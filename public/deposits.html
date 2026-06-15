@@ -2267,7 +2267,7 @@ function copyDepositLinkByUid(uid) {
       });
 
       if (!data.length) {
-        container.innerHTML = '<p class="empty-state">Aucune réservation active pour ce filtre.</p>';
+        container.innerHTML = '' + (window.bhEmptyState ? window.bhEmptyState('check','Aucune réservation active','Aucune réservation active pour ce filtre.') : '<p class=\"empty-state\">Aucune réservation active pour ce filtre.</p>') + '';
         return;
       }
 
@@ -3400,11 +3400,11 @@ function renderPaymentsHistoryTable() {
   const withPayment = filtered.filter(r => r.payment);
 
   if (!filtered.length) {
-    container.innerHTML = '<p class="empty-state">Aucun séjour terminé ce dernier mois.</p>';
+    container.innerHTML = '' + (window.bhEmptyState ? window.bhEmptyState('calendar','Aucun séjour terminé','Aucun séjour terminé ce dernier mois.') : '<p class=\"empty-state\">Aucun séjour terminé ce dernier mois.</p>') + '';
     return;
   }
   if (!withPayment.length) {
-    container.innerHTML = '<p class="empty-state">Aucun paiement sur les séjours terminés.</p>';
+    container.innerHTML = '' + (window.bhEmptyState ? window.bhEmptyState('check','Aucun paiement','Aucun paiement sur les séjours terminés.') : '<p class=\"empty-state\">Aucun paiement sur les séjours terminés.</p>') + '';
     return;
   }
 

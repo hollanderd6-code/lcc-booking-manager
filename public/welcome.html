@@ -1712,7 +1712,7 @@ async function loadLivretsList() {
       initLivretsViewToggle();
       displayLivretsList(data.welcomeBooks);
     } else {
-      document.getElementById('livretsList').innerHTML = '<p style="color: #64748b; text-align: center;">Aucun livret pour le moment.</p>';
+      document.getElementById('livretsList').innerHTML = (window.bhEmptyState ? window.bhEmptyState('note','Aucun livret','Créez votre premier livret d\'accueil.') : '<p style="color: #64748b; text-align: center;">Aucun livret pour le moment.</p>');
     }
   } catch (error) {
     console.error('Erreur chargement livrets:', error);
@@ -2330,7 +2330,7 @@ function displayLivretsList(livrets) {
 
   if (!livrets || !livrets.length) {
     grid.classList.remove('list-view');
-    grid.innerHTML = '<p style="color:#7A8695;grid-column:1/-1;text-align:center;padding:24px">Aucun livret pour le moment.</p>';
+    grid.innerHTML = (window.bhEmptyState ? window.bhEmptyState('note','Aucun livret','Créez votre premier livret d\'accueil.') : '<p style="color:#7A8695;grid-column:1/-1;text-align:center;padding:24px">Aucun livret pour le moment.</p>');
     appendAddCard(grid);
     return;
   }

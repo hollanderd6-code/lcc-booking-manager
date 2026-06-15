@@ -947,7 +947,7 @@ async function loadActivity(lockId) {
     const data = await api(`/lock/${lockId}/activity`);
     const logs = data.logs || [];
     if (!logs.length) {
-      container.innerHTML = '<div style="font-size:13px;color:var(--sl-text-muted);padding:8px 0;">Aucune activité récente.</div>';
+      container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('lock','Aucune activité','L\'activité récente de vos serrures apparaîtra ici.') : '<div style="font-size:13px;color:var(--sl-text-muted);padding:8px 0;">Aucune activité récente.</div>');
       return;
     }
     container.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:8px;">📋 Dernière activité</div>' +

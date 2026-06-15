@@ -1569,7 +1569,7 @@ html[data-theme-v3="1"] .btn-ghost {
       window.loadInvoiceHistory = async function() {
         const container = document.getElementById('historyContent');
         if (!container) return;
-        container.innerHTML = '<div class="history-empty"><i class="fas fa-spinner fa-spin"></i>Chargement...</div>';
+        container.innerHTML = '<div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div>';
         
         try {
           const res = await fetch('/api/invoice/history', {
@@ -1637,7 +1637,7 @@ html[data-theme-v3="1"] .btn-ghost {
         }
 
         if (filtered.length === 0) {
-          container.innerHTML = '<div class="history-empty"><i class="fas fa-file-invoice"></i>Aucune facture sur cette période</div>';
+          container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('invoice','Aucune facture','Aucune facture sur cette période.') : '<div class="history-empty"><i class="fas fa-file-invoice"></i>Aucune facture sur cette période</div>');
           return;
         }
 

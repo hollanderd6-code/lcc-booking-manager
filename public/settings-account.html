@@ -3038,7 +3038,7 @@ document.addEventListener('DOMContentLoaded', function() {
         `).join('');
       } else {
         // Aucun gestionnaire — remettre le message par défaut
-        delegatesList.innerHTML = '<p style="color:#9ca3af;font-size:13px;">Aucun gestionnaire pour le moment</p>';
+        delegatesList.innerHTML = (window.bhEmptyState ? window.bhEmptyState('users','Aucun gestionnaire','Vos gestionnaires délégués apparaîtront ici.') : '<p style="color:#9ca3af;font-size:13px;">Aucun gestionnaire pour le moment</p>');
       }
     } catch(e) {
       console.error('Erreur chargement délégations:', e);
@@ -3199,7 +3199,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function displayTeamMembers(members) {
     const container = document.getElementById('teamMembersList');
     if (members.length === 0) {
-      container.innerHTML = '<div style="text-align:center;padding:48px 24px;color:#9ca3af;"><i class="fas fa-users" style="font-size:48px;margin-bottom:16px;opacity:0.3;"></i><p>Aucun membre</p></div>';
+      container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('users','Aucun membre','Ajoutez des membres à votre équipe.') : '<div style="text-align:center;padding:48px 24px;color:#9ca3af;"><i class="fas fa-users" style="font-size:48px;margin-bottom:16px;opacity:0.3;"></i><p>Aucun membre</p></div>');
       return;
     }
     

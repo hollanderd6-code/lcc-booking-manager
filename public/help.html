@@ -1305,7 +1305,7 @@ function renderConvHistory() {
   if (!list) return;
 
   if (!allUserConvs.length) {
-    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary,#6b7280);font-size:13px;">Aucune conversation. Créez-en une !</div>';
+    list.innerHTML = (window.bhEmptyState ? window.bhEmptyState('message','Aucune conversation','Créez-en une pour contacter le support.') : '<div style="text-align:center;padding:20px;color:var(--text-secondary,#6b7280);font-size:13px;">Aucune conversation. Créez-en une !</div>');
     return;
   }
 

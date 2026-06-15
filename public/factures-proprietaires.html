@@ -2077,7 +2077,7 @@ async function loadInvoices() {
 
     if (invs.length === 0) {
       console.log('⚠️ Aucune facture trouvée');
-      container.innerHTML = '<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Aucune facture.</div>';
+      container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('invoice','Aucune facture','Vos factures propriétaires apparaîtront ici.') : '<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Aucune facture.</div>');
       document.getElementById('statsRevenue').textContent = '0,00 €';
       document.getElementById('statsPending').textContent = '0,00 €';
       return;
@@ -2100,7 +2100,7 @@ function renderFpGrid(invs) {
   if (!container) return;
 
   if (!invs || invs.length === 0) {
-    container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;color:#6b7280;">Aucune facture sur cette période.</div>';
+    container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('invoice','Aucune facture','Aucune facture sur cette période.') : '<div style="padding:40px;text-align:center;grid-column:1/-1;color:#6b7280;">Aucune facture sur cette période.</div>');
     return;
   }
 

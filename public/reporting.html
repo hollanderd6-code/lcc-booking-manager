@@ -1280,7 +1280,7 @@ function renderRentabLogement(byProp) {
   const props = Array.isArray(byProp) ? Object.values(byProp) : byProp;
   const container = document.getElementById('rentabLogementCards');
   if (!props || props.length === 0) {
-    container.innerHTML = '<div style="padding:40px;text-align:center;color:#9ca3af;">Aucun logement</div>';
+    container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('inbox','Aucun logement','Ajoutez des logements pour voir vos statistiques.') : '<div style="padding:40px;text-align:center;color:#9ca3af;">Aucun logement</div>');
     return;
   }
 
