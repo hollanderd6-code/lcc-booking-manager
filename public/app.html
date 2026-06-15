@@ -5755,11 +5755,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     if (totalEl) totalEl.textContent = fmtAmt(caTotal2);
 
     if (!entries.length) {
-      content.innerHTML = '<div style="text-align:center;padding:32px 0;opacity:.7;">'
-        + '<i class="fas fa-chart-line" style="font-size:32px;color:#1A7A5E;margin-bottom:12px;display:block;"></i>'
-        + 'Aucune réservation avec montant ce mois-ci.<br>'
-        + '<small style="display:block;margin-top:8px;">Renseignez les montants sur vos réservations.</small>'
-        + '</div>';
+      content.innerHTML = bhEmptyState('invoice', 'Aucun revenu ce mois-ci', 'Renseignez les montants sur vos réservations pour suivre votre CA.');
     } else {
       var daysInMonth = new Date(now2.getFullYear(), now2.getMonth() + 1, 0).getDate();
       content.innerHTML = entries.map(function(p) {
@@ -5871,6 +5867,24 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   };
   function hideFab() { window.hideFab(); }
   function showFab() { window.showFab(); }
+
+  // Helper : génère un état vide illustré et cohérent (icône + titre + texte).
+  // Icônes disponibles : 'note', 'calendar', 'invoice', 'check', 'inbox'.
+  window.bhEmptyState = function(icon, title, text) {
+    var icons = {
+      note: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>',
+      calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+      invoice: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>',
+      check: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+      inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>'
+    };
+    var path = icons[icon] || icons.inbox;
+    return '<div class="bh-empty">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + path + '</svg>' +
+      '<div class="bh-empty-title">' + title + '</div>' +
+      (text ? '<div class="bh-empty-text">' + text + '</div>' : '') +
+      '</div>';
+  };
 
   function ensureGenericModal(modalId, titleText) {
   if (document.getElementById(modalId)) return;
@@ -6127,7 +6141,7 @@ movesCard.addEventListener('touchstart', handler, { passive: true });
         const modalContent = document.getElementById('kpiNotesModalContent');
         if (!modalContent) return;
         if (notes.length === 0) {
-          modalContent.innerHTML = '<div style="text-align:center;padding:32px;color:#9CA3AF;font-size:14px;">Aucune note active</div>';
+          modalContent.innerHTML = bhEmptyState('note', 'Aucune note active', 'Vos notes liées aux réservations apparaîtront ici.');
         } else {
           modalContent.innerHTML = notes.map(function(r) {
             var propName = (r.property && (r.property.internalName || r.property.internal_name || r.property.name)) || r.propertyName || r.propertyId || '';
@@ -6935,7 +6949,9 @@ try {
     var enCours   = list.filter(function(r){ var s=(r.startDate||r.start||'').split('T')[0]; var e=(r.endDate||r.end||'').split('T')[0]; return s!==selStr && e!==selStr; });
 
     if (list.length===0) {
-      listDiv.appendChild(div('background:white;border-radius:14px;padding:28px;text-align:center;color:#9CA3AF;font-size:13px;box-shadow:0 1px 4px rgba(0,0,0,.07);','Aucune réservation ce jour'));
+      var emptyD = div('background:white;border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.07);');
+      emptyD.innerHTML = bhEmptyState('calendar', 'Aucune réservation ce jour', 'Rien de prévu pour cette date.');
+      listDiv.appendChild(emptyD);
     } else {
       if (arrivees.length>0) {
         var secIn = div(''); secIn.className='bh-section-block'; secIn.dataset.type='arrivees';
