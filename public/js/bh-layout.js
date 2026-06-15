@@ -277,10 +277,10 @@ function getSidebarHTML() {
 `;
 }
 
-  const BRAND_TEXT_HTML = `<span class="mobile-logo-title">
+  const BRAND_TEXT_HTML = `<span class="mobile-logo-title" style="font-size:16px; line-height:1.15;">
     <span style="color:#1A7A5E; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
   </span>
-  <span class="mobile-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">Smart Property Manager</span>`;
+  <span class="mobile-logo-subtitle" style="font-size: 8px; color: #6B7280; font-weight: 500; letter-spacing: 0.3px; text-transform: uppercase; display:block; margin-top:1px;">Smart Property Manager</span>`;
 
   function escapeHtml(str) {
     return (str || "").replace(/[&<>"']/g, (m) => ({
@@ -469,8 +469,11 @@ function getSidebarHTML() {
           }
         } catch(e) {}
       }
-      const hasCorrectBranding = mobileLogoText.querySelector(".mobile-logo-title");
-      if (!hasCorrectBranding) {
+      // Toujours réinjecter le branding standard pour garantir un logo+texte
+      // STRICTEMENT identique sur toutes les pages, peu importe ce que contenait
+      // le HTML statique de la page. (On ne réécrit pas si c'est déjà exactement
+      // le bon HTML, pour éviter de recréer le DOM à chaque appel.)
+      if (mobileLogoText.innerHTML.replace(/\s+/g,'') !== BRAND_TEXT_HTML.replace(/\s+/g,'')) {
         mobileLogoText.innerHTML = BRAND_TEXT_HTML;
       }
     }
