@@ -15184,5 +15184,89 @@ function notifSwitchTab(tab) {
   }
 }
 </script>
+
+<!-- ════════ PANNEAU DEBUG MODAL (TEMPORAIRE — à retirer après diagnostic) ════════ -->
+<script>
+(function(){
+  // Bouton flottant 🐞
+  var btn = document.createElement('button');
+  btn.textContent = '🐞';
+  btn.style.cssText = 'position:fixed;right:10px;bottom:120px;z-index:2147483647;width:46px;height:46px;border-radius:50%;border:none;background:#1A7A5E;color:#fff;font-size:22px;box-shadow:0 4px 14px rgba(0,0,0,.3);';
+  document.body.appendChild(btn);
+
+  var box = document.createElement('div');
+  box.style.cssText = 'position:fixed;left:8px;right:8px;top:60px;z-index:2147483647;background:#0D1117;color:#0f0;font:11px/1.45 monospace;padding:10px;border-radius:10px;max-height:70vh;overflow:auto;display:none;white-space:pre-wrap;box-shadow:0 8px 30px rgba(0,0,0,.5);';
+  document.body.appendChild(box);
+
+  function vp(){
+    return 'VIEWPORT\n'
+      + '  innerHeight: ' + window.innerHeight + '\n'
+      + '  visualViewport.height: ' + (window.visualViewport ? Math.round(window.visualViewport.height) : 'n/a') + '\n'
+      + '  100dvh support: ' + (CSS.supports && CSS.supports('height','100dvh')) + '\n'
+      + '  safe-area-bottom: ' + getComputedStyle(document.documentElement).getPropertyValue('--sab-test') + '\n';
+  }
+
+  function findOpenModal(){
+    // Cherche un overlay bottom-sheet actuellement affiché
+    var candidates = document.querySelectorAll('[style*="align-items:flex-end"], [style*="align-items: flex-end"], .booking-modal');
+    for (var i=0;i<candidates.length;i++){
+      var el = candidates[i];
+      var cs = getComputedStyle(el);
+      if (cs.display !== 'none' && el.offsetParent !== null || (cs.display==='flex')) {
+        var r = el.getBoundingClientRect();
+        if (r.height > 50) return el;
+      }
+    }
+    return null;
+  }
+
+  function report(){
+    var out = vp() + '\n';
+    var modal = findOpenModal();
+    if (!modal){
+      out += '❌ Aucun modal ouvert détecté.\nOuvre d\'abord un modal, PUIS tape 🐞.';
+      box.textContent = out; box.style.display='block'; return;
+    }
+    var mr = modal.getBoundingClientRect();
+    var mcs = getComputedStyle(modal);
+    out += 'OVERLAY: ' + (modal.id||modal.className||modal.tagName) + '\n';
+    out += '  rect: top='+Math.round(mr.top)+' bottom='+Math.round(mr.bottom)+' h='+Math.round(mr.height)+'\n';
+    out += '  display:'+mcs.display+' position:'+mcs.position+' height:'+mcs.height+'\n';
+    out += '  align-items:'+mcs.alignItems+' inset(top/bottom):'+mcs.top+'/'+mcs.bottom+'\n\n';
+
+    // sheet enfant
+    var sheet = null;
+    for (var j=0;j<modal.children.length;j++){ var c=modal.children[j]; if (c.getBoundingClientRect().height>50){ sheet=c; break; } }
+    if (sheet){
+      var sr = sheet.getBoundingClientRect();
+      var scs = getComputedStyle(sheet);
+      out += 'SHEET: ' + (sheet.id||sheet.className||'div') + '\n';
+      out += '  rect: top='+Math.round(sr.top)+' bottom='+Math.round(sr.bottom)+' h='+Math.round(sr.height)+'\n';
+      out += '  maxHeight:'+scs.maxHeight+' overflow:'+scs.overflow+'\n';
+      out += '  ⚠️ bottom dépasse écran de: '+Math.round(sr.bottom - window.innerHeight)+'px\n\n';
+    }
+
+    // Remonter les parents qui cassent position:fixed
+    out += 'PARENTS QUI CASSENT FIXED (transform/filter/backdrop):\n';
+    var n = modal.parentElement, found=false;
+    while (n && n !== document.documentElement){
+      var cs = getComputedStyle(n);
+      var bf = cs.backdropFilter || cs.webkitBackdropFilter || 'none';
+      if (cs.transform!=='none' || cs.filter!=='none' || bf!=='none' || cs.perspective!=='none' || cs.willChange==='transform' || cs.contain.indexOf('paint')>-1){
+        found=true;
+        out += '  ⛔ '+(n.id||n.className||n.tagName)+'\n     transform:'+cs.transform+'\n     filter:'+cs.filter+'\n     backdrop:'+bf+'\n     willChange:'+cs.willChange+' contain:'+cs.contain+'\n';
+      }
+      n = n.parentElement;
+    }
+    if (!found) out += '  ✅ Aucun — le containing-block n\'est PAS le souci.\n';
+
+    box.textContent = out; box.style.display = (box.style.display==='block'?'none':'block');
+  }
+
+  btn.addEventListener('click', report);
+})();
+</script>
+<!-- ════════ FIN PANNEAU DEBUG ════════ -->
+
 </body>
 </html>
