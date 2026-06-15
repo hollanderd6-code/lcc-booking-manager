@@ -280,7 +280,7 @@ function getSidebarHTML() {
   const BRAND_TEXT_HTML = `<span class="mobile-logo-title" style="font-size:16px; line-height:1.15;">
     <span style="color:#1A7A5E; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
   </span>
-  <span class="mobile-logo-subtitle" style="font-size: 8px; color: #6B7280; font-weight: 500; letter-spacing: 0.3px; text-transform: uppercase; display:block; margin-top:1px;">Smart Property Manager</span>`;
+  <span class="mobile-logo-subtitle" style="font-size: 7px; color: #6B7280; font-weight: 500; letter-spacing: 0; text-transform: uppercase; display:block; margin-top:1px; width:100%; text-align:justify; text-align-last:justify; -moz-text-align-last:justify;">Smart Property Manager</span>`;
 
   function escapeHtml(str) {
     return (str || "").replace(/[&<>"']/g, (m) => ({
@@ -1608,8 +1608,11 @@ window.confirm = function(msg) {
     s.textContent =
       '.mobile-header .mobile-logo,.mobile-logo{gap:7px!important;}' +
       '.mobile-header .mobile-logo img,.mobile-logo img{width:34px!important;height:34px!important;min-width:34px!important;border-radius:9px!important;}' +
-      '.mobile-header .mobile-logo-title,.mobile-logo-title{font-size:16px!important;line-height:1.15!important;}' +
-      '.mobile-header .mobile-logo-subtitle,.mobile-logo-subtitle{font-size:8px!important;letter-spacing:.3px!important;}';
+      // Texte en colonne : titre au-dessus, sous-titre dessous, calés à la même largeur
+      '.mobile-header .mobile-logo-text,.mobile-logo-text{display:inline-flex!important;flex-direction:column!important;align-items:stretch!important;}' +
+      '.mobile-header .mobile-logo-title,.mobile-logo-title{font-size:16px!important;line-height:1.15!important;white-space:nowrap!important;}' +
+      // Sous-titre réduit + justifié → s'étire EXACTEMENT sur la largeur de "Boostinghost"
+      '.mobile-header .mobile-logo-subtitle,.mobile-logo-subtitle{font-size:7px!important;letter-spacing:0!important;margin-top:1px!important;display:block!important;width:100%!important;text-align:justify!important;text-align-last:justify!important;-moz-text-align-last:justify!important;}';
     document.head.appendChild(s);
   }
   function injectCSS() {
