@@ -8812,8 +8812,18 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
     let propertyName = 'Logement';
     
     try {
-      // Mode agence : autoriser la suppression des résas des comptes délégués
-      const agencyIdsForDelete = await getAgencyUserIds(req, user.id);
+      // Mode agence : toujours inclure les comptes délégués pour la suppression,
+      // sans condition sur ?agency=all (sinon les résas des comptes délégués → 404)
+      let agencyIdsForDelete;
+      try {
+        const delegations = await pool.query(
+          `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+          [user.id]
+        );
+        agencyIdsForDelete = [user.id, ...delegations.rows.map(d => d.delegator_user_id)];
+      } catch(e) {
+        agencyIdsForDelete = [user.id];
+      }
       const deleteResult = await pool.query(
         `DELETE FROM reservations 
          WHERE uid = $1 AND user_id = ANY($2::text[]) 
