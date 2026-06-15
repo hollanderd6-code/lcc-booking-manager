@@ -23492,7 +23492,8 @@ case 'checkout.session.completed': {
 
 app.post('/api/manual-reservations/delete', async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
+    // ✅ Utiliser req.user si dispo (authenticateAny), sinon fallback getUserFromRequest
+    let user = req.user ? { id: req.user.isSubAccount ? (req.user.parentUserId || req.user.id) : req.user.id } : await getUserFromRequest(req);
     if (!user) {
       console.log('❌ Suppression refusée : utilisateur non authentifié');
       return res.status(401).json({ error: 'Non autorisé' });
@@ -23505,8 +23506,23 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
       return res.status(400).json({ error: 'propertyId et uid sont requis' });
     }
 
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    // ✅ Vérifier le logement en DB (pas en mémoire) — inclut les comptes délégués
+    let allUserIds = [user.id];
+    try {
+      const delegations = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [user.id]
+      );
+      allUserIds = [user.id, ...delegations.rows.map(d => d.delegator_user_id)];
+    } catch(e) { /* fallback to [user.id] */ }
+
+    const propertyCheck = await pool.query(
+      'SELECT id, name, internal_name FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [propertyId, allUserIds]
+    );
+    const property = propertyCheck.rows[0] || null;
     if (!property) {
+      console.log('❌ Logement non trouvé ou non autorisé:', propertyId, '| ids:', allUserIds);
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
 
@@ -23515,8 +23531,8 @@ app.post('/api/manual-reservations/delete', async (req, res) => {
     let deletedRow = null;
     try {
       const deleteResult = await pool.query(
-        'DELETE FROM reservations WHERE uid = $1 AND user_id = $2 RETURNING *',
-        [uid, user.id]
+        'DELETE FROM reservations WHERE uid = $1 AND user_id = ANY($2::text[]) RETURNING *',
+        [uid, allUserIds]
       );
       
       deleted = deleteResult.rowCount > 0;
