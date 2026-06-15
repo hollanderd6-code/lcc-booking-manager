@@ -18935,31 +18935,60 @@ app.get('/api/owner-invoices',
 
     const agencyIds = await getAgencyUserIds(req, userId);
 
-    const result = await pool.query(`
-            SELECT
-        i.id,
-        COALESCE(i.invoice_number, 'Brouillon #' || i.id::text) AS invoice_number,
-        i.issue_date,
-        i.total_ttc,
-        i.status,
-        i.is_credit_note,
-        i.original_invoice_id,
-        COALESCE(
-          c.company_name,
-          NULLIF(TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,'')), ''),
-          i.client_name
-        ) AS client_name
+    let result;
+    try {
+      // Version avec fallback sur la colonne i.client_name (clients agence sans owner_client lié)
+      result = await pool.query(`
+              SELECT
+          i.id,
+          COALESCE(i.invoice_number, 'Brouillon #' || i.id::text) AS invoice_number,
+          i.issue_date,
+          i.total_ttc,
+          i.status,
+          i.is_credit_note,
+          i.original_invoice_id,
+          COALESCE(
+            c.company_name,
+            NULLIF(TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,'')), ''),
+            i.client_name
+          ) AS client_name
 
-      FROM owner_invoices i
-      LEFT JOIN owner_clients c ON c.id = i.client_id
-      WHERE i.user_id = ANY($1::text[])
-      ORDER BY i.issue_date DESC, i.id DESC
-    `, [agencyIds]);
+        FROM owner_invoices i
+        LEFT JOIN owner_clients c ON c.id = i.client_id
+        WHERE i.user_id = ANY($1::text[])
+        ORDER BY i.issue_date DESC, i.id DESC
+      `, [agencyIds]);
+    } catch (e) {
+      // Si la colonne i.client_name n'existe pas (code 42703), on retombe sur une requête sans elle
+      if (e && e.code === '42703') {
+        result = await pool.query(`
+                SELECT
+            i.id,
+            COALESCE(i.invoice_number, 'Brouillon #' || i.id::text) AS invoice_number,
+            i.issue_date,
+            i.total_ttc,
+            i.status,
+            i.is_credit_note,
+            i.original_invoice_id,
+            COALESCE(
+              c.company_name,
+              NULLIF(TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,'')), '')
+            ) AS client_name
+
+          FROM owner_invoices i
+          LEFT JOIN owner_clients c ON c.id = i.client_id
+          WHERE i.user_id = ANY($1::text[])
+          ORDER BY i.issue_date DESC, i.id DESC
+        `, [agencyIds]);
+      } else {
+        throw e;
+      }
+    }
 
     res.json({ invoices: result.rows });
   } catch (err) {
     console.error('Erreur liste factures propriétaires:', err);
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: 'Erreur serveur', detail: err.message, code: err.code });
   }
 });
 
