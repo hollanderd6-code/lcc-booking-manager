@@ -2310,6 +2310,9 @@ async function loadPropertiesForInvoice() {
 // Nouvelle fonction appelée quand on sélectionne un client
 function loadClientDefaults() {
   const clientId = document.getElementById('invoiceClientId').value;
+  // Si l'utilisateur choisit un client réel via le select, on abandonne tout snapshot
+  // de facture précédemment chargée (il sera recalculé depuis window.clients).
+  if (clientId) window._invoiceClientSnapshot = null;
   
   if (!clientId) {
     // Cacher la section logements
@@ -3748,6 +3751,18 @@ if (window.userProfile && window.userProfile.logoUrl) {
       if (client.email) details += client.email + '<br>';
       if (client.phone) details += client.phone + '<br>';
       document.getElementById('previewClientDetails').innerHTML = details;
+    } else if (window._invoiceClientSnapshot) {
+      // Facture d'un client agence rouverte : pas de client dans window.clients,
+      // on affiche le snapshot stocké sur la facture.
+      const s = window._invoiceClientSnapshot;
+      document.getElementById('previewClientName').textContent = s.name || 'Client';
+      let details = '';
+      if (s.address) details += s.address + '<br>';
+      if (s.postal_code || s.city) details += `${s.postal_code || ''} ${s.city || ''}`.trim() + '<br>';
+      if (s.siret) details += `SIRET : ${s.siret}<br>`;
+      if (s.email) details += s.email + '<br>';
+      if (s.phone) details += s.phone + '<br>';
+      document.getElementById('previewClientDetails').innerHTML = details;
     }
 
     // Dates
@@ -4020,6 +4035,7 @@ function getSelectedProperties() {
 
   window.createNewInvoice = function() {
     // Désactiver le mode lecture seule
+    window._invoiceClientSnapshot = null;
     isReadOnlyMode = false;
     const sidebar = document.getElementById('editorSidebar');
     if (sidebar) sidebar.classList.remove('readonly');
@@ -4090,6 +4106,22 @@ window.editOwnerInvoiceDraft = async function(id) {
 
     const clientSelect = document.getElementById('invoiceClientId');
     if (clientSelect) clientSelect.value = inv.client_id || '';
+
+    // Si la facture n'a pas de client lié (client agence), on remplit le bloc
+    // destinataire de l'aperçu directement depuis le snapshot stocké sur la facture.
+    if (!inv.client_id && (inv.client_name || inv.client_address)) {
+      window._invoiceClientSnapshot = {
+        name: inv.client_name || 'Client',
+        address: inv.client_address || '',
+        postal_code: inv.client_postal_code || '',
+        city: inv.client_city || '',
+        siret: inv.client_siret || '',
+        email: inv.client_email || '',
+        phone: inv.client_phone || ''
+      };
+    } else {
+      window._invoiceClientSnapshot = null;
+    }
     if (inv.issue_date) document.getElementById('invoiceIssueDate').value = inv.issue_date.slice(0,10);
     if (inv.due_date) document.getElementById('invoiceDueDate').value = inv.due_date.slice(0,10);
     if (inv.period_start) document.getElementById('invoicePeriodStart').value = inv.period_start.slice(0,10);

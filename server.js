@@ -19369,7 +19369,10 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     }
     if (senderLogoBuffer) {
       try {
-        doc.image(senderLogoBuffer, W - mg - 160, y - 8, { width: 160, height: 70, fit: [160, 70], align: 'right' });
+        // fit seul = redimensionne en gardant le ratio dans une boîte max (pas de déformation).
+        // Ne PAS passer width/height en plus, sinon pdfkit force la taille et agrandit le logo.
+        const LOGO_MAX_W = 120, LOGO_MAX_H = 55;
+        doc.image(senderLogoBuffer, W - mg - LOGO_MAX_W, y - 8, { fit: [LOGO_MAX_W, LOGO_MAX_H], align: 'right', valign: 'top' });
       } catch(e) { console.error('[PDF] doc.image a rejeté le buffer logo (format non supporté ?) :', e.message); }
     }
 
