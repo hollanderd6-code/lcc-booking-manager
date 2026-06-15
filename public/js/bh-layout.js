@@ -277,8 +277,8 @@ function getSidebarHTML() {
 `;
 }
 
-  const BRAND_TEXT_HTML = `<span class="mobile-logo-title" style="font-size:16px; line-height:1.15;">
-    <span style="color:#1A7A5E; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
+  const BRAND_TEXT_HTML = `<span class="mobile-logo-title" style="font-size:16px; line-height:1.15; font-family:'DM Sans',sans-serif;">
+    <span style="color:#1A7A5E; font-weight:700;">Boosting</span><span style="color:#111827; font-weight:700;">host</span>
   </span>
   <span class="mobile-logo-subtitle" style="font-size:7px !important; color:#6B7280; font-weight:700 !important; letter-spacing:0 !important; text-transform:uppercase !important; display:block !important; margin-top:1px; width:100% !important; text-align:justify !important; text-align-last:justify !important; -moz-text-align-last:justify !important;">Smart Property Manager</span>`;
 
