@@ -1423,6 +1423,7 @@ window.confirm = function(msg) {
     var dragging = false, moved = false, startX = 0, lastX = 0, lastT = 0, vx = 0;
     var startIdx = -1, hoverIdx = -1, suppressClick = false, mc = [], rafId = 0, pendX = 0, curIdx = -1;
     var pinned = false, pinWatch = null, sawOpen = false;
+    var navTargetIdx = -1; // onglet cible d'une navigation : la capsule y reste pendant le chargement de la nouvelle page
 
     function snapshot() { mc = tabsOf(bar).map(function (t) { return { el: t, left: t.offsetLeft, width: t.offsetWidth, center: t.offsetLeft + t.offsetWidth / 2 }; }); }
     function markActive(idx) { var ts = tabsOf(bar); for (var i = 0; i < ts.length; i++) ts[i].classList.toggle('lg-active', i === idx); }
@@ -1442,6 +1443,10 @@ window.confirm = function(msg) {
 
     function sync(animate) {
       var ts = tabsOf(bar);
+      // Navigation en cours : on garde la capsule sur l'onglet cible. La page
+      // courante est encore l'ancienne, donc pageIndex() renverrait l'onglet
+      // d'origine → la capsule rebondirait en arrière avant le chargement.
+      if (navTargetIdx >= 0 && navTargetIdx < ts.length) { settle(navTargetIdx, animate); return; }
       if (pinned || moreOpen()) { var pi = plusIndex(ts); if (pi >= 0) { settle(pi, animate); return; } }
       settle(pageIndex(ts), animate);
     }
@@ -1512,7 +1517,10 @@ window.confirm = function(msg) {
       else if (idx === pi) { pinned = !pinned; }
       else { pinned = false; }
       if (pinned) startPinWatch(); else if (pinWatch) { clearInterval(pinWatch); }
-      setTimeout(function () { if (!dragging) sync(true); }, 0);
+      // Onglet de navigation (pas le Plus) : la capsule reste sur l'onglet cliqué
+      // jusqu'au chargement de la nouvelle page, au lieu de rebondir vers l'origine.
+      if (!pinned && idx >= 0 && idx !== pi) { navTargetIdx = idx; settle(idx, true); }
+      else { setTimeout(function () { if (!dragging) sync(true); }, 0); }
     }
 
     if (window.PointerEvent) {
