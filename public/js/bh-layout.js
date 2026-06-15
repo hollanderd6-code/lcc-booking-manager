@@ -536,7 +536,7 @@ function getSidebarHTML() {
     mobileHeader.style.setProperty('z-index', '1100', 'important');
     mobileHeader.style.setProperty('align-items', 'center', 'important');
     mobileHeader.style.setProperty('justify-content', 'center', 'important');
-    mobileHeader.style.setProperty('padding', 'env(safe-area-inset-top,0px) 16px 0', 'important');
+    mobileHeader.style.setProperty('padding', 'env(safe-area-inset-top,0px) 10px 0', 'important');
     mobileHeader.style.setProperty('background', 'rgba(245,242,236,0.97)', 'important');
     mobileHeader.style.setProperty('backdrop-filter', 'blur(12px)', 'important');
     mobileHeader.style.setProperty('border-bottom', '1px solid rgba(200,184,154,0.4)', 'important');
@@ -1163,8 +1163,8 @@ window.confirm = function(msg) {
     var btn = document.createElement('button');
     btn.id = 'agencySwitcherBtnMobile';
     btn.onclick = function() { if (window.openAgencySwitcherModal) window.openAgencySwitcherModal(); };
-    btn.style.cssText = 'display:none;background:rgba(124,58,237,.10);border:1px solid rgba(124,58,237,.22);border-radius:13px;cursor:pointer;color:#7c3aed;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s;width:40px;height:40px;flex-shrink:0;';
-    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/></svg>';
+    btn.style.cssText = 'display:none;background:rgba(124,58,237,.10);border:1px solid rgba(124,58,237,.22);border-radius:10px;cursor:pointer;color:#7c3aed;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s;width:32px;height:32px;flex-shrink:0;';
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/></svg>';
     if (rightContainer) {
       rightContainer.insertBefore(btn, rightContainer.firstChild);
     } else {
