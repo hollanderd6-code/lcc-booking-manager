@@ -1163,8 +1163,8 @@ window.confirm = function(msg) {
     var btn = document.createElement('button');
     btn.id = 'agencySwitcherBtnMobile';
     btn.onclick = function() { if (window.openAgencySwitcherModal) window.openAgencySwitcherModal(); };
-    btn.style.cssText = 'display:none;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px;color:#7c3aed;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:all .2s;width:32px;height:32px;flex-shrink:0;';
-    btn.innerHTML = '<i class="fas fa-building"></i>';
+    btn.style.cssText = 'display:none;background:rgba(124,58,237,.10);border:1px solid rgba(124,58,237,.22);border-radius:13px;cursor:pointer;color:#7c3aed;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s;width:40px;height:40px;flex-shrink:0;';
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/></svg>';
     if (rightContainer) {
       rightContainer.insertBefore(btn, rightContainer.firstChild);
     } else {
@@ -1566,4 +1566,65 @@ window.confirm = function(msg) {
 
   window.addEventListener('resize', function () { var b = document.querySelector('.mobile-tabs'); if (b && b.__lgSync) b.__lgSync(false); });
   window.addEventListener('pageshow', function () { var b = document.querySelector('.mobile-tabs'); if (b && b.__lgSync) b.__lgSync(false); });
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// 🧊 HEADER v4.0 — icônes Lucide + boutons glass (toutes les pages)
+// Remplace les <i> FontAwesome du .mobile-header par des SVG Lucide
+// et applique le style glass, SANS toucher aux id/badges/handlers
+// (le <i> est conservé : la rotation du bouton sync continue de marcher).
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+  var P = {
+    server: '<rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/>',
+    plug: '<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/>',
+    bell: '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8a6 6 0 0 0-12 0c0 4.499-1.411 5.956-2.738 7.326"/>'
+  };
+  function svg(name, size) {
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + P[name] + '</svg>';
+  }
+  function swap(iEl, name, size) {
+    if (!iEl) return;
+    iEl.className = 'lg-hicon';
+    iEl.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;line-height:0;';
+    iEl.innerHTML = svg(name, size);
+  }
+  function injectCSS() {
+    if (document.getElementById('bh-header-v4-css')) return;
+    var s = document.createElement('style');
+    s.id = 'bh-header-v4-css';
+    s.textContent =
+      '.mobile-header #bh-mobile-svc,.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{' +
+        'background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);' +
+        'border:1px solid rgba(26,122,94,.16)!important;border-radius:13px!important;height:40px!important;cursor:pointer;' +
+        'transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s,color .2s,border-color .2s!important;}' +
+      '.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{width:40px!important;}' +
+      '.mobile-header #bh-mobile-svc{border-radius:999px!important;padding:0 13px!important;gap:10px!important;}' +
+      '.mobile-header #syncBtnMobile{color:#1A7A5E!important;}' +
+      '.mobile-header #bh-mobile-ann-btn,.mobile-header #bh-mobile-notif-btn{color:#6B7280!important;}' +
+      '.mobile-header #bh-mobile-svc .lg-hicon{color:#94a3b8!important;}' +
+      '.mobile-header #bh-mobile-svc:hover,.mobile-header #bh-mobile-ann-btn:hover,.mobile-header #syncBtnMobile:hover,.mobile-header #bh-mobile-notif-btn:hover{background:rgba(255,255,255,.82)!important;}' +
+      '.mobile-header #bh-mobile-ann-btn:hover,.mobile-header #bh-mobile-notif-btn:hover{color:#1A7A5E!important;}' +
+      '.mobile-header #bh-mobile-svc:active,.mobile-header #bh-mobile-ann-btn:active,.mobile-header #syncBtnMobile:active,.mobile-header #bh-mobile-notif-btn:active,.mobile-header #agencySwitcherBtnMobile:active{transform:scale(.92);}' +
+      '.mobile-header #agencySwitcherBtnMobile:hover{background:rgba(124,58,237,.18)!important;}' +
+      '.mobile-header .lg-hicon svg{display:block;}';
+    document.head.appendChild(s);
+  }
+  function enhance() {
+    var mh = document.querySelector('.mobile-header');
+    if (!mh || mh.dataset.v4) return;
+    injectCSS();
+    swap(mh.querySelector('#bh-mobile-svc i.fa-server'), 'server', 16);
+    swap(mh.querySelector('#bh-mobile-svc i.fa-plug'), 'plug', 16);
+    swap(mh.querySelector('#bh-mobile-ann-btn i.fa-info-circle'), 'info', 20);
+    swap(mh.querySelector('#syncBtnMobile i.fa-sync-alt'), 'refresh', 20);
+    swap(mh.querySelector('#bh-mobile-notif-btn i.fa-bell'), 'bell', 20);
+    mh.dataset.v4 = '1';
+  }
+  function boot() { enhance(); setTimeout(enhance, 600); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
