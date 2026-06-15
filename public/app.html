@@ -2784,8 +2784,10 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 </style>
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- jsPDF retiré du chargement initial : chargé à la demande via ensureJsPDF() dans downloadChecklistPDF() -->
+<!-- html2canvas retiré : aucun appel html2canvas() dans cette page -->
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> -->
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script> -->
 <script>
 // Masquage immédiat selon le rôle (avant rendu)
 (function() {
@@ -3753,8 +3755,9 @@ window.closeChecklistsKpiModal = function() {
 <!-- Toast Notifications -->
 <div class="toast-container" id="toastContainer"></div>
 <!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script>
+<!-- FullCalendar retiré : le dashboard utilise renderModernCalendar() (calendrier maison), pas la lib FullCalendar -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script> -->
 <script src="/js/app.js?v=4"></script>
 <style>
     /* Styles spécifiques calendrier & UI complémentaire */
@@ -11667,12 +11670,29 @@ function loadImageAsDataURL(url) {
   });
 }
 
+// Charge jsPDF à la demande (1re fois seulement), puis le garde en mémoire.
+// Évite de parser ~350 Ko de lib à chaque ouverture du dashboard.
+var _jspdfPromise = null;
+function ensureJsPDF() {
+  if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
+  if (_jspdfPromise) return _jspdfPromise;
+  _jspdfPromise = new Promise(function(resolve, reject) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload = function() { resolve(); };
+    s.onerror = function() { _jspdfPromise = null; reject(new Error('Échec chargement jsPDF')); };
+    document.head.appendChild(s);
+  });
+  return _jspdfPromise;
+}
+
 async function downloadChecklistPDF() {
   var c = window._currentChecklist;
   if (!c) return;
   var btn = document.querySelector('[onclick="downloadChecklistPDF()"]');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Génération...'; }
   try {
+    await ensureJsPDF();
     var { jsPDF } = window.jspdf;
     var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     var tasks = typeof c.tasks === 'string' ? JSON.parse(c.tasks) : (c.tasks || []);
@@ -11965,7 +11985,7 @@ if (document.readyState === 'loading') {
 </script>
 <!-- 📱 Expérience Mobile Native -->
 <script src="/js/mobile-native-experience.js"></script>
-<script src="/js/mobile-tabs-handler.js?v=5"></script>
+<script src="/js/mobile-tabs-handler.js?v=4"></script>
 
 <script id="calendar-horizontal-scroll-lock-fix-v2">
 (function() {
@@ -15099,28 +15119,5 @@ function notifSwitchTab(tab) {
   }
 }
 </script>
-<script>
-/* 🔗 Deep link notif → ouvre le calendrier (vue Mois) depuis ?view=calendar (iOS push) */
-(function(){
-  try {
-    var v = new URLSearchParams(location.search).get('view');
-    if (v !== 'calendar') return;
-    var tries = 0;
-    var iv = setInterval(function(){
-      tries++;
-      var root = document.getElementById('bhCalRoot');
-      if (root) {
-        clearInterval(iv);
-        var monthBtn = document.querySelector('.view-tab[data-view="month"]');
-        if (monthBtn && !monthBtn.classList.contains('active')) { try { monthBtn.click(); } catch(e){} }
-        setTimeout(function(){ try { root.scrollIntoView({behavior:'smooth', block:'start'}); } catch(e){ try{ root.scrollIntoView(); }catch(_){} } }, 200);
-        try { history.replaceState({}, '', location.pathname); } catch(e){}
-      }
-      if (tries > 40) clearInterval(iv);
-    }, 250);
-  } catch(e) { console.error('[deeplink calendar]', e); }
-})();
-</script>
-
 </body>
 </html>
