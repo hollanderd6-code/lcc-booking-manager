@@ -1602,8 +1602,8 @@ window.confirm = function(msg) {
       '.mobile-header .mobile-logo{gap:7px!important;}' +
       '.mobile-header .mobile-logo img{width:28px!important;height:28px!important;min-width:28px!important;}' +
       '.mobile-header .mobile-logo-title{font-size:14px!important;}' +
-      '.mobile-header .mobile-logo-subtitle{font-size:9px!important;}' +
-      '.mobile-header>[style*="flex-end"]{gap:5px!important;}' +
+      '.mobile-header .mobile-logo-subtitle{font-size:8px!important;letter-spacing:.3px!important;}' +
+      '.mobile-header>[style*="flex-end"]{gap:5px!important;margin-left:10px!important;}' +
       '.mobile-header #bh-mobile-svc,.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{' +
         'background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);' +
         'border:1px solid rgba(26,122,94,.16)!important;border-radius:10px!important;height:32px!important;cursor:pointer;' +
