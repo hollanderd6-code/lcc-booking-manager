@@ -14935,6 +14935,10 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
     var url = GUEST_BASE + '?' + params.toString();
     window._bhGeneratedLink = url;
+    // Les paramètres ont changé → l'éventuel hold précédent ne correspond plus.
+    // On force la (re)création d'un hold au prochain « Copier le lien ».
+    window._bhHoldToken = null;
+    window._bhHoldCreated = false;
 
     document.getElementById('bhLinkText').textContent = url;
     preview.style.display = 'block';
@@ -15050,9 +15054,6 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
   };
 
   window.bhCopyLink = async function() {
-    var url = window._bhGeneratedLink;
-    if (!url) return;
-
     // Vérifier email ou téléphone obligatoire
     var email = (document.getElementById('bhLinkEmail')?.value || '').trim();
     var phone = (document.getElementById('bhLinkPhone')?.value || '').trim();
@@ -15067,39 +15068,70 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     }
 
     var btn = document.getElementById('bhCopyBtn');
+    var propId   = document.getElementById('bhLinkProp')?.value;
+    var checkin  = document.getElementById('bhLinkCheckin')?.value;
+    var checkout = document.getElementById('bhLinkCheckout')?.value;
+    var fixedPrice = parseFloat(document.getElementById('bhLinkFixedPrice')?.value) || null;
 
-    // Copier le lien
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+
+    // 1) Créer le hold D'ABORD pour obtenir le token (sinon le lien copié
+    //    n'a pas de hold_token → le client se voit refuser au paiement).
+    var holdToken = window._bhHoldToken || null;
+    if (!holdToken && propId && checkin && checkout) {
+      try {
+        var token = localStorage.getItem('lcc_token');
+        var res = await fetch((window.API_URL || '') + '/api/guest/hold', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ property_id: propId, checkin, checkout, fixed_price: fixedPrice, guest_email: email || null, guest_phone: phone || null, skip_send: true })
+        });
+        if (res.ok) {
+          var data = await res.json();
+          holdToken = data.token;
+          window._bhHoldToken = holdToken;
+          window._bhHoldCreated = true;
+          var exp = new Date(data.expires_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+          var statusEl = document.getElementById('bhHoldStatus');
+          if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = '#059669'; statusEl.innerHTML = '✅ Lien copié · Dates bloquées jusqu\'à ' + exp; }
+          if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
+        } else {
+          var d2 = await res.json().catch(function(){ return {}; });
+          var st2 = document.getElementById('bhHoldStatus');
+          if (st2) { st2.style.display = 'block'; st2.style.color = '#DC2626'; st2.innerHTML = '❌ ' + (d2.error || 'Impossible de bloquer les dates'); }
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-copy"></i> Copier le lien';
+          return;
+        }
+      } catch(e) {
+        console.warn('Hold creation on copy:', e.message);
+        var st3 = document.getElementById('bhHoldStatus');
+        if (st3) { st3.style.display = 'block'; st3.style.color = '#DC2626'; st3.innerHTML = '❌ Erreur réseau lors du blocage des dates'; }
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-copy"></i> Copier le lien';
+        return;
+      }
+    }
+
+    // 2) Construire le lien AVEC le hold_token, puis copier
+    var url = window._bhGeneratedLink || '';
+    if (holdToken) {
+      var sep = url.indexOf('?') === -1 ? '?' : '&';
+      // Éviter un doublon de hold_token si déjà présent
+      url = url.replace(/([?&])hold_token=[^&]*/,'').replace(/[?&]$/,'');
+      url += (url.indexOf('?') === -1 ? '?' : '&') + 'hold_token=' + encodeURIComponent(holdToken);
+      window._bhGeneratedLink = url;
+      var linkText = document.getElementById('bhLinkText');
+      if (linkText) linkText.textContent = url;
+    }
+
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(url);
       else { var ta = document.createElement('textarea'); ta.value = url; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
     } catch(e) {}
 
-    // Créer le hold si pas encore fait
-    if (!window._bhHoldCreated) {
-      var propId   = document.getElementById('bhLinkProp')?.value;
-      var checkin  = document.getElementById('bhLinkCheckin')?.value;
-      var checkout = document.getElementById('bhLinkCheckout')?.value;
-      var fixedPrice = parseFloat(document.getElementById('bhLinkFixedPrice')?.value) || null;
-      if (propId && checkin && checkout) {
-        try {
-          var token = localStorage.getItem('lcc_token');
-          var res = await fetch((window.API_URL || '') + '/api/guest/hold', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ property_id: propId, checkin, checkout, fixed_price: fixedPrice, guest_email: email || null, guest_phone: phone || null, skip_send: true })
-          });
-          if (res.ok) {
-            window._bhHoldCreated = true;
-            var data = await res.json();
-            var exp = new Date(data.expires_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-            var statusEl = document.getElementById('bhHoldStatus');
-            if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = '#059669'; statusEl.innerHTML = '✅ Lien copié · Dates bloquées jusqu\'à ' + exp; }
-            if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
-          }
-        } catch(e) { console.warn('Hold creation on copy:', e.message); }
-      }
-    }
-
+    btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
     btn.style.background = '#059669';
     setTimeout(() => {
@@ -15108,7 +15140,12 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     }, 2000);
   };
 
-  window.bhShareLink = function() {
+  window.bhShareLink = async function() {
+    // S'assurer que le hold existe et que le lien contient le hold_token
+    // avant de partager (sinon le client serait refusé au paiement).
+    if (!window._bhHoldToken) {
+      await window.bhCopyLink();
+    }
     var url = window._bhGeneratedLink;
     if (!url) return;
     if (navigator.share) {

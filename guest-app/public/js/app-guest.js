@@ -1403,11 +1403,16 @@ function goToCheckout() {
     ? state._pendingFixedPrice
     : null;
   const displayBase = fixedPriceOverride !== null ? fixedPriceOverride : total;
-  const commission = Math.round(displayBase * 0.03 * 100) / 100;
+  // Prix négocié = TOUT COMPRIS (ménage, taxes, frais BHGuest déjà inclus).
+  // On n'ajoute donc PAS la commission par-dessus : elle est déjà dans le prix.
+  const isFixed = fixedPriceOverride !== null;
+  const commission = isFixed ? 0 : Math.round(displayBase * 0.03 * 100) / 100;
+  // Frais BHGuest déjà contenus dans le prix négocié (3% inclus) — affichage info
+  const includedFee = isFixed ? Math.round(displayBase * 3 / 103 * 100) / 100 : 0;
   // Prix fixe = tout inclus : ménage et taxe de séjour non ajoutés
-  const cleaningFee = fixedPriceOverride !== null ? 0 : (p.cleaningFee || 0);
+  const cleaningFee = isFixed ? 0 : (p.cleaningFee || 0);
   const guestCount = parseInt(document.getElementById('guestCount')?.value) || 2;
-  const touristTax = fixedPriceOverride !== null ? 0 : (p.touristTaxPerNight
+  const touristTax = isFixed ? 0 : (p.touristTaxPerNight
     ? Math.round(p.touristTaxPerNight * nights * guestCount * 100) / 100
     : 0);
   const ttc = Math.round((displayBase + cleaningFee + touristTax + commission) * 100) / 100;
@@ -1427,13 +1432,16 @@ function goToCheckout() {
       <div class="checkout-row"><span>Dates</span><span>${fmtDate(state.selectedCheckin)} → ${fmtDate(state.selectedCheckout)}</span></div>
       ${fixedPriceOverride !== null
         ? `<div class="checkout-row" id="baseRow"><span>Prix négocié</span><span>${displayBase}€</span></div>
-           <div class="checkout-row" style="font-size:11px;color:#9CA3AF;"><span><em>Prix spécial convenu avec l'hôte</em></span></div>`
+           <div class="checkout-row" style="font-size:11px;color:#9CA3AF;"><span><em>Prix spécial convenu avec l'hôte · tout compris</em></span></div>`
         : `<div class="checkout-row" id="baseRow"><span>Hébergement · ${nights} nuit${nights > 1 ? 's' : ''}</span><span>${total}€</span></div>`
       }
       <div class="checkout-row" id="promoRow" style="display:${fixedPriceOverride !== null ? 'none' : 'none'};color:#10b981;"><span>Code promo</span><span id="promoAmount">-0€</span></div>
       ${cleaningFee > 0 ? `<div class="checkout-row" id="cleaningRow"><span>Frais de ménage</span><span>${cleaningFee}€</span></div>` : ''}
       ${touristTax > 0 ? `<div class="checkout-row" id="touristTaxRow"><span>Taxe de séjour</span><span id="touristTaxAmount">${touristTax}€</span></div>` : ''}
-      <div class="checkout-row" id="commissionRow"><span>Frais de service (3%)</span><span id="commissionAmount">${commission}€</span></div>
+      ${isFixed
+        ? `<div class="checkout-row" id="commissionRow" style="font-size:12px;color:#9CA3AF;"><span>Dont frais BHGuest</span><span id="commissionAmount">${includedFee}€</span></div>`
+        : `<div class="checkout-row" id="commissionRow"><span>Frais de service (3%)</span><span id="commissionAmount">${commission}€</span></div>`
+      }
       <div class="checkout-row total"><span>Total</span><span id="totalAmount">${ttc}€</span></div>
     </div>
     <div class="form-section">
@@ -1603,7 +1611,9 @@ async function submitBooking() {
         guest_phone: guestPhone,
         promo_code: promoCode,
         fixed_price_override: fixedPriceOverride,
-        hold_token: state._holdToken || localStorage.getItem('guest_hold_token') || null
+        // Token du lien OUVERT uniquement. On ne retombe pas sur un ancien
+        // token du localStorage (résidu d'un lien précédent → 410 à tort).
+        hold_token: state._holdToken || null
       })
     });
     const data = await res.json();
