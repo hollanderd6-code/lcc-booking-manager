@@ -324,19 +324,20 @@ module.exports = function createSmartLocksRoutes(pool) {
       if (!lockId || !propertyId) return res.status(400).json({ error: 'lockId et propertyId requis' });
 
       // Vérifier que la serrure appartient à l'utilisateur
-      const lock = await pool.query('SELECT id FROM smart_locks WHERE id = $1 AND user_id = $2', [lockId, userId]);
+      const lock = await pool.query('SELECT id, user_id FROM smart_locks WHERE id = $1 AND user_id = ANY($2::text[])', [lockId, await getAgencyUserIds(req, userId)]);
       if (!lock.rows[0]) return res.status(404).json({ error: 'Serrure introuvable' });
+      const ownerId = lock.rows[0].user_id;
 
       await pool.query(
         `INSERT INTO smart_lock_assignments (lock_id, property_id, user_id)
          VALUES ($1, $2, $3)
          ON CONFLICT (lock_id) DO UPDATE SET property_id = $2`,
-        [lockId, propertyId, userId]
+        [lockId, propertyId, ownerId]
       );
 
       // Auto-générer les codes pour les réservations futures de ce logement
       try {
-        const generated = await autoGenerateCodesForProperty(pool, userId, propertyId);
+        const generated = await autoGenerateCodesForProperty(pool, ownerId, propertyId);
         console.log(`🔑 [ASSIGN] ${generated} code(s) auto-générés pour property ${propertyId}`);
         res.json({ success: true, codesGenerated: generated });
       } catch (autoErr) {
@@ -353,7 +354,7 @@ module.exports = function createSmartLocksRoutes(pool) {
     try {
       const userId = getUserId(req);
       const { lockId } = req.body;
-      await pool.query('DELETE FROM smart_lock_assignments WHERE lock_id = $1 AND user_id = $2', [lockId, userId]);
+      await pool.query('DELETE FROM smart_lock_assignments WHERE lock_id = $1 AND user_id = ANY($2::text[])', [lockId, await getAgencyUserIds(req, userId)]);
       res.json({ success: true });
     } catch (e) {
       res.status(500).json({ error: 'Erreur désassociation' });
@@ -380,8 +381,8 @@ module.exports = function createSmartLocksRoutes(pool) {
          FROM smart_lock_assignments sla
          JOIN smart_locks sl ON sl.id = sla.lock_id
          JOIN smart_lock_connections slc ON slc.id = sl.connection_id AND slc.is_active = TRUE
-         WHERE sla.property_id = $1 AND sla.user_id = $2`,
-        [propertyId, userId]
+         WHERE sla.property_id = $1 AND sla.user_id = ANY($2::text[])`,
+        [propertyId, await getAgencyUserIds(req, userId)]
       );
 
       if (!lockResult.rows[0]) {
@@ -423,7 +424,7 @@ module.exports = function createSmartLocksRoutes(pool) {
           (user_id, lock_id, property_id, reservation_uid, brand, external_code_id, code, code_type, guest_name, valid_from, valid_until, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'temporary', $8, $9, $10, 'active')
          RETURNING id`,
-        [userId, lock.id, propertyId, reservationUid || null, lock.brand,
+        [lock.user_id, lock.id, propertyId, reservationUid || null, lock.brand,
          result.externalCodeId, result.code, guestName || null,
          result.validFrom, result.validUntil]
       );
@@ -455,8 +456,8 @@ module.exports = function createSmartLocksRoutes(pool) {
         `SELECT slc.*, sl.device_id, sl.connection_id, sl.brand AS lock_brand
          FROM smart_lock_codes slc
          JOIN smart_locks sl ON sl.id = slc.lock_id
-         WHERE slc.id = $1 AND slc.user_id = $2 AND slc.status = 'active'`,
-        [codeId, userId]
+         WHERE slc.id = $1 AND slc.user_id = ANY($2::text[]) AND slc.status = 'active'`,
+        [codeId, await getAgencyUserIds(req, userId)]
       );
 
       if (!codeRow.rows[0]) return res.status(404).json({ error: 'Code introuvable ou déjà révoqué' });
@@ -523,9 +524,9 @@ module.exports = function createSmartLocksRoutes(pool) {
         `SELECT code, valid_from, valid_until, sl.lock_name, slc.brand
          FROM smart_lock_codes slc
          JOIN smart_locks sl ON sl.id = slc.lock_id
-         WHERE slc.reservation_uid = $1 AND slc.user_id = $2 AND slc.status = 'active'
+         WHERE slc.reservation_uid = $1 AND slc.user_id = ANY($2::text[]) AND slc.status = 'active'
          ORDER BY slc.created_at DESC LIMIT 1`,
-        [req.params.uid, userId]
+        [req.params.uid, await getAgencyUserIds(req, userId)]
       );
 
       if (!result.rows[0]) return res.json({ code: null });
@@ -585,8 +586,8 @@ module.exports = function createSmartLocksRoutes(pool) {
         `SELECT sl.*, slc.id AS connection_id_full
          FROM smart_locks sl
          JOIN smart_lock_connections slc ON slc.id = sl.connection_id
-         WHERE sl.id = $1 AND sl.user_id = $2`,
-        [req.params.id, userId]
+         WHERE sl.id = $1 AND sl.user_id = ANY($2::text[])`,
+        [req.params.id, await getAgencyUserIds(req, userId)]
       );
 
       if (!lock.rows[0]) return res.status(404).json({ error: 'Serrure introuvable' });
@@ -615,7 +616,7 @@ module.exports = function createSmartLocksRoutes(pool) {
   router.post('/lock/:id/unlock', async (req, res) => {
     try {
       const userId = getUserId(req);
-      const lock = await pool.query('SELECT * FROM smart_locks WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+      const lock = await pool.query('SELECT * FROM smart_locks WHERE id = $1 AND user_id = ANY($2::text[])', [req.params.id, await getAgencyUserIds(req, userId)]);
       if (!lock.rows[0]) return res.status(404).json({ error: 'Serrure introuvable' });
 
       const connResult = await pool.query('SELECT * FROM smart_lock_connections WHERE id = $1', [lock.rows[0].connection_id]);
@@ -635,7 +636,7 @@ module.exports = function createSmartLocksRoutes(pool) {
   router.post('/lock/:id/lock', async (req, res) => {
     try {
       const userId = getUserId(req);
-      const lock = await pool.query('SELECT * FROM smart_locks WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+      const lock = await pool.query('SELECT * FROM smart_locks WHERE id = $1 AND user_id = ANY($2::text[])', [req.params.id, await getAgencyUserIds(req, userId)]);
       if (!lock.rows[0]) return res.status(404).json({ error: 'Serrure introuvable' });
 
       const connResult = await pool.query('SELECT * FROM smart_lock_connections WHERE id = $1', [lock.rows[0].connection_id]);
@@ -656,7 +657,7 @@ module.exports = function createSmartLocksRoutes(pool) {
     try {
       const userId = getUserId(req);
       const { code, name, startDate, endDate } = req.body;
-      const lock = await pool.query('SELECT * FROM smart_locks WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+      const lock = await pool.query('SELECT * FROM smart_locks WHERE id = $1 AND user_id = ANY($2::text[])', [req.params.id, await getAgencyUserIds(req, userId)]);
       if (!lock.rows[0]) return res.status(404).json({ error: 'Serrure introuvable' });
 
       const connResult = await pool.query('SELECT * FROM smart_lock_connections WHERE id = $1', [lock.rows[0].connection_id]);
@@ -676,7 +677,7 @@ module.exports = function createSmartLocksRoutes(pool) {
   router.get('/lock/:id/activity', async (req, res) => {
     try {
       const userId = getUserId(req);
-      const lock = await pool.query('SELECT * FROM smart_locks WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+      const lock = await pool.query('SELECT * FROM smart_locks WHERE id = $1 AND user_id = ANY($2::text[])', [req.params.id, await getAgencyUserIds(req, userId)]);
       if (!lock.rows[0]) return res.status(404).json({ error: 'Serrure introuvable' });
 
       const connResult = await pool.query('SELECT * FROM smart_lock_connections WHERE id = $1', [lock.rows[0].connection_id]);

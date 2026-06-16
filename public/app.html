@@ -6343,6 +6343,11 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
     patchArr(window.LCC_RESERVATIONS);
     if (window.__bhCalendarState) patchArr(window.__bhCalendarState.bookings);
     if (window.BH_NOTES) patchArr(window.BH_NOTES);
+    // Mettre à jour la résa actuellement ouverte dans le modal,
+    // sinon une note supprimée réapparaît (le modal lit currentBookingData.notes en premier).
+    if (window.currentBookingData && (window.currentBookingData.uid === uid || window.currentBookingData.id === uid)) {
+      window.currentBookingData.notes = cleanNote;
+    }
     // Recalculer le KPI avec la source mise à jour
     var src = (window.__bhCalendarState && window.__bhCalendarState.bookings)
       ? window.__bhCalendarState.bookings
