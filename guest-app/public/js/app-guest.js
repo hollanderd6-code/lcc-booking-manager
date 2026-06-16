@@ -506,38 +506,179 @@ function navTo(name) {
   if (name === 'home' || name === 'home-list') loadCityChips();
 }
 
-// ── Pill glass glissante de la bottom nav ────────────────────
-function moveNavPill() {
-  const nav  = document.getElementById('bottomNav');
-  const pill = document.getElementById('navPill');
-  if (!nav || !pill) return;
-  // Si la nav est masquée (écran detail/chat), on cache la pill
-  if (nav.style.display === 'none' || getComputedStyle(nav).display === 'none') {
-    pill.style.opacity = '0';
-    return;
+// ══════════════════════════════════════════════════════════════
+// 🧊 LIQUID GLASS — Capsule glissante de la bottom nav
+// Portée depuis BH : capsule draggable au doigt + spring au snap.
+// ══════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+
+  function tabsOf(bar) {
+    return Array.prototype.slice.call(bar.querySelectorAll('.nav-item'))
+      .filter(function (t) { return t.offsetWidth > 0; });
   }
-  const active = nav.querySelector('.nav-item.active');
-  if (!active) { pill.style.opacity = '0'; return; }
+  // Onglet actif = celui marqué .active par navTo (sinon -1)
+  function activeIndex(tabs) {
+    for (var i = 0; i < tabs.length; i++) if (tabs[i].classList.contains('active')) return i;
+    return -1;
+  }
+  // La barre est-elle visible ? (masquée sur detail/chat/lock)
+  function barVisible(bar) {
+    if (!bar) return false;
+    if (bar.style.display === 'none') return false;
+    var cs = window.getComputedStyle(bar);
+    return cs.display !== 'none';
+  }
 
-  const navRect = nav.getBoundingClientRect();
-  const itemRect = active.getBoundingClientRect();
-  // Inset pour que la pill n'englobe pas tout l'item (marges latérales)
-  const inset = 8;
-  const x = itemRect.left - navRect.left + inset;
-  const w = itemRect.width - inset * 2;
+  function setup(bar) {
+    if (bar.__lgReady) return;
+    bar.__lgReady = true;
 
-  pill.style.width = w + 'px';
-  pill.style.transform = `translateX(${x}px)`;
-  pill.style.opacity = '1';
+    var cap = bar.querySelector('#navPill');
+    if (!cap) { cap = document.createElement('span'); cap.id = 'navPill'; bar.insertBefore(cap, bar.firstChild); }
 
-  // Si la nav vient d'être réaffichée, le layout peut ne pas être prêt → retry
-  if (w <= 0) setTimeout(moveNavPill, 50);
+    var dragging = false, moved = false, startX = 0, lastX = 0, lastT = 0, vx = 0;
+    var startIdx = -1, hoverIdx = -1, suppressClick = false, mc = [], rafId = 0, pendX = 0, curIdx = -1;
+
+    function snapshot() {
+      mc = tabsOf(bar).map(function (t) {
+        return { el: t, left: t.offsetLeft, width: t.offsetWidth, center: t.offsetLeft + t.offsetWidth / 2 };
+      });
+    }
+    function markActive(idx) {
+      var ts = tabsOf(bar);
+      for (var i = 0; i < ts.length; i++) ts[i].classList.toggle('lg-active', i === idx);
+    }
+    function paintHover(idx) {
+      for (var i = 0; i < mc.length; i++) mc[i].el.classList.toggle('lg-hover', i === idx && i !== curIdx);
+    }
+    function clearHover() {
+      for (var i = 0; i < mc.length; i++) mc[i].el.classList.remove('lg-hover');
+    }
+
+    function settle(idx, animate) {
+      snapshot(); curIdx = idx; markActive(idx);
+      if (!barVisible(bar) || idx < 0 || idx >= mc.length) { cap.classList.remove('lg-visible'); return; }
+      var m = mc[idx];
+      // Léger inset pour que la capsule n'occupe pas toute la largeur de l'item
+      var inset = 6;
+      cap.classList.remove('lg-dragging');
+      cap.classList.toggle('lg-animate', !!animate);
+      cap.style.width = (m.width - inset * 2) + 'px';
+      cap.style.transform = 'translateX(' + (m.left + inset) + 'px) scaleX(1) translateZ(0)';
+      cap.classList.add('lg-visible');
+    }
+
+    function sync(animate) {
+      settle(activeIndex(tabsOf(bar)), animate);
+    }
+    bar.__lgSync = sync;
+
+    function applyFollow() {
+      rafId = 0; if (!mc.length) return;
+      var x = Math.max(mc[0].center, Math.min(mc[mc.length - 1].center, pendX));
+      var inset = 6;
+      var w = (mc[startIdx] ? mc[startIdx].width : mc[0].width) - inset * 2;
+      var st = Math.min(0.10, Math.abs(vx) * 0.008);
+      cap.style.width = w + 'px';
+      cap.style.transform = 'translateX(' + (x - w / 2 - inset) + 'px) scaleX(' + (1 + st) + ') translateZ(0)';
+      var best = 0, bd = Infinity;
+      for (var i = 0; i < mc.length; i++) { var dd = Math.abs(mc[i].center - x); if (dd < bd) { bd = dd; best = i; } }
+      if (best !== hoverIdx) {
+        hoverIdx = best; paintHover(best);
+        if (navigator.vibrate) { try { navigator.vibrate(3); } catch (e) {} }
+      }
+    }
+    function follow(px) { pendX = px; if (!rafId) rafId = requestAnimationFrame(applyFollow); }
+
+    function onDown(e) {
+      if (!barVisible(bar)) return;
+      var p = (e.touches ? e.touches[0] : e); snapshot(); if (!mc.length) return;
+      dragging = true; moved = false; startX = lastX = p.clientX; lastT = e.timeStamp || Date.now(); vx = 0; hoverIdx = curIdx;
+      startIdx = 0;
+      for (var i = 0; i < mc.length; i++) {
+        if (p.clientX >= mc[i].left && p.clientX <= mc[i].left + mc[i].width) { startIdx = i; break; }
+      }
+      cap.classList.remove('lg-animate');
+      if (bar.setPointerCapture && e.pointerId != null) { try { bar.setPointerCapture(e.pointerId); } catch (er) {} }
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      var p = (e.touches ? e.touches[0] : e);
+      var dx = p.clientX - lastX, dt = (e.timeStamp || Date.now()) - lastT;
+      if (dt > 0) vx = dx / dt * 16; lastX = p.clientX; lastT = e.timeStamp || Date.now();
+      if (!moved && Math.abs(p.clientX - startX) > 6) { moved = true; cap.classList.add('lg-dragging'); }
+      if (moved) { if (e.cancelable) e.preventDefault(); follow(p.clientX); }
+    }
+    function onUp() {
+      if (!dragging) return; dragging = false;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } clearHover();
+      if (!moved) { return; }
+      var target = hoverIdx >= 0 ? hoverIdx : startIdx;
+      settle(target, true);
+      if (target !== startIdx && mc[target]) {
+        suppressClick = true; setTimeout(function () { suppressClick = false; }, 450);
+        var el = mc[target].el;
+        // Déclencher la navigation associée à l'onglet cible
+        setTimeout(function () {
+          var ev;
+          try { ev = new MouseEvent('click', { bubbles: true, cancelable: true }); }
+          catch (er) { ev = document.createEvent('MouseEvents'); ev.initEvent('click', true, true); }
+          ev.__lgProg = true; el.dispatchEvent(ev);
+        }, 120);
+      }
+      moved = false;
+    }
+
+    function swallowClick(e) {
+      if (e.__lgProg) return;
+      if (suppressClick) { e.preventDefault(); e.stopPropagation(); }
+    }
+
+    if (window.PointerEvent) {
+      bar.addEventListener('pointerdown', onDown, { passive: true });
+      bar.addEventListener('pointermove', onMove, { passive: false });
+      bar.addEventListener('pointerup', onUp, { passive: true });
+      bar.addEventListener('pointercancel', function () { dragging = false; if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } clearHover(); sync(true); }, { passive: true });
+    } else {
+      bar.addEventListener('touchstart', onDown, { passive: true });
+      bar.addEventListener('touchmove', onMove, { passive: false });
+      bar.addEventListener('touchend', onUp, { passive: true });
+    }
+    bar.addEventListener('click', swallowClick, true);
+
+    sync(false);
+    requestAnimationFrame(function () { bar.offsetHeight; cap.classList.add('lg-animate'); });
+
+    // Resync quand la classe .active d'un onglet change (navigation interne)
+    tabsOf(bar).forEach(function (t) {
+      new MutationObserver(function () { if (!dragging) sync(true); })
+        .observe(t, { attributes: true, attributeFilter: ['class'] });
+    });
+  }
+
+  function boot() {
+    var tries = 0;
+    var poll = setInterval(function () {
+      tries++;
+      var bar = document.getElementById('bottomNav');
+      if (bar && tabsOf(bar).length) { clearInterval(poll); setup(bar); }
+      if (tries > 60) clearInterval(poll);
+    }, 80);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+
+  window.addEventListener('resize', function () { var b = document.getElementById('bottomNav'); if (b && b.__lgSync) b.__lgSync(false); });
+  window.addEventListener('orientationchange', function () { setTimeout(function () { var b = document.getElementById('bottomNav'); if (b && b.__lgSync) b.__lgSync(false); }, 200); });
+})();
+
+// Repositionner la capsule (appelé par navTo). Délègue au moteur ci-dessus.
+function moveNavPill() {
+  var bar = document.getElementById('bottomNav');
+  if (bar && bar.__lgSync) bar.__lgSync(true);
 }
-
-// Repositionner au chargement et au resize / rotation
-window.addEventListener('load',   () => setTimeout(moveNavPill, 60));
-window.addEventListener('resize', () => moveNavPill());
-window.addEventListener('orientationchange', () => setTimeout(moveNavPill, 200));
 
 // ══════════════════════════════════════════════════
 // MESSAGERIE GUEST — Socket.IO + conversations
