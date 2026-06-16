@@ -16158,7 +16158,8 @@ app.patch('/api/properties/:propertyId', authenticateAny, async (req, res) => {
     const { ownerId } = req.body;
 
     // Vérifier que le logement appartient à cet user
-    const check = await pool.query('SELECT id FROM properties WHERE id = $1 AND user_id = $2', [propertyId, user.id]);
+    const agencyIds = await getAgencyUserIds(req, user.id);
+    const check = await pool.query('SELECT id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])', [propertyId, agencyIds]);
     if (!check.rows.length) return res.status(404).json({ error: 'Logement non trouvé' });
 
     await pool.query(
@@ -16248,7 +16249,8 @@ app.put('/api/properties/:propertyId',
 
     const externalPricing = body.externalPricing;
     
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && agencyIds.includes(p.userId));
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
@@ -16647,8 +16649,9 @@ app.delete('/api/properties/:propertyId',
       }
     }
     
-    // ✅ FIX : Utiliser userId au lieu de user.id
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    // ✅ FIX : userId + comptes délégués (mode agence)
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && agencyIds.includes(p.userId));
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
@@ -25386,6 +25389,7 @@ app.post('/api/message-templates', authenticateToken, async (req, res) => {
 app.put('/api/message-templates/:id', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const { title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, active, property_id, property_ids } = req.body;
     const result = await pool.query(
       `UPDATE message_templates SET
@@ -25399,8 +25403,8 @@ app.put('/api/message-templates/:id', authenticateToken, async (req, res) => {
         trigger_offset_days = COALESCE($9, trigger_offset_days),
         send_condition = COALESCE($10, send_condition),
         updated_at = NOW()
-       WHERE id = $7 AND user_id = $8 RETURNING *`,
-      [title, message, trigger_type, trigger_offset_hours, active, property_id || null, req.params.id, userId,
+       WHERE id = $7 AND user_id = ANY($8::text[]) RETURNING *`,
+      [title, message, trigger_type, trigger_offset_hours, active, property_id || null, req.params.id, agencyIds,
        trigger_offset_days !== undefined ? trigger_offset_days : null,
        send_condition || null,
        JSON.stringify(Array.isArray(property_ids) && property_ids.length > 0 ? property_ids : [])]
@@ -25415,7 +25419,8 @@ app.put('/api/message-templates/:id', authenticateToken, async (req, res) => {
 // DELETE — supprimer un template
 app.delete('/api/message-templates/:id', authenticateToken, async (req, res) => {
   try {
-    await pool.query('DELETE FROM message_templates WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    const agencyIds = await getAgencyUserIds(req, req.user.id);
+    await pool.query('DELETE FROM message_templates WHERE id = $1 AND user_id = ANY($2::text[])', [req.params.id, agencyIds]);
     res.json({ success: true });
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -25426,13 +25431,14 @@ app.delete('/api/message-templates/:id', authenticateToken, async (req, res) => 
 app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const { conversation_id } = req.body;
     if (!conversation_id) return res.status(400).json({ error: 'conversation_id requis' });
 
-    const tmpl = await pool.query('SELECT * FROM message_templates WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+    const tmpl = await pool.query('SELECT * FROM message_templates WHERE id = $1 AND user_id = ANY($2::text[])', [req.params.id, agencyIds]);
     if (!tmpl.rows[0]) return res.status(404).json({ error: 'Template non trouvé' });
 
-    const conv = await pool.query('SELECT * FROM conversations WHERE id = $1 AND user_id = $2', [conversation_id, userId]);
+    const conv = await pool.query('SELECT * FROM conversations WHERE id = $1 AND user_id = ANY($2::text[])', [conversation_id, agencyIds]);
     if (!conv.rows[0]) return res.status(404).json({ error: 'Conversation non trouvée' });
 
     const { sendBookingMessage } = require('./channex');
