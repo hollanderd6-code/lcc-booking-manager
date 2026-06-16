@@ -539,6 +539,7 @@ function navTo(name) {
 
     var dragging = false, moved = false, startX = 0, lastX = 0, lastT = 0, vx = 0;
     var startIdx = -1, hoverIdx = -1, suppressClick = false, mc = [], rafId = 0, pendX = 0, curIdx = -1;
+    var navTargetIdx = -1; // onglet cible verrouillé pendant la navigation (évite l'aller-retour)
 
     function snapshot() {
       mc = tabsOf(bar).map(function (t) {
@@ -570,7 +571,17 @@ function navTo(name) {
     }
 
     function sync(animate) {
-      settle(activeIndex(tabsOf(bar)), animate);
+      var ts = tabsOf(bar);
+      // Pendant une navigation : on garde la capsule sur l'onglet cible.
+      // La classe .active est encore sur l'ancien onglet (le clic de nav
+      // n'a pas encore eu lieu) → sans ce verrou, la capsule rebondirait.
+      if (navTargetIdx >= 0 && navTargetIdx < ts.length) {
+        var act = activeIndex(ts);
+        // Une fois que .active a rejoint la cible, on libère le verrou.
+        if (act === navTargetIdx) navTargetIdx = -1;
+        else { settle(navTargetIdx, animate); return; }
+      }
+      settle(activeIndex(ts), animate);
     }
     bar.__lgSync = sync;
 
@@ -615,6 +626,10 @@ function navTo(name) {
       if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } clearHover();
       if (!moved) { return; }
       var target = hoverIdx >= 0 ? hoverIdx : startIdx;
+      // Verrouiller la cible AVANT settle : le markActive() de settle déclenche
+      // le MutationObserver → sync ; sans ce verrou il repartirait sur l'ancien
+      // onglet (dont .active n'a pas encore bougé) d'où l'aller-retour.
+      if (target !== startIdx) navTargetIdx = target;
       settle(target, true);
       if (target !== startIdx && mc[target]) {
         suppressClick = true; setTimeout(function () { suppressClick = false; }, 450);
