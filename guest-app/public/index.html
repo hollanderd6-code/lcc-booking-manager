@@ -231,13 +231,24 @@ body {
 /* ═══════════════════════════════════════
    ÉCRAN HOME — LANDING
    ═══════════════════════════════════════ */
-#screen-home { background: var(--bg); }
+#screen-home {
+  background:
+    radial-gradient(900px 480px at -5% -8%, rgba(124,58,237,.12), transparent 55%),
+    radial-gradient(760px 420px at 108% 4%, rgba(167,139,250,.14), transparent 52%),
+    radial-gradient(680px 600px at 50% 118%, rgba(196,181,253,.10), transparent 55%),
+    var(--bg);
+}
 
 .home-hero {
-  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a855f7 100%);
-  padding: max(env(safe-area-inset-top),24px) 20px 32px;
+  background:
+    radial-gradient(420px 220px at 85% -10%, rgba(255,255,255,.22), transparent 60%),
+    linear-gradient(135deg, #4c1d95 0%, #7c3aed 52%, #a855f7 100%);
+  padding: max(env(safe-area-inset-top),24px) 20px 38px;
   position: relative;
   overflow: hidden;
+  border-bottom-left-radius: 28px;
+  border-bottom-right-radius: 28px;
+  box-shadow: 0 18px 40px -16px rgba(124,58,237,.5);
 }
 .home-hero::before {
   content: '';
@@ -247,10 +258,15 @@ body {
 }
 .home-hero-logo {
   display: flex; align-items: center; gap: 10px; margin-bottom: 24px;
+  position: relative;
 }
 .home-hero-logo-icon {
-  width: 40px; height: 40px; border-radius: 10px;
-  background: rgba(255,255,255,.2); display: flex; align-items: center;
+  width: 40px; height: 40px; border-radius: 12px;
+  background: rgba(255,255,255,.18);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,.25);
+  display: flex; align-items: center;
   justify-content: center; color: white; font-size: 18px; font-weight: 800;
   font-family: 'Instrument Serif', serif;
 }
@@ -263,15 +279,23 @@ body {
   font-size: 28px; font-weight: 400;
   color: white; line-height: 1.25;
   margin-bottom: 10px;
+  position: relative;
 }
 .home-hero h1 em { font-style: italic; color: #e9d5ff; }
-.home-hero p { color: rgba(255,255,255,.8); font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+.home-hero p { color: rgba(255,255,255,.8); font-size: 14px; line-height: 1.5; margin-bottom: 20px; position: relative; }
 
-/* Search bar */
+/* Search bar — glass */
 .home-search {
-  background: white; border-radius: var(--radius);
+  position: relative;
+  background: rgba(255,255,255,.92);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.5);
+  border-radius: 16px;
   padding: 4px; display: flex; align-items: center;
-  gap: 8px; box-shadow: 0 4px 20px rgba(0,0,0,.15);
+  gap: 8px;
+  box-shadow: 0 8px 28px rgba(76,29,149,.28),
+              inset 0 1px 0 rgba(255,255,255,.6);
 }
 .home-search input {
   flex: 1; border: none; outline: none;
@@ -281,22 +305,28 @@ body {
 }
 .home-search input::placeholder { color: var(--text2); }
 .home-search-btn {
-  background: var(--primary); color: white;
-  border: none; border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 12px;
   width: 44px; height: 44px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; font-size: 16px; flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(124,58,237,.35), inset 0 1px 0 rgba(255,255,255,.3);
+  transition: transform .15s ease;
 }
+.home-search-btn:active { transform: scale(.92); }
 
 /* Trust badges */
 .home-trust {
   display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;
+  position: relative;
 }
 .home-trust-badge {
   display: flex; align-items: center; gap: 5px;
   font-size: 11px; color: rgba(255,255,255,.85); font-weight: 500;
 }
-.home-trust-badge i { font-size: 12px; color: #a78bfa; }
+.home-trust-badge i { font-size: 12px; color: #d8b4fe; }
 
 /* Sections */
 .home-section { padding: 20px 16px 0; }
@@ -699,7 +729,12 @@ body {
 }
 
 /* Détail logement */
-#screen-detail { background: var(--bg); }
+#screen-detail {
+  background:
+    radial-gradient(700px 360px at -5% 30%, rgba(124,58,237,.08), transparent 55%),
+    radial-gradient(620px 420px at 108% 70%, rgba(167,139,250,.10), transparent 52%),
+    var(--bg);
+}
 
 /* ─── DETAIL LOGEMENT ─── */
 .detail-photos { width: 100%; height: 260px; overflow: hidden; }
@@ -746,7 +781,11 @@ body {
 /* Booking bar */
 #bookingBar {
   position: fixed; bottom: 0; left: 0; right: 0;
-  background: white; border-top: 1px solid var(--border);
+  background: rgba(255,255,255,.72);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  border-top: 1px solid rgba(124,58,237,.10);
+  box-shadow: 0 -1px 0 rgba(255,255,255,.6) inset, 0 -8px 28px rgba(124,58,237,.08);
   padding: 12px 16px max(env(safe-area-inset-bottom),12px);
   display: none; align-items: center; gap: 12px;
   z-index: 200;
@@ -757,9 +796,12 @@ body.screen-detail #bottomNav { display: none !important; }
 .booking-bar-night { font-size: 12px; color: var(--text2); }
 .booking-bar-btn {
   flex: 1; padding: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white; border: none; border-radius: 12px;
+  color: white; border: 1px solid rgba(255,255,255,.2); border-radius: 14px;
   font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(124,58,237,.32), inset 0 1px 0 rgba(255,255,255,.3);
+  transition: transform .15s ease;
 }
+.booking-bar-btn:active { transform: scale(.97); }
 
 /* ─── Checkout / Confirm ─── */
 #screen-checkout, #screen-confirm { background: var(--bg); }
@@ -771,15 +813,30 @@ body.screen-detail #bottomNav { display: none !important; }
 }
 
 /* ─── CALENDRIER ─── */
+#calendarContainer {
+  max-width: 420px; margin: 0 auto;
+  background: rgba(255,255,255,.58);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(124,58,237,.12);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 4px 20px rgba(124,58,237,.08), inset 0 1px 0 rgba(255,255,255,.55);
+  margin-bottom: 16px;
+}
 .calendar-nav {
   display: flex !important; align-items: center; justify-content: space-between;
   margin-bottom: 12px;
 }
 .calendar-nav button {
-  background: var(--bg2, #f1f0f8); border: none; border-radius: 8px;
+  background: rgba(124,58,237,.08);
+  border: 1px solid rgba(124,58,237,.14);
+  border-radius: 10px;
   width: 36px; height: 36px; cursor: pointer; font-size: 16px;
-  color: var(--text); display: flex; align-items: center; justify-content: center;
+  color: var(--primary); display: flex; align-items: center; justify-content: center;
+  transition: transform .15s ease, background .2s ease;
 }
+.calendar-nav button:active { transform: scale(.9); background: rgba(124,58,237,.16); }
 .cal-month { font-size: 15px; font-weight: 700; color: var(--text); }
 .calendar-grid {
   display: grid !important;
@@ -794,7 +851,7 @@ body.screen-detail #bottomNav { display: none !important; }
 .cal-day {
   display: flex !important; align-items: center !important;
   justify-content: center !important;
-  border-radius: 8px; height: 40px;
+  border-radius: 10px; height: 40px;
   font-size: 13px; font-weight: 500; cursor: pointer;
   transition: all .15s; color: var(--text);
   touch-action: manipulation;
@@ -802,20 +859,33 @@ body.screen-detail #bottomNav { display: none !important; }
   user-select: none;
   position: relative; z-index: 1;
 }
-/* Limiter la largeur max du calendrier */
-#calendarContainer { max-width: 420px; margin: 0 auto; }
 .cal-day.empty { cursor: default; pointer-events: none; }
 .cal-day.disabled { color: #d1d5db !important; cursor: not-allowed; text-decoration: line-through; }
 .cal-day:not(.disabled):not(.empty):hover { background: var(--primary-light, #ede9fe); color: var(--primary); }
 .cal-day.today { font-weight: 700; color: var(--primary); }
-.cal-day.selected, .cal-day.range-start, .cal-day.range-end { background: var(--primary) !important; color: white !important; }
-.cal-day.range-start { border-radius: 8px 0 0 8px; }
-.cal-day.range-end { border-radius: 0 8px 8px 0; }
+.cal-day.selected, .cal-day.range-start, .cal-day.range-end {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+  color: white !important;
+  box-shadow: 0 3px 10px rgba(124,58,237,.35);
+}
+.cal-day.range-start { border-radius: 10px 0 0 10px; }
+.cal-day.range-end { border-radius: 0 10px 10px 0; }
 .cal-day.in-range { background: var(--primary-light, #ede9fe) !important; color: var(--primary) !important; border-radius: 0; }
 
 /* ─── DETAIL LOGEMENT ─── */
-.detail-photos { width: 100%; height: 260px; overflow: hidden; }
+.detail-photos {
+  width: 100%; height: 260px; overflow: hidden;
+  position: relative;
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
+}
 .detail-photos img { width: 100%; height: 260px; object-fit: cover; }
+.detail-photos::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0; height: 70px;
+  background: linear-gradient(to top, var(--bg), transparent);
+  pointer-events: none;
+}
 .no-photo {
   width: 100%; height: 260px;
   background: linear-gradient(135deg, #c4b5fd, #7c3aed);
@@ -824,11 +894,17 @@ body.screen-detail #bottomNav { display: none !important; }
 }
 .detail-feats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .detail-feat {
-  background: var(--bg2, #f1f0f8); border-radius: 999px;
-  padding: 6px 12px; font-size: 12px; color: var(--text2);
-  display: flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,.6);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid rgba(124,58,237,.12);
+  border-radius: 14px;
+  padding: 8px 13px; font-size: 12px; color: var(--text2);
+  display: flex; align-items: center; gap: 6px;
+  box-shadow: 0 2px 10px rgba(124,58,237,.06), inset 0 1px 0 rgba(255,255,255,.5);
 }
 .detail-feat i { color: var(--primary); }
+.detail-feat strong { color: var(--text); }
 .detail-location { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 5px; margin-bottom: 12px; }
 .section-title { font-size: 15px; font-weight: 700; color: var(--text); margin: 20px 0 12px; }
 
