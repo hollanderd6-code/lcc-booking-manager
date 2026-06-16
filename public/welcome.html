@@ -1712,7 +1712,7 @@ async function loadLivretsList() {
       initLivretsViewToggle();
       displayLivretsList(data.welcomeBooks);
     } else {
-      document.getElementById('livretsList').innerHTML = (window.bhEmptyState ? window.bhEmptyState('note','Aucun livret','Créez votre premier livret d\'accueil.') : '<p style="color: #64748b; text-align: center;">Aucun livret pour le moment.</p>');
+      document.getElementById('livretsList').innerHTML = '<p style="color: #64748b; text-align: center;">Aucun livret pour le moment.</p>';
     }
   } catch (error) {
     console.error('Erreur chargement livrets:', error);
@@ -1872,50 +1872,29 @@ async function duplicateLivret(uniqueId, originalName) {
   }
 }
 
-function deleteLivret(uniqueId) {
-  // Modale custom de confirmation (évite le confirm() bloqué sur mobile/WebView)
-  const existing = document.getElementById('_deleteModal');
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.id = '_deleteModal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(13,17,23,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
-  modal.innerHTML = `
-    <div style="background:white;border-radius:20px;padding:32px 28px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.18);">
-      <div style="width:56px;height:56px;border-radius:50%;background:#FEF2F2;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:22px;">🗑️</div>
-      <h3 style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700;color:#0D1117;margin:0 0 8px;">Supprimer ce livret ?</h3>
-      <p style="font-size:13px;color:#7A8695;margin:0 0 24px;">Cette action est irréversible. Le livret et son lien seront définitivement supprimés.</p>
-      <div style="display:flex;gap:10px;">
-        <button id="_deleteCancelBtn" style="flex:1;height:42px;border-radius:12px;border:1.5px solid rgba(13,17,23,.15);background:white;color:#374151;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Annuler</button>
-        <button id="_deleteConfirmBtn" style="flex:1;height:42px;border-radius:12px;border:none;background:#DC2626;color:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Supprimer</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  document.getElementById('_deleteCancelBtn').onclick = () => modal.remove();
-  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-
-  document.getElementById('_deleteConfirmBtn').onclick = async () => {
-    modal.remove();
-    try {
-      const response = await fetch(`${API_BASE}/api/welcome-books/by-unique/${uniqueId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('lcc_token')}` }
-      });
-      const raw = await response.text();
-      let data = null;
-      try { data = raw ? JSON.parse(raw) : null; } catch (e) { data = null; }
-      if (data && data.success) {
-        loadLivretsList();
-      } else {
-        alert('Erreur lors de la suppression');
-      }
-    } catch (error) {
-      console.error('Erreur suppression:', error);
-      alert('Erreur lors de la suppression');
+async function deleteLivret(uniqueId) {
+  const ok = window.bhConfirm
+    ? await window.bhConfirm('Supprimer ce livret ?', 'Cette action est irréversible. Le livret et son lien seront définitivement supprimés.', 'Supprimer', 'Annuler', 'danger')
+    : confirm('Supprimer ce livret ?');
+  if (!ok) return;
+  try {
+    const response = await fetch(`${API_BASE}/api/welcome-books/by-unique/${uniqueId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('lcc_token')}` }
+    });
+    const raw = await response.text();
+    let data = null;
+    try { data = raw ? JSON.parse(raw) : null; } catch (e) { data = null; }
+    if (data && data.success) {
+      loadLivretsList();
+      if (window.showToast) window.showToast('Livret supprimé', 'success');
+    } else {
+      if (window.showToast) window.showToast('Erreur lors de la suppression', 'error'); else alert('Erreur lors de la suppression');
     }
-  };
+  } catch (error) {
+    console.error('Erreur suppression:', error);
+    if (window.showToast) window.showToast('Erreur lors de la suppression', 'error'); else alert('Erreur lors de la suppression');
+  }
 }
 function downloadQRCode(uniqueId) {
   try {
@@ -2330,7 +2309,7 @@ function displayLivretsList(livrets) {
 
   if (!livrets || !livrets.length) {
     grid.classList.remove('list-view');
-    grid.innerHTML = (window.bhEmptyState ? window.bhEmptyState('note','Aucun livret','Créez votre premier livret d\'accueil.') : '<p style="color:#7A8695;grid-column:1/-1;text-align:center;padding:24px">Aucun livret pour le moment.</p>');
+    grid.innerHTML = '<p style="color:#7A8695;grid-column:1/-1;text-align:center;padding:24px">Aucun livret pour le moment.</p>';
     appendAddCard(grid);
     return;
   }

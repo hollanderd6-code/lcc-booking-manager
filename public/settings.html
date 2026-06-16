@@ -2546,11 +2546,14 @@ function insertVariable(textareaId, variable, event) {
   };
 
   // Modal upgrade Solo
-  window.showPlanLimitModal = function(plan) {
+  window.showPlanLimitModal = async function(plan) {
     const msg = plan === 'solo'
-      ? 'Le plan Solo est limité à 1 logement.\n\nPour gérer plusieurs logements, passez au plan Standard (29€/mois, 3 logements inclus) ou Pro (49€/mois, 6 logements inclus).'
+      ? 'Le plan Solo est limité à 1 logement. Pour gérer plusieurs logements, passez au plan Standard (29€/mois, 3 logements) ou Pro (49€/mois, 6 logements).'
       : 'Vous avez atteint la limite de votre plan.';
-    if (confirm(msg + '\n\nVoulez-vous voir les plans disponibles ?')) {
+    const ok = window.bhConfirm
+      ? await window.bhConfirm('Limite de logements atteinte', msg, 'Voir les plans', 'Plus tard', 'default')
+      : confirm(msg + '\n\nVoulez-vous voir les plans disponibles ?');
+    if (ok) {
       window.location.href = '/pricing.html';
     }
   };

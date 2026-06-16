@@ -2633,7 +2633,7 @@ async function loadInvoices() {
 
     if (invs.length === 0) {
       console.log('⚠️ Aucune facture trouvée');
-      container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('invoice','Aucune facture','Vos factures de séjour apparaîtront ici.') : '<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Aucune facture.</div>');
+      container.innerHTML = '<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Aucune facture.</div>';
       document.getElementById('statsRevenue').textContent = '0,00 €';
       document.getElementById('statsPending').textContent = '0,00 €';
       return;
@@ -2656,7 +2656,7 @@ function renderFpGrid(invs) {
   if (!container) return;
 
   if (!invs || invs.length === 0) {
-    container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('invoice','Aucune facture','Aucune facture sur cette période.') : '<div style="padding:40px;text-align:center;grid-column:1/-1;color:#6b7280;">Aucune facture sur cette période.</div>');
+    container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;color:#6b7280;">Aucune facture sur cette période.</div>';
     return;
   }
 
@@ -2868,31 +2868,21 @@ document.addEventListener('click', function(e) {
 
 // ── Modale de confirmation custom (remplace confirm() natif) ──
 function showConfirm(message, onOk, title) {
-  const modal = document.getElementById('confirmModal');
-  const msgEl = document.getElementById('confirmModalMessage');
-  const titleEl = document.getElementById('confirmModalTitle');
-  const okBtn = document.getElementById('confirmModalOk');
-  const cancelBtn = document.getElementById('confirmModalCancel');
-  if (!modal) { if (confirm(message)) onOk(); return; }
-  titleEl.textContent = title || 'Confirmer';
-  msgEl.textContent = message;
-  modal.style.display = 'flex';
-  // Couleur du bouton OK selon le contexte (danger si "Supprimer")
-  const isDanger = message.toLowerCase().includes('supprimer') || message.toLowerCase().includes('irréversible');
-  okBtn.style.background = isDanger ? '#dc2626' : '#1A7A5E';
-  okBtn.textContent = isDanger ? 'Supprimer' : 'Confirmer';
-  // Nettoyer les anciens listeners
-  const newOk = okBtn.cloneNode(true);
-  const newCancel = cancelBtn.cloneNode(true);
-  okBtn.parentNode.replaceChild(newOk, okBtn);
-  cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
-  document.getElementById('confirmModalOk').addEventListener('click', function() {
-    modal.style.display = 'none';
-    onOk();
-  });
-  document.getElementById('confirmModalCancel').addEventListener('click', function() {
-    modal.style.display = 'none';
-  });
+  // Unifié vers bhConfirm (modale globale liquid glass). On garde la signature
+  // (message, onOk, title) pour ne casser aucun appel existant.
+  var isDanger = message.toLowerCase().includes('supprimer') || message.toLowerCase().includes('irréversible');
+  if (typeof window.bhConfirm === 'function') {
+    window.bhConfirm(
+      title || (isDanger ? 'Supprimer ?' : 'Confirmer'),
+      message,
+      isDanger ? 'Supprimer' : 'Confirmer',
+      'Annuler',
+      isDanger ? 'danger' : 'default'
+    ).then(function(ok){ if (ok && typeof onOk === 'function') onOk(); });
+    return;
+  }
+  // Fallback ultime (jamais atteint si bh-layout chargé)
+  if (confirm(message) && typeof onOk === 'function') onOk();
 }
 
 // Fermer le menu si on clique ailleurs dans la page
@@ -6183,7 +6173,7 @@ window.fetchInvoiceSummary = async function() {
     window._importResaSummary = data;
 
     if (!data.summary || data.summary.length === 0) {
-      contentEl.innerHTML = (window.bhEmptyState ? window.bhEmptyState('calendar','Aucune réservation','Aucune réservation sur cette période.') : "<div style=\"text-align:center;padding:40px;color:#9ca3af;font-size:13px;\"><i class=\"fas fa-calendar-times\" style=\"font-size:32px;display:block;margin-bottom:10px;opacity:0.3;\"></i>Aucune r\u00e9servation trouv\u00e9e sur cette p\u00e9riode</div>");
+      contentEl.innerHTML = "<div style=\"text-align:center;padding:40px;color:#9ca3af;font-size:13px;\"><i class=\"fas fa-calendar-times\" style=\"font-size:32px;display:block;margin-bottom:10px;opacity:0.3;\"></i>Aucune r\u00e9servation trouv\u00e9e sur cette p\u00e9riode</div>";
       document.getElementById("importResaTotalLabel").textContent = "";
       return;
     }

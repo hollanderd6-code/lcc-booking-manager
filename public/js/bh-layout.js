@@ -1035,6 +1035,9 @@ window.bhConfirm = function(title, message, confirmLabel, cancelLabel, variant) 
     setTimeout(function() { if (okBtn) okBtn.focus(); }, 50);
   });
 };
+// Référence stable du bhConfirm global, pour les pages qui surchargent window.bhConfirm
+// avec une signature différente mais veulent quand même router vers la modale unifiée.
+window.__bhLayoutConfirm = window.bhConfirm;
 
 // window.confirm : on NE patche PAS le confirm natif.
 // Raison : confirm() est synchrone et bloquant ; le remplacer par bhConfirm

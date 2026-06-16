@@ -1436,45 +1436,45 @@ html[data-theme-v3="1"] .invoice-paper {
 console.log('[INIT] Script principal charge');
 let token = localStorage.getItem('lcc_token');
 
-// ── Modal de confirmation (remplace confirm() natif bloqué dans Capacitor) ──
-window.bhConfirm = function(message, title, icon) {
-  return new Promise(function(resolve) {
-    const modal   = document.getElementById('bh-confirm-modal');
-    const titleEl = document.getElementById('bh-confirm-title');
-    const msgEl   = document.getElementById('bh-confirm-message');
-    const iconEl  = document.getElementById('bh-confirm-icon');
-    const okBtn   = document.getElementById('bh-confirm-ok');
-    const cancelBtn = document.getElementById('bh-confirm-cancel');
-
-    if (!modal) { resolve(window.confirm(message)); return; }
-
-    titleEl.textContent  = title  || 'Confirmation';
-    msgEl.textContent    = message || '';
-    iconEl.textContent   = icon   || '⚠️';
-
-    modal.classList.add('active');
-
-    function cleanup(result) {
-      modal.classList.remove('active');
-      okBtn.removeEventListener('click', onOk);
-      cancelBtn.removeEventListener('click', onCancel);
-      resolve(result);
+// ── Confirmation unifiée : on délègue au bhConfirm GLOBAL de bh-layout.js ──
+// La version locale gardait une signature différente (message, title, icon).
+// On conserve cette signature pour ne casser aucun appel de cette page, mais
+// on l'adapte vers le bhConfirm global (title, message, okLabel, cancelLabel, variant).
+(function(){
+  // On garde une référence au bhConfirm de bh-layout s'il existe déjà.
+  var layoutConfirm = window.bhConfirm && window.bhConfirm.__fromLayout ? window.bhConfirm : window.bhConfirm;
+  window.bhConfirm = function(message, title, icon) {
+    // Le vrai bhConfirm global expose la signature (title, message, ok, cancel, variant).
+    // On le détecte via la présence de la modale globale bh-confirm-overlay logic.
+    var g = window.__bhLayoutConfirm || layoutConfirm;
+    var isDanger = (icon === '🗑️') || (String(message).toLowerCase().indexOf('supprim') > -1);
+    if (typeof g === 'function') {
+      return g(title || 'Confirmation', message || '', isDanger ? 'Supprimer' : 'Confirmer', 'Annuler', isDanger ? 'danger' : 'default');
     }
-    function onOk()     { cleanup(true);  }
-    function onCancel() { cleanup(false); }
-
-    okBtn.addEventListener('click', onOk);
-    cancelBtn.addEventListener('click', onCancel);
-  });
-};
-// ── Couleur du bouton confirmer selon le type d'action ──
+    // Fallback : modale HTML locale si présente
+    return new Promise(function(resolve) {
+      var modal = document.getElementById('bh-confirm-modal');
+      if (!modal) { resolve(window.confirm(message)); return; }
+      var titleEl = document.getElementById('bh-confirm-title');
+      var msgEl = document.getElementById('bh-confirm-message');
+      var iconEl = document.getElementById('bh-confirm-icon');
+      var okBtn = document.getElementById('bh-confirm-ok');
+      var cancelBtn = document.getElementById('bh-confirm-cancel');
+      titleEl.textContent = title || 'Confirmation';
+      msgEl.textContent = message || '';
+      iconEl.textContent = icon || '⚠️';
+      modal.classList.add('active');
+      function cleanup(r){ modal.classList.remove('active'); okBtn.removeEventListener('click', onOk); cancelBtn.removeEventListener('click', onCancel); resolve(r); }
+      function onOk(){ cleanup(true); }
+      function onCancel(){ cleanup(false); }
+      okBtn.addEventListener('click', onOk);
+      cancelBtn.addEventListener('click', onCancel);
+    });
+  };
+})();
+// bhConfirmDanger : conserve l'API, route vers la version danger
 window.bhConfirmDanger = function(message, title) {
-  const okBtn = document.getElementById('bh-confirm-ok');
-  if (okBtn) { okBtn.style.background = '#ef4444'; }
-  return window.bhConfirm(message, title || 'Confirmation', '🗑️').then(function(r) {
-    if (okBtn) { okBtn.style.background = '#1A7A5E'; }
-    return r;
-  });
+  return window.bhConfirm(message, title || 'Confirmation', '🗑️');
 };
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
   let clients = [];
@@ -2077,7 +2077,7 @@ async function loadInvoices() {
 
     if (invs.length === 0) {
       console.log('⚠️ Aucune facture trouvée');
-      container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('invoice','Aucune facture','Vos factures propriétaires apparaîtront ici.') : '<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Aucune facture.</div>');
+      container.innerHTML = '<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Aucune facture.</div>';
       document.getElementById('statsRevenue').textContent = '0,00 €';
       document.getElementById('statsPending').textContent = '0,00 €';
       return;
@@ -2100,7 +2100,7 @@ function renderFpGrid(invs) {
   if (!container) return;
 
   if (!invs || invs.length === 0) {
-    container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('invoice','Aucune facture','Aucune facture sur cette période.') : '<div style="padding:40px;text-align:center;grid-column:1/-1;color:#6b7280;">Aucune facture sur cette période.</div>');
+    container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;color:#6b7280;">Aucune facture sur cette période.</div>';
     return;
   }
 
