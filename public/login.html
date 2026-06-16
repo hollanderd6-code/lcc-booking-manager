@@ -158,6 +158,17 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
           <button class="magic-btn" id="magicLinkBtn"><i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email</button>
           <div class="form-notif"><div class="dot"></div>Connexion sécurisée · Chiffrement TLS</div>
           <div class="form-footer-link" id="registerFooter">Pas encore de compte ? <a href="/register.html">Créer un compte gratuit</a></div>
+          <style>
+            .signup-ios-btn{display:none;flex-direction:column;align-items:center;gap:3px;width:100%;margin-top:14px;padding:13px 16px;background:#fff;border:1.5px solid rgba(26,122,94,.35);border-radius:12px;cursor:pointer;transition:background .18s ease,border-color .18s ease;font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;}
+            .signup-ios-btn:hover,.signup-ios-btn:active{background:#F2F9F6;border-color:#1A7A5E;}
+            .signup-ios-btn .sib-top{font-size:12.5px;color:#6B7280;}
+            .signup-ios-btn .sib-main{font-size:15px;font-weight:700;color:#1A7A5E;display:flex;align-items:center;gap:7px;}
+            .signup-ios-btn .sib-main i{font-size:12px;}
+          </style>
+          <button type="button" id="signupIosBtn" class="signup-ios-btn">
+            <span class="sib-top">Vous n'avez pas encore de compte ?</span>
+            <span class="sib-main">Créer un compte sur le site <i class="fas fa-arrow-up-right-from-square"></i></span>
+          </button>
         </div>
       </div>
     </div>
@@ -170,6 +181,16 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   if (IS_IOS) {
     document.getElementById('navRegisterBtn')?.style && (document.getElementById('navRegisterBtn').style.display = 'none');
     document.getElementById('registerFooter')?.style && (document.getElementById('registerFooter').style.display = 'none');
+    const iosBtn = document.getElementById('signupIosBtn');
+    if (iosBtn) {
+      iosBtn.style.display = 'flex';
+      iosBtn.addEventListener('click', function () {
+        const url = 'https://www.boostinghost.fr/register.html';
+        // Capacitor ouvre les URL externes dans le navigateur système (Safari)
+        try { window.open(url, '_system'); }
+        catch (e) { try { window.open(url, '_blank'); } catch (_) { window.location.href = url; } }
+      });
+    }
   }
   const API_BASE=IS_NATIVE?'https://www.boostinghost.fr':'';
   function showToast(msg,type='error'){document.getElementById('bh-toast')?.remove();const c=type==='error'?'#DC2626':'#1A7A5E',ic=type==='error'?'fa-circle-exclamation':'fa-circle-check',t=document.createElement('div');t.id='bh-toast';t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#fff;color:#1C1C1C;border-left:4px solid ${c};border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);font-family:'DM Sans',sans-serif;font-size:14px;z-index:9999;max-width:90vw;width:380px;animation:toastIn .25s ease;`;t.innerHTML=`<i class="fas ${ic}" style="color:${c};font-size:18px;flex-shrink:0;"></i><span style="flex:1;">${msg}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1;padding:0;">×</button>`;if(!document.getElementById('bh-toast-style')){const s=document.createElement('style');s.id='bh-toast-style';s.textContent='@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';document.head.appendChild(s);}document.body.appendChild(t);setTimeout(()=>t?.remove(),5000);}
