@@ -909,42 +909,46 @@ window.showToast = function(message, type = 'success', duration = 4000) {
   if (existing) existing.remove();
 
   const colors = {
-    success: { bg: '#1A7A5E', icon: 'fa-check-circle' },
-    error:   { bg: '#dc2626', icon: 'fa-times-circle'  },
-    info:    { bg: '#2563eb', icon: 'fa-info-circle'   },
-    warning: { bg: '#d97706', icon: 'fa-exclamation-circle' }
+    success: { accent: '#1A7A5E', icon: 'fa-check', pill: 'rgba(26,122,94,.14)' },
+    error:   { accent: '#dc2626', icon: 'fa-xmark', pill: 'rgba(220,38,38,.12)' },
+    info:    { accent: '#2563eb', icon: 'fa-info',  pill: 'rgba(37,99,235,.12)' },
+    warning: { accent: '#d97706', icon: 'fa-exclamation', pill: 'rgba(217,119,6,.14)' }
   };
-  const { bg, icon } = colors[type] || colors.success;
+  const { accent, icon, pill } = colors[type] || colors.success;
+  const isMobile = window.innerWidth <= 768;
 
   const toast = document.createElement('div');
   toast.id = 'bh-toast';
   toast.style.cssText = `
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: ${bg};
-    color: white;
-    padding: 14px 20px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    box-shadow: 0 4px 20px rgba(0,0,0,.2);
+    ${isMobile ? 'top: calc(env(safe-area-inset-top,0px) + 12px); left: 12px; right: 12px;' : 'bottom: 24px; right: 24px; max-width: 360px;'}
+    background: rgba(255,255,255,.82);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,.5);
+    border-left: 3px solid ${accent};
+    color: #0D1117;
+    padding: 13px 16px;
+    border-radius: 14px;
+    font-size: 13.5px;
+    font-weight: 500;
+    font-family: "DM Sans", system-ui, sans-serif;
+    box-shadow: 0 8px 32px rgba(13,17,23,.16);
     z-index: 99999;
     display: flex;
     align-items: center;
-    gap: 10px;
-    max-width: 320px;
-    animation: bhToastIn .25s ease;
+    gap: 11px;
+    animation: bhToastIn .3s cubic-bezier(.22,1.1,.36,1);
   `;
-  toast.innerHTML = `<i class="fas ${icon}" style="font-size:17px;flex-shrink:0;"></i><span>${message}</span>`;
+  toast.innerHTML = `<span style="width:26px;height:26px;border-radius:50%;background:${pill};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas ${icon}" style="font-size:12px;color:${accent};"></i></span><span style="flex:1;line-height:1.35;">${message}</span>`;
 
   // Inject keyframes once
   if (!document.getElementById('bh-toast-style')) {
     const style = document.createElement('style');
     style.id = 'bh-toast-style';
     style.textContent = `
-      @keyframes bhToastIn  { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-      @keyframes bhToastOut { from { opacity:1; transform:translateY(0); } to { opacity:0; transform:translateY(12px); } }
+      @keyframes bhToastIn  { from { opacity:0; transform:translateY(-14px); } to { opacity:1; transform:translateY(0); } }
+      @keyframes bhToastOut { from { opacity:1; transform:translateY(0); } to { opacity:0; transform:translateY(-14px); } }
     `;
     document.head.appendChild(style);
   }
@@ -985,7 +989,7 @@ window.bhConfirm = function(title, message, confirmLabel, cancelLabel, variant) 
         '#bh-confirm-overlay{position:fixed;inset:0;z-index:999999;background:rgba(13,17,23,.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;animation:bhCfIn .15s ease;}',
         '@keyframes bhCfIn{from{opacity:0}to{opacity:1}}',
         '@keyframes bhCfSlide{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}',
-        '#bh-confirm-box{background:white;border-radius:20px;padding:28px 24px 24px;max-width:360px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.18);text-align:center;animation:bhCfSlide .18s cubic-bezier(0.175,0.885,0.32,1.275);}',
+        '#bh-confirm-box{background:rgba(255,255,255,.9);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,.5);border-radius:22px;padding:28px 24px 24px;max-width:360px;width:100%;box-shadow:0 24px 64px rgba(13,17,23,.24);text-align:center;animation:bhCfSlide .18s cubic-bezier(0.175,0.885,0.32,1.275);}',
         '#bh-confirm-title{font-family:"Instrument Serif",Georgia,serif;font-size:20px;font-weight:400;color:#0D1117;margin-bottom:8px;line-height:1.3;}',
         '#bh-confirm-message{font-family:"DM Sans",sans-serif;font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:24px;}',
         '#bh-confirm-actions{display:flex;gap:10px;}',
@@ -1032,14 +1036,13 @@ window.bhConfirm = function(title, message, confirmLabel, cancelLabel, variant) 
   });
 };
 
-// Patch window.confirm : remplace les confirm() natifs par bhConfirm
-// IMPORTANT : les appels existants doivent être migrés vers await bhConfirm()
-// pour que la valeur de retour soit respectée.
-// Ce patch évite l'alerte moche du navigateur en cas d'appel non migré.
-window.confirm = function(msg) {
-  window.bhConfirm(msg || '', '', 'Confirmer', 'Annuler', 'danger');
-  return true;
-};
+// window.confirm : on NE patche PAS le confirm natif.
+// Raison : confirm() est synchrone et bloquant ; le remplacer par bhConfirm
+// (asynchrone) en retournant toujours true ferait exécuter les actions
+// (suppressions, etc.) SANS attendre la réponse de l'utilisateur — dangereux.
+// Pour une jolie modale, utiliser directement « await bhConfirm(...) » dans le code.
+// Les confirm() natifs restants restent fonctionnels (bloquants, sûrs).
+var _bhNativeConfirm = window.confirm;
 
 // ── Agency Switcher Modal (bh-layout.js) ─────────────────────
 (function() {
