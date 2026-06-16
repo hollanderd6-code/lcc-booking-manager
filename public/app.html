@@ -3945,8 +3945,7 @@ window.closeChecklistsKpiModal = function() {
       overflow: hidden;
     }
     .modal.active .modal-body,
-    .modal[style*="flex"] .modal-body {
-      overscroll-behavior: contain;
+.modal[style*="flex"]:not(#newReservationModal) .modal-body {      overscroll-behavior: contain;
     }
 
     .modal-dialog {
