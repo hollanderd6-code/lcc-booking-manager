@@ -1442,13 +1442,6 @@ html[data-theme-v3="1"] .invoice-paper {
 <input accept="image/*" class="form-control" id="logoInput" onchange="updateLogoPreview()" style="flex:1;" type="file"/>
 </div>
 </div>
-<div class="form-group">
-<label>Adresse affichée sur la facture</label>
-<textarea class="form-control" id="senderAddressInput" oninput="updatePreview()" placeholder="Votre adresse..." rows="2"></textarea>
-<div style="font-size:11px; color:#6b7280; margin-top:4px;">
-                  Elle est pré-remplie automatiquement avec les champs ci-dessus, mais vous pouvez la modifier pour une facture précise.
-                </div>
-</div>
 </div>
 <div class="editor-section">
 <div class="editor-section-title">Prestations</div>
@@ -3031,7 +3024,16 @@ window.deleteOwnerInvoice = function (id) {
     if (ep.address) addrParts.push(ep.address);
     if (ep.postalCode || ep.city) addrParts.push(((ep.postalCode||'') + ' ' + (ep.city||'')).trim());
     if (ep.siret) addrParts.push('SIRET : ' + ep.siret);
-    if (up.email) addrParts.push(up.email);
+    if (ep.phone) addrParts.push(ep.phone);
+    const _epEmail = ep.email || up.email;
+    if (_epEmail) addrParts.push(_epEmail);
+    if (ep.website) addrParts.push(ep.website);
+    if (ep.customFields && ep.customFields.length) {
+      ep.customFields.forEach(function(cf) {
+        if (cf.label && cf.value) addrParts.push(cf.label + ' : ' + cf.value);
+        else if (cf.value) addrParts.push(cf.value);
+      });
+    }
     const senderAddress = addrParts.join('<br>');
     const issDate = inv.issue_date ? formatDate(inv.issue_date) : new Date().toLocaleDateString('fr-FR');
     const dueDate = inv.due_date ? formatDate(inv.due_date) : '';
@@ -3595,15 +3597,15 @@ window.duplicatePrestation = function(id) {
       const saved = JSON.parse(localStorage.getItem('lcc_owner_emitter_profile') || '{}');
       emitterProfile = { ...emitterProfile, ...saved };
 
-      // 2. Enrichir avec les champs des Paramètres (phone, email, website, customFields)
-      //    Ces champs ont priorité car ils viennent de la source de vérité "Paramètres"
+      // 2. Compléter avec les champs des Paramètres SEULEMENT s'ils ne sont pas déjà
+      //    renseignés/édités ici → une modif faite dans l'éditeur de facture persiste.
       const settingsRaw = localStorage.getItem('lcc_settings_profile');
       if (settingsRaw) {
         const sp = JSON.parse(settingsRaw);
-        if (sp.phone)        emitterProfile.phone        = sp.phone;
-        if (sp.invoiceEmail) emitterProfile.email        = sp.invoiceEmail;
-        if (sp.website)      emitterProfile.website      = sp.website;
-        if (sp.customFields && sp.customFields.length) emitterProfile.customFields = sp.customFields;
+        if (!emitterProfile.phone   && sp.phone)        emitterProfile.phone   = sp.phone;
+        if (!emitterProfile.email   && sp.invoiceEmail) emitterProfile.email   = sp.invoiceEmail;
+        if (!emitterProfile.website && sp.website)      emitterProfile.website = sp.website;
+        if ((!emitterProfile.customFields || !emitterProfile.customFields.length) && sp.customFields && sp.customFields.length) emitterProfile.customFields = sp.customFields;
         // Aussi récupérer adresse/ville/cp/siret des paramètres si pas encore renseignés
         if (!emitterProfile.company  && sp.company)    emitterProfile.company    = sp.company;
         if (!emitterProfile.address  && sp.address)    emitterProfile.address    = sp.address;
