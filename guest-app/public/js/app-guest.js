@@ -474,12 +474,46 @@ function navTo(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const navId = name === 'login' ? 'account' : name === 'chat' ? 'messages' : name === 'home-list' ? 'home' : name;
   document.getElementById('nav-' + navId)?.classList.add('active');
+  moveNavPill();
 
   // Charger les conversations quand on arrive sur l'onglet messages
   if (name === 'messages') loadGuestConversations();
   // Charger les city chips sur home et home-list
   if (name === 'home' || name === 'home-list') loadCityChips();
 }
+
+// ── Pill glass glissante de la bottom nav ────────────────────
+function moveNavPill() {
+  const nav  = document.getElementById('bottomNav');
+  const pill = document.getElementById('navPill');
+  if (!nav || !pill) return;
+  // Si la nav est masquée (écran detail/chat), on cache la pill
+  if (nav.style.display === 'none' || getComputedStyle(nav).display === 'none') {
+    pill.style.opacity = '0';
+    return;
+  }
+  const active = nav.querySelector('.nav-item.active');
+  if (!active) { pill.style.opacity = '0'; return; }
+
+  const navRect = nav.getBoundingClientRect();
+  const itemRect = active.getBoundingClientRect();
+  // Inset pour que la pill n'englobe pas tout l'item (marges latérales)
+  const inset = 8;
+  const x = itemRect.left - navRect.left + inset;
+  const w = itemRect.width - inset * 2;
+
+  pill.style.width = w + 'px';
+  pill.style.transform = `translateX(${x}px)`;
+  pill.style.opacity = '1';
+
+  // Si la nav vient d'être réaffichée, le layout peut ne pas être prêt → retry
+  if (w <= 0) setTimeout(moveNavPill, 50);
+}
+
+// Repositionner au chargement et au resize / rotation
+window.addEventListener('load',   () => setTimeout(moveNavPill, 60));
+window.addEventListener('resize', () => moveNavPill());
+window.addEventListener('orientationchange', () => setTimeout(moveNavPill, 200));
 
 // ══════════════════════════════════════════════════
 // MESSAGERIE GUEST — Socket.IO + conversations
@@ -578,9 +612,13 @@ async function loadGuestConversations() {
 function updateGuestMsgBadge(count) {
   const badge = document.getElementById('navMsgsBadge');
   if (!badge) return;
+  if (!count || count < 1) {
+    badge.style.display = 'none';
+    return;
+  }
   badge.textContent = count > 9 ? '9+' : count;
   badge.style.display = 'block';
-  badge.style.background = count > 0 ? '#ef4444' : '#94a3b8';
+  badge.style.background = '#ef4444';
 }
 
 async function openGuestChat(convId, propName, checkin, checkout) {
