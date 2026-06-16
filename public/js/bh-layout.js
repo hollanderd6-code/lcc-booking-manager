@@ -1609,6 +1609,59 @@ var _bhNativeConfirm = window.confirm;
     iEl.innerHTML = svg(name, size);
   }
   // Helper global : état vide illustré (icône + titre + texte), dispo sur toutes les pages.
+  // ── bhAnimateValue : anime un nombre de 0 (ou valeur courante) vers une cible ──
+  // Gère préfixe/suffixe (%, €), décimales, et respecte prefers-reduced-motion.
+  // Usage : bhAnimateValue(el, 375, { suffix:'€' });  bhAnimateValue(el, 8, { suffix:'%' });
+  if (!window.bhAnimateValue) {
+    window.bhAnimateValue = function(el, target, opts) {
+      if (!el) return;
+      opts = opts || {};
+      var prefix = opts.prefix || '';
+      var suffix = opts.suffix || '';
+      var decimals = opts.decimals || 0;
+      var duration = opts.duration || 900;
+      target = Number(target) || 0;
+      // Respecte la préférence d'accessibilité : pas d'animation
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        el.textContent = prefix + target.toFixed(decimals) + suffix;
+        return;
+      }
+      var start = 0;
+      var startTime = null;
+      function fmt(v){ return prefix + (decimals ? v.toFixed(decimals) : Math.round(v).toLocaleString('fr-FR')) + suffix; }
+      function step(ts) {
+        if (!startTime) startTime = ts;
+        var p = Math.min((ts - startTime) / duration, 1);
+        // easeOutCubic
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = fmt(start + (target - start) * eased);
+        if (p < 1) requestAnimationFrame(step);
+        else el.textContent = fmt(target);
+      }
+      requestAnimationFrame(step);
+    };
+  }
+
+  // ── bhHaptic : vibration légère sur les actions (iOS Capacitor + fallback web) ──
+  // Usage : bhHaptic() pour un tap léger ; bhHaptic('medium') / bhHaptic('heavy')
+  if (!window.bhHaptic) {
+    window.bhHaptic = function(intensity) {
+      try {
+        // Capacitor Haptics si dispo (app iOS native)
+        var Cap = window.Capacitor;
+        if (Cap && Cap.Plugins && Cap.Plugins.Haptics) {
+          var style = intensity === 'heavy' ? 'HEAVY' : intensity === 'medium' ? 'MEDIUM' : 'LIGHT';
+          Cap.Plugins.Haptics.impact({ style: style });
+          return;
+        }
+        // Fallback web : navigator.vibrate (Android surtout)
+        if (navigator.vibrate) {
+          navigator.vibrate(intensity === 'heavy' ? 18 : intensity === 'medium' ? 12 : 7);
+        }
+      } catch(e) { /* silencieux */ }
+    };
+  }
+
   if (!window.bhEmptyState) {
     window.bhEmptyState = function(icon, title, text) {
       var icons = {
@@ -1722,7 +1775,19 @@ var _bhNativeConfirm = window.confirm;
     swap(mh.querySelector('#bh-mobile-notif-btn i.fa-bell'), 'bell', 16);
     mh.dataset.v4 = '1';
   }
-  function boot() { injectLogoCSS(); injectStyleV4(); enhance(); setTimeout(function(){ injectLogoCSS(); injectStyleV4(); enhance(); }, 600); }
+  // Haptic global : léger retour tactile au tap sur les éléments interactifs clés.
+  function attachHaptics() {
+    if (window.__bhHapticsAttached) return;
+    window.__bhHapticsAttached = true;
+    document.addEventListener('touchstart', function(e) {
+      var t = e.target;
+      if (!t || !t.closest) return;
+      // Boutons, cards KPI, FAB, onglets, liens d'action
+      var hit = t.closest('button, .kpi-card, [class*="kpi-card"], .fab, [class*="fab"], .mobile-tabs a, [role="button"], .bh-close-glass');
+      if (hit) { try { window.bhHaptic && window.bhHaptic('light'); } catch(_){} }
+    }, { passive: true });
+  }
+  function boot() { injectLogoCSS(); injectStyleV4(); enhance(); attachHaptics(); setTimeout(function(){ injectLogoCSS(); injectStyleV4(); enhance(); }, 600); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();
