@@ -15045,7 +15045,7 @@ app.put('/api/pricing/rules/:id', authenticateAny, requirePermission(pool, 'can_
         discount_after_nights = $9,
         priority = COALESCE($10, priority),
         active = COALESCE($11, active)
-      WHERE id = $12 AND user_id = $13
+      WHERE id = $12 AND user_id = ANY($13::text[])
       RETURNING *
     `, [
       name, rule_type,
@@ -15057,7 +15057,7 @@ app.put('/api/pricing/rules/:id', authenticateAny, requirePermission(pool, 'can_
       discount_after_nights || null,
       priority,
       active,
-      id, user.id
+      id, await getAgencyUserIds(req, user.id)
     ]);
 
     if (result.rows.length === 0) return res.status(404).json({ error: 'Règle introuvable' });
@@ -15075,7 +15075,7 @@ app.delete('/api/pricing/rules/:id', authenticateAny, requirePermission(pool, 'c
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    const deleted = await pool.query('DELETE FROM pricing_rules WHERE id = $1 AND user_id = $2 RETURNING property_id', [req.params.id, user.id]);
+    const deleted = await pool.query('DELETE FROM pricing_rules WHERE id = $1 AND user_id = ANY($2::text[]) RETURNING property_id', [req.params.id, await getAgencyUserIds(req, user.id)]);
     res.json({ success: true });
     if (deleted.rows[0]) setImmediate(() => triggerChannexRatesSync(deleted.rows[0].property_id, user.id));
   } catch (err) {
@@ -17799,7 +17799,7 @@ app.put('/api/deposits/:depositId',
     const { amount } = req.body;
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Montant invalide' });
 
-    const { rows } = await pool.query('SELECT * FROM deposits WHERE id = $1 AND user_id = $2', [depositId, userId]);
+    const { rows } = await pool.query('SELECT * FROM deposits WHERE id = $1 AND user_id = ANY($2::text[])', [depositId, await getAgencyUserIds(req, userId)]);
     if (!rows.length) return res.status(404).json({ error: 'Caution introuvable' });
 
     const existing = rows[0];
@@ -17856,7 +17856,7 @@ app.delete('/api/deposits/:depositId',
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const { depositId } = req.params;
-    const { rows } = await pool.query('SELECT * FROM deposits WHERE id = $1 AND user_id = $2', [depositId, userId]);
+    const { rows } = await pool.query('SELECT * FROM deposits WHERE id = $1 AND user_id = ANY($2::text[])', [depositId, await getAgencyUserIds(req, userId)]);
     if (!rows.length) return res.status(404).json({ error: 'Caution introuvable' });
 
     const existing = rows[0];
@@ -18224,8 +18224,8 @@ app.post('/api/deposits/:depositId/capture',
     
     // Vérifier que le deposit appartient à l'utilisateur
     const deposit = await pool.query(
-      'SELECT * FROM deposits WHERE id = $1 AND user_id = $2',
-      [depositId, userId]
+      'SELECT * FROM deposits WHERE id = $1 AND user_id = ANY($2::text[])',
+      [depositId, await getAgencyUserIds(req, userId)]
     );
 
     if (deposit.rows.length === 0) {
@@ -18258,8 +18258,8 @@ app.post('/api/deposits/:depositId/release',
     
     // Vérifier que le deposit appartient à l'utilisateur
     const deposit = await pool.query(
-      'SELECT * FROM deposits WHERE id = $1 AND user_id = $2',
-      [depositId, userId]
+      'SELECT * FROM deposits WHERE id = $1 AND user_id = ANY($2::text[])',
+      [depositId, await getAgencyUserIds(req, userId)]
     );
 
     if (deposit.rows.length === 0) {
@@ -23198,8 +23198,8 @@ app.put('/api/properties/:propertyId/quick-replies', authenticateAny, async (req
     }).filter(Boolean).slice(0, 5);
 
     await pool.query(
-      `UPDATE properties SET quick_replies = $1 WHERE id = $2 AND user_id = $3`,
-      [JSON.stringify(cleaned), propertyId, userId]
+      `UPDATE properties SET quick_replies = $1 WHERE id = $2 AND user_id = ANY($3::text[])`,
+      [JSON.stringify(cleaned), propertyId, await getAgencyUserIds(req, userId)]
     );
 
     await loadProperties();
