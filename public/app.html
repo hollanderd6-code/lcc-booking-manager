@@ -3666,7 +3666,7 @@ window.closeChecklistsKpiModal = function() {
 </div>
 </div>
 <!-- New Manual Reservation Modal -->
-<div id="newReservationModal" style="display:none;position:fixed;inset:0;overflow:hidden;background:rgba(13,17,23,.6);backdrop-filter:blur(4px);z-index:9999;align-items:flex-end;justify-content:center;">
+<div id="newReservationModal" style="display:none;position:fixed;inset:0;overflow:hidden;background:rgba(13,17,23,.6);backdrop-filter:blur(4px);z-index:9999;align-items:flex-end;justify-content:center;touch-action:none;overscroll-behavior:none;">
   <div style="background:#F5F0E8;border-radius:24px 24px 0 0;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.18);">
 
     <!-- Drag handle -->
@@ -4928,12 +4928,11 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
 
       function openNewReservationModal() {
         if (newReservationModal) {
+          if (typeof unfreezePageVerticalScroll === 'function') unfreezePageVerticalScroll();
           populateNewReservationProperties();
           newReservationModal.style.display = 'flex';
           newReservationModal.classList.add('active');
           document.body.style.overflow = 'hidden';
-          document.body.style.position = 'fixed';
-          document.body.style.width = '100%';
         }
       }
 
@@ -4942,8 +4941,6 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           newReservationModal.style.display = 'none';
           newReservationModal.classList.remove('active');
           document.body.style.overflow = '';
-          document.body.style.position = '';
-          document.body.style.width = '';
         }
         if (newReservationForm) {
           newReservationForm.reset();
@@ -10979,11 +10976,10 @@ html[data-theme-v3="1"] .sidebar .nav-section {
       if (startInput && !startInput.value) startInput.value = today;
       if (endInput && !endInput.value) { var tom = new Date(); tom.setDate(tom.getDate() + 1); endInput.value = tom.toISOString().slice(0, 10); }
 
+      if (typeof unfreezePageVerticalScroll === 'function') unfreezePageVerticalScroll();
       modal.style.display = 'flex';
       modal.classList.add('active');
       document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
     }
 
     function closeNewReservationModal() {
@@ -10991,8 +10987,6 @@ html[data-theme-v3="1"] .sidebar .nav-section {
       modal.style.display = 'none';
       modal.classList.remove('active');
       document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
     }
 
     // Clic sur le bouton +
@@ -13007,16 +13001,12 @@ function openReorderModal() {
   modal.style.display = 'flex';
   // Bloquer le scroll du body (iOS)
   document.body.style.overflow = 'hidden';
-  document.body.style.position = 'fixed';
-  document.body.style.width = '100%';
 }
 
 function closeReorderModal() {
   document.getElementById('reorderModal').style.display = 'none';
   // Restaurer le scroll du body
   document.body.style.overflow = '';
-  document.body.style.position = '';
-  document.body.style.width = '';
 }
 
 // Touch drag for mobile reorder
