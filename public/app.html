@@ -4926,14 +4926,20 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       }
 
       function openNewReservationModal() {
-        if (newReservationModal) {
-          if (typeof unfreezePageVerticalScroll === 'function') unfreezePageVerticalScroll();
-          populateNewReservationProperties();
-          newReservationModal.style.display = 'flex';
-          newReservationModal.classList.add('active');
-          document.body.style.overflow = 'hidden';
-        }
-      }
+  if (newReservationModal) {
+    if (typeof unfreezePageVerticalScroll === 'function') unfreezePageVerticalScroll();
+    // Force reset body position au cas où unfreezePageVerticalScroll n'est pas dispo
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    populateNewReservationProperties();
+    newReservationModal.style.display = 'flex';
+    newReservationModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+}
 
       function closeNewReservationModal() {
         if (newReservationModal) {
