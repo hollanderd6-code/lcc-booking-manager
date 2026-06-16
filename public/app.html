@@ -273,6 +273,19 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     flex-shrink: 0 !important;
   }
 
+  /* Modal checklist : il est CENTRÉ (pas un bottom-sheet flex-end), donc le patch
+     global ne l'attrape pas et son bas (bouton "Valider le ménage") passe derrière
+     la bottom-bar. On réserve la hauteur de la barre sous l'overlay pour le remonter. */
+  .checklist-modal-overlay {
+    align-items: center !important;
+    padding-top: 12px !important;
+    padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px) + 12px) !important;
+    box-sizing: border-box !important;
+  }
+  .checklist-modal {
+    max-height: calc(100dvh - 74px - env(safe-area-inset-bottom, 0px) - 24px) !important;
+  }
+
   /* Zones scrollables des modaux génériques. */
   #todayMovesModalContent,
   #cleaning48hModalContent,
