@@ -5845,7 +5845,6 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       depositsVal.style.color = count >= 1 ? '#10B981' : '#000000';
       depositsVal.style.fontWeight = '700';
       if (window.bhAnimateValue) window.bhAnimateValue(depositsVal, count); else depositsVal.textContent = count;
-      if (window.bhSetNavBadge) window.bhSetNavBadge('deposits', count);
 
       if (depositsSub) {
         if (count === 0) {
@@ -11162,7 +11161,6 @@ async function loadCleaningChecklists() {
       const val = document.getElementById('kpiChecklistsValue');
       const sub = document.getElementById('kpiChecklistsSub');
       if (val) { if (window.bhAnimateValue) window.bhAnimateValue(val, pending.length); else val.textContent = pending.length; }
-      if (window.bhSetNavBadge) window.bhSetNavBadge('cleaning', pending.length);
       if (sub) sub.textContent = pending.length === 0 ? 'tout est validé ✓'
         : pending.length === 1 ? 'checklist en attente' : 'checklists en attente';
     })();

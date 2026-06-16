@@ -2602,7 +2602,7 @@ async function loadInvoices() {
   console.log('🔍 loadInvoices() - Début...');
   // Afficher message de chargement
   const container = document.getElementById('invoicesCardsGrid');
-  if (container) container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;color:#6b7280;"><i class="fas fa-spinner fa-spin" style="margin-right:8px;color:#1A7A5E;"></i>Chargement des factures...</div>';
+  if (container) container.innerHTML = '<div style="grid-column:1/-1;"><div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div></div>';
   
   // Timeout 20s pour Render cold start
   const controller = new AbortController();
@@ -2868,21 +2868,31 @@ document.addEventListener('click', function(e) {
 
 // ── Modale de confirmation custom (remplace confirm() natif) ──
 function showConfirm(message, onOk, title) {
-  // Unifié vers bhConfirm (modale globale liquid glass). On garde la signature
-  // (message, onOk, title) pour ne casser aucun appel existant.
-  var isDanger = message.toLowerCase().includes('supprimer') || message.toLowerCase().includes('irréversible');
-  if (typeof window.bhConfirm === 'function') {
-    window.bhConfirm(
-      title || (isDanger ? 'Supprimer ?' : 'Confirmer'),
-      message,
-      isDanger ? 'Supprimer' : 'Confirmer',
-      'Annuler',
-      isDanger ? 'danger' : 'default'
-    ).then(function(ok){ if (ok && typeof onOk === 'function') onOk(); });
-    return;
-  }
-  // Fallback ultime (jamais atteint si bh-layout chargé)
-  if (confirm(message) && typeof onOk === 'function') onOk();
+  const modal = document.getElementById('confirmModal');
+  const msgEl = document.getElementById('confirmModalMessage');
+  const titleEl = document.getElementById('confirmModalTitle');
+  const okBtn = document.getElementById('confirmModalOk');
+  const cancelBtn = document.getElementById('confirmModalCancel');
+  if (!modal) { if (confirm(message)) onOk(); return; }
+  titleEl.textContent = title || 'Confirmer';
+  msgEl.textContent = message;
+  modal.style.display = 'flex';
+  // Couleur du bouton OK selon le contexte (danger si "Supprimer")
+  const isDanger = message.toLowerCase().includes('supprimer') || message.toLowerCase().includes('irréversible');
+  okBtn.style.background = isDanger ? '#dc2626' : '#1A7A5E';
+  okBtn.textContent = isDanger ? 'Supprimer' : 'Confirmer';
+  // Nettoyer les anciens listeners
+  const newOk = okBtn.cloneNode(true);
+  const newCancel = cancelBtn.cloneNode(true);
+  okBtn.parentNode.replaceChild(newOk, okBtn);
+  cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+  document.getElementById('confirmModalOk').addEventListener('click', function() {
+    modal.style.display = 'none';
+    onOk();
+  });
+  document.getElementById('confirmModalCancel').addEventListener('click', function() {
+    modal.style.display = 'none';
+  });
 }
 
 // Fermer le menu si on clique ailleurs dans la page

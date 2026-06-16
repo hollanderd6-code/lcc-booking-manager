@@ -1612,34 +1612,6 @@ var _bhNativeConfirm = window.confirm;
   // ── bhAnimateValue : anime un nombre de 0 (ou valeur courante) vers une cible ──
   // Gère préfixe/suffixe (%, €), décimales, et respecte prefers-reduced-motion.
   // Usage : bhAnimateValue(el, 375, { suffix:'€' });  bhAnimateValue(el, 8, { suffix:'%' });
-  // ── bhSetNavBadge(page, count) : pastille de comptage sur une entrée de menu ──
-  // S'applique au menu latéral (.nav-item[data-page]) et aux onglets du bas (.tab-btn[data-tab]).
-  // count = 0 ou falsy → retire la pastille.
-  if (!window.bhSetNavBadge) {
-    window.bhSetNavBadge = function(page, count) {
-      count = Number(count) || 0;
-      var label = count > 99 ? '99+' : String(count);
-      // Cibles : sidebar + barre du bas
-      var targets = [].slice.call(document.querySelectorAll('.nav-item[data-page="' + page + '"], .tab-btn[data-tab="' + page + '"]'));
-      targets.forEach(function(el) {
-        var badge = el.querySelector('.bh-nav-badge');
-        if (count <= 0) { if (badge) badge.remove(); return; }
-        if (!badge) {
-          badge = document.createElement('span');
-          badge.className = 'bh-nav-badge';
-          badge.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:auto;background:#dc2626;color:#fff;font-size:10.5px;font-weight:700;line-height:1;border-radius:999px;box-shadow:0 1px 3px rgba(220,38,38,.4);flex-shrink:0;';
-          // Sur la barre du bas (icône seule), positionner en absolu en haut à droite
-          if (el.classList.contains('tab-btn')) {
-            badge.style.cssText = 'position:absolute;top:2px;right:calc(50% - 20px);min-width:16px;height:16px;padding:0 4px;background:#dc2626;color:#fff;font-size:9.5px;font-weight:700;line-height:16px;text-align:center;border-radius:999px;box-shadow:0 1px 3px rgba(220,38,38,.4);';
-            el.style.position = 'relative';
-          }
-          el.appendChild(badge);
-        }
-        badge.textContent = label;
-      });
-    };
-  }
-
   if (!window.bhAnimateValue) {
     window.bhAnimateValue = function(el, target, opts) {
       if (!el) return;
@@ -1815,7 +1787,45 @@ var _bhNativeConfirm = window.confirm;
       if (hit) { try { window.bhHaptic && window.bhHaptic('light'); } catch(_){} }
     }, { passive: true });
   }
-  function boot() { injectLogoCSS(); injectStyleV4(); enhance(); attachHaptics(); setTimeout(function(){ injectLogoCSS(); injectStyleV4(); enhance(); }, 600); }
+  // ── Transitions de page : fondu à l'arrivée + léger fondu sortant à la navigation ──
+  // Supprime le "flash blanc" entre les pages. Filets de sécurité inclus.
+  function injectPageTransition() {
+    if (document.getElementById('bh-page-transition-css')) return;
+    var s = document.createElement('style');
+    s.id = 'bh-page-transition-css';
+    s.textContent = [
+      '@keyframes bhPageIn{from{opacity:0;}to{opacity:1;}}',
+      'body.bh-page-ready{animation:bhPageIn .28s ease;}',
+      'body.bh-page-leaving{opacity:0;transition:opacity .18s ease;}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+  function setupPageTransitions() {
+    injectPageTransition();
+    // Fade-in à l'arrivée
+    document.body.classList.add('bh-page-ready');
+    // Si la page revient du cache (retour arrière), retirer tout état "leaving"
+    window.addEventListener('pageshow', function() {
+      document.body.classList.remove('bh-page-leaving');
+    });
+    // Fade-out sortant sur les liens internes de navigation
+    document.addEventListener('click', function(e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (!a) return;
+      var href = a.getAttribute('href');
+      if (!href || href.charAt(0) === '#') return;
+      if (a.target === '_blank' || a.hasAttribute('download')) return;
+      if (/^(mailto:|tel:|javascript:)/i.test(href)) return;
+      // Seulement les liens internes .html de l'app
+      if (!/\.html(\?|#|$)/.test(href) && href.charAt(0) !== '/') return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+      // Lance le fondu sortant ; le navigateur enchaîne la navigation
+      document.body.classList.add('bh-page-leaving');
+      // Filet de sécurité : si la nav est annulée, on rétablit après 1s
+      setTimeout(function(){ document.body.classList.remove('bh-page-leaving'); }, 1000);
+    }, true);
+  }
+  function boot() { injectLogoCSS(); injectStyleV4(); enhance(); attachHaptics(); setupPageTransitions(); setTimeout(function(){ injectLogoCSS(); injectStyleV4(); enhance(); }, 600); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();

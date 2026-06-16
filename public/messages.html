@@ -3171,7 +3171,7 @@ async function loadChannexMessages() {
 
   // Afficher loader
   container.className = 'channex-ota-loading';
-  container.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><div>Chargement des messages...</div>';
+  container.innerHTML = '<div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div>';
 
   try {
     const token = localStorage.getItem('lcc_token');
@@ -4638,7 +4638,7 @@ async function loadScheduled() {
     const items = data.scheduled || [];
 
     if (items.length === 0) {
-      container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('calendar','Aucun envoi planifié','Aucun message programmé dans les 7 prochains jours.') : '<div style="text-align:center;color:#9CA3AF;font-size:13px;padding:16px;background:white;border-radius:12px;border:1px solid #f1f5f9;">Aucun envoi planifié dans les 7 prochains jours.</div>');
+      container.innerHTML = '<div style="text-align:center;color:#9CA3AF;font-size:13px;padding:16px;background:white;border-radius:12px;border:1px solid #f1f5f9;">Aucun envoi planifié dans les 7 prochains jours.</div>';
       return;
     }
 
@@ -5059,7 +5059,7 @@ window.renderSmsLogs = function renderSmsLogs(logs) {
   const list = document.getElementById('smsLogsList');
   if (!list) return;
   if (!logs.length) {
-    list.innerHTML = (window.bhEmptyState ? window.bhEmptyState('message','Aucun SMS envoyé','Vos SMS envoyés apparaîtront ici.') : '<div style="text-align:center;padding:40px 20px;color:#9ca3af;"><i class="fas fa-sms" style="font-size:32px;display:block;margin-bottom:12px;opacity:.3;"></i><div style="font-size:14px;">Aucun SMS envoyé</div></div>');
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#9ca3af;"><i class="fas fa-sms" style="font-size:32px;display:block;margin-bottom:12px;opacity:.3;"></i><div style="font-size:14px;">Aucun SMS envoyé</div></div>';
     return;
   }
   list.innerHTML = logs.map(log => {
