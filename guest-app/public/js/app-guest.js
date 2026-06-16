@@ -53,7 +53,11 @@ let state = {
   selectingEnd: null,
   account: JSON.parse(localStorage.getItem('guest_account') || '{}'),
   session: null, // { email, token, name }
-  appliedPromo: null // { code, discount_type, discount_value, discount_amount }
+  appliedPromo: null, // { code, discount_type, discount_value, discount_amount }
+  _lockedPropertyId: null, // logement verrouillé par un lien personnalisé (prix négocié / hold)
+  _pendingFixedPrice: null,
+  _fixedPriceActive: null,
+  _holdToken: null
 };
 
 // ── Auth helpers ─────────────────────────────────────────────
@@ -328,6 +332,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       App.addListener('appUrlOpen', async (data) => {
         if (data && data.url) {
           state._pendingFixedPrice = null;
+          state._lockedPropertyId = null;
           state.search = { checkin: null, checkout: null, guests: null };
           await handleDeepLink(data.url);
         }
@@ -371,6 +376,12 @@ async function handleDeepLink(overrideUrl) {
   if (fixedPrice)  state._pendingFixedPrice = fixedPrice;
   if (holdToken)   state._holdToken = holdToken;
   if (holdToken)   localStorage.setItem('guest_hold_token', holdToken);
+
+  // 🔒 Lien personnalisé (prix négocié ou hold) → verrouiller sur CE logement.
+  // Le client ne pourra pas réserver un autre logement via ce lien.
+  if (fixedPrice || holdToken) {
+    state._lockedPropertyId = propertyId;
+  }
 
   if (!IS_NATIVE) window.history.replaceState({}, '', window.location.pathname);
 
@@ -459,10 +470,23 @@ function showScreen(name) {
 }
 
 function navTo(name) {
+  // 🔒 Parcours verrouillé (lien personnalisé) : on empêche le retour vers la
+  // liste des logements. Le client reste dans le tunnel de SON logement.
+  if (state._lockedPropertyId && (name === 'home' || name === 'home-list')) {
+    if (state.currentProperty && state.currentProperty.id === state._lockedPropertyId) {
+      name = 'detail';
+    } else {
+      openProperty(state._lockedPropertyId);
+      return;
+    }
+  }
+
   // Écrans spéciaux sans bottom nav
   const noNavScreens = ['chat']; // Nav visible partout sauf chat plein écran
   const bottomNav = document.getElementById('bottomNav');
-  if (bottomNav) bottomNav.style.display = noNavScreens.includes(name) ? 'none' : 'flex';
+  // En parcours verrouillé, on masque la barre d'onglets (tunnel de résa)
+  const hideNav = noNavScreens.includes(name) || !!state._lockedPropertyId;
+  if (bottomNav) bottomNav.style.display = hideNav ? 'none' : 'flex';
   // Sur detail, bookingBar prend le bas — on masque le bottomNav via classe CSS
   document.body.classList.toggle('screen-detail', name === 'detail');
 
@@ -995,6 +1019,14 @@ async function loadProperties() {
 
 // ── Ouvrir un logement ───────────────────────────────────────
 async function openProperty(id) {
+  // 🔒 Si le client est arrivé via un lien personnalisé (prix négocié / hold),
+  // il est verrouillé sur le logement assigné. Toute tentative d'ouvrir un
+  // autre logement le ramène sur le sien.
+  if (state._lockedPropertyId && id !== state._lockedPropertyId) {
+    showToast("Ce lien est réservé à un logement précis");
+    id = state._lockedPropertyId;
+  }
+
   navTo('detail');
   document.getElementById('detailContent').innerHTML = '<div class="loading-center" style="padding:60px"><i class="fas fa-spinner fa-spin"></i></div>';
 
@@ -1013,7 +1045,16 @@ async function openProperty(id) {
   const detailHeader = document.getElementById('detailHeader');
   if (detailHeader) {
     const backBtn = detailHeader.querySelector('.btn-back');
-    if (backBtn) backBtn.onclick = () => navTo('home-list');
+    if (backBtn) {
+      // En parcours verrouillé, pas de retour vers la liste : le client
+      // n'a qu'un seul logement à réserver.
+      if (state._lockedPropertyId) {
+        backBtn.style.display = 'none';
+      } else {
+        backBtn.style.display = '';
+        backBtn.onclick = () => navTo('home-list');
+      }
+    }
   }
     renderDetail();
     updateBookingBar();
@@ -1214,8 +1255,12 @@ function goToCheckout() {
   const p = state.currentProperty;
   const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
   const total = sumNights(p, state.selectedCheckin, state.selectedCheckout);
-  // Prix fixe depuis deep link (override tout le calcul de base)
-  const fixedPriceOverride = state._pendingFixedPrice || null;
+  // Prix fixe depuis deep link — UNIQUEMENT sur le logement verrouillé.
+  // (Sécurité : empêche le prix négocié de fuiter sur un autre logement.)
+  const fixedPriceOverride = (state._pendingFixedPrice != null
+    && (!state._lockedPropertyId || p.id === state._lockedPropertyId))
+    ? state._pendingFixedPrice
+    : null;
   const displayBase = fixedPriceOverride !== null ? fixedPriceOverride : total;
   const commission = Math.round(displayBase * 0.03 * 100) / 100;
   // Prix fixe = tout inclus : ménage et taxe de séjour non ajoutés
@@ -1387,7 +1432,11 @@ async function submitBooking() {
   const guestPhone = document.getElementById('guestPhone')?.value.trim();
   const guestCount = document.getElementById('guestCount')?.value;
   const promoCode = state.appliedPromo?.code || document.getElementById('promoInput')?.value?.trim() || null;
-  const fixedPriceOverride = state._fixedPriceActive || null;
+  // Sécurité : le prix négocié n'est transmis que si on est bien sur le
+  // logement verrouillé par le lien personnalisé.
+  const onLockedProperty = !state._lockedPropertyId
+    || (state.currentProperty && state.currentProperty.id === state._lockedPropertyId);
+  const fixedPriceOverride = onLockedProperty ? (state._fixedPriceActive || null) : null;
 
   if (!guestName || !guestEmail) {
     showToast('Veuillez remplir votre nom et email');
@@ -1448,6 +1497,14 @@ async function submitBooking() {
 function showConfirmation(data, guestName, guestEmail) {
   const p = state.currentProperty;
   const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  // 🔓 La réservation est faite : on lève le verrou du lien personnalisé.
+  // Le client est maintenant libre de parcourir les autres logements.
+  state._lockedPropertyId = null;
+  state._pendingFixedPrice = null;
+  state._fixedPriceActive = null;
+  state._holdToken = null;
+  localStorage.removeItem('guest_hold_token');
 
   document.getElementById('confirmContent').innerHTML = `
     <div class="confirm-icon"><i class="fas fa-check"></i></div>
