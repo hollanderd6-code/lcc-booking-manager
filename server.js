@@ -31,7 +31,7 @@ const brevo = require('@getbrevo/brevo');
 const PDFDocument = require('pdfkit');
 
 // ============================================
-// ✅ NOUVEAU : IMPORTS POUR LIVRETS D'ACCUEIL  
+// NOUVEAU : IMPORTS POUR LIVRETS D'ACCUEIL  
 // ============================================
 const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeRoutes');
 const { setupDynamicPricingRoutes } = require('./routes/dynamic-pricing-routes');
@@ -19456,8 +19456,9 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
 
     // Titre + date
     const invTitle = inv.is_credit_note ? 'AVOIR' : (inv.invoice_number ? 'FACTURE' : 'FACTURE BROUILLON');
-    const invRef   = inv.invoice_number || 'BROUILLON';
-    doc.font('Helvetica-Bold').fontSize(22).fillColor(GREEN).text(invTitle + (inv.invoice_number ? '' : ''), mg, y);
+    const invRef   = inv.invoice_number || '';
+    // Le titre inclut le numéro de facture (ex. "FACTURE FACT-2026-0019"), comme dans l'aperçu HTML.
+    doc.font('Helvetica-Bold').fontSize(22).fillColor(GREEN).text(invTitle + (invRef ? ' ' + invRef : ''), mg, y);
     y += 28;
     const issDate = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR');
     doc.font('Helvetica').fontSize(10).fillColor(GRAY).text(issDate, mg, y);
@@ -19513,14 +19514,18 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     y += 4;
 
     // En-tête tableau
-    const colDesc = mg, colBase = mg+250, colTaux = mg+345, colTotal = mg+430;
+    // Colonnes décalées vers la gauche + padding droit (RPAD) pour que la colonne
+    // TOTAL HT ait plus d'air et ne soit pas collée/coupée au bord droit.
+    const RPAD = 8;
+    const colDesc = mg, colBase = mg+235, colTaux = mg+325, colTotal = mg+410;
+    const totalW = W - mg - colTotal - RPAD;
     const rowH = 28;
     doc.rect(mg, y, W-mg*2, rowH).fill(GREEN);
     doc.font('Helvetica-Bold').fontSize(9).fillColor('white');
-    doc.text('DESCRIPTION', colDesc+6, y+9, {width:260});
+    doc.text('DESCRIPTION', colDesc+6, y+9, {width:240});
     doc.text('BASE', colBase, y+9, {width:80, align:'right'});
-    doc.text('TAUX/QTÉ', colTaux, y+9, {width:80, align:'right'});
-    doc.text('TOTAL HT', colTotal, y+9, {width:W-mg-colTotal, align:'right'});
+    doc.text('TAUX/QTÉ', colTaux, y+9, {width:75, align:'right'});
+    doc.text('TOTAL HT', colTotal, y+9, {width:totalW, align:'right'});
     y += rowH;
 
     const PAGE_BOTTOM = doc.page.height - 60; // marge bas
@@ -19531,7 +19536,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
       // Hauteur réelle de la ligne : si la description tient sur plusieurs lignes,
       // on agrandit la ligne (sinon la hauteur fixe désynchronise la pagination).
       doc.font('Helvetica').fontSize(10);
-      const descH = doc.heightOfString(desc, { width: 260 });
+      const descH = doc.heightOfString(desc, { width: 240 });
       const thisRowH = Math.max(rowH, Math.ceil(descH) + 14);
 
       // Saut de page si on déborde (en tenant compte de la hauteur réelle)
@@ -19541,10 +19546,10 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
         // Réafficher l'en-tête tableau sur la nouvelle page
         doc.rect(mg, y, W-mg*2, rowH).fill(GREEN);
         doc.font('Helvetica-Bold').fontSize(9).fillColor('white');
-        doc.text('DESCRIPTION', colDesc+6, y+9, {width:260});
+        doc.text('DESCRIPTION', colDesc+6, y+9, {width:240});
         doc.text('BASE', colBase, y+9, {width:80, align:'right'});
-        doc.text('TAUX/QTÉ', colTaux, y+9, {width:80, align:'right'});
-        doc.text('TOTAL HT', colTotal, y+9, {width:W-mg-colTotal, align:'right'});
+        doc.text('TAUX/QTÉ', colTaux, y+9, {width:75, align:'right'});
+        doc.text('TOTAL HT', colTotal, y+9, {width:totalW, align:'right'});
         y += rowH;
       }
 
@@ -19564,10 +19569,10 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
       }
 
       doc.font('Helvetica').fontSize(10).fillColor(DARK);
-      doc.text(desc, colDesc+6, y+9, {width:260});
+      doc.text(desc, colDesc+6, y+9, {width:240});
       doc.text(baseStr, colBase, y+9, {width:80, align:'right'});
-      doc.text(tauxStr, colTaux, y+9, {width:80, align:'right'});
-      doc.font('Helvetica-Bold').text(total.toFixed(2)+' €', colTotal, y+9, {width:W-mg-colTotal, align:'right'});
+      doc.text(tauxStr, colTaux, y+9, {width:75, align:'right'});
+      doc.font('Helvetica-Bold').text(total.toFixed(2)+' €', colTotal, y+9, {width:totalW, align:'right'});
       y += thisRowH;
     });
 
@@ -19587,12 +19592,12 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
 
     doc.font('Helvetica').fontSize(10).fillColor(GRAY);
     doc.text('Total HT', totX, y, {width:140});
-    doc.font('Helvetica-Bold').fillColor(DARK).text(subtotal.toFixed(2)+' €', totX+140, y, {width:80, align:'right'});
+    doc.font('Helvetica-Bold').fillColor(DARK).text(subtotal.toFixed(2)+' €', totX+132, y, {width:80, align:'right'});
     y += 16;
 
     if (vatAmt > 0) {
       doc.font('Helvetica').fontSize(10).fillColor(GRAY).text(`TVA (${inv.vat_rate}%)`, totX, y, {width:140});
-      doc.font('Helvetica-Bold').fillColor(DARK).text(vatAmt.toFixed(2)+' €', totX+140, y, {width:80, align:'right'});
+      doc.font('Helvetica-Bold').fillColor(DARK).text(vatAmt.toFixed(2)+' €', totX+132, y, {width:80, align:'right'});
       y += 16;
     } else {
       doc.font('Helvetica').fontSize(9).fillColor(GRAY).text('TVA non applicable, art. 293 B du CGI', mg, y);
@@ -19603,7 +19608,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     doc.rect(totX, y, 220, 1.5).fill(GREEN);
     y += 8;
     doc.font('Helvetica-Bold').fontSize(13).fillColor(GREEN).text('Total', totX, y, {width:140});
-    doc.text(totalTtc.toFixed(2)+' €', totX+140, y, {width:80, align:'right'});
+    doc.text(totalTtc.toFixed(2)+' €', totX+132, y, {width:80, align:'right'});
     y += 26;
 
     // Conditions
@@ -21201,15 +21206,17 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
 
     // ── TABLEAU ITEMS ──────────────────────────────────────────
     // Colonnes en positions ABSOLUES (mêmes que le PDF de téléchargement)
-    const colDesc = mg, colBase = mg+250, colTaux = mg+345, colTotal = mg+430;
+    const RPAD = 8;
+    const colDesc = mg, colBase = mg+230, colTaux = mg+320, colTotal = mg+405;
+    const totalW = W - mg - colTotal - RPAD;
     const rowH = 26;
     const drawTableHeader = () => {
       doc.rect(mg, y, W-mg*2, rowH).fill(GREEN);
       doc.font('Helvetica-Bold').fontSize(9).fillColor('white');
-      doc.text('DESCRIPTION', colDesc+6, y+8, { width: 240 });
+      doc.text('DESCRIPTION', colDesc+6, y+8, { width: 220 });
       doc.text('BASE',        colBase,   y+8, { width: 80, align: 'right' });
-      doc.text('TAUX/QTÉ',   colTaux,   y+8, { width: 80, align: 'right' });
-      doc.text('TOTAL HT',   colTotal,  y+8, { width: W-mg-colTotal, align: 'right' });
+      doc.text('TAUX/QTÉ',   colTaux,   y+8, { width: 75, align: 'right' });
+      doc.text('TOTAL HT',   colTotal,  y+8, { width: totalW, align: 'right' });
       y += rowH;
     };
     drawTableHeader();
@@ -21219,7 +21226,7 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
     (items || []).forEach(item => {
       const desc = item.description || 'Prestation';
       doc.font('Helvetica').fontSize(10);
-      const descH = doc.heightOfString(desc, { width: 240 });
+      const descH = doc.heightOfString(desc, { width: 220 });
       const thisRowH = Math.max(rowH, Math.ceil(descH) + 12);
 
       // Saut de page propre + réaffichage de l'en-tête sur la nouvelle page
@@ -21241,11 +21248,11 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
 
       if (alt) doc.rect(mg, y, W-mg*2, thisRowH).fill(LIGHT);
       doc.font('Helvetica').fontSize(10).fillColor(DARK)
-         .text(desc,     colDesc+6, y+7, { width: 240 })
+         .text(desc,     colDesc+6, y+7, { width: 220 })
          .text(baseDisp, colBase,   y+7, { width: 80, align: 'right' })
-         .text(rateDisp, colTaux,   y+7, { width: 80, align: 'right' });
+         .text(rateDisp, colTaux,   y+7, { width: 75, align: 'right' });
       doc.font('Helvetica-Bold').fillColor(DARK)
-         .text(total.toFixed(2)+' €', colTotal, y+7, { width: W-mg-colTotal, align: 'right' });
+         .text(total.toFixed(2)+' €', colTotal, y+7, { width: totalW, align: 'right' });
       doc.rect(mg, y+thisRowH, W-mg*2, 0.5).fill(BORDER);
       y += thisRowH; alt = !alt;
     });
@@ -21258,11 +21265,11 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
     const totW = 200, totX = W - mg - totW;
     doc.font('Helvetica').fontSize(10).fillColor(GRAY)
        .text('Total HT', totX, y)
-       .text(ht.toFixed(2)+' €', totX+100, y, { width: totW-100, align: 'right' });
+       .text(ht.toFixed(2)+' €', totX+100, y, { width: totW-108, align: 'right' });
     y += 16;
     if (vatAmt > 0) {
       doc.text('TVA (' + (vatRate||0) + '%)', totX, y)
-         .text(vatAmt.toFixed(2)+' €', totX+100, y, { width: totW-100, align: 'right' });
+         .text(vatAmt.toFixed(2)+' €', totX+100, y, { width: totW-108, align: 'right' });
       y += 14;
     } else {
       doc.font('Helvetica').fontSize(8).fillColor(GRAY)
@@ -21272,7 +21279,7 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
     doc.rect(totX, y, totW, 1.5).fill(GREEN); y += 5;
     doc.font('Helvetica-Bold').fontSize(12).fillColor(GREEN)
        .text('Total', totX, y+2)
-       .text(ttc.toFixed(2)+' €', totX+100, y+2, { width: totW-100, align: 'right' });
+       .text(ttc.toFixed(2)+' €', totX+100, y+2, { width: totW-108, align: 'right' });
     y += 26;
 
     // ── CONDITIONS ─────────────────────────────────────────────
@@ -21424,16 +21431,33 @@ app.post('/api/owner-invoices/:id/send',
     }
     // Permet l'envoi depuis draft ou invoiced
 
+    // Générer le numéro de facture s'il est absent (cas d'un envoi direct depuis brouillon,
+    // notamment en mode agence où la facture n'est pas passée par /finalize au préalable).
+    // Sans ça, le PDF envoyé n'a pas de numéro alors que l'aperçu en affiche un.
+    if (!invoice.invoice_number || String(invoice.invoice_number).startsWith('Brouillon')) {
+      const year = new Date().getFullYear();
+      const seqRes = await pool.query(
+        `SELECT MAX(CAST(SPLIT_PART(invoice_number, '-', 3) AS INTEGER)) as max_seq
+         FROM owner_invoices
+         WHERE user_id = $1
+           AND invoice_number LIKE $2
+           AND (is_credit_note IS NULL OR is_credit_note = FALSE)`,
+        [userId, `FACT-${year}-%`]
+      );
+      const nextSeq = (parseInt(seqRes.rows[0]?.max_seq || 0) + 1);
+      invoice.invoice_number = `FACT-${year}-${String(nextSeq).padStart(4, '0')}`;
+    }
+
     // Récupérer les items
     const itemsResult = await pool.query(
       'SELECT * FROM owner_invoice_items WHERE invoice_id = $1 ORDER BY order_index',
       [req.params.id]
     );
 
-    // Mettre à jour statut
+    // Mettre à jour statut ET numéro de facture
     await pool.query(
-      'UPDATE owner_invoices SET status = $1, sent_at = NOW() WHERE id = $2',
-      ['sent', req.params.id]
+      'UPDATE owner_invoices SET status = $1, invoice_number = $2, sent_at = NOW() WHERE id = $3',
+      ['sent', invoice.invoice_number, req.params.id]
     );
 
     // Envoyer email
