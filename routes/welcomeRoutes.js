@@ -202,9 +202,10 @@ router.post(
 
     if (clientUniqueId) {
       // Mode ÉDITION : charger les anciennes photos de CE livret
+      const agencyIds = await getAgencyUserIds(req, req.userId);
       const existingCheck = await pool.query(
-        'SELECT id, unique_id, data FROM public.welcome_books_v2 WHERE user_id = $1 AND unique_id = $2 LIMIT 1',
-        [req.userId, clientUniqueId]
+        'SELECT id, unique_id, data FROM public.welcome_books_v2 WHERE user_id = ANY($1::text[]) AND unique_id = $2 LIMIT 1',
+        [agencyIds, clientUniqueId]
       );
       uniqueId = clientUniqueId;
       if (existingCheck.rows.length > 0) {
@@ -400,11 +401,12 @@ router.delete('/by-unique/:uniqueId', authenticateUser, async (req, res) => {
 
     const { uniqueId } = req.params;
 
+    const agencyIds = await getAgencyUserIds(req, req.userId);
     const del = await pool.query(
       `DELETE FROM public.welcome_books_v2
-       WHERE user_id = $1 AND unique_id = $2
+       WHERE user_id = ANY($1::text[]) AND unique_id = $2
        RETURNING 1`,
-      [req.userId, uniqueId]
+      [agencyIds, uniqueId]
     );
 
     if (del.rowCount === 0) return res.status(404).json({ success: false, error: 'Livret introuvable ou non autorisÃ©' });
@@ -453,9 +455,10 @@ router.post('/duplicate/:uniqueId', authenticateUser, async (req, res) => {
     const { newName } = req.body;
 
     // Charger le livret source (doit appartenir à l'utilisateur)
+    const agencyIds = await getAgencyUserIds(req, req.userId);
     const sourceRes = await pool.query(
-      'SELECT unique_id, property_name, data FROM public.welcome_books_v2 WHERE unique_id = $1 AND user_id = $2 LIMIT 1',
-      [uniqueId, req.userId]
+      'SELECT unique_id, property_name, data FROM public.welcome_books_v2 WHERE unique_id = $1 AND user_id = ANY($2::text[]) LIMIT 1',
+      [uniqueId, agencyIds]
     );
 
     if (sourceRes.rows.length === 0) {
@@ -514,12 +517,13 @@ router.post('/reorder', authenticateUser, async (req, res) => {
     }
 
     // Stocke sortOrder dans data JSONB de chaque livret
+    const agencyIds = await getAgencyUserIds(req, req.userId);
     const updates = order.map((uniqueId, idx) =>
       pool.query(
         `UPDATE public.welcome_books_v2
          SET data = jsonb_set(data, '{sortOrder}', $1::jsonb)
-         WHERE unique_id = $2 AND user_id = $3`,
-        [String(idx), uniqueId, req.userId]
+         WHERE unique_id = $2 AND user_id = ANY($3::text[])`,
+        [String(idx), uniqueId, agencyIds]
       )
     );
     await Promise.all(updates);
