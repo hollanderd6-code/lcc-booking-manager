@@ -279,6 +279,87 @@ async function triggerChannexAvailabilitySync(propertyId, targetDates = null) {
 
 
 // ============================================================
+// 💰 PRIX CALENDRIER — Prix réel par date
+// Reproduit la hiérarchie utilisée pour Channex :
+//   override (calendrier) > règle période > règle jour de semaine
+//   > weekend_price/base_price
+// Utilisé par BHGuest pour afficher/calculer le vrai prix.
+// Retourne un objet { 'YYYY-MM-DD': prix, ... } sur `days` jours.
+// ============================================================
+async function getCalendarPricesForRange(propertyId, userId, days = 500) {
+  const fmt = d => d.toISOString().split('T')[0];
+  const today = new Date();
+  const endDate = new Date(today); endDate.setDate(today.getDate() + days);
+
+  // Prix de base du logement
+  const propRes = await pool.query(
+    `SELECT base_price, weekend_price FROM properties WHERE id = $1`,
+    [propertyId]
+  );
+  const prop = propRes.rows[0];
+  if (!prop) return {};
+  const basePrice    = prop.base_price != null ? parseFloat(prop.base_price) : null;
+  const weekendPrice = prop.weekend_price != null ? parseFloat(prop.weekend_price) : null;
+
+  let overridesMap = {};
+  let periodRules = [], weekdayRules = [];
+
+  if (userId) {
+    const overridesResult = await pool.query(
+      `SELECT TO_CHAR(date,'YYYY-MM-DD') as date, price FROM pricing_overrides
+       WHERE property_id = $1 AND user_id = $2 AND date >= $3 AND date <= $4`,
+      [propertyId, userId, fmt(today), fmt(endDate)]
+    );
+    overridesResult.rows.forEach(o => { overridesMap[o.date] = parseFloat(o.price); });
+
+    const rulesResult = await pool.query(
+      'SELECT * FROM pricing_rules WHERE property_id = $1 AND user_id = $2 AND active = true ORDER BY priority DESC',
+      [propertyId, userId]
+    );
+    const rules = rulesResult.rows;
+    periodRules  = rules.filter(r => r.rule_type === 'period');
+    weekdayRules = rules.filter(r => r.rule_type === 'weekday');
+  }
+
+  const prices = {};
+  for (let i = 0; i < days; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const dateStr = fmt(d);
+    const dow = d.getDay();
+
+    let appliedPrice = null;
+
+    if (overridesMap[dateStr] != null) {
+      appliedPrice = overridesMap[dateStr];
+    } else {
+      for (const rule of periodRules) {
+        if (rule.start_date && rule.end_date && rule.price != null) {
+          if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
+            appliedPrice = parseFloat(rule.price); break;
+          }
+        }
+      }
+      if (appliedPrice === null) {
+        for (const rule of weekdayRules) {
+          if (rule.days_of_week && rule.price != null && rule.days_of_week.includes(dow)) {
+            appliedPrice = parseFloat(rule.price); break;
+          }
+        }
+      }
+      if (appliedPrice === null) {
+        const isPremium = (dow === 5 || dow === 6);
+        appliedPrice = isPremium && weekendPrice != null ? weekendPrice : basePrice;
+      }
+    }
+
+    if (appliedPrice != null) prices[dateStr] = appliedPrice;
+  }
+
+  return prices;
+}
+
+// ============================================================
 // 💰 CHANNEX — Sync automatique des tarifs
 // Appelé après chaque modif de prix/règle/override
 // ============================================================
@@ -33403,13 +33484,25 @@ app.get('/api/guest/properties', async (req, res) => {
       properties = properties.filter(p => !bookedSet.has(p.id));
     }
 
-    res.json(properties.map(p => ({
+    // 💰 Pour chaque logement, calculer le prix réel de la prochaine nuit
+    // (override/règle calendrier) au lieu d'afficher uniquement base_price.
+    const fmtToday = new Date().toISOString().split('T')[0];
+    const displayPrices = await Promise.all(properties.map(async (p) => {
+      try {
+        const prices = await getCalendarPricesForRange(p.id, p.owner_id, 1);
+        return prices[fmtToday] != null ? prices[fmtToday] : (parseFloat(p.base_price) || null);
+      } catch {
+        return parseFloat(p.base_price) || null;
+      }
+    }));
+
+    res.json(properties.map((p, idx) => ({
       id: p.id,
       name: p.name,
       address: p.address,
       city: p.city,
       photoUrl: p.photo_url,
-      basePrice: parseFloat(p.base_price) || null,
+      basePrice: displayPrices[idx] != null ? displayPrices[idx] : (parseFloat(p.base_price) || null),
       weekendPrice: parseFloat(p.weekend_price) || null,
       maxGuests: p.max_guests,
       bedrooms: p.bedrooms,
@@ -33455,6 +33548,14 @@ app.get('/api/guest/properties/:id', async (req, res) => {
       ORDER BY start_date ASC
     `, [id]);
 
+    // 💰 Prix réels du calendrier (overrides + règles), prioritaires sur base/weekend
+    let calendarPrices = {};
+    try {
+      calendarPrices = await getCalendarPricesForRange(p.id, p.owner_id, 500);
+    } catch (priceErr) {
+      console.warn('⚠️ [GUEST] calendarPrices non chargés:', priceErr.message);
+    }
+
     res.json({
       id: p.id,
       name: p.name,
@@ -33463,6 +33564,7 @@ app.get('/api/guest/properties/:id', async (req, res) => {
       photoUrl: p.photo_url,
       basePrice: parseFloat(p.base_price) || null,
       weekendPrice: parseFloat(p.weekend_price) || null,
+      calendarPrices,
       maxGuests: p.max_guests,
       bedrooms: p.bedrooms,
       beds: p.beds,
@@ -35707,18 +35809,38 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       }
     }
 
-    // Calcul prix
+    // Calcul prix — aligné sur les prix réels du calendrier
+    // (overrides + règles), comme affiché au client dans BHGuest.
     const start = new Date(checkin);
     const end = new Date(checkout);
     const nights = Math.round((end - start) / (1000 * 60 * 60 * 24));
+
+    let calPrices = {};
+    try {
+      calPrices = await getCalendarPricesForRange(property_id, propUserId, 500);
+    } catch (cpErr) {
+      console.warn('⚠️ [GUEST] calendarPrices checkout non chargés, fallback base/weekend:', cpErr.message);
+    }
+    const _fmtLocal = d => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
     let totalBase = 0;
     for (let i = 0; i < nights; i++) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
-      const dow = d.getDay();
-      totalBase += (dow === 5 || dow === 6) && prop.weekend_price
-        ? parseFloat(prop.weekend_price)
-        : parseFloat(prop.base_price || 0);
+      const key = _fmtLocal(d);
+      if (calPrices[key] != null) {
+        totalBase += calPrices[key];
+      } else {
+        const dow = d.getDay();
+        totalBase += (dow === 5 || dow === 6) && prop.weekend_price
+          ? parseFloat(prop.weekend_price)
+          : parseFloat(prop.base_price || 0);
+      }
     }
 
     // Prix fixe override (convenu avec l'hôte) — validé contre un hold actif en base

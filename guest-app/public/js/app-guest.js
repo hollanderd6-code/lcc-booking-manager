@@ -1122,6 +1122,40 @@ function selectDate(dateStr) {
   updateBookingBar();
 }
 
+// ── Prix réel d'une nuit ─────────────────────────────────────
+// Priorité : prix du calendrier (override + règles, fourni par
+// l'API via calendarPrices) → weekend_price → base_price.
+// Garantit que le client voit le même prix que le calendrier de l'hôte.
+function _dateKey(d) {
+  // Clé YYYY-MM-DD en heure locale (évite le décalage de toISOString)
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function nightPrice(p, date) {
+  if (!p) return 0;
+  if (p.calendarPrices) {
+    const key = _dateKey(date);
+    if (p.calendarPrices[key] != null) return p.calendarPrices[key];
+  }
+  const dow = date.getDay();
+  return (dow === 5 || dow === 6) && p.weekendPrice ? p.weekendPrice : (p.basePrice || 0);
+}
+
+// Somme des prix réels nuit par nuit entre checkin et checkout
+function sumNights(p, checkin, checkout) {
+  const nights = Math.round((new Date(checkout) - new Date(checkin)) / 86400000);
+  let total = 0;
+  for (let i = 0; i < nights; i++) {
+    const d = new Date(checkin);
+    d.setDate(d.getDate() + i);
+    total += nightPrice(p, d);
+  }
+  return total;
+}
+
 function updateBookingBar() {
   const p = state.currentProperty;
   if (!p) return;
@@ -1129,13 +1163,7 @@ function updateBookingBar() {
 
   if (state.selectedCheckin && state.selectedCheckout) {
     const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
-    let total = 0;
-    for (let i = 0; i < nights; i++) {
-      const d = new Date(state.selectedCheckin);
-      d.setDate(d.getDate() + i);
-      const dow = d.getDay();
-      total += (dow === 5 || dow === 6) && p.weekendPrice ? p.weekendPrice : (p.basePrice || 0);
-    }
+    const total = sumNights(p, state.selectedCheckin, state.selectedCheckout);
     if (bar) bar.innerHTML = `${total}€ <span style="font-size:12px;font-weight:400;color:var(--text2);">· ${nights} nuit${nights > 1 ? 's' : ''}</span>`;
   } else {
     if (bar) bar.innerHTML = `${p.basePrice}€`;
@@ -1147,13 +1175,7 @@ function goToCheckout() {
   if (!state.selectedCheckin || !state.selectedCheckout) return;
   const p = state.currentProperty;
   const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
-  let total = 0;
-  for (let i = 0; i < nights; i++) {
-    const d = new Date(state.selectedCheckin);
-    d.setDate(d.getDate() + i);
-    const dow = d.getDay();
-    total += (dow === 5 || dow === 6) && p.weekendPrice ? p.weekendPrice : (p.basePrice || 0);
-  }
+  const total = sumNights(p, state.selectedCheckin, state.selectedCheckout);
   // Prix fixe depuis deep link (override tout le calcul de base)
   const fixedPriceOverride = state._pendingFixedPrice || null;
   const displayBase = fixedPriceOverride !== null ? fixedPriceOverride : total;
@@ -1182,7 +1204,7 @@ function goToCheckout() {
       ${fixedPriceOverride !== null
         ? `<div class="checkout-row" id="baseRow"><span>Prix négocié</span><span>${displayBase}€</span></div>
            <div class="checkout-row" style="font-size:11px;color:#9CA3AF;"><span><em>Prix spécial convenu avec l'hôte</em></span></div>`
-        : `<div class="checkout-row" id="baseRow"><span>${p.basePrice}€ × ${nights} nuit${nights > 1 ? 's' : ''}</span><span>${total}€</span></div>`
+        : `<div class="checkout-row" id="baseRow"><span>Hébergement · ${nights} nuit${nights > 1 ? 's' : ''}</span><span>${total}€</span></div>`
       }
       <div class="checkout-row" id="promoRow" style="display:${fixedPriceOverride !== null ? 'none' : 'none'};color:#10b981;"><span>Code promo</span><span id="promoAmount">-0€</span></div>
       ${cleaningFee > 0 ? `<div class="checkout-row" id="cleaningRow"><span>Frais de ménage</span><span>${cleaningFee}€</span></div>` : ''}
@@ -1247,13 +1269,7 @@ function _recalcTotal() {
   const p = state.currentProperty;
   if (!p) return;
   const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
-  let totalBase = 0;
-  for (let i = 0; i < nights; i++) {
-    const d = new Date(state.selectedCheckin);
-    d.setDate(d.getDate() + i);
-    const dow = d.getDay();
-    totalBase += (dow === 5 || dow === 6) && p.weekendPrice ? p.weekendPrice : (p.basePrice || 0);
-  }
+  const totalBase = sumNights(p, state.selectedCheckin, state.selectedCheckout);
   const discount = state.appliedPromo?.discount_amount || 0;
   const discounted = Math.max(0, totalBase - discount);
   const cleaningFee = p.cleaningFee || 0;
@@ -1284,12 +1300,7 @@ async function applyPromo() {
   try {
     const p = state.currentProperty;
     const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
-    let total = 0;
-    for (let i = 0; i < nights; i++) {
-      const d = new Date(state.selectedCheckin); d.setDate(d.getDate() + i);
-      const dow = d.getDay();
-      total += (dow === 5 || dow === 6) && p.weekendPrice ? p.weekendPrice : (p.basePrice || 0);
-    }
+    const total = sumNights(p, state.selectedCheckin, state.selectedCheckout);
 
     const res = await fetch(`${API_URL}/api/guest/promo/check`, {
       method: 'POST',
