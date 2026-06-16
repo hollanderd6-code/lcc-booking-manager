@@ -214,7 +214,8 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       background-repeat: no-repeat; background-position: right 12px center;
       padding-right: 32px; cursor: pointer;
     }
-    .bh-sheet-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .bh-sheet-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
+    .bh-sheet-row > * { min-width: 0; }
     .bh-field { margin-bottom: 12px; }
     .bh-section-title {
       font-size: 10px; font-weight: 700; color: #9CA3AF;
@@ -3681,7 +3682,7 @@ window.closeChecklistsKpiModal = function() {
     </div>
 
     <!-- Scrollable body -->
-<div style="overflow-y:auto;flex:1;min-height:0;padding:0 16px 8px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
+<div style="overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;padding:0 16px 8px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;">
       <form id="newReservationForm" onsubmit="return false;">
         <!-- Logement -->
         <div class="bh-field">
