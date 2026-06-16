@@ -28762,7 +28762,7 @@ app.get('/api/contrats', authenticateAny, async (req, res) => {
     params.push(parseInt(limit), parseInt(offset));
 
     const result = await pool.query(query, params);
-    const countResult = await pool.query(`SELECT COUNT(*) FROM contracts WHERE user_id = $1${status ? ' AND status = $2' : ''}`, status ? [userId, status] : [userId]);
+    const countResult = await pool.query(`SELECT COUNT(*) FROM contracts WHERE user_id = ANY($1::text[])${status ? ' AND status = $2' : ''}`, status ? [agencyIds, status] : [agencyIds]);
 
     res.json({
       contracts: result.rows,
@@ -28787,8 +28787,8 @@ app.get('/api/contrats/:id', authenticateAny, async (req, res) => {
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const result = await pool.query(
-      `SELECT * FROM contracts WHERE id = $1 AND user_id = $2`,
-      [req.params.id, userId]
+      `SELECT * FROM contracts WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [req.params.id, await getAgencyUserIds(req, userId)]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Contrat introuvable' });
 
@@ -28810,8 +28810,8 @@ app.post('/api/contrats/:id/resend-sign', authenticateAny, async (req, res) => {
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const result = await pool.query(
-      `SELECT * FROM contracts WHERE id = $1 AND user_id = $2`,
-      [req.params.id, userId]
+      `SELECT * FROM contracts WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [req.params.id, await getAgencyUserIds(req, userId)]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Contrat introuvable' });
 
@@ -28885,8 +28885,8 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const result = await pool.query(
-      `SELECT * FROM contracts WHERE id = $1 AND user_id = $2`,
-      [req.params.id, userId]
+      `SELECT * FROM contracts WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [req.params.id, await getAgencyUserIds(req, userId)]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Contrat introuvable' });
 
