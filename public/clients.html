@@ -3058,7 +3058,7 @@ window.deleteOwnerInvoice = function (id) {
     const emitterCustomFields = (ep.customFields || up.customFields || []);
     const emitterLines = [
       ep.address || up.address,
-      ((ep.postalCode||up.postalCode||'') + ' ' + (ep.city||up.city||'')).trim(),
+      ((ep.postalCode||up.postalCode||'') + ' ' + String(ep.city||up.city||'').replace(/^\s*\d{4,5}\s+/, '')).trim(),
       ep.siret ? 'SIRET : ' + ep.siret : (up.siret || ''),
       ep.phone || up.phone || '',
       ep.email || up.invoiceEmail || up.email || '',
@@ -3626,6 +3626,7 @@ window.duplicatePrestation = function(id) {
       if (companyInput) companyInput.value = emitterProfile.company || '';
       if (addressInput) addressInput.value = emitterProfile.address || '';
       if (postalInput) postalInput.value = emitterProfile.postalCode || '';
+      if (emitterProfile.city) emitterProfile.city = String(emitterProfile.city).replace(/^\s*\d{4,5}\s+/, '').trim();
       if (cityInput) cityInput.value = emitterProfile.city || '';
       if (siretInput) siretInput.value = emitterProfile.siret || '';
       if (phoneInput) phoneInput.value = emitterProfile.phone || '';
@@ -3641,6 +3642,7 @@ window.duplicatePrestation = function(id) {
         emitterProfile.customFields.forEach(function(cf) { addEmitterCustomField(cf.label, cf.value); });
       }
 
+      window.emitterProfile = emitterProfile; // synchro pour le rendu de la facture
       updateSenderAddressFromProfile();
       updateSenderPreviewOnly();
 
@@ -3664,6 +3666,7 @@ if (window.userProfile && window.userProfile.logoUrl) {
 
   function saveEmitterProfile() {
     try {
+      window.emitterProfile = emitterProfile; // rendu facture : buildInvoiceHTML lit window.emitterProfile
       localStorage.setItem('lcc_owner_emitter_profile', JSON.stringify(emitterProfile));
     } catch (e) {
       console.warn('Impossible d\'enregistrer le profil émetteur', e);
