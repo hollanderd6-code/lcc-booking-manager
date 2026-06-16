@@ -485,6 +485,40 @@ async function sendNotificationToMultipleLogged(tokens, title, body, data) {
   if (userId) saveNotificationToHistory(userId, title, body, (data && data.type) || 'push', data);
   return result;
 }
+
+// ── Notifications 4.0 : formatage cohérent + constructeur unique ──
+function bhFmtAmount(v){
+  const n = Math.round(Number(v) || 0);
+  return new Intl.NumberFormat('fr-FR').format(n) + ' \u20AC';
+}
+function bhFmtDate(d){
+  const x = d instanceof Date ? d : new Date(d);
+  if (isNaN(x.getTime())) return String(d == null ? '' : d);
+  return String(x.getDate()).padStart(2,'0') + '/' + String(x.getMonth()+1).padStart(2,'0');
+}
+function bhFmtRange(from, to){ return bhFmtDate(from) + ' \u2192 ' + bhFmtDate(to); }
+
+/**
+ * Constructeur unique des push : titre/corps coh. + cle de regroupement (_group).
+ * opts = { emoji, event, context, parts:[], data:{}, group:{by:'property'|'type', id} }
+ * -> { title, body, data }  (data: valeurs forcees en string, + _group pour le regroupement)
+ */
+function bhPush(opts){
+  opts = opts || {};
+  const SEP = ' \u00B7 ';
+  const title = (opts.emoji ? opts.emoji + ' ' : '') + [opts.event, opts.context].filter(Boolean).join(SEP);
+  const body  = (opts.parts || []).filter(function(x){ return x != null && String(x).trim() !== ''; }).join(SEP);
+  const data = {};
+  const src = opts.data || {};
+  Object.keys(src).forEach(function(k){ if (src[k] != null) data[k] = String(src[k]); });
+  if (opts.group && opts.group.by) {
+    const gid = opts.group.id != null ? String(opts.group.id) : (data.type || 'bh');
+    data._group = (opts.group.by === 'property' ? 'prop_' : 'type_') + gid;
+  } else if (data.type) {
+    data._group = 'type_' + data.type;
+  }
+  return { title: title, body: body, data: data };
+}
 /**
  * Nettoie le nom du voyageur extrait d'iCal
  */
@@ -950,12 +984,13 @@ async function syncSingleIcalUrl(pool, property, entry) {
           const fcmTokens = tokensRes.rows.map(r => r.fcm_token);
           const checkin = new Date(startStr).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
           const checkout = new Date(endStr).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
-          await sendNotificationToMultipleLogged(
-            fcmTokens,
-            `📅 Nouvelle réservation ${platformName}`,
-            `${displayName(property)} - ${checkin} au ${checkout}`,
-            { type: 'new_reservation', reservation_id: uid, property_name: displayName(property) }
-          );
+          const _pResaOTA = bhPush({
+            emoji: '🎉', event: 'Nouvelle réservation', context: platformName,
+            parts: [ displayName(property), bhFmtRange(startStr, endStr) ],
+            data: { type: 'new_reservation', reservation_id: uid, property_name: displayName(property) },
+            group: { by: 'property', id: property.id }
+          });
+          await sendNotificationToMultipleLogged(fcmTokens, _pResaOTA.title, _pResaOTA.body, _pResaOTA.data);
           await sendNotificationToDelegatesOf(
             property.user_id,
             `📅 Nouvelle réservation ${platformName}`,
@@ -6852,12 +6887,13 @@ async function captureDeposit(depositId, amountCents = null) {
         [depositData.user_id]
       );
       if (tokensRes.rows.length > 0) {
-        await sendNotificationToMultipleLogged(
-          tokensRes.rows.map(r => r.fcm_token),
-          `💰 Caution débitée : ${amountEur}€`,
-          `${guestName} — ${propName}`,
-          { type: 'deposit_captured', depositId: String(depositId), amount: String(capturedAmount) }
-        );
+        const _pCaution = bhPush({
+          emoji: '💸', event: 'Caution débitée', context: amountEur + ' €',
+          parts: [ guestName, propName ],
+          data: { type: 'deposit_captured', depositId: String(depositId), amount: String(capturedAmount) },
+          group: { by: 'property', id: depositData.property_id }
+        });
+        await sendNotificationToMultipleLogged(tokensRes.rows.map(r => r.fcm_token), _pCaution.title, _pCaution.body, _pCaution.data);
       }
       console.log(`🔔 Notification caution débitée: ${amountEur}€ (${guestName})`);
     } catch (notifErr) {
@@ -7713,16 +7749,13 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
             // ✅ GROUPER TOUS LES TOKENS ET ENVOYER UNE SEULE NOTIFICATION
             const fcmTokens = tokenResult.rows.map(row => row.fcm_token);
             
-            await sendNotificationToMultipleLogged(
-              fcmTokens,
-              '📅 Nouvelle réservation directe',
-              `${(reservation.guestName || guestName || 'Voyageur')} · ${displayName(property)} · ${checkInDate} → ${checkOutDate}`,
-              {
-                type: 'new_reservation',
-                reservation_id: uid,
-                property_name: displayName(property)
-              }
-            );
+            const _pResaDirecte = bhPush({
+              emoji: '🎉', event: 'Réservation directe',
+              parts: [ (reservation.guestName || guestName || 'Voyageur'), displayName(property), checkInDate + ' → ' + checkOutDate ],
+              data: { type: 'new_reservation', reservation_id: uid, property_name: displayName(property) },
+              group: { by: 'property', id: property.id }
+            });
+            await sendNotificationToMultipleLogged(fcmTokens, _pResaDirecte.title, _pResaDirecte.body, _pResaDirecte.data);
             
             console.log(`✅ Notification groupée envoyée à ${fcmTokens.length} appareil(s) pour ${displayName(property)}`);
             // ✅ Notif sous-comptes : nouvelle réservation manuelle
@@ -8875,12 +8908,12 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
         );
         if (tokensResult.rows.length > 0) {
           const fcmTokens = tokensResult.rows.map(row => row.fcm_token);
-          await sendNotificationToMultipleLogged(
-            fcmTokens,
-            '❌ Réservation annulée',
-            `${propertyName} - ${cancelDate}`,
-            { type: 'reservation_cancelled', reservation_id: uid, property_name: propertyName }
-          );
+          const _pAnnul = bhPush({
+            event: 'Réservation annulée', context: propertyName,
+            parts: [ cancelDate, 'dates de nouveau libres' ],
+            data: { type: 'reservation_cancelled', reservation_id: uid, property_name: propertyName }
+          });
+          await sendNotificationToMultipleLogged(fcmTokens, _pAnnul.title, _pAnnul.body, _pAnnul.data);
           console.log(`✅ Notification annulation groupée envoyée à ${fcmTokens.length} appareil(s)`);
         }
       } catch (notifError) {
@@ -10887,12 +10920,12 @@ app.post('/api/checklists/:reservationUid/complete', authenticateAny, checkSubsc
         property_name: propertyName
       };
       for (const tok of tokensResult.rows) {
-        await sendNotificationLogged(
-          tok.fcm_token,
-          '✅ Ménage terminé',
-          `${propertyName} - Checklist complétée`,
-          notifData
-        );
+        const _pMenageFini = bhPush({
+          emoji: '🧹', event: 'Ménage terminé', context: propertyName,
+          parts: [ 'Checklist complétée — à valider' ],
+          data: notifData
+        });
+        await sendNotificationLogged(tok.fcm_token, _pMenageFini.title, _pMenageFini.body, _pMenageFini.data);
       }
       console.log(`✅ Notification ménage complété envoyée pour ${propertyName} (${tokensResult.rows.length} appareil(s))`);
     }
@@ -12247,8 +12280,8 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     // 🔔 ENVOYER NOTIFICATION DE NOUVEAU MÉNAGE
 try {
   const cleaner = cleanerResult.rows[0];
-  const title = '🧹 Nouveau ménage assigné';
-  const body = displayName(property) + ' — Vous avez un ménage à effectuer';
+  const title = '🧹 Ménage à prévoir';
+  const body = displayName(property) + ' · tapez pour voir la checklist';
   const data = { type: 'cleaning_assigned', reservationKey: reservationKey };
 
   // ✅ Si le cleaner est lié à un sous-compte → notif ciblée
@@ -13457,12 +13490,13 @@ app.put('/api/cleaning/checklists/:id/validate',
           WHERE c.id = $1 LIMIT 1`, [cl.cleaner_id]);
         if (cleanerRow.rows.length > 0 && cleanerRow.rows[0].fcm_token) {
           alreadyNotifiedTokens.add(cleanerRow.rows[0].fcm_token);
-          await sendNotificationLogged(
-            cleanerRow.rows[0].fcm_token,
-            '✅ Ménage validé — ' + propertyName,
-            'Super travail ! Le ménage du ' + checkoutFmt + ' a été validé.',
-            { type: 'cleaning_validated', checklistId: String(id), propertyId: cl.property_id }
-          );
+          const _pValide = bhPush({
+            emoji: '✅', event: 'Ménage validé', context: propertyName,
+            parts: [ 'Beau travail 👏 Le ménage du ' + checkoutFmt + ' est validé.' ],
+            data: { type: 'cleaning_validated', checklistId: String(id), propertyId: cl.property_id },
+            group: { by: 'property', id: cl.property_id }
+          });
+          await sendNotificationLogged(cleanerRow.rows[0].fcm_token, _pValide.title, _pValide.body, _pValide.data);
           console.log(`📱 Notif validation envoyée au cleaner ${cl.cleaner_id}`);
         }
 
@@ -13561,12 +13595,13 @@ app.put('/api/cleaning/checklists/:id/reject',
           const alreadyNotifiedTokens = new Set();
           if (cleaner.fcm_token) {
             alreadyNotifiedTokens.add(cleaner.fcm_token);
-            await sendNotificationLogged(
-              cleaner.fcm_token,
-              `⚠️ Complément demandé — ${propertyName}`,
-              notes ? notes : `Le propriétaire demande un complément pour le ménage du ${checkoutFmt}.`,
-              { type: 'cleaning_complement', checklistId: String(id), propertyId: checklist.property_id }
-            );
+            const _pComplement = bhPush({
+              emoji: '🔄', event: 'Complément demandé', context: propertyName,
+              parts: [ notes ? ('« ' + notes + ' »') : ('Complément demandé pour le ménage du ' + checkoutFmt) ],
+              data: { type: 'cleaning_complement', checklistId: String(id), propertyId: checklist.property_id },
+              group: { by: 'property', id: checklist.property_id }
+            });
+            await sendNotificationLogged(cleaner.fcm_token, _pComplement.title, _pComplement.body, _pComplement.data);
             console.log(`📱 Push complément envoyé au cleaner ${checklist.cleaner_id}`);
           }
 
@@ -20648,12 +20683,12 @@ app.post('/api/invoice/create',
           );
           if (tokensRes.rows.length > 0) {
             const tokens = tokensRes.rows.map(r => r.fcm_token);
-            await sendNotificationToMultipleLogged(
-              tokens,
-              `📄 Facture ${invoiceNumber} envoyée`,
-              `Facture envoyée à ${clientName} pour ${propertyName}`,
-              { type: 'new_invoice', invoiceNumber }
-            );
+            const _pFacture = bhPush({
+              emoji: '📄', event: 'Facture ' + invoiceNumber, context: 'envoyée',
+              parts: [ clientName, propertyName ],
+              data: { type: 'new_invoice', invoiceNumber: invoiceNumber }
+            });
+            await sendNotificationToMultipleLogged(tokens, _pFacture.title, _pFacture.body, _pFacture.data);
           }
         }
       } catch (pushErr) {

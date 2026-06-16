@@ -122,6 +122,13 @@ async function sendNotification(fcmToken, title, body, data = {}) {
     }
   };
 
+  // Regroupement écran verrouillé : iOS empile par thread-id (pas de perte de message).
+  // Clé = data._group (posée par bhPush) sinon par type. Android : le client lit data._group.
+  const _groupKey = data && (data._group || (data.type ? ('type_' + data.type) : null));
+  if (_groupKey) {
+    message.apns.payload.aps['thread-id'] = String(_groupKey);
+  }
+
   try {
     const response = await admin.messaging().send(message);
     console.log('✅ Notification envoyée:', { title, to: fcmToken.substring(0, 20) + '...' });
