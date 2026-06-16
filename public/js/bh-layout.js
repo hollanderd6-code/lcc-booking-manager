@@ -1612,6 +1612,34 @@ var _bhNativeConfirm = window.confirm;
   // ── bhAnimateValue : anime un nombre de 0 (ou valeur courante) vers une cible ──
   // Gère préfixe/suffixe (%, €), décimales, et respecte prefers-reduced-motion.
   // Usage : bhAnimateValue(el, 375, { suffix:'€' });  bhAnimateValue(el, 8, { suffix:'%' });
+  // ── bhSetNavBadge(page, count) : pastille de comptage sur une entrée de menu ──
+  // S'applique au menu latéral (.nav-item[data-page]) et aux onglets du bas (.tab-btn[data-tab]).
+  // count = 0 ou falsy → retire la pastille.
+  if (!window.bhSetNavBadge) {
+    window.bhSetNavBadge = function(page, count) {
+      count = Number(count) || 0;
+      var label = count > 99 ? '99+' : String(count);
+      // Cibles : sidebar + barre du bas
+      var targets = [].slice.call(document.querySelectorAll('.nav-item[data-page="' + page + '"], .tab-btn[data-tab="' + page + '"]'));
+      targets.forEach(function(el) {
+        var badge = el.querySelector('.bh-nav-badge');
+        if (count <= 0) { if (badge) badge.remove(); return; }
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'bh-nav-badge';
+          badge.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:auto;background:#dc2626;color:#fff;font-size:10.5px;font-weight:700;line-height:1;border-radius:999px;box-shadow:0 1px 3px rgba(220,38,38,.4);flex-shrink:0;';
+          // Sur la barre du bas (icône seule), positionner en absolu en haut à droite
+          if (el.classList.contains('tab-btn')) {
+            badge.style.cssText = 'position:absolute;top:2px;right:calc(50% - 20px);min-width:16px;height:16px;padding:0 4px;background:#dc2626;color:#fff;font-size:9.5px;font-weight:700;line-height:16px;text-align:center;border-radius:999px;box-shadow:0 1px 3px rgba(220,38,38,.4);';
+            el.style.position = 'relative';
+          }
+          el.appendChild(badge);
+        }
+        badge.textContent = label;
+      });
+    };
+  }
+
   if (!window.bhAnimateValue) {
     window.bhAnimateValue = function(el, target, opts) {
       if (!el) return;
