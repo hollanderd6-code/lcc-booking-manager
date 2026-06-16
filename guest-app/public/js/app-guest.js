@@ -1161,6 +1161,12 @@ async function loadProperties() {
         </div>
       </div>
     `).join('');
+    // Apparition en cascade (fondu + montée décalée)
+    requestAnimationFrame(() => {
+      grid.querySelectorAll('.prop-card').forEach((card, i) => {
+        setTimeout(() => card.classList.add('card-in'), i * 60);
+      });
+    });
     // Charger les vraies notes Channex en arrière-plan
     state.properties.forEach(async p => {
       const r = await fetchPropertyRating(p.id);
