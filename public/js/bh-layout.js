@@ -1188,9 +1188,18 @@ var _bhNativeConfirm = window.confirm;
     }
   }
 
+  function _updateAgencyHeaderClass() {
+    var mh = document.getElementById('bhMobileHeader') || document.querySelector('.mobile-header');
+    if (!mh) return;
+    var btnMobile = document.getElementById('agencySwitcherBtnMobile');
+    var visible = btnMobile && btnMobile.style.display !== 'none' && getComputedStyle(btnMobile).display !== 'none';
+    mh.classList.toggle('bh-has-agency', !!visible);
+    mh.classList.toggle('bh-no-agency', !visible);
+  }
+
   window.initAgencySwitcherBtn = function() {
     // Pas de bouton agence sur settings-account et help
-    if (isAgencyBtnHiddenPage()) return;
+    if (isAgencyBtnHiddenPage()) { _updateAgencyHeaderClass(); return; }
     if (window.innerWidth <= 1366) injectMobileAgencyBtn();
     var btn = document.getElementById('agencySwitcherBtn');
     var btnMobile = document.getElementById('agencySwitcherBtnMobile');
@@ -1201,6 +1210,7 @@ var _bhNativeConfirm = window.confirm;
       if (btnMobile) btnMobile.style.display = 'inline-flex';
       updateAgencySwitcherLabel();
     }
+    _updateAgencyHeaderClass();
   };
 
   // Watch for agency accounts to be loaded
@@ -1212,6 +1222,7 @@ var _bhNativeConfirm = window.confirm;
     if (btn) btn.style.display = 'inline-flex';
     if (btnMobile) btnMobile.style.display = 'inline-flex';
     updateAgencySwitcherLabel();
+    _updateAgencyHeaderClass();
     // Don't call old bar rendering
   };
 
@@ -1748,6 +1759,10 @@ var _bhNativeConfirm = window.confirm;
       '.mobile-header{justify-content:space-between!important;}' +
       '.mobile-header #bh-mobile-ann-btn{margin-right:6px!important;}' +
       '.mobile-header>[style*="flex-end"]{gap:5px!important;margin-left:10px!important;}' +
+      /* Sans bouton agence : le groupe droit (2 boutons) laisse un vide entre le logo
+         et les boutons. On décolle le groupe du bord droit pour le ramener vers le
+         centre, ce qui rééquilibre comme s'il y avait 3 boutons. */
+      '.mobile-header.bh-no-agency>[style*="flex-end"]{margin-right:20px!important;}' +
       '.mobile-header #bh-mobile-svc,.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{' +
         'background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);' +
         'border:1px solid rgba(26,122,94,.16)!important;border-radius:10px!important;height:32px!important;cursor:pointer;' +
