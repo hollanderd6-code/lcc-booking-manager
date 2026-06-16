@@ -701,12 +701,21 @@ body {
 }
 
 /* Compte */
-#screen-account { background: var(--bg); }
+#screen-account {
+  background:
+    radial-gradient(700px 380px at -5% -5%, rgba(124,58,237,.08), transparent 55%),
+    radial-gradient(600px 420px at 108% 10%, rgba(167,139,250,.10), transparent 52%),
+    var(--bg);
+}
 .account-wrap { padding: 16px 16px 80px; }
 .account-card {
-  background: white; border-radius: var(--radius);
-  padding: 16px; margin-bottom: 12px;
-  box-shadow: var(--shadow);
+  background: rgba(255,255,255,.6);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(124,58,237,.12);
+  border-radius: 18px;
+  padding: 18px; margin-bottom: 12px;
+  box-shadow: 0 4px 20px rgba(124,58,237,.08), inset 0 1px 0 rgba(255,255,255,.55);
 }
 .account-card-title {
   font-size: 13px; font-weight: 700; color: var(--text);
@@ -804,7 +813,12 @@ body.screen-detail #bottomNav { display: none !important; }
 .booking-bar-btn:active { transform: scale(.97); }
 
 /* ─── Checkout / Confirm ─── */
-#screen-checkout, #screen-confirm { background: var(--bg); }
+#screen-checkout, #screen-confirm {
+  background:
+    radial-gradient(700px 380px at -5% -5%, rgba(124,58,237,.10), transparent 55%),
+    radial-gradient(620px 420px at 108% 8%, rgba(167,139,250,.12), transparent 52%),
+    var(--bg);
+}
 .checkout-wrap, .confirm-wrap { padding: 16px 16px 80px; }
 
 /* ─── Responsive ─── */
@@ -909,14 +923,83 @@ body.screen-detail #bottomNav { display: none !important; }
 .section-title { font-size: 15px; font-weight: 700; color: var(--text); margin: 20px 0 12px; }
 
 /* ─── CHECKOUT ─── */
-.checkout-summary { background: var(--bg2, #f1f0f8); border-radius: 14px; padding: 16px; margin-bottom: 20px; }
-.checkout-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; border-bottom: 1px solid var(--border); }
+.checkout-summary {
+  background: rgba(255,255,255,.6);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(124,58,237,.12);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(124,58,237,.08), inset 0 1px 0 rgba(255,255,255,.55);
+}
+.checkout-row { display: flex; justify-content: space-between; padding: 9px 0; font-size: 14px; border-bottom: 1px solid rgba(124,58,237,.08); color: var(--text); }
 .checkout-row:last-child { border-bottom: none; }
-.checkout-row.total { font-weight: 700; font-size: 16px; }
+.checkout-row.total {
+  font-weight: 800; font-size: 17px; color: var(--primary);
+  border-top: 1.5px solid rgba(124,58,237,.16);
+  margin-top: 6px; padding-top: 12px; border-bottom: none;
+}
 .form-section { margin-bottom: 16px; }
 .form-section label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
-.form-section input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 16px; font-family: inherit; outline: none; }
-.form-section input:focus { border-color: var(--primary); }
+.form-section input {
+  width: 100%; padding: 13px 14px;
+  background: rgba(255,255,255,.7);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(124,58,237,.14);
+  border-radius: 12px; font-size: 16px; font-family: inherit; outline: none;
+  color: var(--text);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.form-section input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(124,58,237,.12);
+}
+
+/* ─── CONFIRMATION ─── */
+.confirm-icon {
+  width: 76px; height: 76px; margin: 8px auto 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 32px;
+  box-shadow: 0 8px 24px rgba(124,58,237,.4),
+              inset 0 1px 0 rgba(255,255,255,.4);
+  animation: confirmPop .45s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes confirmPop {
+  0% { transform: scale(.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.confirm-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 26px; color: var(--text); text-align: center; margin-bottom: 6px;
+}
+.confirm-sub { font-size: 14px; color: var(--text2); text-align: center; margin-bottom: 22px; line-height: 1.5; }
+.confirm-card {
+  background: rgba(255,255,255,.6);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(124,58,237,.12);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 20px rgba(124,58,237,.08), inset 0 1px 0 rgba(255,255,255,.55);
+}
+.confirm-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; border-bottom: 1px solid rgba(124,58,237,.08); color: var(--text); }
+.confirm-row:last-child { border-bottom: none; }
+.confirm-row span:first-child { color: var(--text2); }
+.confirm-row span:last-child { font-weight: 600; }
+.btn-confirm-home {
+  width: 100%; padding: 15px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white; border: 1px solid rgba(255,255,255,.2); border-radius: 14px;
+  font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(124,58,237,.32), inset 0 1px 0 rgba(255,255,255,.3);
+  transition: transform .15s ease;
+}
+.btn-confirm-home:active { transform: scale(.97); }
 
 </style>
 </head>
