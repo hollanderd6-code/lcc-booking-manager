@@ -7937,6 +7937,7 @@ app.patch('/api/reservations/:uid/note', authenticateToken, async (req, res) => 
   try {
     const { uid } = req.params;
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const rawNote = (req.body.notes || '').trim();
     // Stocker NULL si la note est vide (suppression propre)
     const noteToStore = rawNote.length > 0 ? rawNote : null;
@@ -7944,9 +7945,9 @@ app.patch('/api/reservations/:uid/note', authenticateToken, async (req, res) => 
     const result = await pool.query(
       `UPDATE reservations
        SET notes = $1, updated_at = NOW()
-       WHERE (uid = $2 OR channex_booking_id = $2) AND user_id = $3
+       WHERE (uid = $2 OR channex_booking_id = $2) AND user_id = ANY($3::text[])
        RETURNING uid, notes`,
-      [noteToStore, uid, userId]
+      [noteToStore, uid, agencyIds]
     );
 
     if (result.rows.length === 0) {
@@ -12934,6 +12935,7 @@ app.get('/api/cleaning/checklists/:id', async (req, res) => {
     }
 
     const { id } = req.params;
+    const agencyIds = await getAgencyUserIds(req, user.id);
 
     const result = await pool.query(
       `SELECT 
@@ -12943,8 +12945,8 @@ app.get('/api/cleaning/checklists/:id', async (req, res) => {
         c.phone as cleaner_phone
        FROM cleaning_checklists cc
        LEFT JOIN cleaners c ON c.id = cc.cleaner_id
-       WHERE cc.id = $1 AND cc.user_id = $2`,
-      [id, user.id]
+       WHERE cc.id = $1 AND cc.user_id = ANY($2::text[])`,
+      [id, agencyIds]
     );
 
     if (result.rows.length === 0) {
@@ -13445,6 +13447,7 @@ app.put('/api/cleaning/checklists/:id/validate',
       }
 
       const { id } = req.params;
+      const agencyIds = await getAgencyUserIds(req, userId);
 
       const result = await pool.query(
         `UPDATE cleaning_checklists 
@@ -13452,9 +13455,9 @@ app.put('/api/cleaning/checklists/:id/validate',
              owner_validated_at = NOW(), 
              is_validated = TRUE,
              updated_at = NOW()
-         WHERE id = $1 AND user_id = $2
+         WHERE id = $1 AND user_id = ANY($2::text[])
          RETURNING *`,
-        [id, userId]
+        [id, agencyIds]
       );
 
       if (result.rows.length === 0) {
@@ -13462,7 +13465,7 @@ app.put('/api/cleaning/checklists/:id/validate',
       }
 
       if (typeof io !== 'undefined' && io) {
-        io.to(`user_${userId}`).emit('cleaning:validated', {
+        io.to(`user_${result.rows[0].user_id}`).emit('cleaning:validated', {
           checklistId: id,
           propertyId: result.rows[0].property_id
         });
@@ -13556,15 +13559,16 @@ app.put('/api/cleaning/checklists/:id/reject',
 
       const { id } = req.params;
       const { notes } = req.body;
+      const agencyIds = await getAgencyUserIds(req, userId);
 
       const result = await pool.query(
         `UPDATE cleaning_checklists 
          SET owner_status = 'rejected', 
              owner_notes = $3,
              updated_at = NOW()
-         WHERE id = $1 AND user_id = $2
+         WHERE id = $1 AND user_id = ANY($2::text[])
          RETURNING *`,
-        [id, userId, notes || 'Merci de compléter le ménage']
+        [id, agencyIds, notes || 'Merci de compléter le ménage']
       );
 
       if (result.rows.length === 0) {
