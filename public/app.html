@@ -3667,7 +3667,7 @@ window.closeChecklistsKpiModal = function() {
 </div>
 <!-- New Manual Reservation Modal -->
 <div id="newReservationModal" style="display:none;position:fixed;inset:0;overflow:hidden;background:rgba(13,17,23,.6);backdrop-filter:blur(4px);z-index:9999;align-items:flex-end;justify-content:center;touch-action:none;overscroll-behavior:none;">
-  <div style="background:#F5F0E8;border-radius:24px 24px 0 0;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.18);">
+  <div style="background:#F5F0E8;border-radius:24px 24px 0 0;width:100%;max-width:620px;max-height:92dvh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.18);">
 
     <!-- Drag handle -->
     <div style="display:flex;justify-content:center;padding:10px 0 4px;flex-shrink:0;">
@@ -3813,7 +3813,7 @@ window.closeChecklistsKpiModal = function() {
     </div>
 
     <!-- Footer -->
-    <div style="padding:12px 16px 32px;display:flex;gap:8px;align-items:center;border-top:1px solid rgba(200,184,154,.35);background:#F5F0E8;flex-shrink:0;">
+    <div style="padding:12px 16px calc(16px + env(safe-area-inset-bottom, 0px));display:flex;gap:8px;align-items:center;border-top:1px solid rgba(200,184,154,.35);background:#F5F0E8;flex-shrink:0;">
       <button class="btn btn-ghost" id="newReservationCancel" type="button" style="height:42px;padding:0 18px;border-radius:12px;font-size:13px;font-weight:600;">Annuler</button>
       <button id="newReservationSubmit" type="button" style="flex:1;height:42px;border-radius:12px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#1A7A5E,#0f5c46);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
         <i class="fas fa-check" style="font-size:13px;"></i> Enregistrer
