@@ -6334,7 +6334,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
     function patchArr(arr) {
       if (!Array.isArray(arr)) return;
       for (var i = 0; i < arr.length; i++) {
-        if (arr[i] && (arr[i].uid === uid || arr[i].id === uid)) {
+        if (arr[i] && (arr[i].uid === uid || arr[i].id === uid || arr[i].channex_booking_id === uid)) {
           arr[i] = Object.assign({}, arr[i], { notes: cleanNote });
           break;
         }
@@ -6345,7 +6345,7 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
     if (window.BH_NOTES) patchArr(window.BH_NOTES);
     // Mettre à jour la résa actuellement ouverte dans le modal,
     // sinon une note supprimée réapparaît (le modal lit currentBookingData.notes en premier).
-    if (window.currentBookingData && (window.currentBookingData.uid === uid || window.currentBookingData.id === uid)) {
+    if (window.currentBookingData && (window.currentBookingData.uid === uid || window.currentBookingData.id === uid || window.currentBookingData.channex_booking_id === uid)) {
       window.currentBookingData.notes = cleanNote;
     }
     // Recalculer le KPI avec la source mise à jour
@@ -9869,15 +9869,15 @@ function handleEditBooking() {
   var editNotesEl = document.getElementById('editNotes');
   var editNotesLabel = document.getElementById('editNotesLabel');
   if (editNotesEl) {
-    // Chercher la note dans l'ordre de priorité :
-    // 1. currentBookingData.notes (devrait être là après le fix handleEditBooking)
-    // 2. LCC_RESERVATIONS par uid (filet de sécurité)
-    var _noteVal = currentBookingData.notes || '';
-    if (!_noteVal && currentBookingData.uid) {
-      var _allResas = window.LCC_RESERVATIONS || [];
-      var _found = _allResas.find(function(r) { return r && (r.uid === currentBookingData.uid || r.id === currentBookingData.uid); });
-      if (_found && _found.notes) _noteVal = _found.notes;
-    }
+    // Source autoritaire = LCC_RESERVATIONS (rechargé du serveur à chaque sauvegarde).
+    // On la préfère à currentBookingData (qui peut être périmé si le calendrier n'a pas
+    // re-rendu), sinon une note supprimée réapparaît.
+    var _uidKey = currentBookingData.uid || currentBookingData.id;
+    var _allResas = window.LCC_RESERVATIONS || [];
+    var _found = _uidKey ? _allResas.find(function(r) {
+      return r && (r.uid === _uidKey || r.id === _uidKey || r.channex_booking_id === _uidKey);
+    }) : null;
+    var _noteVal = _found ? (_found.notes || '') : (currentBookingData.notes || '');
     editNotesEl.value = _noteVal;
     console.log('📝 editNotes pré-rempli avec:', JSON.stringify(_noteVal));
     var hasNote = !!_noteVal.trim();
