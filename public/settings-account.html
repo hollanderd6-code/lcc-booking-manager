@@ -238,6 +238,38 @@
       border-top: 1px solid var(--border-color);
     }
 
+    /* ===== Parrainage ===== */
+    .referral-share-box {
+      background: linear-gradient(135deg, rgba(26,122,94,.06), rgba(110,231,183,.08));
+      border: 1.5px solid rgba(26,122,94,.18);
+      border-radius: 14px; padding: 16px; margin-bottom: 16px;
+    }
+    .referral-url-row { display: flex; gap: 6px; margin-top: 10px; }
+    .referral-url-row input {
+      flex: 1; padding: 9px 12px; border-radius: 10px;
+      border: 1.5px solid var(--border-color, #e5e7eb); font-size: 12px;
+      outline: none; background: white; color: var(--text-color, #1e293b); font-family: monospace;
+    }
+    .referral-url-row button, .share-btn {
+      padding: 9px 14px; border-radius: 10px; border: none;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      white-space: nowrap; transition: transform .12s;
+    }
+    .referral-url-row button:active, .share-btn:active { transform: scale(.95); }
+    .referral-url-row button { background: var(--accent-color, #1A7A5E); color: white; }
+    .referral-stats-row { display: flex; gap: 20px; margin-top: 14px; }
+    .referral-stat-value { font-size: 24px; font-weight: 800; color: var(--text-color, #1e293b); line-height: 1; }
+    .referral-stat-value.accent { color: var(--accent-color, #1A7A5E); }
+    .referral-stat-label { font-size: 11px; color: var(--text-secondary, #6b7280); margin-top: 2px; }
+    .referral-list { margin-top: 14px; }
+    .referral-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color, #e5e7eb); font-size: 13px; }
+    .referral-item:last-child { border-bottom: none; }
+    .share-btns { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .share-btn { display: inline-flex; align-items: center; gap: 6px; color: white; text-decoration: none; }
+    .share-btn.whatsapp { background: #25D366; }
+    .share-btn.telegram { background: #0088cc; }
+    .share-btn.email-share { background: #6b7280; }
+
     .detail-row {
       display: flex;
       justify-content: space-between;
@@ -1788,6 +1820,18 @@ html[data-theme-v3="1"] .subscription-card {
 </div>
 </section>
 
+<!-- ===== SECTION PARRAINAGE & CODE PROMO ===== -->
+<section class="card mb-lg" id="referralSection">
+  <div class="card-header">
+    <div class="card-title"><i class="fas fa-gift"></i> Parrainage & code promo</div>
+  </div>
+  <div class="card-body">
+    <div id="referralContent">
+      <div style="color:#9ca3af;font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
+    </div>
+  </div>
+</section>
+
 
 <!-- ===== SECTION OPTION SMS ===== -->
 <section class="card mb-lg" id="smsOptionSection">
@@ -2956,10 +3000,94 @@ if (logoInput && logoPreview) {
         btn.addEventListener('click', () => {
           if (btn.dataset.tab === 'subscription') {
             setTimeout(() => loadSubscriptionStatus(), 100);
+            setTimeout(() => loadReferralSection(), 150);
           }
         });
       });
     });
+
+    // ── Parrainage & Code promo ──────────────────────────────────
+    async function loadReferralSection() {
+      const container = document.getElementById('referralContent');
+      if (!container) return;
+      const token = localStorage.getItem('lcc_token');
+      if (!token) { container.innerHTML = '<p style="color:#9ca3af;font-size:13px;">Connectez-vous pour voir votre parrainage.</p>'; return; }
+
+      try {
+        const r = await fetch((window.API_URL || '') + '/api/referral/stats', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const d = await r.json();
+        const code = d.referralCode || '—';
+        const url = d.shareUrl || '';
+        const total = d.totalReferred || 0;
+        const bonus = d.totalBonusDays || 0;
+        const shareText = encodeURIComponent(`Gère tes locations courte durée gratuitement avec Boostinghost ! Inscris-toi avec mon lien et on reçoit chacun 1 mois offert 🎁 ${url}`);
+
+        let referralsList = '';
+        if (d.referrals && d.referrals.length > 0) {
+          referralsList = `<div class="referral-list">
+            <div style="font-size:12px;font-weight:600;color:var(--text-secondary,#6b7280);margin-bottom:6px;">Mes filleuls</div>
+            ${d.referrals.map(r => `
+              <div class="referral-item">
+                <div>
+                  <span style="font-weight:600;">${r.name || '—'}</span>
+                  ${r.company ? `<span style="color:var(--text-secondary,#6b7280);"> · ${r.company}</span>` : ''}
+                </div>
+                <div style="color:var(--accent-color,#1A7A5E);font-weight:600;font-size:12px;">+${r.bonusDays}j</div>
+              </div>`).join('')}
+          </div>`;
+        }
+
+        container.innerHTML = `
+          <div class="referral-share-box">
+            <div style="font-size:15px;font-weight:700;color:var(--text-color,#1e293b);margin-bottom:4px;">
+              🎁 Parrainez, gagnez 1 mois gratuit
+            </div>
+            <p style="font-size:12px;color:var(--text-secondary,#6b7280);line-height:1.5;margin-bottom:0;">
+              Partagez votre lien. Pour chaque inscription, vous recevez <strong>30 jours offerts</strong> — et votre filleul aussi.
+            </p>
+            <div class="referral-url-row">
+              <input type="text" value="${url}" readonly id="refUrlField" onclick="this.select()"/>
+              <button onclick="copyRefUrl()" id="copyRefBtn"><i class="fas fa-copy"></i> Copier</button>
+            </div>
+            <div class="share-btns">
+              <a href="https://wa.me/?text=${shareText}" target="_blank" class="share-btn whatsapp"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+              <a href="https://t.me/share/url?url=${encodeURIComponent(url)}&text=${shareText}" target="_blank" class="share-btn telegram"><i class="fab fa-telegram"></i> Telegram</a>
+              <a href="mailto:?subject=${encodeURIComponent('Essaie Boostinghost gratuitement')}&body=${shareText}" class="share-btn email-share"><i class="fas fa-envelope"></i> Email</a>
+            </div>
+          </div>
+
+          <div class="referral-stats-row">
+            <div class="referral-stat">
+              <div class="referral-stat-value">${total}</div>
+              <div class="referral-stat-label">filleul${total > 1 ? 's' : ''}</div>
+            </div>
+            <div class="referral-stat">
+              <div class="referral-stat-value accent">${bonus}j</div>
+              <div class="referral-stat-label">offerts</div>
+            </div>
+            <div class="referral-stat">
+              <div class="referral-stat-value" style="font-family:monospace;font-size:16px;letter-spacing:1px;">${code}</div>
+              <div class="referral-stat-label">votre code</div>
+            </div>
+          </div>
+          ${referralsList}
+        `;
+      } catch(e) {
+        container.innerHTML = '<p style="color:#f87171;font-size:13px;">Erreur de chargement du parrainage.</p>';
+      }
+    }
+
+    function copyRefUrl() {
+      const input = document.getElementById('refUrlField');
+      if (!input) return;
+      navigator.clipboard.writeText(input.value).then(() => {
+        const btn = document.getElementById('copyRefBtn');
+        btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+        setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copier'; }, 2000);
+      }).catch(() => { input.select(); document.execCommand('copy'); });
+    }
 </script>
 
 <script>
