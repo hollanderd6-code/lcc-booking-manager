@@ -345,9 +345,14 @@
           <h1><i class="fas fa-headset"></i> Support</h1>
           <p id="convCount">Chargement...</p>
         </div>
-        <button onclick="toggleTeamPanel()" style="width:36px; height:36px; border-radius:10px; border:1px solid var(--border); background:white; cursor:pointer; font-size:14px; color:var(--text-secondary);" title="Gérer l'équipe">
-          <i class="fas fa-users-cog"></i>
-        </button>
+        <div style="display:flex;gap:6px;">
+          <button onclick="togglePromoPanel()" style="width:36px; height:36px; border-radius:10px; border:1px solid var(--border); background:white; cursor:pointer; font-size:14px; color:var(--text-secondary);" title="Codes promo & parrainage">
+            <i class="fas fa-gift"></i>
+          </button>
+          <button onclick="toggleTeamPanel()" style="width:36px; height:36px; border-radius:10px; border:1px solid var(--border); background:white; cursor:pointer; font-size:14px; color:var(--text-secondary);" title="Gérer l'équipe">
+            <i class="fas fa-users-cog"></i>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -362,6 +367,44 @@
         </button>
       </div>
       <div id="teamError" style="color:var(--red); font-size:11px; margin-top:6px; min-height:16px;"></div>
+    </div>
+
+    <!-- Promo & parrainage panel (hidden by default) -->
+    <div id="promoPanel" style="display:none; border-bottom:1px solid var(--border); padding:16px 20px; background:#f8fafc; max-height:60vh; overflow-y:auto;">
+      <div style="font-size:13px; font-weight:700; margin-bottom:12px;">🎟️ Codes promo</div>
+
+      <!-- Formulaire création -->
+      <div style="background:white; border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:14px;">
+        <div style="font-size:11px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;">Nouveau code</div>
+        <div style="display:flex; gap:6px; margin-bottom:6px;">
+          <input type="text" id="promoNewCode" placeholder="FACEBOOK2026" style="flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); font-size:12px; outline:none; text-transform:uppercase;"/>
+          <input type="number" id="promoNewDays" placeholder="30" min="1" max="365" value="30" style="width:60px; padding:7px 8px; border-radius:8px; border:1px solid var(--border); font-size:12px; outline:none; text-align:center;" title="Jours d'essai"/>
+          <span style="font-size:11px; color:var(--text-secondary); align-self:center;">jours</span>
+        </div>
+        <div style="display:flex; gap:6px; margin-bottom:6px;">
+          <input type="text" id="promoNewDesc" placeholder="Description (optionnel)" style="flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); font-size:12px; outline:none;"/>
+          <input type="number" id="promoNewMaxUses" placeholder="∞" min="1" style="width:60px; padding:7px 8px; border-radius:8px; border:1px solid var(--border); font-size:12px; outline:none; text-align:center;" title="Max utilisations (vide = illimité)"/>
+          <span style="font-size:11px; color:var(--text-secondary); align-self:center;">max</span>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="date" id="promoNewExpires" style="flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); font-size:12px; outline:none; color:var(--text-secondary);" title="Date d'expiration (vide = pas d'expiration)"/>
+          <button onclick="createPromoCode()" style="padding:7px 14px; border-radius:8px; border:none; background:var(--accent); color:white; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;">
+            <i class="fas fa-plus"></i> Créer
+          </button>
+        </div>
+        <div id="promoCreateMsg" style="font-size:11px; margin-top:6px; min-height:16px;"></div>
+      </div>
+
+      <!-- Liste des codes existants -->
+      <div id="promoList" style="font-size:12px;">
+        <div style="color:var(--text-muted); text-align:center; padding:10px;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
+      </div>
+
+      <!-- Stats parrainage rapide -->
+      <div style="margin-top:14px; font-size:13px; font-weight:700; margin-bottom:8px;">🤝 Parrainage</div>
+      <div id="referralStats" style="font-size:12px; color:var(--text-secondary);">
+        <div style="color:var(--text-muted); text-align:center; padding:10px;"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
     </div>
     <div class="panel-search">
       <input type="text" id="searchInput" placeholder="Rechercher un utilisateur..." oninput="filterConversations()"/>
@@ -886,6 +929,8 @@ function showConvPanel() {
 // ============================================
 function toggleTeamPanel() {
   const panel = document.getElementById('teamPanel');
+  const promoPanel = document.getElementById('promoPanel');
+  if (promoPanel) promoPanel.style.display = 'none'; // fermer l'autre
   if (panel.style.display === 'none') {
     panel.style.display = 'block';
     loadTeam();
@@ -954,6 +999,134 @@ async function removeTeamMember(id) {
     loadTeam();
   } catch (err) {
     console.error('Erreur remove:', err);
+  }
+}
+
+// ============================================
+// 🎟️ CODES PROMO & PARRAINAGE
+// ============================================
+
+function togglePromoPanel() {
+  const panel = document.getElementById('promoPanel');
+  const teamPanel = document.getElementById('teamPanel');
+  if (teamPanel) teamPanel.style.display = 'none'; // fermer l'autre
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    loadPromoCodes();
+    loadReferralStats();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+async function loadPromoCodes() {
+  const list = document.getElementById('promoList');
+  try {
+    const r = await fetch(API_URL + '/api/promo/list', { headers: { 'Authorization': 'Bearer ' + token } });
+    const d = await r.json();
+    if (!d.promoCodes || d.promoCodes.length === 0) {
+      list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:8px;">Aucun code promo créé</div>';
+      return;
+    }
+    list.innerHTML = d.promoCodes.map(p => {
+      const expired = p.expires_at && new Date(p.expires_at) < new Date();
+      const exhausted = p.max_uses && p.uses_count >= p.max_uses;
+      const statusColor = (!p.active || expired || exhausted) ? 'var(--red)' : 'var(--accent)';
+      const statusLabel = !p.active ? 'Désactivé' : expired ? 'Expiré' : exhausted ? 'Épuisé' : 'Actif';
+      const expStr = p.expires_at ? new Date(p.expires_at).toLocaleDateString('fr-FR') : '∞';
+      const usesStr = p.max_uses ? `${p.uses_count}/${p.max_uses}` : `${p.uses_count}`;
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:white;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;">
+          <div style="min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-weight:700;font-family:monospace;font-size:13px;letter-spacing:.5px;color:var(--text);">${p.code}</span>
+              <span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:${statusColor}15;color:${statusColor};">${statusLabel}</span>
+            </div>
+            ${p.description ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${p.description}</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:8px;">
+            <div style="font-size:11px;color:var(--text-secondary);"><strong>${p.value_days}j</strong> · ${usesStr} utilisé${p.uses_count>1?'s':''}</div>
+            <div style="font-size:10px;color:var(--text-muted);">exp: ${expStr}</div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = '<div style="color:var(--red);font-size:11px;">Erreur chargement</div>';
+  }
+}
+
+async function createPromoCode() {
+  const code = (document.getElementById('promoNewCode').value || '').trim().toUpperCase();
+  const valueDays = parseInt(document.getElementById('promoNewDays').value) || 30;
+  const description = document.getElementById('promoNewDesc').value.trim() || null;
+  const maxUses = parseInt(document.getElementById('promoNewMaxUses').value) || null;
+  const expiresInput = document.getElementById('promoNewExpires').value;
+  const expiresAt = expiresInput ? new Date(expiresInput + 'T23:59:59').toISOString() : null;
+  const msg = document.getElementById('promoCreateMsg');
+
+  if (!code) { msg.style.color = 'var(--red)'; msg.textContent = 'Code requis'; return; }
+
+  try {
+    const r = await fetch(API_URL + '/api/promo/create', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, description, valueDays, maxUses, expiresAt })
+    });
+    const d = await r.json();
+    if (d.success) {
+      msg.style.color = 'var(--accent)';
+      msg.textContent = `✅ Code ${code} créé (${valueDays}j)`;
+      document.getElementById('promoNewCode').value = '';
+      document.getElementById('promoNewDesc').value = '';
+      document.getElementById('promoNewMaxUses').value = '';
+      document.getElementById('promoNewExpires').value = '';
+      loadPromoCodes();
+    } else {
+      msg.style.color = 'var(--red)';
+      msg.textContent = '❌ ' + (d.error || 'Erreur');
+    }
+  } catch(e) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = '❌ Erreur réseau';
+  }
+}
+
+async function loadReferralStats() {
+  const el = document.getElementById('referralStats');
+  try {
+    const r = await fetch(API_URL + '/api/referral/stats', { headers: { 'Authorization': 'Bearer ' + token } });
+    const d = await r.json();
+    const code = d.referralCode || '—';
+    const url = d.shareUrl || '';
+    el.innerHTML = `
+      <div style="background:white;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:11px;color:var(--text-muted);">Ton lien de parrainage :</span>
+          <span style="font-weight:700;font-family:monospace;font-size:12px;letter-spacing:.5px;color:var(--accent);">${code}</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <input type="text" value="${url}" readonly id="referralUrlField" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid var(--border);font-size:11px;outline:none;background:#f8fafc;color:var(--text);"/>
+          <button onclick="copyReferralUrl()" style="padding:6px 10px;border-radius:6px;border:none;background:var(--accent);color:white;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;" id="copyRefBtn">
+            <i class="fas fa-copy"></i> Copier
+          </button>
+        </div>
+        <div style="display:flex;gap:16px;">
+          <div><span style="font-size:18px;font-weight:800;color:var(--text);">${d.totalReferred || 0}</span> <span style="font-size:11px;color:var(--text-muted);">filleul${(d.totalReferred||0)>1?'s':''}</span></div>
+          <div><span style="font-size:18px;font-weight:800;color:var(--accent);">${d.totalBonusDays || 0}j</span> <span style="font-size:11px;color:var(--text-muted);">offerts</span></div>
+        </div>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--red);font-size:11px;">Erreur chargement stats</div>';
+  }
+}
+
+function copyReferralUrl() {
+  const input = document.getElementById('referralUrlField');
+  if (input) {
+    navigator.clipboard.writeText(input.value).then(() => {
+      const btn = document.getElementById('copyRefBtn');
+      btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
+      setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Copier'; }, 2000);
+    }).catch(() => { input.select(); document.execCommand('copy'); });
   }
 }
 
