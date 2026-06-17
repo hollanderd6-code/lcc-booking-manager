@@ -4,6 +4,7 @@
 // ============================================
 
 const { getGroqResponse, requiresHumanIntervention } = require('./groq-ai');
+const { getProximityContext } = require('./geo-proximity');
 
 const Stripe = require('stripe');
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -687,6 +688,19 @@ async function handleIncomingMessage(message, conversation, pool, io) {
 
     // ─── Few-shot : apprendre des réponses manuelles de l'hôte ────
     const fewShotExamples = await loadFewShotExamples(pool, conversation.id, conversation.property_id);
+
+    // ─── Recherche de proximité en temps réel (Google Places) ─────
+    // Si le voyageur demande un commerce/lieu proche, on récupère de
+    // VRAIES données au lieu de laisser l'IA inventer.
+    try {
+      if (context.address) {
+        const proximityBlock = await getProximityContext(message.message, context.address);
+        if (proximityBlock) {
+          context.proximityResults = proximityBlock;
+          console.log('📍 [HANDLER] Contexte proximité injecté');
+        }
+      }
+    } catch(e) { console.warn('⚠️ [HANDLER] Proximité:', e.message); }
 
     // ─── Appel Groq ───────────────────────────────────────────────
     console.log('🚀 [HANDLER] → Groq AI');
