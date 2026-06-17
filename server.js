@@ -2138,6 +2138,74 @@ ON invoice_download_tokens(token);
       console.log('✅ Colonne early_checkin_tolerance_minutes OK');
     } catch(e) { console.log('ℹ️ early_checkin_tolerance_minutes:', e.message); }
 
+    // ✅ Migration : codes promo
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS promo_codes (
+          id SERIAL PRIMARY KEY,
+          code TEXT UNIQUE NOT NULL,
+          description TEXT,
+          type TEXT NOT NULL DEFAULT 'trial_extension',
+          value_days INTEGER NOT NULL DEFAULT 30,
+          max_uses INTEGER DEFAULT NULL,
+          uses_count INTEGER NOT NULL DEFAULT 0,
+          active BOOLEAN NOT NULL DEFAULT TRUE,
+          expires_at TIMESTAMPTZ DEFAULT NULL,
+          created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_promo_codes_code ON promo_codes(UPPER(code));
+      `);
+      console.log('✅ Table promo_codes OK');
+    } catch(e) { console.log('ℹ️ promo_codes:', e.message); }
+
+    // ✅ Migration : colonnes parrainage sur users
+    try {
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT UNIQUE`);
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by TEXT REFERENCES users(id) ON DELETE SET NULL`);
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS promo_code_used TEXT`);
+      console.log('✅ Colonnes parrainage/promo sur users OK');
+    } catch(e) { console.log('ℹ️ referral columns:', e.message); }
+
+    // ✅ Migration : table referrals (suivi des parrainages)
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS referrals (
+          id SERIAL PRIMARY KEY,
+          referrer_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          referred_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          referrer_bonus_days INTEGER NOT NULL DEFAULT 30,
+          referred_bonus_days INTEGER NOT NULL DEFAULT 30,
+          referrer_reward_applied BOOLEAN NOT NULL DEFAULT FALSE,
+          referred_reward_applied BOOLEAN NOT NULL DEFAULT FALSE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id);
+        CREATE INDEX IF NOT EXISTS idx_referrals_referred ON referrals(referred_id);
+      `);
+      console.log('✅ Table referrals OK');
+    } catch(e) { console.log('ℹ️ referrals:', e.message); }
+
+    // ✅ Migration : générer un referral_code pour les utilisateurs existants qui n'en ont pas
+    try {
+      const noCode = await pool.query(`SELECT id, first_name FROM users WHERE referral_code IS NULL`);
+      for (const u of noCode.rows) {
+        const code = (u.first_name || 'BH').toUpperCase().slice(0,6).replace(/[^A-Z]/g,'') + Math.random().toString(36).slice(2,6).toUpperCase();
+        try { await pool.query(`UPDATE users SET referral_code = $1 WHERE id = $2`, [code, u.id]); } catch {}
+      }
+      if (noCode.rows.length > 0) console.log(`✅ Referral codes générés pour ${noCode.rows.length} utilisateurs existants`);
+    } catch(e) { console.log('ℹ️ referral codes gen:', e.message); }
+
+    // ✅ Migration : code promo par défaut BIENVENUE (30j d'essai)
+    try {
+      await pool.query(
+        `INSERT INTO promo_codes (code, description, type, value_days, active)
+         VALUES ('BIENVENUE', 'Essai prolongé à 30 jours — Code de bienvenue', 'trial_extension', 30, TRUE)
+         ON CONFLICT (code) DO NOTHING`
+      );
+      console.log('✅ Code promo BIENVENUE OK');
+    } catch(e) { console.log('ℹ️ promo BIENVENUE:', e.message); }
+
     // ✅ Migration : capacité d'accueil sur properties
     try {
       await pool.query(`
@@ -16918,9 +16986,108 @@ app.get('/api/config', async (req, res) => {
 // ROUTES API - AUTH (Postgres)
 // ============================================
 
+// ════════════════════════════════════════════════════════════
+// 🎟️  CODES PROMO & PARRAINAGE
+// ════════════════════════════════════════════════════════════
+
+// Valider un code promo (public, utilisé par register.html)
+app.post('/api/promo/validate', async (req, res) => {
+  try {
+    const code = (req.body.code || '').trim().toUpperCase();
+    if (!code) return res.status(400).json({ valid: false, error: 'Code manquant' });
+    const r = await pool.query(
+      `SELECT id, code, description, type, value_days, max_uses, uses_count, expires_at
+       FROM promo_codes
+       WHERE UPPER(code) = $1 AND active = TRUE`, [code]
+    );
+    if (r.rows.length === 0) return res.json({ valid: false, error: 'Code invalide ou expiré' });
+    const p = r.rows[0];
+    if (p.expires_at && new Date() > new Date(p.expires_at)) return res.json({ valid: false, error: 'Code expiré' });
+    if (p.max_uses && p.uses_count >= p.max_uses) return res.json({ valid: false, error: 'Code épuisé (nombre max d\'utilisations atteint)' });
+    res.json({ valid: true, code: p.code, description: p.description, type: p.type, valueDays: p.value_days });
+  } catch(e) { res.status(500).json({ valid: false, error: e.message }); }
+});
+
+// Valider un code de parrainage (public, utilisé par register.html)
+app.post('/api/referral/validate', async (req, res) => {
+  try {
+    const code = (req.body.code || '').trim().toUpperCase();
+    if (!code) return res.status(400).json({ valid: false });
+    const r = await pool.query(
+      `SELECT id, first_name FROM users WHERE UPPER(referral_code) = $1`, [code]
+    );
+    if (r.rows.length === 0) return res.json({ valid: false });
+    res.json({ valid: true, referrerName: r.rows[0].first_name });
+  } catch(e) { res.status(500).json({ valid: false }); }
+});
+
+// Stats parrainage pour l'utilisateur connecté
+app.get('/api/referral/stats', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    // Code de parrainage de l'utilisateur
+    const userRow = await pool.query(`SELECT referral_code FROM users WHERE id = $1`, [userId]);
+    const referralCode = userRow.rows[0]?.referral_code || null;
+    // Nombre de filleuls
+    const countRow = await pool.query(
+      `SELECT COUNT(*) as total, COALESCE(SUM(referrer_bonus_days),0) as bonus_days
+       FROM referrals WHERE referrer_id = $1`, [userId]
+    );
+    const stats = countRow.rows[0];
+    // Liste des filleuls
+    const referredRows = await pool.query(
+      `SELECT u.first_name, u.company, r.created_at, r.referrer_bonus_days, r.referrer_reward_applied
+       FROM referrals r JOIN users u ON u.id = r.referred_id
+       WHERE r.referrer_id = $1 ORDER BY r.created_at DESC LIMIT 20`, [userId]
+    );
+    res.json({
+      referralCode,
+      shareUrl: `https://boostinghost.fr/register.html?ref=${referralCode}`,
+      totalReferred: parseInt(stats.total) || 0,
+      totalBonusDays: parseInt(stats.bonus_days) || 0,
+      referrals: referredRows.rows.map(r => ({
+        name: r.first_name, company: r.company,
+        date: r.created_at, bonusDays: r.referrer_bonus_days, applied: r.referrer_reward_applied
+      }))
+    });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Créer un code promo (authentifié — seul le propriétaire peut créer)
+app.post('/api/promo/create', authenticateToken, async (req, res) => {
+  try {
+    const { code, description, valueDays, maxUses, expiresAt } = req.body;
+    if (!code) return res.status(400).json({ error: 'Code requis' });
+    const r = await pool.query(
+      `INSERT INTO promo_codes (code, description, type, value_days, max_uses, expires_at, created_by)
+       VALUES ($1, $2, 'trial_extension', $3, $4, $5, $6)
+       ON CONFLICT (code) DO NOTHING
+       RETURNING *`,
+      [code.trim().toUpperCase(), description || null, valueDays || 30, maxUses || null, expiresAt || null, req.user.id]
+    );
+    if (r.rows.length === 0) return res.status(409).json({ error: 'Ce code existe déjà' });
+    res.json({ success: true, promo: r.rows[0] });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Lister les codes promo (authentifié)
+app.get('/api/promo/list', authenticateToken, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT code, description, value_days, max_uses, uses_count, active, expires_at, created_at
+       FROM promo_codes WHERE created_by = $1 ORDER BY created_at DESC`, [req.user.id]
+    );
+    res.json({ promoCodes: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════
+// 🔐 AUTH
+// ════════════════════════════════════════════════════════════
+
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { company, firstName, lastName, email, password } = req.body;
+    const { company, firstName, lastName, email, password, promoCode, referralCode } = req.body;
     
     if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({ error: 'Champs obligatoires manquants' });
@@ -16946,18 +17113,53 @@ app.post('/api/auth/register', async (req, res) => {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 heures
 
-    // Créer l'utilisateur avec email_verified = FALSE
+    // Générer un code de parrainage unique pour ce nouvel utilisateur
+    const myReferralCode = (firstName || 'BH').toUpperCase().slice(0,6).replace(/[^A-Z]/g,'') + Math.random().toString(36).slice(2,6).toUpperCase();
+
+    // ── Valider le code promo (si fourni) ──
+    let promoDays = 0;
+    let promoCodeUsed = null;
+    if (promoCode) {
+      const pc = promoCode.trim().toUpperCase();
+      const pr = await pool.query(
+        `SELECT id, code, value_days, max_uses, uses_count, expires_at
+         FROM promo_codes WHERE UPPER(code) = $1 AND active = TRUE`, [pc]
+      );
+      if (pr.rows.length > 0) {
+        const p = pr.rows[0];
+        const valid = (!p.expires_at || new Date() <= new Date(p.expires_at))
+                   && (!p.max_uses || p.uses_count < p.max_uses);
+        if (valid) {
+          promoDays = p.value_days || 0;
+          promoCodeUsed = p.code;
+          await pool.query(`UPDATE promo_codes SET uses_count = uses_count + 1 WHERE id = $1`, [p.id]);
+        }
+      }
+    }
+
+    // ── Valider le parrain (si fourni) ──
+    let referrerId = null;
+    if (referralCode) {
+      const rc = referralCode.trim().toUpperCase();
+      const rr = await pool.query(
+        `SELECT id FROM users WHERE UPPER(referral_code) = $1`, [rc]
+      );
+      if (rr.rows.length > 0) referrerId = rr.rows[0].id;
+    }
+
+    // Créer l'utilisateur
     await pool.query(
       `INSERT INTO users (
         id, company, first_name, last_name, email, password_hash, 
         created_at, stripe_account_id,
-        email_verified, verification_token, verification_token_expires
+        email_verified, verification_token, verification_token_expires,
+        referral_code, referred_by, promo_code_used
       )
-      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NULL, $7, $8, $9)`,
-      [id, company, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires]
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NULL, $7, $8, $9, $10, $11, $12)`,
+      [id, company, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires, myReferralCode, referrerId, promoCodeUsed]
     );
 
-    // Créer l'abonnement trial (seulement s'il n'existe pas déjà)
+    // Créer l'abonnement trial
     const existingSub = await pool.query(
       'SELECT id FROM subscriptions WHERE user_id = $1',
       [id]
@@ -16965,7 +17167,12 @@ app.post('/api/auth/register', async (req, res) => {
 
     if (existingSub.rows.length === 0) {
       const trialStartDate = new Date();
-      const trialEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+      // Durée du trial : promo remplace les 14j par défaut
+      const baseDays = promoDays > 0 ? promoDays : 14;
+      // Bonus parrainage : +30 jours pour le filleul
+      const referralBonus = referrerId ? 30 : 0;
+      const totalDays = baseDays + referralBonus;
+      const trialEndDate = new Date(Date.now() + totalDays * 24 * 60 * 60 * 1000);
 
       await pool.query(
         `INSERT INTO subscriptions (
@@ -16983,6 +17190,31 @@ app.post('/api/auth/register', async (req, res) => {
           trialEndDate
         ]
       );
+
+      console.log(`✅ Trial créé : ${totalDays}j (base ${baseDays}${referralBonus ? ' + 30 parrainage' : ''}${promoCodeUsed ? ' (promo ' + promoCodeUsed + ')' : ''})`);
+    }
+
+    // ── Enregistrer le parrainage et récompenser le parrain ──
+    if (referrerId) {
+      await pool.query(
+        `INSERT INTO referrals (referrer_id, referred_id, referrer_bonus_days, referred_bonus_days, referred_reward_applied)
+         VALUES ($1, $2, 30, 30, TRUE)`,
+        [referrerId, id]
+      );
+      // Ajouter 30 jours au trial du parrain
+      try {
+        await pool.query(
+          `UPDATE subscriptions
+           SET trial_end_date = trial_end_date + INTERVAL '30 days', updated_at = NOW()
+           WHERE user_id = $1 AND status IN ('trial','trialing')`,
+          [referrerId]
+        );
+        await pool.query(
+          `UPDATE referrals SET referrer_reward_applied = TRUE WHERE referrer_id = $1 AND referred_id = $2`,
+          [referrerId, id]
+        );
+        console.log(`🎁 Parrainage : +30j pour le parrain ${referrerId} et le filleul ${id}`);
+      } catch(e) { console.warn('⚠️ Bonus parrain:', e.message); }
     }
 
     // Envoyer l'email de vérification
@@ -17048,11 +17280,14 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
 // Retourner succès
+    // Calculer les jours d'essai effectifs pour l'affichage
+    const effectiveTrialDays = (promoDays > 0 ? promoDays : 14) + (referrerId ? 30 : 0);
     res.status(201).json({
       success: true,
       message: 'Compte créé ! Vérifiez votre email pour activer votre compte.',
       emailSent: true,
-      email: email
+      email: email,
+      trialDays: effectiveTrialDays
     });
 
   } catch (err) {

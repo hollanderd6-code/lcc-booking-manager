@@ -402,6 +402,28 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
               </div>
             </div>
 
+            <!-- Code promo (optionnel) -->
+            <div style="margin-top:12px;">
+              <label class="form-label" for="promoCode"><i class="fas fa-gift" style="color:#6ee7b7;margin-right:4px;"></i> Code promo <span style="color:rgba(255,255,255,.35);font-weight:400;font-size:11px;">(optionnel)</span></label>
+              <div class="form-field" style="position:relative;">
+                <i class="fas fa-tag"></i>
+                <input type="text" id="promoCode" name="promoCode" placeholder="BIENVENUE" autocomplete="off" style="text-transform:uppercase;">
+                <span id="promoStatus" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:16px;"></span>
+              </div>
+              <div id="promoMsg" style="font-size:11px;margin-top:4px;min-height:16px;color:rgba(255,255,255,.5);"></div>
+            </div>
+
+            <!-- Bandeau parrainage (affiché si ?ref= dans l'URL) -->
+            <div id="referralBanner" style="display:none;background:rgba(110,231,183,.12);border:1px solid rgba(110,231,183,.25);border-radius:12px;padding:12px 14px;margin-top:12px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-user-group" style="color:#6ee7b7;font-size:16px;"></i>
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:white;">Vous êtes parrainé<span id="referralByName"></span> !</div>
+                  <div style="font-size:11px;color:rgba(255,255,255,.55);">🎁 30 jours d'essai offerts en bonus</div>
+                </div>
+              </div>
+            </div>
+
             <label class="form-terms">
               <input type="checkbox" id="terms" required>
               J'accepte les <a href="/cgu.html" target="_blank">CGU</a> et la <a href="/politique-confidentialite.html" target="_blank">politique de confidentialité</a>.
@@ -554,6 +576,51 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
   }
 
   // ─── Register form ───
+  // ── Parrainage : lecture du ?ref= dans l'URL ──
+  const urlRef = new URLSearchParams(window.location.search).get('ref');
+  if (urlRef) {
+    fetch(API_BASE + '/api/referral/validate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ code: urlRef })
+    }).then(r=>r.json()).then(d=>{
+      if (d.valid) {
+        document.getElementById('referralBanner').style.display = 'block';
+        if (d.referrerName) document.getElementById('referralByName').textContent = ' par ' + d.referrerName;
+      }
+    }).catch(()=>{});
+  }
+
+  // ── Code promo : validation en temps réel (debounce) ──
+  let promoTimer = null;
+  const promoInput = document.getElementById('promoCode');
+  if (promoInput) {
+    promoInput.addEventListener('input', function() {
+      clearTimeout(promoTimer);
+      const code = this.value.trim();
+      const status = document.getElementById('promoStatus');
+      const msg = document.getElementById('promoMsg');
+      if (!code) { status.textContent = ''; msg.textContent = ''; return; }
+      promoTimer = setTimeout(async () => {
+        try {
+          const r = await fetch(API_BASE + '/api/promo/validate', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ code })
+          });
+          const d = await r.json();
+          if (d.valid) {
+            status.textContent = '✅';
+            msg.style.color = '#6ee7b7';
+            msg.textContent = d.description || `Essai prolongé à ${d.valueDays} jours !`;
+          } else {
+            status.textContent = '❌';
+            msg.style.color = '#f87171';
+            msg.textContent = d.error || 'Code invalide';
+          }
+        } catch { status.textContent = ''; msg.textContent = ''; }
+      }, 500);
+    });
+  }
+
   document.getElementById('registerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const company   = document.getElementById('company').value.trim();
@@ -563,6 +630,8 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
     const password  = document.getElementById('regPassword').value;
     const confirm   = document.getElementById('regPasswordConfirm').value;
     const terms     = document.getElementById('terms').checked;
+    const promoCode = (document.getElementById('promoCode')?.value || '').trim() || undefined;
+    const referralCode = urlRef || undefined;
 
     if (!firstName || !lastName || !email || !password || !confirm) { showToast('Veuillez remplir tous les champs obligatoires.'); return; }
     if (!terms) { showToast("Vous devez accepter les conditions générales d'utilisation."); return; }
@@ -574,10 +643,11 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création en cours…';
 
     try {
-      const res  = await fetch(API_BASE + '/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, firstName, lastName, email, password }) });
+      const res  = await fetch(API_BASE + '/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, firstName, lastName, email, password, promoCode, referralCode }) });
       const data = await res.json();
 
       if (res.ok && data.success) {
+        const trialInfo = data.trialDays ? `<span style="color:#6ee7b7;font-weight:600;">${data.trialDays} jours d'essai gratuit</span>` : '';
         document.getElementById('registerForm').innerHTML = `
           <div style="text-align:center;padding:32px 16px;">
             <div style="width:72px;height:72px;margin:0 auto 20px;background:rgba(26,122,94,.2);border:1px solid rgba(110,231,183,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;">
@@ -588,6 +658,7 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
               Lien envoyé à<br>
               <strong style="color:#6ee7b7;">${data.email || email}</strong>
             </p>
+            ${trialInfo ? `<p style="font-size:13px;margin-bottom:10px;">${trialInfo}</p>` : ''}
             <p style="color:rgba(255,255,255,.4);font-size:12px;line-height:1.6;margin-bottom:24px;">
               Cliquez sur le lien dans l'email pour activer votre compte.<br>
               <span>Vous ne l'avez pas reçu ? Vérifiez vos spams.</span>
