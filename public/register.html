@@ -14,6 +14,8 @@
   <meta property="og:locale" content="fr_FR">
 
   <script>
+    // Masquage anti-flash : levé plus bas selon la plateforme.
+    // (iOS → reste masqué puis message web ; Android/web → réaffiché)
     if (window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:') {
       document.documentElement.style.visibility = 'hidden';
     }
@@ -508,12 +510,18 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
 
   // ─── Native detection ───
   const IS_NATIVE = !!(window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:');
+  const IS_IOS     = IS_NATIVE && (window.Capacitor?.getPlatform?.() === 'ios');
+  const IS_ANDROID = IS_NATIVE && (window.Capacitor?.getPlatform?.() === 'android');
   const API_BASE  = IS_NATIVE ? 'https://www.boostinghost.fr' : '';
 
-  if (IS_NATIVE) {
+  // iOS : l'inscription doit se faire sur le web (règle App Store).
+  // Android : inscription autorisée DANS l'app → on garde le formulaire.
+  if (IS_IOS) {
     document.getElementById('registerForm').style.display = 'none';
     document.getElementById('nativeRegisterMsg').style.display = 'block';
   }
+  // Réafficher la page (le masquage anti-flash du <head> est levé ici).
+  document.documentElement.style.visibility = '';
 
   // ─── Auth check ───
   async function checkAuth() {
@@ -566,7 +574,7 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création en cours…';
 
     try {
-      const res  = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, firstName, lastName, email, password }) });
+      const res  = await fetch(API_BASE + '/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, firstName, lastName, email, password }) });
       const data = await res.json();
 
       if (res.ok && data.success) {
@@ -584,7 +592,7 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
               Cliquez sur le lien dans l'email pour activer votre compte.<br>
               <span>Vous ne l'avez pas reçu ? Vérifiez vos spams.</span>
             </p>
-            <a href="/login.html" style="display:inline-flex;align-items:center;gap:8px;padding:11px 22px;background:var(--primary);color:white;border-radius:12px;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 4px 14px rgba(26,122,94,.4);">
+            <a href="${IS_NATIVE ? 'login.html' : '/login.html'}" style="display:inline-flex;align-items:center;gap:8px;padding:11px 22px;background:var(--primary);color:white;border-radius:12px;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 4px 14px rgba(26,122,94,.4);">
               <i class="fas fa-arrow-right-to-bracket"></i> Aller à la connexion
             </a>
           </div>`;
