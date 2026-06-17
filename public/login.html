@@ -150,7 +150,7 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
                 <div style="flex:1;height:1px;background:rgba(255,255,255,.15);"></div>
               </div>
               <button id="faceIdBtn" type="button" style="width:100%;padding:14px;background:rgba(0,0,0,.4);color:white;border:1.5px solid rgba(255,255,255,.2);border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'DM Sans',sans-serif;">
-                <i class="fas fa-face-viewfinder" style="font-size:20px;color:#6ee7b7;"></i> Se connecter avec Face ID
+                <i id="faceIdBtnIcon" class="fas fa-fingerprint" style="font-size:20px;color:#6ee7b7;"></i> <span id="faceIdBtnLabel">Se connecter avec la biométrie</span>
               </button>
             </div>
           </form>
@@ -199,17 +199,46 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
     });
   }
   const API_BASE=IS_NATIVE?'https://www.boostinghost.fr':'';
+
+  // 🔐 Persiste le token de façon DURABLE avant toute navigation.
+  // Bug Android : localStorage est vidé au kill de l'app. La sauvegarde
+  // Preferences doit être attendue (await) sinon la navigation vers app.html
+  // coupe l'écriture disque → session perdue au prochain lancement.
+  async function persistToken(token, extra) {
+    try { localStorage.setItem('lcc_token', token); } catch {}
+    if (extra) { for (const k in extra) { try { localStorage.setItem(k, extra[k]); } catch {} } }
+    if (IS_NATIVE && window.Capacitor?.Plugins?.Preferences) {
+      const P = window.Capacitor.Plugins.Preferences;
+      try {
+        await P.set({ key: 'lcc_token', value: token });
+        // Token aussi conservé comme jeton biométrique (reconnexion rapide)
+        await P.set({ key: 'lcc_faceid_token', value: token });
+        if (extra) {
+          for (const k in extra) { try { await P.set({ key: k, value: extra[k] }); } catch {} }
+        }
+      } catch(e) { console.warn('⚠️ [Auth] persistToken Preferences:', e?.message); }
+    }
+    if (window._syncTokenToNative) { try { window._syncTokenToNative(token); } catch {} }
+  }
   function showToast(msg,type='error'){document.getElementById('bh-toast')?.remove();const c=type==='error'?'#DC2626':'#1A7A5E',ic=type==='error'?'fa-circle-exclamation':'fa-circle-check',t=document.createElement('div');t.id='bh-toast';t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#fff;color:#1C1C1C;border-left:4px solid ${c};border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);font-family:'DM Sans',sans-serif;font-size:14px;z-index:9999;max-width:90vw;width:380px;animation:toastIn .25s ease;`;t.innerHTML=`<i class="fas ${ic}" style="color:${c};font-size:18px;flex-shrink:0;"></i><span style="flex:1;">${msg}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1;padding:0;">×</button>`;if(!document.getElementById('bh-toast-style')){const s=document.createElement('style');s.id='bh-toast-style';s.textContent='@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';document.head.appendChild(s);}document.body.appendChild(t);setTimeout(()=>t?.remove(),5000);}
   async function checkAuth(){const tk=localStorage.getItem('lcc_token');if(!tk)return false;try{const r=await fetch(API_BASE+'/api/user',{headers:{'Authorization':'Bearer '+tk}});if(r.ok){window.location.href=IS_NATIVE?'app.html':'/app.html';return true;}if(r.status===401)localStorage.removeItem('lcc_token');return false;}catch{return false;}}
-  async function checkMagicToken(){const mt=new URLSearchParams(window.location.search).get('magic_token');if(!mt)return false;const ld=document.createElement('div');ld.style.cssText='position:fixed;inset:0;background:rgba(13,17,23,.7);backdrop-filter:blur(8px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';ld.innerHTML='<div style="width:52px;height:52px;border:3px solid rgba(255,255,255,.15);border-top-color:#1A7A5E;border-radius:50%;animation:spin .8s linear infinite;"></div><p style="color:white;font-family:\'DM Sans\',sans-serif;font-size:15px;">Connexion en cours…</p>';if(!document.getElementById('spin-s')){const s=document.createElement('style');s.id='spin-s';s.textContent='@keyframes spin{to{transform:rotate(360deg)}}';document.head.appendChild(s);}document.body.appendChild(ld);try{const r=await fetch(API_BASE+'/api/auth/magic-link/verify?token='+encodeURIComponent(mt));const d=await r.json();if(r.ok&&d.token){localStorage.setItem('lcc_token',d.token);if(d.user)localStorage.setItem('lcc_user',JSON.stringify(d.user));window.history.replaceState({},'','/login.html');window.location.href=IS_NATIVE?'app.html':'/app.html';return true;}else{ld.remove();showToast(d.error||'Lien invalide ou expiré.');return false;}}catch{ld.remove();showToast('Erreur de connexion.');return false;}}
+  async function checkMagicToken(){const mt=new URLSearchParams(window.location.search).get('magic_token');if(!mt)return false;const ld=document.createElement('div');ld.style.cssText='position:fixed;inset:0;background:rgba(13,17,23,.7);backdrop-filter:blur(8px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';ld.innerHTML='<div style="width:52px;height:52px;border:3px solid rgba(255,255,255,.15);border-top-color:#1A7A5E;border-radius:50%;animation:spin .8s linear infinite;"></div><p style="color:white;font-family:\'DM Sans\',sans-serif;font-size:15px;">Connexion en cours…</p>';if(!document.getElementById('spin-s')){const s=document.createElement('style');s.id='spin-s';s.textContent='@keyframes spin{to{transform:rotate(360deg)}}';document.head.appendChild(s);}document.body.appendChild(ld);try{const r=await fetch(API_BASE+'/api/auth/magic-link/verify?token='+encodeURIComponent(mt));const d=await r.json();if(r.ok&&d.token){await persistToken(d.token, d.user?{lcc_user:JSON.stringify(d.user)}:null);window.history.replaceState({},'','/login.html');window.location.href=IS_NATIVE?'app.html':'/app.html';return true;}else{ld.remove();showToast(d.error||'Lien invalide ou expiré.');return false;}}catch{ld.remove();showToast('Erreur de connexion.');return false;}}
   checkMagicToken().then(async (h) => {
     if (!h) {
       await restoreFromPreferences();
-      // Android : auto-login direct sans biométrie
-      const androidLoggedIn = await autoLoginAndroid();
-      if (!androidLoggedIn) {
-        await checkAuth();
+      const faceEnabled = localStorage.getItem(FACE_ID_KEY) === 'true'
+        && !!localStorage.getItem(FACE_ID_TOKEN_KEY);
+      if (faceEnabled) {
+        // Biométrie activée → on la propose AVANT d'entrer (sécurité).
         await initFaceID();
+      } else {
+        // Pas de biométrie : auto-login silencieux si session encore valide.
+        // (corrige la reconnexion forcée après kill de l'app)
+        const auto = await autoLoginSilent();
+        if (!auto) {
+          await checkAuth();
+          await initFaceID(); // proposera d'activer la biométrie si dispo
+        }
       }
     }
   });
@@ -230,10 +259,11 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
     try {
       if (!IS_NATIVE) return;
 
-      // Attendre que Preferences soit disponible (Android peut être lent)
+      // Attendre que Preferences soit disponible (Android peut être lent
+      // à injecter le pont natif au démarrage à froid après un kill).
       let prefs = window.Capacitor?.Plugins?.Preferences;
-      if (!prefs) {
-        await new Promise(r => setTimeout(r, 300));
+      for (let i = 0; i < 10 && !prefs; i++) {
+        await new Promise(r => setTimeout(r, 150));
         prefs = window.Capacitor?.Plugins?.Preferences;
       }
       if (!prefs) return;
@@ -260,15 +290,19 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
     } catch(e) { console.warn('⚠️ [Auth] Preferences restore:', e?.message); }
   }
 
-  // Auto-login Android : si token présent après restore, rediriger directement
-  async function autoLoginAndroid() {
-    if (!IS_ANDROID) return false;
+  // Auto-login silencieux (iOS + Android) : si un token persistant est
+  // toujours valide après restore, on entre directement sans redemander
+  // le mot de passe. C'est ce qui corrige la reconnexion forcée au kill.
+  async function autoLoginSilent() {
+    if (!IS_NATIVE) return false;
     const token = localStorage.getItem('lcc_token');
     if (!token) return false;
     try {
       const r = await fetch(API_BASE + '/api/user', { headers: { 'Authorization': 'Bearer ' + token } });
       if (r.ok) {
-        console.log('✅ [Android] Auto-login réussi');
+        console.log('✅ [Auto-login] session restaurée');
+        // Re-persister pour résister au prochain kill
+        await persistToken(token);
         window.location.href = 'app.html';
         return true;
       } else {
@@ -278,34 +312,86 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
     } catch { return false; }
   }
 
-  function isBiometricAvailable() {
-    return new Promise(resolve => {
-      if (!IS_NATIVE || !window._checkBiometryAvailable) {
-        console.warn('🔍 Face ID bridge non disponible');
-        return resolve(false);
-      }
-      window._faceIDCheckCallback = function(result) {
-        console.log('🔍 Face ID disponible:', result);
-        resolve(result === true);
-      };
-      window._checkBiometryAvailable(window._faceIDCheckCallback);
-      setTimeout(() => resolve(false), 3000);
-    });
+  // Plugin biométrique Capacitor (cross-platform iOS + Android).
+  // Accès via window.Capacitor.Plugins.BiometricAuth (enregistré par le plugin natif).
+  function getBiometricPlugin() {
+    return window.Capacitor?.Plugins?.BiometricAuth || null;
   }
 
-  function authenticateWithFaceID() {
-    return new Promise(resolve => {
-      if (!IS_NATIVE || !window._authenticateWithFaceID) {
-        console.warn('🔐 Face ID bridge non disponible');
-        return resolve(false);
+  async function isBiometricAvailable() {
+    if (!IS_NATIVE) return false;
+    // 1) Plugin Capacitor cross-platform (empreinte + face, iOS + Android)
+    const plugin = getBiometricPlugin();
+    if (plugin?.checkBiometry) {
+      try {
+        const r = await plugin.checkBiometry();
+        return !!(r && r.isAvailable);
+      } catch(e) { console.warn('🔍 checkBiometry:', e?.message); }
+    }
+    // 2) Fallback : ancien bridge iOS custom (AppDelegate.swift)
+    if (window._checkBiometryAvailable) {
+      return new Promise(resolve => {
+        window._faceIDCheckCallback = function(result) { resolve(result === true); };
+        window._checkBiometryAvailable(window._faceIDCheckCallback);
+        setTimeout(() => resolve(false), 3000);
+      });
+    }
+    return false;
+  }
+
+  async function authenticateWithFaceID() {
+    if (!IS_NATIVE) return false;
+    // 1) Plugin Capacitor cross-platform
+    const plugin = getBiometricPlugin();
+    if (plugin?.authenticate) {
+      try {
+        await plugin.authenticate({
+          reason: 'Connectez-vous à Boostinghost',
+          cancelTitle: 'Annuler',
+          allowDeviceCredential: true,                 // PIN/schéma en repli
+          iosFallbackTitle: 'Utiliser le code',
+          androidTitle: 'Connexion Boostinghost',
+          androidSubtitle: 'Authentifiez-vous pour continuer',
+          androidConfirmationRequired: false
+        });
+        return true; // authenticate() ne jette pas → succès
+      } catch(e) {
+        console.warn('🔐 authenticate échec/annulé:', e?.code || e?.message);
+        return false;
       }
-      window._faceIDAuthCallback = function(result) {
-        console.log('🔐 Face ID résultat:', result);
-        resolve(result === true);
-      };
-      window._authenticateWithFaceID(window._faceIDAuthCallback);
-      setTimeout(() => resolve(false), 30000);
-    });
+    }
+    // 2) Fallback : ancien bridge iOS custom
+    if (window._authenticateWithFaceID) {
+      return new Promise(resolve => {
+        window._faceIDAuthCallback = function(result) { resolve(result === true); };
+        window._authenticateWithFaceID(window._faceIDAuthCallback);
+        setTimeout(() => resolve(false), 30000);
+      });
+    }
+    return false;
+  }
+
+  async function adaptBiometricLabel() {
+    const label = document.getElementById('faceIdBtnLabel');
+    const ico = document.getElementById('faceIdBtnIcon');
+    if (!label) return;
+    let type = null;
+    const plugin = getBiometricPlugin();
+    if (plugin?.checkBiometry) {
+      try { const r = await plugin.checkBiometry(); type = r?.biometryType; } catch {}
+    }
+    // biometryType: 'faceId'/'touchId' (iOS), 'fingerprintAuthentication'/'faceAuthentication' (Android)
+    const t = String(type || '').toLowerCase();
+    if (t.includes('face')) {
+      label.textContent = 'Se connecter avec le visage';
+      if (ico) ico.className = 'fas fa-face-viewfinder';
+    } else if (t.includes('finger') || t.includes('touch')) {
+      label.textContent = "Se connecter avec l'empreinte";
+      if (ico) ico.className = 'fas fa-fingerprint';
+    } else {
+      label.textContent = 'Se connecter avec la biométrie';
+      if (ico) ico.className = 'fas fa-fingerprint';
+    }
   }
 
   async function initFaceID() {
@@ -316,16 +402,11 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
     if (faceIdEnabled && savedToken) {
       const container = document.getElementById('faceIdContainer');
       if (container) container.style.display = 'block';
+      adaptBiometricLabel();
       setTimeout(async () => {
         const ok = await authenticateWithFaceID();
         if (ok) {
-          localStorage.setItem('lcc_token', savedToken);
-          // Resauvegarder dans Preferences pour résister au prochain kill
-          if (window.Capacitor?.Plugins?.Preferences) {
-            window.Capacitor.Plugins.Preferences.set({ key: 'lcc_token', value: savedToken }).catch(() => {});
-            window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_TOKEN_KEY, value: savedToken }).catch(() => {});
-          }
-          if (window._syncTokenToNative) window._syncTokenToNative(savedToken);
+          await persistToken(savedToken);
           window.location.href = 'app.html';
         }
       }, 500);
@@ -362,12 +443,7 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
           console.warn('⚠️ [FaceID] Vérification impossible (hors ligne ?), token utilisé tel quel');
         }
 
-        localStorage.setItem('lcc_token', tokenToUse);
-        if (window.Capacitor?.Plugins?.Preferences) {
-          window.Capacitor.Plugins.Preferences.set({ key: 'lcc_token', value: tokenToUse }).catch(() => {});
-          window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_TOKEN_KEY, value: tokenToUse }).catch(() => {});
-        }
-        if (window._syncTokenToNative) window._syncTokenToNative(tokenToUse);
+        await persistToken(tokenToUse);
         window.location.href = 'app.html';
       });
     }
@@ -403,14 +479,17 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
     if (alreadyEnabled) return;
     const available = await isBiometricAvailable();
     if (!available) return;
-    const confirm = window.confirm('Activer Face ID pour vous connecter plus rapidement ?');
+    const confirm = window.confirm('Activer la connexion biométrique (empreinte / visage) pour vous connecter plus rapidement ?');
     if (confirm) {
       localStorage.setItem(FACE_ID_KEY, 'true');
       if (IS_NATIVE && window.Capacitor?.Plugins?.Preferences) {
-        window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_KEY, value: 'true' }).catch(() => {});
-        window.Capacitor.Plugins.Preferences.set({ key: 'lcc_token', value: token }).catch(() => {});
+        try {
+          await window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_KEY, value: 'true' });
+          await window.Capacitor.Plugins.Preferences.set({ key: 'lcc_token', value: token });
+          await window.Capacitor.Plugins.Preferences.set({ key: FACE_ID_TOKEN_KEY, value: localStorage.getItem(FACE_ID_TOKEN_KEY) || token });
+        } catch {}
       }
-      console.log('✅ Face ID activé');
+      console.log('✅ Biométrie activée');
     }
   };
 
@@ -420,10 +499,10 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   document.getElementById('loginForm').addEventListener('submit',async function(e){e.preventDefault();const email=document.getElementById('loginEmail').value.trim(),pwd=document.getElementById('loginPassword').value;if(!email||!pwd){showToast('Veuillez remplir tous les champs.');return;}const btn=document.getElementById('loginSubmit');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connexion…';try{
   // 1. Essayer compte principal
   const res=await fetch(API_BASE+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});const data=await res.json();
-  if(res.ok&&data.token){localStorage.setItem('lcc_token',data.token);if(data.user)localStorage.setItem('lcc_user',JSON.stringify(data.user));localStorage.removeItem('lcc_is_sub_account');localStorage.removeItem('lcc_settings_profile');localStorage.removeItem('lcc_properties_cache');localStorage.removeItem('lcc_groups');if(window._onLoginSuccess)window._onLoginSuccess(data.token);window.location.href=IS_NATIVE?'app.html':(data.redirect||'/app.html');return;}
+  if(res.ok&&data.token){localStorage.removeItem('lcc_is_sub_account');localStorage.removeItem('lcc_settings_profile');localStorage.removeItem('lcc_properties_cache');localStorage.removeItem('lcc_groups');await persistToken(data.token, data.user?{lcc_user:JSON.stringify(data.user)}:null);if(window._onLoginSuccess){try{await window._onLoginSuccess(data.token);}catch{}}window.location.href=IS_NATIVE?'app.html':(data.redirect||'/app.html');return;}
   // 2. Si échec, essayer sous-compte
   const res2=await fetch(API_BASE+'/api/sub-accounts/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pwd})});const data2=await res2.json();
-  if(res2.ok&&data2.token){localStorage.setItem('lcc_token',data2.token);localStorage.setItem('lcc_sub_account',JSON.stringify(data2.subAccount));localStorage.setItem('lcc_is_sub_account','true');localStorage.removeItem('lcc_user');localStorage.removeItem('lcc_settings_profile');localStorage.removeItem('lcc_properties_cache');localStorage.removeItem('lcc_groups');if(window._onLoginSuccess)window._onLoginSuccess(data2.token);window.location.href=IS_NATIVE?'app.html':'/app.html';return;}
+  if(res2.ok&&data2.token){localStorage.setItem('lcc_sub_account',JSON.stringify(data2.subAccount));localStorage.setItem('lcc_is_sub_account','true');localStorage.removeItem('lcc_user');localStorage.removeItem('lcc_settings_profile');localStorage.removeItem('lcc_properties_cache');localStorage.removeItem('lcc_groups');await persistToken(data2.token, {lcc_is_sub_account:'true', lcc_sub_account:JSON.stringify(data2.subAccount)});if(window._onLoginSuccess)window._onLoginSuccess(data2.token);window.location.href=IS_NATIVE?'app.html':'/app.html';return;}
   // 3. Les deux ont échoué
   showToast(data2?.error||data.error||'Email ou mot de passe incorrect.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';
   }catch{showToast('Erreur de connexion.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}});
