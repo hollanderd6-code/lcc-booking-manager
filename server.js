@@ -2130,6 +2130,14 @@ ON invoice_download_tokens(token);
       console.log('✅ Colonne late_checkout_tolerance_minutes OK');
     } catch(e) { console.log('ℹ️ late_checkout_tolerance_minutes:', e.message); }
 
+    // ✅ Migration : tolérance d'arrivée anticipée (early check-in) par logement
+    // Nombre de minutes AVANT l'heure d'arrivée pendant lesquelles l'IA
+    // accepte automatiquement une arrivée anticipée (défaut 60 = 1h).
+    try {
+      await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS early_checkin_tolerance_minutes INTEGER DEFAULT 60`);
+      console.log('✅ Colonne early_checkin_tolerance_minutes OK');
+    } catch(e) { console.log('ℹ️ early_checkin_tolerance_minutes:', e.message); }
+
     // ✅ Migration : capacité d'accueil sur properties
     try {
       await pool.query(`

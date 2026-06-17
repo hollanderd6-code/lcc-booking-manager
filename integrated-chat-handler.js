@@ -611,6 +611,9 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       // Départ tardif (late checkout) : tolérance en minutes (défaut 120 = 2h)
       lateCheckoutToleranceMin: (property.late_checkout_tolerance_minutes != null
         ? parseInt(property.late_checkout_tolerance_minutes) : 120),
+      // Arrivée anticipée (early check-in) : tolérance en minutes (défaut 60 = 1h)
+      earlyCheckinToleranceMin: (property.early_checkin_tolerance_minutes != null
+        ? parseInt(property.early_checkin_tolerance_minutes) : 60),
       // WiFi
       wifiName:          property.wifi_name     || welcomeBookData?.wifiSSID,
       wifiPassword:      property.wifi_password || welcomeBookData?.wifiPassword,
@@ -797,6 +800,82 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         }
       }
 
+      // ─── Détection tag [EARLY_CHECKIN:HH:MM] ──────────────────
+      const earlyMatch = aiResponse.match(/\[EARLY_CHECKIN:(\d{1,2}):(\d{2})\]/);
+      if (earlyMatch) {
+        try {
+          const reqH = parseInt(earlyMatch[1]);
+          const reqMin = parseInt(earlyMatch[2]);
+          // Heure d'arrivée prévue (check-in)
+          const arrStr = String(context.arrivalTime || '15:00');
+          const arrMatch = arrStr.match(/(\d{1,2})\s*[h:]\s*(\d{2})?/);
+          const arrH = arrMatch ? parseInt(arrMatch[1]) : 15;
+          const arrM = arrMatch && arrMatch[2] != null ? parseInt(arrMatch[2]) : 0;
+
+          const requestedTotal = reqH * 60 + reqMin;
+          const arrivalTotal = arrH * 60 + arrM;
+          const earlyMin = arrivalTotal - requestedTotal; // minutes AVANT le check-in
+          const toleranceMin = context.earlyCheckinToleranceMin != null
+            ? context.earlyCheckinToleranceMin : 60;
+
+          const reqLabel = `${String(reqH).padStart(2,'0')}h${String(reqMin).padStart(2,'0')}`;
+          const arrLabel = `${String(arrH).padStart(2,'0')}h${String(arrM).padStart(2,'0')}`;
+
+          // Cas 1 : heure demandée >= check-in → pas une arrivée anticipée, c'est OK
+          if (earlyMin <= 0) {
+            const okMsg = {
+              fr: `Pas de problème, une arrivée à ${reqLabel} est tout à fait possible. À très bientôt ! 😊`,
+              en: `No problem, arriving at ${reqLabel} works perfectly. See you soon! 😊`,
+              it: `Nessun problema, arrivare alle ${reqLabel} va benissimo. A presto! 😊`,
+              es: `Sin problema, llegar a las ${reqLabel} está perfecto. ¡Hasta pronto! 😊`,
+              de: `Kein Problem, Ankunft um ${reqLabel} ist völlig in Ordnung. Bis bald! 😊`,
+            };
+            await sendBotMessage(conversation.id, okMsg[language] || okMsg.fr, pool, io, channexId);
+            return true;
+          }
+
+          // Cas 2 : dans la tolérance → ACCEPTER + note auto + notif proprio
+          if (earlyMin <= toleranceMin) {
+            const okMsg = {
+              fr: `C'est noté, vous pourrez accéder au logement dès ${reqLabel} 😊 Les informations d'accès vous parviendront le matin de votre arrivée. À très bientôt !`,
+              en: `All set, you'll be able to access the place from ${reqLabel} 😊 Access details will be sent to you the morning of your arrival. See you soon!`,
+              it: `Perfetto, potrà accedere all'alloggio dalle ${reqLabel} 😊 Le informazioni di accesso le arriveranno la mattina dell'arrivo. A presto!`,
+              es: `Perfecto, podrá acceder al alojamiento desde las ${reqLabel} 😊 La información de acceso le llegará la mañana de su llegada. ¡Hasta pronto!`,
+              de: `Alles klar, Sie können die Unterkunft ab ${reqLabel} betreten 😊 Die Zugangsdaten erhalten Sie am Morgen Ihrer Ankunft. Bis bald!`,
+            };
+            await sendBotMessage(conversation.id, okMsg[language] || okMsg.fr, pool, io, channexId);
+            await addArrivalNote(conversation, pool, reqLabel, 'early');
+            await notifyEarlyCheckin(conversation, pool, reqLabel, arrLabel, true);
+            console.log(`✅ [HANDLER] Early check-in accepté à ${reqLabel} (tolérance ${toleranceMin}min)`);
+            return true;
+          }
+
+          // Cas 3 : trop tôt → refuser poliment + escalade
+          const tooEarlyMsg = {
+            fr: `Je comprends votre souhait d'arriver à ${reqLabel}. L'arrivée est normalement prévue à partir de ${arrLabel}. Je vérifie avec l'hôte si une arrivée plus tôt est possible et reviens vers vous rapidement. Merci ! 🙏`,
+            en: `I understand you'd like to arrive at ${reqLabel}. Check-in is normally from ${arrLabel}. I'll check with the host whether an earlier arrival is possible and get back to you shortly. Thank you! 🙏`,
+            it: `Capisco che vorrebbe arrivare alle ${reqLabel}. Il check-in è normalmente dalle ${arrLabel}. Verifico con l'host se è possibile un arrivo anticipato e la ricontatto a breve. Grazie! 🙏`,
+            es: `Entiendo que quiere llegar a las ${reqLabel}. La entrada es normalmente a partir de las ${arrLabel}. Verifico con el anfitrión si es posible una llegada anticipada y le respondo pronto. ¡Gracias! 🙏`,
+            de: `Ich verstehe, dass Sie um ${reqLabel} ankommen möchten. Der Check-in ist normalerweise ab ${arrLabel}. Ich kläre mit dem Gastgeber, ob eine frühere Ankunft möglich ist, und melde mich bald. Danke! 🙏`,
+          };
+          await sendBotMessage(conversation.id, tooEarlyMsg[language] || tooEarlyMsg.fr, pool, io, channexId);
+          await notifyEarlyCheckin(conversation, pool, reqLabel, arrLabel, false);
+          await pool.query(
+            `UPDATE conversations SET escalated = TRUE, escalated_at = NOW(), updated_at = NOW() WHERE id = $1`,
+            [conversation.id]
+          );
+          if (io) io.to(`user_${conversation.user_id}`).emit('conversation_escalated', {
+            conversationId: conversation.id, guestName: conversation.guest_name || 'Voyageur'
+          });
+          console.log(`🔄 [HANDLER] Early check-in ${reqLabel} > tolérance → escalade`);
+          return false;
+        } catch(e) {
+          console.error('❌ [HANDLER] Erreur early check-in:', e.message);
+          await escalateToOwner(conversation, pool, io, language, channexId);
+          return false;
+        }
+      }
+
       // ─── Détection tag [FACTURE] ──────────────────────────────
       const factureMatch = aiResponse.match(/\[FACTURE(?::([^\]]*))?\]/);
       if (factureMatch) {
@@ -895,9 +974,9 @@ async function handleIncomingMessage(message, conversation, pool, io) {
 // ============================================
 
 // Ajoute/complète la note interne de la réservation liée à la conversation.
-async function addLateCheckoutNote(conversation, pool, reqLabel) {
+// kind = 'late' (départ tardif) ou 'early' (arrivée anticipée).
+async function addArrivalNote(conversation, pool, reqLabel, kind) {
   try {
-    // Retrouver la réservation liée (par channex_booking_id ou par property + date d'arrivée)
     const resRow = await pool.query(
       `SELECT uid, notes FROM reservations
        WHERE (channex_booking_id = $1 AND $1 IS NOT NULL)
@@ -907,14 +986,19 @@ async function addLateCheckoutNote(conversation, pool, reqLabel) {
       [conversation.channex_booking_id || null, conversation.property_id, conversation.reservation_start_date]
     );
     const resa = resRow.rows[0];
-    if (!resa) { console.warn('⚠️ [LATE] Réservation introuvable pour note'); return; }
+    if (!resa) { console.warn('⚠️ [ARR] Réservation introuvable pour note'); return; }
 
-    const tag = `Checkout tardif à ${reqLabel} autorisé`;
-    // Éviter les doublons si la note existe déjà
+    const tag = kind === 'early'
+      ? `Arrivée anticipée à ${reqLabel} autorisée`
+      : `Checkout tardif à ${reqLabel} autorisé`;
+    const dedupeRegex = kind === 'early'
+      ? /Arrivée anticipée à \d{1,2}h\d{2} autorisée/
+      : /Checkout tardif à \d{1,2}h\d{2} autorisé/;
+    const dedupeWord = kind === 'early' ? 'Arrivée anticipée' : 'Checkout tardif';
+
     let newNotes;
-    if (resa.notes && resa.notes.includes('Checkout tardif')) {
-      // Remplacer l'ancienne mention par la nouvelle heure
-      newNotes = resa.notes.replace(/Checkout tardif à \d{1,2}h\d{2} autorisé/, tag);
+    if (resa.notes && resa.notes.includes(dedupeWord)) {
+      newNotes = resa.notes.replace(dedupeRegex, tag);
     } else if (resa.notes && resa.notes.trim().length > 0) {
       newNotes = `${resa.notes.trim()}\n🕐 ${tag}`;
     } else {
@@ -926,9 +1010,50 @@ async function addLateCheckoutNote(conversation, pool, reqLabel) {
        WHERE uid = $2 OR channex_booking_id = $2`,
       [newNotes, resa.uid]
     );
-    console.log(`📝 [LATE] Note réservation mise à jour : ${tag}`);
+    console.log(`📝 [ARR] Note réservation mise à jour : ${tag}`);
   } catch(e) {
-    console.error('❌ [LATE] Erreur note réservation:', e.message);
+    console.error('❌ [ARR] Erreur note réservation:', e.message);
+  }
+}
+
+// Conserve l'ancien nom pour le late checkout (compat) → délègue au générique.
+async function addLateCheckoutNote(conversation, pool, reqLabel) {
+  return addArrivalNote(conversation, pool, reqLabel, 'late');
+}
+
+// Notifie le propriétaire (push) d'une demande d'arrivée anticipée.
+async function notifyEarlyCheckin(conversation, pool, reqLabel, arrLabel, accepted) {
+  try {
+    const { sendNotification } = require('./services/notifications-service');
+    let propName = null;
+    if (conversation.property_id) {
+      try {
+        const pr = await pool.query('SELECT internal_name, name FROM properties WHERE id = $1', [conversation.property_id]);
+        const p = pr.rows[0];
+        if (p) propName = p.internal_name || p.name || null;
+      } catch(e) {}
+    }
+    const guest = conversation.guest_name || 'Voyageur';
+    const title = accepted
+      ? `🕐 Arrivée anticipée autorisée — ${guest}${propName ? ' · ' + propName : ''}`
+      : `⚠️ Demande d'arrivée anticipée — ${guest}${propName ? ' · ' + propName : ''}`;
+    const body = accepted
+      ? `Arrivée à ${reqLabel} acceptée automatiquement (prévu ${arrLabel}). Note ajoutée à la réservation.`
+      : `Le voyageur demande à arriver à ${reqLabel} (prévu ${arrLabel}) — au-delà de la tolérance. À valider manuellement.`;
+
+    const tokens = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+      [conversation.user_id]
+    );
+    for (const tok of tokens.rows) {
+      await sendNotification(tok.fcm_token, title, body, {
+        type: accepted ? 'early_checkin_ok' : 'early_checkin_review',
+        conversation_id: String(conversation.id),
+        screen: 'messages'
+      });
+    }
+  } catch(e) {
+    console.error('❌ [ARR] Erreur notification early:', e.message);
   }
 }
 
