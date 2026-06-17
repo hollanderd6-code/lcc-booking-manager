@@ -953,22 +953,98 @@ async function openMessageForReservation(r) {
   }
 }
 
+function _resaCanViewFinances() {
+  try {
+    const isSub = localStorage.getItem('lcc_is_sub_account')==='true' || localStorage.getItem('lcc_account_type')==='sub';
+    if (!isSub) return true;
+    const sd = JSON.parse(localStorage.getItem('lcc_sub_account')||'{}');
+    const perms = JSON.parse(localStorage.getItem('lcc_permissions')||'{}');
+    const p = Object.keys(perms).length>0 ? perms : (sd.permissions||{});
+    return p.can_view_finances === true;
+  } catch(e){ return true; }
+}
+function _num(x){ return (x==null||x===''||isNaN(Number(x))) ? null : Number(x); }
+function _money(x){ x=_num(x); return x==null ? null : x.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+function _telHref(p){ return String(p||'').replace(/[^\d+]/g,''); }
+function _countryFlag(cc){ return cc ? String(cc).toUpperCase().replace(/./g, c => String.fromCodePoint(c.charCodeAt(0)+127397)) : ''; }
+
 function openDetail(r) {
   currentDetailReservation = r;
   const body = document.getElementById('detailBody');
   const plt  = normPlatform(r);
   const s = r.start||r.startDate||'', e = r.end||r.endDate||'';
+
+  // ── Montants ──
+  const fin = _resaCanViewFinances();
+  const at = _num(r.amount_total) != null ? _num(r.amount_total) : _num(r.price);
+  const ar = _num(r.amount_rooms), ax = _num(r.amount_taxes), ac = _num(r.amount_cleaning), oc = _num(r.ota_commission), hp = _num(r.host_payout);
+  let _db = r.days_breakdown; if (typeof _db === 'string') { try { _db = JSON.parse(_db); } catch(_) { _db = null; } }
+  let _nightsSum = null;
+  if (_db && typeof _db === 'object') { const _v = Object.values(_db).map(x=>parseFloat(x)).filter(x=>!isNaN(x)); if (_v.length) _nightsSum = +_v.reduce((a,b)=>a+b,0).toFixed(2); }
+  const _rooms = _nightsSum != null ? _nightsSum : ar;
+  // Net hôte (valeur backend sinon estimation, identique au calendrier)
+  let _net = null, _netEst = false;
+  { const g = at, comm = oc||0, tax = ax||0;
+    if (hp != null) { _net = +hp.toFixed(2); }
+    else if (g != null && g > 0) {
+      const pl = (r.platform||r.source||'').toLowerCase(); let fee = 0;
+      if (pl.includes('booking')) fee = +(comm*0.0824).toFixed(2);
+      else if (pl.includes('airbnb')) fee = 0;
+      else fee = +(g*0.015).toFixed(2);
+      _net = +(g - comm - tax - fee).toFixed(2); _netEst = true;
+    } }
+
+  // ── Coordonnées ──
+  const _email   = r.guest_email||r.guestEmail||'';
+  const _phone   = r.guest_phone||r.guestPhone||'';
+  const _addr    = [r.guest_address, [r.guest_zip, r.guest_city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const _country = r.guest_country||'';
+  const _flag    = _countryFlag(_country);
+  const _created = r.created_at||r.createdAt||'';
+  const _otaId   = r.ota_reservation_id||r.otaReservationId||'';
+  const _adults  = r.occupancy_adults||r.occupancyAdults||null;
+  const _children= r.occupancy_children||r.occupancyChildren||0;
+
+  // ── Lignes du bloc Montant ──
+  const amountRows = [];
+  if (_money(_rooms))  amountRows.push(`<div class="bh-modal-row"><span class="bh-modal-row-label">Hébergement (nuits)</span><span class="bh-modal-row-val">${_money(_rooms)}</span></div>`);
+  if (_money(ac))      amountRows.push(`<div class="bh-modal-row"><span class="bh-modal-row-label">Ménage</span><span class="bh-modal-row-val">${_money(ac)}</span></div>`);
+  if (_money(ax))      amountRows.push(`<div class="bh-modal-row"><span class="bh-modal-row-label">Taxe de séjour</span><span class="bh-modal-row-val">${_money(ax)}</span></div>`);
+  if (_money(oc))      amountRows.push(`<div class="bh-modal-row"><span class="bh-modal-row-label">Commission OTA</span><span class="bh-modal-row-val" style="color:#dc2626;">− ${_money(oc)}</span></div>`);
+  const amountBlock = (fin && (_money(at) || amountRows.length)) ? `
+    <div class="bh-modal-section">
+      <div class="bh-modal-label">Montant</div>
+      <div class="bh-modal-card">
+        ${amountRows.join('')}
+        ${_money(at) ? `<div class="bh-modal-row" style="border-top:1px solid rgba(0,0,0,.08);"><span class="bh-modal-row-label" style="font-weight:700;color:var(--text);">Total voyageur</span><span class="bh-modal-row-val" style="font-size:16px;font-weight:800;color:var(--green);">${_money(at)}</span></div>` : ''}
+        ${_money(_net) ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Net hôte${_netEst?' (estimé)':''}</span><span class="bh-modal-row-val" style="font-weight:700;">${_money(_net)}</span></div>` : ''}
+      </div>
+    </div>` : '';
+
+  // ── Bloc paiements / cautions ──
+  let payBlock = '';
+  if (fin && Array.isArray(r.payments) && r.payments.length) {
+    const rows = r.payments.map(p => {
+      const amt = _money((p.amount_cents!=null ? p.amount_cents/100 : p.amount));
+      const st  = ({authorized:'Empreinte',captured:'Débité',pending:'En attente',cancelled:'Annulé',refunded:'Remboursé'})[p.status] || p.status || '';
+      return `<div class="bh-modal-row"><span class="bh-modal-row-label">${st}</span><span class="bh-modal-row-val">${amt||'—'}</span></div>`;
+    }).join('');
+    payBlock = `<div class="bh-modal-section"><div class="bh-modal-label">Caution / Paiements</div><div class="bh-modal-card">${rows}</div></div>`;
+  }
+
   body.innerHTML = `
     <div style="padding:12px 0 8px;display:flex;align-items:center;gap:10px;">
       <div style="width:42px;height:42px;border-radius:50%;background:var(--green);color:white;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${(guestFullName(r)||'?').charAt(0).toUpperCase()}</div>
-      <div>
-        <div style="font-size:16px;font-weight:700;color:var(--text);">${guestFullName(r)}</div>
-        <div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:16px;font-weight:700;color:var(--text);">${guestFullName(r)} ${_flag}</div>
+        <div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap;align-items:center;">
           <span class="plt-badge plt-${plt}">${pltLabel(r)}</span>
           <span class="status-badge ${statusClass((r.status||'confirmed').toLowerCase())}">${statusLabel((r.status||'confirmed').toLowerCase())}</span>
+          ${_adults ? `<span style="font-size:12px;color:var(--text-muted);"><i class="fas fa-user" style="font-size:10px;opacity:.7;"></i> ${_adults}${_children?'+'+_children:''}</span>` : ''}
         </div>
       </div>
     </div>
+
     <div class="bh-modal-section">
       <div class="bh-modal-label">Séjour</div>
       <div class="bh-modal-card">
@@ -976,17 +1052,30 @@ function openDetail(r) {
         <div class="bh-modal-row"><span class="bh-modal-row-label">Checkin</span><span class="bh-modal-row-val">${fmtDate(s.split('T')[0])}</span></div>
         <div class="bh-modal-row"><span class="bh-modal-row-label">Checkout</span><span class="bh-modal-row-val">${fmtDate(e.split('T')[0])}</span></div>
         <div class="bh-modal-row"><span class="bh-modal-row-label">Nuits</span><span class="bh-modal-row-val">${nightsCount(s,e)}</span></div>
-        <div class="bh-modal-row"><span class="bh-modal-row-label">Voyageurs</span><span class="bh-modal-row-val">${r.occupancyAdults||r.occupancy_adults||1}</span></div>
+        <div class="bh-modal-row"><span class="bh-modal-row-label">Voyageurs</span><span class="bh-modal-row-val">${_adults||1}${_children?' + '+_children+' enf.':''}</span></div>
       </div>
     </div>
-    ${fmtAmount(r) !== '—' ? `<div class="bh-modal-section"><div class="bh-modal-label">Montant</div><div class="bh-modal-card"><div class="bh-modal-amount-total">${fmtAmount(r)}</div></div></div>` : ''}
-    ${r.guestEmail||r.guestPhone ? `<div class="bh-modal-section"><div class="bh-modal-label">Contact</div><div class="bh-modal-card">
-      ${r.guestEmail ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Email</span><span class="bh-modal-row-val">${r.guestEmail}</span></div>` : ''}
-      ${r.guestPhone ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Téléphone</span><span class="bh-modal-row-val">${r.guestPhone}</span></div>` : ''}
+
+    ${amountBlock}
+    ${payBlock}
+
+    ${(_email||_phone||_addr) ? `<div class="bh-modal-section"><div class="bh-modal-label">Coordonnées</div><div class="bh-modal-card">
+      ${_email ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Email</span><span class="bh-modal-row-val"><a href="mailto:${_email}" style="color:var(--green);text-decoration:none;">${_email}</a></span></div>` : ''}
+      ${_phone ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Téléphone</span><span class="bh-modal-row-val"><a href="tel:${_telHref(_phone)}" style="color:var(--green);text-decoration:none;">${_phone}</a></span></div>` : ''}
+      ${_addr ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Adresse</span><span class="bh-modal-row-val">${_addr}</span></div>` : ''}
+      ${_country ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Pays</span><span class="bh-modal-row-val">${_flag} ${_country}</span></div>` : ''}
     </div></div>` : ''}
-    ${hasRealNote(r) ? `<div class="bh-modal-section"><div class="bh-modal-label">Note</div><div class="bh-modal-card"><div style="padding:12px 14px;font-size:13px;color:var(--text);">${r.notes}</div></div></div>` : ''}
+
+    <div class="bh-modal-section"><div class="bh-modal-label">Réservation</div><div class="bh-modal-card">
+      <div class="bh-modal-row"><span class="bh-modal-row-label">Plateforme</span><span class="bh-modal-row-val">${pltLabel(r)}</span></div>
+      ${_created ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Réservé le</span><span class="bh-modal-row-val">${fmtDate(String(_created).split('T')[0])}</span></div>` : ''}
+      ${_otaId ? `<div class="bh-modal-row"><span class="bh-modal-row-label">N° réservation</span><span class="bh-modal-row-val">${_otaId}</span></div>` : ''}
+    </div></div>
+
+    ${hasRealNote(r) ? `<div class="bh-modal-section"><div class="bh-modal-label">Note</div><div class="bh-modal-card"><div style="padding:12px 14px;font-size:13px;color:var(--text);white-space:pre-wrap;">${r.notes}</div></div></div>` : ''}
+
     <div style="display:flex;gap:8px;margin-top:10px;">
-      <button class="btn btn-primary" style="flex:1;" onclick="openMessageForReservation(currentDetailReservation)"><i class="fas fa-comment"></i> Messages</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="openMessageForReservation(currentDetailReservation)"><i class="fas fa-comment"></i> Message</button>
     </div>`;
   const overlay = document.getElementById('detailOverlay');
   const sheet   = document.getElementById('detailSheet');
