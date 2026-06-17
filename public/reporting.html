@@ -727,6 +727,7 @@ let _data = null;
 let _chartBar = null;
 let _chartPie = null;
 let _chartMode = 'gross';
+let _yearMonthly = null;   // données 12 mois (toujours l'année complète, indépendant du filtre mois)
 
 const PLATFORM_COLORS = {
   'Airbnb': '#FF5A5F', 'Booking.com': '#003580',
@@ -794,6 +795,20 @@ async function loadReport() {
     const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
     if (!r.ok) throw new Error('Erreur ' + r.status);
     _data = await r.json();
+
+    // Le graphe "Revenus par mois" affiche TOUJOURS l'année complète (pour comparer),
+    // même si un mois précis est sélectionné. On récupère donc la version année seule.
+    if (month) {
+      try {
+        let yUrl = `${API_URL}/api/reporting?year=${year}`;
+        if (propId) yUrl += `&property_id=${propId}`;
+        const yr = await fetch(yUrl, { headers: { 'Authorization': 'Bearer ' + token } });
+        _yearMonthly = yr.ok ? ((await yr.json()).monthly || _data.monthly) : _data.monthly;
+      } catch(_) { _yearMonthly = _data.monthly; }
+    } else {
+      _yearMonthly = _data.monthly; // déjà l'année complète
+    }
+
     render(_data);
     // Charger les scores qualité en parallèle
     loadQualityScores(year);
@@ -819,7 +834,7 @@ function render(d) {
 
   renderKPIs(s);
   renderConcierge(d);
-  renderBarChart(d.monthly, _chartMode);
+  renderBarChart(_yearMonthly || d.monthly, _chartMode);
   renderPieChart(d.platforms);
   renderPropTable(d.byProperty);
   renderMonthlyTable(d.monthly, d.byProperty);
@@ -940,7 +955,7 @@ function switchChart(type, btn) {
   _chartMode = type;
   document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
-  if (_data) renderBarChart(_data.monthly, type);
+  if (_data) renderBarChart(_yearMonthly || _data.monthly, type);
 }
 
 function renderPieChart(platforms) {
