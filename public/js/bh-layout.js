@@ -530,7 +530,7 @@ function getSidebarHTML() {
     if (!mobileHeader.classList.contains('mobile-header')) mobileHeader.classList.add('mobile-header');
     if (!mobileHeader.id) mobileHeader.id = 'bhMobileHeader';
     if (!mobileHeader.querySelector('.mobile-logo')) {
-      mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="flex-shrink:0;display:flex;align-items:center;gap:10px;text-decoration:none;"><span class="mobile-logo-text"></span></a>';
+      mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="min-width:0;display:flex;align-items:center;gap:10px;text-decoration:none;overflow:hidden;"><span class="mobile-logo-text"></span></a>';
     }
 
     // Style : logo centré, rien d'autre (comme messages.html)
@@ -1740,13 +1740,13 @@ var _bhNativeConfirm = window.confirm;
     // Tailles du logo/texte appliquées sur TOUTES les pages (pas seulement le dashboard),
     // pour que le logo soit cohérent partout. Cible large : .mobile-header et .mobile-logo.
     s.textContent =
-      '.mobile-header .mobile-logo,.mobile-logo{gap:7px!important;}' +
-      '.mobile-header .mobile-logo img,.mobile-logo img{width:34px!important;height:34px!important;min-width:34px!important;border-radius:9px!important;}' +
+      '.mobile-header .mobile-logo,.mobile-logo{gap:6px!important;min-width:0!important;flex:1 1 auto!important;overflow:hidden!important;}' +
+      '.mobile-header .mobile-logo img,.mobile-logo img{width:30px!important;height:30px!important;min-width:30px!important;border-radius:8px!important;flex-shrink:0!important;}' +
       // Texte en colonne : titre au-dessus, sous-titre dessous, calés à la même largeur
-      '.mobile-header .mobile-logo-text,.mobile-logo-text{display:inline-flex!important;flex-direction:column!important;align-items:stretch!important;}' +
-      '.mobile-header .mobile-logo-title,.mobile-logo-title{font-size:16px!important;line-height:1.15!important;white-space:nowrap!important;}' +
+      '.mobile-header .mobile-logo-text,.mobile-logo-text{display:inline-flex!important;flex-direction:column!important;align-items:stretch!important;min-width:0!important;overflow:hidden!important;}' +
+      '.mobile-header .mobile-logo-title,.mobile-logo-title{font-size:15px!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}' +
       // Sous-titre réduit + justifié → s'étire EXACTEMENT sur la largeur de "Boostinghost"
-      '.mobile-header .mobile-logo-subtitle,.mobile-logo-subtitle{font-size:7px!important;letter-spacing:0!important;margin-top:1px!important;display:block!important;width:100%!important;text-align:justify!important;text-align-last:justify!important;-moz-text-align-last:justify!important;}';
+      '.mobile-header .mobile-logo-subtitle,.mobile-logo-subtitle{font-size:6.5px!important;letter-spacing:0!important;margin-top:1px!important;display:block!important;width:100%!important;white-space:nowrap!important;overflow:hidden!important;text-align:justify!important;text-align-last:justify!important;-moz-text-align-last:justify!important;}';
     document.head.appendChild(s);
   }
   function injectCSS() {
@@ -1756,13 +1756,15 @@ var _bhNativeConfirm = window.confirm;
     var s = document.createElement('style');
     s.id = 'bh-header-v4-css';
     s.textContent =
-      '.mobile-header{justify-content:space-between!important;}' +
+      '.mobile-header{justify-content:space-between!important;overflow:hidden!important;max-width:100%!important;box-sizing:border-box!important;}' +
+      // Le groupe de boutons à droite ne doit jamais se comprimer ni sortir de l'écran
+      '.mobile-header>[style*="flex-end"]{flex-shrink:0!important;}' +
       '.mobile-header #bh-mobile-ann-btn{margin-right:6px!important;}' +
-      '.mobile-header>[style*="flex-end"]{gap:5px!important;margin-left:10px!important;}' +
+      '.mobile-header>[style*="flex-end"]{gap:5px!important;margin-left:8px!important;}' +
       /* Sans bouton agence : le groupe droit (2 boutons) laisse un vide entre le logo
          et les boutons. On décolle le groupe du bord droit pour le ramener vers le
          centre, ce qui rééquilibre comme s'il y avait 3 boutons. */
-      '.mobile-header.bh-no-agency>[style*="flex-end"]{margin-right:20px!important;}' +
+      '.mobile-header.bh-no-agency>[style*="flex-end"]{margin-right:12px!important;}' +
       '.mobile-header #bh-mobile-svc,.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{' +
         'background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);' +
         'border:1px solid rgba(26,122,94,.16)!important;border-radius:10px!important;height:32px!important;cursor:pointer;' +
