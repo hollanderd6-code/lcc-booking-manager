@@ -2122,6 +2122,14 @@ ON invoice_download_tokens(token);
       console.log('✅ Colonne quick_replies OK');
     } catch(e) { console.log('ℹ️ quick_replies:', e.message); }
 
+    // ✅ Migration : tolérance de départ tardif (late checkout) par logement
+    // Nombre de minutes après l'heure de départ pendant lesquelles l'IA
+    // accepte automatiquement un départ tardif (défaut 120 = 2h).
+    try {
+      await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS late_checkout_tolerance_minutes INTEGER DEFAULT 120`);
+      console.log('✅ Colonne late_checkout_tolerance_minutes OK');
+    } catch(e) { console.log('ℹ️ late_checkout_tolerance_minutes:', e.message); }
+
     // ✅ Migration : capacité d'accueil sur properties
     try {
       await pool.query(`

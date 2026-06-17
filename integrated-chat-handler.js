@@ -608,6 +608,9 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       arrivalTime:       property.arrival_time,
       departureTime:     property.departure_time || welcomeBookData?.checkoutTime,
       checkoutInstructions: welcomeBookData?.checkoutInstructions,
+      // Départ tardif (late checkout) : tolérance en minutes (défaut 120 = 2h)
+      lateCheckoutToleranceMin: (property.late_checkout_tolerance_minutes != null
+        ? parseInt(property.late_checkout_tolerance_minutes) : 120),
       // WiFi
       wifiName:          property.wifi_name     || welcomeBookData?.wifiSSID,
       wifiPassword:      property.wifi_password || welcomeBookData?.wifiPassword,
@@ -713,6 +716,87 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         return false;
       }
 
+      // ─── Détection tag [LATE_CHECKOUT:HH:MM] ──────────────────
+      const lateMatch = aiResponse.match(/\[LATE_CHECKOUT:(\d{1,2}):(\d{2})\]/);
+      if (lateMatch) {
+        try {
+          const reqH = parseInt(lateMatch[1]);
+          const reqMin = parseInt(lateMatch[2]);
+          // Heure de départ prévue (ex "10:00", "10h", "11h00")
+          const depStr = String(context.departureTime || '11:00');
+          const depMatch = depStr.match(/(\d{1,2})\s*[h:]\s*(\d{2})?/);
+          const depH = depMatch ? parseInt(depMatch[1]) : 11;
+          const depM = depMatch && depMatch[2] != null ? parseInt(depMatch[2]) : 0;
+
+          const requestedTotal = reqH * 60 + reqMin;
+          const departureTotal = depH * 60 + depM;
+          const delayMin = requestedTotal - departureTotal;
+          const toleranceMin = context.lateCheckoutToleranceMin != null
+            ? context.lateCheckoutToleranceMin : 120;
+
+          const reqLabel = `${String(reqH).padStart(2,'0')}h${String(reqMin).padStart(2,'0')}`;
+          const depLabel = `${String(depH).padStart(2,'0')}h${String(depM).padStart(2,'0')}`;
+          const cleanMsg = aiResponse.replace(/\[LATE_CHECKOUT:\d{1,2}:\d{2}\]/, '').trim();
+
+          // Cas 1 : heure demandée <= heure de départ → c'est dans les clous, pas un "late checkout"
+          if (delayMin <= 0) {
+            const okMsg = {
+              fr: `Pas de problème, le départ à ${reqLabel} est tout à fait dans les temps. Bon voyage ! 😊`,
+              en: `No problem, leaving at ${reqLabel} is perfectly fine. Safe travels! 😊`,
+              it: `Nessun problema, partire alle ${reqLabel} va benissimo. Buon viaggio! 😊`,
+              es: `Sin problema, salir a las ${reqLabel} está perfecto. ¡Buen viaje! 😊`,
+              de: `Kein Problem, Abreise um ${reqLabel} ist völlig in Ordnung. Gute Reise! 😊`,
+            };
+            await sendBotMessage(conversation.id, okMsg[language] || okMsg.fr, pool, io, channexId);
+            return true;
+          }
+
+          // Cas 2 : dans la tolérance → ACCEPTER + note auto + notif proprio
+          if (delayMin <= toleranceMin) {
+            const okMsg = {
+              fr: `C'est noté, vous pouvez partir jusqu'à ${reqLabel} sans souci 😊 Merci de laisser le logement bien fermé en partant. Bon voyage !`,
+              en: `All set, you can leave by ${reqLabel} without any issue 😊 Please make sure to lock up when you leave. Safe travels!`,
+              it: `Perfetto, può partire entro le ${reqLabel} senza problemi 😊 Mi raccomando di chiudere bene l'alloggio. Buon viaggio!`,
+              es: `Perfecto, puede salir hasta las ${reqLabel} sin problema 😊 Por favor cierre bien el alojamiento al salir. ¡Buen viaje!`,
+              de: `Alles klar, Sie können bis ${reqLabel} auschecken 😊 Bitte schließen Sie die Unterkunft gut ab. Gute Reise!`,
+            };
+            await sendBotMessage(conversation.id, okMsg[language] || okMsg.fr, pool, io, channexId);
+
+            // Note auto sur la réservation
+            await addLateCheckoutNote(conversation, pool, reqLabel);
+            // Notification au proprio
+            await notifyLateCheckout(conversation, pool, reqLabel, depLabel, true);
+            console.log(`✅ [HANDLER] Late checkout accepté à ${reqLabel} (tolérance ${toleranceMin}min)`);
+            return true;
+          }
+
+          // Cas 3 : au-delà de la tolérance → refuser poliment + escalade
+          const tooLateMsg = {
+            fr: `Je comprends votre demande de partir à ${reqLabel}. Je dois vérifier ce point avec l'hôte, qui reviendra vers vous rapidement pour confirmer. Merci de votre patience ! 🙏`,
+            en: `I understand you'd like to leave at ${reqLabel}. I need to check this with the host, who'll get back to you shortly to confirm. Thank you for your patience! 🙏`,
+            it: `Capisco che vorrebbe partire alle ${reqLabel}. Devo verificare con l'host, che la ricontatterà a breve per confermare. Grazie per la pazienza! 🙏`,
+            es: `Entiendo que quiere salir a las ${reqLabel}. Debo verificarlo con el anfitrión, que le responderá pronto para confirmar. ¡Gracias por su paciencia! 🙏`,
+            de: `Ich verstehe, dass Sie um ${reqLabel} abreisen möchten. Ich muss das mit dem Gastgeber klären, der sich in Kürze bei Ihnen meldet. Vielen Dank für Ihre Geduld! 🙏`,
+          };
+          await sendBotMessage(conversation.id, tooLateMsg[language] || tooLateMsg.fr, pool, io, channexId);
+          await notifyLateCheckout(conversation, pool, reqLabel, depLabel, false);
+          // Escalade pour décision manuelle (bot silencieux + notif prise en charge)
+          await pool.query(
+            `UPDATE conversations SET escalated = TRUE, escalated_at = NOW(), updated_at = NOW() WHERE id = $1`,
+            [conversation.id]
+          );
+          if (io) io.to(`user_${conversation.user_id}`).emit('conversation_escalated', {
+            conversationId: conversation.id, guestName: conversation.guest_name || 'Voyageur'
+          });
+          console.log(`🔄 [HANDLER] Late checkout ${reqLabel} > tolérance → escalade`);
+          return false;
+        } catch(e) {
+          console.error('❌ [HANDLER] Erreur late checkout:', e.message);
+          await escalateToOwner(conversation, pool, io, language, channexId);
+          return false;
+        }
+      }
+
       // ─── Détection tag [FACTURE] ──────────────────────────────
       const factureMatch = aiResponse.match(/\[FACTURE(?::([^\]]*))?\]/);
       if (factureMatch) {
@@ -803,6 +887,84 @@ async function handleIncomingMessage(message, conversation, pool, io) {
   } catch (error) {
     console.error('❌ [HANDLER] Erreur handleIncomingMessage:', error);
     return false;
+  }
+}
+
+// ============================================
+// 🕐 LATE CHECKOUT — note auto + notification
+// ============================================
+
+// Ajoute/complète la note interne de la réservation liée à la conversation.
+async function addLateCheckoutNote(conversation, pool, reqLabel) {
+  try {
+    // Retrouver la réservation liée (par channex_booking_id ou par property + date d'arrivée)
+    const resRow = await pool.query(
+      `SELECT uid, notes FROM reservations
+       WHERE (channex_booking_id = $1 AND $1 IS NOT NULL)
+          OR (property_id = $2 AND DATE(start_date) = DATE($3) AND status != 'cancelled')
+       ORDER BY (channex_booking_id = $1) DESC NULLS LAST, created_at DESC
+       LIMIT 1`,
+      [conversation.channex_booking_id || null, conversation.property_id, conversation.reservation_start_date]
+    );
+    const resa = resRow.rows[0];
+    if (!resa) { console.warn('⚠️ [LATE] Réservation introuvable pour note'); return; }
+
+    const tag = `Checkout tardif à ${reqLabel} autorisé`;
+    // Éviter les doublons si la note existe déjà
+    let newNotes;
+    if (resa.notes && resa.notes.includes('Checkout tardif')) {
+      // Remplacer l'ancienne mention par la nouvelle heure
+      newNotes = resa.notes.replace(/Checkout tardif à \d{1,2}h\d{2} autorisé/, tag);
+    } else if (resa.notes && resa.notes.trim().length > 0) {
+      newNotes = `${resa.notes.trim()}\n🕐 ${tag}`;
+    } else {
+      newNotes = `🕐 ${tag}`;
+    }
+
+    await pool.query(
+      `UPDATE reservations SET notes = $1, updated_at = NOW()
+       WHERE uid = $2 OR channex_booking_id = $2`,
+      [newNotes, resa.uid]
+    );
+    console.log(`📝 [LATE] Note réservation mise à jour : ${tag}`);
+  } catch(e) {
+    console.error('❌ [LATE] Erreur note réservation:', e.message);
+  }
+}
+
+// Notifie le propriétaire (push) d'une demande de départ tardif.
+async function notifyLateCheckout(conversation, pool, reqLabel, depLabel, accepted) {
+  try {
+    const { sendNotification } = require('./services/notifications-service');
+    let propName = null;
+    if (conversation.property_id) {
+      try {
+        const pr = await pool.query('SELECT internal_name, name FROM properties WHERE id = $1', [conversation.property_id]);
+        const p = pr.rows[0];
+        if (p) propName = p.internal_name || p.name || null;
+      } catch(e) {}
+    }
+    const guest = conversation.guest_name || 'Voyageur';
+    const title = accepted
+      ? `🕐 Checkout tardif autorisé — ${guest}${propName ? ' · ' + propName : ''}`
+      : `⚠️ Demande de checkout tardif — ${guest}${propName ? ' · ' + propName : ''}`;
+    const body = accepted
+      ? `Départ à ${reqLabel} accepté automatiquement (prévu ${depLabel}). Note ajoutée à la réservation.`
+      : `Le voyageur demande à partir à ${reqLabel} (prévu ${depLabel}) — au-delà de la tolérance. À valider manuellement.`;
+
+    const tokens = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+      [conversation.user_id]
+    );
+    for (const tok of tokens.rows) {
+      await sendNotification(tok.fcm_token, title, body, {
+        type: accepted ? 'late_checkout_ok' : 'late_checkout_review',
+        conversation_id: String(conversation.id),
+        screen: 'messages'
+      });
+    }
+  } catch(e) {
+    console.error('❌ [LATE] Erreur notification:', e.message);
   }
 }
 
