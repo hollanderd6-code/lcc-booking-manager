@@ -2,6 +2,81 @@
 // BOOSTINGHOST GUEST — app-guest.js
 // ============================================================
 
+// ─── Système d'icônes SF (traits fins, cohérent avec la bottom nav) ───
+const BH_ICONS = {
+  'search':      '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>',
+  'location':    '<svg viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11.5A7 7 0 0 0 5 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+  'bed':         '<svg viewBox="0 0 24 24"><path d="M3 7v11M3 12h18v6M21 18v-5a3 3 0 0 0-3-3h-7v3"/><circle cx="7" cy="10.5" r="1.6"/></svg>',
+  'bath':        '<svg viewBox="0 0 24 24"><path d="M4 12V6.5A2.5 2.5 0 0 1 6.5 4a2.3 2.3 0 0 1 2.3 2"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M5 12v3a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4v-3"/><line x1="8" y1="19.5" x2="7" y2="21.5"/><line x1="16" y1="19.5" x2="17" y2="21.5"/></svg>',
+  'users':       '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 3-4.6 5.5-4.6S14 16 14.5 19"/><path d="M16 5.2a3.2 3.2 0 0 1 0 6.1M17 14.6c2 .5 3.6 2 4 4.4"/></svg>',
+  'user':        '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.8"/><path d="M5 20c.7-3.6 3.6-5.5 7-5.5s6.3 1.9 7 5.5"/></svg>',
+  'moon':        '<svg viewBox="0 0 24 24"><path d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5z"/></svg>',
+  'wifi':        '<svg viewBox="0 0 24 24"><path d="M5 12.5a10 10 0 0 1 14 0M8 15.8a5.5 5.5 0 0 1 8 0"/><circle cx="12" cy="19" r="1"/></svg>',
+  'clock':       '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  'check':       '<svg viewBox="0 0 24 24"><polyline points="4.5 12.5 9.5 17.5 19.5 6.5"/></svg>',
+  'calendar':    '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="3" x2="8" y2="6.5"/><line x1="16" y1="3" x2="16" y2="6.5"/></svg>',
+  'calendar-check':'<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="3" x2="8" y2="6.5"/><line x1="16" y1="3" x2="16" y2="6.5"/><polyline points="8.5 14.5 11 17 15.5 12.5"/></svg>',
+  'home':        '<svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7"/><path d="M6 10v9a1 1 0 0 0 1 1h3.5v-5a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v5H18a1 1 0 0 0 1-1v-9"/></svg>',
+  'message':     '<svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4 3.5V17h-.5A2.5 2.5 0 0 1 3 14.5z"/></svg>',
+  'arrow-left':  '<svg viewBox="0 0 24 24"><line x1="20" y1="12" x2="5" y2="12"/><polyline points="11 6 5 12 11 18"/></svg>',
+  'arrow-right': '<svg viewBox="0 0 24 24"><line x1="4" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg>',
+  'chevron-left':'<svg viewBox="0 0 24 24"><polyline points="14 6 8 12 14 18"/></svg>',
+  'chevron-right':'<svg viewBox="0 0 24 24"><polyline points="10 6 16 12 10 18"/></svg>',
+  'lock':        '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9.5" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.2"/></svg>',
+  'key':         '<svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="4"/><path d="M11 11l8 8M16 16l2-2M18.5 18.5l1.5-1.5"/></svg>',
+  'shield':      '<svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6z"/><polyline points="9 11.5 11.2 13.7 15 9.5"/></svg>',
+  'headset':     '<svg viewBox="0 0 24 24"><path d="M5 13v-1a7 7 0 0 1 14 0v1"/><rect x="3.5" y="13" width="3.5" height="6" rx="1.5"/><rect x="17" y="13" width="3.5" height="6" rx="1.5"/><path d="M19 19a4 4 0 0 1-4 3.2"/></svg>',
+  'star':        '<svg viewBox="0 0 24 24"><polygon points="12 3.5 14.6 9 20.5 9.8 16 14 17.2 20 12 17 6.8 20 8 14 3.5 9.8 9.4 9"/></svg>',
+  'bolt':        '<svg viewBox="0 0 24 24"><polygon points="13 2.5 5 13 11 13 10 21.5 19 10 13 10"/></svg>',
+  'book':        '<svg viewBox="0 0 24 24"><path d="M4 5.5A2 2 0 0 1 6 4h6v15H6a2 2 0 0 0-2 1.5z"/><path d="M20 5.5A2 2 0 0 0 18 4h-6v15h6a2 2 0 0 1 2 1.5z"/></svg>',
+  'send':        '<svg viewBox="0 0 24 24"><path d="M21 3 10.5 13.5M21 3l-7 18-3.5-7.5L3 10z"/></svg>',
+  'sign-in':     '<svg viewBox="0 0 24 24"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><line x1="4" y1="12" x2="15" y2="12"/><polyline points="11 8 15 12 11 16"/></svg>',
+  'sign-out':    '<svg viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><line x1="20" y1="12" x2="9" y2="12"/><polyline points="16 8 20 12 16 16"/></svg>',
+  'user-plus':   '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.8"/><path d="M3 20c.7-3.4 3.4-5.2 6-5.2"/><line x1="17" y1="9" x2="17" y2="15"/><line x1="14" y1="12" x2="20" y2="12"/></svg>',
+  'info':        '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.8" r="0.6"/></svg>',
+  'alert':       '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><line x1="12" y1="7.5" x2="12" y2="13"/><circle cx="12" cy="16.2" r="0.6"/></svg>',
+};
+
+// Retourne le markup d'une icône SF. Usage: icon('search') ou icon('star','bhi-star-fill')
+function icon(name, extraClass) {
+  const svg = BH_ICONS[name];
+  if (!svg) return '';
+  return `<span class="bhi${extraClass ? ' ' + extraClass : ''}" aria-hidden="true">${svg}</span>`;
+}
+// Exposé globalement pour les usages dans le HTML/inline
+window.icon = icon;
+
+// Remplace les <i class="fas fa-X"> statiques du HTML par les SVG SF,
+// en préservant le style inline. Ignore le spinner (animation FA conservée).
+const FA_TO_SF = {
+  'fa-search':'search','fa-arrow-right':'arrow-right','fa-arrow-left':'arrow-left',
+  'fa-shield-halved':'shield','fa-headset':'headset','fa-star':'star','fa-bolt':'bolt',
+  'fa-comment-dots':'message','fa-book-open':'book','fa-user-plus':'user-plus',
+  'fa-sign-in-alt':'sign-in','fa-lock':'lock','fa-calendar-check':'calendar-check',
+  'fa-paper-plane':'send','fa-user':'user','fa-user-circle':'user','fa-key':'key',
+  'fa-info-circle':'info','fa-location-dot':'location','fa-home':'home',
+  'fa-bed':'bed','fa-bath':'bath','fa-users':'users','fa-moon':'moon','fa-wifi':'wifi',
+  'fa-clock':'clock','fa-calendar':'calendar','fa-check':'check','fa-sign-out-alt':'sign-out',
+  'fa-chevron-left':'chevron-left','fa-chevron-right':'chevron-right',
+  'fa-exclamation-circle':'alert',
+};
+function bhReplaceIcons(root) {
+  (root || document).querySelectorAll('i.fas').forEach(el => {
+    if ([...el.classList].some(c => c === 'fa-spin' || c === 'fa-spinner')) return;
+    const faCls = [...el.classList].find(c => FA_TO_SF[c]);
+    if (!faCls) return;
+    const svg = BH_ICONS[FA_TO_SF[faCls]];
+    if (!svg) return;
+    const span = document.createElement('span');
+    span.className = 'bhi';
+    span.setAttribute('aria-hidden', 'true');
+    if (el.getAttribute('style')) span.setAttribute('style', el.getAttribute('style'));
+    span.innerHTML = svg;
+    el.replaceWith(span);
+  });
+}
+window.bhReplaceIcons = bhReplaceIcons;
+
 const IS_NATIVE = window.Capacitor?.isNativePlatform?.() || false;
 const API_URL = IS_NATIVE
   ? 'https://www.boostinghost.fr'
@@ -113,7 +188,7 @@ async function requestMagicLink() {
     showToast(e.message || 'Erreur envoi email');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Recevoir mon lien';
+    btn.innerHTML = icon('send') + ' Recevoir mon lien';
   }
 }
 
@@ -158,7 +233,7 @@ async function loginWithPassword() {
     errBox.textContent = e.message || 'Erreur de connexion';
     errBox.style.display = 'block';
   } finally {
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Se connecter';
+    btn.disabled = false; btn.innerHTML = icon('sign-in') + ' Se connecter';
   }
 }
 
@@ -231,7 +306,7 @@ async function registerWithPassword() {
     errBox.textContent = e.message || 'Erreur lors de la création du compte';
     errBox.style.display = 'block';
   } finally {
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Créer mon compte';
+    btn.disabled = false; btn.innerHTML = icon('user-plus') + ' Créer mon compte';
   }
 }
 
@@ -274,6 +349,7 @@ async function verifyMagicToken(token) {
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  bhReplaceIcons(); // Remplace les icônes FA statiques par les SVG SF
   initStripe(); // Lance en parallèle — polling interne jusqu'à 5s
   // Initialiser le badge messages à 0 dès le démarrage
   updateGuestMsgBadge(0);
@@ -915,8 +991,8 @@ function renderStars(rating) {
   const full = Math.floor(on5);
   const half = on5 % 1 >= 0.5 ? 1 : 0;
   const empty = 5 - full - half;
-  const stars = '<i class="fas fa-star" style="color:#f59e0b"></i>'.repeat(full)
-    + (half ? '<i class="fas fa-star-half-stroke" style="color:#f59e0b"></i>' : '')
+  const stars = icon('star','bhi-star-fill').repeat(full)
+    + (half ? icon('star') : '')
     + '<i class="far fa-star" style="color:#d1d5db"></i>'.repeat(empty);
   return `${stars} <span style="font-weight:600;font-size:12px;color:#374151">${(rating/2).toFixed(1)}</span>`;
 }
@@ -1089,7 +1165,7 @@ async function loadFeaturedProperties() {
         <div class="home-card-body">
           <div class="home-card-stars" id="stars-home-${p.id}" style="color:#d1d5db;font-size:12px;">…</div>
           <div class="home-card-name">${p.name}</div>
-          <div class="home-card-loc"><i class="fas fa-location-dot"></i>${p.city || 'France'}</div>
+          <div class="home-card-loc">${icon('location')}${p.city || 'France'}</div>
           <div class="home-card-price">${p.basePrice || '—'}€ <span>/ nuit</span></div>
         </div>
       </div>
@@ -1130,7 +1206,7 @@ async function loadProperties() {
     }
 
     if (!state.properties.length) {
-      grid.innerHTML = `<div class="empty-state"><i class="fas fa-home"></i><p>Aucun logement disponible pour ces critères</p></div>`;
+      grid.innerHTML = `<div class="empty-state">${icon('home')}<p>Aucun logement disponible pour ces critères</p></div>`;
       return;
     }
 
@@ -1139,17 +1215,17 @@ async function loadProperties() {
         <div class="prop-card-img" style="${p.photoUrl ? 'padding:0;background:none;' : ''}">
           ${p.photoUrl
             ? `<img src="${p.photoUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`
-            : '<i class="fas fa-home"></i>'}
+            : icon('home')}
           ${p.basePrice ? `<div class="prop-card-badge">${p.basePrice}€ / nuit</div>` : ''}
         </div>
         <div class="prop-card-body">
           <div class="prop-card-stars" id="stars-list-${p.id}" style="color:#d1d5db;font-size:12px;">…</div>
           <div class="prop-card-name">${p.name}</div>
-          <div class="prop-card-loc"><i class="fas fa-location-dot"></i>${p.city || p.address || 'France'}</div>
+          <div class="prop-card-loc">${icon('location')}${p.city || p.address || 'France'}</div>
           <div class="prop-card-features">
-            ${p.bedrooms ? `<div class="prop-card-feat"><i class="fas fa-bed"></i>${p.bedrooms} ch.</div>` : ''}
-            ${p.maxGuests ? `<div class="prop-card-feat"><i class="fas fa-user"></i>${p.maxGuests} pers.</div>` : ''}
-            ${p.bathrooms ? `<div class="prop-card-feat"><i class="fas fa-bath"></i>${p.bathrooms} sdb</div>` : ''}
+            ${p.bedrooms ? `<div class="prop-card-feat">${icon('bed')}${p.bedrooms} ch.</div>` : ''}
+            ${p.maxGuests ? `<div class="prop-card-feat">${icon('user')}${p.maxGuests} pers.</div>` : ''}
+            ${p.bathrooms ? `<div class="prop-card-feat">${icon('bath')}${p.bathrooms} sdb</div>` : ''}
           </div>
           <div class="prop-card-footer">
             <div>
@@ -1175,7 +1251,7 @@ async function loadProperties() {
     });
 
   } catch (e) {
-    grid.innerHTML = `<div class="empty-state"><i class="fas fa-wifi"></i><p>Impossible de charger les logements</p></div>`;
+    grid.innerHTML = `<div class="empty-state">${icon('wifi')}<p>Impossible de charger les logements</p></div>`;
   }
 }
 
@@ -1222,7 +1298,7 @@ async function openProperty(id) {
     updateBookingBar();
 
   } catch (e) {
-    document.getElementById('detailContent').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`;
+    document.getElementById('detailContent').innerHTML = `<div class="empty-state">${icon('alert')}<p>${e.message}</p></div>`;
   }
 }
 
@@ -1232,16 +1308,16 @@ function renderDetail() {
     <div class="detail-photos">
       ${p.photoUrl
         ? `<img src="${p.photoUrl}" alt="${p.name}">`
-        : '<div class="no-photo"><i class="fas fa-home"></i></div>'}
+        : '<div class="no-photo">' + icon('home') + '</div>'}
     </div>
     <div class="detail-body">
       <div class="detail-name">${p.name}</div>
-      <div class="detail-location"><i class="fas fa-location-dot"></i> ${p.city || p.address || 'France'}</div>
+      <div class="detail-location">${icon('location')} ${p.city || p.address || 'France'}</div>
       <div class="detail-feats">
-        ${p.bedrooms ? `<div class="detail-feat"><i class="fas fa-bed"></i><strong>${p.bedrooms}</strong><span>chambres</span></div>` : ''}
-        ${p.maxGuests ? `<div class="detail-feat"><i class="fas fa-users"></i><strong>${p.maxGuests}</strong><span>personnes</span></div>` : ''}
-        ${p.bathrooms ? `<div class="detail-feat"><i class="fas fa-bath"></i><strong>${p.bathrooms}</strong><span>sdb</span></div>` : ''}
-        ${p.beds ? `<div class="detail-feat"><i class="fas fa-moon"></i><strong>${p.beds}</strong><span>lits</span></div>` : ''}
+        ${p.bedrooms ? `<div class="detail-feat">${icon('bed')}<strong>${p.bedrooms}</strong><span>chambres</span></div>` : ''}
+        ${p.maxGuests ? `<div class="detail-feat">${icon('users')}<strong>${p.maxGuests}</strong><span>personnes</span></div>` : ''}
+        ${p.bathrooms ? `<div class="detail-feat">${icon('bath')}<strong>${p.bathrooms}</strong><span>sdb</span></div>` : ''}
+        ${p.beds ? `<div class="detail-feat">${icon('moon')}<strong>${p.beds}</strong><span>lits</span></div>` : ''}
       </div>
 
       <div class="section-title">Sélectionner vos dates</div>
@@ -1289,9 +1365,9 @@ function renderCalendar() {
   let html = `
     <div style="background:white; border-radius:16px; padding:16px; margin-bottom:16px;">
       <div class="calendar-nav">
-        <button onclick="calNav(-1)"><i class="fas fa-chevron-left"></i></button>
+        <button onclick="calNav(-1)">${icon('chevron-left')}</button>
         <h4>${monthName}</h4>
-        <button onclick="calNav(1)"><i class="fas fa-chevron-right"></i></button>
+        <button onclick="calNav(1)">${icon('chevron-right')}</button>
       </div>
       <div class="calendar-grid">
         ${['Lu','Ma','Me','Je','Ve','Sa','Di'].map(d => `<div class="cal-day-header">${d}</div>`).join('')}
@@ -1492,7 +1568,7 @@ function goToCheckout() {
       <div id="promoMsg" style="font-size:12px;margin-top:6px;display:none;"></div>
     </div>
     <div style="background:var(--bg);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text-light);margin-top:8px;margin-bottom:16px;">
-      <i class="fas fa-lock" style="color:var(--primary);margin-right:6px;"></i>
+      <span style="color:var(--primary);margin-right:6px;">${icon('lock')}</span>
       Paiement sécurisé. Votre réservation sera confirmée immédiatement.
     </div>
     <button id="btnPay" onclick="submitBooking()" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
@@ -1679,7 +1755,7 @@ function showConfirmation(data, guestName, guestEmail) {
   localStorage.removeItem('guest_hold_token');
 
   document.getElementById('confirmContent').innerHTML = `
-    <div class="confirm-icon"><i class="fas fa-check"></i></div>
+    <div class="confirm-icon">${icon('check')}</div>
     <div class="confirm-title">Réservation confirmée !</div>
     <div class="confirm-sub">Un email de confirmation a été envoyé à ${guestEmail}</div>
     <div class="confirm-card">
@@ -1689,7 +1765,7 @@ function showConfirmation(data, guestName, guestEmail) {
       <div class="confirm-row"><span>Voyageur</span><span>${guestName}</span></div>
       <div class="confirm-row"><span>Total payé</span><span>${data.total_ttc}€</span></div>
       ${p.arrivalTime ? `<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;font-size:13px;color:var(--text-light);">
-        <i class="fas fa-clock"></i> Arrivée à partir de ${p.arrivalTime}
+        ${icon('clock')} Arrivée à partir de ${p.arrivalTime}
       </div>` : ''}
     </div>
     <button class="btn-confirm-home" onclick="navTo('home')">Voir d'autres logements</button>
@@ -1712,7 +1788,7 @@ async function loadMyBookings() {
   if (!session?.token && !localEmail) {
     list.innerHTML = `
       <div class="empty-state">
-        <i class="fas fa-calendar"></i>
+        ${icon('calendar')}
         <p style="margin-bottom:20px;">Connectez-vous pour voir vos réservations</p>
         <button onclick="navTo('login')" style="background:var(--primary);color:white;border:none;border-radius:10px;padding:10px 22px;font-size:14px;font-weight:600;cursor:pointer;">
           Se connecter
@@ -1740,7 +1816,7 @@ async function loadMyBookings() {
     }
 
     if (!bookings.length) {
-      list.innerHTML = `<div class="empty-state"><i class="fas fa-calendar"></i><p>Aucune réservation pour le moment</p></div>`;
+      list.innerHTML = `<div class="empty-state">${icon('calendar')}<p>Aucune réservation pour le moment</p></div>`;
       return;
     }
 
@@ -1787,13 +1863,13 @@ async function loadMyBookings() {
       const btnContact = b.conversationId
         ? `<button onclick="openGuestChat(${b.conversationId},'${(b.property.name||'').replace(/'/g,"\'")}','${fmtDate(b.checkin)}','${fmtDate(b.checkout)}')"
             style="flex:1;padding:10px;background:var(--primary);color:white;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-            <i class="fas fa-comment-dots"></i> Contacter
+            ${icon('message')} Contacter
           </button>` : '';
 
       const btnLivret = b.property.welcomeBookUrl
         ? `<button onclick="window.open('${b.property.welcomeBookUrl}','_blank')"
             style="flex:1;padding:10px;background:#f0fdf4;color:#10b981;border:1px solid #bbf7d0;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
-            <i class="fas fa-book-open"></i> Livret
+            ${icon('book')} Livret
           </button>` : '';
 
       const hasButtons = btnContact || btnLivret;
@@ -1807,7 +1883,7 @@ async function loadMyBookings() {
 
         <!-- Dates -->
         <div style="font-size:13px;color:#64748b;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-          <i class="fas fa-calendar" style="color:var(--primary);font-size:12px;"></i>
+          <span style="color:var(--primary);font-size:12px;">${icon('calendar')}</span>
           <span>${fmtDate(b.checkin)} → ${fmtDate(b.checkout)}</span>
           ${b.property.city ? `<span style="color:#cbd5e1;">·</span><span>${b.property.city}</span>` : ''}
         </div>
@@ -1815,8 +1891,8 @@ async function loadMyBookings() {
         <!-- Horaires arrivée/départ -->
         ${(b.property.arrivalTime || b.property.departureTime) ? `
         <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;display:flex;gap:12px;">
-          ${b.property.arrivalTime ? `<span><i class="fas fa-sign-in-alt" style="color:#10b981;margin-right:3px;"></i>Arrivée dès ${b.property.arrivalTime}</span>` : ''}
-          ${b.property.departureTime ? `<span><i class="fas fa-sign-out-alt" style="color:#f59e0b;margin-right:3px;"></i>Départ avant ${b.property.departureTime}</span>` : ''}
+          ${b.property.arrivalTime ? `<span><span style="color:#10b981;margin-right:3px;">${icon('sign-in')}</span>Arrivée dès ${b.property.arrivalTime}</span>` : ''}
+          ${b.property.departureTime ? `<span><span style="color:#f59e0b;margin-right:3px;">${icon('sign-out')}</span>Départ avant ${b.property.departureTime}</span>` : ''}
         </div>` : ''}
 
         <!-- Montant -->
@@ -1837,7 +1913,7 @@ async function loadMyBookings() {
     }).join('');
 
   } catch (e) {
-    list.innerHTML = `<div class="empty-state"><i class="fas fa-wifi"></i><p>Erreur de chargement</p></div>`;
+    list.innerHTML = `<div class="empty-state">${icon('wifi')}<p>Erreur de chargement</p></div>`;
   }
 }
 
@@ -1877,7 +1953,7 @@ function renderLogoutSection() {
   } else {
     section.innerHTML = `
       <button onclick="navTo('login')" style="width:100%;padding:14px;background:var(--primary-light);color:var(--primary);border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">
-        <i class="fas fa-sign-in-alt"></i> Se connecter
+        ${icon('sign-in')} Se connecter
       </button>`;
   }
 }
