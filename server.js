@@ -36529,7 +36529,7 @@ app.post('/api/guest/modify-reservation', authenticateAny, async (req, res) => {
     if (checkin)  { updates.push(`start_date = $${idx++}`); values.push(checkin); }
     if (checkout) { updates.push(`end_date = $${idx++}`); values.push(checkout); }
     if (guests)   { updates.push(`occupancy_adults = $${idx++}`); values.push(parseInt(guests)); }
-    if (notes != null) { updates.push(`notes = $${idx++}`); values.push(notes); }
+    if (notes !== undefined) { updates.push(`notes = $${idx++}`); values.push(notes && String(notes).trim() ? String(notes).trim() : null); }
     if (amount_total != null && !isNaN(parseFloat(amount_total))) { updates.push(`amount_total = $${idx++}`); updates.push(`price = $${idx++}`); values.push(parseFloat(amount_total)); values.push(parseFloat(amount_total)); }
     if (!updates.length) return res.status(400).json({ error: 'Rien à modifier' });
     values.push(uid);
