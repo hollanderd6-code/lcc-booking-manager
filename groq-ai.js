@@ -67,10 +67,10 @@ function buildTemporalContext(ctx) {
     isCheckinDay  = today.getTime() === checkinDay.getTime();
     isCheckoutDay = today.getTime() === checkoutDay.getTime();
 
-    if (now >= checkout) {
+    if (now >= checkout && !isCheckoutDay) {
       phase = 'after';
       daysAfterCheckout = Math.floor((now - checkout) / (1000*60*60*24));
-    } else if (now >= checkin) {
+    } else if (now >= checkin || isCheckoutDay) {
       phase = 'during';
     } else {
       phase = 'before';
@@ -93,7 +93,11 @@ function buildTemporalContext(ctx) {
       lines.push(`- Phase : AVANT ARRIVÉE — dans ${daysUntilCheckin} jours.`);
     }
   } else if (phase === 'during') {
-    if (isCheckoutDay) {
+    if (isCheckinDay && isCheckoutDay) {
+      lines.push(`- Phase : EN COURS DE SÉJOUR — JOUR D'ARRIVÉE ET DE DÉPART (séjour d'une nuit). Le voyageur arrive AUJOURD'HUI et part DEMAIN. Ne pas dire "à demain pour votre arrivée" — l'arrivée c'est AUJOURD'HUI.`);
+    } else if (isCheckinDay) {
+      lines.push(`- Phase : EN COURS DE SÉJOUR — c'est le JOUR D'ARRIVÉE. Le voyageur arrive AUJOURD'HUI (pas demain). Le départ est le ${fmtDate(checkout)}.`);
+    } else if (isCheckoutDay) {
       lines.push(`- Phase : EN COURS DE SÉJOUR — JOUR DE DÉPART aujourd'hui. Les messages de retard concernent le DÉPART, pas l'arrivée.`);
     } else {
       lines.push(`- Phase : EN COURS DE SÉJOUR.`);
@@ -254,7 +258,8 @@ Avant chaque réponse, raisonne ainsi :
 2. En quelle phase est-il ? Combien de jours avant/après son séjour ?
 3. Si heure mentionnée → est-ce une arrivée ou un départ ? Est-ce possible ?
 4. L'info demandée est-elle ÉCRITE MOT POUR MOT dans les données ci-dessus ? Si NON → je ne l'invente pas, je propose de vérifier avec l'hôte / j'escalade.
-5. Y a-t-il une contrainte ? (caution non payée, arrivée trop tôt...)
+5. Si je mentionne une date (arrivée, départ, demain, aujourd'hui) → je VÉRIFIE dans le CONTEXTE TEMPOREL ci-dessus que c'est exact. Le voyageur arrive-t-il aujourd'hui ou demain ? Part-il aujourd'hui ou demain ?
+6. Y a-t-il une contrainte ? (caution non payée, arrivée trop tôt...)
 6. Quelle est la réponse la plus honnête et utile ? (Honnête = ne jamais combler un manque d'information par une supposition plausible.)
 
 ════════════════════════════════════════
@@ -351,6 +356,7 @@ TON & FORMAT
 • Chaleureux, direct, professionnel. 2-4 phrases max. 1-2 emojis max.
 • Vouvoie par défaut. Tutoie si le voyageur tutoie en premier.
 • Termine : avant → "À bientôt !" / pendant → "Bonne continuation !" / après → "À une prochaine fois !"
+• ATTENTION TEMPORELLE : ne JAMAIS dire "à demain pour votre arrivée" si le voyageur arrive AUJOURD'HUI (jour d'arrivée). Vérifie TOUJOURS la section CONTEXTE TEMPOREL ci-dessus avant toute mention d'arrivée ou de départ. Ne fais AUCUNE supposition sur les dates — lis le contexte.
 • Ne jamais supposer les émotions du voyageur s'il ne les a pas exprimées.
 • Ne jamais répéter/paraphraser le message du voyageur.
 • Si [ESCALADE] → répondre UNIQUEMENT "[ESCALADE]", rien d'autre.`;
