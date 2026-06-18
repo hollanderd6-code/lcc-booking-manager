@@ -17109,7 +17109,7 @@ app.delete('/api/promo/:id', authenticateToken, async (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { company, firstName, lastName, email, password, promoCode, referralCode } = req.body;
+    const { company, firstName, lastName, email, password, phone, promoCode, referralCode } = req.body;
     
     if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({ error: 'Champs obligatoires manquants' });
@@ -17175,10 +17175,10 @@ app.post('/api/auth/register', async (req, res) => {
         id, company, first_name, last_name, email, password_hash, 
         created_at, stripe_account_id,
         email_verified, verification_token, verification_token_expires,
-        referral_code, referred_by, promo_code_used
+        referral_code, referred_by, promo_code_used, phone
       )
-      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NULL, $7, $8, $9, $10, $11, $12)`,
-      [id, company, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires, myReferralCode, referrerId, promoCodeUsed]
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NULL, $7, $8, $9, $10, $11, $12, $13)`,
+      [id, company, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires, myReferralCode, referrerId, promoCodeUsed, (phone && String(phone).trim()) ? String(phone).trim() : null]
     );
 
     // Créer l'abonnement trial
