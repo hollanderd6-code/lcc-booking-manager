@@ -968,19 +968,6 @@ html[data-theme-v3="1"] .app-container {
 .toggle-switch input:disabled + .toggle-slider { opacity:.5; cursor:not-allowed; }
 </style>
 <style>
-.invoice-btn-short { display: none; }
-@media (max-width: 768px) {
-  .invoice-btn-full { display: none; }
-  .invoice-btn-short { display: inline; }
-  #btnToggleAI {
-    font-size: 12px !important;
-    padding: 0 13px !important;
-    height: 32px !important;
-    gap: 5px !important;
-  }
-  #btnToggleAI .fa-robot { font-size: 12px !important; }
-  #btnToggleAILabel { font-size: 11px !important; }
-}
 </style>
 <style>
 /* Fix templateModal boutons cachés sous bottom bar sur mobile */
@@ -1177,7 +1164,7 @@ html[data-theme-v3="1"] .app-container {
               <i class="fas fa-robot"></i>
               <span id="btnToggleAILabel" style="font-size:12.5px;font-weight:600;"></span>
             </button>
-            <button class="msgs-auto-btn" id="chatCloseConvBtn" onclick="openInvoiceFromConversation()"><i class="fas fa-file-invoice"></i> <span class="invoice-btn-full">Envoyer la facture</span><span class="invoice-btn-short">Facture</span></button>
+            <button class="msgs-icon-btn" id="chatCloseConvBtn" onclick="openInvoiceFromConversation()" title="Envoyer la facture"><i class="fas fa-file-invoice"></i></button>
             
             <button class="msgs-icon-btn" id="btnSendInfos" onclick="sendPracticalInfos()" title="Envoyer les infos pratiques" style="color:#1A7A5E;"><i class="fas fa-info-circle"></i></button>
             <button class="msgs-icon-btn" id="btnQuickNote" onclick="openQuickNoteModal()" title="Note interne" style="color:#F59E0B;"><i class="fas fa-sticky-note"></i></button>
@@ -2434,7 +2421,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
           body: JSON.stringify({ status: 'active' })
         }).catch(function() {});
         if (item) { item.style.opacity = ''; item.style.filter = ''; }
-        btn.innerHTML = '<i class="fas fa-file-invoice"></i> <span class="invoice-btn-full">Envoyer la facture</span><span class="invoice-btn-short">Facture</span>';
+        btn.innerHTML = '<i class="fas fa-file-invoice"></i>';
       };
     }
   };
@@ -2930,18 +2917,47 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
   /* ── 8. CHAT HEADER COMPACT ── */
   #msgsChatHeader {
-    padding: 10px 14px !important;
+    padding: 8px 12px !important;
+    gap: 8px !important;
     flex-shrink: 0 !important;
   }
-  .msgs-chat-actions {
-    flex-wrap: wrap !important;
-    gap: 6px !important;
+  .msgs-chat-avatar {
+    width: 32px !important; height: 32px !important; min-width: 32px !important;
+    font-size: 12px !important;
   }
-  .msgs-auto-btn {
+  .msgs-chat-name {
+    font-size: 13px !important;
+    margin-bottom: 1px !important;
+  }
+  .msgs-chat-meta {
+    font-size: 11px !important;
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+  }
+  #chatPlatformBadge { display: none !important; }
+  #chatOccupancy, #chatMetaSep2 { display: none !important; }
+  .msgs-chat-actions {
+    flex-wrap: nowrap !important;
+    gap: 5px !important;
+    flex-shrink: 0 !important;
+  }
+  .msgs-icon-btn {
+    width: 30px !important; height: 30px !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+  }
+  #btnToggleAI {
     font-size: 11px !important;
     padding: 0 10px !important;
-    height: 28px !important;
+    height: 30px !important;
+    gap: 4px !important;
+    border-radius: 8px !important;
   }
+  #btnToggleAI .fa-robot { font-size: 11px !important; }
+  #btnToggleAILabel { font-size: 10px !important; }
 
   /* ── 9. ZONE MESSAGES ── */
   #chatMessages, .chat-modal-messages {
@@ -4254,77 +4270,93 @@ window.openInvoiceFromConversation = function() {
 // ── Envoyer les infos pratiques depuis la conversation ──
 window.sendPracticalInfos = async function() {
   var conv = window.currentChatConv;
-  var prop = window.currentChatProperty;
   if (!conv) return;
-
-  // Construire le message d'infos pratiques
-  var lines = [];
-  var guestFirst = ((conv.guest_first_name || conv.guest_name || '').split(' ')[0]) || 'Voyageur';
-  lines.push('Bonjour ' + guestFirst + ' 👋');
-  lines.push('');
-  lines.push('Voici les informations pratiques pour votre séjour :');
-  lines.push('');
-
-  if (prop) {
-    if (prop.address) lines.push('📍 Adresse : ' + prop.address);
-    if (prop.arrivalTime || prop.arrival_time) lines.push('🕐 Arrivée possible dès : ' + (prop.arrivalTime || prop.arrival_time));
-    if (prop.departureTime || prop.departure_time) lines.push('🕙 Départ avant : ' + (prop.departureTime || prop.departure_time));
-    if (prop.accessCode || prop.access_code) lines.push('🔑 Code d\'accès : ' + (prop.accessCode || prop.access_code));
-    if (prop.wifiName || prop.wifi_name) {
-      lines.push('📶 WiFi : ' + (prop.wifiName || prop.wifi_name));
-      if (prop.wifiPassword || prop.wifi_password) lines.push('🔐 Mot de passe WiFi : ' + (prop.wifiPassword || prop.wifi_password));
-    }
-  }
-
-  if (conv.reservation_start_date) {
-    var cin = new Date(conv.reservation_start_date).toLocaleDateString('fr-FR');
-    lines.push('');
-    lines.push('📅 Arrivée : ' + cin);
-  }
-  if (conv.reservation_end_date) {
-    var cout = new Date(conv.reservation_end_date).toLocaleDateString('fr-FR');
-    lines.push('📅 Départ : ' + cout);
-  }
-
-  lines.push('');
-  lines.push('N\'hésitez pas à nous contacter pour toute question. Bon séjour ! 😊');
-
-  var message = lines.join('\n');
-
-  // Afficher confirm avec aperçu
-  var confirmed = await window.bhConfirm(
-    '📋 Envoyer les infos pratiques',
-    '<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 14px;font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.6;max-height:280px;overflow-y:auto;margin-top:4px;">' + message.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>',
-    'Envoyer', 'Annuler'
-  );
-  if (!confirmed) return;
 
   var token = localStorage.getItem('lcc_token');
   var convId = conv.id || window.currentConversationId;
+  var propId = conv.property_id || '';
+
+  // 1. Charger les templates on_arrival du logement
+  var btnInfos = document.getElementById('btnSendInfos');
+  if (btnInfos) { btnInfos.disabled = true; btnInfos.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
 
   try {
-    // Essai envoi plateforme (Channex OTA) en priorité
-    var res = await fetch('/api/chat/conversations/' + convId + '/send-platform', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ message })
+    var res = await fetch('/api/message-templates?property_id=' + propId, {
+      headers: { 'Authorization': 'Bearer ' + token }
     });
     var data = await res.json();
+    var templates = (data.templates || []).filter(function(t) {
+      return t.trigger_type === 'on_arrival';
+    });
 
-    if (!res.ok) {
-      // Fallback : envoi interne (chat BH)
-      var res2 = await fetch('/api/chat/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ conversation_id: convId, message, sender_type: 'owner', sender_name: 'Vous' })
-      });
-      if (!res2.ok) throw new Error('Erreur envoi');
+    if (templates.length === 0) {
+      if (window.showBHToast) showBHToast('Aucun template "À l'arrivée" trouvé pour ce logement', 'warning');
+      return;
     }
 
-    if (window.showBHToast) showBHToast('✅ Infos pratiques envoyées', 'success');
+    // 2. Si plusieurs templates, laisser choisir ; sinon prendre le premier
+    var chosen = null;
+    if (templates.length === 1) {
+      chosen = templates[0];
+    } else {
+      // Afficher un sélecteur dans le confirm
+      var opts = templates.map(function(t, i) {
+        return '<option value="' + i + '">' + (t.title || 'Template ' + (i+1)) + '</option>';
+      }).join('');
+      var pickHtml = '<div style="margin-top:10px;">'
+        + '<label style="font-size:12px;color:#6B7280;font-weight:600;display:block;margin-bottom:6px;">Choisir le template :</label>'
+        + '<select id="bhTplPicker" style="width:100%;padding:8px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;font-family:inherit;">' + opts + '</select>'
+        + '</div>';
+      var ok = await window.bhConfirm('📋 Envoyer les infos d'arrivée', pickHtml, 'Continuer', 'Annuler');
+      if (!ok) return;
+      var sel = document.getElementById('bhTplPicker');
+      chosen = templates[sel ? parseInt(sel.value) : 0];
+    }
+
+    // 3. Confirm final avec aperçu du message brut (les variables seront résolues côté serveur)
+    var preview = (chosen.message || '')
+      .replace(/\{prenom\}/gi, (conv.guest_first_name || conv.guest_name || '').split(' ')[0] || 'Voyageur')
+      .replace(/\{nom\}/gi, conv.guest_name || '')
+      .replace(/\{logement\}/gi, conv.property_name || '')
+      .replace(/\{arrivee\}/gi, conv.reservation_start_date ? new Date(conv.reservation_start_date).toLocaleDateString('fr-FR') : '')
+      .replace(/\{depart\}/gi, conv.reservation_end_date ? new Date(conv.reservation_end_date).toLocaleDateString('fr-FR') : '');
+    // Variables logement depuis currentChatProperty
+    var prop = window.currentChatProperty || {};
+    preview = preview
+      .replace(/\{adresse\}/gi, prop.address || '')
+      .replace(/\{heure_arrivee\}/gi, prop.arrivalTime || prop.arrival_time || '')
+      .replace(/\{heure_depart\}/gi, prop.departureTime || prop.departure_time || '')
+      .replace(/\{code_acces\}/gi, prop.accessCode || prop.access_code || '')
+      .replace(/\{wifi_nom\}/gi, prop.wifiName || prop.wifi_name || '')
+      .replace(/\{wifi_mdp\}/gi, prop.wifiPassword || prop.wifi_password || '')
+      .replace(/\{instructions\}/gi, prop.practicalInfo || prop.practical_info || '')
+      .replace(/\{livret\}/gi, prop.welcomeBookUrl || prop.welcome_book_url || '');
+
+    var confirmed = await window.bhConfirm(
+      '📋 ' + (chosen.title || 'Message d'arrivée'),
+      '<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 14px;font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.6;max-height:260px;overflow-y:auto;margin-top:8px;">'
+        + preview.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        + '</div>',
+      'Envoyer', 'Annuler'
+    );
+    if (!confirmed) return;
+
+    // 4. Envoi via l'endpoint dédié (variables résolues côté serveur, avec code_serrure, caution_url, etc.)
+    var sendRes = await fetch('/api/message-templates/' + chosen.id + '/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ conversation_id: convId })
+    });
+    var sendData = await sendRes.json();
+    if (!sendRes.ok) throw new Error(sendData.error || 'Erreur envoi');
+
+    if (window.showBHToast) showBHToast('✅ Message d'arrivée envoyé', 'success');
+
   } catch(e) {
     console.error('❌ sendPracticalInfos:', e.message);
     if (window.showBHToast) showBHToast('Erreur : ' + e.message, 'error');
+  } finally {
+    if (btnInfos) { btnInfos.disabled = false; btnInfos.innerHTML = '<i class="fas fa-info-circle"></i>'; }
   }
 };
 
