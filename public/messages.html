@@ -2319,6 +2319,16 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     if (conv && conv.id && typeof window.loadQuickReplies === 'function') {
       window.loadQuickReplies(conv.id);
     }
+
+    // ── Charger les données property pour le remplacement des variables ──
+    window.currentChatProperty = null;
+    if (conv && conv.property_id) {
+      var token = localStorage.getItem('lcc_token');
+      fetch('/api/properties/' + conv.property_id, { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) { window.currentChatProperty = data && (data.property || data) || null; })
+        .catch(function() {});
+    }
   }
 
   // ── Override openChat after chat-owner.js loaded ──
@@ -2521,6 +2531,41 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
   }
 
   // ── Init ──
+  // ── Remplacement automatique des variables {xxx} lors de la saisie ──
+  document.addEventListener('DOMContentLoaded', function() {
+    var chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+      chatInput.addEventListener('input', function() {
+        var val = chatInput.value;
+        if (!val.includes('{') || !val.includes('}')) return;
+        var conv = window.currentChatConv || {};
+        var prop = window.currentChatProperty || {};
+        var guestFirst = ((conv.guest_first_name || conv.guest_name || '').split(' ')[0]) || '';
+        var checkin = conv.reservation_start_date ? new Date(conv.reservation_start_date).toLocaleDateString('fr-FR') : '';
+        var checkout = conv.reservation_end_date ? new Date(conv.reservation_end_date).toLocaleDateString('fr-FR') : '';
+        var newVal = val
+          .replace(/\{prenom\}/gi, guestFirst)
+          .replace(/\{nom\}/gi, conv.guest_name || '')
+          .replace(/\{logement\}/gi, conv.property_name || prop.name || '')
+          .replace(/\{arrivee\}/gi, checkin)
+          .replace(/\{depart\}/gi, checkout)
+          .replace(/\{adresse\}/gi, prop.address || '')
+          .replace(/\{heure_arrivee\}/gi, prop.arrivalTime || prop.arrival_time || '')
+          .replace(/\{heure_depart\}/gi, prop.departureTime || prop.departure_time || '')
+          .replace(/\{code_acces\}/gi, prop.accessCode || prop.access_code || '')
+          .replace(/\{wifi_nom\}/gi, prop.wifiName || prop.wifi_name || '')
+          .replace(/\{wifi_mdp\}/gi, prop.wifiPassword || prop.wifi_password || '')
+          .replace(/\{instructions\}/gi, prop.practicalInfo || prop.practical_info || '')
+          .replace(/\{livret\}/gi, prop.welcomeBookUrl || prop.welcome_book_url || '');
+        if (newVal !== val) {
+          var pos = chatInput.selectionStart + (newVal.length - val.length);
+          chatInput.value = newVal;
+          chatInput.setSelectionRange(pos, pos);
+        }
+      });
+    }
+  });
+
   document.addEventListener('DOMContentLoaded', function() {
     initSearch();
 
