@@ -1166,8 +1166,8 @@ html[data-theme-v3="1"] .app-container {
             </button>
             <button class="msgs-icon-btn" id="chatCloseConvBtn" onclick="openInvoiceFromConversation()" title="Envoyer la facture"><i class="fas fa-file-invoice"></i></button>
             
-            <button class="msgs-icon-btn" id="btnSendInfos" onclick="sendPracticalInfos()" title="Envoyer les infos pratiques" style="color:#1A7A5E;"><i class="fas fa-info-circle"></i></button>
-            <button class="msgs-icon-btn" id="btnQuickNote" onclick="openQuickNoteModal()" title="Note interne" style="color:#F59E0B;"><i class="fas fa-sticky-note"></i></button>
+            <button class="msgs-icon-btn" id="btnSendInfos" onclick="window.sendPracticalInfos && window.sendPracticalInfos()" title="Envoyer les infos pratiques" style="color:#1A7A5E;"><i class="fas fa-info-circle"></i></button>
+            <button class="msgs-icon-btn" id="btnQuickNote" onclick="window.openQuickNoteModal && window.openQuickNoteModal()" title="Note interne" style="color:#F59E0B;"><i class="fas fa-sticky-note"></i></button>
             <button class="msgs-icon-btn" id="btnCopyInviteLink" style="display:none" title="Copier le lien"><i class="fas fa-link"></i></button>
             <button class="msgs-icon-btn" id="btnBookingMessage" style="display:none" title="Message Booking"><i class="fas fa-paper-plane"></i></button>
           </div>
@@ -2945,16 +2945,16 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     flex-shrink: 0 !important;
   }
   .msgs-icon-btn {
-    width: 30px !important; height: 30px !important;
-    border-radius: 8px !important;
-    font-size: 12px !important;
+    width: 34px !important; height: 34px !important;
+    border-radius: 9px !important;
+    font-size: 13px !important;
   }
   #btnToggleAI {
     font-size: 11px !important;
-    padding: 0 10px !important;
-    height: 30px !important;
+    padding: 0 11px !important;
+    height: 34px !important;
     gap: 4px !important;
-    border-radius: 8px !important;
+    border-radius: 9px !important;
   }
   #btnToggleAI .fa-robot { font-size: 11px !important; }
   #btnToggleAILabel { font-size: 10px !important; }
