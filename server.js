@@ -30169,31 +30169,152 @@ app.get('/api/admin/revenue-overview', authenticateToken, async (req, res) => {
 // POST /api/admin/clients/:id/impersonate — générer un token de connexion en tant que ce client
 // Sécurité : réservé aux admins, jamais utilisable pour les mots de passe (on ne les connaît pas),
 // token à durée de vie courte (1h), action toujours journalisée dans admin_actions_log.
-app.post('/api/admin/clients/:id/impersonate', authenticateToken, async (req, res) => {
+// POST /api/admin/clients/:id/request-impersonation — demande d'autorisation de connexion (étape 1/3)
+// Ne génère PAS de token directement : crée une demande en attente que le client doit valider
+// dans l'app, comme une demande de prise en main à distance (AnyDesk).
+app.post('/api/admin/clients/:id/request-impersonation', authenticateToken, async (req, res) => {
   try {
     const adminUser = await getUserFromRequest(req);
     if (!adminUser || !ADMIN_EMAILS.includes(adminUser.email)) return res.status(403).json({ error: 'Accès refusé' });
 
     const { id } = req.params;
+    const { reason } = req.body;
     const target = await pool.query(`SELECT id, email, first_name, last_name FROM users WHERE id = $1`, [id]);
     if (target.rows.length === 0) return res.status(404).json({ error: 'Client non trouvé' });
-
     const targetUser = target.rows[0];
+
+    // On annule toute demande en attente précédente pour ce client (éviter l'accumulation)
+    await pool.query(`UPDATE impersonation_requests SET status = 'expired' WHERE target_user_id = $1 AND status = 'pending'`, [id]);
+
+    const insertResult = await pool.query(
+      `INSERT INTO impersonation_requests (admin_email, admin_user_id, target_user_id, reason)
+       VALUES ($1, $2, $3, $4) RETURNING id, expires_at`,
+      [adminUser.email, adminUser.id, id, reason || null]
+    );
+    const requestId = insertResult.rows[0].id;
+
+    // Notifie le client immédiatement par push, pour qu'il voie la demande même s'il n'a pas l'app ouverte
+    try {
+      const tokensRes = await pool.query(
+        `SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL`,
+        [id]
+      );
+      const tokens = tokensRes.rows.map(r => r.fcm_token).filter(Boolean);
+      if (tokens.length) {
+        const push = bhPush({
+          emoji: '🔐',
+          event: 'Demande de connexion support',
+          context: '',
+          parts: [`L'équipe Boostinghost souhaite accéder à votre compte pour vous assister${reason ? ' : ' + reason : ''}.`],
+          data: { type: 'impersonation_request', requestId: String(requestId) }
+        });
+        await sendNotificationToMultipleLogged(tokens, push.title, push.body, push.data);
+      }
+    } catch (pushErr) {
+      console.error('push impersonation request:', pushErr.message);
+    }
+
+    res.json({ success: true, requestId, expiresAt: insertResult.rows[0].expires_at, targetEmail: targetUser.email });
+  } catch(e) {
+    console.error('POST /api/admin/clients/:id/request-impersonation:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET /api/admin/impersonation-requests/:id/status — l'admin vérifie si sa demande a été traitée (polling, étape 3/3)
+app.get('/api/admin/impersonation-requests/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const adminUser = await getUserFromRequest(req);
+    if (!adminUser || !ADMIN_EMAILS.includes(adminUser.email)) return res.status(403).json({ error: 'Accès refusé' });
+
+    const { id } = req.params;
+    const result = await pool.query(`SELECT * FROM impersonation_requests WHERE id = $1`, [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Demande non trouvée' });
+    const reqRow = result.rows[0];
+
+    // Auto-expiration si le délai est dépassé et toujours en pending
+    if (reqRow.status === 'pending' && new Date(reqRow.expires_at) < new Date()) {
+      await pool.query(`UPDATE impersonation_requests SET status = 'expired' WHERE id = $1`, [id]);
+      reqRow.status = 'expired';
+    }
+
+    if (reqRow.status === 'approved' && reqRow.token && !reqRow.token_consumed) {
+      // On consomme le token : il ne sera renvoyé qu'une seule fois à l'admin
+      await pool.query(`UPDATE impersonation_requests SET token_consumed = TRUE WHERE id = $1`, [id]);
+      return res.json({ status: 'approved', token: reqRow.token });
+    }
+
+    res.json({ status: reqRow.status });
+  } catch(e) {
+    console.error('GET /api/admin/impersonation-requests/:id/status:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET /api/impersonation/pending — le client (depuis app.html) vérifie s'il a une demande en attente (polling, étape 2/3)
+app.get('/api/impersonation/pending', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+
+    const result = await pool.query(
+      `SELECT id, admin_email, reason, created_at, expires_at FROM impersonation_requests
+       WHERE target_user_id = $1 AND status = 'pending' AND expires_at > NOW()
+       ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    );
+    res.json({ request: result.rows[0] || null });
+  } catch(e) {
+    console.error('GET /api/impersonation/pending:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/impersonation/:id/respond — le client accepte ou refuse la demande (étape 2/3)
+app.post('/api/impersonation/:id/respond', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non authentifié' });
+
+    const { id } = req.params;
+    const { approve } = req.body;
+
+    const result = await pool.query(
+      `SELECT * FROM impersonation_requests WHERE id = $1 AND target_user_id = $2`,
+      [id, user.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Demande non trouvée' });
+    const reqRow = result.rows[0];
+
+    if (reqRow.status !== 'pending') return res.status(409).json({ error: 'Cette demande a déjà été traitée' });
+    if (new Date(reqRow.expires_at) < new Date()) {
+      await pool.query(`UPDATE impersonation_requests SET status = 'expired' WHERE id = $1`, [id]);
+      return res.status(410).json({ error: 'Cette demande a expiré' });
+    }
+
+    if (!approve) {
+      await pool.query(`UPDATE impersonation_requests SET status = 'denied', responded_at = NOW() WHERE id = $1`, [id]);
+      await logAdminAction({ email: reqRow.admin_email, id: reqRow.admin_user_id }, user.id, 'impersonate_denied', { target_email: user.email });
+      return res.json({ success: true, status: 'denied' });
+    }
+
     const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
-    const impersonationToken = jwt.sign(
-      { id: targetUser.id, email: targetUser.email },
-      secret,
-      { expiresIn: '1h' }
+    const impersonationToken = jwt.sign({ id: user.id, email: user.email }, secret, { expiresIn: '1h' });
+
+    await pool.query(
+      `UPDATE impersonation_requests SET status = 'approved', token = $1, responded_at = NOW() WHERE id = $2`,
+      [impersonationToken, id]
     );
 
-    await logAdminAction(adminUser, id, 'impersonate', {
-      target_email: targetUser.email,
-      target_name: `${targetUser.first_name || ''} ${targetUser.last_name || ''}`.trim()
+    await logAdminAction({ email: reqRow.admin_email, id: reqRow.admin_user_id }, user.id, 'impersonate', {
+      target_email: user.email,
+      target_name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+      approved_by_client: true
     });
 
-    res.json({ success: true, token: impersonationToken, expiresIn: '1h', targetEmail: targetUser.email });
+    res.json({ success: true, status: 'approved' });
   } catch(e) {
-    console.error('POST /api/admin/clients/:id/impersonate:', e);
+    console.error('POST /api/impersonation/:id/respond:', e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });

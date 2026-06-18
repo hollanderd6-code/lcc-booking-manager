@@ -1523,8 +1523,8 @@ function openDrawer(userId) {
 
     <div class="drawer-section">
       <div class="drawer-section-title"><i class="fas fa-user-secret" style="margin-right:5px;"></i>Connexion client</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Génère un lien de connexion temporaire (1h) pour diagnostiquer un problème sans mot de passe. Action journalisée.</div>
-      <button class="action-btn" style="width:100%;justify-content:center;" onclick="impersonateClient('${c.id}')"><i class="fas fa-sign-in-alt"></i> Se connecter en tant que ce client</button>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Envoie une demande d'autorisation au client (comme AnyDesk). La connexion ne s'ouvre que s'il accepte. Action journalisée.</div>
+      <button class="action-btn" style="width:100%;justify-content:center;" onclick="impersonateClient('${c.id}')"><i class="fas fa-sign-in-alt"></i> Demander l'accès au compte</button>
     </div>
 
     <div class="drawer-section">
@@ -1592,26 +1592,87 @@ async function loadClientActionsLog(userId) {
   }
 }
 
+let _impersonationPollTimer = null;
+
 async function impersonateClient(userId) {
-  if (!confirm('Générer un lien de connexion temporaire pour ce client ? Cette action sera journalisée.')) return;
+  const reason = prompt('Motif de la demande (optionnel, visible par le client) :', '') || '';
   try {
-    const res = await fetch(`${API}/api/admin/clients/${userId}/impersonate`, {
+    const res = await fetch(`${API}/api/admin/clients/${userId}/request-impersonation`, {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + adminToken }
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ reason: reason.trim() || null })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur');
 
-    // Ouvre l'app dans un nouvel onglet avec le token d'impersonation injecté.
-    // Le token est passé en query param ; app.html doit le récupérer et le stocker dans lcc_token
-    // (voir note ci-dessous si ce mécanisme n'existe pas encore côté front client).
-    const url = `${window.location.origin.includes('localhost') ? 'http://localhost:3000' : 'https://www.boostinghost.fr'}/app.html?impersonate_token=${encodeURIComponent(data.token)}`;
-    window.open(url, '_blank');
-    showToast(`Connexion générée pour ${data.targetEmail} (valide 1h).`);
-    loadClientActionsLog(userId);
+    showToast(`Demande envoyée à ${data.targetEmail}. En attente de son autorisation…`);
+    _showImpersonationWaitingModal(data.requestId, data.targetEmail);
+    _pollImpersonationStatus(data.requestId);
   } catch(e) {
-    showToast(e.message || 'Erreur lors de la génération du lien.', 'error');
+    showToast(e.message || 'Erreur lors de l\'envoi de la demande.', 'error');
   }
+}
+
+function _showImpersonationWaitingModal(requestId, targetEmail) {
+  let modal = document.getElementById('impersonationWaitModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'impersonationWaitModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+    modal.innerHTML = `
+      <div style="background:var(--card-bg,#fff);border-radius:14px;padding:28px;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+        <div style="font-size:32px;margin-bottom:10px;">🔐</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px;color:var(--text);">En attente d'autorisation</div>
+        <div id="impersonationWaitText" style="font-size:13px;color:var(--muted);margin-bottom:18px;"></div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">La demande expire automatiquement après 2 minutes si le client ne répond pas.</div>
+        <button class="action-btn" style="width:100%;justify-content:center;" onclick="_cancelImpersonationWait()">Annuler</button>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  document.getElementById('impersonationWaitText').textContent = `Demande envoyée à ${targetEmail}…`;
+  modal.style.display = 'flex';
+  modal.dataset.requestId = requestId;
+}
+
+function _cancelImpersonationWait() {
+  if (_impersonationPollTimer) clearInterval(_impersonationPollTimer);
+  const modal = document.getElementById('impersonationWaitModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function _pollImpersonationStatus(requestId) {
+  if (_impersonationPollTimer) clearInterval(_impersonationPollTimer);
+  let elapsed = 0;
+  _impersonationPollTimer = setInterval(async () => {
+    elapsed += 3;
+    try {
+      const res = await fetch(`${API}/api/admin/impersonation-requests/${requestId}/status`, {
+        headers: { Authorization: 'Bearer ' + adminToken }
+      });
+      const data = await res.json();
+
+      if (data.status === 'approved' && data.token) {
+        clearInterval(_impersonationPollTimer);
+        _cancelImpersonationWait();
+        const url = `${window.location.origin.includes('localhost') ? 'http://localhost:3000' : 'https://www.boostinghost.fr'}/app.html?impersonate_token=${encodeURIComponent(data.token)}`;
+        window.open(url, '_blank');
+        showToast('Le client a autorisé la connexion ✅');
+      } else if (data.status === 'denied') {
+        clearInterval(_impersonationPollTimer);
+        _cancelImpersonationWait();
+        showToast('Le client a refusé la demande.', 'error');
+      } else if (data.status === 'expired') {
+        clearInterval(_impersonationPollTimer);
+        _cancelImpersonationWait();
+        showToast('La demande a expiré sans réponse.', 'error');
+      } else if (elapsed >= 130) {
+        // garde-fou côté front si jamais le statut serveur n'a pas basculé à temps
+        clearInterval(_impersonationPollTimer);
+        _cancelImpersonationWait();
+        showToast('La demande a expiré sans réponse.', 'error');
+      }
+    } catch(e) { /* on continue le polling malgré une erreur réseau ponctuelle */ }
+  }, 3000);
 }
 
 // ══════════════════════════════════════
