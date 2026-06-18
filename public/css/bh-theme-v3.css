@@ -357,7 +357,7 @@ html[data-theme-v3="1"] .sidebar a.nav-item.active > i {
   color: var(--jade) !important;
 }
 
-html[data-theme-v3="1"] .sidebar a.nav-item > span {
+html[data-theme-v3="1"] .sidebar a.nav-item > span:first-of-type {
   flex: 1 !important;
   color: inherit !important;
   font-size: inherit !important;
