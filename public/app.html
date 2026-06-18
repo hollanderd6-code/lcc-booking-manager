@@ -26,6 +26,19 @@
   // Activation permanente du thème V3
   document.documentElement.setAttribute('data-theme-v3','1');
 
+  // ── Impersonation admin : si un token est passé en query param, on l'installe
+  // comme token de session normal et on nettoie l'URL pour ne pas le laisser visible/partageable.
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    var impToken = params.get('impersonate_token');
+    if (impToken) {
+      localStorage.setItem('lcc_token', impToken);
+      params.delete('impersonate_token');
+      var cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  })();
+
   // ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
   (function() {
     var _origFetch = window.fetch;

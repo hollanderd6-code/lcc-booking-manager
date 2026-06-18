@@ -701,6 +701,14 @@
           <option value="trial">Trial</option>
           <option value="expired">Expiré</option>
           <option value="blocked">Bloqué</option>
+          <option value="expiring_soon">⏳ Trial expire cette semaine</option>
+        </select>
+        <select class="filter-select" id="clientSort" onchange="filterClients()">
+          <option value="created_desc">Plus récents</option>
+          <option value="created_asc">Plus anciens</option>
+          <option value="expiry_asc">Expire le plus tôt</option>
+          <option value="name_asc">Nom (A→Z)</option>
+          <option value="amount_desc">Montant (décroissant)</option>
         </select>
       </div>
       <div class="data-table">
@@ -770,6 +778,32 @@
             <tr><td colspan="5" class="empty-state"><i class="fas fa-circle-notch fa-spin"></i>Chargement…</td></tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="section-header" style="margin-top:32px;">
+        <h1 class="section-title" style="font-size:20px;">Répartition <em>par plan</em></h1>
+      </div>
+      <div id="revenueByPlan" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px;">
+        <div class="empty-state"><i class="fas fa-circle-notch fa-spin"></i>Chargement…</div>
+      </div>
+
+      <div class="section-header">
+        <h1 class="section-title" style="font-size:20px;">Évolution <em>des inscriptions</em></h1>
+        <p class="section-subtitle">Nouveaux comptes par mois (12 derniers mois)</p>
+      </div>
+      <div id="revenueMonthlyChart" style="display:flex;align-items:flex-end;gap:6px;height:140px;padding:16px 8px 8px;background:var(--card-bg,#fff);border-radius:12px;margin-bottom:16px;">
+        <div class="empty-state"><i class="fas fa-circle-notch fa-spin"></i>Chargement…</div>
+      </div>
+
+      <div class="stats-grid" style="grid-template-columns: repeat(2,1fr);">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--danger-bg);color:var(--danger);"><i class="fas fa-user-slash"></i></div>
+          <div><div class="stat-value" id="revChurnedTotal">—</div><div class="stat-label">Comptes expirés/bloqués (total)</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--danger-bg);color:var(--danger);"><i class="fas fa-arrow-trend-down"></i></div>
+          <div><div class="stat-value" id="revChurn30d">—</div><div class="stat-label">Bloqués ces 30 derniers jours</div></div>
+        </div>
       </div>
     </div>
 
@@ -1207,14 +1241,53 @@ function updateClientStats() {
   document.getElementById('statActive').textContent = active;
 }
 
+function _daysUntil(dateStr) {
+  if (!dateStr) return null;
+  return Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
+}
+
 function filterClients() {
   const q = document.getElementById('clientSearch').value.toLowerCase();
   const f = document.getElementById('clientFilter').value;
-  const filtered = allClients.filter(c => {
+  const sort = document.getElementById('clientSort') ? document.getElementById('clientSort').value : 'created_desc';
+
+  let filtered = allClients.filter(c => {
     const matchQ = !q || (c.first_name + ' ' + c.last_name + ' ' + c.email + ' ' + (c.company || '')).toLowerCase().includes(q);
-    const matchF = f === 'all' || c.subscription_status === f;
+    let matchF;
+    if (f === 'all') {
+      matchF = true;
+    } else if (f === 'expiring_soon') {
+      const days = _daysUntil(c.trial_end_date);
+      matchF = days != null && days >= 0 && days <= 7 && c.subscription_status !== 'active';
+    } else {
+      matchF = c.subscription_status === f;
+    }
     return matchQ && matchF;
   });
+
+  filtered.sort((a, b) => {
+    switch (sort) {
+      case 'created_asc':
+        return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+      case 'expiry_asc': {
+        const da = _daysUntil(a.trial_end_date);
+        const db = _daysUntil(b.trial_end_date);
+        // les comptes sans date d'expiration passent en dernier
+        if (da == null && db == null) return 0;
+        if (da == null) return 1;
+        if (db == null) return -1;
+        return da - db;
+      }
+      case 'name_asc':
+        return `${a.first_name || ''} ${a.last_name || ''}`.localeCompare(`${b.first_name || ''} ${b.last_name || ''}`);
+      case 'amount_desc':
+        return parseFloat(b.plan_amount || 0) - parseFloat(a.plan_amount || 0);
+      case 'created_desc':
+      default:
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    }
+  });
+
   renderClientsTable(filtered);
 }
 
@@ -1363,6 +1436,17 @@ function openDrawer(userId) {
       <button class="action-btn" style="width:100%;justify-content:center;background:var(--accent,#1A7A5E);color:white;" onclick="changePlan('${c.id}')"><i class="fas fa-check"></i> Appliquer les changements</button>
     </div>
 
+    <div class="drawer-section">
+      <div class="drawer-section-title"><i class="fas fa-user-secret" style="margin-right:5px;"></i>Connexion client</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Génère un lien de connexion temporaire (1h) pour diagnostiquer un problème sans mot de passe. Action journalisée.</div>
+      <button class="action-btn" style="width:100%;justify-content:center;" onclick="impersonateClient('${c.id}')"><i class="fas fa-sign-in-alt"></i> Se connecter en tant que ce client</button>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title"><i class="fas fa-history" style="margin-right:5px;"></i>Historique des actions admin</div>
+      <div id="drawerActionsLog" style="font-size:12px;color:var(--muted);">Chargement…</div>
+    </div>
+
     <div class="drawer-actions">
       ${blocked
         ? `<button class="action-btn success" onclick="toggleBlock('${c.id}', false);closeDrawer()"><i class="fas fa-unlock"></i> Débloquer</button>`
@@ -1373,6 +1457,76 @@ function openDrawer(userId) {
 
   document.getElementById('drawerOverlay').classList.add('open');
   document.getElementById('clientDrawer').classList.add('open');
+  loadClientActionsLog(userId);
+}
+
+async function loadClientActionsLog(userId) {
+  const el = document.getElementById('drawerActionsLog');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/api/admin/actions-log?userId=${userId}&limit=20`, {
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const actions = data.actions || [];
+    if (!actions.length) {
+      el.innerHTML = `<div style="padding:8px 0;color:var(--muted);">Aucune action enregistrée pour ce client.</div>`;
+      return;
+    }
+    const ACTION_LABELS = {
+      block: '🚫 Compte bloqué',
+      unblock: '✅ Compte débloqué',
+      extend_trial: '🎁 Jours offerts',
+      change_plan: '🔄 Abonnement modifié',
+      impersonate: '🕵️ Connexion en tant que client'
+    };
+    el.innerHTML = actions.map(a => {
+      const date = new Date(a.created_at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+      const label = ACTION_LABELS[a.action] || a.action;
+      let detail = '';
+      if (a.action === 'extend_trial' && a.details) {
+        detail = `${a.details.days > 0 ? '+' : ''}${a.details.days} jour${Math.abs(a.details.days)>1?'s':''}`;
+      } else if (a.action === 'change_plan' && a.details && a.details.new) {
+        const parts = [];
+        if (a.details.new.plan_type) parts.push(a.details.new.plan_type);
+        if (a.details.new.status) parts.push(a.details.new.status);
+        detail = parts.join(' · ');
+      }
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="font-weight:600;color:var(--text);font-size:12px;">${label}</span>
+          <span style="font-size:10px;color:var(--muted);">${date}</span>
+        </div>
+        ${detail ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${detail}</div>` : ''}
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">par ${a.admin_email}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);">Erreur de chargement de l'historique.</div>`;
+  }
+}
+
+async function impersonateClient(userId) {
+  if (!confirm('Générer un lien de connexion temporaire pour ce client ? Cette action sera journalisée.')) return;
+  try {
+    const res = await fetch(`${API}/api/admin/clients/${userId}/impersonate`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+
+    // Ouvre l'app dans un nouvel onglet avec le token d'impersonation injecté.
+    // Le token est passé en query param ; app.html doit le récupérer et le stocker dans lcc_token
+    // (voir note ci-dessous si ce mécanisme n'existe pas encore côté front client).
+    const url = `${window.location.origin.includes('localhost') ? 'http://localhost:3000' : 'https://www.boostinghost.fr'}/app.html?impersonate_token=${encodeURIComponent(data.token)}`;
+    window.open(url, '_blank');
+    showToast(`Connexion générée pour ${data.targetEmail} (valide 1h).`);
+    loadClientActionsLog(userId);
+  } catch(e) {
+    showToast(e.message || 'Erreur lors de la génération du lien.', 'error');
+  }
 }
 
 function closeDrawer() {
@@ -1505,8 +1659,58 @@ async function loadRevenue() {
       </tr>`;
     });
     tbody.innerHTML = rows.join('');
+
+    loadRevenueOverview();
   } catch(e) {
     showToast('Erreur chargement revenus.', 'error');
+  }
+}
+
+async function loadRevenueOverview() {
+  try {
+    const res = await fetch(`${API}/api/admin/revenue-overview`, {
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+
+    // Répartition par plan
+    const planEl = document.getElementById('revenueByPlan');
+    if (!data.by_plan || !data.by_plan.length) {
+      planEl.innerHTML = `<div class="empty-state"><i class="fas fa-chart-pie"></i>Aucun abonnement actif</div>`;
+    } else {
+      planEl.innerHTML = data.by_plan.map(p => `
+        <div class="revenue-card" style="padding:14px;">
+          <div class="revenue-card-title" style="text-transform:capitalize;">${(p.plan_type || '—').replace('_', ' ')}</div>
+          <div class="revenue-big" style="font-size:22px;">${p.total.toFixed(0)} <span>€/mois</span></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">${p.count} client${p.count>1?'s':''}</div>
+        </div>
+      `).join('');
+    }
+
+    // Évolution mensuelle (barres simples)
+    const chartEl = document.getElementById('revenueMonthlyChart');
+    const months = data.new_accounts_by_month || [];
+    if (!months.length) {
+      chartEl.innerHTML = `<div class="empty-state"><i class="fas fa-chart-line"></i>Pas assez de données</div>`;
+    } else {
+      const maxCount = Math.max(...months.map(m => m.count), 1);
+      chartEl.innerHTML = months.map(m => {
+        const h = Math.max(4, Math.round((m.count / maxCount) * 110));
+        const [y, mo] = m.month.split('-');
+        const label = new Date(`${y}-${mo}-01`).toLocaleDateString('fr-FR', { month: 'short' });
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text);">${m.count}</div>
+          <div style="width:100%;max-width:28px;height:${h}px;background:var(--green,#1A7A5E);border-radius:4px 4px 0 0;"></div>
+          <div style="font-size:10px;color:var(--muted);text-transform:capitalize;">${label}</div>
+        </div>`;
+      }).join('');
+    }
+
+    document.getElementById('revChurnedTotal').textContent = data.churned_count ?? '—';
+    document.getElementById('revChurn30d').textContent = data.recent_churn_30d ?? '—';
+  } catch(e) {
+    console.error('loadRevenueOverview', e);
   }
 }
 

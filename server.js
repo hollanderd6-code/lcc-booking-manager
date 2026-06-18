@@ -29785,6 +29785,21 @@ app.post('/api/roadmap/:id/vote', authenticateAny, async (req, res) => {
 // ADMIN — CLIENTS
 // ══════════════════════════════════════════════════════
 
+const ADMIN_EMAILS = ['charles.induni@gmail.com', 'arnaud.gestionpro@gmail.com'];
+
+// Journalise une action admin (jamais bloquant : une erreur de log ne doit pas casser l'action elle-même)
+async function logAdminAction(adminUser, targetUserId, action, details) {
+  try {
+    await pool.query(
+      `INSERT INTO admin_actions_log (admin_email, admin_user_id, target_user_id, action, details)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [adminUser.email, adminUser.id, targetUserId, action, JSON.stringify(details || {})]
+    );
+  } catch (e) {
+    console.error('logAdminAction:', e.message);
+  }
+}
+
 // GET /api/admin/clients — liste tous les comptes + abonnement
 app.post('/api/admin/sync-all-channex', authenticateToken, async (req, res) => {
   try {
@@ -29857,6 +29872,8 @@ app.put('/api/admin/clients/:id/block', authenticateToken, async (req, res) => {
       [newStatus, id]
     );
 
+    await logAdminAction(user, id, blocked ? 'block' : 'unblock', { previous_status: null, new_status: newStatus });
+
     res.json({ success: true, status: newStatus });
   } catch(e) {
     console.error('PUT /api/admin/clients/:id/block:', e);
@@ -29910,6 +29927,14 @@ app.post('/api/admin/clients/:id/extend-trial', authenticateToken, async (req, r
       [newTrialEnd, newPeriodEndEpoch, newStatus, id]
     );
 
+    await logAdminAction(user, id, 'extend_trial', {
+      days,
+      previous_trial_end_date: row.trial_end_date,
+      new_trial_end_date: newTrialEnd,
+      previous_status: row.status,
+      new_status: newStatus
+    });
+
     res.json({ success: true, trial_end_date: newTrialEnd, current_period_end: newPeriodEndEpoch, status: newStatus });
   } catch(e) {
     console.error('POST /api/admin/clients/:id/extend-trial:', e);
@@ -29933,7 +29958,8 @@ app.put('/api/admin/clients/:id/plan', authenticateToken, async (req, res) => {
     if (planType && !ALLOWED_PLANS.includes(planType)) return res.status(400).json({ error: 'Plan invalide' });
     if (status && !ALLOWED_STATUS.includes(status)) return res.status(400).json({ error: 'Statut invalide' });
 
-    const existing = await pool.query(`SELECT user_id FROM subscriptions WHERE user_id = $1`, [id]);
+    const existing = await pool.query(`SELECT user_id, plan_type, status, plan_amount FROM subscriptions WHERE user_id = $1`, [id]);
+    const previous = existing.rows[0] || null;
     if (existing.rows.length === 0) {
       await pool.query(
         `INSERT INTO subscriptions (user_id, plan_type, status, plan_amount, created_at, updated_at)
@@ -29951,9 +29977,139 @@ app.put('/api/admin/clients/:id/plan', authenticateToken, async (req, res) => {
       await pool.query(`UPDATE subscriptions SET ${sets.join(', ')} WHERE user_id = $${idx}`, vals);
     }
 
+    await logAdminAction(user, id, 'change_plan', {
+      previous: previous ? { plan_type: previous.plan_type, status: previous.status, plan_amount: previous.plan_amount } : null,
+      new: { plan_type: planType || null, status: status || null, plan_amount: planAmount != null ? planAmount : null }
+    });
+
     res.json({ success: true });
   } catch(e) {
     console.error('PUT /api/admin/clients/:id/plan:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET /api/admin/actions-log — historique des actions admin (global ou filtré par client)
+app.get('/api/admin/actions-log', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user || !ADMIN_EMAILS.includes(user.email)) return res.status(403).json({ error: 'Accès refusé' });
+
+    const { userId, limit } = req.query;
+    const lim = Math.min(parseInt(limit, 10) || 100, 500);
+
+    let query, params;
+    if (userId) {
+      query = `
+        SELECT l.id, l.admin_email, l.target_user_id, l.action, l.details, l.created_at,
+               u.first_name, u.last_name, u.email AS target_email
+        FROM admin_actions_log l
+        LEFT JOIN users u ON u.id = l.target_user_id
+        WHERE l.target_user_id = $1
+        ORDER BY l.created_at DESC
+        LIMIT $2`;
+      params = [userId, lim];
+    } else {
+      query = `
+        SELECT l.id, l.admin_email, l.target_user_id, l.action, l.details, l.created_at,
+               u.first_name, u.last_name, u.email AS target_email
+        FROM admin_actions_log l
+        LEFT JOIN users u ON u.id = l.target_user_id
+        ORDER BY l.created_at DESC
+        LIMIT $1`;
+      params = [lim];
+    }
+
+    const result = await pool.query(query, params);
+    res.json({ actions: result.rows });
+  } catch(e) {
+    console.error('GET /api/admin/actions-log:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET /api/admin/revenue-overview — MRR actuel, évolution mensuelle, churn
+app.get('/api/admin/revenue-overview', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user || !ADMIN_EMAILS.includes(user.email)) return res.status(403).json({ error: 'Accès refusé' });
+
+    // MRR actuel : somme des plan_amount des abonnements actifs (statut active)
+    const mrrResult = await pool.query(`
+      SELECT COALESCE(SUM(plan_amount), 0) AS mrr, COUNT(*)::int AS active_count
+      FROM subscriptions WHERE status = 'active'
+    `);
+
+    // Répartition par plan (actifs uniquement)
+    const byPlanResult = await pool.query(`
+      SELECT plan_type, COUNT(*)::int AS count, COALESCE(SUM(plan_amount), 0) AS total
+      FROM subscriptions WHERE status = 'active'
+      GROUP BY plan_type ORDER BY total DESC
+    `);
+
+    // Nouveaux comptes par mois (12 derniers mois, basé sur users.created_at)
+    const newAccountsResult = await pool.query(`
+      SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month, COUNT(*)::int AS count
+      FROM users
+      WHERE created_at >= NOW() - INTERVAL '12 months'
+      GROUP BY 1 ORDER BY 1
+    `);
+
+    // Churn approximatif : comptes passés à expired/blocked dans les 30 derniers jours (via le log d'actions)
+    // et comptes dont le statut actuel est expired/blocked
+    const churnedResult = await pool.query(`
+      SELECT COUNT(*)::int AS churned_count
+      FROM subscriptions WHERE status IN ('expired', 'blocked')
+    `);
+
+    const recentChurnResult = await pool.query(`
+      SELECT COUNT(DISTINCT target_user_id)::int AS recent_churn
+      FROM admin_actions_log
+      WHERE action = 'block' AND created_at >= NOW() - INTERVAL '30 days'
+    `);
+
+    res.json({
+      mrr: parseFloat(mrrResult.rows[0].mrr),
+      active_count: mrrResult.rows[0].active_count,
+      by_plan: byPlanResult.rows.map(r => ({ plan_type: r.plan_type, count: r.count, total: parseFloat(r.total) })),
+      new_accounts_by_month: newAccountsResult.rows,
+      churned_count: churnedResult.rows[0].churned_count,
+      recent_churn_30d: recentChurnResult.rows[0].recent_churn
+    });
+  } catch(e) {
+    console.error('GET /api/admin/revenue-overview:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/admin/clients/:id/impersonate — générer un token de connexion en tant que ce client
+// Sécurité : réservé aux admins, jamais utilisable pour les mots de passe (on ne les connaît pas),
+// token à durée de vie courte (1h), action toujours journalisée dans admin_actions_log.
+app.post('/api/admin/clients/:id/impersonate', authenticateToken, async (req, res) => {
+  try {
+    const adminUser = await getUserFromRequest(req);
+    if (!adminUser || !ADMIN_EMAILS.includes(adminUser.email)) return res.status(403).json({ error: 'Accès refusé' });
+
+    const { id } = req.params;
+    const target = await pool.query(`SELECT id, email, first_name, last_name FROM users WHERE id = $1`, [id]);
+    if (target.rows.length === 0) return res.status(404).json({ error: 'Client non trouvé' });
+
+    const targetUser = target.rows[0];
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const impersonationToken = jwt.sign(
+      { id: targetUser.id, email: targetUser.email },
+      secret,
+      { expiresIn: '1h' }
+    );
+
+    await logAdminAction(adminUser, id, 'impersonate', {
+      target_email: targetUser.email,
+      target_name: `${targetUser.first_name || ''} ${targetUser.last_name || ''}`.trim()
+    });
+
+    res.json({ success: true, token: impersonationToken, expiresIn: '1h', targetEmail: targetUser.email });
+  } catch(e) {
+    console.error('POST /api/admin/clients/:id/impersonate:', e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
