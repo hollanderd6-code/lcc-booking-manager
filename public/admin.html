@@ -1653,9 +1653,19 @@ function _pollImpersonationStatus(requestId) {
 
       if (data.status === 'approved' && data.token) {
         clearInterval(_impersonationPollTimer);
-        _cancelImpersonationWait();
         const url = `${window.location.origin.includes('localhost') ? 'http://localhost:3000' : 'https://www.boostinghost.fr'}/app.html?impersonate_token=${encodeURIComponent(data.token)}`;
-        window.open(url, '_blank');
+        // Afficher le bouton dans le modal au lieu de window.open (bloqué par anti-popup)
+        const modal = document.getElementById('impersonationWaitModal');
+        if (modal) {
+          modal.querySelector('div > div').innerHTML = `
+            <div style="font-size:38px;margin-bottom:10px;">✅</div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px;color:var(--text);">Connexion autorisée</div>
+            <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Le client a accepté votre demande.</div>
+            <a href="${url}" target="_blank" class="action-btn" style="width:100%;justify-content:center;background:var(--accent,#1A7A5E);color:white;text-decoration:none;font-weight:600;padding:12px;border-radius:10px;display:flex;">
+              <i class="fas fa-sign-in-alt" style="margin-right:8px;"></i> Ouvrir le compte client
+            </a>
+            <button class="action-btn" style="width:100%;justify-content:center;margin-top:8px;" onclick="_cancelImpersonationWait()">Fermer</button>`;
+        }
         showToast('Le client a autorisé la connexion ✅');
       } else if (data.status === 'denied') {
         clearInterval(_impersonationPollTimer);
