@@ -5484,24 +5484,17 @@ window.showSmsConfirm = function() {
 <script>
 // ── Listeners boutons header chat ──
 // DOMContentLoaded déjà passé → exécuter immédiatement ou via requestAnimationFrame
-(function bindHeaderBtns() {
-  function bindBtn(id, fn) {
-    var el = document.getElementById(id);
-    if (el) { el.addEventListener('click', fn); return true; }
-    return false;
-  }
-  function bind() {
-    bindBtn('chatCloseConvBtn', function() { if (window.openInvoiceFromConversation) window.openInvoiceFromConversation(); });
-    bindBtn('btnSendInfos',     function() { if (window.sendPracticalInfos)          window.sendPracticalInfos(); });
-    bindBtn('btnQuickNote',     function() { if (window.openQuickNoteModal)           window.openQuickNoteModal(); });
-    bindBtn('btnToggleAI',      function() { if (window.toggleConversationAI)         window.toggleConversationAI(); });
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bind);
-  } else {
-    bind();
-  }
-})();
+// Délégation sur document — immunisée contre toute reconstruction du DOM par chat-owner.js
+document.addEventListener('click', function(e) {
+  var t = e.target.closest('#chatCloseConvBtn, #btnSendInfos, #btnQuickNote, #btnToggleAI');
+  if (!t) return;
+  e.preventDefault(); e.stopPropagation();
+  var id = t.id;
+  if (id === 'chatCloseConvBtn' && window.openInvoiceFromConversation) window.openInvoiceFromConversation();
+  if (id === 'btnSendInfos'     && window.sendPracticalInfos)          window.sendPracticalInfos();
+  if (id === 'btnQuickNote'     && window.openQuickNoteModal)           window.openQuickNoteModal();
+  if (id === 'btnToggleAI'      && window.toggleConversationAI)         window.toggleConversationAI();
+}, true);
 </script>
 </body>
 </html>
