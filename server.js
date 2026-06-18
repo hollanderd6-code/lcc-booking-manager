@@ -17074,10 +17074,32 @@ app.post('/api/promo/create', authenticateToken, async (req, res) => {
 app.get('/api/promo/list', authenticateToken, async (req, res) => {
   try {
     const r = await pool.query(
-      `SELECT code, description, value_days, max_uses, uses_count, active, expires_at, created_at
+      `SELECT id, code, description, value_days, max_uses, uses_count, active, expires_at, created_at
        FROM promo_codes ORDER BY created_at DESC`
     );
     res.json({ promoCodes: r.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Activer / désactiver un code promo
+app.patch('/api/promo/:id/toggle', authenticateToken, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `UPDATE promo_codes SET active = NOT active WHERE id = $1 RETURNING id, code, active`, [req.params.id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ error: 'Code introuvable' });
+    res.json({ success: true, code: r.rows[0].code, active: r.rows[0].active });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Supprimer un code promo
+app.delete('/api/promo/:id', authenticateToken, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `DELETE FROM promo_codes WHERE id = $1 RETURNING code`, [req.params.id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ error: 'Code introuvable' });
+    res.json({ success: true, deleted: r.rows[0].code });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 

@@ -971,10 +971,11 @@
                 <th>Utilisations</th>
                 <th>Expiration</th>
                 <th>Statut</th>
+                <th style="width:90px;">Actions</th>
               </tr>
             </thead>
             <tbody id="promoTableBody">
-              <tr><td colspan="6" style="text-align:center;color:#9CA3AF;">Chargement...</td></tr>
+              <tr><td colspan="7" style="text-align:center;color:#9CA3AF;">Chargement...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1690,7 +1691,7 @@ async function adminLoadPromoCodes() {
     } catch { document.getElementById('statReferrals').textContent = '—'; }
 
     if (codes.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#9CA3AF;">Aucun code promo</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#9CA3AF;">Aucun code promo</td></tr>';
       return;
     }
 
@@ -1702,6 +1703,8 @@ async function adminLoadPromoCodes() {
       const statusCls = isActive ? 'pill-green' : 'pill-amber';
       const expStr = p.expires_at ? new Date(p.expires_at).toLocaleDateString('fr-FR') : '—';
       const usesStr = p.max_uses ? `${p.uses_count} / ${p.max_uses}` : `${p.uses_count}`;
+      const toggleIcon = p.active ? 'fa-pause' : 'fa-play';
+      const toggleTitle = p.active ? 'Désactiver' : 'Activer';
       return `<tr>
         <td><strong style="font-family:monospace;letter-spacing:.5px;">${p.code}</strong></td>
         <td>${p.value_days}j</td>
@@ -1709,10 +1712,14 @@ async function adminLoadPromoCodes() {
         <td>${usesStr}</td>
         <td>${expStr}</td>
         <td><span class="pill ${statusCls}">${statusLabel}</span></td>
+        <td style="white-space:nowrap;">
+          <button onclick="adminTogglePromo(${p.id})" title="${toggleTitle}" style="border:none;background:none;cursor:pointer;font-size:14px;color:${p.active ? '#f59e0b' : '#1A7A5E'};padding:4px 6px;"><i class="fas ${toggleIcon}"></i></button>
+          <button onclick="adminDeletePromo(${p.id},'${p.code}')" title="Supprimer" style="border:none;background:none;cursor:pointer;font-size:14px;color:#EF4444;padding:4px 6px;"><i class="fas fa-trash"></i></button>
+        </td>
       </tr>`;
     }).join('');
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="6" style="color:#EF4444;">Erreur : ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="color:#EF4444;">Erreur : ${e.message}</td></tr>`;
   }
 }
 
@@ -1751,6 +1758,35 @@ async function adminCreatePromo() {
     msg.style.color = '#EF4444';
     msg.textContent = '❌ Erreur réseau';
   }
+}
+
+async function adminTogglePromo(id) {
+  try {
+    const r = await fetch(API + '/api/promo/' + id + '/toggle', {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    const d = await r.json();
+    if (d.success) {
+      showToast(d.code + ' ' + (d.active ? 'activé' : 'désactivé'));
+      adminLoadPromoCodes();
+    }
+  } catch(e) { showToast('Erreur', 'error'); }
+}
+
+async function adminDeletePromo(id, code) {
+  if (!confirm('Supprimer le code ' + code + ' ? Cette action est irréversible.')) return;
+  try {
+    const r = await fetch(API + '/api/promo/' + id, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    const d = await r.json();
+    if (d.success) {
+      showToast('Code ' + code + ' supprimé');
+      adminLoadPromoCodes();
+    }
+  } catch(e) { showToast('Erreur', 'error'); }
 }
 </script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
