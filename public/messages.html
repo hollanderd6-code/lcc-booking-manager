@@ -1160,14 +1160,14 @@ html[data-theme-v3="1"] .app-container {
             </div>
           </div>
           <div class="msgs-chat-actions">
-            <button id="btnToggleAI" title="Activer/Désactiver l'IA" onclick="toggleConversationAI()" style="display:none;font-size:15px;gap:8px;align-items:center;padding:8px 18px;border-radius:10px;cursor:pointer;transition:all .2s;border:1px solid rgba(16,185,129,.25);background:rgba(16,185,129,.1);color:#10B981;width:auto;height:auto;line-height:1.2;">
+            <button id="btnToggleAI" title="Activer/Désactiver l'IA"  style="display:none;font-size:15px;gap:8px;align-items:center;padding:8px 18px;border-radius:10px;cursor:pointer;transition:all .2s;border:1px solid rgba(16,185,129,.25);background:rgba(16,185,129,.1);color:#10B981;width:auto;height:auto;line-height:1.2;">
               <i class="fas fa-robot"></i>
               <span id="btnToggleAILabel" style="font-size:12.5px;font-weight:600;"></span>
             </button>
-            <button class="msgs-icon-btn" id="chatCloseConvBtn" onclick="openInvoiceFromConversation()" title="Envoyer la facture"><i class="fas fa-file-invoice"></i></button>
+            <button class="msgs-icon-btn" id="chatCloseConvBtn" title="Envoyer la facture"><i class="fas fa-file-invoice"></i></button>
             
-            <button class="msgs-icon-btn" id="btnSendInfos" onclick="window.sendPracticalInfos && window.sendPracticalInfos()" title="Envoyer les infos pratiques" style="color:#1A7A5E;"><i class="fas fa-info-circle"></i></button>
-            <button class="msgs-icon-btn" id="btnQuickNote" onclick="window.openQuickNoteModal && window.openQuickNoteModal()" title="Note interne" style="color:#F59E0B;"><i class="fas fa-sticky-note"></i></button>
+            <button class="msgs-icon-btn" id="btnSendInfos"  title="Envoyer les infos pratiques" style="color:#1A7A5E;"><i class="fas fa-info-circle"></i></button>
+            <button class="msgs-icon-btn" id="btnQuickNote"  title="Note interne" style="color:#F59E0B;"><i class="fas fa-sticky-note"></i></button>
             <button class="msgs-icon-btn" id="btnCopyInviteLink" style="display:none" title="Copier le lien"><i class="fas fa-link"></i></button>
             <button class="msgs-icon-btn" id="btnBookingMessage" style="display:none" title="Message Booking"><i class="fas fa-paper-plane"></i></button>
           </div>
@@ -5479,6 +5479,28 @@ window.showSmsConfirm = function() {
   document.addEventListener('scroll', hidePill, true);
   window.addEventListener('resize', hidePill);
 })();
+</script>
+
+<script>
+// ── Listeners boutons header chat (jamais de onclick inline pour compatibilité iOS) ──
+document.addEventListener('DOMContentLoaded', function() {
+  function bindBtn(id, fn) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', fn);
+  }
+  bindBtn('chatCloseConvBtn', function() {
+    if (window.openInvoiceFromConversation) window.openInvoiceFromConversation();
+  });
+  bindBtn('btnSendInfos', function() {
+    if (window.sendPracticalInfos) window.sendPracticalInfos();
+  });
+  bindBtn('btnQuickNote', function() {
+    if (window.openQuickNoteModal) window.openQuickNoteModal();
+  });
+  bindBtn('btnToggleAI', function() {
+    if (window.toggleConversationAI) window.toggleConversationAI();
+  });
+});
 </script>
 </body>
 </html>
