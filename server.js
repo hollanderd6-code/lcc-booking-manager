@@ -17075,7 +17075,7 @@ app.get('/api/promo/list', authenticateToken, async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT code, description, value_days, max_uses, uses_count, active, expires_at, created_at
-       FROM promo_codes WHERE created_by = $1 ORDER BY created_at DESC`, [req.user.id]
+       FROM promo_codes ORDER BY created_at DESC`
     );
     res.json({ promoCodes: r.rows });
   } catch(e) { res.status(500).json({ error: e.message }); }
