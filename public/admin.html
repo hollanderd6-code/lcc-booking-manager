@@ -651,6 +651,9 @@
     <button class="nav-tab" onclick="showSection('promo', this)">
       <i class="fas fa-gift"></i> Promo
     </button>
+    <button class="nav-tab" onclick="showSection('logs', this)">
+      <i class="fas fa-history"></i> Logs
+    </button>
     <button class="nav-tab" id="navSupport" onclick="showSection('support', this)">
       <i class="fas fa-headset"></i> Support <span id="supportUnreadBadge" style="display:none;background:#EF4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:4px;">0</span>
     </button>
@@ -1016,6 +1019,45 @@
       </div>
     </div>
 
+    <!-- ── LOGS ── -->
+    <div class="section-panel" id="panel-logs">
+      <div class="section-header">
+        <h1 class="section-title">Historique <em>des actions</em></h1>
+        <p class="section-subtitle">Qui a fait quoi, et quand — toutes les actions admin sur les comptes clients.</p>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <i class="fas fa-search"></i>
+          <input class="search-input" id="logsSearch" type="text" placeholder="Rechercher un client ou un admin…" oninput="renderActionsLog()"/>
+        </div>
+        <select class="filter-select" id="logsActionFilter" onchange="renderActionsLog()">
+          <option value="all">Toutes les actions</option>
+          <option value="block">Comptes bloqués</option>
+          <option value="unblock">Comptes débloqués</option>
+          <option value="extend_trial">Jours offerts</option>
+          <option value="change_plan">Abonnements modifiés</option>
+          <option value="impersonate">Connexions impersonation</option>
+        </select>
+        <button class="action-btn" onclick="loadActionsLog()" style="white-space:nowrap;"><i class="fas fa-rotate"></i> Actualiser</button>
+      </div>
+      <div class="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Quand</th>
+              <th>Admin</th>
+              <th>Action</th>
+              <th>Client concerné</th>
+              <th>Détail</th>
+            </tr>
+          </thead>
+          <tbody id="logsTableBody">
+            <tr><td colspan="5" class="empty-state"><i class="fas fa-circle-notch fa-spin"></i>Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- ── SUPPORT ── -->
     <div class="section-panel" id="panel-support">
       <div class="section-header" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
@@ -1195,6 +1237,7 @@ function showSection(name, btn) {
   if (name === 'subscriptions') loadSubscriptions();
   if (name === 'roadmap') loadRoadmap();
   if (name === 'promo') adminLoadPromoCodes();
+  if (name === 'logs') loadActionsLog();
 }
 
 // ══════════════════════════════════════
@@ -1531,6 +1574,91 @@ async function impersonateClient(userId) {
   } catch(e) {
     showToast(e.message || 'Erreur lors de la génération du lien.', 'error');
   }
+}
+
+// ══════════════════════════════════════
+// LOGS — vue globale de l'historique admin
+// ══════════════════════════════════════
+let allActionsLog = [];
+
+async function loadActionsLog() {
+  const tbody = document.getElementById('logsTableBody');
+  tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="fas fa-circle-notch fa-spin"></i>Chargement…</td></tr>`;
+  try {
+    const res = await fetch(`${API}/api/admin/actions-log?limit=300`, {
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    allActionsLog = data.actions || [];
+    renderActionsLog();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="fas fa-exclamation-triangle"></i>Erreur de chargement de l'historique.</td></tr>`;
+  }
+}
+
+const ACTIONS_LOG_LABELS = {
+  block: '🚫 Compte bloqué',
+  unblock: '✅ Compte débloqué',
+  extend_trial: '🎁 Jours offerts',
+  change_plan: '🔄 Abonnement modifié',
+  impersonate: '🕵️ Connexion impersonation'
+};
+
+function renderActionsLog() {
+  const tbody = document.getElementById('logsTableBody');
+  const q = (document.getElementById('logsSearch').value || '').toLowerCase();
+  const f = document.getElementById('logsActionFilter').value;
+
+  const filtered = allActionsLog.filter(a => {
+    const targetName = `${a.first_name || ''} ${a.last_name || ''} ${a.target_email || ''}`.toLowerCase();
+    const matchQ = !q || targetName.includes(q) || (a.admin_email || '').toLowerCase().includes(q);
+    const matchF = f === 'all' || a.action === f;
+    return matchQ && matchF;
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="fas fa-history"></i>Aucune action trouvée</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(a => {
+    const date = new Date(a.created_at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const label = ACTIONS_LOG_LABELS[a.action] || a.action;
+    const targetName = `${a.first_name || ''} ${a.last_name || ''}`.trim() || '—';
+
+    let detail = '—';
+    if (a.action === 'extend_trial' && a.details) {
+      detail = `${a.details.days > 0 ? '+' : ''}${a.details.days} jour${Math.abs(a.details.days)>1?'s':''}`;
+      if (a.details.previous_status && a.details.new_status && a.details.previous_status !== a.details.new_status) {
+        detail += ` · ${a.details.previous_status} → ${a.details.new_status}`;
+      }
+    } else if (a.action === 'change_plan' && a.details) {
+      const prev = a.details.previous ? `${a.details.previous.plan_type || '—'}/${a.details.previous.status || '—'}` : '—';
+      const next = a.details.new ? `${a.details.new.plan_type || '—'}/${a.details.new.status || '—'}` : '—';
+      detail = `${prev} → ${next}`;
+    } else if (a.action === 'impersonate' && a.details) {
+      detail = a.details.target_email || '—';
+    } else if ((a.action === 'block' || a.action === 'unblock') && a.details) {
+      detail = a.details.new_status || '—';
+    }
+
+    return `<tr onclick="openDrawer('${a.target_user_id}')" class="clickable">
+      <td style="white-space:nowrap;font-size:12px;color:var(--muted);">${date}</td>
+      <td style="font-size:12px;">${a.admin_email}</td>
+      <td style="font-weight:600;font-size:13px;">${label}</td>
+      <td>
+        <div class="user-info">
+          <div class="user-avatar" style="width:28px;height:28px;font-size:11px;">${((a.first_name||'').charAt(0)+(a.last_name||'').charAt(0)).toUpperCase()||'?'}</div>
+          <div>
+            <div class="user-name" style="font-size:13px;">${targetName}</div>
+            <div class="user-email" style="font-size:11px;">${a.target_email || ''}</div>
+          </div>
+        </div>
+      </td>
+      <td style="font-size:12px;color:var(--muted);">${detail}</td>
+    </tr>`;
+  }).join('');
 }
 
 function closeDrawer() {
