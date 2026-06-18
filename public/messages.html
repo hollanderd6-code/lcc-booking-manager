@@ -1179,6 +1179,8 @@ html[data-theme-v3="1"] .app-container {
             </button>
             <button class="msgs-auto-btn" id="chatCloseConvBtn" onclick="openInvoiceFromConversation()"><i class="fas fa-file-invoice"></i> <span class="invoice-btn-full">Envoyer la facture</span><span class="invoice-btn-short">Facture</span></button>
             
+            <button class="msgs-icon-btn" id="btnSendInfos" onclick="sendPracticalInfos()" title="Envoyer les infos pratiques" style="color:#1A7A5E;"><i class="fas fa-info-circle"></i></button>
+            <button class="msgs-icon-btn" id="btnQuickNote" onclick="openQuickNoteModal()" title="Note interne" style="color:#F59E0B;"><i class="fas fa-sticky-note"></i></button>
             <button class="msgs-icon-btn" id="btnCopyInviteLink" style="display:none" title="Copier le lien"><i class="fas fa-link"></i></button>
             <button class="msgs-icon-btn" id="btnBookingMessage" style="display:none" title="Message Booking"><i class="fas fa-paper-plane"></i></button>
           </div>
@@ -2263,6 +2265,10 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
     // Stocker la conv courante pour la facture
     window.currentChatConv = conv || null;
+
+    // ── Badge note : rouge si une note existe ──
+    var noteBtn = document.getElementById('btnQuickNote');
+    if (noteBtn) noteBtn.style.color = (conv && conv.notes) ? '#EF4444' : '#F59E0B';
 
     // ── Toggle IA : afficher l'état ──
     var aiBtn = document.getElementById('btnToggleAI');
@@ -4243,6 +4249,163 @@ window.openInvoiceFromConversation = function() {
     amountTotal:    conv.amount_total    || null,
     conversationId: conv.id || window.currentConversationId || null,
   });
+};
+
+// ── Envoyer les infos pratiques depuis la conversation ──
+window.sendPracticalInfos = async function() {
+  var conv = window.currentChatConv;
+  var prop = window.currentChatProperty;
+  if (!conv) return;
+
+  // Construire le message d'infos pratiques
+  var lines = [];
+  var guestFirst = ((conv.guest_first_name || conv.guest_name || '').split(' ')[0]) || 'Voyageur';
+  lines.push('Bonjour ' + guestFirst + ' 👋');
+  lines.push('');
+  lines.push('Voici les informations pratiques pour votre séjour :');
+  lines.push('');
+
+  if (prop) {
+    if (prop.address) lines.push('📍 Adresse : ' + prop.address);
+    if (prop.arrivalTime || prop.arrival_time) lines.push('🕐 Arrivée possible dès : ' + (prop.arrivalTime || prop.arrival_time));
+    if (prop.departureTime || prop.departure_time) lines.push('🕙 Départ avant : ' + (prop.departureTime || prop.departure_time));
+    if (prop.accessCode || prop.access_code) lines.push('🔑 Code d\'accès : ' + (prop.accessCode || prop.access_code));
+    if (prop.wifiName || prop.wifi_name) {
+      lines.push('📶 WiFi : ' + (prop.wifiName || prop.wifi_name));
+      if (prop.wifiPassword || prop.wifi_password) lines.push('🔐 Mot de passe WiFi : ' + (prop.wifiPassword || prop.wifi_password));
+    }
+  }
+
+  if (conv.reservation_start_date) {
+    var cin = new Date(conv.reservation_start_date).toLocaleDateString('fr-FR');
+    lines.push('');
+    lines.push('📅 Arrivée : ' + cin);
+  }
+  if (conv.reservation_end_date) {
+    var cout = new Date(conv.reservation_end_date).toLocaleDateString('fr-FR');
+    lines.push('📅 Départ : ' + cout);
+  }
+
+  lines.push('');
+  lines.push('N\'hésitez pas à nous contacter pour toute question. Bon séjour ! 😊');
+
+  var message = lines.join('\n');
+
+  // Afficher confirm avec aperçu
+  var confirmed = await window.bhConfirm(
+    '📋 Envoyer les infos pratiques',
+    '<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 14px;font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.6;max-height:280px;overflow-y:auto;margin-top:4px;">' + message.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>',
+    'Envoyer', 'Annuler'
+  );
+  if (!confirmed) return;
+
+  var token = localStorage.getItem('lcc_token');
+  var convId = conv.id || window.currentConversationId;
+
+  try {
+    // Essai envoi plateforme (Channex OTA) en priorité
+    var res = await fetch('/api/chat/conversations/' + convId + '/send-platform', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ message })
+    });
+    var data = await res.json();
+
+    if (!res.ok) {
+      // Fallback : envoi interne (chat BH)
+      var res2 = await fetch('/api/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ conversation_id: convId, message, sender_type: 'owner', sender_name: 'Vous' })
+      });
+      if (!res2.ok) throw new Error('Erreur envoi');
+    }
+
+    if (window.showBHToast) showBHToast('✅ Infos pratiques envoyées', 'success');
+  } catch(e) {
+    console.error('❌ sendPracticalInfos:', e.message);
+    if (window.showBHToast) showBHToast('Erreur : ' + e.message, 'error');
+  }
+};
+
+// ── Note rapide depuis la conversation ──
+window.openQuickNoteModal = function() {
+  var conv = window.currentChatConv;
+  if (!conv) return;
+
+  // Supprimer un éventuel modal précédent
+  document.getElementById('bhQuickNoteModal')?.remove();
+
+  var uid = conv.reservation_uid || conv.channex_booking_id || null;
+  var currentNote = conv.notes || '';
+
+  var modal = document.createElement('div');
+  modal.id = 'bhQuickNoteModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:99990;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div onclick="document.getElementById('bhQuickNoteModal')?.remove()" style="position:absolute;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(3px);"></div>
+    <div style="position:relative;background:white;border-radius:18px;width:92%;max-width:440px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <i class="fas fa-sticky-note" style="color:#F59E0B;font-size:18px;"></i>
+        <span style="font-size:16px;font-weight:700;color:#111827;">Note interne</span>
+        <span style="font-size:12px;color:#9CA3AF;margin-left:auto;">Visible uniquement par vous</span>
+      </div>
+      ${!uid ? '<div style="font-size:12px;color:#EF4444;background:#FEF2F2;border-radius:8px;padding:8px 12px;margin-bottom:12px;">⚠️ Aucune réservation liée à cette conversation — la note ne peut pas être sauvegardée.</div>' : ''}
+      <textarea id="bhQuickNoteText" rows="5" placeholder="Ex : voyageur difficile, dommages signalés, remise accordée…"
+        style="width:100%;box-sizing:border-box;border:1.5px solid #E5E7EB;border-radius:10px;padding:12px;font-size:13px;font-family:'DM Sans',sans-serif;resize:none;line-height:1.6;outline:none;color:#374151;"
+        onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'"
+      >${currentNote.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+      <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end;">
+        <button onclick="document.getElementById('bhQuickNoteModal')?.remove()"
+          style="padding:9px 18px;border-radius:10px;border:1.5px solid #E5E7EB;background:white;font-size:13px;font-weight:600;color:#374151;cursor:pointer;">
+          Annuler
+        </button>
+        <button onclick="window._saveQuickNote()" ${!uid ? 'disabled style="opacity:.5;cursor:not-allowed;"' : ''}
+          style="padding:9px 22px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:13px;font-weight:700;cursor:pointer;">
+          <i class="fas fa-save" style="margin-right:6px;"></i>Enregistrer
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  setTimeout(function() { var ta = document.getElementById('bhQuickNoteText'); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }, 50);
+};
+
+window._saveQuickNote = async function() {
+  var conv = window.currentChatConv;
+  var uid = conv && (conv.reservation_uid || conv.channex_booking_id);
+  if (!uid) return;
+
+  var ta = document.getElementById('bhQuickNoteText');
+  var note = ta ? ta.value.trim() : '';
+  var token = localStorage.getItem('lcc_token');
+
+  var saveBtn = document.querySelector('#bhQuickNoteModal button:last-child');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+
+  try {
+    var res = await fetch('/api/reservations/' + uid + '/note', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ notes: note })
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+
+    // Mettre à jour la conv en mémoire
+    if (conv) conv.notes = data.notes || '';
+
+    document.getElementById('bhQuickNoteModal')?.remove();
+    if (window.showBHToast) showBHToast(note ? '📝 Note enregistrée' : '🗑️ Note supprimée', 'success');
+
+    // Mettre à jour le badge du bouton
+    var btn = document.getElementById('btnQuickNote');
+    if (btn) btn.style.color = note ? '#EF4444' : '#F59E0B';
+  } catch(e) {
+    console.error('❌ saveQuickNote:', e.message);
+    if (window.showBHToast) showBHToast('Erreur : ' + e.message, 'error');
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save"></i> Enregistrer'; }
+  }
 };
 
 // ── Toggle IA par conversation ──
