@@ -5482,25 +5482,26 @@ window.showSmsConfirm = function() {
 </script>
 
 <script>
-// ── Listeners boutons header chat (jamais de onclick inline pour compatibilité iOS) ──
-document.addEventListener('DOMContentLoaded', function() {
+// ── Listeners boutons header chat ──
+// DOMContentLoaded déjà passé → exécuter immédiatement ou via requestAnimationFrame
+(function bindHeaderBtns() {
   function bindBtn(id, fn) {
     var el = document.getElementById(id);
-    if (el) el.addEventListener('click', fn);
+    if (el) { el.addEventListener('click', fn); return true; }
+    return false;
   }
-  bindBtn('chatCloseConvBtn', function() {
-    if (window.openInvoiceFromConversation) window.openInvoiceFromConversation();
-  });
-  bindBtn('btnSendInfos', function() {
-    if (window.sendPracticalInfos) window.sendPracticalInfos();
-  });
-  bindBtn('btnQuickNote', function() {
-    if (window.openQuickNoteModal) window.openQuickNoteModal();
-  });
-  bindBtn('btnToggleAI', function() {
-    if (window.toggleConversationAI) window.toggleConversationAI();
-  });
-});
+  function bind() {
+    bindBtn('chatCloseConvBtn', function() { if (window.openInvoiceFromConversation) window.openInvoiceFromConversation(); });
+    bindBtn('btnSendInfos',     function() { if (window.sendPracticalInfos)          window.sendPracticalInfos(); });
+    bindBtn('btnQuickNote',     function() { if (window.openQuickNoteModal)           window.openQuickNoteModal(); });
+    bindBtn('btnToggleAI',      function() { if (window.toggleConversationAI)         window.toggleConversationAI(); });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bind);
+  } else {
+    bind();
+  }
+})();
 </script>
 </body>
 </html>
