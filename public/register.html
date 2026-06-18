@@ -379,6 +379,14 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
               </div>
             </div>
 
+            <div class="form-row">
+              <label class="form-label" for="regPhone">Téléphone <span style="opacity:.5;">(optionnel)</span></label>
+              <div class="form-field">
+                <i class="fas fa-phone"></i>
+                <input type="tel" id="regPhone" name="phone" placeholder="06 12 34 56 78" autocomplete="tel">
+              </div>
+            </div>
+
             <div class="form-row-two">
               <div>
                 <label class="form-label" for="regPassword">Mot de passe <span style="color:#f87171;">*</span></label>
@@ -627,6 +635,7 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
     const firstName = document.getElementById('firstName').value.trim();
     const lastName  = document.getElementById('lastName').value.trim();
     const email     = document.getElementById('regEmail').value.trim();
+    const phone     = (document.getElementById('regPhone')?.value || '').trim() || undefined;
     const password  = document.getElementById('regPassword').value;
     const confirm   = document.getElementById('regPasswordConfirm').value;
     const terms     = document.getElementById('terms').checked;
@@ -643,7 +652,7 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création en cours…';
 
     try {
-      const res  = await fetch(API_BASE + '/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, firstName, lastName, email, password, promoCode, referralCode }) });
+      const res  = await fetch(API_BASE + '/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, firstName, lastName, email, phone, password, promoCode, referralCode }) });
       const data = await res.json();
 
       if (res.ok && data.success) {
