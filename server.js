@@ -30219,6 +30219,7 @@ app.post('/api/admin/clients/:id/request-impersonation', authenticateToken, asyn
       console.error('push impersonation request:', pushErr.message);
     }
 
+    console.log(`🔐 Impersonation request #${requestId} → ${targetUser.email} (par ${adminUser.email})`);
     res.json({ success: true, requestId, expiresAt: insertResult.rows[0].expires_at, targetEmail: targetUser.email });
   } catch(e) {
     console.error('POST /api/admin/clients/:id/request-impersonation:', e);
