@@ -17111,7 +17111,7 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { company, firstName, lastName, email, password, phone, promoCode, referralCode } = req.body;
     
-    if (!firstName || !lastName || !email || !password) {
+    if (!firstName || !lastName || !email || !password || !phone) {
       return res.status(400).json({ error: 'Champs obligatoires manquants' });
     }
 
@@ -17178,7 +17178,7 @@ app.post('/api/auth/register', async (req, res) => {
         referral_code, referred_by, promo_code_used, phone
       )
       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NULL, $7, $8, $9, $10, $11, $12, $13)`,
-      [id, company, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires, myReferralCode, referrerId, promoCodeUsed, (phone && String(phone).trim()) ? String(phone).trim() : null]
+      [id, company, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires, myReferralCode, referrerId, promoCodeUsed, String(phone).trim()]
     );
 
     // Créer l'abonnement trial

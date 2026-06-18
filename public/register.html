@@ -380,10 +380,10 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
             </div>
 
             <div class="form-row">
-              <label class="form-label" for="regPhone">Téléphone <span style="opacity:.5;">(optionnel)</span></label>
+              <label class="form-label" for="regPhone">Téléphone <span style="color:#f87171;">*</span></label>
               <div class="form-field">
                 <i class="fas fa-phone"></i>
-                <input type="tel" id="regPhone" name="phone" placeholder="06 12 34 56 78" autocomplete="tel">
+                <input type="tel" id="regPhone" name="phone" placeholder="06 12 34 56 78" required autocomplete="tel">
               </div>
             </div>
 
@@ -635,14 +635,14 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
     const firstName = document.getElementById('firstName').value.trim();
     const lastName  = document.getElementById('lastName').value.trim();
     const email     = document.getElementById('regEmail').value.trim();
-    const phone     = (document.getElementById('regPhone')?.value || '').trim() || undefined;
+    const phone     = document.getElementById('regPhone').value.trim();
     const password  = document.getElementById('regPassword').value;
     const confirm   = document.getElementById('regPasswordConfirm').value;
     const terms     = document.getElementById('terms').checked;
     const promoCode = (document.getElementById('promoCode')?.value || '').trim() || undefined;
     const referralCode = urlRef || undefined;
 
-    if (!firstName || !lastName || !email || !password || !confirm) { showToast('Veuillez remplir tous les champs obligatoires.'); return; }
+    if (!firstName || !lastName || !email || !phone || !password || !confirm) { showToast('Veuillez remplir tous les champs obligatoires.'); return; }
     if (!terms) { showToast("Vous devez accepter les conditions générales d'utilisation."); return; }
     if (password !== confirm) { showToast('Les mots de passe ne correspondent pas.'); return; }
     if (password.length < 6) { showToast('Le mot de passe doit contenir au moins 6 caractères.'); return; }
