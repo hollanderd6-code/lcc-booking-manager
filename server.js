@@ -30326,6 +30326,86 @@ app.post('/api/impersonation/:id/respond', authenticateToken, async (req, res) =
   }
 });
 
+// ============================================================
+// ❓ QUESTIONS FACTUELLES À L'HÔTE (réponse 1 clic depuis l'app)
+// ============================================================
+async function ensureHostQuestionsTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ai_host_questions (
+        id              BIGSERIAL PRIMARY KEY,
+        user_id         TEXT NOT NULL,
+        conversation_id BIGINT,
+        property_id     TEXT,
+        guest_name      TEXT,
+        question        TEXT NOT NULL,
+        guest_message   TEXT,
+        language        TEXT DEFAULT 'fr',
+        status          TEXT NOT NULL DEFAULT 'pending',
+        answer_text     TEXT,
+        created_at      TIMESTAMPTZ DEFAULT NOW(),
+        answered_at     TIMESTAMPTZ,
+        updated_at      TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_ai_host_questions_user_status
+        ON ai_host_questions (user_id, status);
+    `);
+    console.log('✅ Table ai_host_questions prête');
+  } catch (e) {
+    console.error('❌ ensureHostQuestionsTable:', e.message);
+  }
+}
+ensureHostQuestionsTable();
+
+// GET /api/host-questions/pending — questions en attente pour l'hôte (polling app)
+app.get('/api/host-questions/pending', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const result = await pool.query(
+      `SELECT id, conversation_id, property_id, guest_name, question, language, created_at
+       FROM ai_host_questions
+       WHERE user_id = ANY($1::text[]) AND status = 'pending'
+       ORDER BY created_at ASC`,
+      [agencyIds]
+    );
+    res.json({ questions: result.rows });
+  } catch (e) {
+    console.error('GET /api/host-questions/pending:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/host-questions/:id/answer — l'hôte répond (yes | no | self), texte optionnel
+app.post('/api/host-questions/:id/answer', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const { answer, text } = req.body; // answer ∈ {'yes','no','self'}
+    if (!['yes', 'no', 'self'].includes(answer)) {
+      return res.status(400).json({ error: 'answer invalide (yes|no|self)' });
+    }
+
+    const qRes = await pool.query(
+      `SELECT * FROM ai_host_questions WHERE id = $1 AND user_id = ANY($2::text[]) AND status = 'pending'`,
+      [req.params.id, agencyIds]
+    );
+    if (!qRes.rows[0]) return res.status(404).json({ error: 'Question introuvable ou déjà traitée' });
+
+    const { relayHostAnswer } = require('./integrated-chat-handler');
+    const result = await relayHostAnswer(pool, io, {
+      questionRow: qRes.rows[0],
+      answerType: answer,
+      freeText: (text || '').trim() || null
+    });
+
+    res.json({ success: true, sent: result.sent, message: result.message || null });
+  } catch (e) {
+    console.error('POST /api/host-questions/:id/answer:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // GET /api/admin/error-logs — liste des erreurs serveur capturées
 app.get('/api/admin/error-logs', authenticateToken, async (req, res) => {
   try {

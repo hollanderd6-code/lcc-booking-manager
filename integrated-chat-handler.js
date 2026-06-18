@@ -719,6 +719,38 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         return false;
       }
 
+      // ─── Détection tag [QUESTION_HOTE:...] ────────────────────
+      const questionMatch = aiResponse.match(/\[QUESTION_HOTE:([^\]]+)\]/);
+      if (questionMatch) {
+        try {
+          const hostQuestion = questionMatch[1].trim();
+          const cleanMsg = aiResponse.replace(/\[QUESTION_HOTE:[^\]]+\]/, '').trim();
+
+          // Message neutre au voyageur (l'IA a déjà rédigé un texte chaleureux avant le tag)
+          const fallbackMsg = {
+            fr: `Je vérifie ce point avec l'hôte et reviens vers vous très vite 😊`,
+            en: `I'm checking this with the host and will get back to you very soon 😊`,
+            it: `Verifico questo punto con l'host e la ricontatto al più presto 😊`,
+            es: `Estoy verificando este punto con el anfitrión y le responderé muy pronto 😊`,
+            de: `Ich kläre das mit dem Gastgeber und melde mich sehr bald bei Ihnen 😊`,
+          };
+          await sendBotMessage(conversation.id, cleanMsg || (fallbackMsg[language] || fallbackMsg.fr), pool, io, channexId);
+
+          // Créer la question + notifier l'hôte (sans escalader : l'IA reprendra dès la réponse)
+          await createHostQuestion(conversation, pool, io, {
+            question: hostQuestion,
+            guestMessage: message.message,
+            language
+          });
+          console.log(`❓ [HANDLER] Question à l'hôte créée : "${hostQuestion}"`);
+          return true;
+        } catch(e) {
+          console.error('❌ [HANDLER] Erreur question hôte:', e.message);
+          await escalateToOwner(conversation, pool, io, language, channexId);
+          return false;
+        }
+      }
+
       // ─── Détection tag [LATE_CHECKOUT:HH:MM] ──────────────────
       const lateMatch = aiResponse.match(/\[LATE_CHECKOUT:(\d{1,2}):(\d{2})\]/);
       if (lateMatch) {
@@ -1148,9 +1180,145 @@ async function escalateToOwner(conversation, pool, io, language, channexId = nul
   }
 }
 
+// ============================================
+// ❓ QUESTION FACTUELLE À L'HÔTE (réponse 1 clic)
+// ============================================
+
+// Crée une question en attente + notifie l'hôte. Met l'IA en pause sur la conv
+// le temps de la réponse (réutilise le mécanisme d'escalade existant).
+async function createHostQuestion(conversation, pool, io, { question, guestMessage, language }) {
+  // Nom du logement (pour la notif)
+  let propName = null;
+  if (conversation.property_id) {
+    try {
+      const pr = await pool.query('SELECT internal_name, name FROM properties WHERE id = $1', [conversation.property_id]);
+      const p = pr.rows[0];
+      if (p) propName = p.internal_name || p.name || null;
+    } catch(e) {}
+  }
+
+  // Enregistrer la question (status pending). Une seule question pending par conv : on remplace l'ancienne.
+  let questionId = null;
+  try {
+    await pool.query(
+      `UPDATE ai_host_questions SET status = 'cancelled', updated_at = NOW()
+       WHERE conversation_id = $1 AND status = 'pending'`,
+      [conversation.id]
+    );
+    const ins = await pool.query(
+      `INSERT INTO ai_host_questions
+         (user_id, conversation_id, property_id, guest_name, question, guest_message, language, status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', NOW(), NOW())
+       RETURNING id`,
+      [conversation.user_id, conversation.id, conversation.property_id || null,
+       conversation.guest_name || 'Voyageur', question, guestMessage || '', language || 'fr']
+    );
+    questionId = ins.rows[0].id;
+  } catch(e) {
+    console.error('❌ [QHOTE] Erreur insertion question:', e.message);
+    return;
+  }
+
+  // Mettre l'IA en pause (bot silencieux) en attendant la réponse — réutilise le flag escalated
+  try {
+    await pool.query(
+      `UPDATE conversations SET escalated = TRUE, escalated_at = NOW(), updated_at = NOW() WHERE id = $1`,
+      [conversation.id]
+    );
+  } catch(e) {}
+
+  // Notifier l'hôte (push) + temps réel
+  try {
+    const { sendNotification } = require('./services/notifications-service');
+    const guest = conversation.guest_name || 'Voyageur';
+    const title = `❓ Question voyageur — ${guest}${propName ? ' · ' + propName : ''}`;
+    const body = question;
+    const tokens = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+      [conversation.user_id]
+    );
+    for (const tok of tokens.rows) {
+      await sendNotification(tok.fcm_token, title, body, {
+        type: 'host_question',
+        question_id: String(questionId),
+        conversation_id: String(conversation.id),
+        screen: 'messages'
+      });
+    }
+  } catch(e) {
+    console.error('❌ [QHOTE] Erreur notification:', e.message);
+  }
+
+  if (io) {
+    io.to(`user_${conversation.user_id}`).emit('host_question_pending', {
+      questionId, conversationId: conversation.id,
+      guestName: conversation.guest_name || 'Voyageur', question
+    });
+  }
+}
+
+// Quand l'hôte a répondu (oui/non/texte) : l'IA reformule et envoie au voyageur,
+// puis l'IA reprend la main sur la conversation. Appelée depuis server.js.
+async function relayHostAnswer(pool, io, { questionRow, answerType, freeText }) {
+  const channexId = null; // résolu via sendBotMessage si besoin
+  const lang = questionRow.language || 'fr';
+
+  // Construire la réponse au voyageur
+  let guestReply;
+  if (answerType === 'self') {
+    // L'hôte répond lui-même → on n'envoie rien automatiquement, il écrit dans la conv.
+    // On clôt juste la question et on laisse la conv escaladée (l'hôte prend la main).
+    await pool.query(
+      `UPDATE ai_host_questions SET status = 'answered_self', answered_at = NOW(), updated_at = NOW() WHERE id = $1`,
+      [questionRow.id]
+    );
+    return { sent: false };
+  }
+
+  // Reformuler via Groq pour une réponse naturelle dans la langue du voyageur
+  const positive = answerType === 'yes';
+  try {
+    const { getGroqResponse } = require('./groq-ai');
+    const synthPrompt = `Le voyageur a demandé : "${questionRow.guest_message || questionRow.question}". `
+      + `L'hôte vient de confirmer que la réponse est : ${positive ? 'OUI' : 'NON'}`
+      + (freeText ? ` (précision de l'hôte : "${freeText}")` : '')
+      + `. Rédige UNE réponse courte, chaleureuse et naturelle au voyageur dans sa langue (${lang}), `
+      + `qui transmet cette information. 1-2 phrases, 1 emoji max. Ne mentionne pas que tu as demandé à l'hôte. Réponds UNIQUEMENT le message au voyageur, sans tag ni guillemets.`;
+    guestReply = await getGroqResponse(synthPrompt, { language: lang }, [], []);
+    if (guestReply) guestReply = guestReply.replace(/\[[^\]]+\]/g, '').trim();
+  } catch(e) {
+    console.error('❌ [QHOTE] Erreur reformulation Groq:', e.message);
+  }
+
+  // Fallback si Groq échoue
+  if (!guestReply) {
+    const yes = { fr: `Bonne nouvelle, c'est bien le cas 😊`, en: `Good news, yes it is 😊`, it: `Buone notizie, sì 😊`, es: `Buenas noticias, sí 😊`, de: `Gute Nachrichten, ja 😊` };
+    const no  = { fr: `Après vérification, ce n'est malheureusement pas le cas.`, en: `After checking, unfortunately that's not the case.`, it: `Dopo verifica, purtroppo no.`, es: `Tras verificar, lamentablemente no.`, de: `Nach Prüfung leider nicht.` };
+    const base = positive ? (yes[lang] || yes.fr) : (no[lang] || no.fr);
+    guestReply = freeText ? `${base} ${freeText}` : base;
+  }
+
+  await sendBotMessage(questionRow.conversation_id, guestReply, pool, io, channexId);
+
+  // Clore la question + l'IA reprend la main sur la conv
+  await pool.query(
+    `UPDATE ai_host_questions SET status = $2, answer_text = $3, answered_at = NOW(), updated_at = NOW() WHERE id = $1`,
+    [questionRow.id, positive ? 'answered_yes' : 'answered_no', freeText || null]
+  );
+  await pool.query(
+    `UPDATE conversations SET escalated = FALSE, escalated_at = NULL, updated_at = NOW() WHERE id = $1`,
+    [questionRow.conversation_id]
+  );
+  if (io) io.to(`user_${questionRow.user_id}`).emit('host_question_answered', { questionId: questionRow.id });
+
+  return { sent: true, message: guestReply };
+}
+
 module.exports = {
   handleIncomingMessage,
   handleIncomingMessageDebounced,
   sendBotMessage,
-  sendAutoMessage
+  sendAutoMessage,
+  createHostQuestion,
+  relayHostAnswer
 };
