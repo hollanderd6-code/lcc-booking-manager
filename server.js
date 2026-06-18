@@ -27278,15 +27278,12 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
 
       console.log(`📱 [sous-compte ${subAccountId}] Enregistrement token FCM (${deviceType})`);
 
-      // Le token FCM peut déjà exister (même iPhone = même token pour compte principal et sous-compte)
-      // On utilise ON CONFLICT sur fcm_token pour mettre à jour la ligne existante
+      // Supprimer tout ancien enregistrement de ce token (évite conflit multi-contraintes)
+      await pool.query(`DELETE FROM user_fcm_tokens WHERE fcm_token = $1`, [token]);
+
       await pool.query(
         `INSERT INTO user_fcm_tokens (sub_account_id, user_id, fcm_token, device_type, created_at, updated_at)
-         VALUES ($1, NULL, $2, $3, NOW(), NOW())
-         ON CONFLICT (fcm_token)
-         DO UPDATE SET
-           sub_account_id = EXCLUDED.sub_account_id,
-           updated_at = NOW()`,
+         VALUES ($1, NULL, $2, $3, NOW(), NOW())`,
         [subAccountId, token, deviceType]
       );
 
@@ -27304,15 +27301,13 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
       console.log(`📱 [user ${userId}] Enregistrement token FCM (${deviceType}, device_id: ${deviceId || 'non fourni'})`);
 
       if (deviceId) {
-        // ✅ Stratégie avec device_id : 1 ligne par appareil physique, sans doublon
-        // Étape 1 : si ce token FCM appartient déjà à un autre device_id du même user → on met à jour ce device_id
+        // Supprimer tout ancien enregistrement de ce token (évite conflit multi-contraintes)
         await pool.query(
-          `UPDATE user_fcm_tokens SET device_id = $1, device_type = $2, updated_at = NOW()
-           WHERE fcm_token = $3 AND user_id = $4 AND (device_id IS NULL OR device_id != $1)`,
-          [deviceId, deviceType, token, userId]
-        ).catch(() => {});
+          `DELETE FROM user_fcm_tokens WHERE fcm_token = $1 AND NOT (user_id = $2 AND device_id = $3)`,
+          [token, userId, deviceId]
+        );
 
-        // Étape 2 : upsert sur (user_id, device_id) → un seul enregistrement par appareil
+        // Upsert sur (user_id, device_id) → un seul enregistrement par appareil
         await pool.query(
           `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, device_id, created_at, updated_at)
            VALUES ($1, $2, $3, $4, NOW(), NOW())
