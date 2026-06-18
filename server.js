@@ -30193,22 +30193,27 @@ app.post('/api/admin/clients/:id/request-impersonation', authenticateToken, asyn
     );
     const requestId = insertResult.rows[0].id;
 
-    // Notifie le client immédiatement par push, pour qu'il voie la demande même s'il n'a pas l'app ouverte
+    // Notifie le client : sauvegarde systématique dans l'historique + push si tokens disponibles
     try {
+      const push = bhPush({
+        emoji: '🔐',
+        event: 'Demande de connexion support',
+        context: '',
+        parts: [`L'équipe Boostinghost souhaite accéder à votre compte pour vous assister${reason ? ' : ' + reason : ''}.`],
+        data: { type: 'impersonation_request', requestId: String(requestId) }
+      });
+
+      // Toujours sauvegarder dans l'historique pour que le client voie la demande dans l'app (web ou native)
+      await saveNotificationToHistory(id, push.title, push.body, 'impersonation_request', push.data);
+
+      // Push FCM si le client a des tokens enregistrés
       const tokensRes = await pool.query(
         `SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL`,
         [id]
       );
       const tokens = tokensRes.rows.map(r => r.fcm_token).filter(Boolean);
       if (tokens.length) {
-        const push = bhPush({
-          emoji: '🔐',
-          event: 'Demande de connexion support',
-          context: '',
-          parts: [`L'équipe Boostinghost souhaite accéder à votre compte pour vous assister${reason ? ' : ' + reason : ''}.`],
-          data: { type: 'impersonation_request', requestId: String(requestId) }
-        });
-        await sendNotificationToMultipleLogged(tokens, push.title, push.body, push.data);
+        await _origSendNotificationToMultiple(tokens, push.title, push.body, push.data);
       }
     } catch (pushErr) {
       console.error('push impersonation request:', pushErr.message);
