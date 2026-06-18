@@ -4290,7 +4290,7 @@ window.sendPracticalInfos = async function() {
     });
 
     if (templates.length === 0) {
-      if (window.showBHToast) showBHToast('Aucun template "À l'arrivée" trouvé pour ce logement', 'warning');
+      if (window.showBHToast) showBHToast('Aucun template "À l\'arrivée" trouvé pour ce logement', 'warning');
       return;
     }
 
@@ -4307,7 +4307,7 @@ window.sendPracticalInfos = async function() {
         + '<label style="font-size:12px;color:#6B7280;font-weight:600;display:block;margin-bottom:6px;">Choisir le template :</label>'
         + '<select id="bhTplPicker" style="width:100%;padding:8px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;font-family:inherit;">' + opts + '</select>'
         + '</div>';
-      var ok = await window.bhConfirm('📋 Envoyer les infos d'arrivée', pickHtml, 'Continuer', 'Annuler');
+      var ok = await window.bhConfirm('📋 Envoyer les infos d\'arrivée', pickHtml, 'Continuer', 'Annuler');
       if (!ok) return;
       var sel = document.getElementById('bhTplPicker');
       chosen = templates[sel ? parseInt(sel.value) : 0];
@@ -4333,7 +4333,7 @@ window.sendPracticalInfos = async function() {
       .replace(/\{livret\}/gi, prop.welcomeBookUrl || prop.welcome_book_url || '');
 
     var confirmed = await window.bhConfirm(
-      '📋 ' + (chosen.title || 'Message d'arrivée'),
+      '📋 ' + (chosen.title || 'Message d\'arrivée'),
       '<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 14px;font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.6;max-height:260px;overflow-y:auto;margin-top:8px;">'
         + preview.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         + '</div>',
@@ -4350,7 +4350,7 @@ window.sendPracticalInfos = async function() {
     var sendData = await sendRes.json();
     if (!sendRes.ok) throw new Error(sendData.error || 'Erreur envoi');
 
-    if (window.showBHToast) showBHToast('✅ Message d'arrivée envoyé', 'success');
+    if (window.showBHToast) showBHToast('✅ Message d\'arrivée envoyé', 'success');
 
   } catch(e) {
     console.error('❌ sendPracticalInfos:', e.message);
