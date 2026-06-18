@@ -1415,7 +1415,11 @@ function openDrawer(userId) {
         <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;">Plan</label>
         <select id="planSelect" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);">
           <option value="trial" ${c.plan_type === 'trial' ? 'selected' : ''}>Trial</option>
+          <option value="starter_monthly" ${c.plan_type === 'starter_monthly' ? 'selected' : ''}>Starter Monthly</option>
+          <option value="starter_annual" ${c.plan_type === 'starter_annual' ? 'selected' : ''}>Starter Annual</option>
           <option value="pro" ${c.plan_type === 'pro' ? 'selected' : ''}>Pro</option>
+          <option value="pro_monthly" ${c.plan_type === 'pro_monthly' ? 'selected' : ''}>Pro Monthly</option>
+          <option value="pro_annual" ${c.plan_type === 'pro_annual' ? 'selected' : ''}>Pro Annual</option>
           <option value="agence_monthly" ${c.plan_type === 'agence_monthly' ? 'selected' : ''}>Agence Monthly</option>
           <option value="agence_annual" ${c.plan_type === 'agence_annual' ? 'selected' : ''}>Agence Annual</option>
         </select>
