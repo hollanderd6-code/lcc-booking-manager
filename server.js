@@ -29864,6 +29864,100 @@ app.put('/api/admin/clients/:id/block', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/admin/clients/:id/extend-trial — ajouter des jours gratuits (trial ou période en cours)
+app.post('/api/admin/clients/:id/extend-trial', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    const ADMIN_EMAILS = ['charles.induni@gmail.com', 'arnaud.gestionpro@gmail.com'];
+    if (!user || !ADMIN_EMAILS.includes(user.email)) return res.status(403).json({ error: 'Accès refusé' });
+
+    const { id } = req.params;
+    const days = parseInt(req.body.days, 10);
+    if (!days || isNaN(days) || days === 0) return res.status(400).json({ error: 'Nombre de jours invalide' });
+
+    const sub = await pool.query(`SELECT trial_end_date, current_period_end, status FROM subscriptions WHERE user_id = $1`, [id]);
+    if (sub.rows.length === 0) return res.status(404).json({ error: 'Abonnement non trouvé' });
+
+    const row = sub.rows[0];
+    // Base de calcul : la date la plus pertinente déjà existante, sinon maintenant
+    const baseTrial  = row.trial_end_date ? new Date(row.trial_end_date) : new Date();
+    const baseRenew  = row.current_period_end ? new Date(row.current_period_end * 1000) : null;
+
+    const newTrialEnd = new Date(Math.max(baseTrial.getTime(), Date.now()));
+    newTrialEnd.setDate(newTrialEnd.getDate() + days);
+
+    // Si le client a un abonnement payant en cours (current_period_end), on prolonge aussi celui-ci
+    let newPeriodEndEpoch = null;
+    if (baseRenew) {
+      const newPeriodEnd = new Date(Math.max(baseRenew.getTime(), Date.now()));
+      newPeriodEnd.setDate(newPeriodEnd.getDate() + days);
+      newPeriodEndEpoch = Math.floor(newPeriodEnd.getTime() / 1000);
+    }
+
+    // Si le compte était expiré/bloqué, on le repasse actif/trial selon le cas
+    let newStatus = row.status;
+    if (row.status === 'expired' || row.status === 'blocked') {
+      newStatus = baseRenew ? 'active' : 'trial';
+    }
+
+    await pool.query(
+      `UPDATE subscriptions SET
+        trial_end_date = $1,
+        current_period_end = COALESCE($2, current_period_end),
+        status = $3,
+        updated_at = NOW()
+       WHERE user_id = $4`,
+      [newTrialEnd, newPeriodEndEpoch, newStatus, id]
+    );
+
+    res.json({ success: true, trial_end_date: newTrialEnd, current_period_end: newPeriodEndEpoch, status: newStatus });
+  } catch(e) {
+    console.error('POST /api/admin/clients/:id/extend-trial:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/admin/clients/:id/plan — changer le plan / statut d'un client
+app.put('/api/admin/clients/:id/plan', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    const ADMIN_EMAILS = ['charles.induni@gmail.com', 'arnaud.gestionpro@gmail.com'];
+    if (!user || !ADMIN_EMAILS.includes(user.email)) return res.status(403).json({ error: 'Accès refusé' });
+
+    const { id } = req.params;
+    const { planType, status, planAmount } = req.body;
+
+    const ALLOWED_PLANS  = ['trial', 'pro', 'agence_monthly', 'solo_monthly', 'starter_monthly', 'pro_monthly', 'agence_annual'];
+    const ALLOWED_STATUS = ['trial', 'active', 'expired', 'blocked'];
+
+    if (planType && !ALLOWED_PLANS.includes(planType)) return res.status(400).json({ error: 'Plan invalide' });
+    if (status && !ALLOWED_STATUS.includes(status)) return res.status(400).json({ error: 'Statut invalide' });
+
+    const existing = await pool.query(`SELECT user_id FROM subscriptions WHERE user_id = $1`, [id]);
+    if (existing.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO subscriptions (user_id, plan_type, status, plan_amount, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+        [id, planType || 'trial', status || 'trial', planAmount != null ? planAmount : 0]
+      );
+    } else {
+      const sets = ['updated_at = NOW()'];
+      const vals = [];
+      let idx = 1;
+      if (planType) { sets.push(`plan_type = $${idx++}`); vals.push(planType); }
+      if (status)   { sets.push(`status = $${idx++}`);    vals.push(status); }
+      if (planAmount != null) { sets.push(`plan_amount = $${idx++}`); vals.push(planAmount); }
+      vals.push(id);
+      await pool.query(`UPDATE subscriptions SET ${sets.join(', ')} WHERE user_id = $${idx}`, vals);
+    }
+
+    res.json({ success: true });
+  } catch(e) {
+    console.error('PUT /api/admin/clients/:id/plan:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ADMIN — GET toutes les suggestions
 app.get('/api/admin/roadmap', authenticateToken, async (req, res) => {
   try {

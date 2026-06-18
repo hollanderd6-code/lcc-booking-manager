@@ -1324,6 +1324,45 @@ function openDrawer(userId) {
       <div class="drawer-row"><span class="drawer-row-label">Renouvellement</span><span class="drawer-row-value">${renewal}</span></div>
     </div>
 
+    <div class="drawer-section">
+      <div class="drawer-section-title"><i class="fas fa-gift" style="margin-right:5px;"></i>Offrir des jours</div>
+      <div class="form-row" style="display:flex;gap:8px;align-items:flex-end;">
+        <div style="flex:1;">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;">Nombre de jours</label>
+          <input id="extendDaysInput" type="number" value="30" min="-365" max="365" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);box-sizing:border-box;">
+        </div>
+        <button class="action-btn success" style="height:38px;" onclick="extendTrial('${c.id}')"><i class="fas fa-calendar-plus"></i> Offrir</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Prolonge la date de fin de trial (et l'échéance d'abonnement si actif). Un nombre négatif raccourcit.</div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title"><i class="fas fa-exchange-alt" style="margin-right:5px;"></i>Changer l'abonnement</div>
+      <div class="form-row">
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;">Plan</label>
+        <select id="planSelect" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);">
+          <option value="trial" ${c.plan_type === 'trial' ? 'selected' : ''}>Trial</option>
+          <option value="pro" ${c.plan_type === 'pro' ? 'selected' : ''}>Pro</option>
+          <option value="agence_monthly" ${c.plan_type === 'agence_monthly' ? 'selected' : ''}>Agence Monthly</option>
+          <option value="agence_annual" ${c.plan_type === 'agence_annual' ? 'selected' : ''}>Agence Annual</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;">Statut</label>
+        <select id="statusSelect" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);">
+          <option value="trial" ${c.subscription_status === 'trial' ? 'selected' : ''}>Trial</option>
+          <option value="active" ${c.subscription_status === 'active' ? 'selected' : ''}>Actif</option>
+          <option value="expired" ${c.subscription_status === 'expired' ? 'selected' : ''}>Expiré</option>
+          <option value="blocked" ${c.subscription_status === 'blocked' ? 'selected' : ''}>Bloqué</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;">Montant (€/mois)</label>
+        <input id="amountInput" type="number" step="0.01" min="0" value="${c.plan_amount != null ? parseFloat(c.plan_amount) : 0}" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);box-sizing:border-box;">
+      </div>
+      <button class="action-btn" style="width:100%;justify-content:center;background:var(--accent,#1A7A5E);color:white;" onclick="changePlan('${c.id}')"><i class="fas fa-check"></i> Appliquer les changements</button>
+    </div>
+
     <div class="drawer-actions">
       ${blocked
         ? `<button class="action-btn success" onclick="toggleBlock('${c.id}', false);closeDrawer()"><i class="fas fa-unlock"></i> Débloquer</button>`
@@ -1356,6 +1395,61 @@ async function toggleBlock(userId, block) {
     updateClientStats();
     filterClients();
     showToast(`Compte ${block ? 'bloqué' : 'débloqué'} avec succès.`);
+  } catch(e) {
+    showToast('Erreur lors de la mise à jour.', 'error');
+  }
+}
+
+async function extendTrial(userId) {
+  const days = parseInt(document.getElementById('extendDaysInput').value, 10);
+  if (!days || isNaN(days)) { showToast('Indiquez un nombre de jours valide.', 'error'); return; }
+  const label = days > 0 ? `offrir ${days} jour${days>1?'s':''}` : `retirer ${Math.abs(days)} jour${Math.abs(days)>1?'s':''}`;
+  if (!confirm(`Confirmer : ${label} à ce client ?`)) return;
+  try {
+    const res = await fetch(`${API}/api/admin/clients/${userId}/extend-trial`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ days })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    const idx = allClients.findIndex(c => c.id === userId);
+    if (idx !== -1) {
+      allClients[idx].trial_end_date = data.trial_end_date;
+      if (data.current_period_end != null) allClients[idx].current_period_end = data.current_period_end;
+      allClients[idx].subscription_status = data.status;
+    }
+    updateClientStats();
+    filterClients();
+    showToast(`${days > 0 ? days + ' jours offerts' : Math.abs(days) + ' jours retirés'}.`);
+    openDrawer(userId);
+  } catch(e) {
+    showToast(e.message || 'Erreur lors de la mise à jour.', 'error');
+  }
+}
+
+async function changePlan(userId) {
+  const planType = document.getElementById('planSelect').value;
+  const status = document.getElementById('statusSelect').value;
+  const planAmount = parseFloat(document.getElementById('amountInput').value);
+  if (!confirm(`Appliquer : plan "${planType}", statut "${status}", ${isNaN(planAmount) ? '—' : planAmount.toFixed(2)+' €/mois'} ?`)) return;
+  try {
+    const res = await fetch(`${API}/api/admin/clients/${userId}/plan`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ planType, status, planAmount: isNaN(planAmount) ? null : planAmount })
+    });
+    if (!res.ok) throw new Error();
+    const idx = allClients.findIndex(c => c.id === userId);
+    if (idx !== -1) {
+      allClients[idx].plan_type = planType;
+      allClients[idx].subscription_status = status;
+      if (!isNaN(planAmount)) allClients[idx].plan_amount = planAmount;
+    }
+    updateClientStats();
+    filterClients();
+    showToast('Abonnement mis à jour.');
+    openDrawer(userId);
   } catch(e) {
     showToast('Erreur lors de la mise à jour.', 'error');
   }
