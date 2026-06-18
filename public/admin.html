@@ -648,6 +648,9 @@
     <button class="nav-tab" onclick="showSection('announcements', this)">
       <i class="fas fa-bullhorn"></i> Annonces
     </button>
+    <button class="nav-tab" onclick="showSection('promo', this)">
+      <i class="fas fa-gift"></i> Promo
+    </button>
     <button class="nav-tab" id="navSupport" onclick="showSection('support', this)">
       <i class="fas fa-headset"></i> Support <span id="supportUnreadBadge" style="display:none;background:#EF4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:4px;">0</span>
     </button>
@@ -893,6 +896,91 @@
       </div>
     </div>
 
+    <!-- ── PROMO & PARRAINAGE ── -->
+    <div class="section-panel" id="panel-promo">
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">Codes <em>promo</em> & parrainage</h1>
+          <p class="section-subtitle">Créez des codes promotionnels et suivez les parrainages</p>
+        </div>
+      </div>
+
+      <!-- Stats rapides -->
+      <div style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;" id="promoStats">
+        <div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:16px 20px;flex:1;min-width:140px;">
+          <div style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;">Codes actifs</div>
+          <div style="font-size:28px;font-weight:800;color:#0D1117;margin-top:4px;" id="statActiveCodes">—</div>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:16px 20px;flex:1;min-width:140px;">
+          <div style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;">Utilisations totales</div>
+          <div style="font-size:28px;font-weight:800;color:#1A7A5E;margin-top:4px;" id="statTotalUses">—</div>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:16px 20px;flex:1;min-width:140px;">
+          <div style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;">Parrainages</div>
+          <div style="font-size:28px;font-weight:800;color:#7c3aed;margin-top:4px;" id="statReferrals">—</div>
+        </div>
+      </div>
+
+      <!-- Formulaire création -->
+      <div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:24px;margin-bottom:24px;">
+        <h3 style="font-size:15px;font-weight:700;margin:0 0 16px;color:#0D1117;">Créer un code promo</h3>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div style="flex:2;min-width:160px;">
+              <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:5px;">Code *</label>
+              <input id="promoCode" type="text" placeholder="FACEBOOK2026" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#FAFAF8;color:#0D1117;box-sizing:border-box;text-transform:uppercase;">
+            </div>
+            <div style="flex:1;min-width:100px;">
+              <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:5px;">Jours d'essai</label>
+              <input id="promoDays" type="number" value="30" min="1" max="365" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#FAFAF8;color:#0D1117;box-sizing:border-box;">
+            </div>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:5px;">Description <span style="font-weight:400;color:#9CA3AF;">(optionnel — visible par le client)</span></label>
+            <input id="promoDesc" type="text" placeholder="Offre spéciale groupes Facebook — 30 jours d'essai" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#FAFAF8;color:#0D1117;box-sizing:border-box;">
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:120px;">
+              <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:5px;">Max utilisations <span style="font-weight:400;color:#9CA3AF;">(vide = illimité)</span></label>
+              <input id="promoMax" type="number" placeholder="∞" min="1" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#FAFAF8;color:#0D1117;box-sizing:border-box;">
+            </div>
+            <div style="flex:1;min-width:140px;">
+              <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:5px;">Expire le <span style="font-weight:400;color:#9CA3AF;">(vide = jamais)</span></label>
+              <input id="promoExpires" type="date" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#FAFAF8;color:#0D1117;box-sizing:border-box;">
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button onclick="adminCreatePromo()" style="background:#1A7A5E;color:white;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:7px;">
+              <i class="fas fa-plus"></i> Créer le code
+            </button>
+            <span id="promoCreateMsg" style="font-size:12px;min-height:16px;"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Liste des codes -->
+      <div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:24px;">
+        <h3 style="font-size:15px;font-weight:700;margin:0 0 16px;color:#0D1117;">Codes existants</h3>
+        <div class="data-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Jours</th>
+                <th>Description</th>
+                <th>Utilisations</th>
+                <th>Expiration</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody id="promoTableBody">
+              <tr><td colspan="6" style="text-align:center;color:#9CA3AF;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ── SUPPORT ── -->
     <div class="section-panel" id="panel-support">
       <div class="section-header" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
@@ -1071,6 +1159,7 @@ function showSection(name, btn) {
   if (name === 'revenue') loadRevenue();
   if (name === 'subscriptions') loadSubscriptions();
   if (name === 'roadmap') loadRoadmap();
+  if (name === 'promo') adminLoadPromoCodes();
 }
 
 // ══════════════════════════════════════
@@ -1572,6 +1661,96 @@ function getStatusPill(status) {
   };
   const [cls, label] = map[status] || ['pill-grey', status || '—'];
   return `<span class="pill ${cls}">${label}</span>`;
+}
+
+// ══════════════════════════════════════
+// 🎟️ CODES PROMO & PARRAINAGE
+// ══════════════════════════════════════
+
+async function adminLoadPromoCodes() {
+  const tbody = document.getElementById('promoTableBody');
+  try {
+    const r = await fetch(API + '/api/promo/list', {
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    const d = await r.json();
+    const codes = d.promoCodes || [];
+
+    // Stats
+    const active = codes.filter(c => c.active && (!c.expires_at || new Date(c.expires_at) > new Date()));
+    const totalUses = codes.reduce((s, c) => s + (c.uses_count || 0), 0);
+    document.getElementById('statActiveCodes').textContent = active.length;
+    document.getElementById('statTotalUses').textContent = totalUses;
+
+    // Stats parrainage
+    try {
+      const rr = await fetch(API + '/api/referral/stats', { headers: { Authorization: 'Bearer ' + adminToken } });
+      const rd = await rr.json();
+      document.getElementById('statReferrals').textContent = rd.totalReferred || 0;
+    } catch { document.getElementById('statReferrals').textContent = '—'; }
+
+    if (codes.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#9CA3AF;">Aucun code promo</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = codes.map(p => {
+      const expired = p.expires_at && new Date(p.expires_at) < new Date();
+      const exhausted = p.max_uses && p.uses_count >= p.max_uses;
+      const isActive = p.active && !expired && !exhausted;
+      const statusLabel = !p.active ? 'Désactivé' : expired ? 'Expiré' : exhausted ? 'Épuisé' : 'Actif';
+      const statusCls = isActive ? 'pill-green' : 'pill-amber';
+      const expStr = p.expires_at ? new Date(p.expires_at).toLocaleDateString('fr-FR') : '—';
+      const usesStr = p.max_uses ? `${p.uses_count} / ${p.max_uses}` : `${p.uses_count}`;
+      return `<tr>
+        <td><strong style="font-family:monospace;letter-spacing:.5px;">${p.code}</strong></td>
+        <td>${p.value_days}j</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6B7280;font-size:12px;">${p.description || '—'}</td>
+        <td>${usesStr}</td>
+        <td>${expStr}</td>
+        <td><span class="pill ${statusCls}">${statusLabel}</span></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" style="color:#EF4444;">Erreur : ${e.message}</td></tr>`;
+  }
+}
+
+async function adminCreatePromo() {
+  const code = (document.getElementById('promoCode').value || '').trim().toUpperCase();
+  const valueDays = parseInt(document.getElementById('promoDays').value) || 30;
+  const description = document.getElementById('promoDesc').value.trim() || null;
+  const maxUses = parseInt(document.getElementById('promoMax').value) || null;
+  const expiresInput = document.getElementById('promoExpires').value;
+  const expiresAt = expiresInput ? new Date(expiresInput + 'T23:59:59').toISOString() : null;
+  const msg = document.getElementById('promoCreateMsg');
+
+  if (!code) { msg.style.color = '#EF4444'; msg.textContent = 'Code obligatoire'; return; }
+
+  try {
+    const r = await fetch(API + '/api/promo/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ code, description, valueDays, maxUses, expiresAt })
+    });
+    const d = await r.json();
+    if (d.success) {
+      msg.style.color = '#1A7A5E';
+      msg.textContent = `✅ Code ${code} créé (${valueDays}j)`;
+      document.getElementById('promoCode').value = '';
+      document.getElementById('promoDesc').value = '';
+      document.getElementById('promoMax').value = '';
+      document.getElementById('promoExpires').value = '';
+      adminLoadPromoCodes();
+      setTimeout(() => { msg.textContent = ''; }, 3000);
+    } else {
+      msg.style.color = '#EF4444';
+      msg.textContent = '❌ ' + (d.error || 'Erreur');
+    }
+  } catch(e) {
+    msg.style.color = '#EF4444';
+    msg.textContent = '❌ Erreur réseau';
+  }
 }
 </script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
