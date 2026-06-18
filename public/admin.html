@@ -654,6 +654,9 @@
     <button class="nav-tab" onclick="showSection('logs', this)">
       <i class="fas fa-history"></i> Logs
     </button>
+    <button class="nav-tab" onclick="showSection('bugs', this)">
+      <i class="fas fa-bug"></i> Bugs <span id="bugsUnresolvedBadge" style="display:none;background:#EF4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:4px;">0</span>
+    </button>
     <button class="nav-tab" id="navSupport" onclick="showSection('support', this)">
       <i class="fas fa-headset"></i> Support <span id="supportUnreadBadge" style="display:none;background:#EF4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:4px;">0</span>
     </button>
@@ -1058,6 +1061,39 @@
       </div>
     </div>
 
+    <!-- ── BUGS ── -->
+    <div class="section-panel" id="panel-bugs">
+      <div class="section-header">
+        <h1 class="section-title">Erreurs <em>serveur</em></h1>
+        <p class="section-subtitle">Exceptions et erreurs 500 capturées automatiquement sur Render — pour détecter et corriger rapidement.</p>
+      </div>
+      <div class="toolbar">
+        <select class="filter-select" id="bugsStatusFilter" onchange="loadErrorLogs()">
+          <option value="false">Non résolues</option>
+          <option value="true">Résolues</option>
+          <option value="all">Toutes</option>
+        </select>
+        <button class="action-btn" onclick="loadErrorLogs()" style="white-space:nowrap;"><i class="fas fa-rotate"></i> Actualiser</button>
+      </div>
+      <div class="data-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Vue la 1ère fois</th>
+              <th>Vue la dernière fois</th>
+              <th>Occurrences</th>
+              <th>Route</th>
+              <th>Message</th>
+              <th style="width:100px;">Statut</th>
+            </tr>
+          </thead>
+          <tbody id="bugsTableBody">
+            <tr><td colspan="6" class="empty-state"><i class="fas fa-circle-notch fa-spin"></i>Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- ── SUPPORT ── -->
     <div class="section-panel" id="panel-support">
       <div class="section-header" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
@@ -1218,6 +1254,7 @@ function showApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appScreen').style.display = 'block';
   loadClients();
+  updateBugsBadge();
 }
 
 // Au chargement : si token en session, aller direct à l'app
@@ -1238,6 +1275,7 @@ function showSection(name, btn) {
   if (name === 'roadmap') loadRoadmap();
   if (name === 'promo') adminLoadPromoCodes();
   if (name === 'logs') loadActionsLog();
+  if (name === 'bugs') loadErrorLogs();
 }
 
 // ══════════════════════════════════════
@@ -1659,6 +1697,96 @@ function renderActionsLog() {
       <td style="font-size:12px;color:var(--muted);">${detail}</td>
     </tr>`;
   }).join('');
+}
+
+// ══════════════════════════════════════
+// BUGS — erreurs serveur capturées automatiquement
+// ══════════════════════════════════════
+let allErrorLogs = [];
+
+async function loadErrorLogs() {
+  const tbody = document.getElementById('bugsTableBody');
+  tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><i class="fas fa-circle-notch fa-spin"></i>Chargement…</td></tr>`;
+  try {
+    const filter = document.getElementById('bugsStatusFilter').value;
+    let url = `${API}/api/admin/error-logs?limit=300`;
+    if (filter !== 'all') url += `&resolved=${filter}`;
+
+    const res = await fetch(url, { headers: { Authorization: 'Bearer ' + adminToken } });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    allErrorLogs = data.errors || [];
+    renderErrorLogs();
+    updateBugsBadge();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><i class="fas fa-exclamation-triangle"></i>Erreur de chargement.</td></tr>`;
+  }
+}
+
+async function updateBugsBadge() {
+  try {
+    const res = await fetch(`${API}/api/admin/error-logs?resolved=false&limit=1000`, {
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const count = (data.errors || []).length;
+    const badge = document.getElementById('bugsUnresolvedBadge');
+    if (count > 0) { badge.textContent = count; badge.style.display = 'inline-block'; }
+    else { badge.style.display = 'none'; }
+  } catch(e) {}
+}
+
+function renderErrorLogs() {
+  const tbody = document.getElementById('bugsTableBody');
+  if (!allErrorLogs.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><i class="fas fa-check-circle"></i>Aucune erreur — tout va bien</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = allErrorLogs.map(err => {
+    const first = new Date(err.first_seen_at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const last = new Date(err.last_seen_at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const occBadge = err.occurrences > 1
+      ? `<span style="background:var(--danger-bg);color:var(--danger);font-weight:700;padding:2px 8px;border-radius:999px;font-size:12px;">${err.occurrences}×</span>`
+      : `<span style="color:var(--muted);font-size:12px;">1×</span>`;
+    const statusBtn = err.resolved
+      ? `<button class="action-btn" onclick="event.stopPropagation();resolveErrorLog(${err.id}, false)"><i class="fas fa-rotate-left"></i> Ré-ouvrir</button>`
+      : `<button class="action-btn success" onclick="event.stopPropagation();resolveErrorLog(${err.id}, true)"><i class="fas fa-check"></i> Résolu</button>`;
+
+    return `<tr class="clickable" onclick="toggleErrorStack(${err.id})">
+      <td style="white-space:nowrap;font-size:12px;color:var(--muted);">${first}</td>
+      <td style="white-space:nowrap;font-size:12px;color:var(--muted);">${last}</td>
+      <td>${occBadge}</td>
+      <td style="font-size:12px;font-family:monospace;">${err.method || ''} ${err.route || '—'}</td>
+      <td style="font-size:13px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(err.message||'').replace(/"/g,'&quot;')}">${err.message || '—'}</td>
+      <td onclick="event.stopPropagation();">${statusBtn}</td>
+    </tr>
+    <tr id="stack-${err.id}" style="display:none;">
+      <td colspan="6" style="background:var(--bg);padding:12px 16px;">
+        <pre style="font-size:11px;color:var(--muted);white-space:pre-wrap;word-break:break-all;margin:0;">${(err.stack || 'Pas de stack trace disponible').replace(/</g,'&lt;')}</pre>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleErrorStack(id) {
+  const row = document.getElementById(`stack-${id}`);
+  if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
+async function resolveErrorLog(id, resolved) {
+  try {
+    const res = await fetch(`${API}/api/admin/error-logs/${id}/resolve`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ resolved })
+    });
+    if (!res.ok) throw new Error();
+    showToast(resolved ? 'Erreur marquée comme résolue.' : 'Erreur ré-ouverte.');
+    loadErrorLogs();
+  } catch(e) {
+    showToast('Erreur lors de la mise à jour.', 'error');
+  }
 }
 
 function closeDrawer() {

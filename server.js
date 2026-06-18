@@ -600,6 +600,69 @@ function bhPush(opts){
   }
   return { title: title, body: body, data: data };
 }
+
+// ── Logging des erreurs serveur (500 / exceptions non gérées) ──
+// Dédoublonne par fingerprint (message + route), incrémente le compteur si déjà vu,
+// et alerte les admins par push uniquement à la première occurrence (pour éviter le spam
+// si une même erreur se répète en boucle, ex: un cron qui échoue toutes les minutes).
+const ADMIN_USER_IDS_FOR_ALERTS = ['u_mmtl7m45', 'u_mpzi6aid']; // Charles, Arnaud
+
+function _errorFingerprint(method, route, message) {
+  // On normalise les ids dynamiques dans la route (ex: /api/reservations/abc123 -> /api/reservations/:id)
+  // pour que la même erreur sur des ressources différentes se regroupe bien.
+  const normalizedRoute = String(route || '').replace(/\/[A-Za-z0-9_-]{6,}(?=\/|$)/g, '/:id');
+  const base = `${method || ''} ${normalizedRoute} :: ${String(message || '').slice(0, 200)}`;
+  return crypto.createHash('sha256').update(base).digest('hex');
+}
+
+async function logServerError(err, req) {
+  try {
+    const method = req && req.method;
+    const route = req && (req.originalUrl || req.url);
+    const message = (err && err.message) || String(err);
+    const stack = err && err.stack ? String(err.stack).slice(0, 4000) : null;
+    const userId = req && req.user && req.user.id ? req.user.id : null;
+    const statusCode = (err && err.statusCode) || 500;
+    const fingerprint = _errorFingerprint(method, route, message);
+
+    const result = await pool.query(
+      `INSERT INTO error_logs (fingerprint, method, route, message, stack, user_id, status_code)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (fingerprint) DO UPDATE SET
+         occurrences = error_logs.occurrences + 1,
+         last_seen_at = NOW(),
+         stack = EXCLUDED.stack,
+         user_id = EXCLUDED.user_id
+       RETURNING occurrences`,
+      [fingerprint, method, route, message, stack, userId, statusCode]
+    );
+
+    const occurrences = result.rows[0] ? result.rows[0].occurrences : 1;
+
+    // Alerte push uniquement à la 1ère occurrence (ou tous les x100 si ça continue de se répéter,
+    // pour ne pas perdre totalement la trace d'une erreur récurrente non corrigée)
+    if (occurrences === 1 || occurrences % 100 === 0) {
+      const tokensRes = await pool.query(
+        `SELECT fcm_token FROM user_fcm_tokens WHERE user_id = ANY($1::text[]) AND fcm_token IS NOT NULL`,
+        [ADMIN_USER_IDS_FOR_ALERTS]
+      );
+      const tokens = tokensRes.rows.map(r => r.fcm_token).filter(Boolean);
+      if (tokens.length) {
+        const push = bhPush({
+          emoji: '🐛',
+          event: occurrences === 1 ? 'Nouvelle erreur serveur' : `Erreur répétée (${occurrences}x)`,
+          context: route || '',
+          parts: [message],
+          data: { type: 'server_error', fingerprint }
+        });
+        await sendNotificationToMultipleLogged(tokens, push.title, push.body, push.data);
+      }
+    }
+  } catch (logErr) {
+    // Le logging d'erreur ne doit jamais lui-même faire planter la requête en cours
+    console.error('logServerError (échec du logging):', logErr.message);
+  }
+}
 /**
  * Nettoie le nom du voyageur extrait d'iCal
  */
@@ -5017,6 +5080,27 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
 
 // Middleware
 app.use(cors());
+
+// ── Capture globale des erreurs serveur (500) ──
+// Wrappe res.status pour intercepter tout code 500 envoyé par n'importe quelle route,
+// sans avoir à modifier les centaines de catch(e) existants. Le logging est best-effort
+// (jamais bloquant) et se fait après l'envoi de la réponse pour ne pas ralentir le client.
+app.use((req, res, next) => {
+  const originalStatus = res.status.bind(res);
+  res.status = function(code) {
+    if (code === 500 && !res._bhErrorLogged) {
+      res._bhErrorLogged = true;
+      const originalJson = res.json.bind(res);
+      res.json = function(body) {
+        const message = body && (body.error || body.message);
+        logServerError({ message: message || 'Erreur 500 sans message', statusCode: 500 }, req);
+        return originalJson(body);
+      };
+    }
+    return originalStatus(code);
+  };
+  next();
+});
 
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
@@ -30114,6 +30198,53 @@ app.post('/api/admin/clients/:id/impersonate', authenticateToken, async (req, re
   }
 });
 
+// GET /api/admin/error-logs — liste des erreurs serveur capturées
+app.get('/api/admin/error-logs', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user || !ADMIN_EMAILS.includes(user.email)) return res.status(403).json({ error: 'Accès refusé' });
+
+    const { resolved, limit } = req.query;
+    const lim = Math.min(parseInt(limit, 10) || 200, 1000);
+
+    let query = `SELECT * FROM error_logs`;
+    const params = [];
+    if (resolved === 'true' || resolved === 'false') {
+      params.push(resolved === 'true');
+      query += ` WHERE resolved = $${params.length}`;
+    }
+    params.push(lim);
+    query += ` ORDER BY last_seen_at DESC LIMIT $${params.length}`;
+
+    const result = await pool.query(query, params);
+    res.json({ errors: result.rows });
+  } catch(e) {
+    console.error('GET /api/admin/error-logs:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/admin/error-logs/:id/resolve — marquer une erreur comme traitée
+app.put('/api/admin/error-logs/:id/resolve', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user || !ADMIN_EMAILS.includes(user.email)) return res.status(403).json({ error: 'Accès refusé' });
+
+    const { id } = req.params;
+    const { resolved } = req.body; // true pour marquer résolu, false pour ré-ouvrir
+
+    await pool.query(
+      `UPDATE error_logs SET resolved = $1, resolved_at = $2, resolved_by = $3 WHERE id = $4`,
+      [!!resolved, resolved ? new Date() : null, resolved ? user.email : null, id]
+    );
+
+    res.json({ success: true });
+  } catch(e) {
+    console.error('PUT /api/admin/error-logs/:id/resolve:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ADMIN — GET toutes les suggestions
 app.get('/api/admin/roadmap', authenticateToken, async (req, res) => {
   try {
@@ -37464,4 +37595,16 @@ app.delete('/api/guest/promo/:id', authenticateToken, async (req, res) => {
 // ── Servir l'app Guest (catch-all SPA) ───────────────────────
 app.get('/guest-app/public', (req, res) => {
   res.sendFile(path.join(__dirname, 'guest-app', 'public', 'index.html'));
+});
+
+// ── Filet de sécurité : erreurs vraiment non gérées (hors d'une requête HTTP, ex: crons, promesses oubliées) ──
+// Le process continue de tourner (on ne fait pas process.exit) : ce n'est qu'un logging,
+// pas une stratégie de redémarrage. Render redémarre déjà le service en cas de crash réel.
+process.on('uncaughtException', (err) => {
+  console.error('uncaughtException:', err);
+  logServerError(err, null);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('unhandledRejection:', reason);
+  logServerError(reason instanceof Error ? reason : new Error(String(reason)), null);
 });
