@@ -30243,6 +30243,7 @@ app.get('/api/admin/impersonation-requests/:id/status', authenticateToken, async
       await pool.query(`UPDATE impersonation_requests SET status = 'expired' WHERE id = $1`, [id]);
       reqRow.status = 'expired';
     }
+    console.log(`🔐 Status poll request #${id}: status=${reqRow.status}, hasToken=${!!reqRow.token}, consumed=${reqRow.token_consumed}`);
 
     if (reqRow.status === 'approved' && reqRow.token && !reqRow.token_consumed) {
       // On consomme le token : il ne sera renvoyé qu'une seule fois à l'admin
