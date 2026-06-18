@@ -30269,6 +30269,11 @@ app.get('/api/impersonation/pending', authenticateToken, async (req, res) => {
        ORDER BY created_at DESC LIMIT 1`,
       [user.id]
     );
+    if (result.rows.length > 0) {
+      console.log(`🔐 Pending impersonation found for ${user.email} (${user.id}): request #${result.rows[0].id}`);
+    } else {
+      console.log(`🔐 Impersonation poll by ${user.email} (${user.id}) → aucune demande pending`);
+    }
     res.json({ request: result.rows[0] || null });
   } catch(e) {
     console.error('GET /api/impersonation/pending:', e);
