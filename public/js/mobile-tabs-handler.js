@@ -136,7 +136,7 @@
 
     if (!isSubAccount) {
       var betaBadge = '<span style="margin-left:auto;font-size:10px;font-weight:700;background:rgba(245,158,11,.15);color:#B45309;border:1px solid rgba(245,158,11,.3);padding:1px 7px;border-radius:20px;">Bêta</span>';
-      buttons += item('pricing', 'Prix dynamique', "window.location.href='/dynamic-pricing.html'", betaBadge);
+      buttons += item('pricing', 'BoostPrice', "window.location.href='/dynamic-pricing.html'", betaBadge);
       buttons += hr;
     }
 
