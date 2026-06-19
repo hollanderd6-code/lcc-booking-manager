@@ -82,8 +82,41 @@ body { font-family: "DM Sans", sans-serif; background: #f8f7f4; color: var(--ink
   .tuto-intro { flex-direction: column; padding: 20px; }
 }
 </style>
+<style>
+/* === Correctifs responsive + navigation (ajout BH) === */
+.tuto-topbar{position:sticky;top:0;z-index:50;background:#0D1117;display:flex;align-items:center;padding:12px 20px}
+.tuto-topbar .tuto-back{display:inline-flex;align-items:center;gap:8px;color:#fff;text-decoration:none;font-family:"DM Sans",sans-serif;font-size:14px;font-weight:600;padding:8px 16px;border:1px solid rgba(255,255,255,.18);border-radius:100px;transition:background .15s}
+.tuto-topbar .tuto-back:hover{background:rgba(255,255,255,.12)}
+.tuto-back-arrow{font-size:16px;line-height:1}
+
+/* Conteneur de contenu (la classe existait mais n'etait jamais appliquee) */
+.tuto-body{max-width:820px;margin:0 auto;padding:40px 20px 96px}
+
+/* Captures d'ecran : centrees, jamais geantes, annotations SVG alignees */
+.annot-wrap{display:block;width:-webkit-fit-content;width:fit-content;max-width:100%;margin:0 auto 22px}
+.annot-wrap img{display:block;width:auto;height:auto;max-width:100%;max-height:74vh;border-radius:14px}
+
+/* CTA de fin : bouton retour qui marche */
+.tuto-cta{display:flex;flex-direction:column;align-items:center;gap:12px}
+.tuto-cta a{margin:0}
+.tuto-cta .tuto-cta-app{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.55)}
+.tuto-cta .tuto-cta-app:hover{background:rgba(255,255,255,.1)}
+
+@media (max-width:600px){
+  .tuto-topbar{padding:10px 14px}
+  .tuto-topbar .tuto-back{font-size:13px;padding:7px 13px}
+  .tuto-body{padding:24px 14px 72px}
+  .annot-wrap{margin-bottom:18px}
+  .annot-wrap img{max-height:68vh}
+  .tuto-cta{padding:28px 20px}
+}
+</style>
 </head>
 <body>
+<div class="tuto-topbar">
+  <a href="help.html" class="tuto-back"><span class="tuto-back-arrow">&larr;</span> Retour aux guides</a>
+</div>
+<div class="tuto-body">
 
 <!-- EDIT TOOLBAR -->
 
@@ -173,7 +206,8 @@ body { font-family: "DM Sans", sans-serif; background: #f8f7f4; color: var(--ink
   <div class="tuto-cta">
     <h3>Prêt à essayer ?</h3>
     <p>Ouvrez votre tableau de bord et envoyez votre premier lien BHGuest en moins de 2 minutes.</p>
-    <a href="https://app.boostinghost.fr">Accéder à Boostinghost →</a>
+    <a href="help.html" class="tuto-cta-back"><span class="tuto-back-arrow">&larr;</span> Retour aux guides</a>
+    <a href="/app.html" class="tuto-cta-app">Accéder à Boostinghost →</a>
   </div>
 
 </div>
