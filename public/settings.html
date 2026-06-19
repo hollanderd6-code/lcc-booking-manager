@@ -3944,63 +3944,15 @@ document.addEventListener('DOMContentLoaded', function() {
   window.addEventListener('resize', applyGrid);
 });
 
-// ── Toggle vue grille/liste (définition fiable, écrase celle de settings.js) ──
-// Réinitialisation unique : efface une préférence "list" résiduelle des tests, défaut = grille.
-try {
-  if (!localStorage.getItem('bh_property_view_reset_v2')) {
-    localStorage.setItem('bh_property_view', 'grid');
-    localStorage.setItem('bh_property_view_reset_v2', '1');
-  }
-} catch(e) {}
-
-window.setPropertyView = function(mode) {
-  var grid = document.getElementById('propertiesGrid');
-  var btnGrid = document.getElementById('btnViewGrid');
-  var btnList = document.getElementById('btnViewList');
-  if (!grid) return;
-  var isList = mode === 'list';
-  grid.classList.toggle('list-view', isList);
-  if (btnGrid) btnGrid.classList.toggle('active', !isList);
-  if (btnList) btnList.classList.toggle('active', isList);
-  // Appliquer immédiatement le bon display (sans attendre un re-render)
-  if (isList) {
-    // Vue liste : laisser la classe .list-view + CSS gérer
-    grid.style.removeProperty('display');
-    grid.style.removeProperty('grid-template-columns');
-    grid.style.removeProperty('flex-direction');
-  } else if (window.innerWidth <= 768) {
-    // Vue grille mobile : comportement d'origine (liste verticale pleine largeur)
-    grid.style.removeProperty('grid-template-columns');
-    grid.style.setProperty('display', 'flex', 'important');
-    grid.style.setProperty('flex-direction', 'column', 'important');
-  } else {
-    grid.style.setProperty('display', 'grid', 'important');
-    grid.style.setProperty('grid-template-columns', 'repeat(3, minmax(0, 1fr))', 'important');
-  }
-  try { localStorage.setItem('bh_property_view', mode); } catch(e) {}
-};
-
 var _orig = window.renderProperties;
 if (typeof _orig === 'function') {
   window.renderProperties = function() {
     _orig.apply(this, arguments);
     var grid = document.getElementById('propertiesGrid');
     if (!grid) return;
-    // Restaurer la vue choisie (persistée) après chaque re-render
-    var savedView = 'grid';
-    try { savedView = localStorage.getItem('bh_property_view') || 'grid'; } catch(e) {}
-    var isList = savedView === 'list';
-    grid.classList.toggle('list-view', isList);
-    var btnGrid = document.getElementById('btnViewGrid');
-    var btnList = document.getElementById('btnViewList');
-    if (btnGrid) btnGrid.classList.toggle('active', !isList);
-    if (btnList) btnList.classList.toggle('active', isList);
-    if (isList) {
-      grid.style.removeProperty('display');
-      grid.style.removeProperty('grid-template-columns');
-      grid.style.removeProperty('flex-direction');
-    } else if (window.innerWidth <= 768) {
-      // Vue grille mobile : comportement d'origine (flex colonne)
+    // Ne pas forcer le flex si la vue liste est active : on respecte le choix de l'utilisateur.
+    if (grid.classList.contains('list-view')) return;
+    if (window.innerWidth <= 768) {
       grid.style.removeProperty('grid-template-columns');
       grid.style.setProperty('display', 'flex', 'important');
       grid.style.setProperty('flex-direction', 'column', 'important');
@@ -4010,6 +3962,35 @@ if (typeof _orig === 'function') {
     }
   };
 }
+
+// ── Fix bouton toggle vue : nettoyer les inline-styles au clic pour que la vue choisie
+//    s'applique dès le 1er clic (sans redéfinir setPropertyView de settings.js). ──
+(function() {
+  function syncGridStyles() {
+    var grid = document.getElementById('propertiesGrid');
+    if (!grid) return;
+    if (grid.classList.contains('list-view')) {
+      // Vue liste : retirer les inline-styles qui masquent le CSS .list-view
+      grid.style.removeProperty('display');
+      grid.style.removeProperty('flex-direction');
+      grid.style.removeProperty('grid-template-columns');
+    } else if (window.innerWidth <= 768) {
+      // Vue grille mobile : grandes cartes empilées
+      grid.style.removeProperty('grid-template-columns');
+      grid.style.setProperty('display', 'flex', 'important');
+      grid.style.setProperty('flex-direction', 'column', 'important');
+    } else {
+      grid.style.setProperty('display', 'grid', 'important');
+      grid.style.setProperty('grid-template-columns', 'repeat(3, minmax(0, 1fr))', 'important');
+    }
+  }
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('#btnViewGrid, #btnViewList');
+    if (!btn) return;
+    // Laisser setPropertyView (settings.js) basculer la classe, puis re-synchroniser
+    setTimeout(syncGridStyles, 0);
+  });
+})();
 
 // ── Rendre la photo cliquable + supprimer le bouton Gérer ──
 (function() {
