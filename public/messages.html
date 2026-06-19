@@ -5482,6 +5482,14 @@ window.loadSmsLogs = async function loadSmsLogs() {
       }
     }
 
+    // Aperçu de la date du jour dans le champ (iOS laisse les input date vides en blanc).
+    // On remplit la valeur visuellement SANS déclencher applySmsLogsFilters → la liste reste complète.
+    const smsDateEl = document.getElementById('smsLogsFilterDate');
+    if (smsDateEl && !smsDateEl.value) {
+      const t = new Date();
+      smsDateEl.value = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+    }
+
     renderSmsLogs(_allSmsLogs);
   } catch(e) {
     list.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:16px;">Erreur de chargement</div>';
