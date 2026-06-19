@@ -30341,6 +30341,8 @@ async function ensureHostQuestionsTable() {
         question        TEXT NOT NULL,
         guest_message   TEXT,
         language        TEXT DEFAULT 'fr',
+        kind            TEXT DEFAULT 'factual',
+        meta            JSONB,
         status          TEXT NOT NULL DEFAULT 'pending',
         answer_text     TEXT,
         created_at      TIMESTAMPTZ DEFAULT NOW(),
@@ -30349,6 +30351,8 @@ async function ensureHostQuestionsTable() {
       );
       CREATE INDEX IF NOT EXISTS idx_ai_host_questions_user_status
         ON ai_host_questions (user_id, status);
+      ALTER TABLE ai_host_questions ADD COLUMN IF NOT EXISTS kind TEXT DEFAULT 'factual';
+      ALTER TABLE ai_host_questions ADD COLUMN IF NOT EXISTS meta JSONB;
     `);
     console.log('✅ Table ai_host_questions prête');
   } catch (e) {
@@ -30363,7 +30367,7 @@ app.get('/api/host-questions/pending', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const agencyIds = await getAgencyUserIds(req, userId);
     const result = await pool.query(
-      `SELECT id, conversation_id, property_id, guest_name, question, language, created_at
+      `SELECT id, conversation_id, property_id, guest_name, question, language, kind, meta, created_at
        FROM ai_host_questions
        WHERE user_id = ANY($1::text[]) AND status = 'pending'
        ORDER BY created_at ASC`,

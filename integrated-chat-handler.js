@@ -843,16 +843,19 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             de: `Ich verstehe, dass Sie um ${reqLabel} abreisen möchten. Ich muss das mit dem Gastgeber klären, der sich in Kürze bei Ihnen meldet. Vielen Dank für Ihre Geduld! 🙏`,
           };
           await sendBotMessage(conversation.id, tooLateMsg[language] || tooLateMsg.fr, pool, io, channexId);
-          await notifyLateCheckout(conversation, pool, reqLabel, depLabel, false);
-          // Escalade pour décision manuelle (bot silencieux + notif prise en charge)
-          await pool.query(
-            `UPDATE conversations SET escalated = TRUE, escalated_at = NOW(), updated_at = NOW() WHERE id = $1`,
-            [conversation.id]
-          );
-          if (io) io.to(`user_${conversation.user_id}`).emit('conversation_escalated', {
-            conversationId: conversation.id, guestName: conversation.guest_name || 'Voyageur'
+          // Note interne orange : demande en attente de validation
+          await addInternalNote(conversation.id,
+            `⏳ Départ tardif à ${reqLabel} demandé (prévu ${depLabel}) — HORS tolérance. En attente de votre validation (Oui/Non).`,
+            pool, io);
+          // Question Oui/Non à l'hôte (modal + notif) ; sur Oui → note réservation auto
+          await createHostQuestion(conversation, pool, io, {
+            question: `Autoriser un départ tardif à ${reqLabel} ? (prévu ${depLabel})`,
+            guestMessage: message.message,
+            language,
+            kind: 'schedule',
+            meta: { type: 'late', reqLabel, refLabel: depLabel }
           });
-          console.log(`🔄 [HANDLER] Late checkout ${reqLabel} > tolérance → escalade`);
+          console.log(`🔄 [HANDLER] Late checkout ${reqLabel} > tolérance → question Oui/Non à l'hôte`);
           return false;
         } catch(e) {
           console.error('❌ [HANDLER] Erreur late checkout:', e.message);
@@ -923,15 +926,19 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             de: `Ich verstehe, dass Sie um ${reqLabel} ankommen möchten. Der Check-in ist normalerweise ab ${arrLabel}. Ich kläre mit dem Gastgeber, ob eine frühere Ankunft möglich ist, und melde mich bald. Danke! 🙏`,
           };
           await sendBotMessage(conversation.id, tooEarlyMsg[language] || tooEarlyMsg.fr, pool, io, channexId);
-          await notifyEarlyCheckin(conversation, pool, reqLabel, arrLabel, false);
-          await pool.query(
-            `UPDATE conversations SET escalated = TRUE, escalated_at = NOW(), updated_at = NOW() WHERE id = $1`,
-            [conversation.id]
-          );
-          if (io) io.to(`user_${conversation.user_id}`).emit('conversation_escalated', {
-            conversationId: conversation.id, guestName: conversation.guest_name || 'Voyageur'
+          // Note interne orange : demande en attente de validation
+          await addInternalNote(conversation.id,
+            `⏳ Arrivée anticipée à ${reqLabel} demandée (prévu ${arrLabel}) — HORS tolérance. En attente de votre validation (Oui/Non).`,
+            pool, io);
+          // Question Oui/Non à l'hôte (modal + notif) ; sur Oui → note réservation auto
+          await createHostQuestion(conversation, pool, io, {
+            question: `Autoriser une arrivée anticipée à ${reqLabel} ? (prévu ${arrLabel})`,
+            guestMessage: message.message,
+            language,
+            kind: 'schedule',
+            meta: { type: 'early', reqLabel, refLabel: arrLabel }
           });
-          console.log(`🔄 [HANDLER] Early check-in ${reqLabel} > tolérance → escalade`);
+          console.log(`🔄 [HANDLER] Early check-in ${reqLabel} > tolérance → question Oui/Non à l'hôte`);
           return false;
         } catch(e) {
           console.error('❌ [HANDLER] Erreur early check-in:', e.message);
@@ -1218,7 +1225,8 @@ async function escalateToOwner(conversation, pool, io, language, channexId = nul
 
 // Crée une question en attente + notifie l'hôte. Met l'IA en pause sur la conv
 // le temps de la réponse (réutilise le mécanisme d'escalade existant).
-async function createHostQuestion(conversation, pool, io, { question, guestMessage, language }) {
+async function createHostQuestion(conversation, pool, io, { question, guestMessage, language, kind, meta }) {
+  kind = kind || 'factual';
   // Nom du logement (pour la notif)
   let propName = null;
   if (conversation.property_id) {
@@ -1239,11 +1247,12 @@ async function createHostQuestion(conversation, pool, io, { question, guestMessa
     );
     const ins = await pool.query(
       `INSERT INTO ai_host_questions
-         (user_id, conversation_id, property_id, guest_name, question, guest_message, language, status, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', NOW(), NOW())
+         (user_id, conversation_id, property_id, guest_name, question, guest_message, language, kind, meta, status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', NOW(), NOW())
        RETURNING id`,
       [conversation.user_id, conversation.id, conversation.property_id || null,
-       conversation.guest_name || 'Voyageur', question, guestMessage || '', language || 'fr']
+       conversation.guest_name || 'Voyageur', question, guestMessage || '', language || 'fr',
+       kind, meta ? JSON.stringify(meta) : null]
     );
     questionId = ins.rows[0].id;
   } catch(e) {
@@ -1263,7 +1272,9 @@ async function createHostQuestion(conversation, pool, io, { question, guestMessa
   try {
     const { sendNotification } = require('./services/notifications-service');
     const guest = conversation.guest_name || 'Voyageur';
-    const title = `❓ Question voyageur — ${guest}${propName ? ' · ' + propName : ''}`;
+    const emoji = kind === 'schedule' ? '🕐' : '❓';
+    const label = kind === 'schedule' ? 'Demande horaire' : 'Question voyageur';
+    const title = `${emoji} ${label} — ${guest}${propName ? ' · ' + propName : ''}`;
     const body = question;
     const tokens = await pool.query(
       'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
@@ -1304,6 +1315,8 @@ async function relayHostAnswer(pool, io, { questionRow, answerType, freeText }) 
       `UPDATE ai_host_questions SET status = 'answered_self', answered_at = NOW(), updated_at = NOW() WHERE id = $1`,
       [questionRow.id]
     );
+    await addInternalNote(questionRow.conversation_id,
+      `📝 Demande prise en charge manuellement par l'hôte.`, pool, io);
     return { sent: false };
   }
 
@@ -1331,6 +1344,36 @@ async function relayHostAnswer(pool, io, { questionRow, answerType, freeText }) 
   }
 
   await sendBotMessage(questionRow.conversation_id, guestReply, pool, io, channexId);
+
+  // Cas demande horaire acceptée → écrire la note de réservation + note interne orange
+  let meta = questionRow.meta;
+  if (meta && typeof meta === 'string') { try { meta = JSON.parse(meta); } catch(e) { meta = null; } }
+  if (questionRow.kind === 'schedule' && positive && meta) {
+    try {
+      // Reconstituer un objet conversation minimal pour addArrivalNote
+      const convRow = await pool.query(
+        `SELECT id, user_id, property_id, channex_booking_id, reservation_start_date, guest_name
+         FROM conversations WHERE id = $1`,
+        [questionRow.conversation_id]
+      );
+      const conv = convRow.rows[0];
+      if (conv) {
+        const noteKind = meta.type === 'early' ? 'early' : 'late';
+        await addArrivalNote(conv, pool, meta.reqLabel, noteKind);
+        const txt = meta.type === 'early'
+          ? `🕐 Arrivée anticipée à ${meta.reqLabel} VALIDÉE par l'hôte (prévu ${meta.refLabel}, hors tolérance). Note ajoutée à la réservation.`
+          : `🕐 Départ tardif à ${meta.reqLabel} VALIDÉ par l'hôte (prévu ${meta.refLabel}, hors tolérance). Note ajoutée à la réservation.`;
+        await addInternalNote(questionRow.conversation_id, txt, pool, io);
+      }
+    } catch(e) {
+      console.error('❌ [QHOTE] Erreur note horaire:', e.message);
+    }
+  } else if (questionRow.kind === 'schedule' && !positive) {
+    // Refus → note interne pour traçabilité
+    const m = meta || {};
+    await addInternalNote(questionRow.conversation_id,
+      `🕐 Demande horaire (${m.reqLabel || '?'}) REFUSÉE par l'hôte.`, pool, io);
+  }
 
   // Clore la question + l'IA reprend la main sur la conv
   await pool.query(
