@@ -3945,6 +3945,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── Toggle vue grille/liste (définition fiable, écrase celle de settings.js) ──
+// Réinitialisation unique : efface une préférence "list" résiduelle des tests, défaut = grille.
+try {
+  if (!localStorage.getItem('bh_property_view_reset_v2')) {
+    localStorage.setItem('bh_property_view', 'grid');
+    localStorage.setItem('bh_property_view_reset_v2', '1');
+  }
+} catch(e) {}
+
 window.setPropertyView = function(mode) {
   var grid = document.getElementById('propertiesGrid');
   var btnGrid = document.getElementById('btnViewGrid');
