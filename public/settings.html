@@ -1770,8 +1770,10 @@ html[data-theme-v3="1"] .sidebar {
 .view-toggle-btn.active {
   background: #1A7A5E; border-color: #1A7A5E; color: white;
 }
-.view-toggle-btn:not(.active):hover {
-  border-color: #1A7A5E; color: #1A7A5E;
+@media (hover: hover) and (pointer: fine) {
+  .view-toggle-btn:not(.active):hover {
+    border-color: #1A7A5E; color: #1A7A5E;
+  }
 }
 
 /* ============================================================
@@ -3950,8 +3952,6 @@ if (typeof _orig === 'function') {
     _orig.apply(this, arguments);
     var grid = document.getElementById('propertiesGrid');
     if (!grid) return;
-    // Ne pas forcer le flex si la vue liste est active : on respecte le choix de l'utilisateur.
-    if (grid.classList.contains('list-view')) return;
     if (window.innerWidth <= 768) {
       grid.style.removeProperty('grid-template-columns');
       grid.style.setProperty('display', 'flex', 'important');
@@ -3962,35 +3962,6 @@ if (typeof _orig === 'function') {
     }
   };
 }
-
-// ── Fix bouton toggle vue : nettoyer les inline-styles au clic pour que la vue choisie
-//    s'applique dès le 1er clic (sans redéfinir setPropertyView de settings.js). ──
-(function() {
-  function syncGridStyles() {
-    var grid = document.getElementById('propertiesGrid');
-    if (!grid) return;
-    if (grid.classList.contains('list-view')) {
-      // Vue liste : retirer les inline-styles qui masquent le CSS .list-view
-      grid.style.removeProperty('display');
-      grid.style.removeProperty('flex-direction');
-      grid.style.removeProperty('grid-template-columns');
-    } else if (window.innerWidth <= 768) {
-      // Vue grille mobile : grandes cartes empilées
-      grid.style.removeProperty('grid-template-columns');
-      grid.style.setProperty('display', 'flex', 'important');
-      grid.style.setProperty('flex-direction', 'column', 'important');
-    } else {
-      grid.style.setProperty('display', 'grid', 'important');
-      grid.style.setProperty('grid-template-columns', 'repeat(3, minmax(0, 1fr))', 'important');
-    }
-  }
-  document.addEventListener('click', function(e) {
-    var btn = e.target.closest('#btnViewGrid, #btnViewList');
-    if (!btn) return;
-    // Laisser setPropertyView (settings.js) basculer la classe, puis re-synchroniser
-    setTimeout(syncGridStyles, 0);
-  });
-})();
 
 // ── Rendre la photo cliquable + supprimer le bouton Gérer ──
 (function() {
