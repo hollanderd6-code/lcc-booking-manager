@@ -3944,16 +3944,55 @@ document.addEventListener('DOMContentLoaded', function() {
   window.addEventListener('resize', applyGrid);
 });
 
+// ── Toggle vue grille/liste (définition fiable, écrase celle de settings.js) ──
+window.setPropertyView = function(mode) {
+  var grid = document.getElementById('propertiesGrid');
+  var btnGrid = document.getElementById('btnViewGrid');
+  var btnList = document.getElementById('btnViewList');
+  if (!grid) return;
+  var isList = mode === 'list';
+  grid.classList.toggle('list-view', isList);
+  if (btnGrid) btnGrid.classList.toggle('active', !isList);
+  if (btnList) btnList.classList.toggle('active', isList);
+  // Appliquer immédiatement le bon display (sans attendre un re-render)
+  if (isList) {
+    grid.style.removeProperty('display');
+    grid.style.removeProperty('grid-template-columns');
+    grid.style.removeProperty('flex-direction');
+  } else if (window.innerWidth <= 768) {
+    grid.style.setProperty('display', 'grid', 'important');
+    grid.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
+  } else {
+    grid.style.setProperty('display', 'grid', 'important');
+    grid.style.setProperty('grid-template-columns', 'repeat(3, minmax(0, 1fr))', 'important');
+  }
+  try { localStorage.setItem('bh_property_view', mode); } catch(e) {}
+};
+
 var _orig = window.renderProperties;
 if (typeof _orig === 'function') {
   window.renderProperties = function() {
     _orig.apply(this, arguments);
     var grid = document.getElementById('propertiesGrid');
     if (!grid) return;
-    if (window.innerWidth <= 768) {
+    // Restaurer la vue choisie (persistée) après chaque re-render
+    var savedView = 'grid';
+    try { savedView = localStorage.getItem('bh_property_view') || 'grid'; } catch(e) {}
+    var isList = savedView === 'list';
+    grid.classList.toggle('list-view', isList);
+    var btnGrid = document.getElementById('btnViewGrid');
+    var btnList = document.getElementById('btnViewList');
+    if (btnGrid) btnGrid.classList.toggle('active', !isList);
+    if (btnList) btnList.classList.toggle('active', isList);
+    if (isList) {
+      grid.style.removeProperty('display');
       grid.style.removeProperty('grid-template-columns');
-      grid.style.setProperty('display', 'flex', 'important');
-      grid.style.setProperty('flex-direction', 'column', 'important');
+      grid.style.removeProperty('flex-direction');
+    } else if (window.innerWidth <= 768) {
+      grid.style.removeProperty('grid-template-columns');
+      grid.style.setProperty('display', 'grid', 'important');
+      grid.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
+      grid.style.removeProperty('flex-direction');
     } else {
       grid.style.setProperty('display', 'grid', 'important');
       grid.style.setProperty('grid-template-columns', 'repeat(3, minmax(0, 1fr))', 'important');
