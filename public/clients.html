@@ -2487,29 +2487,28 @@ function populateFpSelects(invs) {
       sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
   }
 
-  // Peupler clients — source principale : window.clients (liste complète)
+  // Peupler clients — clé = nom (robuste : marche pour clients classiques ET agence sans client_id)
   const clientSel = document.getElementById('fpClientSelect');
   if (clientSel) {
-    const clientMap = {};
+    const nameSet = new Set();
 
-    // Source 1 : window.clients (la plus fiable)
-    (window.clients || []).forEach(c => {
-      const name = c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
-      if (c.id && name) clientMap[String(c.id)] = name;
+    // Source 1 : noms présents sur les factures (toujours fiables, y compris agence)
+    invs.forEach(inv => {
+      const name = (inv.client_name || inv.clientName || '').trim();
+      if (name) nameSet.add(name);
     });
 
-    // Source 2 : fallback sur les factures si window.clients vide
-    if (Object.keys(clientMap).length === 0) {
-      invs.forEach(inv => {
-        const id = inv.client_id || inv.clientId;
-        const name = inv.client_name || inv.clientName;
-        if (id && name && name.trim()) clientMap[String(id)] = name.trim();
-      });
-    }
+    // Source 2 : compléter avec window.clients (clients sans facture encore)
+    (window.clients || []).forEach(c => {
+      const name = (c.company_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim()).trim();
+      if (name) nameSet.add(name);
+    });
 
-    const sorted = Object.entries(clientMap).sort((a,b) => a[1].localeCompare(b[1], 'fr'));
+    const sorted = Array.from(nameSet).sort((a, b) => a.localeCompare(b, 'fr'));
+    const prev = clientSel.value;
     clientSel.innerHTML = '<option value="">Tous les clients</option>' +
-      sorted.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+      sorted.map(name => `<option value="${name.replace(/"/g, '&quot;')}">${name}</option>`).join('');
+    if (prev) clientSel.value = prev;
   }
 
   // Peupler mois (filtrés selon l'année sélectionnée au moment du peuplement)
@@ -2559,8 +2558,11 @@ function applyFpFilter() {
   }
 
   const filtered = invs.filter(function(inv) {
-    // Filtre client
-    if (selectedClient && String(inv.client_id) !== selectedClient) return false;
+    // Filtre client (par nom : robuste pour clients classiques et agence)
+    if (selectedClient) {
+      const invName = (inv.client_name || inv.clientName || '').trim();
+      if (invName !== selectedClient) return false;
+    }
 
     const d = inv.issue_date || inv.created_at;
     if (!d) return !selectedYear && !selectedMonth;
@@ -2663,11 +2665,25 @@ function renderFpGrid(invs) {
     return;
   }
 
+  // Trier de la plus récente à la plus ancienne (date d'émission, sinon création).
+  // En cas d'égalité de date, le numéro de facture le plus élevé passe en premier.
+  invs = invs.slice().sort(function(a, b) {
+    const da = new Date(a.issue_date || a.created_at || 0).getTime();
+    const db = new Date(b.issue_date || b.created_at || 0).getTime();
+    if (db !== da) return db - da;
+    const na = parseInt(String(a.invoice_number || '').replace(/\D/g, ''), 10) || 0;
+    const nb = parseInt(String(b.invoice_number || '').replace(/\D/g, ''), 10) || 0;
+    return nb - na;
+  });
+
     let totalRev = 0;
     let totalPending = 0;
     container.innerHTML = '';
     
     console.log('🔄 Génération des cartes de factures...');
+
+    // Suivi du mois courant pour insérer des séparateurs visuels par mois
+    let _currentMonthKey = null;
 
     // Ensemble des IDs de factures annulées par un avoir (collecté depuis les
     // avoirs eux-mêmes via leur original_invoice_id).
@@ -2752,6 +2768,21 @@ function renderFpGrid(invs) {
       }
 
       const issueDate = formatDate(inv.issue_date);
+
+      // Séparateur de mois (full-width) quand on change de mois
+      const _d = new Date(inv.issue_date || inv.created_at || 0);
+      if (!isNaN(_d)) {
+        const _mk = _d.getFullYear() + '-' + String(_d.getMonth() + 1).padStart(2, '0');
+        if (_mk !== _currentMonthKey) {
+          _currentMonthKey = _mk;
+          const _mLabel = (MOIS_FR[_d.getMonth()] || '') + ' ' + _d.getFullYear();
+          container.innerHTML += `
+            <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:8px 0 2px;">
+              <span style="font-size:13px;font-weight:700;color:#1A7A5E;text-transform:capitalize;white-space:nowrap;">${_mLabel}</span>
+              <span style="flex:1;height:1px;background:linear-gradient(to right,rgba(200,184,154,.5),transparent);"></span>
+            </div>`;
+        }
+      }
 
       // Avatar initiales
       const clientName = inv.client_name || '';
