@@ -25773,7 +25773,17 @@ app.get('/api/message-templates', authenticateToken, async (req, res) => {
     const { property_id } = req.query;
     let q = 'SELECT * FROM message_templates WHERE user_id = ANY($1::text[])';
     const params = [agencyIds];
-    if (property_id) { q += ' AND (property_id = $2 OR property_id IS NULL)'; params.push(property_id); }
+    if (property_id) {
+      // Un template s'applique si : property_id simple correspond, OU il est global (NULL/vide),
+      // OU le logement figure dans le tableau JSON property_ids (templates multi-logements).
+      // Même logique que l'envoi automatique (cf. mt.property_ids @> to_jsonb).
+      q += ` AND (
+        property_id = $2
+        OR property_id IS NULL
+        OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb AND property_ids @> to_jsonb($2::text))
+      )`;
+      params.push(property_id);
+    }
     q += ' ORDER BY created_at DESC';
     const result = await pool.query(q, params);
     res.json({ templates: result.rows });
