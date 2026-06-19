@@ -1633,11 +1633,6 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     /* Booking Form */
     .booking-form {
       padding: 24px;
-      overflow-x: hidden;
-      max-width: 100%;
-      touch-action: pan-y;            /* bloque le balayage gauche/droite à l'intérieur */
-      overscroll-behavior: contain;
-      -webkit-overflow-scrolling: touch;
     }
 
     .booking-form .form-group {
@@ -1660,8 +1655,6 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     .booking-form .form-group select,
     .booking-form .form-group textarea {
       width: 100%;
-      box-sizing: border-box;
-      max-width: 100%;
       padding: 10px 14px;
       border: 1px solid #d1d5db;
       border-radius: 8px;
@@ -13863,15 +13856,10 @@ function bhConfirm(message) {
 #invoiceModal .inv-close:hover { background:#f5f2ec; }
 #invoiceModal .inv-body {
   display: grid; grid-template-columns: 380px 1fr; flex: 1; overflow: hidden;
-  max-width: 100%;
 }
 #invoiceModal .inv-form-panel {
-  padding: 20px; overflow-y: auto; overflow-x: hidden; border-right: 1px solid rgba(0,0,0,.08);
+  padding: 20px; overflow-y: auto; border-right: 1px solid rgba(0,0,0,.08);
   background: white;
-  max-width: 100%;
-  touch-action: pan-y;            /* bloque le balayage gauche/droite à l'intérieur */
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
 }
 #invoiceModal .inv-preview-panel {
   padding: 20px; overflow-y: auto; background: #F5F2EC;
@@ -13938,25 +13926,8 @@ function bhConfirm(message) {
 #invoiceModal .inv-btn-ghost { background:white;color:#374151;border:1px solid rgba(0,0,0,.12); }
 #invoiceModal .inv-btn-ghost:hover { background:#f5f2ec; }
 @media (max-width: 768px) {
-  /* Le modal facture est centré ; en webview le 100vh inclut la zone derrière
-     la bottom-bar (74px) → le pied (.inv-actions avec "Générer/Envoyer la facture")
-     passait dessous. On réserve cette hauteur sous l'overlay et on plafonne le
-     contenu en 100dvh pour garantir scroll interne + footer toujours visible. */
-  #invoiceModal {
-    align-items: center;
-    padding: 12px 12px calc(74px + env(safe-area-inset-bottom, 0px) + 12px) 12px;
-    box-sizing: border-box;
-  }
-  #invoiceModal .inv-content {
-    max-height: calc(100dvh - 74px - env(safe-area-inset-bottom, 0px) - 24px);
-    width: 100%;
-  }
   #invoiceModal .inv-body { grid-template-columns: 1fr; }
   #invoiceModal .inv-preview-panel { display: none; }
-  #invoiceModal .inv-form-panel { -webkit-overflow-scrolling: touch; }
-  #invoiceModal .inv-actions {
-    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  }
 }
 
 /* ── Push notif items ── */
@@ -14370,8 +14341,8 @@ body.notif-panel-open {
 <!-- ============================================================ -->
 <!-- MODAL ÉDITION GROUPÉE -->
 <!-- ============================================================ -->
-<div id="batchEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-  <div style="background:white;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.2);">
+<div id="batchEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;overflow:hidden;overscroll-behavior:contain;touch-action:none;">
+  <div style="background:white;border-radius:20px;width:100%;max-width:560px;max-height:90dvh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.2);">
     <!-- Header -->
     <div style="padding:20px 24px 16px;border-bottom:1px solid #f0ede7;display:flex;align-items:center;justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:10px;">
@@ -14387,7 +14358,7 @@ body.notif-panel-open {
     </div>
 
     <!-- Body -->
-    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:20px;">
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:20px;flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;">
 
       <!-- Action -->
       <div>
@@ -14483,7 +14454,7 @@ body.notif-panel-open {
     </div>
 
     <!-- Footer -->
-    <div style="padding:16px 24px;border-top:1px solid #f0ede7;display:flex;gap:10px;">
+    <div style="padding:16px 24px calc(16px + env(safe-area-inset-bottom));border-top:1px solid #f0ede7;display:flex;gap:10px;flex-shrink:0;background:white;border-radius:0 0 20px 20px;">
       <button onclick="closeBatchEditModal()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid #e2e8f0;background:white;color:#374151;font-size:14px;font-weight:600;cursor:pointer;">Annuler</button>
       <button id="batchApplyBtn" onclick="applyBatchEdit()" style="flex:2;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
         <i class="fas fa-check"></i> Appliquer
@@ -14501,6 +14472,7 @@ var _batchAction = 'price'; // 'price', 'block', 'unblock'
 function openBatchEditModal() {
   const modal = document.getElementById('batchEditModal');
   modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
 
   // Pré-remplir : aujourd'hui → demain
   const today = new Date();
@@ -14535,6 +14507,7 @@ function openBatchEditModal() {
 
 function closeBatchEditModal() {
   document.getElementById('batchEditModal').style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 function setBatchAction(action) {
