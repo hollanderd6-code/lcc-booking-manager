@@ -1221,10 +1221,15 @@ loadData();
 #invoiceModal .inv-close:hover { background:#f5f2ec; }
 #invoiceModal .inv-body {
   display: grid; grid-template-columns: 380px 1fr; flex: 1; overflow: hidden;
+  max-width: 100%;
 }
 #invoiceModal .inv-form-panel {
-  padding: 20px; overflow-y: auto; border-right: 1px solid rgba(0,0,0,.08);
+  padding: 20px; overflow-y: auto; overflow-x: hidden; border-right: 1px solid rgba(0,0,0,.08);
   background: white;
+  max-width: 100%;
+  touch-action: pan-y;            /* bloque le balayage gauche/droite à l'intérieur */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 #invoiceModal .inv-preview-panel {
   padding: 20px; overflow-y: auto; background: #F5F2EC;
@@ -1291,8 +1296,25 @@ loadData();
 #invoiceModal .inv-btn-ghost { background:white;color:#374151;border:1px solid rgba(0,0,0,.12); }
 #invoiceModal .inv-btn-ghost:hover { background:#f5f2ec; }
 @media (max-width: 768px) {
+  /* Le modal facture est centré ; en webview le 100vh inclut la zone derrière
+     la bottom-bar (74px) → le pied (.inv-actions) passait dessous. On réserve
+     cette hauteur sous l'overlay et on plafonne en 100dvh : scroll interne +
+     footer toujours visible. Verrou horizontal aussi. */
+  #invoiceModal {
+    align-items: center;
+    padding: 12px 12px calc(74px + env(safe-area-inset-bottom, 0px) + 12px) 12px;
+    box-sizing: border-box;
+  }
+  #invoiceModal .inv-content {
+    max-height: calc(100dvh - 74px - env(safe-area-inset-bottom, 0px) - 24px);
+    width: 100%;
+  }
   #invoiceModal .inv-body { grid-template-columns: 1fr; }
   #invoiceModal .inv-preview-panel { display: none; }
+  #invoiceModal .inv-form-panel { -webkit-overflow-scrolling: touch; }
+  #invoiceModal .inv-actions {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* ── Push notif items ── */
