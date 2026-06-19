@@ -178,6 +178,16 @@ function buildSystemPrompt(ctx, temporalCtx, fewShotExamples) {
     sections.push(`QUESTIONS FRÉQUENTES DE L'HÔTE :\n${ctx.customQRSummary}`);
   }
 
+  // ── Faits mémorisés (réponses passées de l'hôte, par logement) ──
+  if (ctx.propertyFacts && ctx.propertyFacts.length) {
+    const factLines = ctx.propertyFacts.map(f => {
+      const rep = f.answer === true ? 'OUI' : f.answer === false ? 'NON' : '';
+      const det = f.detail ? ` (${f.detail})` : '';
+      return `- ${f.question} → ${rep}${det}`;
+    });
+    sections.push(`FAITS CONFIRMÉS PAR L'HÔTE (fiables, réponds directement sans escalader) :\n${factLines.join('\n')}`);
+  }
+
   // ── Caution ────────────────────────────────
   if (!ctx.isAirbnb && ctx.depositAmount && parseFloat(ctx.depositAmount) > 0) {
     const amt = parseFloat(ctx.depositAmount);

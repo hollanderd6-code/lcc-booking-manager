@@ -30361,6 +30361,107 @@ async function ensureHostQuestionsTable() {
 }
 ensureHostQuestionsTable();
 
+// ============================================================
+// 🧠 FAITS MÉMORISÉS PAR LOGEMENT (auto-apprentissage de l'IA)
+// ============================================================
+async function ensurePropertyFactsTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS property_facts (
+        id          BIGSERIAL PRIMARY KEY,
+        property_id TEXT NOT NULL,
+        question    TEXT NOT NULL,
+        answer      BOOLEAN,
+        detail      TEXT,
+        created_at  TIMESTAMPTZ DEFAULT NOW(),
+        updated_at  TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (property_id, question)
+      );
+      CREATE INDEX IF NOT EXISTS idx_property_facts_property ON property_facts (property_id);
+    `);
+    console.log('✅ Table property_facts prête');
+  } catch (e) {
+    console.error('❌ ensurePropertyFactsTable:', e.message);
+  }
+}
+ensurePropertyFactsTable();
+
+// GET /api/properties/:id/facts — liste des faits mémorisés d'un logement
+app.get('/api/properties/:id/facts', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
+    // Vérifier que le logement appartient bien à l'utilisateur (ou délégation agence)
+    const own = await pool.query(
+      `SELECT id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [req.params.id, agencyIds]
+    );
+    if (!own.rows[0]) return res.status(403).json({ error: 'Accès refusé' });
+
+    const result = await pool.query(
+      `SELECT id, question, answer, detail, updated_at
+       FROM property_facts WHERE property_id = $1 ORDER BY updated_at DESC`,
+      [req.params.id]
+    );
+    res.json({ facts: result.rows });
+  } catch (e) {
+    console.error('GET /api/properties/:id/facts:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/properties/:id/facts — créer/modifier un fait manuellement
+app.post('/api/properties/:id/facts', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const own = await pool.query(
+      `SELECT id, user_id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [req.params.id, agencyIds]
+    );
+    if (!own.rows[0]) return res.status(403).json({ error: 'Accès refusé' });
+
+    const { question, answer, detail } = req.body;
+    if (!question || typeof answer !== 'boolean') {
+      return res.status(400).json({ error: 'question (texte) et answer (booléen) requis' });
+    }
+    const result = await pool.query(
+      `INSERT INTO property_facts (property_id, question, answer, detail, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW())
+       ON CONFLICT (property_id, question)
+       DO UPDATE SET answer = EXCLUDED.answer, detail = EXCLUDED.detail, updated_at = NOW()
+       RETURNING id, question, answer, detail, updated_at`,
+      [req.params.id, question.trim(), answer, (detail || '').trim() || null]
+    );
+    res.json({ success: true, fact: result.rows[0] });
+  } catch (e) {
+    console.error('POST /api/properties/:id/facts:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE /api/properties/:id/facts/:factId — oublier un fait
+app.delete('/api/properties/:id/facts/:factId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const own = await pool.query(
+      `SELECT id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [req.params.id, agencyIds]
+    );
+    if (!own.rows[0]) return res.status(403).json({ error: 'Accès refusé' });
+
+    await pool.query(
+      `DELETE FROM property_facts WHERE id = $1 AND property_id = $2`,
+      [req.params.factId, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    console.error('DELETE /api/properties/:id/facts/:factId:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // GET /api/host-questions/pending — questions en attente pour l'hôte (polling app)
 app.get('/api/host-questions/pending', authenticateToken, async (req, res) => {
   try {

@@ -2235,6 +2235,25 @@ function insertVariable(textareaId, variable, event) {
   </div>
 </div>
 
+<!-- ===== SECTION : FAITS MÉMORISÉS PAR L'IA ===== -->
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-brain"></i>
+  <h3>Faits mémorisés par l'IA</h3>
+  <small>Quand l'IA vous pose une question sur ce logement et que vous répondez, elle retient la réponse ici et l'utilise automatiquement la prochaine fois.</small>
+</div>
+
+<div class="form-group">
+  <div id="propertyFactsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+  <button type="button" onclick="addPropertyFactManual()"
+    style="width:100%;padding:9px;border:1.5px dashed #7c3aed60;border-radius:10px;background:transparent;color:#7c3aed;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
+    <i class="fas fa-plus"></i> Ajouter un fait manuellement
+  </button>
+  <div class="info-box" style="margin-top:10px;">
+    <i class="fas fa-robot"></i>
+    <p>Ex : <strong>"Y a-t-il un ventilateur ?"</strong> → <strong>Oui</strong>. L'IA répondra seule à cette question pour ce logement.</p>
+  </div>
+</div>
+
 <!-- ===== RACCOURCIS MESSAGES ===== -->
 <div class="form-group" style="background:linear-gradient(135deg,#10b98110,#10b98118);padding:20px;border-radius:14px;border:1.5px solid #10b98130;">
   <label style="margin-bottom:14px;">
@@ -2632,6 +2651,9 @@ function insertVariable(textareaId, variable, event) {
         })
         .catch(() => {});
     }
+
+    // === FAITS MÉMORISÉS PAR L'IA ===
+    if (property.id) loadPropertyFacts(property.id);
     
     // === ÉQUIPEMENTS ===
     try {
@@ -3836,6 +3858,93 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+</script>
+
+<script>
+// ═══════════════════════════════════════════
+// 🧠 Faits mémorisés par l'IA (par logement)
+// ═══════════════════════════════════════════
+async function loadPropertyFacts(propertyId) {
+  const list = document.getElementById('propertyFactsList');
+  if (!list) return;
+  list.innerHTML = '<div style="font-size:12px;color:#9ca3af;padding:6px;">Chargement…</div>';
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/properties/' + propertyId + '/facts', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const data = await res.json();
+    renderPropertyFacts(data.facts || []);
+  } catch(e) {
+    list.innerHTML = '<div style="font-size:12px;color:#ef4444;padding:6px;">Erreur de chargement</div>';
+  }
+}
+
+function renderPropertyFacts(facts) {
+  const list = document.getElementById('propertyFactsList');
+  if (!list) return;
+  if (!facts.length) {
+    list.innerHTML = '<div style="font-size:12px;color:#9ca3af;padding:6px 2px;">Aucun fait mémorisé pour le moment. Ils apparaîtront ici quand vous répondrez aux questions de l\'IA.</div>';
+    return;
+  }
+  list.innerHTML = facts.map(function(f) {
+    const yes = f.answer === true;
+    const badge = yes
+      ? '<span style="background:#dcfce7;color:#16a34a;font-weight:700;font-size:11px;padding:2px 8px;border-radius:999px;">OUI</span>'
+      : '<span style="background:#fee2e2;color:#dc2626;font-weight:700;font-size:11px;padding:2px 8px;border-radius:999px;">NON</span>';
+    const detail = f.detail ? '<div style="font-size:11px;color:#6b7280;margin-top:2px;">' + escapeHtmlFact(f.detail) + '</div>' : '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#faf8f4;border:1px solid #e7e0d4;border-radius:10px;">'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;color:#374151;">' + escapeHtmlFact(f.question) + '</div>' + detail + '</div>'
+      + badge
+      + '<button type="button" onclick="deletePropertyFact(' + f.id + ')" title="Oublier ce fait" style="border:none;background:transparent;color:#9ca3af;cursor:pointer;font-size:14px;padding:4px;">'
+      + '<i class="fas fa-trash"></i></button>'
+      + '</div>';
+  }).join('');
+}
+
+function escapeHtmlFact(s) {
+  return String(s || '').replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+  });
+}
+
+async function deletePropertyFact(factId) {
+  const propertyId = document.getElementById('propertyId').value;
+  if (!propertyId) return;
+  if (!confirm('Oublier ce fait ? L\'IA reposera la question la prochaine fois.')) return;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch('/api/properties/' + propertyId + '/facts/' + factId, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    loadPropertyFacts(propertyId);
+  } catch(e) {
+    alert('Erreur lors de la suppression');
+  }
+}
+
+async function addPropertyFactManual() {
+  const propertyId = document.getElementById('propertyId').value;
+  if (!propertyId) { alert('Sélectionnez d\'abord un logement.'); return; }
+  const question = prompt('Question (ex : Y a-t-il un ventilateur ?)');
+  if (!question || !question.trim()) return;
+  const ans = prompt('Réponse : tapez "oui" ou "non"');
+  if (ans === null) return;
+  const answer = /^o/i.test(ans.trim());
+  const detail = prompt('Précision (optionnel)') || '';
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch('/api/properties/' + propertyId + '/facts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ question: question.trim(), answer: answer, detail: detail.trim() })
+    });
+    loadPropertyFacts(propertyId);
+  } catch(e) {
+    alert('Erreur lors de l\'ajout');
+  }
+}
 </script>
 
 <script>

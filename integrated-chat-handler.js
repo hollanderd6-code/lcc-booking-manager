@@ -569,6 +569,19 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       } catch(e) {}
     }
 
+    // ─── Faits mémorisés (réponses passées de l'hôte, par logement) ──
+    let propertyFacts = [];
+    if (property) {
+      try {
+        const factsRes = await pool.query(
+          `SELECT question, answer, detail FROM property_facts
+           WHERE property_id = $1 ORDER BY updated_at DESC LIMIT 50`,
+          [property.id]
+        );
+        propertyFacts = factsRes.rows;
+      } catch(e) { /* table absente au tout premier démarrage : ignorer */ }
+    }
+
     // ─── URL et statut lien caution ───────────────────────────────
     let depositLinkAlreadySent = false;
     let depositUrl = null;
@@ -679,6 +692,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       extraNotesLogement: welcomeBookData?.extraNotesLogement,
       practicalInfo:     property.practical_info,
       customQRSummary,
+      propertyFacts,
       // Caution
       depositAmount:      isAirbnbPlatform ? null : depositAmount,
       depositStatus:      isAirbnbPlatform ? 'not_applicable' : depositStatus,
@@ -1373,6 +1387,26 @@ async function relayHostAnswer(pool, io, { questionRow, answerType, freeText }) 
     const m = meta || {};
     await addInternalNote(questionRow.conversation_id,
       `🕐 Demande horaire (${m.reqLabel || '?'}) REFUSÉE par l'hôte.`, pool, io);
+  }
+
+  // ── Auto-apprentissage : mémoriser la réponse comme fait du logement ──
+  // Uniquement pour les questions FACTUELLES (équipement, animaux...), pas les horaires.
+  if (questionRow.kind !== 'schedule' && questionRow.property_id) {
+    try {
+      await pool.query(
+        `INSERT INTO property_facts (property_id, question, answer, detail, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, NOW(), NOW())
+         ON CONFLICT (property_id, question)
+         DO UPDATE SET answer = EXCLUDED.answer, detail = EXCLUDED.detail, updated_at = NOW()`,
+        [questionRow.property_id, questionRow.question, positive, freeText || null]
+      );
+      await addInternalNote(questionRow.conversation_id,
+        `🧠 Réponse mémorisée pour ce logement : « ${questionRow.question} » → ${positive ? 'Oui' : 'Non'}${freeText ? ' (' + freeText + ')' : ''}. L'IA répondra seule la prochaine fois.`,
+        pool, io);
+      console.log(`🧠 [FAIT] Mémorisé pour ${questionRow.property_id} : "${questionRow.question}" → ${positive}`);
+    } catch(e) {
+      console.error('❌ [FAIT] Erreur mémorisation:', e.message);
+    }
   }
 
   // Clore la question + l'IA reprend la main sur la conv
