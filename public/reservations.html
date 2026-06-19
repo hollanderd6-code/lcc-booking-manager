@@ -278,6 +278,30 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 .bh-modal-row-label { color: var(--text-muted); }
 .bh-modal-row-val { font-weight: 600; text-align: right; max-width: 60%; word-break: break-word; }
 .bh-modal-amount-total { font-size: 18px; font-weight: 800; color: var(--green); padding: 10px 12px; }
+
+/* 📱 Modal détail réservation — sur mobile le header app (60px) et la tab bar (74px)
+   masquaient le haut et le bas. On réserve ces deux zones et on plafonne en dvh pour
+   garantir un scroll interne complet (boutons visibles) + verrou horizontal. */
+@media (max-width: 768px) {
+  .bh-resa-overlay {
+    align-items: center;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 8px);
+    padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px) + 8px);
+    box-sizing: border-box;
+  }
+  .bh-resa-sheet {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 60px - 74px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
+  }
+  .bh-resa-body {
+    overflow-x: hidden;
+    max-width: 100%;
+    touch-action: pan-y;            /* bloque le balayage gauche/droite */
+    overscroll-behavior: contain;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+}
 /* Desktop page header */
 @media (min-width: 1367px) {
   .bh-desktop-header {
