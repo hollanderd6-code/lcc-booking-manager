@@ -239,7 +239,7 @@ PROXIMITÉ — RECHERCHE EN TEMPS RÉEL
 ${ctx.proximityResults}\n`;
   }
 
-  return `⚠️ LANGUE — PRIORITÉ ABSOLUE ⚠️
+  const basePrompt = `⚠️ LANGUE — PRIORITÉ ABSOLUE ⚠️
 ${languageInstructions[lang] || languageInstructions.auto}
 
 ════════════════════════════════════════
@@ -373,6 +373,29 @@ TON & FORMAT
 • Ne jamais répéter/paraphraser le message du voyageur.
 • Si [ESCALADE] → répondre UNIQUEMENT "[ESCALADE]", rien d'autre.
 • Le tag [QUESTION_HOTE:...] se place TOUJOURS sur une ligne séparée À LA FIN, après ton message chaleureux au voyageur. N'émets jamais plus d'un tag [QUESTION_HOTE] par réponse.`;
+
+  // ── MODE BROUILLON HÔTE ──────────────────────────────
+  // Quand on génère une suggestion de réponse que l'HÔTE va relire/éditer/envoyer.
+  // On NEUTRALISE tout le mécanisme d'escalade et de tags : l'hôte EST l'humain.
+  if (ctx.ownerDraftMode) {
+    return basePrompt + `
+
+════════════════════════════════════════
+⚡ MODE BROUILLON POUR L'HÔTE — PRIORITÉ ABSOLUE (écrase les règles ci-dessus en cas de conflit)
+════════════════════════════════════════
+Tu n'écris PAS au voyageur directement. Tu rédiges un BROUILLON de réponse que l'HÔTE (le responsable du logement) va relire, éventuellement modifier, puis envoyer lui-même. La conversation vient d'être transmise à l'hôte parce que l'assistant automatique n'a pas su répondre seul.
+
+RÈGLES DE CE MODE :
+• Rédige une réponse COMPLÈTE, chaleureuse et prête à envoyer, qui répond au DERNIER message du voyageur.
+• N'émets JAMAIS de tag : pas de [ESCALADE], pas de [QUESTION_HOTE], pas de [LATE_CHECKOUT], pas de [EARLY_CHECKIN], pas de [FACTURE]. Aucun crochet technique. Uniquement du texte naturel destiné au voyageur.
+• Ne dis JAMAIS « je vais vérifier avec l'hôte », « je transmets au responsable », « je vous mets en relation » : c'est l'hôte lui-même qui parle.
+• Si une information précise manque (équipement, horaire, tarif, décision à prendre…) → NE l'invente PAS. Insère un court repère entre parenthèses que l'hôte complétera, par ex. « (à confirmer : … ) » ou « (à compléter par l'hôte) ». Garde le reste de la réponse fluide et naturelle.
+• Pour une demande nécessitant une décision (départ tardif, geste commercial, remboursement…), propose une formulation positive et ouverte que l'hôte pourra ajuster, sans t'engager sur un chiffre que tu ne connais pas.
+• Ton : comme l'hôte parlerait — chaleureux, direct, 2 à 5 phrases. Reprends son style à partir des EXEMPLES DE RÉPONSES DE L'HÔTE ci-dessus s'il y en a.
+• Réponds UNIQUEMENT avec le texte du brouillon, sans préambule (« Voici un brouillon… »), sans guillemets autour, sans signature autre que naturelle.`;
+  }
+
+  return basePrompt;
 }
 
 // ─────────────────────────────────────────────
@@ -437,6 +460,83 @@ async function getGroqResponse(userMessage, conversationContext = {}, messageHis
 }
 
 // ─────────────────────────────────────────────
+// ✍️ Brouillon de réponse POUR L'HÔTE (suggestion 1 clic)
+// Réutilise tout le contexte logement / few-shot / proximité,
+// mais en mode "ownerDraftMode" : aucun tag, aucune escalade,
+// texte complet prêt à relire/éditer/envoyer.
+// ─────────────────────────────────────────────
+
+async function getOwnerDraftResponse(lastGuestMessage, conversationContext = {}, messageHistory = [], fewShotExamples = [], opts = {}) {
+  if (!GROQ_API_KEY) {
+    console.warn('⚠️ GROQ_API_KEY non configurée (brouillon hôte)');
+    return null;
+  }
+  try {
+    const temporalCtx = buildTemporalContext({
+      checkinDt:     conversationContext.checkinDt,
+      checkoutDt:    conversationContext.checkoutDt,
+      arrivalTime:   conversationContext.arrivalTime,
+      departureTime: conversationContext.departureTime,
+    });
+
+    const ctx = { ...conversationContext, ownerDraftMode: true };
+    const systemPrompt = buildSystemPrompt(ctx, temporalCtx, fewShotExamples);
+
+    const groqMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messageHistory.slice(-30),
+      { role: 'user', content: lastGuestMessage || '(le voyageur attend une réponse)' }
+    ];
+
+    // Température un peu plus haute en régénération pour varier la proposition
+    const temperature = opts.regenerate ? 0.6 : 0.35;
+
+    const response = await fetch(GROQ_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: groqMessages,
+        temperature,
+        max_tokens: 600,
+        top_p: 0.95,
+        stream: false
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('❌ Erreur Groq API (brouillon hôte):', error);
+      return null;
+    }
+
+    const data = await response.json();
+    let draft = data.choices[0]?.message?.content?.trim() || '';
+
+    // Garde-fous : retirer tout tag technique qui aurait fui, et les guillemets enveloppants
+    draft = draft
+      .replace(/\[ESCALADE\]/gi, '')
+      .replace(/\[QUESTION_HOTE:[^\]]*\]/gi, '')
+      .replace(/\[LATE_CHECKOUT:[^\]]*\]/gi, '')
+      .replace(/\[EARLY_CHECKIN:[^\]]*\]/gi, '')
+      .replace(/\[FACTURE(?::[^\]]*)?\]/gi, '')
+      .trim();
+    if ((draft.startsWith('"') && draft.endsWith('"')) || (draft.startsWith('«') && draft.endsWith('»'))) {
+      draft = draft.slice(1, -1).trim();
+    }
+
+    console.log('✍️ [GROQ] Brouillon hôte:', draft.substring(0, 120) + (draft.length > 120 ? '...' : ''));
+    return draft || null;
+  } catch (error) {
+    console.error('❌ Erreur appel Groq (brouillon hôte):', error);
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────
 // Détection urgences (garde-fou rapide avant Groq)
 // ─────────────────────────────────────────────
 
@@ -463,5 +563,6 @@ function requiresHumanIntervention(message) {
 
 module.exports = {
   getGroqResponse,
+  getOwnerDraftResponse,
   requiresHumanIntervention
 };

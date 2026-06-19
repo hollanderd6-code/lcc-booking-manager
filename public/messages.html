@@ -576,6 +576,52 @@ html[data-theme-v3="1"] .page-back-btn {
 }
 .chat-input:focus { border-color: rgba(26,122,94,.4); background: white; }
 
+/* ── ✍️ Brouillon suggéré par l'IA ── */
+#ownerSuggestionCard {
+  margin: 6px 14px 0;
+  border: 1px solid rgba(26,122,94,.28);
+  background: linear-gradient(135deg, #F1FBF7, #EAF7F1);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(26,122,94,.08);
+  animation: osgIn .22s ease;
+}
+@keyframes osgIn { from { opacity:0; transform: translateY(6px);} to { opacity:1; transform:none; } }
+#ownerSuggestionCard .osg-head {
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;
+}
+#ownerSuggestionCard .osg-title {
+  font-size:12.5px; font-weight:700; color:#1A7A5E; letter-spacing:.2px;
+  display:flex; align-items:center; gap:7px;
+}
+#ownerSuggestionCard .osg-close {
+  border:none; background:transparent; color:#9CA3AF; cursor:pointer;
+  font-size:13px; padding:4px; border-radius:8px; line-height:1; transition:all .15s;
+}
+#ownerSuggestionCard .osg-close:hover { color:#6B7280; background:rgba(0,0,0,.04); }
+#ownerSuggestionCard .osg-body {
+  font-size:13.5px; line-height:1.55; color:#111827; white-space:pre-wrap;
+  background:rgba(255,255,255,.7); border-radius:12px; padding:10px 12px;
+  max-height:180px; overflow-y:auto;
+}
+#ownerSuggestionCard.osg-loading .osg-body { color:#6B7280; font-style:italic; }
+#ownerSuggestionCard .osg-actions { display:flex; gap:8px; margin-top:10px; }
+#ownerSuggestionCard .osg-btn {
+  border:none; border-radius:11px; padding:9px 14px; font-size:13px; font-weight:600;
+  font-family:'DM Sans',sans-serif; cursor:pointer; transition:all .15s;
+  display:inline-flex; align-items:center; gap:7px;
+}
+#ownerSuggestionCard .osg-use {
+  background:linear-gradient(135deg,#1A7A5E,#2AAE86); color:#fff; flex:1; justify-content:center;
+}
+#ownerSuggestionCard .osg-use:hover { filter:brightness(1.05); }
+#ownerSuggestionCard .osg-regen {
+  background:#fff; color:#1A7A5E; border:1px solid rgba(26,122,94,.3);
+}
+#ownerSuggestionCard .osg-regen:hover { background:#F1FBF7; }
+#ownerSuggestionCard .osg-btn:disabled { opacity:.55; cursor:default; }
+
+
 .quick-replies-bar {
   padding: 8px 14px 4px;
   background: white;
@@ -1178,6 +1224,19 @@ html[data-theme-v3="1"] .app-container {
 
         <!-- Raccourcis messages -->
         <div class="quick-replies-bar" id="quickRepliesBar" style="display:none;"></div>
+
+        <!-- ✍️ Brouillon de réponse suggéré par l'IA (à l'escalade) -->
+        <div id="ownerSuggestionCard" style="display:none;">
+          <div class="osg-head">
+            <span class="osg-title"><i class="fas fa-wand-magic-sparkles"></i> Brouillon suggéré</span>
+            <button class="osg-close" id="osgClose" title="Masquer" type="button"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="osg-body" id="osgBody"></div>
+          <div class="osg-actions">
+            <button class="osg-btn osg-use" id="osgUse" type="button"><i class="fas fa-pen-to-square"></i> Utiliser</button>
+            <button class="osg-btn osg-regen" id="osgRegen" type="button"><i class="fas fa-rotate"></i> Régénérer</button>
+          </div>
+        </div>
 
         <!-- Input: chat-owner.js uses #chatInput and #sendBtn -->
         <div class="chat-modal-input" id="chatInputArea" style="display:none;">
@@ -3572,6 +3631,8 @@ async function sendSmsMessage(convId) {
 // Wrapper : le bouton send appelle soit SMS soit plateforme
 const _origSendMessageOwner = window.sendMessageOwner;
 window.sendMessageOwner = function() {
+  // L'hôte répond lui-même → le brouillon n'a plus lieu d'être
+  if (typeof window.hideOwnerSuggestion === 'function') window.hideOwnerSuggestion();
   if (window._smsMode && window.currentConversationId) {
     sendSmsMessage(window.currentConversationId);
   } else if (_origSendMessageOwner) {
@@ -3640,6 +3701,156 @@ function showBHToast(msg, type = 'info') {
   c.appendChild(t);
   setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(() => t.remove(), 300); }, 3500);
 }
+</script>
+
+
+<!-- ============================================================
+     ✍️ SUGGESTIONS DE RÉPONSE POUR L'HÔTE (brouillon IA 1 clic)
+     ============================================================ -->
+<script>
+(function () {
+  function _token() { return localStorage.getItem('lcc_token') || ''; }
+  function _card() { return document.getElementById('ownerSuggestionCard'); }
+
+  function hideOwnerSuggestion() {
+    const c = _card();
+    if (c) c.style.display = 'none';
+  }
+  window.hideOwnerSuggestion = hideOwnerSuggestion;
+
+  function renderOwnerSuggestion(text) {
+    const c = _card();
+    if (!c) return;
+    const body = document.getElementById('osgBody');
+    if (body) body.textContent = text || '';
+    c.classList.remove('osg-loading');
+    c.style.display = 'block';
+    // S'assurer qu'on voit le bas de la conversation sous l'encart
+    const msgs = document.getElementById('chatMessages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // Récupère le brouillon en attente pour la conv ouverte
+  async function loadOwnerSuggestion(convId) {
+    hideOwnerSuggestion();
+    if (!convId) return;
+    try {
+      const r = await fetch(`/api/chat/conversations/${convId}/suggestion`, {
+        headers: { 'Authorization': 'Bearer ' + _token() }
+      });
+      if (!r.ok) return;
+      const data = await r.json();
+      // Vérifier qu'on est toujours sur la même conv
+      if (String(window.currentConversationId) !== String(convId)) return;
+      if (data && data.suggestion) renderOwnerSuggestion(data.suggestion);
+    } catch (e) { /* silencieux */ }
+  }
+  window.loadOwnerSuggestion = loadOwnerSuggestion;
+
+  // « Utiliser » : injecte le brouillon dans la zone de saisie pour édition
+  async function useOwnerSuggestion() {
+    const body = document.getElementById('osgBody');
+    const input = document.getElementById('chatInput');
+    const txt = body ? body.textContent : '';
+    if (input && txt) {
+      input.value = txt;
+      input.dispatchEvent(new Event('input', { bubbles: true })); // auto-resize
+      input.focus();
+      try { input.setSelectionRange(input.value.length, input.value.length); } catch(e) {}
+    }
+    hideOwnerSuggestion();
+    const convId = window.currentConversationId;
+    if (convId) {
+      fetch(`/api/chat/conversations/${convId}/suggestion/dismiss`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + _token(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'used' })
+      }).catch(() => {});
+    }
+  }
+  window.useOwnerSuggestion = useOwnerSuggestion;
+
+  // « Régénérer » : redemande un brouillon au serveur
+  async function regenerateOwnerSuggestion() {
+    const convId = window.currentConversationId;
+    if (!convId) return;
+    const c = _card();
+    const body = document.getElementById('osgBody');
+    const regenBtn = document.getElementById('osgRegen');
+    const useBtn = document.getElementById('osgUse');
+    if (c) c.classList.add('osg-loading');
+    if (body) body.textContent = 'Génération du brouillon…';
+    if (c) c.style.display = 'block';
+    if (regenBtn) regenBtn.disabled = true;
+    if (useBtn) useBtn.disabled = true;
+    try {
+      const r = await fetch(`/api/chat/conversations/${convId}/suggestion/regenerate`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + _token() }
+      });
+      const data = await r.json().catch(() => ({}));
+      if (String(window.currentConversationId) !== String(convId)) return;
+      if (r.ok && data.suggestion) {
+        renderOwnerSuggestion(data.suggestion);
+      } else {
+        if (body) body.textContent = (data && data.error) ? data.error : "Impossible de générer un brouillon pour l'instant.";
+        if (c) c.classList.remove('osg-loading');
+      }
+    } catch (e) {
+      if (body) body.textContent = "Erreur réseau lors de la génération.";
+      if (c) c.classList.remove('osg-loading');
+    } finally {
+      if (regenBtn) regenBtn.disabled = false;
+      if (useBtn) useBtn.disabled = false;
+    }
+  }
+  window.regenerateOwnerSuggestion = regenerateOwnerSuggestion;
+
+  // « Masquer » : écarte le brouillon
+  async function dismissOwnerSuggestion() {
+    hideOwnerSuggestion();
+    const convId = window.currentConversationId;
+    if (convId) {
+      fetch(`/api/chat/conversations/${convId}/suggestion/dismiss`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + _token(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'dismissed' })
+      }).catch(() => {});
+    }
+  }
+  window.dismissOwnerSuggestion = dismissOwnerSuggestion;
+
+  // ── Câblage des boutons (une seule fois) ──
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('osgUse')?.addEventListener('click', useOwnerSuggestion);
+    document.getElementById('osgRegen')?.addEventListener('click', regenerateOwnerSuggestion);
+    document.getElementById('osgClose')?.addEventListener('click', dismissOwnerSuggestion);
+
+    // Chaîner openConversation pour charger le brouillon à l'ouverture
+    const _prevOpen = window.openConversation;
+    window.openConversation = async function (convId, ...args) {
+      if (typeof _prevOpen === 'function') await _prevOpen(convId, ...args);
+      loadOwnerSuggestion(convId);
+    };
+  });
+
+  // ── Socket : brouillon prêt en temps réel (à l'escalade) ──
+  document.addEventListener('DOMContentLoaded', () => {
+    const _wait = setInterval(() => {
+      const s = window._chatSocket || window.socket || window.io_socket;
+      if (!s) return;
+      clearInterval(_wait);
+      s.on('owner_suggestion_ready', (data) => {
+        if (!data) return;
+        if (String(window.currentConversationId) === String(data.conversationId)) {
+          renderOwnerSuggestion(data.suggestion);
+        } else {
+          showBHToast(`✍️ Brouillon de réponse prêt — ${data.guestName || 'voyageur'}`, 'info');
+        }
+      });
+    }, 500);
+  });
+})();
 </script>
 
 

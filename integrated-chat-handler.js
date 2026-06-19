@@ -3,7 +3,7 @@
 // Architecture : Groq-first + few-shot learning depuis réponses manuelles
 // ============================================
 
-const { getGroqResponse, requiresHumanIntervention } = require('./groq-ai');
+const { getGroqResponse, getOwnerDraftResponse, requiresHumanIntervention } = require('./groq-ai');
 const { getProximityContext } = require('./geo-proximity');
 
 const Stripe = require('stripe');
@@ -445,6 +445,8 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         `UPDATE conversations SET escalated = TRUE, escalated_at = NOW(), updated_at = NOW() WHERE id = $1`,
         [conversation.id]
       );
+      generateOwnerSuggestion(conversation.id, pool, io, {}).catch(e =>
+        console.warn('⚠️ [HANDLER] Suggestion (urgence):', e.message));
       return false;
     }
 
@@ -1179,6 +1181,199 @@ async function notifyLateCheckout(conversation, pool, reqLabel, depLabel, accept
 }
 
 // ============================================
+// ✍️ SUGGESTION DE RÉPONSE POUR L'HÔTE
+// Génère un brouillon (Groq, mode ownerDraft) à partir du dernier
+// message du voyageur + tout le contexte logement, le stocke sur la
+// conversation et notifie le front via socket. Réutilisé par
+// l'escalade (auto) ET l'endpoint "Régénérer".
+// ============================================
+
+async function generateOwnerSuggestion(conversationId, pool, io, opts = {}) {
+  try {
+    // ─── Conversation ───────────────────────────────────────────
+    const convRes = await pool.query('SELECT * FROM conversations WHERE id = $1', [conversationId]);
+    const conversation = convRes.rows[0];
+    if (!conversation) return null;
+
+    // ─── Dernier message du voyageur ────────────────────────────
+    const lastGuestRes = await pool.query(
+      `SELECT message FROM messages
+       WHERE conversation_id = $1 AND sender_type = 'guest'
+       AND LENGTH(message) > 1
+       ORDER BY created_at DESC LIMIT 1`,
+      [conversationId]
+    );
+    const lastGuestMessage = lastGuestRes.rows[0]?.message || '';
+
+    // ─── Logement ───────────────────────────────────────────────
+    let property = null;
+    if (conversation.property_id) {
+      const pr = await pool.query('SELECT * FROM properties WHERE id = $1', [conversation.property_id]);
+      property = pr.rows[0] || null;
+    }
+
+    // ─── Langue / phase / plateforme ────────────────────────────
+    const language = (conversation.language && conversation.language !== 'auto')
+      ? conversation.language : 'auto';
+    const platformRaw = (conversation.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
+    const isAirbnbPlatform = ['airbnb','abb','airbnbofficial'].includes(platformRaw) || platformRaw.includes('airbnb');
+
+    const checkinDt  = conversation.reservation_start_date ? new Date(conversation.reservation_start_date) : null;
+    const checkoutDt = conversation.reservation_end_date   ? new Date(conversation.reservation_end_date)   : null;
+    const nowPhase = new Date();
+    let stayPhase = 'before';
+    if (checkinDt && checkoutDt) {
+      if (nowPhase >= checkoutDt) stayPhase = 'after';
+      else if (nowPhase >= checkinDt) stayPhase = 'during';
+    }
+
+    // ─── Livret d'accueil ───────────────────────────────────────
+    let welcomeBookData = null;
+    if (property?.welcome_book_url) {
+      try {
+        const m = property.welcome_book_url.match(/\/welcome\/([a-zA-Z0-9_-]+)/);
+        const uniqueId = m ? m[1] : null;
+        if (uniqueId) {
+          const b = await pool.query('SELECT data FROM welcome_books_v2 WHERE unique_id = $1', [uniqueId]);
+          welcomeBookData = b.rows[0]?.data || null;
+        }
+      } catch(e) {}
+    }
+
+    // ─── Q/R personnalisées ─────────────────────────────────────
+    let customQRSummary = null;
+    if (property) {
+      try {
+        const raw = property.custom_auto_responses || property.customAutoResponses;
+        const arr = Array.isArray(raw) ? raw : (typeof raw === 'string' ? JSON.parse(raw) : []);
+        if (arr.length) {
+          customQRSummary = arr.filter(q => q.keywords && q.response)
+            .map(q => `- "${q.keywords}" → ${q.response}`).join('\n');
+        }
+      } catch(e) {}
+    }
+
+    // ─── Faits mémorisés ────────────────────────────────────────
+    let propertyFacts = [];
+    if (property) {
+      try {
+        const f = await pool.query(
+          `SELECT question, answer, detail FROM property_facts
+           WHERE property_id = $1 ORDER BY updated_at DESC LIMIT 50`,
+          [property.id]
+        );
+        propertyFacts = f.rows;
+      } catch(e) {}
+    }
+
+    // ─── Contexte (mode brouillon : on inclut codes/accès, l'hôte relit) ─
+    const context = property ? {
+      propertyName:  property.name,
+      language, stayPhase,
+      checkinDt:     conversation.reservation_start_date,
+      checkoutDt:    conversation.reservation_end_date,
+      checkinDate:   checkinDt  ? checkinDt.toLocaleDateString('fr-FR')  : null,
+      checkoutDate:  checkoutDt ? checkoutDt.toLocaleDateString('fr-FR') : null,
+      alreadyGreetedToday: true, // brouillon hôte : pas de salutation auto imposée
+      arrivalTime:   property.arrival_time,
+      departureTime: property.departure_time || welcomeBookData?.checkoutTime,
+      checkoutInstructions: welcomeBookData?.checkoutInstructions,
+      wifiName:      property.wifi_name     || welcomeBookData?.wifiSSID,
+      wifiPassword:  property.wifi_password || welcomeBookData?.wifiPassword,
+      accessCode:    property.access_code || welcomeBookData?.keyboxCode,
+      accessInstructions: property.access_instructions || welcomeBookData?.accessInstructions,
+      address: (() => {
+        const parts = [property.address || welcomeBookData?.address, welcomeBookData?.postalCode, welcomeBookData?.city].filter(Boolean);
+        return parts.length ? parts.join(', ') : null;
+      })(),
+      parkingInfo:        welcomeBookData?.parkingInfo,
+      extraNotesAccess:   welcomeBookData?.extraNotesAccess,
+      equipmentList:      welcomeBookData?.equipmentList,
+      importantRules:     welcomeBookData?.importantRules,
+      transportInfo:      welcomeBookData?.transportInfo,
+      extraNotesPractical: welcomeBookData?.extraNotesPractical,
+      welcomeDescription: welcomeBookData?.welcomeDescription,
+      contactPhone:       welcomeBookData?.contactPhone,
+      restaurants:        welcomeBookData?.restaurants,
+      places:             welcomeBookData?.places,
+      shopsList:          welcomeBookData?.shopsList,
+      extraNotesAround:   welcomeBookData?.extraNotesAround,
+      rooms:              welcomeBookData?.rooms,
+      extraNotesLogement: welcomeBookData?.extraNotesLogement,
+      practicalInfo:      property.practical_info,
+      customQRSummary, propertyFacts,
+      isAirbnb: isAirbnbPlatform,
+    } : { language };
+
+    // ─── Historique ─────────────────────────────────────────────
+    let messageHistory = [];
+    try {
+      const h = await pool.query(
+        `SELECT sender_type, message FROM messages
+         WHERE conversation_id = $1
+         AND created_at > NOW() - INTERVAL '7 days'
+         AND message NOT ILIKE '%THIS RESERVATION HAS BEEN PRE-PAID%'
+         AND message NOT ILIKE '%BOOKING NOTE%'
+         AND message NOT ILIKE '%OTA Commission%'
+         AND sender_type != 'internal_note'
+         AND LENGTH(message) > 3
+         ORDER BY created_at ASC LIMIT 30`,
+        [conversationId]
+      );
+      messageHistory = h.rows.map(m => ({
+        role: m.sender_type === 'guest' ? 'user' : 'assistant',
+        content: m.message
+      }));
+      // éviter doublon avec le dernier message voyageur (envoyé séparément)
+      if (messageHistory.length && messageHistory[messageHistory.length - 1].content === lastGuestMessage) {
+        messageHistory.pop();
+      }
+    } catch(e) {}
+
+    // ─── Few-shot (style de l'hôte) ─────────────────────────────
+    const fewShotExamples = await loadFewShotExamples(pool, conversationId, conversation.property_id);
+
+    // ─── Proximité temps réel si pertinent ──────────────────────
+    try {
+      if (context.address && lastGuestMessage) {
+        const prox = await getProximityContext(lastGuestMessage, context.address);
+        if (prox) context.proximityResults = prox;
+      }
+    } catch(e) {}
+
+    // ─── Génération du brouillon ────────────────────────────────
+    const draft = await getOwnerDraftResponse(
+      lastGuestMessage, context, messageHistory, fewShotExamples,
+      { regenerate: !!opts.regenerate }
+    );
+    if (!draft) {
+      console.warn(`⚠️ [SUGGESTION] Pas de brouillon généré pour conv ${conversationId}`);
+      return null;
+    }
+
+    // ─── Stockage + notif socket ────────────────────────────────
+    await pool.query(
+      `UPDATE conversations
+       SET owner_suggestion = $2, owner_suggestion_at = NOW(), owner_suggestion_status = 'pending', updated_at = NOW()
+       WHERE id = $1`,
+      [conversationId, draft]
+    );
+    if (io) {
+      io.to(`user_${conversation.user_id}`).emit('owner_suggestion_ready', {
+        conversationId,
+        suggestion: draft,
+        guestName: conversation.guest_name || 'Voyageur'
+      });
+    }
+    console.log(`✍️ [SUGGESTION] Brouillon ${opts.regenerate ? '(régénéré) ' : ''}prêt pour conv ${conversationId}`);
+    return draft;
+  } catch (error) {
+    console.error('❌ [SUGGESTION] Erreur generateOwnerSuggestion:', error.message);
+    return null;
+  }
+}
+
+// ============================================
 // 🔔 ESCALADE VERS PROPRIÉTAIRE
 // ============================================
 
@@ -1228,6 +1423,10 @@ async function escalateToOwner(conversation, pool, io, language, channexId = nul
         );
       }
     } catch(nErr) { console.error('❌ [HANDLER] Erreur notif escalade:', nErr.message); }
+
+    // ── Brouillon de réponse pour l'hôte (asynchrone, ne bloque pas l'escalade) ──
+    generateOwnerSuggestion(conversation.id, pool, io, {}).catch(e =>
+      console.warn('⚠️ [HANDLER] Suggestion à l\'escalade:', e.message));
   } catch (error) {
     console.error('❌ [HANDLER] Erreur escalateToOwner:', error);
   }
@@ -1430,5 +1629,6 @@ module.exports = {
   sendAutoMessage,
   addInternalNote,
   createHostQuestion,
-  relayHostAnswer
+  relayHostAnswer,
+  generateOwnerSuggestion
 };

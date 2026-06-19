@@ -24,6 +24,7 @@ const { Pool } = require('pg');
 // 🤖 IMPORTS SYSTÈME ONBOARDING + RÉPONSES AUTO
 // ============================================
 const { handleIncomingMessage, handleIncomingMessageDebounced } = require('./integrated-chat-handler');
+const { generateOwnerSuggestion } = require('./integrated-chat-handler');
 // onboarding-system supprimé — données voyageur via Channex
 const crypto = require('crypto');
 const axios = require('axios');
@@ -2172,6 +2173,16 @@ ON invoice_download_tokens(token);
       await pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS source TEXT`);
       console.log('✅ Colonnes guest_language + language OK');
     } catch(e) { console.log('ℹ️ guest_language:', e.message); }
+
+    // Migration : brouillon de réponse IA pour l'hôte (suggestions 1 clic)
+    try {
+      await pool.query(`
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS owner_suggestion TEXT;
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS owner_suggestion_at TIMESTAMPTZ;
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS owner_suggestion_status TEXT DEFAULT 'pending';
+      `);
+      console.log('✅ Colonnes owner_suggestion OK');
+    } catch(e) { console.log('ℹ️ owner_suggestion:', e.message); }
 
     // ✅ Migration : ai_disabled sur conversations
     try {
@@ -33178,6 +33189,87 @@ app.post('/api/chat/conversations/:conversationId/send-sms', authenticateAny, as
 
   } catch (err) {
     console.error('❌ POST send-sms:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ============================================================
+// ✍️ SUGGESTIONS DE RÉPONSE POUR L'HÔTE (brouillon IA 1 clic)
+// ============================================================
+
+// Helper : vérifie que la conv appartient à l'utilisateur (ou son agence)
+async function _assertConvOwnership(req, conversationId) {
+  const user = await getUserFromRequest(req);
+  if (!user) return { error: 401 };
+  const ids = await getAgencyUserIds(req, user.id);
+  const r = await pool.query(
+    `SELECT id, user_id, guest_name, owner_suggestion, owner_suggestion_at, owner_suggestion_status
+     FROM conversations WHERE id = $1 AND user_id = ANY($2::text[]) LIMIT 1`,
+    [conversationId, ids]
+  );
+  if (!r.rows[0]) return { error: 404 };
+  return { user, conv: r.rows[0] };
+}
+
+// GET — récupérer le brouillon en attente pour une conversation
+app.get('/api/chat/conversations/:conversationId/suggestion', authenticateAny, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const ck = await _assertConvOwnership(req, conversationId);
+    if (ck.error === 401) return res.status(401).json({ error: 'Non autorisé' });
+    if (ck.error === 404) return res.status(404).json({ error: 'Conversation introuvable' });
+
+    const conv = ck.conv;
+    if (conv.owner_suggestion && conv.owner_suggestion_status === 'pending') {
+      return res.json({
+        success: true,
+        suggestion: conv.owner_suggestion,
+        at: conv.owner_suggestion_at
+      });
+    }
+    return res.json({ success: true, suggestion: null });
+  } catch (err) {
+    console.error('❌ GET suggestion:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST — (re)générer un brouillon à la demande
+app.post('/api/chat/conversations/:conversationId/suggestion/regenerate', authenticateAny, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const ck = await _assertConvOwnership(req, conversationId);
+    if (ck.error === 401) return res.status(401).json({ error: 'Non autorisé' });
+    if (ck.error === 404) return res.status(404).json({ error: 'Conversation introuvable' });
+
+    const draft = await generateOwnerSuggestion(conversationId, pool, io, { regenerate: true });
+    if (!draft) {
+      return res.status(502).json({ error: "Impossible de générer un brouillon pour l'instant" });
+    }
+    return res.json({ success: true, suggestion: draft });
+  } catch (err) {
+    console.error('❌ POST suggestion/regenerate:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST — écarter le brouillon (utilisé / ignoré)
+app.post('/api/chat/conversations/:conversationId/suggestion/dismiss', authenticateAny, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const ck = await _assertConvOwnership(req, conversationId);
+    if (ck.error === 401) return res.status(401).json({ error: 'Non autorisé' });
+    if (ck.error === 404) return res.status(404).json({ error: 'Conversation introuvable' });
+
+    const status = (req.body && req.body.status === 'used') ? 'used' : 'dismissed';
+    await pool.query(
+      `UPDATE conversations SET owner_suggestion_status = $2, updated_at = NOW() WHERE id = $1`,
+      [conversationId, status]
+    );
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('❌ POST suggestion/dismiss:', err);
     res.status(500).json({ error: err.message });
   }
 });
