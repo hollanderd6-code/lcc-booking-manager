@@ -36146,7 +36146,7 @@ app.get('/api/guest/conversations/:id/messages', async (req, res) => {
       SELECT id, sender_type, sender_name, message, photo_url,
              is_bot_response, is_auto_response, created_at
       FROM messages
-      WHERE conversation_id = $1
+      WHERE conversation_id = $1 AND sender_type != 'internal_note'
       ORDER BY created_at ASC
       LIMIT 100
     `, [convId]);

@@ -128,6 +128,31 @@ async function sendBotMessage(conversationId, message, pool, io, channexBookingI
 }
 
 // ============================================
+// 🗒️ NOTE INTERNE dans la conversation (visible hôte uniquement)
+// Insérée en DB avec sender_type='internal_note' et JAMAIS envoyée à Channex.
+// ============================================
+async function addInternalNote(conversationId, note, pool, io) {
+  try {
+    // Préfixe sentinelle : permet au front (messages.html) de détecter et styliser
+    // ces notes en orange, puis de le retirer à l'affichage. Invisible côté voyageur.
+    const stored = `⟦NOTE_INTERNE⟧ ${note}`;
+    const messageResult = await pool.query(
+      `INSERT INTO messages (conversation_id, sender_type, message, is_read, created_at)
+       VALUES ($1, 'internal_note', $2, TRUE, NOW())
+       RETURNING id, conversation_id, sender_type, message, is_read, created_at`,
+      [conversationId, stored]
+    );
+    const saved = messageResult.rows[0];
+    if (io) io.to(`conversation_${conversationId}`).emit('new_message', saved);
+    console.log(`🗒️ [NOTE INTERNE] conv ${conversationId} : ${note}`);
+    return saved;
+  } catch (e) {
+    console.error('❌ [NOTE INTERNE] Erreur:', e.message);
+    return null;
+  }
+}
+
+// ============================================
 // 🏦 CAUTION : Créer si elle n'existe pas
 // ============================================
 
@@ -799,6 +824,10 @@ async function handleIncomingMessage(message, conversation, pool, io) {
 
             // Note auto sur la réservation
             await addLateCheckoutNote(conversation, pool, reqLabel);
+            // Note interne dans la conversation (visible hôte uniquement)
+            await addInternalNote(conversation.id,
+              `🕐 Départ tardif autorisé automatiquement : ${reqLabel} (prévu ${depLabel}). Note ajoutée à la réservation.`,
+              pool, io);
             // Notification au proprio
             await notifyLateCheckout(conversation, pool, reqLabel, depLabel, true);
             console.log(`✅ [HANDLER] Late checkout accepté à ${reqLabel} (tolérance ${toleranceMin}min)`);
@@ -877,6 +906,9 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             };
             await sendBotMessage(conversation.id, okMsg[language] || okMsg.fr, pool, io, channexId);
             await addArrivalNote(conversation, pool, reqLabel, 'early');
+            await addInternalNote(conversation.id,
+              `🕐 Arrivée anticipée autorisée automatiquement : ${reqLabel} (prévu ${arrLabel}). Note ajoutée à la réservation.`,
+              pool, io);
             await notifyEarlyCheckin(conversation, pool, reqLabel, arrLabel, true);
             console.log(`✅ [HANDLER] Early check-in accepté à ${reqLabel} (tolérance ${toleranceMin}min)`);
             return true;
@@ -1319,6 +1351,7 @@ module.exports = {
   handleIncomingMessageDebounced,
   sendBotMessage,
   sendAutoMessage,
+  addInternalNote,
   createHostQuestion,
   relayHostAnswer
 };

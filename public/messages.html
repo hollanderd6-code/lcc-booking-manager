@@ -5496,5 +5496,54 @@ document.addEventListener('click', function(e) {
   if (id === 'btnToggleAI'      && window.toggleConversationAI)         window.toggleConversationAI();
 }, true);
 </script>
+
+<style>
+/* 🗒️ Notes internes (visibles hôte uniquement) — bulle orange centrée */
+.chat-message.bh-internal-note { justify-content: center !important; }
+.chat-message.bh-internal-note .chat-bubble {
+  background: #FFF7ED !important;
+  border: 1px solid #FED7AA !important;
+  color: #9A3412 !important;
+  border-radius: 12px !important;
+  max-width: 92% !important;
+  box-shadow: none !important;
+}
+.chat-message.bh-internal-note .chat-text { color: #9A3412 !important; font-size: 13px !important; }
+.chat-message.bh-internal-note .chat-time { color: #C2854A !important; }
+.chat-message.bh-internal-note .chat-bubble::before {
+  content: "🔒 Note interne · non visible par le voyageur";
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #C2410C;
+  margin-bottom: 4px;
+}
+</style>
+<script>
+// 🗒️ Détecte et stylise les notes internes (sentinelle ⟦NOTE_INTERNE⟧ posée côté serveur).
+// chat-owner.js rend ces messages comme des bulles normales ; on les repère et on retire le marqueur.
+(function() {
+  var SENTINEL = '⟦NOTE_INTERNE⟧';
+  function styleInternalNotes() {
+    var bubbles = document.querySelectorAll('#chatMessages .chat-message:not(.bh-internal-note) .chat-text');
+    bubbles.forEach(function(txt) {
+      if (txt.textContent && txt.textContent.indexOf(SENTINEL) !== -1) {
+        // Retirer le marqueur du texte affiché
+        txt.innerHTML = txt.innerHTML.replace(SENTINEL, '').trim();
+        var msg = txt.closest('.chat-message');
+        if (msg) msg.classList.add('bh-internal-note');
+      }
+    });
+  }
+  var chatEl = document.getElementById('chatMessages');
+  var obs = new MutationObserver(styleInternalNotes);
+  if (chatEl) obs.observe(chatEl, { childList: true, subtree: true });
+  // Re-scan périodique léger (filet de sécurité si chatMessages est remonté)
+  setInterval(styleInternalNotes, 1500);
+  styleInternalNotes();
+})();
+</script>
 </body>
 </html>
