@@ -1633,6 +1633,11 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     /* Booking Form */
     .booking-form {
       padding: 24px;
+      overflow-x: hidden;
+      max-width: 100%;
+      touch-action: pan-y;            /* bloque le balayage gauche/droite à l'intérieur */
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
     }
 
     .booking-form .form-group {
@@ -1655,6 +1660,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     .booking-form .form-group select,
     .booking-form .form-group textarea {
       width: 100%;
+      box-sizing: border-box;
+      max-width: 100%;
       padding: 10px 14px;
       border: 1px solid #d1d5db;
       border-radius: 8px;
