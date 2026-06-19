@@ -1398,6 +1398,98 @@ html[data-theme-v3="1"] .sidebar {
 </div>
 <input type="hidden" id="propertyColor" value="#E67E50"/>
 
+<!-- ✅ SECTION : PRESTATIONS PAYANTES (UPSELL) -->
+<div class="form-section-header" style="margin-top:18px;">
+  <i class="fas fa-sack-dollar"></i>
+  <div>
+    <strong>Prestations payantes</strong>
+    <span style="display:block;font-size:11.5px;color:#6b7280;font-weight:400;">Au-delà de la tolérance gratuite, l'IA propose automatiquement un lien de paiement (commission BHGuest 3 %).</span>
+  </div>
+</div>
+
+<!-- Départ tardif -->
+<div class="form-group" style="margin-bottom:8px;">
+  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+    <input type="checkbox" id="upsellLateEnabled" style="width:18px;height:18px;accent-color:#1A7A5E;"/>
+    <span><i class="fas fa-clock" style="color:#1A7A5E;"></i> Départ tardif payant</span>
+  </label>
+</div>
+<div class="form-grid-2" id="upsellLateFields">
+  <div class="form-group">
+    <label for="upsellLateTolerance"><span>Tolérance gratuite</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellLateTolerance" min="0" max="600" step="15" type="number" placeholder="Ex: 120"/>
+      <span>min</span>
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="upsellLatePrice"><span>Tarif au-delà</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellLatePrice" min="0" step="0.5" type="number" placeholder="Ex: 10"/>
+      <span>€/h</span>
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="upsellLateMax"><span>Départ tardif max</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellLateMax" min="0" max="720" step="15" type="number" placeholder="Ex: 240 (vide = illimité)"/>
+      <span>min</span>
+    </div>
+  </div>
+</div>
+
+<!-- Arrivée anticipée -->
+<div class="form-group" style="margin:14px 0 8px;">
+  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+    <input type="checkbox" id="upsellEarlyEnabled" style="width:18px;height:18px;accent-color:#1A7A5E;"/>
+    <span><i class="fas fa-door-open" style="color:#1A7A5E;"></i> Arrivée anticipée payante</span>
+  </label>
+</div>
+<div class="form-grid-2" id="upsellEarlyFields">
+  <div class="form-group">
+    <label for="upsellEarlyTolerance"><span>Tolérance gratuite</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellEarlyTolerance" min="0" max="600" step="15" type="number" placeholder="Ex: 60"/>
+      <span>min</span>
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="upsellEarlyPrice"><span>Tarif au-delà</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellEarlyPrice" min="0" step="0.5" type="number" placeholder="Ex: 10"/>
+      <span>€/h</span>
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="upsellEarlyMax"><span>Arrivée anticipée max</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellEarlyMax" min="0" max="720" step="15" type="number" placeholder="Ex: 180 (vide = illimité)"/>
+      <span>min</span>
+    </div>
+  </div>
+</div>
+
+<!-- Panier d'accueil -->
+<div class="form-group" style="margin:14px 0 8px;">
+  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+    <input type="checkbox" id="upsellBasketEnabled" style="width:18px;height:18px;accent-color:#1A7A5E;"/>
+    <span><i class="fas fa-basket-shopping" style="color:#1A7A5E;"></i> Panier d'accueil (sur demande)</span>
+  </label>
+</div>
+<div class="form-grid-2" id="upsellBasketFields">
+  <div class="form-group">
+    <label for="upsellBasketPrice"><span>Prix du panier</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellBasketPrice" min="0" step="0.5" type="number" placeholder="Ex: 25"/>
+      <span>€</span>
+    </div>
+  </div>
+  <div class="form-group" style="grid-column:1 / -1;">
+    <label for="upsellBasketDesc"><span>Contenu / description</span></label>
+    <input id="upsellBasketDesc" type="text" class="form-control" placeholder="Ex: vin local, fromages, fruits de saison"/>
+  </div>
+</div>
+
 <!-- ✅ SECTION : CAPACITÉ D'ACCUEIL -->
 <div class="form-grid-2">
 <div class="form-group">
@@ -2837,6 +2929,127 @@ function insertVariable(textareaId, variable, event) {
 
   console.log('✅ Module auto-réponses chargé');
   </script>
+
+<!-- ============================================================
+     💸 CONFIG UPSELL (prestations payantes) — chargement & sauvegarde
+     ============================================================ -->
+<script>
+(function () {
+  const API_BASE = (window.API_URL || 'https://lcc-booking-manager.onrender.com');
+  function _token() { return localStorage.getItem('lcc_token') || localStorage.getItem('token') || ''; }
+  window._upsellPropertyId = null;
+
+  function _setVal(id, v) {
+    const el = document.getElementById(id);
+    if (el) el.value = (v === null || v === undefined) ? '' : v;
+  }
+  function _setChk(id, v) {
+    const el = document.getElementById(id);
+    if (el) el.checked = !!v;
+  }
+  function _num(id) {
+    const el = document.getElementById(id);
+    if (!el || el.value === '') return null;
+    const n = parseFloat(el.value);
+    return isNaN(n) ? null : n;
+  }
+  function _chk(id) {
+    const el = document.getElementById(id);
+    return !!(el && el.checked);
+  }
+
+  function _toggleFields() {
+    const map = [
+      ['upsellLateEnabled', 'upsellLateFields'],
+      ['upsellEarlyEnabled', 'upsellEarlyFields'],
+      ['upsellBasketEnabled', 'upsellBasketFields'],
+    ];
+    map.forEach(([chk, box]) => {
+      const c = document.getElementById(chk);
+      const b = document.getElementById(box);
+      if (c && b) b.style.opacity = c.checked ? '1' : '.45';
+    });
+  }
+  ['upsellLateEnabled','upsellEarlyEnabled','upsellBasketEnabled'].forEach(id => {
+    document.addEventListener('change', (e) => { if (e.target && e.target.id === id) _toggleFields(); });
+  });
+
+  async function loadUpsellConfig(propertyId) {
+    window._upsellPropertyId = propertyId || null;
+    // Reset
+    ['upsellLateTolerance','upsellLatePrice','upsellLateMax','upsellEarlyTolerance','upsellEarlyPrice','upsellEarlyMax','upsellBasketPrice','upsellBasketDesc'].forEach(id => _setVal(id, ''));
+    ['upsellLateEnabled','upsellEarlyEnabled','upsellBasketEnabled'].forEach(id => _setChk(id, false));
+    if (!propertyId) { _toggleFields(); return; }
+    try {
+      const r = await fetch(`${API_BASE}/api/properties/${propertyId}/upsell`, {
+        headers: { 'Authorization': 'Bearer ' + _token() }
+      });
+      if (!r.ok) { _toggleFields(); return; }
+      const data = await r.json();
+      const u = data.upsell || {};
+      _setVal('upsellLateTolerance', u.late_checkout_tolerance_minutes);
+      _setChk('upsellLateEnabled', u.late_checkout_enabled);
+      _setVal('upsellLatePrice', u.late_checkout_price_per_hour);
+      _setVal('upsellLateMax', u.late_checkout_max_minutes);
+      _setVal('upsellEarlyTolerance', u.early_checkin_tolerance_minutes);
+      _setChk('upsellEarlyEnabled', u.early_checkin_enabled);
+      _setVal('upsellEarlyPrice', u.early_checkin_price_per_hour);
+      _setVal('upsellEarlyMax', u.early_checkin_max_minutes);
+      _setChk('upsellBasketEnabled', u.welcome_basket_enabled);
+      _setVal('upsellBasketPrice', u.welcome_basket_price);
+      _setVal('upsellBasketDesc', u.welcome_basket_description);
+    } catch(e) { /* silencieux */ }
+    _toggleFields();
+  }
+  window.loadUpsellConfig = loadUpsellConfig;
+
+  async function saveUpsellConfig() {
+    const propertyId = window._upsellPropertyId;
+    if (!propertyId) return; // logement pas encore créé : on ignore (réouvrir pour configurer)
+    const body = {
+      late_checkout_tolerance_minutes: _num('upsellLateTolerance'),
+      late_checkout_enabled: _chk('upsellLateEnabled'),
+      late_checkout_price_per_hour: _num('upsellLatePrice'),
+      late_checkout_max_minutes: _num('upsellLateMax'),
+      early_checkin_tolerance_minutes: _num('upsellEarlyTolerance'),
+      early_checkin_enabled: _chk('upsellEarlyEnabled'),
+      early_checkin_price_per_hour: _num('upsellEarlyPrice'),
+      early_checkin_max_minutes: _num('upsellEarlyMax'),
+      welcome_basket_enabled: _chk('upsellBasketEnabled'),
+      welcome_basket_price: _num('upsellBasketPrice'),
+      welcome_basket_description: (document.getElementById('upsellBasketDesc')?.value || '').trim(),
+    };
+    try {
+      await fetch(`${API_BASE}/api/properties/${propertyId}/upsell`, {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + _token(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      console.log('✅ Config upsell enregistrée');
+    } catch(e) { console.warn('⚠️ Sauvegarde upsell:', e.message); }
+  }
+  window.saveUpsellConfig = saveUpsellConfig;
+
+  // Charger la config à l'ouverture d'un logement (chaîne editProperty)
+  const _prevEdit = window.editProperty;
+  if (typeof _prevEdit === 'function') {
+    window.editProperty = function(propertyData) {
+      _prevEdit(propertyData);
+      const pid = propertyData && (propertyData.id || propertyData.property_id);
+      loadUpsellConfig(pid);
+    };
+  }
+
+  // Sauvegarder la config en même temps que le logement (chaîne saveProperty)
+  const _prevSave = window.saveProperty;
+  if (typeof _prevSave === 'function') {
+    window.saveProperty = function(e) {
+      try { saveUpsellConfig(); } catch(err) {}
+      return _prevSave.apply(this, arguments);
+    };
+  }
+})();
+</script>
 
 <!-- ============================================ -->
 <!-- 🧹 MODULE CLEANER PAR DÉFAUT PAR LOGEMENT    -->

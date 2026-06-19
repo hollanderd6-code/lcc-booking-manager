@@ -5,6 +5,7 @@
 
 const { getGroqResponse, getOwnerDraftResponse, requiresHumanIntervention } = require('./groq-ai');
 const { getProximityContext } = require('./geo-proximity');
+const { createUpsellPaymentLink } = require('./upsell-service');
 
 const Stripe = require('stripe');
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -654,6 +655,12 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       // Arrivée anticipée (early check-in) : tolérance en minutes (défaut 60 = 1h)
       earlyCheckinToleranceMin: (property.early_checkin_tolerance_minutes != null
         ? parseInt(property.early_checkin_tolerance_minutes) : 60),
+      // ── Upsell payant (configuré par logement) ──
+      lateCheckoutPaid:   property.late_checkout_enabled === true && parseFloat(property.late_checkout_price_per_hour) > 0,
+      earlyCheckinPaid:   property.early_checkin_enabled === true && parseFloat(property.early_checkin_price_per_hour) > 0,
+      welcomeBasketEnabled: property.welcome_basket_enabled === true && parseFloat(property.welcome_basket_price) > 0,
+      welcomeBasketPrice:   parseFloat(property.welcome_basket_price) || null,
+      welcomeBasketDescription: property.welcome_basket_description || null,
       // WiFi
       wifiName:          property.wifi_name     || welcomeBookData?.wifiSSID,
       wifiPassword:      property.wifi_password || welcomeBookData?.wifiPassword,
@@ -850,6 +857,47 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             return true;
           }
 
+          // Cas 2bis : au-delà de la tolérance MAIS départ tardif PAYANT activé → lien de paiement
+          if (context.lateCheckoutPaid) {
+            const pricePerHour = parseFloat(property.late_checkout_price_per_hour) || 0;
+            const maxMin = property.late_checkout_max_minutes != null
+              ? parseInt(property.late_checkout_max_minutes) : null;
+            // Plafond : si demande au-delà du max autorisé → on bascule sur validation manuelle (Cas 3)
+            if (pricePerHour > 0 && (maxMin == null || delayMin <= maxMin)) {
+              const billedMin = Math.max(0, delayMin - toleranceMin);
+              const billedHours = Math.max(1, Math.ceil(billedMin / 60));
+              const amountCents = Math.round(billedHours * pricePerHour * 100);
+              const priceLabel = (amountCents / 100).toFixed(2).replace(/\.00$/, '') + '€';
+
+              const link = await createUpsellPaymentLink({
+                pool, stripe, conversation, property,
+                kind: 'late_checkout',
+                label: `Départ tardif jusqu'à ${reqLabel}`,
+                description: `${property.name || 'Logement'} — ${billedHours}h après ${depLabel}`,
+                amountCents,
+                extraMeta: { req_label: reqLabel, ref_label: depLabel, billed_hours: String(billedHours) },
+              });
+
+              if (link && link.url) {
+                const payMsg = {
+                  fr: `Un départ tardif jusqu'à ${reqLabel} est possible ! 😊\n\nCette prestation est à ${priceLabel} (${billedHours}h après l'heure de départ habituelle de ${depLabel}). Pour la réserver, il vous suffit de régler ici :\n\n${link.url}\n\nDès le paiement validé, c'est confirmé et noté pour le ménage. À très vite !`,
+                  en: `A late checkout until ${reqLabel} is possible! 😊\n\nThis option costs ${priceLabel} (${billedHours}h after the usual ${depLabel} checkout). To book it, simply pay here:\n\n${link.url}\n\nOnce payment is confirmed, you're all set. See you soon!`,
+                  it: `È possibile una partenza posticipata fino alle ${reqLabel}! 😊\n\nQuesta opzione costa ${priceLabel} (${billedHours}h dopo le ${depLabel}). Per prenotarla, paghi qui:\n\n${link.url}\n\nDopo il pagamento è tutto confermato. A presto!`,
+                  es: `¡Una salida tardía hasta las ${reqLabel} es posible! 😊\n\nEsta opción cuesta ${priceLabel} (${billedHours}h después de las ${depLabel}). Para reservarla, pague aquí:\n\n${link.url}\n\nUna vez confirmado el pago, queda reservado. ¡Hasta pronto!`,
+                  de: `Ein spätes Auschecken bis ${reqLabel} ist möglich! 😊\n\nDiese Option kostet ${priceLabel} (${billedHours}h nach ${depLabel}). Zum Buchen zahlen Sie bitte hier:\n\n${link.url}\n\nNach Zahlungseingang ist alles bestätigt. Bis bald!`,
+                };
+                await sendBotMessage(conversation.id, payMsg[language] || payMsg.fr, pool, io, channexId);
+                await addInternalNote(conversation.id,
+                  `💸 Départ tardif PAYANT proposé : ${reqLabel} (prévu ${depLabel}) — ${priceLabel} pour ${billedHours}h. Lien de paiement envoyé, en attente de règlement.`,
+                  pool, io);
+                console.log(`💸 [HANDLER] Late checkout payant proposé à ${reqLabel} (${priceLabel})`);
+                return true;
+              }
+              // Si la création du lien échoue → on retombe sur la validation manuelle ci-dessous
+              console.warn('⚠️ [HANDLER] Lien late checkout non créé → fallback question hôte');
+            }
+          }
+
           // Cas 3 : au-delà de la tolérance → refuser poliment + escalade
           const tooLateMsg = {
             fr: `Je comprends votre demande de partir à ${reqLabel}. Je dois vérifier ce point avec l'hôte, qui reviendra vers vous rapidement pour confirmer. Merci de votre patience ! 🙏`,
@@ -931,6 +979,45 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             await notifyEarlyCheckin(conversation, pool, reqLabel, arrLabel, true);
             console.log(`✅ [HANDLER] Early check-in accepté à ${reqLabel} (tolérance ${toleranceMin}min)`);
             return true;
+          }
+
+          // Cas 2bis : au-delà de la tolérance MAIS arrivée anticipée PAYANTE activée → lien de paiement
+          if (context.earlyCheckinPaid) {
+            const pricePerHour = parseFloat(property.early_checkin_price_per_hour) || 0;
+            const maxMin = property.early_checkin_max_minutes != null
+              ? parseInt(property.early_checkin_max_minutes) : null;
+            if (pricePerHour > 0 && (maxMin == null || earlyMin <= maxMin)) {
+              const billedMin = Math.max(0, earlyMin - toleranceMin);
+              const billedHours = Math.max(1, Math.ceil(billedMin / 60));
+              const amountCents = Math.round(billedHours * pricePerHour * 100);
+              const priceLabel = (amountCents / 100).toFixed(2).replace(/\.00$/, '') + '€';
+
+              const link = await createUpsellPaymentLink({
+                pool, stripe, conversation, property,
+                kind: 'early_checkin',
+                label: `Arrivée anticipée dès ${reqLabel}`,
+                description: `${property.name || 'Logement'} — ${billedHours}h avant ${arrLabel}`,
+                amountCents,
+                extraMeta: { req_label: reqLabel, ref_label: arrLabel, billed_hours: String(billedHours) },
+              });
+
+              if (link && link.url) {
+                const payMsg = {
+                  fr: `Une arrivée anticipée dès ${reqLabel} est possible ! 😊\n\nCette prestation est à ${priceLabel} (${billedHours}h avant l'heure d'arrivée habituelle de ${arrLabel}). Pour la réserver, réglez simplement ici :\n\n${link.url}\n\nDès le paiement validé, c'est confirmé. À très vite !`,
+                  en: `An early check-in from ${reqLabel} is possible! 😊\n\nThis option costs ${priceLabel} (${billedHours}h before the usual ${arrLabel} check-in). To book it, simply pay here:\n\n${link.url}\n\nOnce payment is confirmed, you're all set. See you soon!`,
+                  it: `È possibile un check-in anticipato dalle ${reqLabel}! 😊\n\nQuesta opzione costa ${priceLabel} (${billedHours}h prima delle ${arrLabel}). Per prenotarla, paghi qui:\n\n${link.url}\n\nDopo il pagamento è tutto confermato. A presto!`,
+                  es: `¡Una entrada anticipada desde las ${reqLabel} es posible! 😊\n\nEsta opción cuesta ${priceLabel} (${billedHours}h antes de las ${arrLabel}). Para reservarla, pague aquí:\n\n${link.url}\n\nUna vez confirmado el pago, queda reservado. ¡Hasta pronto!`,
+                  de: `Ein früher Check-in ab ${reqLabel} ist möglich! 😊\n\nDiese Option kostet ${priceLabel} (${billedHours}h vor ${arrLabel}). Zum Buchen zahlen Sie bitte hier:\n\n${link.url}\n\nNach Zahlungseingang ist alles bestätigt. Bis bald!`,
+                };
+                await sendBotMessage(conversation.id, payMsg[language] || payMsg.fr, pool, io, channexId);
+                await addInternalNote(conversation.id,
+                  `💸 Arrivée anticipée PAYANTE proposée : ${reqLabel} (prévu ${arrLabel}) — ${priceLabel} pour ${billedHours}h. Lien de paiement envoyé, en attente de règlement.`,
+                  pool, io);
+                console.log(`💸 [HANDLER] Early check-in payant proposé à ${reqLabel} (${priceLabel})`);
+                return true;
+              }
+              console.warn('⚠️ [HANDLER] Lien early check-in non créé → fallback question hôte');
+            }
           }
 
           // Cas 3 : trop tôt → refuser poliment + escalade
@@ -1039,6 +1126,57 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         }
         if (cleanMsg) await sendBotMessage(conversation.id, cleanMsg, pool, io, channexId);
         return true;
+      }
+
+      // ─── Détection tag [WELCOME_BASKET] (panier d'accueil payant) ──
+      const basketMatch = aiResponse.match(/\[WELCOME_BASKET\]/i);
+      if (basketMatch) {
+        const cleanMsg = aiResponse.replace(/\[WELCOME_BASKET\]/i, '').trim();
+        try {
+          if (context.welcomeBasketEnabled && context.welcomeBasketPrice > 0) {
+            const amountCents = Math.round(context.welcomeBasketPrice * 100);
+            const priceLabel = (amountCents / 100).toFixed(2).replace(/\.00$/, '') + '€';
+            const desc = context.welcomeBasketDescription
+              ? context.welcomeBasketDescription
+              : (language === 'en' ? 'Welcome basket' : 'Panier d\'accueil');
+
+            const link = await createUpsellPaymentLink({
+              pool, stripe, conversation, property,
+              kind: 'welcome_basket',
+              label: (language === 'en' ? 'Welcome basket' : "Panier d'accueil") + ` — ${property.name || ''}`.trim(),
+              description: desc,
+              amountCents,
+              extraMeta: {},
+            });
+
+            if (link && link.url) {
+              const payMsg = {
+                fr: `${cleanMsg ? cleanMsg + '\n\n' : ''}Avec plaisir ! Notre panier d'accueil (${desc}) est à ${priceLabel}. Pour en profiter, réglez simplement ici :\n\n${link.url}\n\nDès le paiement validé, nous le préparons pour votre arrivée 😊`,
+                en: `${cleanMsg ? cleanMsg + '\n\n' : ''}With pleasure! Our welcome basket (${desc}) costs ${priceLabel}. To enjoy it, simply pay here:\n\n${link.url}\n\nOnce payment is confirmed, we'll prepare it for your arrival 😊`,
+                it: `${cleanMsg ? cleanMsg + '\n\n' : ''}Con piacere! Il nostro cesto di benvenuto (${desc}) costa ${priceLabel}. Per averlo, paghi qui:\n\n${link.url}\n\nDopo il pagamento lo prepariamo per il suo arrivo 😊`,
+                es: `${cleanMsg ? cleanMsg + '\n\n' : ''}¡Con gusto! Nuestra cesta de bienvenida (${desc}) cuesta ${priceLabel}. Para disfrutarla, pague aquí:\n\n${link.url}\n\nUna vez confirmado el pago, la preparamos para su llegada 😊`,
+                de: `${cleanMsg ? cleanMsg + '\n\n' : ''}Gerne! Unser Willkommenskorb (${desc}) kostet ${priceLabel}. Zum Buchen zahlen Sie bitte hier:\n\n${link.url}\n\nNach Zahlungseingang bereiten wir ihn für Ihre Ankunft vor 😊`,
+              };
+              await sendBotMessage(conversation.id, payMsg[language] || payMsg.fr, pool, io, channexId);
+              await addInternalNote(conversation.id,
+                `💸 Panier d'accueil PAYANT proposé — ${priceLabel}. Lien de paiement envoyé, en attente de règlement.`,
+                pool, io);
+              console.log(`💸 [HANDLER] Panier d'accueil payant proposé (${priceLabel})`);
+              return true;
+            }
+          }
+          // Pas activé ou lien KO → message neutre sans inventer de prix
+          const fallback = {
+            fr: `Je vérifie ce point avec l'hôte et reviens vers vous très vite 😊`,
+            en: `I'm checking this with the host and will get back to you very soon 😊`,
+          };
+          await sendBotMessage(conversation.id, cleanMsg || (fallback[language] || fallback.fr), pool, io, channexId);
+          return true;
+        } catch(bErr) {
+          console.error('❌ [HANDLER] Erreur panier d\'accueil:', bErr.message);
+          if (cleanMsg) await sendBotMessage(conversation.id, cleanMsg, pool, io, channexId);
+          return true;
+        }
       }
 
       await sendBotMessage(conversation.id, aiResponse, pool, io, channexId);
@@ -1622,6 +1760,96 @@ async function relayHostAnswer(pool, io, { questionRow, answerType, freeText }) 
   return { sent: true, message: guestReply };
 }
 
+// ============================================
+// 💸 CONFIRMATION APRÈS PAIEMENT D'UN UPSELL
+// Appelé par le webhook Stripe (checkout.session.completed,
+// payment_type='upsell'). Effectue les actions post-paiement :
+// note réservation + note interne + notif proprio + confirmation voyageur.
+// ============================================
+
+async function confirmUpsellPaid({ paymentRow, pool, io }) {
+  try {
+    let meta = paymentRow.metadata;
+    if (typeof meta === 'string') { try { meta = JSON.parse(meta); } catch(e) { meta = {}; } }
+    meta = meta || {};
+    const kind = meta.upsell_kind;
+    const convId = meta.conversation_id;
+    if (!convId) { console.warn('⚠️ [UPSELL] confirmUpsellPaid sans conversation_id'); return; }
+
+    const cRes = await pool.query('SELECT * FROM conversations WHERE id = $1', [convId]);
+    const conversation = cRes.rows[0];
+    if (!conversation) { console.warn(`⚠️ [UPSELL] Conversation ${convId} introuvable`); return; }
+
+    const channexId = conversation.channex_booking_id || null;
+    const language = (conversation.language && conversation.language !== 'auto') ? conversation.language : 'fr';
+    const reqLabel = meta.req_label || '';
+    const refLabel = meta.ref_label || '';
+
+    if (kind === 'late_checkout') {
+      const msg = {
+        fr: `C'est confirmé ✅ Votre départ tardif jusqu'à ${reqLabel} est bien réservé. Profitez de votre matinée — pensez juste à bien fermer en partant. Merci et bon voyage !`,
+        en: `Confirmed ✅ Your late checkout until ${reqLabel} is booked. Enjoy your morning — just remember to lock up when you leave. Safe travels!`,
+        it: `Confermato ✅ La partenza posticipata fino alle ${reqLabel} è prenotata. Si goda la mattinata e chiuda bene l'alloggio. Buon viaggio!`,
+        es: `¡Confirmado ✅ Su salida tardía hasta las ${reqLabel} está reservada. Disfrute la mañana y cierre bien al salir. ¡Buen viaje!`,
+        de: `Bestätigt ✅ Ihr spätes Auschecken bis ${reqLabel} ist gebucht. Bitte gut abschließen. Gute Reise!`,
+      };
+      await sendBotMessage(conversation.id, msg[language] || msg.fr, pool, io, channexId);
+      try { await addLateCheckoutNote(conversation, pool, reqLabel); } catch(e) {}
+      await addInternalNote(conversation.id,
+        `✅💸 Départ tardif PAYÉ : ${reqLabel} (prévu ${refLabel}). Note ajoutée à la réservation.`, pool, io);
+      try { await notifyLateCheckout(conversation, pool, reqLabel, refLabel, true); } catch(e) {}
+
+    } else if (kind === 'early_checkin') {
+      const msg = {
+        fr: `C'est confirmé ✅ Votre arrivée anticipée dès ${reqLabel} est bien réservée. Les informations d'accès vous parviendront le matin de votre arrivée. À très vite !`,
+        en: `Confirmed ✅ Your early check-in from ${reqLabel} is booked. Access details will reach you the morning of your arrival. See you soon!`,
+        it: `Confermato ✅ Il check-in anticipato dalle ${reqLabel} è prenotato. Le info di accesso arriveranno la mattina dell'arrivo. A presto!`,
+        es: `¡Confirmado ✅ Su entrada anticipada desde las ${reqLabel} está reservada. La info de acceso le llegará la mañana de su llegada. ¡Hasta pronto!`,
+        de: `Bestätigt ✅ Ihr früher Check-in ab ${reqLabel} ist gebucht. Die Zugangsdaten erhalten Sie am Morgen Ihrer Ankunft. Bis bald!`,
+      };
+      await sendBotMessage(conversation.id, msg[language] || msg.fr, pool, io, channexId);
+      try { await addArrivalNote(conversation, pool, reqLabel, 'early'); } catch(e) {}
+      await addInternalNote(conversation.id,
+        `✅💸 Arrivée anticipée PAYÉE : ${reqLabel} (prévu ${refLabel}). Note ajoutée à la réservation.`, pool, io);
+      try { await notifyEarlyCheckin(conversation, pool, reqLabel, refLabel, true); } catch(e) {}
+
+    } else if (kind === 'welcome_basket') {
+      const msg = {
+        fr: `Merci ! ✅ Votre panier d'accueil est réservé, nous le préparons pour votre arrivée 😊`,
+        en: `Thank you! ✅ Your welcome basket is booked, we'll have it ready for your arrival 😊`,
+        it: `Grazie! ✅ Il cesto di benvenuto è prenotato, lo prepareremo per il suo arrivo 😊`,
+        es: `¡Gracias! ✅ Su cesta de bienvenida está reservada, la prepararemos para su llegada 😊`,
+        de: `Danke! ✅ Ihr Willkommenskorb ist gebucht, wir bereiten ihn für Ihre Ankunft vor 😊`,
+      };
+      await sendBotMessage(conversation.id, msg[language] || msg.fr, pool, io, channexId);
+      await addInternalNote(conversation.id,
+        `✅💸 Panier d'accueil PAYÉ — à préparer pour l'arrivée.`, pool, io);
+      // Notif proprio
+      try {
+        const { sendNotification } = require('./services/notifications-service');
+        const tokens = await pool.query(
+          'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+          [conversation.user_id]
+        );
+        for (const tok of tokens.rows) {
+          await sendNotification(
+            tok.fcm_token,
+            `🧺 Panier d'accueil payé — ${conversation.guest_name || 'Voyageur'}`,
+            `Pensez à le préparer pour l'arrivée.`,
+            { type: 'upsell_paid', conversation_id: String(conversation.id), screen: 'messages' }
+          );
+        }
+      } catch(e) {}
+    } else {
+      console.warn(`⚠️ [UPSELL] kind inconnu: ${kind}`);
+    }
+
+    console.log(`✅💸 [UPSELL] Paiement confirmé et traité (${kind}) pour conv ${convId}`);
+  } catch (error) {
+    console.error('❌ [UPSELL] Erreur confirmUpsellPaid:', error.message);
+  }
+}
+
 module.exports = {
   handleIncomingMessage,
   handleIncomingMessageDebounced,
@@ -1630,5 +1858,6 @@ module.exports = {
   addInternalNote,
   createHostQuestion,
   relayHostAnswer,
-  generateOwnerSuggestion
+  generateOwnerSuggestion,
+  confirmUpsellPaid
 };

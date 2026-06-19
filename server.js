@@ -25,6 +25,7 @@ const { Pool } = require('pg');
 // ============================================
 const { handleIncomingMessage, handleIncomingMessageDebounced } = require('./integrated-chat-handler');
 const { generateOwnerSuggestion } = require('./integrated-chat-handler');
+const { confirmUpsellPaid } = require('./integrated-chat-handler');
 // onboarding-system supprimé — données voyageur via Channex
 const crypto = require('crypto');
 const axios = require('axios');
@@ -2212,6 +2213,22 @@ ON invoice_download_tokens(token);
       console.log('✅ Colonne early_checkin_tolerance_minutes OK');
     } catch(e) { console.log('ℹ️ early_checkin_tolerance_minutes:', e.message); }
 
+    // ✅ Migration : prestations payantes (upsell) par logement
+    try {
+      await pool.query(`
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS late_checkout_enabled BOOLEAN DEFAULT FALSE;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS late_checkout_price_per_hour NUMERIC(10,2);
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS late_checkout_max_minutes INTEGER;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS early_checkin_enabled BOOLEAN DEFAULT FALSE;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS early_checkin_price_per_hour NUMERIC(10,2);
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS early_checkin_max_minutes INTEGER;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS welcome_basket_enabled BOOLEAN DEFAULT FALSE;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS welcome_basket_price NUMERIC(10,2);
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS welcome_basket_description TEXT;
+      `);
+      console.log('✅ Colonnes upsell (late/early/panier) OK');
+    } catch(e) { console.log('ℹ️ upsell columns:', e.message); }
+
     // ✅ Migration : codes promo
     try {
       await pool.query(`
@@ -4190,6 +4207,36 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
         const paymentType = session.metadata?.payment_type;
         const depositId = session.metadata?.deposit_id;
         const paymentId = session.metadata?.payment_id;
+
+        // 💸 UPSELL (départ tardif / arrivée anticipée / panier d'accueil)
+        if (paymentType === 'upsell') {
+          console.log('💸 Paiement upsell détecté');
+          try {
+            // Idempotence : ne traiter qu'une fois
+            const prev = await pool.query(
+              'SELECT id, status, metadata FROM payments WHERE id = $1 OR stripe_session_id = $2 LIMIT 1',
+              [paymentId, session.id]
+            );
+            const row = prev.rows[0];
+            const alreadyPaid = row && row.status === 'paid';
+
+            await pool.query(
+              `UPDATE payments SET status = 'paid', stripe_payment_intent_id = $1, updated_at = NOW()
+               WHERE id = $2 OR stripe_session_id = $3`,
+              [session.payment_intent, paymentId, session.id]
+            );
+
+            if (row && !alreadyPaid) {
+              await confirmUpsellPaid({ paymentRow: row, pool, io });
+            } else {
+              console.log(`ℹ️ [UPSELL] Paiement ${paymentId} déjà traité — skip confirmation`);
+            }
+          } catch (e) {
+            console.error('❌ [UPSELL] Erreur traitement webhook upsell:', e.message);
+          }
+          break;
+        }
+
         // 💰 PAIEMENT DE LOCATION (inclut les sessions BHGuest : filet serveur)
         if (paymentType === 'location' || paymentId || session.metadata?.source === 'boostinghost_guest') {
           console.log('Paiement de location detecte');
@@ -33270,6 +33317,87 @@ app.post('/api/chat/conversations/:conversationId/suggestion/dismiss', authentic
     return res.json({ success: true });
   } catch (err) {
     console.error('❌ POST suggestion/dismiss:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ============================================================
+// 💸 CONFIG UPSELL PAR LOGEMENT (départ tardif / arrivée anticipée / panier)
+// ============================================================
+
+// GET — lire la config upsell d'un logement
+app.get('/api/properties/:id/upsell', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const ids = await getAgencyUserIds(req, user.id);
+    const r = await pool.query(
+      `SELECT id,
+              late_checkout_tolerance_minutes, late_checkout_enabled, late_checkout_price_per_hour, late_checkout_max_minutes,
+              early_checkin_tolerance_minutes, early_checkin_enabled, early_checkin_price_per_hour, early_checkin_max_minutes,
+              welcome_basket_enabled, welcome_basket_price, welcome_basket_description
+       FROM properties WHERE id = $1 AND user_id = ANY($2::text[]) LIMIT 1`,
+      [req.params.id, ids]
+    );
+    if (!r.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
+    res.json({ success: true, upsell: r.rows[0] });
+  } catch (err) {
+    console.error('❌ GET upsell config:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT — enregistrer la config upsell d'un logement
+app.put('/api/properties/:id/upsell', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const ids = await getAgencyUserIds(req, user.id);
+
+    const own = await pool.query(
+      'SELECT id FROM properties WHERE id = $1 AND user_id = ANY($2::text[]) LIMIT 1',
+      [req.params.id, ids]
+    );
+    if (!own.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
+
+    const b = req.body || {};
+    const numOrNull = (v) => (v === '' || v === null || v === undefined || isNaN(parseFloat(v))) ? null : parseFloat(v);
+    const intOrNull = (v) => (v === '' || v === null || v === undefined || isNaN(parseInt(v))) ? null : parseInt(v);
+
+    await pool.query(
+      `UPDATE properties SET
+         late_checkout_tolerance_minutes = COALESCE($2, late_checkout_tolerance_minutes),
+         late_checkout_enabled           = $3,
+         late_checkout_price_per_hour     = $4,
+         late_checkout_max_minutes        = $5,
+         early_checkin_tolerance_minutes  = COALESCE($6, early_checkin_tolerance_minutes),
+         early_checkin_enabled            = $7,
+         early_checkin_price_per_hour      = $8,
+         early_checkin_max_minutes         = $9,
+         welcome_basket_enabled           = $10,
+         welcome_basket_price             = $11,
+         welcome_basket_description       = $12,
+         updated_at = NOW()
+       WHERE id = $1`,
+      [
+        req.params.id,
+        intOrNull(b.late_checkout_tolerance_minutes),
+        b.late_checkout_enabled === true || b.late_checkout_enabled === 'true',
+        numOrNull(b.late_checkout_price_per_hour),
+        intOrNull(b.late_checkout_max_minutes),
+        intOrNull(b.early_checkin_tolerance_minutes),
+        b.early_checkin_enabled === true || b.early_checkin_enabled === 'true',
+        numOrNull(b.early_checkin_price_per_hour),
+        intOrNull(b.early_checkin_max_minutes),
+        b.welcome_basket_enabled === true || b.welcome_basket_enabled === 'true',
+        numOrNull(b.welcome_basket_price),
+        (b.welcome_basket_description || '').trim() || null,
+      ]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('❌ PUT upsell config:', err);
     res.status(500).json({ error: err.message });
   }
 });

@@ -239,6 +239,29 @@ PROXIMITÉ — RECHERCHE EN TEMPS RÉEL
 ${ctx.proximityResults}\n`;
   }
 
+  // ── Bloc prestations payantes (upsell) ──
+  let upsellBlock = '';
+  {
+    const lines = [];
+    if (ctx.welcomeBasketEnabled && ctx.welcomeBasketPrice) {
+      lines.push(`• PANIER D'ACCUEIL proposé à la demande : ${ctx.welcomeBasketPrice}€${ctx.welcomeBasketDescription ? ` (${ctx.welcomeBasketDescription})` : ''}.
+  – Si le voyageur DEMANDE un panier d'accueil / des produits de bienvenue / un panier garni → réponds positivement et place le tag "[WELCOME_BASKET]" sur une ligne séparée à la fin. Le système enverra le lien de paiement et le prix exact ; ne réécris pas toi-même le lien.
+  – Ne propose JAMAIS le panier spontanément : uniquement si le voyageur le demande.`);
+    }
+    if (ctx.lateCheckoutPaid) {
+      lines.push(`• DÉPART TARDIF : peut être une prestation PAYANTE au-delà de la tolérance. Garde un texte neutre ("Je regarde si c'est possible…") et émets [LATE_CHECKOUT:HH:MM] comme d'habitude — le système calcule le tarif et envoie le lien. Ne promets JAMAIS la gratuité ni un prix toi-même.`);
+    }
+    if (ctx.earlyCheckinPaid) {
+      lines.push(`• ARRIVÉE ANTICIPÉE : peut être une prestation PAYANTE au-delà de la tolérance. Garde un texte neutre et émets [EARLY_CHECKIN:HH:MM] — le système calcule le tarif et envoie le lien. Ne promets JAMAIS la gratuité ni un prix toi-même.`);
+    }
+    if (lines.length) {
+      upsellBlock = `\n════════════════════════════════════════
+PRESTATIONS PAYANTES DISPONIBLES
+════════════════════════════════════════
+${lines.join('\n')}\n`;
+    }
+  }
+
   const basePrompt = `⚠️ LANGUE — PRIORITÉ ABSOLUE ⚠️
 ${languageInstructions[lang] || languageInstructions.auto}
 
@@ -258,7 +281,7 @@ ${temporalCtx.text}
 DONNÉES DU LOGEMENT (ta seule source de vérité)
 ════════════════════════════════════════
 ${propertyBlock}
-${proximityBlock}${fewShotBlock}
+${proximityBlock}${fewShotBlock}${upsellBlock}
 ════════════════════════════════════════
 RAISONNEMENT AVANT DE RÉPONDRE
 ════════════════════════════════════════
@@ -523,6 +546,7 @@ async function getOwnerDraftResponse(lastGuestMessage, conversationContext = {},
       .replace(/\[LATE_CHECKOUT:[^\]]*\]/gi, '')
       .replace(/\[EARLY_CHECKIN:[^\]]*\]/gi, '')
       .replace(/\[FACTURE(?::[^\]]*)?\]/gi, '')
+      .replace(/\[WELCOME_BASKET\]/gi, '')
       .trim();
     if ((draft.startsWith('"') && draft.endsWith('"')) || (draft.startsWith('«') && draft.endsWith('»'))) {
       draft = draft.slice(1, -1).trim();
