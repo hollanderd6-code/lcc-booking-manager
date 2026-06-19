@@ -13926,8 +13926,25 @@ function bhConfirm(message) {
 #invoiceModal .inv-btn-ghost { background:white;color:#374151;border:1px solid rgba(0,0,0,.12); }
 #invoiceModal .inv-btn-ghost:hover { background:#f5f2ec; }
 @media (max-width: 768px) {
+  /* Le modal facture est centré ; en webview le 100vh inclut la zone derrière
+     la bottom-bar (74px) → le pied (.inv-actions avec "Générer/Envoyer la facture")
+     passait dessous. On réserve cette hauteur sous l'overlay et on plafonne le
+     contenu en 100dvh pour garantir scroll interne + footer toujours visible. */
+  #invoiceModal {
+    align-items: center;
+    padding: 12px 12px calc(74px + env(safe-area-inset-bottom, 0px) + 12px) 12px;
+    box-sizing: border-box;
+  }
+  #invoiceModal .inv-content {
+    max-height: calc(100dvh - 74px - env(safe-area-inset-bottom, 0px) - 24px);
+    width: 100%;
+  }
   #invoiceModal .inv-body { grid-template-columns: 1fr; }
   #invoiceModal .inv-preview-panel { display: none; }
+  #invoiceModal .inv-form-panel { -webkit-overflow-scrolling: touch; }
+  #invoiceModal .inv-actions {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* ── Push notif items ── */
