@@ -12719,6 +12719,33 @@ app.post('/api/cleaning/assignments',
 // ROUTES API - CHECKLISTS MENAGE
 // ============================================
 
+// Les réservations OTA (Booking.com, etc.) importent automatiquement des
+// "notes" en anglais (pré-paiement, commission, message voyageur, "Imported
+// booking"…). Ce ne sont PAS de vraies notes : on ne les transmet pas au
+// personnel de ménage. Seules les notes rédigées manuellement (en français)
+// doivent apparaître. Pour étendre le filtre, ajouter un marqueur ci-dessous.
+function cleanReservationNote(raw) {
+  const note = String(raw == null ? '' : raw).trim();
+  if (!note) return '';
+  const lower = note.toLowerCase();
+  const junkMarkers = [
+    'imported booking',
+    'booking note',
+    'pre-paid',
+    'prepaid',
+    'payment charge',
+    'approximate time of arrival',
+    'meal plan',
+    'smoking preference',
+    'payment collect',
+    'ota collect',
+    'ota commission',
+    'collect booking'
+  ];
+  if (junkMarkers.some(m => lower.includes(m))) return '';
+  return note;
+}
+
 // GET - Liste des tâches pour une personne de ménage (accès via PIN)
 app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
   try {
@@ -12907,7 +12934,7 @@ if (reservation_key && reservation_key !== null) {
       [property_id, startDate, endDate]
     );
     guestName = resaRow.rows[0]?.guest_name || '';
-    reservationNotes = (resaRow.rows[0]?.notes || '').trim();
+    reservationNotes = cleanReservationNote(resaRow.rows[0]?.notes);
   } catch(e) {
     const r = (reservationsStore.properties[property_id] || []).find(r => {
       const rStart = String(r.start || '').slice(0, 10);
@@ -12915,7 +12942,7 @@ if (reservation_key && reservation_key !== null) {
       return `${property_id}_${rStart}_${rEnd}` === reservation_key;
     });
     guestName = r?.guestName || r?.name || '';
-    reservationNotes = (r?.notes || '').trim();
+    reservationNotes = cleanReservationNote(r?.notes);
   }
 
   const property = PROPERTIES.find(p => p.id === property_id);
@@ -12945,7 +12972,7 @@ if (reservation_key && reservation_key !== null) {
           const reservationKey = `${property_id}_${rStart}_${rEnd}`;
           const propertyName = (r.property && displayName(r.property)) || r.propertyInternalName || r.propertyName || property_id;
           const guestName = r.guestName || r.name || '';
-          const reservationNotes = (r.notes || '').trim();
+          const reservationNotes = cleanReservationNote(r.notes);
           
           tasks.push({
             reservationKey,
