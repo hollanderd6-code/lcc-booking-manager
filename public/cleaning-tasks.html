@@ -278,8 +278,8 @@ html, body {
 
 .task-card.completed {
   opacity: 0.6;
-  border-color: var(--accent);
-  border-left: 4px solid var(--accent);
+  border-color: var(--border);
+  border-left: 4px solid #B4B2A9;
 }
 
 .task-card.in-progress {
@@ -317,8 +317,8 @@ html, body {
 }
 
 .badge-today {
-  background: var(--danger-light);
-  color: var(--danger);
+  background: var(--accent-light);
+  color: var(--accent-dark);
   animation: pulse-badge 2s ease-in-out infinite;
 }
 
@@ -1118,11 +1118,150 @@ html, body {
   color: white;
 }
 
+/* ===== HERO (en-tête modernisé) ===== */
+.hero {
+  background: var(--accent);
+  padding: 16px 18px 16px;
+  padding-top: calc(16px + var(--safe-top));
+}
+.hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.hero-left { display: flex; align-items: center; gap: 11px; }
+.hero-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px;
+  flex-shrink: 0;
+}
+.hero-greeting {
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.hero-date {
+  color: rgba(255,255,255,.72);
+  font-size: 12px;
+  margin-top: 1px;
+  text-transform: capitalize;
+}
+.hero-actions { display: flex; gap: 8px; }
+.hero-btn {
+  width: 38px; height: 38px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255,255,255,.15);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 15px;
+  transition: all 0.15s;
+}
+.hero-btn:active { transform: scale(0.92); }
+.hero-recap { display: flex; gap: 8px; }
+.recap-pill {
+  flex: 1;
+  background: rgba(255,255,255,.14);
+  border-radius: 12px;
+  padding: 9px 8px;
+  text-align: center;
+}
+.recap-num { color: #fff; font-size: 20px; font-weight: 800; line-height: 1.1; }
+.recap-label { color: rgba(255,255,255,.75); font-size: 11px; margin-top: 1px; }
+
+/* ===== FILTER TABS ===== */
+.filter-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px 8px;
+  background: rgba(245,242,236,0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.filter-tabs::-webkit-scrollbar { display: none; }
+.filter-tab {
+  flex-shrink: 0;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.filter-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.filter-tab .tab-count {
+  opacity: .7;
+  font-weight: 700;
+  margin-left: 3px;
+}
+
+/* ===== PROGRESS DU JOUR ===== */
+.day-progress {
+  padding: 6px 18px 4px;
+}
+.day-progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.day-progress-row b { color: var(--text); font-weight: 700; }
+.day-progress-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.day-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 6px;
+  transition: width 0.4s ease;
+}
+
+/* ===== BARRES DE STATUT CARTES ===== */
+.task-card.is-today    { border-left: 4px solid var(--accent); }
+.task-card.is-tomorrow { border-left: 4px solid #EF9F27; }
+.task-card.is-upcoming { border-left: 4px solid #6366f1; }
+
+/* Apparition douce des cartes */
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tasks-list .task-card { animation: cardIn 0.28s ease both; }
+
 /* ===== RESPONSIVE ===== */
 @media (min-width: 600px) {
   .tasks-list { max-width: 540px; margin: 0 auto; }
   .checklist-body { max-width: 540px; margin: 0 auto; }
   .photos-grid { grid-template-columns: repeat(4, 1fr); }
+  .filter-tabs { max-width: 540px; margin: 0 auto; }
+  .day-progress { max-width: 540px; margin: 0 auto; }
 }
 
 /* ── Cleaning Tasks V3 extra ── */
@@ -1189,23 +1328,47 @@ html[data-theme-v3="1"] .top-bar {
 <!-- ========== APP SCREEN ========== -->
 <div class="app-screen" id="appScreen">
   
-  <!-- Top bar -->
-  <div class="top-bar">
-    <div class="top-bar-left">
-      <div class="top-bar-avatar" id="cleanerAvatar">M</div>
-      <div>
-        <div class="top-bar-name" id="cleanerName">Marie</div>
-        <div class="top-bar-status" id="cleanerStatus">Connecté(e)</div>
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-top">
+      <div class="hero-left">
+        <div class="hero-avatar" id="cleanerAvatar">M</div>
+        <div>
+          <div class="hero-greeting">Bonjour <span id="cleanerName">Marie</span></div>
+          <div class="hero-date" id="heroDate">—</div>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button class="hero-btn" onclick="refreshTasks()" title="Actualiser">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+        <button class="hero-btn" onclick="logout()" title="Déconnexion">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
       </div>
     </div>
-    <div class="top-bar-right">
-      <button class="top-bar-btn" onclick="refreshTasks()" title="Actualiser">
-        <i class="fas fa-sync-alt"></i>
-      </button>
-      <button class="top-bar-btn" onclick="logout()" title="Déconnexion">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
+    <div class="hero-recap">
+      <div class="recap-pill"><div class="recap-num" id="recapToday">0</div><div class="recap-label">aujourd'hui</div></div>
+      <div class="recap-pill"><div class="recap-num" id="recapTomorrow">0</div><div class="recap-label">demain</div></div>
+      <div class="recap-pill"><div class="recap-num" id="recapValidate">0</div><div class="recap-label">à valider</div></div>
     </div>
+  </div>
+
+  <!-- Onglets de filtre -->
+  <div class="filter-tabs" id="filterTabs">
+    <button class="filter-tab active" data-filter="today" onclick="setFilter('today')">Aujourd'hui</button>
+    <button class="filter-tab" data-filter="tomorrow" onclick="setFilter('tomorrow')">Demain</button>
+    <button class="filter-tab" data-filter="all" onclick="setFilter('all')">Tous</button>
+    <button class="filter-tab" data-filter="done" onclick="setFilter('done')">Terminés</button>
+  </div>
+
+  <!-- Progression du jour -->
+  <div class="day-progress" id="dayProgress" style="display:none;">
+    <div class="day-progress-row">
+      <span id="dayProgressLabel">0 sur 0 terminés aujourd'hui</span>
+      <b id="dayProgressPct">0%</b>
+    </div>
+    <div class="day-progress-bar"><div class="day-progress-fill" id="dayProgressFill" style="width:0%"></div></div>
   </div>
   
   <!-- Tasks list -->
@@ -1457,73 +1620,121 @@ function showLoginError(msg) {
 }
 
 // ===== TASKS LIST =====
+let activeFilter = 'today';
+
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('#filterTabs .filter-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === f);
+  });
+  renderTasks();
+}
+
 function renderTasks() {
   const container = document.getElementById('tasksContainer');
-  
-  if (!tasks.length) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon"><i class="fas fa-sparkles"></i></div>
-        <h3>Aucune tâche</h3>
-        <p>Vous n'avez pas de ménage prévu pour le moment. Revenez plus tard !</p>
-      </div>
-    `;
-    return;
+
+  // Date du jour dans le hero
+  const dateEl = document.getElementById('heroDate');
+  if (dateEl) {
+    try {
+      dateEl.textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    } catch(e) { dateEl.textContent = ''; }
   }
-  
+
   const today = new Date().toISOString().slice(0, 10);
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-  
+
   // Séparer : aujourd'hui, demain, à venir, complément demandé, terminé
   const todayTasks = tasks.filter(t => t.checkoutDate === today && !t.completed);
   const tomorrowTasks = tasks.filter(t => t.checkoutDate === tomorrow && !t.completed);
   const upcomingTasks = tasks.filter(t => t.checkoutDate > tomorrow && !t.completed);
   const complementTasks = tasks.filter(t => t.completed && t.ownerStatus === 'rejected');
   const doneTasks = tasks.filter(t => t.completed && t.ownerStatus !== 'rejected');
-  
-  let html = '';
-  
-  if (todayTasks.length) {
-    html += `<div class="section-label">🔴 Aujourd'hui — ${todayTasks.length} ménage${todayTasks.length > 1 ? 's' : ''}</div>`;
-    html += '<div class="tasks-list">';
-    todayTasks.forEach(t => { html += renderTaskCard(t, 'today'); });
-    html += '</div>';
-  }
-  
-  if (tomorrowTasks.length) {
-    html += `<div class="section-label">🟠 Demain — ${tomorrowTasks.length} ménage${tomorrowTasks.length > 1 ? 's' : ''}</div>`;
-    html += '<div class="tasks-list">';
-    tomorrowTasks.forEach(t => { html += renderTaskCard(t, 'tomorrow'); });
-    html += '</div>';
-  }
-  
-  if (upcomingTasks.length) {
-    html += `<div class="section-label">📅 À venir — ${upcomingTasks.length}</div>`;
-    html += '<div class="tasks-list">';
-    upcomingTasks.forEach(t => { html += renderTaskCard(t, 'upcoming'); });
-    html += '</div>';
-  }
-  
-  if (complementTasks.length) {
-    html += `<div class="section-label">⚠️ Complément demandé — ${complementTasks.length} ménage${complementTasks.length > 1 ? 's' : ''}</div>`;
-    html += '<div class="tasks-list">';
-    complementTasks.forEach(t => { html += renderTaskCard(t, 'complement'); });
-    html += '</div>';
+
+  // ── Récap (pastilles du hero) ──
+  setText('recapToday', todayTasks.length);
+  setText('recapTomorrow', tomorrowTasks.length);
+  setText('recapValidate', complementTasks.length);
+
+  // ── Compteurs des onglets ──
+  updateTabCount('today', todayTasks.length + complementTasks.length);
+  updateTabCount('tomorrow', tomorrowTasks.length);
+  updateTabCount('all', tasks.filter(t => !t.completed).length);
+  updateTabCount('done', doneTasks.length);
+
+  // ── Progression du jour ──
+  const todayDone  = tasks.filter(t => t.checkoutDate === today && t.completed).length;
+  const todayTotal = tasks.filter(t => t.checkoutDate === today).length;
+  const dp = document.getElementById('dayProgress');
+  if (dp) {
+    if (todayTotal > 0) {
+      const pct = Math.round((todayDone / todayTotal) * 100);
+      setText('dayProgressLabel', `${todayDone} sur ${todayTotal} terminé${todayTotal > 1 ? 's' : ''} aujourd'hui`);
+      setText('dayProgressPct', pct + '%');
+      const fill = document.getElementById('dayProgressFill');
+      if (fill) fill.style.width = pct + '%';
+      dp.style.display = 'block';
+    } else {
+      dp.style.display = 'none';
+    }
   }
 
-  if (doneTasks.length) {
-    html += `<div class="section-label">✅ Terminés — ${doneTasks.length}</div>`;
-    html += '<div class="tasks-list">';
-    doneTasks.forEach(t => { html += renderTaskCard(t, 'done'); });
-    html += '</div>';
+  if (!tasks.length) {
+    container.innerHTML = emptyState('sparkles', 'Aucune tâche', "Vous n'avez pas de ménage prévu pour le moment. Revenez plus tard !");
+    return;
   }
-  
+
+  // ── Sections selon le filtre actif ──
+  let html = '';
+  const section = (label, list, type) => {
+    if (!list.length) return '';
+    let s = `<div class="section-label">${label} — ${list.length}</div><div class="tasks-list">`;
+    list.forEach(t => { s += renderTaskCard(t, type); });
+    return s + '</div>';
+  };
+
+  if (activeFilter === 'today') {
+    html += section("🟢 Aujourd'hui", todayTasks, 'today');
+    html += section('⚠️ Complément demandé', complementTasks, 'complement');
+    if (!html) html = emptyState('coffee', 'Rien pour aujourd\'hui', 'Aucun ménage à faire aujourd\'hui. Consultez « Tous » pour les prochains.');
+  } else if (activeFilter === 'tomorrow') {
+    html += section('🟠 Demain', tomorrowTasks, 'tomorrow');
+    if (!html) html = emptyState('calendar', 'Rien pour demain', 'Aucun ménage prévu demain.');
+  } else if (activeFilter === 'done') {
+    html += section('✅ Terminés', doneTasks, 'done');
+    if (!html) html = emptyState('check', 'Aucun ménage terminé', 'Les ménages validés apparaîtront ici.');
+  } else {
+    // 'all'
+    html += section("🟢 Aujourd'hui", todayTasks, 'today');
+    html += section('🟠 Demain', tomorrowTasks, 'tomorrow');
+    html += section('📅 À venir', upcomingTasks, 'upcoming');
+    html += section('⚠️ Complément demandé', complementTasks, 'complement');
+    html += section('✅ Terminés', doneTasks, 'done');
+    if (!html) html = emptyState('sparkles', 'Tout est à jour', 'Aucune tâche en attente. Beau travail ✨');
+  }
+
   container.innerHTML = html;
-  
-  // Update status
-  const pendingCount = tasks.filter(t => !t.completed).length;
-  document.getElementById('cleanerStatus').textContent = 
-    pendingCount > 0 ? `${pendingCount} ménage${pendingCount > 1 ? 's' : ''} à faire` : 'Tout est fait ✨';
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function updateTabCount(filter, n) {
+  const btn = document.querySelector(`#filterTabs .filter-tab[data-filter="${filter}"]`);
+  if (!btn) return;
+  const base = { today: "Aujourd'hui", tomorrow: 'Demain', all: 'Tous', done: 'Terminés' }[filter] || '';
+  btn.innerHTML = n > 0 ? `${base}<span class="tab-count">${n}</span>` : base;
+}
+
+function emptyState(icon, title, text) {
+  return `
+    <div class="empty-state">
+      <div class="empty-state-icon"><i class="fas fa-${icon}"></i></div>
+      <h3>${title}</h3>
+      <p>${text}</p>
+    </div>`;
 }
 
 function escapeHtml(str) {
@@ -1543,16 +1754,19 @@ function renderTaskCard(task, type) {
     case 'today':
       badgeClass = 'badge-today';
       badgeText = "Aujourd'hui";
+      cardClass = 'is-today';
       actionBtn = `<button class="task-card-btn btn-start" onclick="openChecklist('${task.reservationKey}')"><i class="fas fa-play"></i> Commencer</button>`;
       break;
     case 'tomorrow':
       badgeClass = 'badge-todo';
       badgeText = 'Demain';
+      cardClass = 'is-tomorrow';
       actionBtn = `<button class="task-card-btn" onclick="openChecklist('${task.reservationKey}')"><i class="fas fa-eye"></i> Voir les tâches</button>`;
       break;
     case 'upcoming':
       badgeClass = 'badge-upcoming';
       badgeText = dateFormatted;
+      cardClass = 'is-upcoming';
       actionBtn = `<button class="task-card-btn" onclick="openChecklist('${task.reservationKey}')"><i class="fas fa-eye"></i> Voir les tâches</button>`;
       break;
     case 'done':
