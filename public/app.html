@@ -310,13 +310,13 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   /* #batchEditModal (Édition groupée) : même cas que la checklist, modal CENTRÉ
      dont le footer (Annuler/Appliquer) passait derrière la bottom-bar. */
   #batchEditModal {
-    align-items: center !important;
-    padding-top: 12px !important;
+    align-items: flex-start !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 12px) !important;
     padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px) + 12px) !important;
     box-sizing: border-box !important;
   }
   #batchEditModal > div {
-    max-height: calc(100dvh - 74px - env(safe-area-inset-bottom, 0px) - 24px) !important;
+    max-height: calc(100dvh - 60px - env(safe-area-inset-top, 0px) - 74px - env(safe-area-inset-bottom, 0px) - 24px) !important;
   }
 
   /* Zones scrollables des modaux génériques. */
