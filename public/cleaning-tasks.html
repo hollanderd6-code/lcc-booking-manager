@@ -1746,6 +1746,33 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+// Les réservations OTA (Booking.com, etc.) importent automatiquement des
+// "notes" en anglais (pré-paiement, commission, message voyageur, "Imported
+// booking"…). Ce ne sont PAS de vraies notes : on ne les affiche pas au
+// personnel de ménage. Seules les notes rédigées manuellement (en français)
+// doivent apparaître. Pour étendre le filtre, ajouter un marqueur ci-dessous.
+function cleanReservationNote(raw) {
+  const note = String(raw == null ? '' : raw).trim();
+  if (!note) return '';
+  const lower = note.toLowerCase();
+  const junkMarkers = [
+    'imported booking',
+    'booking note',
+    'pre-paid',
+    'prepaid',
+    'payment charge',
+    'approximate time of arrival',
+    'meal plan',
+    'smoking preference',
+    'payment collect',
+    'ota collect',
+    'ota commission',
+    'collect booking'
+  ];
+  if (junkMarkers.some(m => lower.includes(m))) return '';
+  return note;
+}
+
 function renderTaskCard(task, type) {
   const dateFormatted = formatDateFr(task.checkoutDate);
   let badgeClass, badgeText, cardClass = '', actionBtn;
@@ -1787,8 +1814,9 @@ function renderTaskCard(task, type) {
     ? `<div class="complement-banner"><strong>Message du propriétaire</strong>${escapeHtml(task.ownerNotes)}</div>`
     : '';
 
-  const noteBanner = task.reservationNotes
-    ? `<div class="note-banner"><strong><i class="fas fa-info-circle"></i> Note pour ce logement</strong>${escapeHtml(task.reservationNotes)}</div>`
+  const cleanNote = cleanReservationNote(task.reservationNotes);
+  const noteBanner = cleanNote
+    ? `<div class="note-banner"><strong><i class="fas fa-info-circle"></i> Note pour ce logement</strong>${escapeHtml(cleanNote)}</div>`
     : '';
 
   return `
@@ -1837,8 +1865,9 @@ async function openChecklist(reservationKey) {
 
   const noteEl = document.getElementById('checklistNote');
   if (noteEl) {
-    if (currentTask.reservationNotes) {
-      noteEl.innerHTML = `<strong><i class="fas fa-info-circle"></i> Note pour ce logement</strong>${escapeHtml(currentTask.reservationNotes)}`;
+    const cleanNote = cleanReservationNote(currentTask.reservationNotes);
+    if (cleanNote) {
+      noteEl.innerHTML = `<strong><i class="fas fa-info-circle"></i> Note pour ce logement</strong>${escapeHtml(cleanNote)}`;
       noteEl.style.display = 'block';
     } else {
       noteEl.style.display = 'none';
