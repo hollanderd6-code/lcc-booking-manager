@@ -106,23 +106,7 @@ function buildTemporalContext(ctx) {
     lines.push(`- Phase : APRÈS DÉPART — séjour terminé il y a ${daysAfterCheckout || '?'} jour(s).`);
   }
 
-  // ── Directive ACCÈS déterministe (anti-recopie de la phrase "7h") ──
-  const nowHour = now.getHours();
-  const accessReleased = (phase === 'during') || (isCheckinDay && nowHour >= 7);
-  if (accessReleased) {
-    lines.push(`- 🔓 ACCÈS DÉBLOQUÉ : nous sommes le jour d'arrivée (il est ${fmtTime(now)}, après 7h) ou le séjour est en cours. Si le voyageur demande les codes d'accès, l'adresse ou le wifi, tu DOIS les DONNER MAINTENANT directement (pour les non-Airbnb, sous réserve que la caution soit payée). N'utilise JAMAIS la phrase "envoyées le matin de votre arrivée à 7h" : ce moment est DÉJÀ passé.`);
-  } else if (isCheckinDay) {
-    lines.push(`- 🔒 ACCÈS : c'est le jour d'arrivée mais il est avant 7h. Réponds que les informations seront envoyées à 7h ce matin.`);
-  } else if (phase === 'before') {
-    lines.push(`- 🔒 ACCÈS : arrivée pas encore là. Ne donne pas les codes ; ils seront envoyés le matin de l'arrivée à 7h.`);
-  }
-
-  // ── Note arrivée tardive / nuit (anti faux "early check-in") ──
-  if ((isCheckinDay || phase === 'during') && checkin) {
-    lines.push(`- 🌙 ARRIVÉE TARDIVE : si le voyageur annonce une arrivée la nuit (minuit, "entre minuit et 1h", 00h, 01h, 02h…), c'est une arrivée TARDIVE le soir/la nuit du jour d'arrivée — PAS une arrivée anticipée. N'émets PAS [EARLY_CHECKIN]. Rassure : accès autonome possible même tard.`);
-  }
-
-  return { text: lines.join('\n'), phase, isCheckinDay, isCheckoutDay, daysUntilCheckin, accessReleased };
+  return { text: lines.join('\n'), phase, isCheckinDay, isCheckoutDay, daysUntilCheckin };
 }
 
 // ─────────────────────────────────────────────
@@ -340,18 +324,16 @@ COMPRÉHENSION NATURELLE DU LANGAGE
 RAISONNEMENT TEMPOREL
 • "J'arriverai à 19h" — check-in à 15h — séjour dans 2 jours → 19h >= 15h → répondre "Pas de problème, à demain/dans 2 jours !" 
 • "J'arriverai à 10h" — check-in à 15h → arrivée AVANT le check-in → traiter comme arrivée anticipée (voir section HEURE D'ARRIVÉE, émettre [EARLY_CHECKIN:HH:MM])
-• 🌙 "J'arrive vers minuit / entre minuit et 1h / à 00h30 / 01h / 02h" — check-in l'après-midi → c'est une arrivée TARDIVE LE SOIR (la nuit), PAS une arrivée anticipée. Ne PAS émettre [EARLY_CHECKIN]. Rassure simplement : arrivée tardive possible, accès autonome.
 • "On sera en retard de 20 min" le jour du checkout → retard de DÉPART → "Pas de problème, prenez votre temps"
 • "On sera en retard" avant le check-in → retard d'ARRIVÉE → confirmer si heure OK, sinon [ESCALADE]
 • Ne jamais confondre arrivée et départ selon la phase du séjour.
 
 CODES D'ACCÈS / WiFi
-• ⚠️ La directive "🔓/🔒 ACCÈS" du BLOC TEMPOREL ci-dessus FAIT FOI et a priorité. Applique-la.
 • Caution non payée (sauf Airbnb) → refuser codes/accès/wifi UNIQUEMENT. Répondre normalement à tout le reste.
-• Si "🔓 ACCÈS DÉBLOQUÉ" est indiqué → DONNE les codes/adresse/wifi directement, sans aucune phrase d'attente. Ne dis pas "vous les recevrez plus tard".
-• Si "🔒 ACCÈS" avant 7h le jour J → "Les informations vous seront envoyées à 7h ce matin."
-• Si "🔒 ACCÈS" avant le jour d'arrivée → "Toutes les informations nécessaires (adresse, codes d'accès, wifi) vous seront envoyées automatiquement le matin de votre arrivée à 7h. À très bientôt !"
-• Airbnb → pas de condition de caution, MAIS l'embargo du matin d'arrivée à 7h s'applique quand même (sauf si "🔓 ACCÈS DÉBLOQUÉ").
+• AVANT le jour d'arrivée (même la veille au soir) → NE JAMAIS donner les codes. Répondre : "Toutes les informations nécessaires (adresse, codes d'accès, wifi) vous seront envoyées automatiquement le matin de votre arrivée à 7h. À très bientôt !"
+• Jour d'arrivée AVANT 7h → même réponse : "Les informations vous seront envoyées à 7h ce matin."
+• Jour d'arrivée à partir de 7h ou en cours de séjour → donner les codes directement.
+• Airbnb → pas de condition de caution, MAIS l'embargo du matin d'arrivée à 7h s'applique quand même.
 
 HEURE D'ARRIVÉE
 • Voyageur INFORME ("je serai là vers 19h", après le check-in) → confirmer simplement. Pas d'interrogation.
@@ -360,7 +342,7 @@ HEURE D'ARRIVÉE
   – Identifie l'heure d'arrivée souhaitée et émets le tag sur une ligne séparée à la fin : "[EARLY_CHECKIN:HH:MM]" (format 24h, ex : [EARLY_CHECKIN:12:00]).
   – Le système décidera automatiquement (selon la tolérance du logement). Ton texte avant le tag reste neutre et chaleureux, ex : "Je regarde si une arrivée anticipée est possible et je reviens vers vous tout de suite 😊"
   – Si aucune heure précise ("je peux arriver plus tôt ?") → demande gentiment l'heure souhaitée, sans tag.
-• Voyageur DEMANDE une arrivée APRÈS le check-in ("possible d'arriver à 19h ?") → confirmer simplement (c'est toujours possible d'arriver plus tard).
+• Voyageur DEMANDE une arrivée APRÈS l'heure de check-in ("possible d'arriver à 19h ?", "check-in à 20h-21h ?", "late check-in ?") → c'est toujours possible d'arriver plus tard : confirmer simplement et chaleureusement, SANS AUCUN TAG. ⚠️ Aucun tag "[LATE_CHECKIN]" n'existe — ne l'invente JAMAIS. Les seuls tags d'arrivée/départ sont [EARLY_CHECKIN:HH:MM] (arrivée AVANT le check-in) et [LATE_CHECKOUT:HH:MM] (départ APRÈS le check-out).
 
 DÉPART TARDIF (late checkout) — RÈGLE IMPORTANTE
 • Si le voyageur DEMANDE à partir plus tard que l'heure de départ prévue (ex : "je peux partir à midi ?", "départ à 12h possible ?", "posso lasciare più tardi?") :

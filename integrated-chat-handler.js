@@ -962,25 +962,6 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             return true;
           }
 
-          // Cas 1bis : arrivée la NUIT (minuit / petit matin) avec check-in l'après-midi
-          // → ce n'est PAS une arrivée anticipée mais une arrivée TARDIVE. On rassure, pas de question hôte.
-          const isLateNightArrival = (reqH < 7 && arrH >= 11) || earlyMin > 600;
-          if (isLateNightArrival) {
-            const lateMsg = {
-              fr: `Pas de souci pour une arrivée vers ${reqLabel} ! Le logement est en accès autonome, vous pourrez entrer à votre arrivée même tard dans la nuit. Les informations d'accès vous parviennent le jour de votre arrivée. Bon voyage et à très vite ! 😊`,
-              en: `No problem arriving around ${reqLabel}! The place has self check-in, so you can get in even late at night. Access details are sent to you on the day of your arrival. Safe travels, see you soon! 😊`,
-              it: `Nessun problema per un arrivo verso le ${reqLabel}! L'alloggio ha l'accesso autonomo, potrà entrare anche a notte fonda. Le info di accesso arrivano il giorno dell'arrivo. Buon viaggio, a presto! 😊`,
-              es: `¡Sin problema para llegar hacia las ${reqLabel}! El alojamiento tiene acceso autónomo, podrá entrar incluso de madrugada. La info de acceso se envía el día de su llegada. ¡Buen viaje, hasta pronto! 😊`,
-              de: `Kein Problem für eine Ankunft gegen ${reqLabel}! Die Unterkunft hat Self-Check-in, Sie kommen auch spät nachts rein. Die Zugangsdaten erhalten Sie am Anreisetag. Gute Reise, bis bald! 😊`,
-            };
-            await sendBotMessage(conversation.id, lateMsg[language] || lateMsg.fr, pool, io, channexId);
-            await addInternalNote(conversation.id,
-              `🌙 Arrivée tardive annoncée vers ${reqLabel} (check-in ${arrLabel}) — traitée comme arrivée de nuit, pas comme arrivée anticipée.`,
-              pool, io);
-            console.log(`🌙 [HANDLER] Arrivée tardive ${reqLabel} (≠ early check-in) — rassurance auto`);
-            return true;
-          }
-
           // Cas 2 : dans la tolérance → ACCEPTER + note auto + notif proprio
           if (earlyMin <= toleranceMin) {
             const okMsg = {
@@ -1198,7 +1179,16 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         }
       }
 
-      await sendBotMessage(conversation.id, aiResponse, pool, io, channexId);
+      // Garde-fou final : retirer tout tag technique [TAG] / [TAG:valeur] qui aurait fui,
+      // y compris un tag halluciné par l'IA (ex. [LATE_CHECKIN:...] qui n'existe pas).
+      const safeResponse = aiResponse
+        .replace(/\[[A-Z_]+(?::[^\]]*)?\]/g, '')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      if (safeResponse) {
+        await sendBotMessage(conversation.id, safeResponse, pool, io, channexId);
+      }
       return true;
     }
 
