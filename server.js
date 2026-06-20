@@ -8485,6 +8485,9 @@ function isRealNote(note) {
     'total payout', 'host payout', 'paiement hôte',
     'payment method', 'mode de paiement',
     'rate plan', 'tariff', 'non-refundable',
+    'meal plan', 'smoking preference',
+    'ota commission', 'ota collect', 'payment collect',
+    'payment charge', 'approximate time of arrival', 'collect booking',
   ];
   if (OTA_CONTAINS.some(p => nl.includes(p))) return false;
 
