@@ -369,6 +369,30 @@ html, body {
   color: #b45309;
 }
 
+.note-banner {
+  margin: 0 16px 14px;
+  padding: 10px 14px;
+  background: #eff6ff;
+  border: 1px solid rgba(59,130,246,0.35);
+  border-radius: 10px;
+  font-size: 13px;
+  color: #1e3a8a;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.note-banner strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+  color: #1d4ed8;
+}
+
 .badge-in-progress {
   background: #dbeafe;
   color: #1d4ed8;
@@ -480,6 +504,30 @@ html, body {
 }
 
 
+
+.checklist-note {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #eff6ff;
+  border: 1px solid rgba(59,130,246,0.35);
+  border-radius: 10px;
+  font-size: 13px;
+  color: #1e3a8a;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.checklist-note strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+  color: #1d4ed8;
+}
 
 .checklist-property-name {
   font-size: 18px;
@@ -1180,6 +1228,7 @@ html[data-theme-v3="1"] .top-bar {
     </div>
     <div class="checklist-property-name" id="checklistPropertyName">—</div>
     <div class="checklist-subtitle" id="checklistSubtitle">—</div>
+    <div class="checklist-note" id="checklistNote" style="display:none;"></div>
   </div>
   
   <!-- Progress -->
@@ -1477,6 +1526,15 @@ function renderTasks() {
     pendingCount > 0 ? `${pendingCount} ménage${pendingCount > 1 ? 's' : ''} à faire` : 'Tout est fait ✨';
 }
 
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function renderTaskCard(task, type) {
   const dateFormatted = formatDateFr(task.checkoutDate);
   let badgeClass, badgeText, cardClass = '', actionBtn;
@@ -1512,7 +1570,11 @@ function renderTaskCard(task, type) {
   }
 
   const complementBanner = (type === 'complement' && task.ownerNotes)
-    ? `<div class="complement-banner"><strong>Message du propriétaire</strong>${task.ownerNotes}</div>`
+    ? `<div class="complement-banner"><strong>Message du propriétaire</strong>${escapeHtml(task.ownerNotes)}</div>`
+    : '';
+
+  const noteBanner = task.reservationNotes
+    ? `<div class="note-banner"><strong><i class="fas fa-info-circle"></i> Note pour ce logement</strong>${escapeHtml(task.reservationNotes)}</div>`
     : '';
 
   return `
@@ -1529,9 +1591,10 @@ function renderTaskCard(task, type) {
         ${task.guestName ? `
         <div class="task-card-info-item">
           <i class="fas fa-user"></i>
-          <span>${task.guestName}</span>
+          <span>${escapeHtml(task.guestName)}</span>
         </div>` : ''}
       </div>
+      ${noteBanner}
       ${complementBanner}
       <div class="task-card-action">
         ${actionBtn}
@@ -1557,6 +1620,17 @@ async function openChecklist(reservationKey) {
   document.getElementById('checklistPropertyName').textContent = currentTask.propertyName || 'Logement';
   document.getElementById('checklistSubtitle').textContent = 
     `Départ le ${formatDateFr(currentTask.checkoutDate)}${currentTask.guestName ? ' — ' + currentTask.guestName : ''}`;
+
+  const noteEl = document.getElementById('checklistNote');
+  if (noteEl) {
+    if (currentTask.reservationNotes) {
+      noteEl.innerHTML = `<strong><i class="fas fa-info-circle"></i> Note pour ce logement</strong>${escapeHtml(currentTask.reservationNotes)}`;
+      noteEl.style.display = 'block';
+    } else {
+      noteEl.style.display = 'none';
+      noteEl.innerHTML = '';
+    }
+  }
   
   // Render
   renderChecklistBody();

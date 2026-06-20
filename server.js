@@ -4871,13 +4871,13 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
             const tvaAmount = Math.round((amountTTC - amountHT) * 100) / 100;
 
             const userRow = await pool.query(
-              'SELECT email, invoice_email, first_name, last_name, company FROM users WHERE id = $1',
+              'SELECT email, first_name, last_name, company FROM users WHERE id = $1',
               [userId]
             );
             const u = userRow.rows[0] || {};
             const clientName    = [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Client';
             const clientCompany = u.company || '';
-            const clientEmail   = u.invoice_email || u.email || '';
+            const clientEmail   = u.email || '';
 
             const invoiceNumber = await generateBHInvoiceNumber();
 
@@ -4910,41 +4910,6 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
               ]
             );
             console.log(`🧾 Facture BH créée : ${invoiceNumber} (user ${userId})`);
-
-            // 📧 Envoi automatique de la facture au client par email (avec PDF joint)
-            try {
-              if (clientEmail && pdfPath && fs.existsSync(pdfPath)) {
-                const pdfBuffer = fs.readFileSync(pdfPath);
-                const periodStartFr = new Date(subscription.current_period_start * 1000)
-                  .toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-                const periodEndFr = new Date(subscription.current_period_end * 1000)
-                  .toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-
-                await transporter.sendMail({
-                  from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
-                  to: clientEmail,
-                  subject: `Votre facture Boostinghost ${invoiceNumber}`,
-                  html: bhEmailTemplate({
-                    icon: '🧾',
-                    title: `Facture ${invoiceNumber}`,
-                    subtitle: `Abonnement Boostinghost · du ${periodStartFr} au ${periodEndFr}`,
-                    bodyHtml: `
-                      <p>Bonjour <strong>${clientName}</strong>,</p>
-                      <p>Merci pour votre confiance. Veuillez trouver ci-joint votre facture <strong>${invoiceNumber}</strong> pour votre abonnement Boostinghost (période du ${periodStartFr} au ${periodEndFr}).</p>
-                      <div class="success-card">📎 Votre facture PDF est jointe à cet email. Vous pouvez aussi la retrouver à tout moment dans <strong>Mon compte › Mes factures d'abonnement</strong>.</div>
-                      <p>Pour toute question, n'hésitez pas à nous contacter.</p>
-                      <p>Cordialement,<br><strong>L'équipe Boostinghost</strong></p>
-                    `
-                  }),
-                  attachments: [{ filename: `${invoiceNumber}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
-                });
-                console.log(`📧 Facture ${invoiceNumber} envoyée par email à ${clientEmail}`);
-              } else {
-                console.warn(`⚠️ Facture ${invoiceNumber} non envoyée par email (email ou PDF manquant)`);
-              }
-            } catch (mailErr) {
-              console.error('❌ Envoi email facture abonnement (non bloquant):', mailErr.message);
-            }
           } catch (invErr) {
             console.error('❌ Erreur génération facture BH:', invErr.message);
           }
@@ -12930,9 +12895,10 @@ if (reservation_key && reservation_key !== null) {
 
   // ✅ Lire depuis la DB avec TO_CHAR pour avoir des strings ISO
   let guestName = '';
+  let reservationNotes = '';
   try {
     const resaRow = await pool.query(
-      `SELECT guest_name FROM reservations
+      `SELECT guest_name, notes FROM reservations
        WHERE property_id = $1
        AND TO_CHAR(start_date, 'YYYY-MM-DD') = $2
        AND TO_CHAR(end_date, 'YYYY-MM-DD') = $3
@@ -12941,6 +12907,7 @@ if (reservation_key && reservation_key !== null) {
       [property_id, startDate, endDate]
     );
     guestName = resaRow.rows[0]?.guest_name || '';
+    reservationNotes = (resaRow.rows[0]?.notes || '').trim();
   } catch(e) {
     const r = (reservationsStore.properties[property_id] || []).find(r => {
       const rStart = String(r.start || '').slice(0, 10);
@@ -12948,6 +12915,7 @@ if (reservation_key && reservation_key !== null) {
       return `${property_id}_${rStart}_${rEnd}` === reservation_key;
     });
     guestName = r?.guestName || r?.name || '';
+    reservationNotes = (r?.notes || '').trim();
   }
 
   const property = PROPERTIES.find(p => p.id === property_id);
@@ -12958,6 +12926,7 @@ if (reservation_key && reservation_key !== null) {
     propertyId: property_id,
     propertyName,
     guestName,
+    reservationNotes,
     checkoutDate: endDate,
     completed: false
   });
@@ -12976,12 +12945,14 @@ if (reservation_key && reservation_key !== null) {
           const reservationKey = `${property_id}_${rStart}_${rEnd}`;
           const propertyName = (r.property && displayName(r.property)) || r.propertyInternalName || r.propertyName || property_id;
           const guestName = r.guestName || r.name || '';
+          const reservationNotes = (r.notes || '').trim();
           
           tasks.push({
             reservationKey,
             propertyId: property_id,
             propertyName,
             guestName,
+            reservationNotes,
             checkoutDate: endStr,
             completed: false
           });
