@@ -1555,6 +1555,10 @@ html[data-theme-v3="1"] #templatesList > div {
   <button class="cleaning-tab" data-tab="stats" onclick="switchTab('stats')">
     <i class="fas fa-chart-bar"></i><span class="tab-label"> Stats</span>
   </button>
+  <button class="cleaning-tab" data-tab="restock" onclick="switchTab('restock')">
+    <i class="fas fa-basket-shopping"></i><span class="tab-label"> Réassort</span>
+    <span class="tab-badge" id="restockBadge" style="display:none">0</span>
+  </button>
 </div>
 
 <!-- ===== TAB 1 : ÉQUIPE & ASSIGNATION ===== -->
@@ -1839,7 +1843,49 @@ html[data-theme-v3="1"] #templatesList > div {
   </div>
 </div>
 
-<!-- QR Code Modal -->
+<!-- ════════ PANEL RÉASSORT ════════ -->
+<div class="cleaning-tab-panel" id="panel-restock">
+  <section class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-basket-shopping"></i>
+        Liste de courses
+      </div>
+      <button class="assign-select" style="cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;font-weight:700;padding:8px 14px;border-radius:10px;font-size:13px;" onclick="loadRestockAlerts()">
+        <i class="fas fa-sync-alt"></i> Actualiser
+      </button>
+    </div>
+    <p class="text-secondary" style="font-size:13px;margin:-4px 0 14px;">
+      Articles signalés « à racheter » par les agents lors des ménages, groupés par logement.
+    </p>
+    <div id="restockShoppingList"><p class="text-secondary">Chargement…</p></div>
+  </section>
+
+  <section class="card" style="margin-top:16px;">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="fas fa-sliders"></i>
+        Articles suivis
+      </div>
+      <select id="restockCatalogProperty" class="assign-select" style="max-width:200px;font-size:13px;" onchange="loadRestockCatalog()">
+        <option value="">Liste standard (tous)</option>
+      </select>
+    </div>
+    <p class="text-secondary" style="font-size:13px;margin:-4px 0 14px;">
+      La liste standard s'applique à tous les logements. Sélectionnez un logement pour y ajouter des articles spécifiques.
+    </p>
+    <div id="restockCatalogList"><p class="text-secondary">Chargement…</p></div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <input id="restockNewLabel" type="text" placeholder="Nouvel article (ex : Éponges)" maxlength="80"
+        style="flex:1;padding:11px 13px;border:1px solid var(--border,#ddd);border-radius:10px;font-size:14px;font-family:inherit;"
+        onkeydown="if(event.key==='Enter')addRestockItem()">
+      <button onclick="addRestockItem()" style="cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;font-weight:700;padding:11px 16px;border-radius:10px;font-size:14px;">
+        <i class="fas fa-plus"></i> Ajouter
+      </button>
+    </div>
+  </section>
+</div>
+
 <div class="checklist-detail-modal" id="qrModal">
   <div class="checklist-detail-overlay" onclick="closeQrModal()"></div>
   <div class="checklist-detail-panel" style="max-width:380px;">
@@ -2775,8 +2821,173 @@ function formatDateFr(dateStr) {
         if (tabId === 'checklists') loadChecklistsList();
         if (tabId === 'templates') loadTemplates();
         if (tabId === 'stats') loadStats();
+        if (tabId === 'restock') { loadRestockAlerts(); initRestockPropertySelect(); loadRestockCatalog(); }
       }
       window.switchTab = switchTab;
+
+      // ========== RÉASSORT / CONSOMMABLES ==========
+      function _restockAuthHeaders() {
+        const token = localStorage.getItem('lcc_token');
+        return token ? { Authorization: 'Bearer ' + token } : {};
+      }
+      function _restockEsc(s) {
+        return String(s == null ? '' : s)
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      }
+
+      async function loadRestockAlerts() {
+        const wrap = document.getElementById('restockShoppingList');
+        if (!wrap) return;
+        try {
+          const res = await fetch(API_URL + '/api/consumables/alerts?status=open', { headers: _restockAuthHeaders() });
+          if (!res.ok) throw new Error('err');
+          const data = await res.json();
+          const alerts = data.alerts || [];
+
+          // Badge sur l'onglet
+          const badge = document.getElementById('restockBadge');
+          if (badge) {
+            if (alerts.length > 0) { badge.textContent = alerts.length; badge.style.display = 'inline-flex'; }
+            else { badge.style.display = 'none'; }
+          }
+
+          if (alerts.length === 0) {
+            wrap.innerHTML = '<div style="text-align:center;padding:28px 12px;color:var(--text-secondary);">'
+              + '<i class="fas fa-circle-check" style="font-size:30px;color:#10b981;margin-bottom:10px;"></i>'
+              + '<p style="margin:0;font-weight:600;">Rien à racheter</p>'
+              + '<p style="margin:4px 0 0;font-size:13px;">Les signalements des agents apparaîtront ici.</p></div>';
+            return;
+          }
+
+          // Grouper par logement
+          const byProp = {};
+          alerts.forEach(a => {
+            (byProp[a.property_id] = byProp[a.property_id] || []).push(a);
+          });
+
+          let html = '';
+          Object.keys(byProp).forEach(pid => {
+            const list = byProp[pid];
+            const name = getPropertyNameById(pid);
+            html += '<div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;">'
+              + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+              + '<span style="font-weight:700;font-size:15px;color:var(--accent,#1A7A5E);">' + _restockEsc(name) + '</span>'
+              + '<button onclick="clearRestockProperty(\'' + _restockEsc(pid).replace(/'/g,"\\'") + '\')" style="cursor:pointer;border:none;background:#ecfdf5;color:#059669;font-weight:700;font-size:12px;padding:6px 11px;border-radius:8px;">Tout racheté</button>'
+              + '</div>';
+            list.forEach(a => {
+              const when = a.created_at ? new Date(a.created_at).toLocaleDateString('fr-FR', {day:'numeric',month:'short'}) : '';
+              html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);">'
+                + '<div><div style="font-weight:600;font-size:14px;">' + _restockEsc(a.item_label) + '</div>'
+                + '<div style="font-size:12px;color:var(--text-secondary);">'
+                + (a.cleaner_name ? _restockEsc(a.cleaner_name) : 'Agent') + (when ? ' · ' + when : '') + '</div></div>'
+                + '<button onclick="markRestockDone(' + a.id + ')" style="cursor:pointer;border:1px solid var(--border);background:#fff;color:#059669;font-weight:600;font-size:12px;padding:6px 12px;border-radius:8px;"><i class="fas fa-check"></i> Racheté</button>'
+                + '</div>';
+            });
+            html += '</div>';
+          });
+          wrap.innerHTML = html;
+        } catch (err) {
+          console.error('Erreur réassort:', err);
+          wrap.innerHTML = '<p class="text-secondary">Impossible de charger la liste.</p>';
+        }
+      }
+      window.loadRestockAlerts = loadRestockAlerts;
+
+      async function markRestockDone(id) {
+        try {
+          await fetch(API_URL + '/api/consumables/alerts/' + id, {
+            method: 'PATCH',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, _restockAuthHeaders()),
+            body: JSON.stringify({ status: 'done' })
+          });
+          loadRestockAlerts();
+        } catch (e) { console.error(e); }
+      }
+      window.markRestockDone = markRestockDone;
+
+      async function clearRestockProperty(pid) {
+        try {
+          await fetch(API_URL + '/api/consumables/alerts/property/' + encodeURIComponent(pid) + '/clear', {
+            method: 'PATCH', headers: _restockAuthHeaders()
+          });
+          loadRestockAlerts();
+        } catch (e) { console.error(e); }
+      }
+      window.clearRestockProperty = clearRestockProperty;
+
+      function initRestockPropertySelect() {
+        const sel = document.getElementById('restockCatalogProperty');
+        if (!sel || !Array.isArray(PROPERTIES)) return;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">Liste standard (tous)</option>';
+        const seen = new Set();
+        PROPERTIES.forEach(p => {
+          const id = p.id != null ? p.id : p.propertyId;
+          if (!id || seen.has(String(id))) return;
+          seen.add(String(id));
+          const opt = document.createElement('option');
+          opt.value = String(id);
+          opt.textContent = p.name || p.title || p.label || ('Logement ' + id);
+          sel.appendChild(opt);
+        });
+        if (current) sel.value = current;
+      }
+      window.initRestockPropertySelect = initRestockPropertySelect;
+
+      async function loadRestockCatalog() {
+        const wrap = document.getElementById('restockCatalogList');
+        if (!wrap) return;
+        const pid = document.getElementById('restockCatalogProperty')?.value || '';
+        try {
+          const url = API_URL + '/api/consumables/items' + (pid ? ('?propertyId=' + encodeURIComponent(pid)) : '');
+          const res = await fetch(url, { headers: _restockAuthHeaders() });
+          if (!res.ok) throw new Error('err');
+          const data = await res.json();
+          const items = data.items || [];
+          if (items.length === 0) {
+            wrap.innerHTML = '<p class="text-secondary" style="font-size:13px;">Aucun article. Ajoutez-en ci-dessous.</p>';
+            return;
+          }
+          wrap.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;">' + items.map(it => {
+            const isStd = it.property_id == null;
+            return '<span style="display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:22px;border:1px solid var(--border);font-size:13.5px;font-weight:600;background:' + (isStd ? 'var(--bg-card,#f7f5f0)' : '#eef6ff') + ';">'
+              + '<span>' + (it.icon || '📦') + '</span>' + _restockEsc(it.label)
+              + (isStd ? '' : '<span style="font-size:10px;color:#3b82f6;text-transform:uppercase;font-weight:700;">perso</span>')
+              + '<i class="fas fa-times" style="cursor:pointer;color:var(--text-tertiary);margin-left:2px;" onclick="deleteRestockItem(' + it.id + ')"></i>'
+              + '</span>';
+          }).join('') + '</div>';
+        } catch (err) {
+          console.error('Erreur catalogue:', err);
+          wrap.innerHTML = '<p class="text-secondary">Impossible de charger les articles.</p>';
+        }
+      }
+      window.loadRestockCatalog = loadRestockCatalog;
+
+      async function addRestockItem() {
+        const input = document.getElementById('restockNewLabel');
+        const label = (input?.value || '').trim();
+        if (!label) return;
+        const pid = document.getElementById('restockCatalogProperty')?.value || '';
+        try {
+          const res = await fetch(API_URL + '/api/consumables/items', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, _restockAuthHeaders()),
+            body: JSON.stringify({ label: label, propertyId: pid || null })
+          });
+          if (res.ok) { input.value = ''; loadRestockCatalog(); }
+        } catch (e) { console.error(e); }
+      }
+      window.addRestockItem = addRestockItem;
+
+      async function deleteRestockItem(id) {
+        try {
+          await fetch(API_URL + '/api/consumables/items/' + id, { method: 'DELETE', headers: _restockAuthHeaders() });
+          loadRestockCatalog();
+        } catch (e) { console.error(e); }
+      }
+      window.deleteRestockItem = deleteRestockItem;
+
 
       // ========== CHECKLISTS ==========
       let allChecklists = [];
@@ -3506,6 +3717,8 @@ function formatDateFr(dateStr) {
         renderAssignments();
         // Charger les checklists en arrière-plan pour le badge
         loadChecklistsList();
+        // Charger les alertes réassort en arrière-plan pour le badge
+        if (typeof loadRestockAlerts === 'function') loadRestockAlerts();
       })();
     });
   </script>

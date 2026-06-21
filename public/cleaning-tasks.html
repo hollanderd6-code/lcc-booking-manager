@@ -819,6 +819,31 @@ html, body {
   box-shadow: 0 0 0 3px rgba(26,122,94,0.1);
 }
 
+/* ===== RÉASSORT / CONSOMMABLES ===== */
+.restock-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 0 0 14px;
+}
+.restock-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.restock-title i { color: var(--accent); margin-right: 6px; }
+.restock-sub { font-size: 12.5px; color: var(--text-secondary); margin-bottom: 12px; }
+.restock-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.restock-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 13px; border-radius: 22px;
+  border: 1.5px solid var(--border); background: var(--bg); color: var(--text);
+  font-family: var(--font); font-size: 13.5px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.restock-chip .restock-ico { font-size: 15px; }
+.restock-chip i { font-size: 13px; color: var(--text-tertiary); }
+.restock-chip.on { background: #fff7ed; border-color: #f97316; color: #c2410c; }
+.restock-chip.on i { color: #f97316; }
+.restock-chip:active { transform: scale(0.96); }
+
 /* ===== SUBMIT BUTTON (FIXED BOTTOM) ===== */
 .checklist-submit-bar {
   position: fixed;
@@ -1504,6 +1529,8 @@ let tasks = [];
 let currentTask = null;
 let checklistTasks = [];
 let checklistPhotos = []; // base64 strings
+let consumableItems = [];       // catalogue du logement (label/icon)
+let restockSelected = new Set(); // libellés cochés "à racheter"
 let startedAt = null;
 
 // ===== PIN LOGIN =====
@@ -1881,10 +1908,55 @@ async function openChecklist(reservationKey) {
   
   // Start timer
   startTimer();
-  
+
   // Show screen
   document.getElementById('checklistScreen').classList.add('active');
   document.body.style.overflow = 'hidden';
+
+  // Charger les consommables du logement (réassort) en arrière-plan
+  restockSelected = new Set();
+  consumableItems = [];
+  loadConsumables(currentTask.propertyId);
+}
+
+async function loadConsumables(propertyId) {
+  try {
+    const res = await fetch(`${API_URL}/api/cleaning/consumables/${currentPin}?propertyId=${encodeURIComponent(propertyId)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    consumableItems = (data && data.items) ? data.items : [];
+    renderRestockSection();
+  } catch (e) {
+    console.warn('Consommables non chargés:', e);
+  }
+}
+
+function renderRestockSection() {
+  const container = document.getElementById('restockSection');
+  if (!container) return;
+  if (!consumableItems.length) { container.innerHTML = ''; return; }
+  const chips = consumableItems.map((it, idx) => {
+    const on = restockSelected.has(it.label);
+    return `<button type="button" class="restock-chip${on ? ' on' : ''}" onclick="toggleRestock(${idx})">
+      <span class="restock-ico">${it.icon || '📦'}</span>
+      <span>${escapeHtml(it.label)}</span>
+      <i class="fas ${on ? 'fa-check-circle' : 'fa-plus-circle'}"></i>
+    </button>`;
+  }).join('');
+  container.innerHTML = `
+    <div class="restock-card">
+      <div class="restock-title"><i class="fas fa-basket-shopping"></i> Réassort — à racheter ?</div>
+      <div class="restock-sub">Cochez ce qui manque ou est presque épuisé. L'hôte sera prévenu.</div>
+      <div class="restock-chips">${chips}</div>
+    </div>`;
+}
+
+function toggleRestock(idx) {
+  const it = consumableItems[idx];
+  if (!it) return;
+  if (restockSelected.has(it.label)) restockSelected.delete(it.label);
+  else restockSelected.add(it.label);
+  renderRestockSection();
 }
 
 async function loadChecklistTemplate(task) {
@@ -2024,6 +2096,9 @@ function renderChecklistBody() {
     </div>
   `;
   
+  // Réassort / consommables (rempli par renderRestockSection)
+  html += `<div id="restockSection"></div>`;
+
   // Notes section
   html += `
     <div class="notes-section">
@@ -2036,6 +2111,7 @@ function renderChecklistBody() {
   
   body.innerHTML = html;
   renderPhotosGrid();
+  renderRestockSection();
 }
 
 function toggleTask(taskId) {
@@ -2312,7 +2388,8 @@ async function doSubmit() {
       startedAt: startedAt?.toISOString(),
       completedAt: certifiedAt,
       signatureData: sigData || null,
-      certifiedAt: certifiedAt
+      certifiedAt: certifiedAt,
+      restock: Array.from(restockSelected)
     };
     
     const res = await fetch(`${API_URL}/api/cleaning/checklist`, {

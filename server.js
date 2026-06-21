@@ -1991,6 +1991,37 @@ ON invoice_download_tokens(token);
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         PRIMARY KEY (user_id, property_id)
       );
+
+      -- ═══ CONSOMMABLES / RÉASSORT ═══
+      -- Catalogue d'articles : liste standard (property_id NULL) + perso par logement.
+      CREATE TABLE IF NOT EXISTS consumable_items (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        property_id TEXT DEFAULT NULL,
+        label TEXT NOT NULL,
+        icon TEXT DEFAULT '📦',
+        position INTEGER NOT NULL DEFAULT 0,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_consumable_items_user ON consumable_items(user_id);
+      CREATE INDEX IF NOT EXISTS idx_consumable_items_prop ON consumable_items(user_id, property_id);
+
+      -- Signalements de réassort par l'agent de ménage.
+      CREATE TABLE IF NOT EXISTS consumable_alerts (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        property_id TEXT NOT NULL,
+        item_label TEXT NOT NULL,
+        cleaner_id TEXT DEFAULT NULL,
+        cleaner_name TEXT DEFAULT NULL,
+        reservation_key TEXT DEFAULT NULL,
+        status TEXT NOT NULL DEFAULT 'open',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        resolved_at TIMESTAMPTZ DEFAULT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_consumable_alerts_user ON consumable_alerts(user_id, status);
+      CREATE INDEX IF NOT EXISTS idx_consumable_alerts_prop ON consumable_alerts(user_id, property_id, status);
     `);
 
     console.log('✅ Tables users, welcome_books, cleaners, user_settings, cleaning_assignments, cleaning_checklists & cleaning_templates OK dans Postgres');
@@ -13031,6 +13062,39 @@ if (reservation_key && reservation_key !== null) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
+// GET - Liste des consommables d'un logement pour l'agent (accès via PIN)
+app.get('/api/cleaning/consumables/:pinCode', async (req, res) => {
+  try {
+    const { pinCode } = req.params;
+    const { propertyId } = req.query;
+    if (!pinCode || !propertyId) {
+      return res.status(400).json({ error: 'Données manquantes' });
+    }
+    const cleanerResult = await pool.query(
+      'SELECT id, user_id FROM cleaners WHERE pin_code = $1 AND is_active = TRUE',
+      [pinCode]
+    );
+    if (cleanerResult.rows.length === 0) {
+      return res.status(401).json({ error: 'Code PIN invalide' });
+    }
+    const ownerId = cleanerResult.rows[0].user_id;
+
+    await ensureDefaultConsumables(ownerId);
+
+    const result = await pool.query(
+      `SELECT id, label, icon FROM consumable_items
+       WHERE user_id = $1 AND is_active = TRUE
+       AND (property_id IS NULL OR property_id = $2)
+       ORDER BY position ASC, id ASC`,
+      [ownerId, propertyId]
+    );
+    res.json({ success: true, items: result.rows });
+  } catch (err) {
+    console.error('Erreur GET /api/cleaning/consumables/:pinCode :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 // POST - Soumettre une checklist complétée (avec timer + notification propriétaire)
 // Route upload photo ménage (upload immédiat vers Cloudinary pour éviter crash mémoire iOS)
 app.post('/api/cleaning/photo-upload', async (req, res) => {
@@ -13200,8 +13264,65 @@ app.post('/api/cleaning/checklist', async (req, res) => {
     const checklistId = result.rows[0].id;
 
     // ============================
-    // 🔔 NOTIFICATION AU PROPRIÉTAIRE
+    // 🛒 SIGNALEMENTS DE RÉASSORT (consommables cochés par l'agent)
     // ============================
+    try {
+      const restock = Array.isArray(req.body.restock) ? req.body.restock : [];
+      const cleanRestock = restock
+        .map(s => String(s || '').trim())
+        .filter(Boolean)
+        .slice(0, 40);
+
+      if (cleanRestock.length > 0) {
+        for (const label of cleanRestock) {
+          // Éviter les doublons : ne pas recréer une alerte ouverte identique
+          const dup = await pool.query(
+            `SELECT 1 FROM consumable_alerts
+             WHERE user_id = $1 AND property_id = $2 AND item_label = $3 AND status = 'open' LIMIT 1`,
+            [cleaner.user_id, propertyId, label.slice(0, 80)]
+          );
+          if (dup.rows.length > 0) continue;
+          await pool.query(
+            `INSERT INTO consumable_alerts
+             (user_id, property_id, item_label, cleaner_id, cleaner_name, reservation_key, status)
+             VALUES ($1, $2, $3, $4, $5, $6, 'open')`,
+            [cleaner.user_id, propertyId, label.slice(0, 80), cleaner.id, cleaner.name, reservationKey]
+          );
+        }
+
+        // Notif push à l'hôte (+ sous-comptes can_view_cleaning)
+        try {
+          const property = PROPERTIES.find(p => p.id === propertyId);
+          const propName = displayName(property) || propertyId;
+          const title = `🛒 Réassort — ${propName}`;
+          const body = `${cleaner.name} signale : ${cleanRestock.join(', ')}`;
+          const pushData = { type: 'consumable_restock', propertyId, click_action: '/cleaning.html' };
+
+          const tokRes = await pool.query(
+            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+            [cleaner.user_id]
+          );
+          if (tokRes.rows.length > 0) {
+            await sendNotificationToMultipleLogged(tokRes.rows.map(r => r.fcm_token), title, body, pushData);
+          }
+          try {
+            await sendNotificationToSubAccountsOf(
+              cleaner.user_id, 'can_view_cleaning', title, body, pushData, 'notif_sub_cleaning_completed'
+            );
+          } catch(_) {}
+          if (typeof io !== 'undefined' && io) {
+            io.to(`user_${cleaner.user_id}`).emit('consumable:restock', { propertyId, items: cleanRestock });
+          }
+          console.log(`🛒 [CONSO] ${cleanRestock.length} signalement(s) pour ${propName} par ${cleaner.name}`);
+        } catch (notifErr) {
+          console.error('❌ [CONSO] Notif réassort échouée:', notifErr.message);
+        }
+      }
+    } catch (restockErr) {
+      console.error('❌ [CONSO] Enregistrement réassort échoué:', restockErr.message);
+    }
+
+
     try {
       const property = PROPERTIES.find(p => p.id === propertyId);
       const propertyName = displayName(property) || propertyId;
@@ -13778,6 +13899,232 @@ app.delete('/api/cleaning/templates/:id',
 
     } catch (err) {
       console.error('Erreur DELETE /api/cleaning/templates/:id :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// ═══════════════════════════════════════════════════════════
+// CONSOMMABLES / RÉASSORT
+// ═══════════════════════════════════════════════════════════
+
+// Liste standard pré-remplie au premier usage
+const DEFAULT_CONSUMABLES = [
+  { label: 'Papier toilette',     icon: '🧻' },
+  { label: 'Draps',               icon: '🛏️' },
+  { label: 'Serviettes',          icon: '🛁' },
+  { label: 'Capsules café',       icon: '☕' },
+  { label: 'Produit vaisselle',   icon: '🧽' },
+  { label: 'Sacs poubelle',       icon: '🗑️' },
+  { label: 'Savon / gel douche',  icon: '🧴' },
+  { label: 'Essuie-tout',         icon: '🧻' },
+  { label: 'Pastilles lave-vaisselle', icon: '🍽️' },
+  { label: 'Sel / poivre / sucre',     icon: '🧂' },
+];
+
+// Amorce la liste standard pour un user si aucun article n'existe encore
+async function ensureDefaultConsumables(userId) {
+  try {
+    const existing = await pool.query(
+      'SELECT 1 FROM consumable_items WHERE user_id = $1 LIMIT 1', [userId]
+    );
+    if (existing.rows.length > 0) return;
+    for (let i = 0; i < DEFAULT_CONSUMABLES.length; i++) {
+      const it = DEFAULT_CONSUMABLES[i];
+      await pool.query(
+        `INSERT INTO consumable_items (user_id, property_id, label, icon, position)
+         VALUES ($1, NULL, $2, $3, $4)`,
+        [userId, it.label, it.icon, i]
+      );
+    }
+    console.log(`✅ [CONSO] Liste standard amorcée pour ${userId}`);
+  } catch (e) {
+    console.warn('⚠️ [CONSO] ensureDefaultConsumables:', e.message);
+  }
+}
+
+// GET /api/consumables/items — Catalogue (standard + perso logement)
+app.get('/api/consumables/items',
+  authenticateAny,
+  requirePermission(pool, 'can_view_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+      await ensureDefaultConsumables(userId);
+
+      const { propertyId } = req.query;
+      let query, params;
+      if (propertyId) {
+        // Articles standard (property_id NULL) + perso de ce logement
+        query = `SELECT * FROM consumable_items
+                 WHERE user_id = $1 AND is_active = TRUE
+                 AND (property_id IS NULL OR property_id = $2)
+                 ORDER BY position ASC, id ASC`;
+        params = [userId, propertyId];
+      } else {
+        query = `SELECT * FROM consumable_items
+                 WHERE user_id = $1 AND is_active = TRUE
+                 ORDER BY (property_id IS NOT NULL), position ASC, id ASC`;
+        params = [userId];
+      }
+      const result = await pool.query(query, params);
+      res.json({ success: true, items: result.rows });
+    } catch (err) {
+      console.error('Erreur GET /api/consumables/items :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// POST /api/consumables/items — Ajouter un article (standard ou perso logement)
+app.post('/api/consumables/items',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+      const { label, icon, propertyId } = req.body;
+      if (!label || !label.trim()) {
+        return res.status(400).json({ error: 'Libellé requis' });
+      }
+      const posRes = await pool.query(
+        `SELECT COALESCE(MAX(position), -1) + 1 AS pos FROM consumable_items WHERE user_id = $1`,
+        [userId]
+      );
+      const result = await pool.query(
+        `INSERT INTO consumable_items (user_id, property_id, label, icon, position)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [userId, propertyId || null, label.trim().slice(0, 80), (icon || '📦').slice(0, 8), posRes.rows[0].pos]
+      );
+      res.status(201).json({ success: true, item: result.rows[0] });
+    } catch (err) {
+      console.error('Erreur POST /api/consumables/items :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// DELETE /api/consumables/items/:id — Retirer un article
+app.delete('/api/consumables/items/:id',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+      const result = await pool.query(
+        'DELETE FROM consumable_items WHERE id = $1 AND user_id = $2 RETURNING id',
+        [req.params.id, userId]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Article non trouvé' });
+      }
+      res.json({ success: true, deleted: req.params.id });
+    } catch (err) {
+      console.error('Erreur DELETE /api/consumables/items/:id :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// GET /api/consumables/alerts — Liste de courses (alertes ouvertes, groupées logement)
+app.get('/api/consumables/alerts',
+  authenticateAny,
+  requirePermission(pool, 'can_view_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+      const agencyIds = await getAgencyUserIds(req, userId);
+      const status = req.query.status === 'done' ? 'done' : 'open';
+      const result = await pool.query(
+        `SELECT id, property_id, item_label, cleaner_name, reservation_key, status, created_at, resolved_at
+         FROM consumable_alerts
+         WHERE user_id = ANY($1::text[]) AND status = $2
+         ORDER BY property_id ASC, created_at DESC`,
+        [agencyIds, status]
+      );
+      res.json({ success: true, alerts: result.rows });
+    } catch (err) {
+      console.error('Erreur GET /api/consumables/alerts :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// PATCH /api/consumables/alerts/:id — Marquer racheté / rouvrir
+app.patch('/api/consumables/alerts/:id',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+      const agencyIds = await getAgencyUserIds(req, userId);
+      const done = req.body.status !== 'open';
+      const result = await pool.query(
+        `UPDATE consumable_alerts
+         SET status = $1, resolved_at = $2
+         WHERE id = $3 AND user_id = ANY($4::text[])
+         RETURNING id, status`,
+        [done ? 'done' : 'open', done ? new Date() : null, req.params.id, agencyIds]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Alerte non trouvée' });
+      }
+      res.json({ success: true, alert: result.rows[0] });
+    } catch (err) {
+      console.error('Erreur PATCH /api/consumables/alerts/:id :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// PATCH /api/consumables/alerts/property/:propertyId/clear — Tout racheter pour un logement
+app.patch('/api/consumables/alerts/property/:propertyId/clear',
+  authenticateAny,
+  requirePermission(pool, 'can_manage_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+      const agencyIds = await getAgencyUserIds(req, userId);
+      const result = await pool.query(
+        `UPDATE consumable_alerts
+         SET status = 'done', resolved_at = NOW()
+         WHERE property_id = $1 AND status = 'open' AND user_id = ANY($2::text[])
+         RETURNING id`,
+        [req.params.propertyId, agencyIds]
+      );
+      res.json({ success: true, cleared: result.rows.length });
+    } catch (err) {
+      console.error('Erreur PATCH clear alerts :', err);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   }
