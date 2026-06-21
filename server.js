@@ -30614,6 +30614,105 @@ app.post('/api/host-questions/:id/answer', authenticateToken, async (req, res) =
   }
 });
 
+// GET /api/ai/knowledge-overview — Base de connaissance IA (dashboard agrégé)
+// Agrège, sur tous les logements de l'hôte (mode agence inclus) :
+//   - questions en attente de réponse
+//   - questions récurrentes posées ≥ 2 fois (lacunes à combler)
+//   - couverture = nombre de faits mémorisés par logement
+app.get('/api/ai/knowledge-overview', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
+
+    // Expression de normalisation d'une question (minuscules, ponctuation retirée,
+    // espaces normalisés) — identique pour ai_host_questions et property_facts.
+    const NQ = `btrim(regexp_replace(translate(lower(question), '?!.,;:"()-', ''), '\\s+', ' ', 'g'))`;
+
+    // Logements de l'hôte (id → nom) pour l'affichage + scope de couverture
+    const propsRes = await pool.query(
+      `SELECT id, COALESCE(NULLIF(internal_name,''), NULLIF(name,''), id) AS name
+       FROM properties WHERE user_id = ANY($1::text[])`,
+      [agencyIds]
+    );
+    const propNames = {};
+    const propIds = [];
+    propsRes.rows.forEach(p => { propNames[p.id] = p.name; propIds.push(p.id); });
+
+    // 1) Questions en attente
+    const pendingRes = await pool.query(
+      `SELECT id, conversation_id, property_id, guest_name, question, language, created_at
+       FROM ai_host_questions
+       WHERE user_id = ANY($1::text[]) AND status = 'pending'
+       ORDER BY created_at ASC`,
+      [agencyIds]
+    );
+
+    // 2) Questions récurrentes (posées ≥ 2 fois)
+    const recurringRes = await pool.query(
+      `WITH norm AS (
+         SELECT ${NQ} AS nq, question, property_id, created_at
+         FROM ai_host_questions
+         WHERE user_id = ANY($1::text[]) AND question IS NOT NULL AND btrim(question) <> ''
+       )
+       SELECT
+         (array_agg(question ORDER BY created_at DESC))[1] AS sample_question,
+         nq,
+         COUNT(*)::int AS cnt,
+         array_remove(array_agg(DISTINCT property_id), NULL) AS property_ids,
+         MAX(created_at) AS last_asked
+       FROM norm
+       GROUP BY nq
+       HAVING COUNT(*) >= 2
+       ORDER BY cnt DESC, last_asked DESC
+       LIMIT 50`,
+      [agencyIds]
+    );
+    const recurring = recurringRes.rows;
+
+    // 3) Couverture : faits mémorisés par logement (scopé aux logements de l'hôte)
+    let coverage = [];
+    let factSet = new Set();
+    if (propIds.length) {
+      const covRes = await pool.query(
+        `SELECT property_id, COUNT(*)::int AS facts_count
+         FROM property_facts WHERE property_id = ANY($1::text[])
+         GROUP BY property_id`,
+        [propIds]
+      );
+      const covMap = {};
+      covRes.rows.forEach(r => { covMap[r.property_id] = r.facts_count; });
+      coverage = propIds.map(id => ({
+        property_id: id, name: propNames[id] || id, facts_count: covMap[id] || 0
+      })).sort((a, b) => b.facts_count - a.facts_count);
+
+      // Faits normalisés (property_id||nq) pour déterminer la couverture des récurrentes
+      const factsRes = await pool.query(
+        `SELECT property_id, ${NQ} AS nq FROM property_facts WHERE property_id = ANY($1::text[])`,
+        [propIds]
+      );
+      factSet = new Set(factsRes.rows.map(f => f.property_id + '||' + f.nq));
+    }
+
+    // Marquer chaque question récurrente : couverte ou non, + noms des logements concernés
+    recurring.forEach(r => {
+      const ids = r.property_ids || [];
+      const coveredCount = ids.filter(pid => factSet.has(pid + '||' + r.nq)).length;
+      r.covered = ids.length > 0 && coveredCount === ids.length;
+      r.covered_count = coveredCount;
+      r.property_names = ids.map(pid => propNames[pid] || pid);
+    });
+
+    res.json({
+      pending: pendingRes.rows.map(q => ({ ...q, property_name: propNames[q.property_id] || q.property_id })),
+      recurring,
+      coverage
+    });
+  } catch (e) {
+    console.error('GET /api/ai/knowledge-overview:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // GET /api/admin/error-logs — liste des erreurs serveur capturées
 app.get('/api/admin/error-logs', authenticateToken, async (req, res) => {
   try {

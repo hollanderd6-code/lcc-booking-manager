@@ -1,0 +1,4523 @@
+<!DOCTYPE html>
+
+<html data-theme="light" data-theme-v3="1" lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Boostinghost – Mes logements</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<!-- Global CSS de l'app -->
+<link href="/css/style.css" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css?v=6" rel="stylesheet"/><link href="/css/bh-v3-mobile.css" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link href="/css/bottom-bar-enhanced.css" rel="stylesheet"/>
+<link href="/css/tablet-bottom-bar-fix.css" rel="stylesheet"/>
+<link href="/css/messages-badge-fix.css" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/messages-badge-red.css">
+<link rel="stylesheet" href="/css/messages-badge-desktop.css">    
+    <style>
+/* ============================================================
+   DARK BAR + STICKY HEADER (identical to app.html)
+   ============================================================ */
+html[data-theme-v3="1"] body { padding-top: 40px !important; }
+html[data-theme-v3="1"] .sidebar {
+  position: fixed !important; top: 40px !important;
+  left: 0 !important; bottom: 0 !important;
+  height: auto !important;
+  z-index: 30 !important;
+}
+html[data-theme-v3="1"] header.main-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  margin-top: 0 !important;
+}
+html[data-theme-v3="1"] main.main-content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  position: relative !important;
+  z-index: 35 !important;
+}
+html[data-theme-v3="1"] .app-container {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+/* Tuer tout espace parasite entre barre dark et header */
+html[data-theme-v3="1"] main.main-content > header.main-header {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* ── BARRE DARK EN HAUT ── */
+html[data-theme-v3="1"] .bh-demo-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 9999;
+  background: #0D1117;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  height: 40px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  /* Pour le centrage absolu des badges */
+  position: fixed;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-label {
+  color: rgba(255,255,255,.4);
+  font-weight: 500;
+  margin-right: 6px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 11px;
+  white-space: nowrap;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn {
+  padding: 4px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: transparent;
+  color: rgba(255,255,255,.6);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn:hover,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
+  background: rgba(255,255,255,.1);
+  color: white;
+}
+html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
+  background: #1A7A5E;
+  color: white;
+  border-color: #1A7A5E;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+html[data-theme-v3="1"] .bh-demo-nav .bh-demo-mode-label {
+  color: rgba(255,255,255,.4);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+html[data-theme-v3="1"] .bh-theme-toggle {
+  width: 44px;
+  height: 24px;
+  background: rgba(255,255,255,.15);
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+html[data-theme-v3="1"] .bh-theme-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform .2s;
+}
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
+
+
+/* ============================================================
+   PAGE LOGEMENTS — V3 FIXES
+   ============================================================ */
+html[data-theme-v3="1"] body {
+  background: #F5F2EC !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+html[data-theme-v3="1"] .main-content {
+  background: #F5F2EC !important;
+}
+/* Prevent page scroll — header stays fixed */
+html[data-theme-v3="1"],
+html[data-theme-v3="1"] body {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+html[data-theme-v3="1"] .app-container {
+  height: calc(100vh - 40px) !important;
+  overflow: hidden !important;
+}
+html[data-theme-v3="1"] .main-content {
+  overflow-y: auto !important;
+  height: 100% !important;
+}
+/* Hide bh-layout back button */
+html[data-theme-v3="1"] .header-actions .btn-ghost,
+html[data-theme-v3="1"] .header-actions .btn.btn-ghost {
+  display: none !important;
+}
+/* Style page title */
+html[data-theme-v3="1"] header.main-header .page-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 26px !important;
+  font-weight: 400 !important;
+}
+html[data-theme-v3="1"] header.main-header .page-kicker {
+  font-size: 10.5px !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  color: rgba(13,17,23,.38) !important;
+  font-weight: 600 !important;
+}
+/* Back button */
+.settings-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 12px;
+  background: #1A7A5E;
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+  position: fixed;
+  top: 52px;
+  right: 24px;
+  z-index: 200;
+}
+.settings-back-btn:hover { background: #15624B; }
+.settings-back-btn i { font-size: 13px; }
+/* Sidebar z-index fix */
+html[data-theme-v3="1"] .sidebar {
+  z-index: 30 !important;
+}
+
+    html, body {
+      margin: 0 !important;
+      }
+
+    /* (patched) removed inline .main-content padding override for iOS safe-area */
+
+    .page-content {
+      margin-top: 0 !important;
+    }
+
+    .settings-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0;
+    }
+
+    .properties-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .properties-grid { /* overridden by v3 */ }
+
+    /* old property-card overridden */
+
+/* ── Filter chips ── */
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: 999px;
+  border: 1.5px solid rgba(200,184,154,.5);
+  background: white; color: #374151;
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.filter-chip:hover { border-color: #1A7A5E; color: #1A7A5E; background: rgba(26,122,94,.04); }
+.filter-chip.active { background: #1A7A5E; color: white; border-color: #1A7A5E; }
+.filter-chip-groups {
+  background: #F5F0E8; border-color: rgba(200,184,154,.6); color: #6b7280;
+  margin-left: auto;
+}
+.filter-chip-groups:hover { background: #1A7A5E; color: white; border-color: #1A7A5E; }
+
+    .property-card:hover {
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .property-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      gap: 12px;
+    }
+
+    .property-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .property-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-badge {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px rgba(15,23,42,.12);
+      flex-shrink: 0;
+    }
+
+    .property-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .meta-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--bg-secondary, #f3f4f6);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .meta-badge i {
+      font-size: 11px;
+    }
+
+    .property-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+      margin-bottom: 8px;
+    }
+
+    .btn-icon-action {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      transition: var(--transition, all .15s ease);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .btn-edit {
+      background: var(--bg-secondary, #f3f4f6);
+      color: var(--primary-color, #059669);
+    }
+
+    .btn-edit:hover {
+      background: var(--primary-color, #059669);
+      color: #fff;
+    }
+
+    .btn-delete {
+      background: var(--bg-secondary, #f3f4f6);
+      color: #e11d48;
+    }
+
+    .btn-delete:hover {
+      background: #e11d48;
+      color: #fff;
+    }
+
+    .property-photo-wrapper {
+      width: 150px;
+      height: 100px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--bg-secondary, #f3f4f6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .property-photo-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .property-photo-placeholder {
+      font-size: 22px;
+      color: var(--text-secondary);
+      opacity: 0.6;
+    }
+
+    /* CSS iCal supprimé — remplacé par Channex */
+
+    .btn-add-property {
+      background: linear-gradient(135deg, var(--primary-color, #059669) 0%, var(--accent-color, #0ea5e9) 100%);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition, all .15s ease);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow-sm);
+      white-space: nowrap;
+    }
+
+    .btn-add-property i {
+      font-size: 13px;
+    }
+
+    .btn-add-property:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Modal */
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.55);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-primary, #ffffff);
+      border-radius: 18px;
+      max-width: 620px;
+      width: 94%;
+      box-shadow: var(--shadow-xl, 0 24px 60px rgba(15,23,42,.35));
+      overflow: hidden;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .modal-body {
+      padding: 16px 18px 18px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-close {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--text-secondary, #6b7280);
+      padding: 4px;
+    }
+
+    .modal-close i {
+      font-size: 14px;
+    }
+
+    .modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .form-group label {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .form-group label i {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .form-group input,
+    .form-group textarea {
+      padding: 8px 10px;
+      border: 1px solid var(--border-color, #e5e7eb);
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: inherit;
+      transition: var(--transition, all .15s ease);
+      background: var(--bg-secondary, #f9fafb);
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary-color, #059669);
+      box-shadow: 0 0 0 1px rgba(5,150,105,.12);
+      background: #ffffff;
+    }
+
+    .color-picker-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .color-picker {
+      width: 52px;
+      height: 32px;
+      border: 1px solid var(--border-color, #e5e7eb);
+      border-radius: 10px;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .color-preview {
+      flex: 1;
+      padding: 8px 10px;
+      background: var(--bg-secondary, #f3f4f6);
+      border-radius: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .photo-preview-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .photo-preview-box {
+      width: 96px;
+      height: 72px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--bg-secondary, #f3f4f6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .photo-preview-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-preview-placeholder {
+      font-size: 22px;
+      color: var(--text-secondary);
+      opacity: 0.6;
+    }
+
+    .photo-preview-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .input-with-suffix {
+      display: flex;
+      align-items: center;
+      border-radius: 10px;
+      border: 1px solid var(--border-color, #e5e7eb);
+      overflow: hidden;
+      background: var(--bg-secondary, #f9fafb);
+    }
+
+    .input-with-suffix input {
+      border: none;
+      background: transparent;
+      flex: 1;
+      padding: 8px 10px;
+    }
+
+    .input-with-suffix span {
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      border-left: 1px solid var(--border-color, #e5e7eb);
+      background: #f3f4f6;
+    }
+
+    .url-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .url-input-group {
+      display: grid;
+      grid-template-columns: 140px minmax(0, 1fr) 36px;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .url-input-group input {
+      width: 100%;
+    }
+
+    .btn-remove-url {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: none;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: var(--transition, all .15s ease);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .btn-remove-url:hover {
+      background: #dc2626;
+      color: #fff;
+    }
+
+    .btn-add-url {
+      background: var(--bg-secondary, #f3f4f6);
+      color: var(--primary-color, #059669);
+      border: none;
+      padding: 7px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 12px;
+      transition: var(--transition, all .15s ease);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .btn-add-url:hover {
+      background: var(--primary-color, #059669);
+      color: #ffffff;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 10px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color, #e5e7eb);
+      background: var(--bg-primary, #ffffff);
+      position: sticky;
+      bottom: 0;
+      margin-left: -18px;
+      margin-right: -18px;
+      margin-bottom: -18px;
+      padding-left: 18px;
+      padding-right: 18px;
+      padding-bottom: 18px;
+    }
+
+    .btn-cancel {
+      background: var(--bg-secondary, #f3f4f6);
+      color: var(--text-primary);
+      border: none;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-weight: 500;
+      font-size: 13px;
+      cursor: pointer;
+      transition: var(--transition, all .15s ease);
+    }
+
+    .btn-cancel:hover {
+      background: var(--border-color, #e5e7eb);
+    }
+
+    .btn-save {
+      background: #1A7A5E;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: var(--transition, all .15s ease);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-save:hover {
+      background: #15624B;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 12px;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .empty-state i {
+      font-size: 40px;
+      opacity: 0.25;
+      margin-bottom: 8px;
+    }
+
+    .toast-container {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 1200;
+    }
+
+    .toast {
+      min-width: 220px;
+      max-width: 320px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      box-shadow: 0 18px 40px rgba(15,23,42,.25);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      margin-top: 8px;
+      color: #0f172a;
+      background: #ffffff;
+    }
+
+    .toast-success {
+      border-left: 4px solid #16a34a;
+    }
+
+    .toast-error {
+      border-left: 4px solid #ef4444;
+    }
+
+    .toast i {
+      font-size: 14px;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1100;
+    }
+
+    .loading-overlay.active {
+      display: flex;
+    }
+
+    .loading-spinner {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .loading-spinner .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #1A7A5E;
+      animation: bh-bounce 1.2s infinite ease-in-out;
+    }
+    .loading-spinner .dot:nth-child(1) { animation-delay: 0s; }
+    .loading-spinner .dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-spinner .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bh-bounce {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+      40%            { transform: scale(1.1); opacity: 1; }
+    }
+
+    .loading-spinner i,
+    .loading-spinner p { display: none; }
+
+/* ========================================
+   CORRECTIONS MOBILE ULTRA-COMPLÈTES
+   ======================================== */
+
+@media (max-width: 1366px) {
+  /* RESET containers */
+  body {
+    overflow-x: hidden !important;
+  }
+  
+  .settings-container {
+    padding: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+  
+  /* Header */
+  .properties-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    margin-bottom: 12px !important;
+  }
+  
+  .properties-header h1 {
+    font-size: 22px !important;
+    margin-bottom: 0 !important;
+  }
+  
+  .properties-header .btn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 12px 16px !important;
+  }
+  
+  /* Cards */
+  .property-card {
+    padding: 12px !important;
+    margin-bottom: 12px !important;
+    overflow: hidden !important;
+  }
+  
+  .property-header {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  
+  .property-info {
+    width: 100% !important;
+  }
+  
+  .property-name {
+    font-size: 16px !important;
+    word-break: break-word !important;
+  }
+  
+  .property-meta {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  
+  .meta-badge {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Actions */
+  .property-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  
+  .property-actions .btn {
+    width: 100% !important;
+    padding: 10px 12px !important;
+    font-size: 14px !important;
+    justify-content: center !important;
+  }
+  
+  /* URLs et liens - FIX CRITIQUE */
+  .url-copy-section {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+  
+  .url-copy-section input,
+  .url-copy-section .form-input {
+    width: 100% !important;
+    font-size: 12px !important;
+    padding: 10px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  
+  .url-copy-section button,
+  .url-copy-section .btn {
+    width: 100% !important;
+    padding: 10px !important;
+  }
+  
+  /* Chat section verte - FIX IMPORTANT */
+  .chat-link-section,
+  .url-display-section {
+    padding: 12px !important;
+    margin: 10px 0 !important;
+    overflow: hidden !important;
+  }
+  
+  .chat-link-section input,
+  .url-display-section input {
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 11px !important;
+    padding: 8px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  
+  /* URL groups */
+  .url-input-group {
+    flex-direction: column !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+  }
+  
+  .url-input-group input,
+  .url-input-group select {
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 14px !important;
+  }
+  
+  .platform-input {
+    width: 100% !important;
+  }
+  
+  .url-input {
+    width: 100% !important;
+    font-size: 12px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  
+  /* Modal — géré dans mobile-native-styles.css */
+  
+  .form-group {
+    margin-bottom: 14px !important;
+    width: 100% !important;
+  }
+  
+  .form-label {
+    font-size: 14px !important;
+    margin-bottom: 6px !important;
+  }
+  
+  .form-input,
+  .form-select,
+  .form-textarea {
+    width: 100% !important;
+    font-size: 16px !important; /* Anti-zoom iOS */
+    padding: 12px !important;
+  }
+  
+  .form-textarea {
+    min-height: 100px !important;
+  }
+  
+  /* Checkboxes */
+  .checkbox-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  
+  .checkbox-item {
+    padding: 12px !important;
+    width: 100% !important;
+  }
+  
+  /* Photo */
+  .photo-upload-box,
+  .photo-preview-box {
+    height: 180px !important;
+  }
+  
+  /* Sections */
+  .form-section-header {
+    margin-top: 20px !important;
+    font-size: 15px !important;
+  }
+  
+  /* Toggle */
+  .toggle-section {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+  
+  /* Info box */
+  .info-box {
+    padding: 12px !important;
+    font-size: 13px !important;
+  }
+  
+  /* Boutons généraux */
+  .btn {
+    font-size: 14px !important;
+    padding: 10px 14px !important;
+  }
+  
+  .btn-primary {
+    width: 100% !important;
+  }
+}
+
+/* Très petits écrans */
+@media (max-width: 480px) {
+  .settings-container {
+    padding: 6px !important;
+  }
+  
+  .property-card {
+    padding: 10px !important;
+  }
+  
+  .properties-header h1 {
+    font-size: 20px !important;
+  }
+  
+  .property-name {
+    font-size: 15px !important;
+  }
+  
+  .url-copy-section input,
+  .chat-link-section input {
+    font-size: 10px !important;
+    padding: 8px !important;
+  }
+  
+  .meta-badge {
+    font-size: 10px !important;
+    padding: 3px 6px !important;
+  }
+}
+  
+    /* ✅ Toggle switch - défini localement pour Safari */
+    .toggle-switch {
+      display: -webkit-box;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-box-align: center;
+      -webkit-align-items: center;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      width: 100%;
+    }
+    .toggle-switch input[type="checkbox"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 44px;
+      min-width: 44px;
+      height: 24px;
+      background: #d1d5db;
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle-switch input[type="checkbox"]:checked {
+      background: #1A7A5E;
+    }
+    .toggle-switch input[type="checkbox"]::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: left 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle-switch input[type="checkbox"]:checked::after {
+      left: 22px;
+    }
+    .toggle-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1e293b;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .toggle-slider { display: none; } /* masqué, on utilise le CSS natif ci-dessus */
+
+  /* ── AVIS OTA ── */
+  .review-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px; transition:box-shadow .15s; }
+  .review-card:hover { box-shadow:0 2px 12px rgba(0,0,0,.06); }
+  .review-card.unreplied { border-left:3px solid #f59e0b; }
+  .review-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:8px; }
+  .review-guest { display:flex; align-items:center; gap:8px; }
+  .review-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#1A7A5E,#2AAE86); display:flex; align-items:center; justify-content:center; color:white; font-size:13px; font-weight:700; flex-shrink:0; }
+  .review-meta { display:flex; flex-direction:column; gap:2px; }
+  .review-name { font-size:13px; font-weight:600; color:#111827; }
+  .review-date { font-size:11px; color:#9ca3af; }
+  .review-platform { display:flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600; flex-shrink:0; }
+  .platform-airbnb  { background:#fff0f0; color:#FF5A5F; border:1px solid #FFD0D1; }
+  .platform-booking { background:#f0f3ff; color:#003580; border:1px solid #c7d3f5; }
+  .platform-expedia { background:#fff8f0; color:#FF8000; border:1px solid #FFD9B0; }
+  .review-stars { display:flex; align-items:center; gap:2px; margin-bottom:6px; }
+  .review-stars i { font-size:11px; color:#f59e0b; }
+  .review-stars .star-empty { color:#e5e7eb; }
+  .review-text { font-size:12.5px; color:#374151; line-height:1.55; margin-bottom:10px; }
+  .review-reply-existing { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 12px; font-size:12px; color:#166534; margin-bottom:8px; display:flex; gap:8px; align-items:flex-start; }
+  .review-reply-form { display:none; flex-direction:column; gap:8px; margin-top:8px; }
+  .review-reply-form.open { display:flex; }
+  .review-reply-textarea { width:100%; border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; font-size:12.5px; font-family:'DM Sans',sans-serif; resize:vertical; min-height:80px; color:#111827; background:#fafafa; box-sizing:border-box; transition:border-color .15s; }
+  .review-reply-textarea:focus { outline:none; border-color:#1A7A5E; background:#fff; }
+  .review-actions { display:flex; align-items:center; gap:8px; }
+  .btn-reply-toggle { font-size:12px; padding:5px 12px; border-radius:8px; border:1px solid #e5e7eb; background:white; color:#374151; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:5px; transition:all .15s; }
+  .btn-reply-toggle:hover { border-color:#1A7A5E; color:#1A7A5E; }
+  .btn-reply-send { font-size:12px; padding:5px 14px; border-radius:8px; border:none; background:#1A7A5E; color:white; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:5px; transition:background .15s; }
+  .btn-reply-send:hover { background:#145f4a; }
+  .btn-reply-send:disabled { opacity:.6; cursor:not-allowed; }
+  .btn-reply-cancel { font-size:12px; padding:5px 10px; border-radius:8px; border:1px solid #e5e7eb; background:white; color:#9ca3af; cursor:pointer; }
+  .score-bar-wrap { display:flex; align-items:center; gap:8px; }
+  .score-bar-label { font-size:11px; color:#6b7280; width:90px; flex-shrink:0; }
+  .score-bar-track { flex:1; height:4px; background:#e5e7eb; border-radius:2px; overflow:hidden; }
+  .score-bar-fill { height:100%; background:linear-gradient(90deg,#1A7A5E,#2AAE86); border-radius:2px; transition:width .4s ease; }
+  .score-bar-value { font-size:11px; font-weight:600; color:#374151; width:24px; text-align:right; }
+  .hidden-badge { font-size:10px; background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 7px; border-radius:999px; font-weight:600; }
+/* Desktop page header */
+@media (min-width: 1367px) {
+  .bh-desktop-header {
+    position: fixed; top: 40px; left: 260px; right: 0;
+    height: 64px; background: white; border-bottom: 1px solid rgba(200,184,154,.35);
+    display: flex; align-items: center; padding: 0 32px;
+    z-index: 45;
+  }
+  .bh-desktop-header .bh-dh-kicker {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .1em; color: rgba(13,17,23,.38);
+    margin-bottom: 2px;
+  }
+  .bh-desktop-header .bh-dh-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px; font-weight: 400; color: #0D1117;
+    line-height: 1.1;
+  }
+}
+@media (max-width: 1366px) { .bh-desktop-header { display: none !important; } }
+</style>
+<!-- Script auth + user + logout -->
+<script src="/js/auth-fetch.js"></script>
+<script>
+// ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
+(function() {
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    if (typeof url === 'string' && localStorage.getItem('bh_agency_view') === 'all' && url.includes('/api/') && !url.includes('agency=')) {
+      url += (url.includes('?') ? '&' : '?') + 'agency=all';
+    }
+    return _origFetch.call(this, url, opts);
+  };
+})();
+</script>
+<script>
+    (function () {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const rawUser = localStorage.getItem('lcc_user');
+      let user = null;
+
+      try {
+        user = rawUser ? JSON.parse(rawUser) : null;
+      } catch (e) {
+        console.error('Impossible de lire lcc_user', e);
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+        if (user) {
+          const nameEl = document.getElementById('sidebarUserName');
+          const companyEl = document.getElementById('sidebarUserCompany');
+          const avatarEl = document.getElementById('sidebarUserAvatar');
+
+          if (nameEl) {
+            nameEl.textContent = user.firstName
+              ? user.firstName + (user.lastName ? ' ' + user.lastName : '')
+              : (user.email || 'Mon compte');
+          }
+
+          if (companyEl) {
+            companyEl.textContent = user.company || 'Mon espace';
+          }
+
+          if (avatarEl) {
+            const initial = (user.firstName || user.email || '?').trim()[0] || 'U';
+            avatarEl.textContent = initial.toUpperCase();
+          }
+        }
+
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', function () {
+            localStorage.removeItem('lcc_token');
+            localStorage.removeItem('lcc_user');
+            window.location.href = '/login.html';
+          });
+        }
+      });
+    })();
+  </script>
+<link rel="stylesheet" href="/css/mobile-native-styles.css">
+</head>
+<body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Gestion" data-page="settings" data-subtitle="Ajoutez, modifiez et organisez vos logements." data-title="Mes logements">
+
+<!-- MOBILE HEADER -->
+<div class="mobile-header">
+<a class="mobile-logo" href="/app.html">
+<i class="fas fa-calendar-check"></i>
+<span class="mobile-logo-text">Bookingmanage</span>
+</a>
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
+</button>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="app-container">
+<!-- Sidebar -->
+<div id="bhSidebar"></div>
+<!-- MAIN -->
+<main class="main-content"><div id="bhHeader"></div>
+<div class="bh-desktop-header"><div><div class="bh-dh-kicker">Gestion</div><div class="bh-dh-title">Mes logements</div></div></div>
+    <button class="settings-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
+
+<div class="page-content">
+<section class="card settings-container">
+<div class="properties-section-header">
+  <div>
+    <div class="properties-count" id="propertiesCount">… LOGEMENTS ACTIFS</div>
+    <h2 class="properties-title">Mes <em>logements</em></h2>
+  </div>
+  <button class="btn-add-property" onclick="openAddPropertyModal()">
+    <i class="fas fa-plus"></i> Ajouter
+  </button>
+</div>
+<!-- Barre de filtre groupes -->
+<div id="filterBar" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+<!-- Toggle vue grille / liste — mobile uniquement -->
+<div id="viewToggleBar" style="display:none;justify-content:flex-end;margin-bottom:12px;gap:4px;">
+  <button id="btnViewGrid" class="view-toggle-btn active" onclick="setPropertyView('grid')" title="Vue grille">
+    <i class="fas fa-grip"></i>
+  </button>
+  <button id="btnViewList" class="view-toggle-btn" onclick="setPropertyView('list')" title="Vue liste">
+    <i class="fas fa-list"></i>
+  </button>
+</div>
+
+<div class="properties-grid" id="propertiesGrid">
+<!-- Logements injectés ici par settings.js -->
+</div>
+<div class="empty-state" id="propertiesEmptyState" style="display:none;">
+<i class="fas fa-home"></i>
+<p>Aucun logement configuré pour le moment.</p>
+<p>Commencez par ajouter votre premier logement.</p>
+</div>
+<div style="margin-top:10px;">
+<button class="btn-add-property" id="btnAddProperty" onclick="handleAddPropertyClick()">
+<i class="fas fa-plus"></i>
+  Ajouter un logement
+</button>
+<span id="propertyQuotaBadge" style="display:none; margin-left:10px; font-size:13px; color:#6b7280;"></span>
+</div>
+
+<!-- MODAL CONFIRMATION logement supplémentaire payant -->
+<div id="extraPropertyModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:16px; padding:32px; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <div style="text-align:center; margin-bottom:20px;">
+      <div style="width:56px;height:56px;background:#fef3c7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+        <i class="fas fa-home" style="color:#f59e0b;font-size:22px;"></i>
+      </div>
+      <h3 style="font-size:18px;font-weight:700;color:#111827;margin:0 0 8px;">Logement supplémentaire</h3>
+      <p id="extraPropertyModalText" style="color:#6b7280;font-size:14px;margin:0;line-height:1.5;"></p>
+    </div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:20px;text-align:center;">
+      <p id="extraPropertyPriceText" style="font-weight:700;color:#059669;font-size:16px;margin:0;"></p>
+      <p style="color:#6b7280;font-size:12px;margin:4px 0 0;">Ajouté automatiquement à votre abonnement</p>
+    </div>
+    <div style="display:flex;gap:12px;">
+      <button onclick="closeExtraPropertyModal()" style="flex:1;padding:12px;border:2px solid #e5e7eb;background:#fff;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;">Annuler</button>
+      <button onclick="confirmAddExtraProperty()" id="btnConfirmExtra" style="flex:1;padding:12px;background:#10b981;color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;">Confirmer</button>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ===== CARD : BASE DE CONNAISSANCE IA ===== -->
+<style>
+  #aiKnowledgeCard .ak-block { margin-top:18px; }
+  #aiKnowledgeCard .ak-block-title { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:#111827; margin:0 0 10px; }
+  #aiKnowledgeCard .ak-block-title i { color:#7c3aed; }
+  #aiKnowledgeCard .ak-badge { background:#ef4444; color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; }
+  #aiKnowledgeCard .ak-row { display:flex; align-items:center; gap:10px; padding:11px 13px; background:#faf8f4; border:1px solid #e7e0d4; border-radius:11px; margin-bottom:8px; }
+  #aiKnowledgeCard .ak-q { font-size:13px; color:#374151; font-weight:600; line-height:1.35; }
+  #aiKnowledgeCard .ak-meta { font-size:11px; color:#9ca3af; margin-top:3px; }
+  #aiKnowledgeCard .ak-actions { display:flex; gap:6px; flex-shrink:0; }
+  #aiKnowledgeCard .ak-btn { border:none; border-radius:9px; font-size:12px; font-weight:700; padding:7px 12px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+  #aiKnowledgeCard .ak-yes { background:#dcfce7; color:#16a34a; }
+  #aiKnowledgeCard .ak-no  { background:#fee2e2; color:#dc2626; }
+  #aiKnowledgeCard .ak-fill { background:#ede9fe; color:#7c3aed; }
+  #aiKnowledgeCard .ak-pill { font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px; margin-left:6px; vertical-align:middle; }
+  #aiKnowledgeCard .ak-pill-ok  { background:#dcfce7; color:#16a34a; }
+  #aiKnowledgeCard .ak-pill-gap { background:#fef3c7; color:#b45309; }
+  #aiKnowledgeCard .ak-empty { font-size:12px; color:#9ca3af; padding:8px 2px; }
+  #aiKnowledgeCard .ak-cov { display:flex; align-items:center; gap:10px; padding:6px 2px; }
+  #aiKnowledgeCard .ak-cov-name { width:38%; font-size:12px; color:#374151; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #aiKnowledgeCard .ak-cov-bar { flex:1; height:8px; background:#eee6d8; border-radius:999px; overflow:hidden; }
+  #aiKnowledgeCard .ak-cov-fill { height:100%; background:linear-gradient(90deg,#7c3aed,#a855f7); border-radius:999px; }
+  #aiKnowledgeCard .ak-cov-num { width:28px; text-align:right; font-size:12px; font-weight:700; color:#7c3aed; }
+</style>
+<section class="card settings-container" id="aiKnowledgeCard" style="margin-top:20px;">
+  <div class="properties-section-header">
+    <div>
+      <div class="properties-count">INTELLIGENCE ARTIFICIELLE</div>
+      <h2 class="properties-title">Base de <em>connaissance IA</em></h2>
+    </div>
+    <button class="btn-add-property" onclick="loadAiKnowledge()" title="Rafraîchir">
+      <i class="fas fa-sync"></i> Rafraîchir
+    </button>
+  </div>
+  <p style="font-size:13px;color:var(--text-secondary,#6b7280);margin:0 0 4px;line-height:1.5;">
+    Ce que vos voyageurs demandent, ce que l'IA a appris, et les trous à combler en amont.
+  </p>
+
+  <div id="aiKnowledgeLoading" style="text-align:center;padding:20px;color:#9ca3af;font-size:13px;">
+    <i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Chargement…
+  </div>
+
+  <div id="aiKnowledgeContent" style="display:none;">
+    <div class="ak-block">
+      <div class="ak-block-title"><i class="fas fa-clock"></i> Questions en attente <span id="akPendingCount" class="ak-badge" style="display:none;">0</span></div>
+      <div id="akPendingList"></div>
+    </div>
+    <div class="ak-block">
+      <div class="ak-block-title"><i class="fas fa-repeat"></i> Questions récurrentes</div>
+      <div id="akRecurringList"></div>
+    </div>
+    <div class="ak-block">
+      <div class="ak-block-title"><i class="fas fa-brain"></i> Couverture par logement</div>
+      <div id="akCoverageList"></div>
+    </div>
+  </div>
+</section>
+
+<div class="modal" id="editPropertyModal">
+<div class="modal-content">
+<div class="modal-header">
+<h2 id="modalTitle">
+<i class="fas fa-home"></i>
+<span>Modifier le logement</span>
+</h2>
+<button class="modal-close" onclick="closeEditModal()">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="modal-body">
+<form class="modal-form" id="propertyForm" onsubmit="saveProperty(event)">
+<input id="propertyId" type="hidden"/>
+<input id="propertyPhotoUrl" type="hidden"/>
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyName">
+<i class="fas fa-home"></i>
+<span>Nom du logement</span>
+</label>
+<input id="propertyName" placeholder="Ex: Saint-Gratien - RDC" required="" type="text"/>
+</div>
+<div class="form-group">
+<label for="propertyInternalName">
+<i class="fas fa-calendar-alt"></i>
+<span>Nom interne du logement</span>
+<span class="bh-tooltip-wrap">
+  <i class="bh-tooltip-icon">?</i>
+  <span class="bh-tooltip-box">Ce nom apparaîtra sur le calendrier Boostinghost. Utile si votre nom public est long.</span>
+</span>
+</label>
+<input id="propertyInternalName" placeholder="Ex : SG RDC - Interne" type="text"/>
+</div>
+<div class="form-group">
+<label for="propertyOwnerId">
+<i class="fas fa-user"></i>
+<span>Propriétaire (optionnel)</span>
+</label>
+<select class="form-control" id="propertyOwnerId">
+<option value="">Aucun propriétaire</option>
+<!-- Options remplies dynamiquement -->
+</select>
+<small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
+    Lier ce logement à un client propriétaire
+  </small>
+</div>
+<div class="form-group">
+<label for="propertyAddress">
+<i class="fas fa-location-dot"></i>
+<span>Adresse</span>
+</label>
+<input id="propertyAddress" placeholder="Ex : 25 boulevard de la République, Saint-Gratien" type="text"/>
+</div>
+</div>
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyArrivalTime">
+<i class="fas fa-sign-in-alt"></i>
+<span>Heure d’arrivée</span>
+</label>
+<select id="propertyArrivalTime" class="form-control"></select>
+</div>
+<div class="form-group">
+<label for="propertyDepartureTime">
+<i class="fas fa-sign-out-alt"></i>
+<span>Heure de départ</span>
+</label>
+<select id="propertyDepartureTime" class="form-control"></select>
+</div>
+</div>
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyDeposit">
+<i class="fas fa-shield-alt"></i>
+<span>Montant de la caution</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Montant bloqué sur la carte du voyageur. Libéré après le séjour si aucun dommage.</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyDeposit" min="0" placeholder="Laisser vide si aucune" step="1" type="number"/>
+<span>€</span>
+</div>
+</div>
+<div class="form-group" id="depositReleaseDaysGroup">
+<label for="propertyDepositReleaseDays">
+<i class="fas fa-clock"></i>
+<span>Délai de restitution</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Nombre de jours après le départ avant que la caution soit débloquée. L'IA adaptera sa réponse automatiquement.</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyDepositReleaseDays" min="1" max="30" placeholder="Laisser vide si aucune" step="1" type="number"/>
+<span>jours</span>
+</div>
+</div>
+</div>
+<input type="hidden" id="propertyColor" value="#E67E50"/>
+
+<!-- ✅ SECTION : PRESTATIONS PAYANTES (UPSELL) -->
+<div class="form-section-header" style="margin-top:18px;">
+  <i class="fas fa-sack-dollar"></i>
+  <div>
+    <strong>Prestations payantes</strong>
+    <span style="display:block;font-size:11.5px;color:#6b7280;font-weight:400;">Au-delà de la tolérance gratuite, l'IA propose automatiquement un lien de paiement (commission BHGuest 3 %).</span>
+  </div>
+</div>
+
+<!-- Départ tardif -->
+<div class="form-group" style="margin-bottom:8px;">
+  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+    <input type="checkbox" id="upsellLateEnabled" style="width:18px;height:18px;accent-color:#1A7A5E;"/>
+    <span><i class="fas fa-clock" style="color:#1A7A5E;"></i> Départ tardif payant</span>
+  </label>
+</div>
+<div class="form-grid-2" id="upsellLateFields">
+  <div class="form-group">
+    <label for="upsellLateTolerance"><span>Tolérance gratuite</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellLateTolerance" min="0" max="600" step="15" type="number" placeholder="Ex: 120"/>
+      <span>min</span>
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="upsellLatePrice"><span>Tarif au-delà</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellLatePrice" min="0" step="0.5" type="number" placeholder="Ex: 10"/>
+      <span>€/h</span>
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="upsellLateMax"><span>Départ tardif max</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellLateMax" min="0" max="720" step="15" type="number" placeholder="Ex: 240 (vide = illimité)"/>
+      <span>min</span>
+    </div>
+  </div>
+</div>
+
+<!-- Arrivée anticipée -->
+<div class="form-group" style="margin:14px 0 8px;">
+  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+    <input type="checkbox" id="upsellEarlyEnabled" style="width:18px;height:18px;accent-color:#1A7A5E;"/>
+    <span><i class="fas fa-door-open" style="color:#1A7A5E;"></i> Arrivée anticipée payante</span>
+  </label>
+</div>
+<div class="form-grid-2" id="upsellEarlyFields">
+  <div class="form-group">
+    <label for="upsellEarlyTolerance"><span>Tolérance gratuite</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellEarlyTolerance" min="0" max="600" step="15" type="number" placeholder="Ex: 60"/>
+      <span>min</span>
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="upsellEarlyPrice"><span>Tarif au-delà</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellEarlyPrice" min="0" step="0.5" type="number" placeholder="Ex: 10"/>
+      <span>€/h</span>
+    </div>
+  </div>
+  <div class="form-group">
+    <label for="upsellEarlyMax"><span>Arrivée anticipée max</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellEarlyMax" min="0" max="720" step="15" type="number" placeholder="Ex: 180 (vide = illimité)"/>
+      <span>min</span>
+    </div>
+  </div>
+</div>
+
+<!-- Panier d'accueil -->
+<div class="form-group" style="margin:14px 0 8px;">
+  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+    <input type="checkbox" id="upsellBasketEnabled" style="width:18px;height:18px;accent-color:#1A7A5E;"/>
+    <span><i class="fas fa-basket-shopping" style="color:#1A7A5E;"></i> Panier d'accueil (sur demande)</span>
+  </label>
+</div>
+<div class="form-grid-2" id="upsellBasketFields">
+  <div class="form-group">
+    <label for="upsellBasketPrice"><span>Prix du panier</span></label>
+    <div class="input-with-suffix">
+      <input id="upsellBasketPrice" min="0" step="0.5" type="number" placeholder="Ex: 25"/>
+      <span>€</span>
+    </div>
+  </div>
+  <div class="form-group" style="grid-column:1 / -1;">
+    <label for="upsellBasketDesc"><span>Contenu / description</span></label>
+    <input id="upsellBasketDesc" type="text" class="form-control" placeholder="Ex: vin local, fromages, fruits de saison"/>
+  </div>
+</div>
+
+<!-- ✅ SECTION : CAPACITÉ D'ACCUEIL -->
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyMaxGuests"><i class="fas fa-users"></i><span>Capacité d'accueil</span></label>
+<div class="input-with-suffix">
+<input id="propertyMaxGuests" min="1" max="50" placeholder="Ex: 4" step="1" type="number"/>
+<span>pers.</span>
+</div>
+</div>
+<div class="form-group">
+<label for="propertyBedrooms"><i class="fas fa-door-open"></i><span>Chambres</span></label>
+<div class="input-with-suffix">
+<input id="propertyBedrooms" min="0" max="20" placeholder="Ex: 2" step="1" type="number"/>
+<span>ch.</span>
+</div>
+</div>
+</div>
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyBeds"><i class="fas fa-bed"></i><span>Lits</span></label>
+<div class="input-with-suffix">
+<input id="propertyBeds" min="0" max="20" placeholder="Ex: 3" step="1" type="number"/>
+<span>lits</span>
+</div>
+</div>
+<div class="form-group">
+<label for="propertyBathrooms"><i class="fas fa-shower"></i><span>Salles de bain</span></label>
+<div class="input-with-suffix">
+<input id="propertyBathrooms" min="0" max="10" placeholder="Ex: 1" step="0.5" type="number"/>
+<span>sdb.</span>
+</div>
+</div>
+</div>
+
+<!-- ✅ SECTION : TARIFICATION PAR NUIT -->
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyBasePrice">
+<i class="fas fa-moon"></i>
+<span>Prix de base / nuit</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Prix affiché sur le calendrier les jours de semaine. Utilisé pour le calcul de rentabilité.</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyBasePrice" min="0" placeholder="Ex: 75" step="1" type="number"/>
+<span>€</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Affiché sur le calendrier (jours de semaine)</small>
+</div>
+<div class="form-group">
+<label for="propertyWeekendPrice">
+<i class="fas fa-star"></i>
+<span>Prix week-end / nuit</span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyWeekendPrice" min="0" placeholder="Ex: 90" step="1" type="number"/>
+<span>€</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Nuits du vendredi et du samedi (laisser vide = même tarif)</small>
+</div>
+</div>
+
+<!-- Frais ménage + taxe séjour + commission conciergerie -->
+<div class="form-grid-2" style="margin-top:12px;">
+<div class="form-group">
+<label for="propertyCleaningFee">
+<i class="fas fa-broom"></i>
+<span>Frais de ménage</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Frais forfaitaires ajoutés à chaque réservation. Utilisés dans le calcul de rentabilité.</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyCleaningFee" min="0" placeholder="Ex: 40" step="1" type="number"/>
+<span>€</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Par séjour (pour le reporting)</small>
+</div>
+<div class="form-group">
+<label for="propertyTouristTax">
+<i class="fas fa-landmark"></i>
+<span>Taxe de séjour</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Taxe collectée par nuit et par personne adulte. Varie selon la commune (ex: 0,83€ à Paris).</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyTouristTax" min="0" placeholder="Ex: 0.83" step="0.01" type="number"/>
+<span>€/nuit/pers</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Par nuit par voyageur</small>
+</div>
+</div>
+<div class="form-group" style="margin-top:8px;">
+<label for="propertyConciergePct">
+<i class="fas fa-handshake"></i>
+<span>Commission conciergerie</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">% prélevé sur le revenu brut par la conciergerie. Utilisé dans le calcul de rentabilité propriétaire.</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyConciergePct" min="0" max="100" placeholder="Ex: 20" step="0.5" type="number"/>
+<span>%</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">% prélevé par la conciergerie sur le revenu brut</small>
+</div>
+
+<!-- Commissions OTA pour calcul rentabilité -->
+<div class="form-grid-2" style="margin-top:8px;">
+<div class="form-group">
+<label for="propertyAirbnbCommissionPct">
+<i class="fab fa-airbnb"></i>
+<span>Commission Airbnb</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">% prélevé par Airbnb sur chaque réservation (généralement 3%). Utilisé pour calculer votre revenu net.</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyAirbnbCommissionPct" min="0" max="100" placeholder="Ex: 3" step="0.5" type="number"/>
+<span>%</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">% prélevé par Airbnb sur le prix (défaut : 3%)</small>
+</div>
+<div class="form-group">
+<label for="propertyBookingCommissionPct">
+<i class="fas fa-bed"></i>
+<span>Commission Booking</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">% prélevé par Booking.com sur chaque réservation (généralement 15%). Utilisé pour calculer votre revenu net.</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyBookingCommissionPct" min="0" max="100" placeholder="Ex: 15" step="0.5" type="number"/>
+<span>%</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">% prélevé par Booking.com (défaut : 15%)</small>
+</div>
+</div>
+
+<!-- ✅ SECTION : NUITÉES MINIMUM -->
+<div class="form-grid-2" style="margin-top:12px;">
+<div class="form-group">
+<label for="propertyMinStay">
+<i class="fas fa-moon"></i>
+<span>Nuitées minimum</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Nombre minimum de nuits par réservation. Synchronisé avec les OTA via Channex. Vous pouvez modifier cette valeur pour des dates précises via les règles de tarification.</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyMinStay" min="1" max="30" placeholder="1" step="1" type="number" value="1"/>
+<span>nuit(s)</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Par défaut pour toutes les dates (modifiable par période dans les règles)</small>
+</div>
+<div class="form-group"></div>
+</div>
+
+<!-- ✅ SECTION : GESTION TARIFAIRE -->
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-chart-line"></i>
+  <span>Gestion tarifaire</span>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+  <label id="cardPricingInternal" onclick="selectPricingMode('internal')" style="cursor:pointer;border:2px solid #1A7A5E;border-radius:12px;padding:14px;background:#f0fdf4;transition:all .2s;">
+    <input type="radio" name="pricingMode" id="pricingModeInternal" value="internal" checked style="display:none;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <i class="fas fa-check-circle" style="color:#1A7A5E;font-size:16px;" id="iconPricingInternal"></i>
+      <span style="font-size:14px;font-weight:700;color:#0D1117;">Boostinghost</span>
+    </div>
+    <div style="font-size:11px;color:#6B7280;line-height:1.4;">Tarification dynamique intégrée avec règles personnalisées</div>
+  </label>
+  <label id="cardPricingExternal" onclick="selectPricingMode('external')" style="cursor:pointer;border:2px solid #e5e7eb;border-radius:12px;padding:14px;background:#fff;transition:all .2s;">
+    <input type="radio" name="pricingMode" id="pricingModeExternal" value="external" style="display:none;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <i class="far fa-circle" style="color:#d1d5db;font-size:16px;" id="iconPricingExternal"></i>
+      <span style="font-size:14px;font-weight:700;color:#0D1117;">PriceLabs</span>
+    </div>
+    <div style="font-size:11px;color:#6B7280;line-height:1.4;">Tarification dynamique via PriceLabs (connexion requise)</div>
+  </label>
+</div>
+<input type="hidden" name="externalPricing" id="externalPricingField" value="false">
+<div id="externalPricingInfo" style="display:none;margin-bottom:16px;padding:14px;background:#FEF3C7;border-radius:12px;font-size:12px;color:#92400E;line-height:1.5;">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+    <i class="fas fa-info-circle" style="font-size:14px;"></i>
+    <span style="font-weight:700;">Tarification gérée par PriceLabs</span>
+  </div>
+  Les tarifs de ce logement seront gérés par PriceLabs. Les règles de tarification Boostinghost ne s'appliqueront plus pour ce logement.
+  <div style="margin-top:8px;font-size:11px;">
+    <a href="/settings-account.html" style="color:#1A7A5E;font-weight:600;text-decoration:none;">
+      <i class="fas fa-plug"></i> Connecter PriceLabs dans Paramètres du compte → Intégrations
+    </a>
+  </div>
+</div>
+
+<div id="internalPricingSection">
+<!-- ✅ SECTION : RÈGLES DE TARIFICATION AVANCÉE -->
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-tags"></i>
+  <span>Règles de tarification</span>
+  <button type="button" id="btnAddPricingRule" onclick="openPricingRuleModal()"
+    style="margin-left:auto;display:flex;align-items:center;gap:6px;padding:6px 14px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
+    <i class="fas fa-plus"></i> Ajouter une règle
+  </button>
+</div>
+<div id="pricingRulesList" style="margin-bottom:16px;">
+  <div style="font-size:13px;color:#9CA3AF;padding:10px 0;">Aucune règle configurée</div>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+  <button type="button" onclick="pushRulesToChannex()" id="btnPushChannex"
+    style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">
+    <i class="fas fa-cloud-upload-alt"></i> Synchroniser les prix
+  </button>
+</div>
+<small style="font-size:11px;color:#9CA3AF;display:block;margin-bottom:16px;">
+  Les règles s'appliquent dans l'ordre de priorité. Les prix manuels (clic calendrier) ont toujours la priorité.
+</small>
+</div><!-- fin internalPricingSection -->
+
+
+<!-- ✅ SECTION : LIVRET D'ACCUEIL -->
+<div class="form-group">
+<label for="propertyWelcomeBookUrl">
+<i class="fas fa-book"></i>
+<span>URL du livret d'accueil</span>
+</label>
+<input id="propertyWelcomeBookUrl" placeholder="https://monsite.com/livret-appartement-paris" type="url"/>
+<small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
+              Lien vers le livret d'accueil que vous avez créé pour vos voyageurs
+            </small>
+</div>
+<!-- ✅ SECTION : ACCÈS AU LOGEMENT -->
+<div class="form-group">
+<label for="propertyAccessCode">
+<i class="fas fa-key"></i>
+<span>Code d'accès</span>
+</label>
+<input id="propertyAccessCode" placeholder="Ex: 1234# ou code boîte à clés" type="text"/>
+<small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
+              Code de la serrure connectée ou de la boîte à clés
+            </small>
+</div>
+<div class="form-group">
+<label for="propertyAccessInstructions">
+<i class="fas fa-route"></i>
+<span>Instructions d'accès</span>
+</label>
+<textarea id="propertyAccessInstructions" placeholder="Ex: Prenez l'ascenseur jusqu'au 3ème étage, porte à droite..." rows="3"></textarea>
+<small style="display:block;margin-top:4px;font-size:12px;color:#64748b;">
+              Détails pour accéder au logement (étage, porte, etc.)
+            </small>
+</div>
+
+<!-- Message d'arrivée → redirigé vers Templates -->
+<div class="form-group" style="padding:16px;border-radius:12px;border:1px solid #e2e8f0;background:#f8fafc;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <i class="fas fa-paper-plane" style="color:#1A7A5E;font-size:18px;"></i>
+    <div>
+      <div style="font-weight:600;color:#1e293b;font-size:14px;">Messages automatiques</div>
+      <div style="font-size:12px;color:#64748b;margin-top:2px;">Gérez vos templates de messages automatiques (arrivée, départ, réservation) depuis la section Messages.</div>
+    </div>
+    <a href="/messages.html" style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#1A7A5E;color:#FFFFFF !important;border-radius:999px;font-size:13px;font-weight:500;text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(26,122,94,0.25);border:1.5px solid #1A7A5E;">
+      <i class="fas fa-arrow-right" style="color:#FFFFFF !important;"></i> Gérer les templates
+    </a>
+  </div>
+</div>
+
+
+
+<style>
+.variable-btn:hover {
+  background: #667eea !important;
+  color: white !important;
+  border-color: #667eea !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* ============================================================
+   VIEW TOGGLE — MOBILE ONLY
+   ============================================================ */
+.view-toggle-btn {
+  width: 34px; height: 34px;
+  border: 1.5px solid rgba(200,184,154,.5);
+  background: white; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 14px; color: #7A8695;
+  transition: all .15s;
+}
+.view-toggle-btn.active {
+  background: #1A7A5E; border-color: #1A7A5E; color: white;
+}
+@media (hover: hover) and (pointer: fine) {
+  .view-toggle-btn:not(.active):hover {
+    border-color: #1A7A5E; color: #1A7A5E;
+  }
+}
+
+/* ============================================================
+   PROPERTY LIST VIEW — MOBILE
+   ============================================================ */
+#propertiesGrid.list-view {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  padding: 0 !important;
+}
+#propertiesGrid.list-view .property-card-add { display: none !important; }
+
+.property-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #F5F0E8;
+  border: 1px solid rgba(200,184,154,.4);
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  position: relative;
+  transition: box-shadow .15s;
+}
+.property-list-item:active {
+  box-shadow: 0 2px 8px rgba(13,17,23,.08);
+}
+.property-list-thumb {
+  width: 52px; height: 52px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(160deg, #e8e0d4 0%, #c8b89a 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+}
+.property-list-thumb img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.property-list-info {
+  flex: 1; min-width: 0;
+}
+.property-list-name {
+  font-size: 14px; font-weight: 700;
+  color: #0D1117;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.property-list-address {
+  font-size: 11px; color: #7A8695;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 5px;
+}
+.property-list-otas {
+  display: flex; flex-wrap: wrap; gap: 4px;
+}
+.property-list-otas .ota-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 999px;
+  background: rgba(26,122,94,.1); color: #1A7A5E;
+  border: 1px solid rgba(26,122,94,.2);
+}
+.property-list-otas .ota-chip img {
+  width: 11px; height: 11px; object-fit: contain;
+}
+.property-list-actions {
+  display: flex; gap: 6px; flex-shrink: 0;
+}
+.property-list-actions .btn-list-action {
+  width: 32px; height: 32px;
+  border: 1.5px solid rgba(200,184,154,.5);
+  background: white; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 13px; color: #7A8695;
+  transition: all .15s;
+}
+.property-list-actions .btn-list-action:hover { color: #1A7A5E; border-color: #1A7A5E; }
+
+/* DnD handle en vue liste */
+.property-list-item .dnd-handle-list {
+  flex-shrink: 0;
+  width: 24px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(13,17,23,.3); font-size: 13px;
+  cursor: grab; touch-action: none;
+  transition: color .15s;
+}
+.property-list-item .dnd-handle-list:hover { color: #1A7A5E; }
+.property-list-item .dnd-handle-list:active { cursor: grabbing; color: #1A7A5E; }
+.property-list-item.dnd-ghost { opacity: 0.35; }
+.property-list-item.dnd-over  { outline: 2px dashed #1A7A5E; outline-offset: 2px; }
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  padding: 24px;
+}
+@media (max-width: 1100px) { .properties-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px)  { .properties-grid { grid-template-columns: 1fr; } }
+
+.property-card {
+  background: #F5F0E8;
+  border: 1px solid rgba(200,184,154,.4);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: all .2s cubic-bezier(0.16,1,0.3,1);
+  cursor: pointer;
+}
+.property-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(13,17,23,.12), 0 4px 12px rgba(13,17,23,.06);
+  border-color: #C8B89A;
+}
+.property-img {
+  height: 140px;
+  position: relative;
+  overflow: hidden;
+}
+.property-img-bg {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform .3s;
+}
+.property-card:hover .property-img-bg { transform: scale(1.04); }
+.property-img-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 40%, rgba(13,17,23,.45));
+}
+.property-img-badge {
+  position: absolute; top: 10px; right: 10px;
+  background: rgba(13,17,23,.7);
+  backdrop-filter: blur(8px);
+  color: white; font-size: 11px; font-weight: 600;
+  padding: 4px 10px; border-radius: 999px;
+}
+.property-img-badge.active-badge { background: #1A7A5E; }
+.property-img-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #e8e0d4 0%, #c8b89a 100%);
+  font-size: 52px;
+}
+.property-info { padding: 16px; }
+.property-name {
+  font-size: 15px; font-weight: 700;
+  color: #0D1117; margin-bottom: 4px;
+  font-family: 'DM Sans', sans-serif;
+}
+.property-address {
+  font-size: 12px; color: #7A8695;
+  margin-bottom: 12px; display: flex; align-items: center; gap: 5px;
+}
+.property-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 8px; padding: 10px 0;
+  border-top: 1px solid rgba(13,17,23,.08);
+}
+.prop-stat { text-align: center; }
+.prop-stat-val { font-size: 15px; font-weight: 700; color: #0D1117; }
+.prop-stat-label {
+  font-size: 10px; color: #7A8695;
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-top: 2px;
+}
+.property-actions {
+  display: flex; gap: 8px;
+  padding: 12px 0 0;
+  border-top: 1px solid rgba(13,17,23,.08);
+  margin-top: 8px;
+}
+.property-actions .btn {
+  flex: 1; height: 36px; font-size: 13px; font-weight: 600;
+  border-radius: 10px; cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.property-actions .btn-ghost {
+  background: white; color: #0D1117;
+  border: 1px solid rgba(0,0,0,.12);
+}
+.property-actions .btn-ghost:hover { background: #f5f2ec; }
+.property-actions .btn-jade {
+  background: #1A7A5E; color: white; border: none;
+}
+.property-actions .btn-jade:hover { background: #15624B; }
+
+/* Section header */
+.properties-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 24px 0;
+}
+.properties-count {
+  font-size: 11px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: rgba(13,17,23,.38);
+  margin-bottom: 4px;
+}
+.properties-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px; font-weight: 400; color: #0D1117; margin: 0;
+}
+.properties-title em { font-style: italic; color: #1A7A5E; }
+.btn-add-property {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 20px;
+  background: #1A7A5E; color: white; border: none;
+  border-radius: 12px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
+}
+.btn-add-property:hover { background: #15624B; }
+
+/* Dashed "Ajouter un logement" card */
+.property-card-add {
+  background: transparent !important;
+  border: 2px dashed rgba(26,122,94,.35) !important;
+  border-radius: 20px;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all .2s;
+}
+.property-card-add:hover {
+  border-color: #1A7A5E !important;
+  background: rgba(26,122,94,.04) !important;
+  transform: translateY(-2px);
+  box-shadow: none !important;
+}
+.property-card-add-inner {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px; padding: 32px;
+  text-align: center;
+}
+.property-card-add-icon {
+  width: 52px; height: 52px;
+  background: rgba(26,122,94,.1);
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: #1A7A5E;
+}
+.property-card-add-label {
+  font-size: 15px; font-weight: 700; color: #0D1117;
+  font-family: 'DM Sans', sans-serif;
+}
+.property-card-add-sub {
+  font-size: 12px; color: #7A8695;
+}
+</style>
+
+<script>
+// Fonction pour insérer une variable à la position du curseur
+function insertVariable(textareaId, variable, event) {
+  const textarea = document.getElementById(textareaId);
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const text = textarea.value;
+  
+  // Insérer la variable à la position du curseur
+  textarea.value = text.substring(0, start) + variable + text.substring(end);
+  
+  // Repositionner le curseur après la variable insérée
+  const newPosition = start + variable.length;
+  textarea.setSelectionRange(newPosition, newPosition);
+  textarea.focus();
+  
+  // Animation du bouton (si event fourni)
+  if (event && event.target) {
+    event.target.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+      event.target.style.transform = '';
+    }, 100);
+  }
+}
+</script>
+<!-- ✅ SECTION : WIFI -->
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyWifiName">
+<i class="fas fa-wifi"></i>
+<span>Nom du réseau WiFi</span>
+</label>
+<input id="propertyWifiName" placeholder="Ex: FreeWiFi_Secure" type="text"/>
+</div>
+<div class="form-group">
+<label for="propertyWifiPassword">
+<i class="fas fa-lock"></i>
+<span>Mot de passe WiFi</span>
+</label>
+<input id="propertyWifiPassword" placeholder="Ex: MonMotDePasse123" type="text"/>
+</div>
+</div>
+<div class="form-group">
+<label for="propertyPhoto">
+<i class="fas fa-image"></i>
+<span>Photo du logement</span>
+</label>
+<div class="photo-preview-wrapper">
+<div class="photo-preview-box" id="photoPreviewBox">
+<span class="photo-preview-placeholder" id="photoPreviewPlaceholder">
+<i class="fas fa-image"></i>
+</span>
+</div>
+<div>
+<input accept="image/*" id="propertyPhoto" type="file"/>
+<div class="photo-preview-text">
+                  Ajoutez une photo pour la vignette de la carte logement.
+                </div>
+</div>
+</div>
+</div>
+
+<!-- ===== SECTION : ÉQUIPEMENTS ===== -->
+<style>
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.chip-toggle {
+  display: none;
+}
+.chip-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(13,17,23,0.15);
+  background: #fff;
+  color: rgba(13,17,23,0.55);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+.chip-label i {
+  font-size: 13px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.chip-label:hover {
+  border-color: rgba(26,122,94,0.4);
+  color: #1A7A5E;
+  background: rgba(26,122,94,0.04);
+}
+.chip-label:hover i { opacity: 0.8; }
+.chip-toggle:checked + .chip-label,
+.form-group .chip-toggle:checked + .chip-label {
+  background: #1A7A5E;
+  border-color: #1A7A5E;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(26,122,94,0.25);
+}
+.chip-toggle:checked + .chip-label i,
+.form-group .chip-toggle:checked + .chip-label i {
+  opacity: 1;
+  color: #fff !important;
+}
+[data-theme="dark"] .chip-label {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.55);
+}
+[data-theme="dark"] .chip-label:hover {
+  border-color: rgba(26,122,94,0.6);
+  color: #4ADE80;
+  background: rgba(26,122,94,0.1);
+}
+[data-theme="dark"] .chip-toggle:checked + .chip-label {
+  background: #1A7A5E;
+  border-color: #1A7A5E;
+  color: #fff;
+}
+</style>
+
+<div class="form-section-header">
+  <i class="fas fa-home"></i>
+  <h3>Équipements du logement</h3>
+  <small>Ces informations permettent de répondre automatiquement aux questions fréquentes des voyageurs</small>
+</div>
+
+<div class="chip-grid">
+  <input class="chip-toggle" type="checkbox" id="amenityDraps" />
+  <label class="chip-label" for="amenityDraps"><i class="fas fa-bed"></i>Draps fournis</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityServiettes" />
+  <label class="chip-label" for="amenityServiettes"><i class="fas fa-bath"></i>Serviettes fournies</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityCuisine" />
+  <label class="chip-label" for="amenityCuisine"><i class="fas fa-utensils"></i>Cuisine équipée</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityLaveLinge" />
+  <label class="chip-label" for="amenityLaveLinge"><i class="fas fa-tshirt"></i>Lave-linge</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityLaveVaisselle" />
+  <label class="chip-label" for="amenityLaveVaisselle"><i class="fas fa-sink"></i>Lave-vaisselle</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityTelevision" />
+  <label class="chip-label" for="amenityTelevision"><i class="fas fa-tv"></i>Télévision</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityParking" />
+  <label class="chip-label" for="amenityParking"><i class="fas fa-car"></i>Parking</label>
+
+  <input class="chip-toggle" type="checkbox" id="amenityClimatisation" />
+  <label class="chip-label" for="amenityClimatisation"><i class="fas fa-snowflake"></i>Climatisation</label>
+</div>
+<!-- Équipements personnalisés -->
+<div id="customAmenitiesContainer" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+<div style="display:flex;gap:8px;margin-top:10px;">
+  <input id="newAmenityInput" type="text" placeholder="Ex: Jacuzzi, Piscine, Barbecue…"
+    style="flex:1;padding:8px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;"
+    onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomAmenity();}" />
+  <button type="button" onclick="addCustomAmenity()"
+    style="padding:8px 16px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+    <i class="fas fa-plus"></i> Ajouter
+  </button>
+</div>
+
+<!-- ===== SECTION : RÈGLES DE LA MAISON ===== -->
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-list-check"></i>
+  <h3>Règles de la maison</h3>
+  <small>Définissez ce qui est autorisé ou non dans votre logement</small>
+</div>
+
+<div class="chip-grid">
+  <input class="chip-toggle" type="checkbox" id="ruleAnimaux" />
+  <label class="chip-label" for="ruleAnimaux"><i class="fas fa-dog"></i>Animaux acceptés</label>
+
+  <input class="chip-toggle" type="checkbox" id="ruleFumeurs" />
+  <label class="chip-label" for="ruleFumeurs"><i class="fas fa-smoking-ban"></i>Fumeurs acceptés</label>
+
+  <input class="chip-toggle" type="checkbox" id="ruleFetes" />
+  <label class="chip-label" for="ruleFetes"><i class="fas fa-music"></i>Fêtes autorisées</label>
+
+  <input class="chip-toggle" type="checkbox" id="ruleEnfants" />
+  <label class="chip-label" for="ruleEnfants"><i class="fas fa-baby"></i>Enfants bienvenus</label>
+</div>
+<!-- Règles personnalisées -->
+<div id="customRulesContainer" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+<div style="display:flex;gap:8px;margin-top:10px;">
+  <input id="newRuleInput" type="text" placeholder="Ex: Pas de chaussures, Silence après 22h…"
+    style="flex:1;padding:8px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;"
+    onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomRule();}" />
+  <button type="button" onclick="addCustomRule()"
+    style="padding:8px 16px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+    <i class="fas fa-plus"></i> Ajouter
+  </button>
+</div>
+
+<!-- ===== SECTION : INFOS PRATIQUES ===== -->
+<div class="form-section-header">
+  <i class="fas fa-circle-info"></i>
+  <h3>Informations pratiques</h3>
+  <small>Détails utiles pour vos voyageurs</small>
+</div>
+
+<div class="form-group">
+  <label for="practicalParking">
+    <i class="fas fa-car"></i>
+    <span>Détails parking</span>
+  </label>
+  <textarea id="practicalParking" placeholder="Ex: Parking gratuit dans la rue, place réservée n°5 au sous-sol..." rows="2"></textarea>
+</div>
+
+<div class="form-group">
+  <label for="practicalTrash">
+    <i class="fas fa-trash"></i>
+    <span>Jour des poubelles</span>
+  </label>
+  <input id="practicalTrash" placeholder="Ex: Mardi et vendredi soir" type="text" />
+</div>
+
+<div class="form-group">
+  <label for="practicalShops">
+    <i class="fas fa-store"></i>
+    <span>Commerces à proximité</span>
+  </label>
+  <textarea id="practicalShops" placeholder="Ex: Supermarché Carrefour à 200m, boulangerie en bas de la rue..." rows="2"></textarea>
+</div>
+
+<div class="form-group">
+  <label for="practicalTransport">
+    <i class="fas fa-bus"></i>
+    <span>Transports en commun</span>
+  </label>
+  <textarea id="practicalTransport" placeholder="Ex: Métro ligne 13 à 5min à pied, bus 261 devant l'immeuble..." rows="2"></textarea>
+</div>
+
+<!-- ===== SECTION : RÉPONSES AUTOMATIQUES ===== -->
+<div class="form-section-header">
+  <i class="fas fa-broom"></i>
+  <h3>Ménage régulier</h3>
+  <small>Assignez une personne de ménage par défaut pour ce logement. Elle sera automatiquement assignée à chaque nouvelle réservation.</small>
+</div>
+
+<div class="form-group">
+  <label for="defaultCleanerSelect">
+    <i class="fas fa-user-check"></i>
+    <span>Personne de ménage régulière</span>
+  </label>
+  <select id="defaultCleanerSelect" class="form-input" style="width:100%;">
+    <option value="">Aucune — assignation manuelle</option>
+  </select>
+  <div class="info-box" id="defaultCleanerInfo" style="display:none; margin-top:8px;">
+    <i class="fas fa-info-circle"></i>
+    <p id="defaultCleanerInfoText"></p>
+  </div>
+</div>
+
+<div class="form-section-header">
+  <i class="fas fa-robot"></i>
+  <h3>Réponses automatiques & L'IA</h3>
+  <small>Activez pour que L'IA (votre IA) et les réponses automatiques répondent aux voyageurs basées sur les informations du logement</small>
+</div>
+
+<div class="form-group">
+  <label class="toggle-switch">
+    <input type="checkbox" id="autoResponsesEnabled" checked />
+    <span class="toggle-slider"></span>
+    <span class="toggle-label">Activer les réponses automatiques & L'IA</span>
+  </label>
+  <div class="info-box">
+    <i class="fas fa-lightbulb"></i>
+    <p>Lorsqu'activé, <strong>L'IA</strong> (intelligence artificielle) et vos <strong>réponses personnalisées</strong> répondront automatiquement aux voyageurs. L'IA utilise les informations du logement pour répondre aux questions fréquentes ("À quelle heure arriver ?", "Y a-t-il des draps ?", etc.). Si désactivé, <strong>aucune réponse automatique ne sera envoyée</strong> — vous gérez les messages manuellement.</p>
+  </div>
+</div>
+
+
+
+
+<!-- ===== SECTION : QUESTIONS-RÉPONSES PERSONNALISÉES ===== -->
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-comments"></i>
+  <h3>Questions-réponses personnalisées</h3>
+  <small>Ajoutez vos propres paires question/réponse. Le bot répondra en priorité avec ces réponses si les mots-clés correspondent.</small>
+</div>
+
+<div class="form-group">
+  <div id="customQRList" style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;"></div>
+  <button type="button" onclick="addCustomQR()"
+    style="width:100%;padding:9px;border:1.5px dashed #1A7A5E60;border-radius:10px;background:transparent;color:#1A7A5E;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
+    <i class="fas fa-plus"></i> Ajouter une question-réponse
+  </button>
+  <div class="info-box" style="margin-top:10px;">
+    <i class="fas fa-lightbulb"></i>
+    <p>Ex : Mots-clés <strong>"piscine, nager, pool"</strong> → Réponse <strong>"Oui, le logement dispose d'une piscine privée !"</strong></p>
+  </div>
+</div>
+
+<!-- ===== SECTION : FAITS MÉMORISÉS PAR L'IA ===== -->
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-brain"></i>
+  <h3>Faits mémorisés par l'IA</h3>
+  <small>Quand l'IA vous pose une question sur ce logement et que vous répondez, elle retient la réponse ici et l'utilise automatiquement la prochaine fois.</small>
+</div>
+
+<div class="form-group">
+  <div id="propertyFactsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+  <button type="button" onclick="addPropertyFactManual()"
+    style="width:100%;padding:9px;border:1.5px dashed #7c3aed60;border-radius:10px;background:transparent;color:#7c3aed;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
+    <i class="fas fa-plus"></i> Ajouter un fait manuellement
+  </button>
+  <div class="info-box" style="margin-top:10px;">
+    <i class="fas fa-robot"></i>
+    <p>Ex : <strong>"Y a-t-il un ventilateur ?"</strong> → <strong>Oui</strong>. L'IA répondra seule à cette question pour ce logement.</p>
+  </div>
+</div>
+
+<!-- ===== RACCOURCIS MESSAGES ===== -->
+<div class="form-group" style="background:linear-gradient(135deg,#10b98110,#10b98118);padding:20px;border-radius:14px;border:1.5px solid #10b98130;">
+  <label style="margin-bottom:14px;">
+    <i class="fas fa-bolt" style="color:#10B981;"></i>
+    <span style="font-weight:700;">Raccourcis messages <span style="font-size:11px;font-weight:400;color:#6b7280;">(5 max)</span></span>
+  </label>
+  <p style="font-size:12px;color:var(--text-secondary);margin:0 0 14px;line-height:1.5;">Ces messages apparaîtront comme raccourcis cliquables dans le chat.</p>
+  <div id="quickRepliesList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;"></div>
+  <button type="button" id="addQuickReplyBtn" onclick="addQuickReplyField()"
+    style="width:100%;padding:9px;border:1.5px dashed #10B98160;border-radius:10px;background:transparent;color:#10B981;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
+    <i class="fas fa-plus"></i> Ajouter un raccourci
+  </button>
+</div>
+
+
+</form>
+
+<!-- ✅ SECTION : AVIS OTA -->
+<div id="reviewsSection" style="display:none;">
+  <div class="form-section-header" style="margin-top:8px;">
+    <i class="fas fa-star"></i>
+    <h3>Avis voyageurs <span id="reviewsBadge" style="display:none;background:#ef4444;color:white;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;margin-left:4px;">0</span></h3>
+  </div>
+
+  <!-- Score global -->
+  <div id="reviewsScoreBlock" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-size:12px;font-weight:600;color:#374151;">Note globale</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span id="reviewsGlobalScore" style="font-size:22px;font-weight:800;color:#1A7A5E;">—</span>
+        <span style="font-size:12px;color:#9ca3af;" id="reviewsScoreMax">/10</span>
+      </div>
+    </div>
+    <div id="reviewsSubScores" style="display:flex;flex-direction:column;gap:6px;"></div>
+  </div>
+
+  <!-- Chargement -->
+  <div id="reviewsLoading" style="text-align:center;padding:20px;color:#9ca3af;font-size:13px;">
+    <i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Chargement des avis...
+  </div>
+
+  <!-- Liste -->
+  <div id="reviewsList" style="display:flex;flex-direction:column;gap:10px;"></div>
+
+  <!-- Empty state -->
+  <div id="reviewsEmpty" style="display:none;text-align:center;padding:24px 16px;color:#9ca3af;">
+    <i class="fas fa-star" style="font-size:24px;margin-bottom:8px;display:block;opacity:.4;"></i>
+    <div style="font-size:13px;">Aucun avis pour le moment</div>
+    <div style="font-size:11px;margin-top:4px;">Les avis Airbnb, Booking et Expedia apparaîtront ici</div>
+  </div>
+</div>
+
+
+
+<!-- ===== SECTION : SYNCHRONISATION iCAL ===== -->
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-calendar-alt"></i>
+  <h3>Synchronisation iCal</h3>
+  <small>Connectez les plateformes non disponibles via Channex (Gîtes de France, Clévacances…). Les réservations seront importées automatiquement toutes les heures.</small>
+</div>
+
+<!-- Lien iCal export -->
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+  <div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+    <i class="fas fa-link"></i> Votre lien iCal Boostinghost
+  </div>
+  <p style="font-size:12px;color:#15803d;margin:0 0 10px;">Copiez ce lien et collez-le dans les paramètres de chaque plateforme pour synchroniser votre calendrier Boostinghost.</p>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow:hidden;">
+    <input id="icalExportUrl" type="text" readonly
+      style="flex:1;min-width:0;width:0;padding:8px 12px;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;background:white;color:#374151;outline:none;cursor:text;overflow:hidden;text-overflow:ellipsis;">
+    <button type="button" onclick="copyIcalExportUrl()"
+      style="flex-shrink:0;padding:8px 14px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;">
+      <i class="fas fa-copy"></i> Copier
+    </button>
+  </div>
+</div>
+
+<div id="icalUrlsList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
+
+<!-- Ajout d'un nouveau lien iCal -->
+<div style="background:#f9fafb;border:1.5px dashed #e5e7eb;border-radius:12px;padding:16px;" id="icalAddBlock">
+  <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+    <i class="fas fa-plus-circle" style="color:#1A7A5E;"></i> Ajouter une plateforme iCal
+  </div>
+  <!-- Liste déroulante plateforme -->
+  <div style="margin-bottom:10px;">
+    <label style="font-size:12px;font-weight:600;color:#6b7280;display:block;margin-bottom:6px;">Plateforme</label>
+    <div style="position:relative;display:flex;align-items:center;gap:8px;">
+      <img id="icalPlatformFavicon" src="" alt=""
+        style="width:20px;height:20px;border-radius:3px;object-fit:contain;display:none;flex-shrink:0;">
+      <div style="position:relative;flex:1;">
+        <select id="icalPlatformSelect" onchange="onIcalPlatformChange()"
+          style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:white;color:#374151;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;">
+          <option value="">— Sélectionner une plateforme —</option>
+        </select>
+        <i class="fas fa-chevron-down" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:11px;pointer-events:none;"></i>
+      </div>
+    </div>
+  </div>
+  <!-- Champ URL -->
+  <div style="margin-bottom:10px;">
+    <label style="font-size:12px;font-weight:600;color:#6b7280;display:block;margin-bottom:6px;">Lien iCal de la plateforme</label>
+    <input id="icalNewUrl" type="url" placeholder="https://www.gites-de-france.com/export/ical/123456.ics"
+      style="width:100%;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;outline:none;">
+  </div>
+  <button type="button" onclick="addIcalUrl()"
+    style="display:flex;align-items:center;gap:6px;padding:9px 18px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+    <i class="fas fa-plus"></i> Ajouter ce lien
+  </button>
+</div>
+
+<div class="info-box" style="margin-top:10px;margin-bottom:8px;">
+  <i class="fas fa-info-circle"></i>
+  <p>Trouvez le lien iCal dans les paramètres de chaque plateforme (Calendrier → Exporter). Les réservations seront automatiquement importées dans votre calendrier BH.</p>
+</div>
+
+</div>
+<div class="modal-actions">
+<button class="btn-cancel" onclick="closeEditModal()" type="button">Annuler</button>
+<button class="btn-save" onclick="saveProperty(event)" type="button">
+<i class="fas fa-save"></i>
+<span>Enregistrer</span>
+</button>
+</div>
+<!-- Toast & Loading -->
+<div class="toast-container" id="toastContainer"></div>
+<div class="loading-overlay" id="loadingOverlay">
+<div class="loading-spinner">
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+</div>
+</div>
+<!-- JS page -->
+<script src="/js/settings.js"></script>
+<!-- MOBILE MENU SCRIPT + nav active -->
+<script>
+    (function() {
+      const menuBtn = document.getElementById('mobileMenuBtn');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (menuBtn && sidebar && overlay) {
+        menuBtn.addEventListener('click', function() {
+          sidebar.classList.toggle('active');
+          overlay.classList.toggle('active');
+          const icon = menuBtn.querySelector('i');
+          if (sidebar.classList.contains('active')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+          } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+          }
+        });
+
+        overlay.addEventListener('click', function() {
+          sidebar.classList.remove('active');
+          overlay.classList.remove('active');
+          const icon = menuBtn.querySelector('i');
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-bars');
+        });
+
+        if (window.innerWidth <= 1024) {
+          document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+              sidebar.classList.remove('active');
+              overlay.classList.remove('active');
+              const icon = menuBtn.querySelector('i');
+              icon.classList.remove('fa-times');
+              icon.classList.add('fa-bars');
+            });
+          });
+        }
+      }
+    })();
+
+    (function() {
+      const currentPage = document.body.getAttribute('data-page');
+      if (currentPage) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        const activeLink = document.querySelector('.nav-item[data-page="' + currentPage + '"]');
+        if (activeLink) {
+          activeLink.classList.add('active');
+        }
+      }
+    })();
+  </script>
+<!-- PATCH OWNER_ID désactivé : saveProperty() gère déjà ownerId via FormData -->
+<script>
+// ============================================
+// GESTION QUOTA LOGEMENTS
+// ============================================
+(function() {
+  const API = window.API_URL || 'https://lcc-booking-manager.onrender.com';
+
+  // Config des plans
+  const PLAN_LIMITS = {
+    starter: { included: 1,  max: 3,    extraPrice: 9,  extraPriceAnnual: 90  },
+    pro:     { included: 4,  max: 50,   extraPrice: 7,  extraPriceAnnual: 70  },
+    agence:  { included: 51, max: 9999, extraPrice: 5,  extraPriceAnnual: 50  },
+  };
+
+  function getBasePlan(planType) {
+    const p = (planType || '').toLowerCase();
+    if (p.includes('agence') || p.includes('business')) return 'agence';
+    if (p.includes('pro') || p.includes('standard'))    return 'pro';
+    if (p.includes('starter') || p.includes('solo'))    return 'starter';
+    return 'starter';
+  }
+
+  // Données chargées au démarrage
+  let userPlanType = 'starter';
+  let propertyCount = 0;
+
+  async function loadQuotaInfo() {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return;
+
+    try {
+      // Récupérer le plan
+      const subRes = await fetch(`${API}/api/subscription/status`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (subRes.ok) {
+        const subData = await subRes.json();
+        userPlanType = subData.planType || 'solo';
+      }
+
+      // Récupérer le nombre de logements
+      const propRes = await fetch(`${API}/api/properties`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (propRes.ok) {
+        const propData = await propRes.json();
+        propertyCount = (propData.properties || []).length;
+      }
+
+      updateQuotaBadge();
+    } catch (err) {
+      console.warn('Impossible de charger le quota:', err);
+    }
+  }
+
+  function updateQuotaBadge() {
+    const badge = document.getElementById('propertyQuotaBadge');
+    if (!badge) return;
+
+    const basePlan = getBasePlan(userPlanType);
+    const limits   = PLAN_LIMITS[basePlan];
+    const planLabels = { starter: 'Starter', pro: 'Pro', agence: 'Agence' };
+    const planLabel  = planLabels[basePlan] || basePlan;
+
+    if (propertyCount <= limits.included) {
+      // Dans le quota inclus
+      badge.textContent = `${propertyCount}/${limits.included} logement${limits.included > 1 ? 's' : ''} inclus`;
+      badge.style.color = '#6b7280';
+    } else if (propertyCount <= limits.max) {
+      // Au-delà des inclus, dans la limite du plan
+      const extraCount = propertyCount - limits.included;
+      badge.textContent = `${propertyCount} logements (${extraCount} supplémentaire${extraCount > 1 ? 's' : ''} facturé${extraCount > 1 ? 's' : ''})`;
+      badge.style.color = '#f59e0b';
+    } else {
+      // Dépassement de la limite max du plan
+      badge.textContent = `⚠️ Limite atteinte (plan ${planLabel} : max ${limits.max} logements)`;
+      badge.style.color = '#dc2626';
+    }
+    badge.style.display = 'inline';
+  }
+
+  // Clic sur "Ajouter un logement"
+  window.handleAddPropertyClick = function() {
+    const basePlan = getBasePlan(userPlanType);
+    const limits = PLAN_LIMITS[basePlan];
+    const isAnnual = (userPlanType || '').toLowerCase().includes('annual');
+
+    // Limite max du plan atteinte → bloquer
+    if (propertyCount >= limits.max) {
+      showPlanLimitModal(basePlan);
+      return;
+    }
+
+    // Au-delà des inclus → avertir sur la facturation extra
+    if (propertyCount >= limits.included) {
+      const price = isAnnual ? limits.extraPriceAnnual : limits.extraPrice;
+      const period = isAnnual ? 'an' : 'mois';
+      const planLabel = { starter: 'Starter', pro: 'Pro', agence: 'Agence' }[basePlan] || basePlan;
+      document.getElementById('extraPropertyModalText').textContent =
+        `Vous avez atteint les ${limits.included} logements inclus dans votre plan ${planLabel}. Chaque logement supplémentaire est facturé automatiquement.`;
+      document.getElementById('extraPropertyPriceText').textContent =
+        `+${price}€/${period} par logement supplémentaire`;
+      document.getElementById('extraPropertyModal').style.display = 'flex';
+      return;
+    }
+
+    // Dans le quota : ouvrir directement le modal
+    if (typeof openAddPropertyModal === 'function') openAddPropertyModal();
+  };
+
+  window.closeExtraPropertyModal = function() {
+    document.getElementById('extraPropertyModal').style.display = 'none';
+  };
+
+  window.confirmAddExtraProperty = function() {
+    document.getElementById('extraPropertyModal').style.display = 'none';
+    if (typeof openAddPropertyModal === 'function') openAddPropertyModal();
+  };
+
+  // Modal upgrade Solo
+  window.showPlanLimitModal = async function(plan) {
+    const msg = plan === 'solo'
+      ? 'Le plan Solo est limité à 1 logement. Pour gérer plusieurs logements, passez au plan Standard (29€/mois, 3 logements) ou Pro (49€/mois, 6 logements).'
+      : 'Vous avez atteint la limite de votre plan.';
+    const ok = window.bhConfirm
+      ? await window.bhConfirm('Limite de logements atteinte', msg, 'Voir les plans', 'Plus tard', 'default')
+      : confirm(msg + '\n\nVoulez-vous voir les plans disponibles ?');
+    if (ok) {
+      window.location.href = '/pricing.html';
+    }
+  };
+
+  // Mettre à jour le quota après ajout réussi d'une propriété
+  const origReload = window.location.reload.bind(window.location);
+  // Écouter les sauvegardes réussies pour incrémenter le compteur local
+  document.addEventListener('propertySaved', function() {
+    propertyCount++;
+    updateQuotaBadge();
+  });
+
+  // Init au chargement
+  document.addEventListener('DOMContentLoaded', loadQuotaInfo);
+})();
+    </script>
+
+  <!-- Script pour gérer les équipements, règles et réponses auto -->
+  <script>
+  // ============================================
+  // GESTION DES NOUVELLES DONNÉES PROPRIÉTÉS
+  // ============================================
+
+  // Fonction utilitaire pour charger les données dans le formulaire
+  window.selectPricingMode = function(mode) {
+    const isExternal = mode === 'external';
+    document.getElementById('pricingModeInternal').checked = !isExternal;
+    document.getElementById('pricingModeExternal').checked = isExternal;
+    document.getElementById('externalPricingField').value = isExternal ? 'true' : 'false';
+    document.getElementById('internalPricingSection').style.display = isExternal ? 'none' : '';
+    document.getElementById('externalPricingInfo').style.display = isExternal ? 'block' : 'none';
+    // Card styling
+    const ci = document.getElementById('cardPricingInternal');
+    const ce = document.getElementById('cardPricingExternal');
+    ci.style.borderColor = isExternal ? '#e5e7eb' : '#1A7A5E';
+    ci.style.background = isExternal ? '#fff' : '#f0fdf4';
+    ce.style.borderColor = isExternal ? '#1A7A5E' : '#e5e7eb';
+    ce.style.background = isExternal ? '#f0fdf4' : '#fff';
+    document.getElementById('iconPricingInternal').className = isExternal ? 'far fa-circle' : 'fas fa-check-circle';
+    document.getElementById('iconPricingInternal').style.color = isExternal ? '#d1d5db' : '#1A7A5E';
+    document.getElementById('iconPricingExternal').className = isExternal ? 'fas fa-check-circle' : 'far fa-circle';
+    document.getElementById('iconPricingExternal').style.color = isExternal ? '#1A7A5E' : '#d1d5db';
+  };
+  window.togglePricingMode = window.selectPricingMode; // compat
+
+  window.openPriceLabsConnect = function() {
+    window.open('https://app.pricelabs.co/signup', '_blank');
+  };
+
+  window.loadPropertyExtendedData = function(property) {
+    if (!property) return;
+    
+    console.log('📦 Chargement des données étendues:', property);
+
+    // === GESTION TARIFAIRE ===
+    const isExternal = property.external_pricing === true || property.external_pricing === 'true';
+    selectPricingMode(isExternal ? 'external' : 'internal');
+
+    // === NUITÉES MINIMUM (depuis pricing_rules) ===
+    const minStayField = document.getElementById('propertyMinStay');
+    if (minStayField && property.id) {
+      const token = localStorage.getItem('lcc_token');
+      fetch('/api/pricing/rules?property_id=' + property.id, { headers: { Authorization: 'Bearer ' + token } })
+        .then(r => r.json())
+        .then(rules => {
+          if (Array.isArray(rules)) {
+            const globalMinStay = rules.find(r => r.rule_type === 'min_stay' && !r.start_date && !r.end_date);
+            if (globalMinStay && globalMinStay.min_nights) {
+              minStayField.value = globalMinStay.min_nights;
+              minStayField.dataset.ruleId = globalMinStay.id;
+            } else {
+              minStayField.value = 1;
+              minStayField.dataset.ruleId = '';
+            }
+          }
+        })
+        .catch(() => {});
+    }
+
+    // === FAITS MÉMORISÉS PAR L'IA ===
+    if (property.id) loadPropertyFacts(property.id);
+    
+    // === ÉQUIPEMENTS ===
+    try {
+      const amenities = typeof property.amenities === 'string' 
+        ? JSON.parse(property.amenities) 
+        : (property.amenities || {});
+      
+      document.getElementById('amenityDraps').checked = amenities.draps || false;
+      document.getElementById('amenityServiettes').checked = amenities.serviettes || false;
+      document.getElementById('amenityCuisine').checked = amenities.cuisine_equipee || false;
+      document.getElementById('amenityLaveLinge').checked = amenities.lave_linge || false;
+      document.getElementById('amenityLaveVaisselle').checked = amenities.lave_vaisselle || false;
+      document.getElementById('amenityTelevision').checked = amenities.television || false;
+      document.getElementById('amenityParking').checked = amenities.parking || false;
+      document.getElementById('amenityClimatisation').checked = amenities.climatisation || false;
+    } catch (e) {
+      console.error('Erreur chargement amenities:', e);
+    }
+    
+    // === RÈGLES ===
+    try {
+      const rules = typeof property.house_rules === 'string'
+        ? JSON.parse(property.house_rules)
+        : (property.house_rules || {});
+      
+      document.getElementById('ruleAnimaux').checked = rules.animaux || false;
+      document.getElementById('ruleFumeurs').checked = rules.fumeurs || false;
+      document.getElementById('ruleFetes').checked = rules.fetes || false;
+      document.getElementById('ruleEnfants').checked = rules.enfants !== undefined ? rules.enfants : true;
+    } catch (e) {
+      console.error('Erreur chargement house_rules:', e);
+    }
+    
+    // === INFOS PRATIQUES ===
+    try {
+      const practical = typeof property.practical_info === 'string'
+        ? JSON.parse(property.practical_info)
+        : (property.practical_info || {});
+      
+      document.getElementById('practicalParking').value = practical.parking_details || '';
+      document.getElementById('practicalTrash').value = practical.trash_day || '';
+      document.getElementById('practicalShops').value = practical.nearby_shops || '';
+      document.getElementById('practicalTransport').value = practical.public_transport || '';
+    } catch (e) {
+      console.error('Erreur chargement practical_info:', e);
+    }
+    
+    // === RÉPONSES AUTO ===
+    const _togAuto = document.getElementById('autoResponsesEnabled');
+    _togAuto.checked = property.auto_responses_enabled !== undefined 
+      ? property.auto_responses_enabled 
+      : true;
+    _togAuto.style.opacity = '0.99';
+    requestAnimationFrame(() => { _togAuto.style.opacity = ''; });
+    _togAuto.addEventListener('change', function() {
+      this.style.opacity = '0.99';
+      requestAnimationFrame(() => { this.style.opacity = ''; });
+    });
+
+    // === CAPACITÉ ===
+    if (document.getElementById('propertyMaxGuests'))
+      document.getElementById('propertyMaxGuests').value = property.max_guests ?? property.maxGuests ?? '';
+    if (document.getElementById('propertyBedrooms'))
+      document.getElementById('propertyBedrooms').value = property.bedrooms ?? '';
+    if (document.getElementById('propertyBeds'))
+      document.getElementById('propertyBeds').value = property.beds ?? '';
+    if (document.getElementById('propertyBathrooms'))
+      document.getElementById('propertyBathrooms').value = property.bathrooms ?? '';
+  };
+
+  // Fonction pour récupérer les données du formulaire
+  window.getPropertyExtendedData = function() {
+    // === ÉQUIPEMENTS ===
+    const amenities = {
+      draps: document.getElementById('amenityDraps').checked,
+      serviettes: document.getElementById('amenityServiettes').checked,
+      cuisine_equipee: document.getElementById('amenityCuisine').checked,
+      lave_linge: document.getElementById('amenityLaveLinge').checked,
+      lave_vaisselle: document.getElementById('amenityLaveVaisselle').checked,
+      television: document.getElementById('amenityTelevision').checked,
+      parking: document.getElementById('amenityParking').checked,
+      climatisation: document.getElementById('amenityClimatisation').checked
+    };
+    
+    // === RÈGLES ===
+    const houseRules = {
+      animaux: document.getElementById('ruleAnimaux').checked,
+      fumeurs: document.getElementById('ruleFumeurs').checked,
+      fetes: document.getElementById('ruleFetes').checked,
+      enfants: document.getElementById('ruleEnfants').checked
+    };
+    
+    // === INFOS PRATIQUES ===
+    const practicalInfo = {
+      parking_details: document.getElementById('practicalParking').value.trim(),
+      trash_day: document.getElementById('practicalTrash').value.trim(),
+      nearby_shops: document.getElementById('practicalShops').value.trim(),
+      public_transport: document.getElementById('practicalTransport').value.trim()
+    };
+    
+    // === RÉPONSES AUTO ===
+    const autoResponsesEnabled = document.getElementById('autoResponsesEnabled').checked;
+    
+    return {
+      amenities: JSON.stringify({...amenities, custom: window._customAmenities || []}),
+      house_rules: JSON.stringify({...houseRules, custom: window._customRules || []}),
+      practical_info: JSON.stringify(practicalInfo),
+      auto_responses_enabled: autoResponsesEnabled,
+      max_guests: document.getElementById('propertyMaxGuests')?.value || null,
+      bedrooms: document.getElementById('propertyBedrooms')?.value || null,
+      beds: document.getElementById('propertyBeds')?.value || null,
+      bathrooms: document.getElementById('propertyBathrooms')?.value || null,
+      airbnb_id: null,
+      booking_id: null,
+      abritel_id: null,
+      expedia_id: null,
+      channex_property_id: document.getElementById('propertyChannexId')?.value.trim() || null
+    };
+  };
+
+  // Intercepter l'ouverture de la modal d'édition
+  // Cette fonction doit être appelée quand tu charges une propriété
+  const originalEditProperty = window.editProperty;
+  if (typeof originalEditProperty === 'function') {
+    window.editProperty = function(propertyData) {
+      // Appeler la fonction originale
+      originalEditProperty(propertyData);
+      
+      // ✅ CHARGER LE MESSAGE D'ARRIVÉE
+      const arrivalMessageField = document.getElementById('propertyArrivalMessage');
+      if (arrivalMessageField && propertyData.arrival_message) {
+        arrivalMessageField.value = propertyData.arrival_message;
+      }
+
+      // ✅ CHARGER LE DÉLAI DE RESTITUTION CAUTION
+      const depositReleaseDaysField = document.getElementById('propertyDepositReleaseDays');
+      if (depositReleaseDaysField) {
+        var drdVal = propertyData.deposit_release_days || propertyData.depositReleaseDays;
+        depositReleaseDaysField.value = drdVal != null && drdVal !== 0 ? drdVal : '';
+      }
+
+      // ✅ CHARGER L'ID CHANNEX (usage interne admin)
+      const fChannex = document.getElementById('propertyChannexId');
+      if (fChannex) fChannex.value = propertyData.channex_property_id || propertyData.channexId || '';
+
+      // ✅ CHARGER LES PRIX PAR NUIT
+      const basePriceField = document.getElementById('propertyBasePrice');
+      if (basePriceField) {
+        const bp = propertyData.basePrice || propertyData.base_price;
+        basePriceField.value = bp != null ? bp : '';
+      }
+      const weekendPriceField = document.getElementById('propertyWeekendPrice');
+      if (weekendPriceField) {
+        const wp = propertyData.weekendPrice || propertyData.weekend_price;
+        weekendPriceField.value = wp != null ? wp : '';
+      }
+      
+      // ✅ CHARGER LE COMPTE STRIPE DU LOGEMENT
+      const stripeInput = document.getElementById('propertyStripeAccountId');
+      const stripeStatus = document.getElementById('propertyStripeStatus');
+      if (stripeInput) {
+        const accountId = propertyData.stripeAccountId || propertyData.stripe_account_id || '';
+        stripeInput.value = accountId;
+        if (stripeStatus) {
+          if (accountId && accountId.startsWith('acct_')) {
+            stripeStatus.style.display = 'inline-block';
+            stripeStatus.style.background = 'rgba(34,197,94,.15)';
+            stripeStatus.style.color = '#16a34a';
+            stripeStatus.style.border = '1px solid rgba(34,197,94,.3)';
+            stripeStatus.innerHTML = '<i class="fas fa-check-circle"></i> Compte lié';
+          } else {
+            stripeStatus.style.display = 'none';
+          }
+        }
+      }
+      
+      // Charger les données étendues
+      loadPropertyExtendedData(propertyData);
+    };
+  }
+
+  console.log('✅ Module auto-réponses chargé');
+  </script>
+
+<!-- ============================================================
+     💸 CONFIG UPSELL (prestations payantes) — chargement & sauvegarde
+     ============================================================ -->
+<script>
+(function () {
+  const API_BASE = (window.API_URL || 'https://lcc-booking-manager.onrender.com');
+  function _token() { return localStorage.getItem('lcc_token') || localStorage.getItem('token') || ''; }
+  window._upsellPropertyId = null;
+
+  function _setVal(id, v) {
+    const el = document.getElementById(id);
+    if (el) el.value = (v === null || v === undefined) ? '' : v;
+  }
+  function _setChk(id, v) {
+    const el = document.getElementById(id);
+    if (el) el.checked = !!v;
+  }
+  function _num(id) {
+    const el = document.getElementById(id);
+    if (!el || el.value === '') return null;
+    const n = parseFloat(el.value);
+    return isNaN(n) ? null : n;
+  }
+  function _chk(id) {
+    const el = document.getElementById(id);
+    return !!(el && el.checked);
+  }
+
+  function _toggleFields() {
+    const map = [
+      ['upsellLateEnabled', 'upsellLateFields'],
+      ['upsellEarlyEnabled', 'upsellEarlyFields'],
+      ['upsellBasketEnabled', 'upsellBasketFields'],
+    ];
+    map.forEach(([chk, box]) => {
+      const c = document.getElementById(chk);
+      const b = document.getElementById(box);
+      if (c && b) b.style.opacity = c.checked ? '1' : '.45';
+    });
+  }
+  ['upsellLateEnabled','upsellEarlyEnabled','upsellBasketEnabled'].forEach(id => {
+    document.addEventListener('change', (e) => { if (e.target && e.target.id === id) _toggleFields(); });
+  });
+
+  async function loadUpsellConfig(propertyId) {
+    window._upsellPropertyId = propertyId || null;
+    // Reset
+    ['upsellLateTolerance','upsellLatePrice','upsellLateMax','upsellEarlyTolerance','upsellEarlyPrice','upsellEarlyMax','upsellBasketPrice','upsellBasketDesc'].forEach(id => _setVal(id, ''));
+    ['upsellLateEnabled','upsellEarlyEnabled','upsellBasketEnabled'].forEach(id => _setChk(id, false));
+    if (!propertyId) { _toggleFields(); return; }
+    try {
+      const r = await fetch(`${API_BASE}/api/properties/${propertyId}/upsell`, {
+        headers: { 'Authorization': 'Bearer ' + _token() }
+      });
+      if (!r.ok) { _toggleFields(); return; }
+      const data = await r.json();
+      const u = data.upsell || {};
+      _setVal('upsellLateTolerance', u.late_checkout_tolerance_minutes);
+      _setChk('upsellLateEnabled', u.late_checkout_enabled);
+      _setVal('upsellLatePrice', u.late_checkout_price_per_hour);
+      _setVal('upsellLateMax', u.late_checkout_max_minutes);
+      _setVal('upsellEarlyTolerance', u.early_checkin_tolerance_minutes);
+      _setChk('upsellEarlyEnabled', u.early_checkin_enabled);
+      _setVal('upsellEarlyPrice', u.early_checkin_price_per_hour);
+      _setVal('upsellEarlyMax', u.early_checkin_max_minutes);
+      _setChk('upsellBasketEnabled', u.welcome_basket_enabled);
+      _setVal('upsellBasketPrice', u.welcome_basket_price);
+      _setVal('upsellBasketDesc', u.welcome_basket_description);
+    } catch(e) { /* silencieux */ }
+    _toggleFields();
+  }
+  window.loadUpsellConfig = loadUpsellConfig;
+
+  async function saveUpsellConfig() {
+    const propertyId = window._upsellPropertyId;
+    if (!propertyId) return; // logement pas encore créé : on ignore (réouvrir pour configurer)
+    const body = {
+      late_checkout_tolerance_minutes: _num('upsellLateTolerance'),
+      late_checkout_enabled: _chk('upsellLateEnabled'),
+      late_checkout_price_per_hour: _num('upsellLatePrice'),
+      late_checkout_max_minutes: _num('upsellLateMax'),
+      early_checkin_tolerance_minutes: _num('upsellEarlyTolerance'),
+      early_checkin_enabled: _chk('upsellEarlyEnabled'),
+      early_checkin_price_per_hour: _num('upsellEarlyPrice'),
+      early_checkin_max_minutes: _num('upsellEarlyMax'),
+      welcome_basket_enabled: _chk('upsellBasketEnabled'),
+      welcome_basket_price: _num('upsellBasketPrice'),
+      welcome_basket_description: (document.getElementById('upsellBasketDesc')?.value || '').trim(),
+    };
+    try {
+      await fetch(`${API_BASE}/api/properties/${propertyId}/upsell`, {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + _token(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      console.log('✅ Config upsell enregistrée');
+    } catch(e) { console.warn('⚠️ Sauvegarde upsell:', e.message); }
+  }
+  window.saveUpsellConfig = saveUpsellConfig;
+
+  // Charger la config à l'ouverture d'un logement (chaîne editProperty)
+  const _prevEdit = window.editProperty;
+  if (typeof _prevEdit === 'function') {
+    window.editProperty = function(propertyData) {
+      _prevEdit(propertyData);
+      const pid = propertyData && (propertyData.id || propertyData.property_id);
+      loadUpsellConfig(pid);
+    };
+  }
+
+  // Sauvegarder la config en même temps que le logement (chaîne saveProperty)
+  const _prevSave = window.saveProperty;
+  if (typeof _prevSave === 'function') {
+    window.saveProperty = function(e) {
+      try { saveUpsellConfig(); } catch(err) {}
+      return _prevSave.apply(this, arguments);
+    };
+  }
+})();
+</script>
+
+<!-- ============================================ -->
+<!-- 🧹 MODULE CLEANER PAR DÉFAUT PAR LOGEMENT    -->
+<!-- ============================================ -->
+<script>
+(function() {
+  var API_URL = window.API_URL || '';
+  var allCleaners = [];
+  var defaultCleanersMap = {};
+  var lastPopulatedForProperty = null;
+
+  function loadCleanersList() {
+    var token = localStorage.getItem('lcc_token');
+    if (!token) return Promise.resolve();
+    return fetch(API_URL + '/api/cleaners', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(function(res) {
+      if (res.ok) return res.json();
+      throw new Error('status ' + res.status);
+    }).then(function(data) {
+      allCleaners = data.cleaners || data || [];
+      console.log('🧹 Cleaners chargés:', allCleaners.length, allCleaners.map(function(c){return c.name;}));
+    }).catch(function(e) { console.error('Erreur cleaners:', e); });
+  }
+
+  function loadDefaultCleaners() {
+    var token = localStorage.getItem('lcc_token');
+    if (!token) return Promise.resolve();
+    return fetch(API_URL + '/api/cleaning/default-cleaners', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(function(res) {
+      if (res.ok) return res.json();
+      throw new Error('status ' + res.status);
+    }).then(function(data) {
+      defaultCleanersMap = data.defaults || {};
+      console.log('🧹 Cleaners par défaut:', Object.keys(defaultCleanersMap).length);
+    }).catch(function() { /* normal si table pas encore créée */ });
+  }
+
+  function populateCleanerSelect(propertyId) {
+    var select = document.getElementById('defaultCleanerSelect');
+    if (!select) return;
+    if (allCleaners.length === 0) return;
+
+    console.log('🧹 ▶ Remplissage select pour', propertyId, '— cleaners:', allCleaners.length);
+
+    select.innerHTML = '<option value="">Aucune — assignation manuelle</option>';
+    for (var i = 0; i < allCleaners.length; i++) {
+      var c = allCleaners[i];
+      if (c.is_active === false) continue;
+      var opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name + (c.phone ? ' (' + c.phone + ')' : '');
+      select.appendChild(opt);
+    }
+
+    var defaultData = defaultCleanersMap[propertyId];
+    if (defaultData && defaultData.cleanerId) {
+      select.value = defaultData.cleanerId;
+      showCleanerInfo(defaultData.cleanerName);
+    } else {
+      select.value = '';
+      hideCleanerInfo();
+    }
+
+    select.onchange = function() {
+      if (this.value) {
+        var found = null;
+        for (var j = 0; j < allCleaners.length; j++) {
+          if (allCleaners[j].id === this.value) { found = allCleaners[j]; break; }
+        }
+        showCleanerInfo(found ? found.name : '');
+      } else {
+        hideCleanerInfo();
+      }
+    };
+
+    lastPopulatedForProperty = propertyId;
+    console.log('🧹 ✅ Select rempli avec', select.options.length - 1, 'cleaners');
+  }
+
+  function showCleanerInfo(name) {
+    var box = document.getElementById('defaultCleanerInfo');
+    var text = document.getElementById('defaultCleanerInfoText');
+    if (box && text) {
+      text.textContent = (name || 'Cette personne') + ' sera automatiquement assigné(e) à chaque nouveau ménage. Changement ponctuel possible dans la page Ménage.';
+      box.style.display = 'flex';
+    }
+  }
+
+  function hideCleanerInfo() {
+    var box = document.getElementById('defaultCleanerInfo');
+    if (box) box.style.display = 'none';
+  }
+
+  async function saveDefaultCleaner(propertyId) {
+    var select = document.getElementById('defaultCleanerSelect');
+    if (!select) return;
+    var cleanerId = select.value || null;
+    var currentDefault = defaultCleanersMap[propertyId];
+    // ✅ Guard assoupli : on skip uniquement si cleanerId identique ET déjà en map
+    if (!cleanerId && !currentDefault) return;
+    if (cleanerId && currentDefault && String(currentDefault.cleanerId) === String(cleanerId)) return;
+    var token = localStorage.getItem('lcc_token');
+    try {
+      var res = await fetch(API_URL + '/api/cleaning/default-cleaner/' + propertyId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ cleanerId: cleanerId })
+      });
+      var data = res.ok ? await res.json() : null;
+      if (data) {
+        if (cleanerId) { defaultCleanersMap[propertyId] = data.default || { cleanerId: cleanerId }; }
+        else { delete defaultCleanersMap[propertyId]; }
+        console.log('✅ Cleaner par défaut sauvegardé pour', propertyId);
+      }
+    } catch(e) { console.error('Erreur save cleaner:', e); }
+  }
+
+  // ✅ Exposer globalement pour settings-6.js
+  window.saveDefaultCleanerExternal = saveDefaultCleaner;
+
+  // DÉTECTION MODALE : interval simple toutes les 300ms
+  setInterval(function() {
+    var modal = document.getElementById('editPropertyModal');
+    if (!modal) return;
+    var isVisible = modal.classList.contains('active');
+    if (!isVisible) { lastPopulatedForProperty = null; return; }
+    var pidInput = document.getElementById('propertyId');
+    var propertyId = pidInput ? pidInput.value : null;
+    if (!propertyId) return;
+    if (lastPopulatedForProperty === propertyId) return;
+    if (allCleaners.length === 0) return;
+    populateCleanerSelect(propertyId);
+  }, 300);
+
+  // ======================================================
+  // INJECTION BADGES "Cleaner régulier" dans les cards de logement
+  // ======================================================
+
+  function injectCleanerBadges() {
+    if (Object.keys(defaultCleanersMap).length === 0) return;
+
+    var cards = document.querySelectorAll('.property-card');
+    if (cards.length === 0) return;
+
+    cards.forEach(function(card) {
+      // Ne pas re-injecter
+      if (card.querySelector('.cleaner-badge-injected')) return;
+
+      // Trouver le propertyId via le data-id du bouton edit
+      var editBtn = card.querySelector('.btn-edit[data-id]');
+      if (!editBtn) return;
+
+      var propertyId = editBtn.getAttribute('data-id');
+      if (!propertyId) return;
+
+      var defaultData = defaultCleanersMap[propertyId];
+      if (!defaultData || !defaultData.cleanerName) return;
+
+      // Trouver le container .property-meta
+      var metaContainer = card.querySelector('.property-meta');
+      if (!metaContainer) return;
+
+      // Créer le badge vert
+      var badge = document.createElement('span');
+      badge.className = 'meta-badge cleaner-badge-injected';
+      badge.style.cssText = 'display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:6px; font-size:12px; font-weight:600; background:#d1fae5; color:#059669;';
+      badge.innerHTML = '<i class="fas fa-broom" style="font-size:10px;"></i> ' + defaultData.cleanerName;
+      metaContainer.appendChild(badge);
+    });
+  }
+
+  // Vérifier régulièrement si les cards sont rendues pour injecter les badges
+  setInterval(function() {
+    if (Object.keys(defaultCleanersMap).length === 0) return;
+    var cards = document.querySelectorAll('.property-card');
+    if (cards.length === 0) return;
+    var needsInjection = false;
+    cards.forEach(function(c) {
+      if (!c.querySelector('.cleaner-badge-injected')) needsInjection = true;
+    });
+    if (needsInjection) injectCleanerBadges();
+  }, 1000);
+
+  // ✅ Le save est maintenant géré directement dans saveProperty (settings-6.js)
+  //    via window.saveDefaultCleanerExternal — plus besoin du listener submit ici
+
+  // Init
+  Promise.all([loadCleanersList(), loadDefaultCleaners()]).then(function() {
+    console.log('✅ Module cleaner par défaut prêt — cleaners:', allCleaners.length);
+  });
+})();
+</script>
+
+<script>
+// ── Mode Agence : banner, exit, refresh token ─────────────────
+(function() {
+  window.exitAgencyMode = function(redirectTo) {
+    var orig = localStorage.getItem('lcc_agency_token');
+    if (orig) localStorage.setItem('lcc_token', orig);
+    ['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache','lcc_agency_permissions'].forEach(function(k){ localStorage.removeItem(k); });
+    window.location.href = redirectTo || '/app.html';
+  };
+  var managedUser = localStorage.getItem('lcc_managed_user');
+  if (!managedUser) return;
+  var token = localStorage.getItem('lcc_token');
+
+  // Bloquer l'accès à settings-account et support en mode agence
+  var curPath = location.pathname.toLowerCase();
+  if (curPath.includes('settings-account') || curPath.includes('support')) {
+    exitAgencyMode(location.pathname + location.search);
+    return;
+  }
+
+  // Auto-refresh token agence
+  (async function() {
+    try {
+      var res = await fetch('/api/agency/refresh', { method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'} });
+      if (res.ok) { var d = await res.json(); localStorage.setItem('lcc_token', d.token); if (d.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(d.permissions)); }
+      else if (res.status === 403 || res.status === 401) { exitAgencyMode(); }
+    } catch(e) {}
+  })();
+
+  // Intercepter les clics vers settings-account et support dans la nav
+  document.addEventListener('click', function(e) {
+    var a = e.target.closest('a[href]');
+    if (!a) return;
+    var href = (a.getAttribute('href') || '').toLowerCase();
+    if (href.includes('settings-account') || href.includes('support')) {
+      e.preventDefault();
+      exitAgencyMode(a.getAttribute('href'));
+    }
+  }, true);
+
+  // Banner agence géré par bh-layout.js
+  if (typeof initAgencySwitcherBtn === "function") initAgencySwitcherBtn();
+})();
+</script>
+
+<script src="/js/bh-layout.js?v=5"></script>
+<script src="/js/mobile-native-experience.js"></script>
+<script src="/js/mobile-tabs-handler.js"></script>
+<script src="/js/messages-badge-desktop-mobile.js"></script>
+<!-- Socket.io pour le temps réel -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>    
+
+<script>
+// Update properties count in header
+(function() {
+  var origRender = window.renderProperties;
+  function updateCount() {
+    var items = document.querySelectorAll('#propertiesGrid .property-card:not(.property-card-add)');
+    var el = document.getElementById('propertiesCount');
+    if (el) el.textContent = items.length + ' LOGEMENT' + (items.length > 1 ? 'S' : '') + ' ACTIF' + (items.length > 1 ? 'S' : '');
+  }
+  var grid = document.getElementById('propertiesGrid');
+  if (grid) new MutationObserver(updateCount).observe(grid, { childList: true });
+  setTimeout(updateCount, 1000);
+})();
+</script>
+
+
+<script>
+(function() {
+  // Wire top Ajouter button to existing add button
+  var topBtn = document.getElementById('addPropertyBtnTop');
+  if (topBtn) {
+    topBtn.addEventListener('click', function() {
+      var orig = document.getElementById('addPropertyBtn');
+      if (orig) orig.click();
+    });
+  }
+  // Update count dynamically
+  var grid = document.getElementById('propertiesGrid');
+  function updateCount() {
+    var items = document.querySelectorAll('#propertiesGrid .property-card:not(.property-card-add)');
+    var el = document.getElementById('propertiesCount');
+    if (el) el.textContent = items.length + ' LOGEMENT' + (items.length > 1 ? 'S' : '') + ' ACTIF' + (items.length > 1 ? 'S' : '');
+  }
+  if (grid) new MutationObserver(updateCount).observe(grid, { childList: true });
+  setTimeout(updateCount, 800);
+})();
+</script>
+
+<style>
+/* !! FORCE 3 colonnes — override settings-harmonize.css !! */
+html body .app-container .main-content #propertiesGrid,
+html body #propertiesGrid,
+#propertiesGrid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 20px !important;
+  padding: 24px !important;
+}
+@media (max-width: 900px) {
+  html body #propertiesGrid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 580px) {
+  html body #propertiesGrid { grid-template-columns: 1fr !important; }
+}
+
+/* Supprimer button — red/pink */
+.property-actions .btn-delete {
+  flex: 1; height: 36px; font-size: 13px; font-weight: 600;
+  border-radius: 10px; cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid rgba(220,38,38,.2);
+}
+.property-actions .btn-delete:hover {
+  background: #FEE2E2;
+  border-color: rgba(220,38,38,.4);
+}
+
+/* Modal — neutralize green inputs/borders */
+html[data-theme-v3="1"] #editPropertyModal input:focus,
+html[data-theme-v3="1"] #editPropertyModal select:focus,
+html[data-theme-v3="1"] #editPropertyModal textarea:focus {
+  border-color: rgba(0,0,0,.3) !important;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.06) !important;
+  outline: none;
+}
+html[data-theme-v3="1"] #editPropertyModal .btn-primary,
+html[data-theme-v3="1"] #editPropertyModal button[type="submit"] {
+  background: #1A7A5E !important;
+  border-color: #1A7A5E !important;
+}
+html[data-theme-v3="1"] #editPropertyModal a,
+html[data-theme-v3="1"] #editPropertyModal .text-green,
+html[data-theme-v3="1"] #editPropertyModal .text-emerald {
+  color: #374151 !important;
+}
+/* iCal add link */
+html[data-theme-v3="1"] #editPropertyModal .btn-add-url,
+html[data-theme-v3="1"] #editPropertyModal [class*="add-url"],
+html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
+  color: #374151 !important;
+}
+
+/* iCal platform picker */
+.ical-platform-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 20px;
+  border: 1.5px solid #e5e7eb; background: white;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all .15s; font-family: 'DM Sans', sans-serif;
+  color: #374151;
+}
+.ical-platform-chip:hover { border-color: #1A7A5E; background: #f0fdf4; }
+.ical-platform-chip.selected { color: white; border-color: transparent; }
+.ical-platform-chip img { width: 18px; height: 18px; object-fit: contain; border-radius: 3px; }
+
+/* iCal url row */
+.ical-url-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: white;
+  border: 1px solid #e5e7eb; border-radius: 10px;
+}
+.ical-url-row .ical-plat-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+  padding: 3px 10px; border-radius: 20px; color: white;
+}
+.ical-url-row .ical-url-text {
+  flex: 1; font-size: 12px; color: #6b7280;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ical-url-row .ical-remove-btn {
+  flex-shrink: 0; background: none; border: none;
+  color: #EF4444; cursor: pointer; font-size: 14px; padding: 2px 4px;
+}
+</style>
+<style id="settings-mobile-master">
+/* ================================================================
+   📱 SETTINGS — LAYOUT MOBILE
+   ================================================================ */
+@media (max-width: 1366px) {
+
+  /* ── 1. LAYOUT DE BASE ── */
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
+  html[data-theme-v3="1"] body { padding-top: 0 !important; }
+  html[data-theme-v3="1"] .sidebar,
+  html[data-theme-v3="1"] .sidebar-overlay { display: none !important; }
+  html[data-theme-v3="1"] .app-container {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+  html[data-theme-v3="1"] .main-content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* ── 2. MOBILE HEADER FIXE ── */
+  .mobile-header {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    z-index: 1100 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
+    box-shadow: 0 1px 8px rgba(13, 17, 23, 0.06) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+  }
+  .mobile-menu-btn, #mobileMenuBtn,
+  .settings-back-btn { display: none !important; }
+
+  /* ── 3. PAGE CONTENT ── */
+  .page-content {
+    padding: 0 12px 90px !important;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px) + 16px) !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  /* Bouton Ajouter — ne pas couper en haut */
+  .properties-section-header {
+    padding-top: 8px !important;
+    padding-bottom: 12px !important;
+  }
+  
+  .btn-add-property {
+    flex-shrink: 0 !important;
+  }
+  #bhHeader { display: none !important; }
+
+  /* ── 4. SETTINGS CONTAINER ── */
+  .settings-container {
+    max-width: 100% !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* ── 5. SECTION HEADER : titre + bouton Ajouter ── */
+  .properties-section-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 16px 0 12px !important;
+    gap: 12px !important;
+  }
+  .properties-count {
+    font-size: 10px !important;
+    letter-spacing: 0.08em !important;
+    margin-bottom: 2px !important;
+  }
+  .properties-title {
+    font-size: 22px !important;
+    margin: 0 !important;
+  }
+  .btn-add-property {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    background: #1A7A5E !important;
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+  }
+
+  /* ── 6. GRILLE LOGEMENTS → 1 COLONNE ── */
+  #propertiesGrid,
+  .properties-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    padding: 0 !important;
+    width: 100% !important;
+    grid-template-columns: unset !important;
+  }
+  /* Afficher le toggle grille/liste uniquement sur mobile */
+  #viewToggleBar { display: flex !important; }
+
+  /* ── 7. PROPERTY CARD ── */
+  .property-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 16px !important;
+    border-radius: 16px !important;
+    transform: none !important;
+  }
+  .property-card:hover { transform: none !important; }
+
+  .property-header {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+  .property-name { font-size: 15px !important; }
+
+  /* Actions en ligne */
+  .property-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-top: 12px !important;
+  }
+  .property-actions .btn {
+    flex: 1 !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    font-size: 13px !important;
+    padding: 9px 10px !important;
+    white-space: nowrap !important;
+  }
+
+  /* URLs iCal */
+  .url-copy-section,
+  .chat-link-section {
+    flex-direction: column !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+  .url-copy-section input,
+  .chat-link-section input {
+    font-size: 11px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* ── 8. BOUTON AJOUTER EN BAS ── */
+  #btnAddProperty {
+    width: 100% !important;
+    justify-content: center !important;
+    margin-top: 8px !important;
+    background: #1A7A5E !important;
+  }
+
+  /* ── 9. MODAL — géré dans bh-v3-mobile.css ── */
+
+  /* ── 10. BOTTOM TABS ── */
+  .mobile-tabs {
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    z-index: 1000 !important;
+    background: rgba(245, 242, 236, 0.97) !important;
+    backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+}
+</style>
+
+<style>
+/* ── Tooltip "?" ── */
+.bh-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+}
+.bh-tooltip-icon {
+  width: 18px; height: 18px;
+  min-width: 18px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  font-style: normal;
+  line-height: 1;
+  overflow: visible;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.bh-tooltip-icon:hover { background: #1A7A5E; color: #fff; }
+.bh-tooltip-box {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  position: fixed;
+  background: #1e293b;
+  color: #f1f5f9;
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 6px 9px;
+  border-radius: 6px;
+  max-width: 160px;
+  white-space: normal;
+  width: max-content;
+  z-index: 99999;
+  transition: opacity .15s;
+  box-shadow: 0 2px 10px rgba(0,0,0,.2);
+}
+.bh-tooltip-box::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 10px;
+  border: 4px solid transparent;
+  border-bottom-color: #1e293b;
+}
+.bh-tooltip-wrap:hover .bh-tooltip-box {
+  visibility: visible;
+  opacity: 1;
+}
+</style>
+
+<!-- ═══════════════════════════════════════════════
+     🎨 MODAL PREMIUM REDESIGN — Boostinghost
+════════════════════════════════════════════════ -->
+<style id="modal-premium">
+
+/* ── Backdrop ── */
+#editPropertyModal {
+  background: rgba(10, 14, 23, 0.65) !important;
+  backdrop-filter: blur(6px) !important;
+}
+
+/* ── Conteneur ── */
+#editPropertyModal .modal-content {
+  background: #FAFAF8 !important;
+  border-radius: 20px !important;
+  max-width: 640px !important;
+  box-shadow: 0 32px 80px rgba(10,14,23,.28), 0 0 0 1px rgba(255,255,255,.6) inset !important;
+}
+
+/* ── Header ── */
+#editPropertyModal .modal-header {
+  background: #0D1117 !important;
+  padding: 20px 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-bottom: none !important;
+}
+#editPropertyModal .modal-header h2 {
+  color: #FFFFFF !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 0 !important;
+}
+#editPropertyModal .modal-header h2 span {
+  color: #FFFFFF !important;
+}
+#editPropertyModal .modal-header h2 i {
+  width: 30px; height: 30px;
+  background: rgba(26,122,94,.3);
+  border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #4ade80;
+  flex-shrink: 0;
+}
+#editPropertyModal .modal-close {
+  width: 30px; height: 30px;
+  background: rgba(255,255,255,.08) !important;
+  border-radius: 8px !important;
+  color: rgba(255,255,255,.55) !important;
+  display: flex !important; align-items: center !important; justify-content: center !important;
+  transition: background .15s, color .15s !important;
+}
+#editPropertyModal .modal-close:hover {
+  background: rgba(255,255,255,.18) !important;
+  color: #fff !important;
+}
+
+/* ── Body ── */
+#editPropertyModal .modal-body {
+  padding: 20px 24px 0 !important;
+  background: #FAFAF8 !important;
+}
+#editPropertyModal .modal-form {
+  background: #FAFAF8 !important;
+}
+#editPropertyModal .modal-content {
+  background: #FAFAF8 !important;
+  border-radius: 20px !important;
+  max-width: 640px !important;
+  box-shadow: 0 32px 80px rgba(10,14,23,.28), 0 0 0 1px rgba(255,255,255,.6) inset !important;
+}
+#editPropertyModal .modal-body::-webkit-scrollbar { width: 4px; }
+#editPropertyModal .modal-body::-webkit-scrollbar-track { background: transparent; }
+#editPropertyModal .modal-body::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 999px; }
+
+/* ── Séparateurs de sections ── */
+#editPropertyModal .form-section-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 18px 0 10px !important;
+  margin-top: 4px !important;
+  border-top: 1px solid #EAE6DF !important;
+}
+/* Icône badge coloré par section */
+#editPropertyModal .form-section-header > i {
+  width: 28px !important; height: 28px !important; min-width: 28px !important;
+  border-radius: 8px !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  font-size: 12px !important; flex-shrink: 0 !important;
+}
+#editPropertyModal .form-section-header .fa-tags        { background:#FEF3C7!important; color:#D97706!important; }
+#editPropertyModal .form-section-header .fa-home        { background:#DBEAFE!important; color:#2563EB!important; }
+#editPropertyModal .form-section-header .fa-list-check  { background:#FCE7F3!important; color:#DB2777!important; }
+#editPropertyModal .form-section-header .fa-circle-info { background:#F0FDF4!important; color:#16A34A!important; }
+#editPropertyModal .form-section-header .fa-broom       { background:#F5F3FF!important; color:#7C3AED!important; }
+#editPropertyModal .form-section-header .fa-robot       { background:#EFF6FF!important; color:#2563EB!important; }
+#editPropertyModal .form-section-header .fa-comments    { background:#FFF7ED!important; color:#EA580C!important; }
+#editPropertyModal .form-section-header .fa-star        { background:#FFFBEB!important; color:#F59E0B!important; }
+#editPropertyModal .form-section-header .fa-calendar-alt{ background:#F0FDF4!important; color:#1A7A5E!important; }
+#editPropertyModal .form-section-header h3,
+#editPropertyModal .form-section-header > span:first-of-type {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+  letter-spacing: -0.01em !important;
+  flex: 1 !important;
+}
+#editPropertyModal .form-section-header small { display: none !important; }
+
+/* ── Labels ── */
+#editPropertyModal .form-group label {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: #6B7280 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  gap: 5px !important;
+}
+#editPropertyModal .form-group label i { color: #9CA3AF !important; font-size: 10px !important; }
+#editPropertyModal .form-group small,
+#editPropertyModal .form-group p { color: #6B7280 !important; }
+#editPropertyModal .modal-body * { color: inherit; }
+#editPropertyModal .modal-form { color: #111827 !important; }
+
+/* ── Inputs ── */
+#editPropertyModal .form-group input:not([type=checkbox]):not([type=color]):not([type=range]),
+#editPropertyModal .form-group textarea,
+#editPropertyModal .form-group select,
+#editPropertyModal select.form-input,
+#editPropertyModal input.form-input {
+  background: #FFFFFF !important;
+  border: 1px solid #E5E7EB !important;
+  border-radius: 10px !important;
+  padding: 10px 12px !important;
+  font-size: 13px !important;
+  font-family: "DM Sans", sans-serif !important;
+  color: #111827 !important;
+  transition: border-color .15s, box-shadow .15s !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04) !important;
+}
+#editPropertyModal .form-group input:focus,
+#editPropertyModal .form-group textarea:focus,
+#editPropertyModal .form-group select:focus {
+  border-color: #1A7A5E !important;
+  box-shadow: 0 0 0 3px rgba(26,122,94,.1) !important;
+  outline: none !important;
+  background: #FFFFFF !important;
+}
+
+/* ── Info box ── */
+#editPropertyModal .info-box {
+  background: #F8FFFE !important;
+  border: 1px solid #CCFBF1 !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  font-size: 12px !important;
+  color: #065F46 !important;
+  gap: 8px !important;
+}
+#editPropertyModal .info-box i { color: #059669 !important; font-size: 13px !important; }
+
+/* ── Footer ── */
+#editPropertyModal .modal-actions {
+  background: #FFFFFF !important;
+  border-top: 1px solid #EAE6DF !important;
+  padding: 14px 24px 18px !important;
+  margin: 0 -0px !important;
+}
+#editPropertyModal .btn-cancel {
+  background: #F3F4F6 !important;
+  color: #374151 !important;
+  border: 1px solid #E5E7EB !important;
+  border-radius: 10px !important;
+  padding: 9px 18px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  transition: background .15s !important;
+}
+#editPropertyModal .btn-cancel:hover { background: #E9EAEC !important; }
+#editPropertyModal .btn-save {
+  background: #0D1117 !important;
+  color: #FFFFFF !important;
+  border-radius: 10px !important;
+  padding: 10px 24px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  box-shadow: 0 2px 8px rgba(13,17,23,.2) !important;
+  transition: background .15s !important;
+}
+#editPropertyModal .btn-save:hover { background: #1A7A5E !important; }
+
+/* ── Mobile fixes ── */
+@media (max-width: 480px) {
+  /* Modal logement : plein écran sur très petit mobile */
+  #editPropertyModal .modal-content {
+    max-width: 100% !important;
+    border-radius: 16px !important;
+  }
+  #editPropertyModal .modal-body {
+    padding: 16px !important;
+  }
+
+  /* Modal règle de prix : 1 colonne sur petit mobile */
+  #pricingRuleModal [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* iCal export : texte tronqué proprement */
+  #icalExportUrl {
+    font-size: 11px !important;
+  }
+}
+
+/* ── Mobile : éviter que le footer (Annuler / Enregistrer) soit caché
+   par la bottom bar de navigation (~90px) ou la barre Safari iOS ── */
+@media (max-width: 1024px) {
+  #editPropertyModal {
+    /* Remonter le modal au-dessus de la bottom bar native */
+    align-items: flex-start !important;
+    padding-top: 8px !important;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  #editPropertyModal .modal-content {
+    /* Réduire la hauteur max pour laisser de la place aux bottom bars */
+    max-height: calc(100vh - 110px - env(safe-area-inset-bottom, 0px)) !important;
+    max-height: calc(100dvh - 110px - env(safe-area-inset-bottom, 0px)) !important;
+  }
+  #editPropertyModal .modal-actions {
+    /* Bordure claire en haut du footer pour le démarquer */
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 5 !important;
+  }
+}
+
+/* ── iCal ── */
+#editPropertyModal #icalExportUrl {
+  font-size: 11.5px !important;
+  color: #065F46 !important;
+}
+#editPropertyModal .ical-url-row {
+  background: #FFFFFF !important;
+  border: 1px solid #E5E7EB !important;
+  border-radius: 10px !important;
+}
+#editPropertyModal #icalAddBlock {
+  background: #FAFAFA !important;
+  border: 1.5px dashed #E5E7EB !important;
+  border-radius: 12px !important;
+}
+
+</style>
+
+
+<script>
+// Grille responsive : 3 colonnes desktop, 1 colonne mobile
+document.addEventListener('DOMContentLoaded', function() {
+  function applyGrid() {
+    var grid = document.getElementById('propertiesGrid');
+    if (!grid) return;
+    if (window.innerWidth <= 768) {
+      grid.style.removeProperty('grid-template-columns');
+      grid.style.setProperty('display', 'flex', 'important');
+      grid.style.setProperty('flex-direction', 'column', 'important');
+      grid.style.setProperty('gap', '12px', 'important');
+      grid.style.setProperty('padding', '0', 'important');
+    } else {
+      grid.style.setProperty('display', 'grid', 'important');
+      grid.style.setProperty('grid-template-columns', 'repeat(3, minmax(0, 1fr))', 'important');
+      grid.style.setProperty('gap', '20px', 'important');
+      grid.style.setProperty('padding', '24px', 'important');
+    }
+  }
+  applyGrid();
+  window.addEventListener('resize', applyGrid);
+});
+
+var _orig = window.renderProperties;
+if (typeof _orig === 'function') {
+  window.renderProperties = function() {
+    _orig.apply(this, arguments);
+    var grid = document.getElementById('propertiesGrid');
+    if (!grid) return;
+    if (window.innerWidth <= 768) {
+      grid.style.removeProperty('grid-template-columns');
+      grid.style.setProperty('display', 'flex', 'important');
+      grid.style.setProperty('flex-direction', 'column', 'important');
+    } else {
+      grid.style.setProperty('display', 'grid', 'important');
+      grid.style.setProperty('grid-template-columns', 'repeat(3, minmax(0, 1fr))', 'important');
+    }
+  };
+}
+
+// ── Rendre la photo cliquable + supprimer le bouton Gérer ──
+(function() {
+  function patchCards() {
+    document.querySelectorAll('#propertiesGrid .property-card:not(.property-card-add):not([data-photo-patched])').forEach(function(card) {
+      card.setAttribute('data-photo-patched', '1');
+
+      // Trouver le bouton Gérer (btn-jade dans property-actions)
+      var gererBtn = card.querySelector('.property-actions .btn-jade');
+      if (!gererBtn) return;
+
+      // Récupérer l'onclick du bouton Gérer
+      var onclickAttr = gererBtn.getAttribute('onclick') || '';
+      var onclickFn = gererBtn.onclick;
+
+      // Rendre la photo/img cliquable
+      var imgWrapper = card.querySelector('.property-img, .property-img-bg, .property-photo-wrapper, .property-card-image, [class*="img"]');
+      if (!imgWrapper) imgWrapper = card.querySelector('img');
+      if (!imgWrapper) {
+        // Chercher le premier enfant visuel
+        imgWrapper = card.querySelector('div[style*="background"]') || card.firstElementChild;
+      }
+
+      if (imgWrapper) {
+        imgWrapper.style.cursor = 'pointer';
+        imgWrapper.setAttribute('title', 'Modifier ce logement');
+        imgWrapper.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (onclickFn) onclickFn.call(gererBtn);
+          else if (onclickAttr) eval(onclickAttr);
+          else gererBtn.click();
+        });
+
+        // Icône d'édition au hover
+        var editIcon = document.createElement('div');
+        editIcon.innerHTML = '<i class="fas fa-pen" style="font-size:22px;color:white;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4));opacity:0;transition:opacity .2s;"></i>';
+        editIcon.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0);transition:background .2s;pointer-events:none;border-radius:inherit;';
+        imgWrapper.style.position = 'relative';
+        imgWrapper.appendChild(editIcon);
+        var penIcon = editIcon.querySelector('i');
+        imgWrapper.addEventListener('mouseenter', function(){ editIcon.style.background = 'rgba(0,0,0,.32)'; if(penIcon) penIcon.style.opacity='1'; });
+        imgWrapper.addEventListener('mouseleave', function(){ editIcon.style.background = 'rgba(0,0,0,0)'; if(penIcon) penIcon.style.opacity='0'; });
+      }
+
+      // Supprimer le bouton Gérer
+      gererBtn.remove();
+
+      // Si property-actions est maintenant vide ou n'a plus que le bouton supprimer, garder propre
+      var actions = card.querySelector('.property-actions');
+      if (actions && actions.querySelectorAll('.btn').length === 0) {
+        actions.remove();
+      }
+    });
+  }
+
+  // Observer les nouvelles cards
+  var grid = document.getElementById('propertiesGrid');
+  if (grid) {
+    new MutationObserver(function() { setTimeout(patchCards, 50); }).observe(grid, { childList: true, subtree: true });
+  }
+  // Patch initial
+  document.addEventListener('DOMContentLoaded', function() { setTimeout(patchCards, 500); });
+  setTimeout(patchCards, 800);
+  setTimeout(patchCards, 2000);
+})();
+</script>
+
+
+<script>
+// Live validation du champ Stripe par logement
+document.addEventListener('DOMContentLoaded', function() {
+  const input = document.getElementById('propertyStripeAccountId');
+  const status = document.getElementById('propertyStripeStatus');
+  if (!input || !status) return;
+
+  input.addEventListener('input', function() {
+    const val = this.value.trim();
+    if (!val) {
+      status.style.display = 'none';
+      input.style.borderColor = '#e2e8f0';
+      return;
+    }
+    if (val.startsWith('acct_') && val.length > 10) {
+      status.style.display = 'inline-block';
+      status.style.background = 'rgba(34,197,94,.15)';
+      status.style.color = '#16a34a';
+      status.style.border = '1px solid rgba(34,197,94,.3)';
+      status.innerHTML = '<i class="fas fa-check-circle"></i> Format valide';
+      input.style.borderColor = 'rgba(34,197,94,.5)';
+    } else {
+      status.style.display = 'inline-block';
+      status.style.background = 'rgba(239,68,68,.1)';
+      status.style.color = '#dc2626';
+      status.style.border = '1px solid rgba(239,68,68,.3)';
+      status.innerHTML = '<i class="fas fa-exclamation-circle"></i> Doit commencer par acct_';
+      input.style.borderColor = 'rgba(239,68,68,.5)';
+    }
+  });
+
+  // Reset quand on ouvre la modal pour un nouveau logement
+  const addBtn = document.getElementById('addPropertyBtn');
+  if (addBtn) {
+    addBtn.addEventListener('click', function() {
+      setTimeout(function() {
+        input.value = '';
+        input.style.borderColor = '#e2e8f0';
+        status.style.display = 'none';
+      }, 100);
+    });
+  }
+});
+</script>
+
+<script>
+// ═══════════════════════════════════════════
+// 🧠 Faits mémorisés par l'IA (par logement)
+// ═══════════════════════════════════════════
+async function loadPropertyFacts(propertyId) {
+  const list = document.getElementById('propertyFactsList');
+  if (!list) return;
+  list.innerHTML = '<div style="font-size:12px;color:#9ca3af;padding:6px;">Chargement…</div>';
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/properties/' + propertyId + '/facts', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const data = await res.json();
+    renderPropertyFacts(data.facts || []);
+  } catch(e) {
+    list.innerHTML = '<div style="font-size:12px;color:#ef4444;padding:6px;">Erreur de chargement</div>';
+  }
+}
+
+function renderPropertyFacts(facts) {
+  const list = document.getElementById('propertyFactsList');
+  if (!list) return;
+  if (!facts.length) {
+    list.innerHTML = '<div style="font-size:12px;color:#9ca3af;padding:6px 2px;">Aucun fait mémorisé pour le moment. Ils apparaîtront ici quand vous répondrez aux questions de l\'IA.</div>';
+    return;
+  }
+  list.innerHTML = facts.map(function(f) {
+    const yes = f.answer === true;
+    const badge = yes
+      ? '<span style="background:#dcfce7;color:#16a34a;font-weight:700;font-size:11px;padding:2px 8px;border-radius:999px;">OUI</span>'
+      : '<span style="background:#fee2e2;color:#dc2626;font-weight:700;font-size:11px;padding:2px 8px;border-radius:999px;">NON</span>';
+    const detail = f.detail ? '<div style="font-size:11px;color:#6b7280;margin-top:2px;">' + escapeHtmlFact(f.detail) + '</div>' : '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#faf8f4;border:1px solid #e7e0d4;border-radius:10px;">'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;color:#374151;">' + escapeHtmlFact(f.question) + '</div>' + detail + '</div>'
+      + badge
+      + '<button type="button" onclick="deletePropertyFact(' + f.id + ')" title="Oublier ce fait" style="border:none;background:transparent;color:#9ca3af;cursor:pointer;font-size:14px;padding:4px;">'
+      + '<i class="fas fa-trash"></i></button>'
+      + '</div>';
+  }).join('');
+}
+
+function escapeHtmlFact(s) {
+  return String(s || '').replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+  });
+}
+
+async function deletePropertyFact(factId) {
+  const propertyId = document.getElementById('propertyId').value;
+  if (!propertyId) return;
+  if (!confirm('Oublier ce fait ? L\'IA reposera la question la prochaine fois.')) return;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch('/api/properties/' + propertyId + '/facts/' + factId, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    loadPropertyFacts(propertyId);
+  } catch(e) {
+    alert('Erreur lors de la suppression');
+  }
+}
+
+async function addPropertyFactManual() {
+  const propertyId = document.getElementById('propertyId').value;
+  if (!propertyId) { alert('Sélectionnez d\'abord un logement.'); return; }
+  const question = prompt('Question (ex : Y a-t-il un ventilateur ?)');
+  if (!question || !question.trim()) return;
+  const ans = prompt('Réponse : tapez "oui" ou "non"');
+  if (ans === null) return;
+  const answer = /^o/i.test(ans.trim());
+  const detail = prompt('Précision (optionnel)') || '';
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch('/api/properties/' + propertyId + '/facts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ question: question.trim(), answer: answer, detail: detail.trim() })
+    });
+    loadPropertyFacts(propertyId);
+  } catch(e) {
+    alert('Erreur lors de l\'ajout');
+  }
+}
+</script>
+
+<script>
+// ===== BASE DE CONNAISSANCE IA (dashboard agrégé) =====
+(function(){
+  var _data = {};
+  function tok(){ return localStorage.getItem('lcc_token') || localStorage.getItem('token') || ''; }
+  function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function emptyMsg(t){ return '<div class="ak-empty">'+esc(t)+'</div>'; }
+
+  window.loadAiKnowledge = async function(){
+    var card = document.getElementById('aiKnowledgeCard');
+    if (!card) return;
+    var loading = document.getElementById('aiKnowledgeLoading');
+    var content = document.getElementById('aiKnowledgeContent');
+    if (loading){ loading.style.display='block'; loading.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Chargement…'; }
+    if (content) content.style.display = 'none';
+    try {
+      var res = await fetch('/api/ai/knowledge-overview', { headers: { Authorization: 'Bearer ' + tok() } });
+      _data = await res.json() || {};
+      renderPending(_data.pending || []);
+      renderRecurring(_data.recurring || []);
+      renderCoverage(_data.coverage || []);
+    } catch(e){
+      if (loading){ loading.style.display='block'; loading.innerHTML = '<span style="color:#ef4444;">Erreur de chargement</span>'; }
+      return;
+    }
+    if (loading) loading.style.display = 'none';
+    if (content) content.style.display = 'block';
+  };
+
+  function renderPending(list){
+    var el = document.getElementById('akPendingList');
+    var badge = document.getElementById('akPendingCount');
+    if (badge){ badge.textContent = list.length; badge.style.display = list.length ? 'inline-block':'none'; }
+    if (!el) return;
+    if (!list.length){ el.innerHTML = emptyMsg('Aucune question en attente. 🎉'); return; }
+    el.innerHTML = list.map(function(q){
+      return '<div class="ak-row">'
+        + '<div style="flex:1;min-width:0;">'
+        +   '<div class="ak-q">'+esc(q.question)+'</div>'
+        +   '<div class="ak-meta">'+esc(q.property_name||'')+(q.guest_name?' · '+esc(q.guest_name):'')+'</div>'
+        + '</div>'
+        + '<div class="ak-actions">'
+        +   '<button class="ak-btn ak-yes" onclick="akAnswer('+q.id+',\'yes\')">Oui</button>'
+        +   '<button class="ak-btn ak-no" onclick="akAnswer('+q.id+',\'no\')">Non</button>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  window.akAnswer = async function(id, answer){
+    try{
+      await fetch('/api/host-questions/'+id+'/answer', {
+        method:'POST',
+        headers:{'Content-Type':'application/json', Authorization:'Bearer '+tok()},
+        body: JSON.stringify({ answer: answer })
+      });
+      loadAiKnowledge();
+    }catch(e){ alert('Erreur lors de l\'envoi de la réponse'); }
+  };
+
+  function renderRecurring(list){
+    var el = document.getElementById('akRecurringList');
+    if (!el) return;
+    if (!list.length){ el.innerHTML = emptyMsg('Pas encore de question récurrente. Les questions posées au moins 2 fois apparaîtront ici.'); return; }
+    el.innerHTML = list.map(function(r, idx){
+      var pill = r.covered
+        ? '<span class="ak-pill ak-pill-ok">déjà connue</span>'
+        : '<span class="ak-pill ak-pill-gap">à combler</span>';
+      var names = (r.property_names||[]).slice(0,3).join(', ') + (((r.property_names||[]).length>3)?'…':'');
+      var fillBtn = r.covered ? '' : '<button class="ak-btn ak-fill" onclick="akFill('+idx+')">Combler</button>';
+      return '<div class="ak-row">'
+        + '<div style="flex:1;min-width:0;">'
+        +   '<div class="ak-q">'+esc(r.sample_question)+pill+'</div>'
+        +   '<div class="ak-meta">Posée '+r.cnt+'×'+(names?' · '+esc(names):'')+'</div>'
+        + '</div>'
+        + '<div class="ak-actions">'+fillBtn+'</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // Combler une lacune : enregistre la réponse comme fait pour TOUS les logements concernés
+  window.akFill = async function(idx){
+    var r = (_data.recurring||[])[idx];
+    if (!r) return;
+    var ans = prompt('Réponse à « '+r.sample_question+' »\n\nTapez "oui" ou "non" :');
+    if (ans === null) return;
+    var answer = /^o/i.test(ans.trim());
+    var detail = prompt('Précision à transmettre au voyageur (optionnel) :') || '';
+    var ids = (r.property_ids||[]).filter(Boolean);
+    if (!ids.length){ alert('Aucun logement associé à cette question.'); return; }
+    try{
+      for (var i=0;i<ids.length;i++){
+        await fetch('/api/properties/'+ids[i]+'/facts', {
+          method:'POST',
+          headers:{'Content-Type':'application/json', Authorization:'Bearer '+tok()},
+          body: JSON.stringify({ question: r.sample_question, answer: answer, detail: detail.trim() })
+        });
+      }
+      loadAiKnowledge();
+    }catch(e){ alert('Erreur lors de l\'enregistrement du fait'); }
+  };
+
+  function renderCoverage(list){
+    var el = document.getElementById('akCoverageList');
+    if (!el) return;
+    if (!list.length){ el.innerHTML = emptyMsg('Aucun logement.'); return; }
+    var max = Math.max.apply(null, list.map(function(c){ return c.facts_count; }).concat([1]));
+    el.innerHTML = list.map(function(c){
+      var pct = Math.round((c.facts_count / max) * 100);
+      return '<div class="ak-cov">'
+        + '<div class="ak-cov-name">'+esc(c.name)+'</div>'
+        + '<div class="ak-cov-bar"><div class="ak-cov-fill" style="width:'+pct+'%;"></div></div>'
+        + '<div class="ak-cov-num">'+c.facts_count+'</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.loadAiKnowledge);
+  else window.loadAiKnowledge();
+})();
+</script>
+
+<script>
+// ===== RACCOURCIS MESSAGES =====
+(function() {
+  var MAX = 5;
+  var API = window.API_URL || 'https://lcc-booking-manager.onrender.com';
+
+  // --- Rendu d'un champ ---
+  window.addQuickReplyField = function(value) {
+    var list = document.getElementById('quickRepliesList');
+    var btn  = document.getElementById('addQuickReplyBtn');
+    if (!list) return;
+    var count = list.querySelectorAll('.qr-item').length;
+    if (count >= MAX) return;
+    var div = document.createElement('div');
+    div.className = 'qr-item';
+    div.style.cssText = 'display:flex;align-items:flex-start;gap:8px;';
+
+    var badge = document.createElement('span');
+    badge.style.cssText = 'flex-shrink:0;width:22px;height:22px;background:#10B981;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:10px;';
+    badge.textContent = count + 1;
+
+    var fields = document.createElement('div');
+    fields.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;';
+
+    // Extraire title et text selon le format reçu (string ou {title,text})
+    var titleVal = (value && typeof value === 'object') ? (value.title || '') : '';
+    var textVal  = (value && typeof value === 'object') ? (value.text  || '') : (value || '');
+
+    var titleInput = document.createElement('input');
+    titleInput.type = 'text'; titleInput.className = 'qr-title'; titleInput.maxLength = 50;
+    titleInput.placeholder = 'Titre affiché sur le bouton (ex: Code WiFi)';
+    titleInput.value = titleVal;
+    titleInput.style.cssText = 'padding:7px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:12px;font-weight:600;font-family:DM Sans,sans-serif;outline:none;background:#f9fafb;';
+    titleInput.addEventListener('focus', function() { this.style.borderColor='#10B981'; });
+    titleInput.addEventListener('blur',  function() { this.style.borderColor='#d1d5db'; });
+
+    var textInput = document.createElement('input');
+    textInput.type = 'text'; textInput.className = 'qr-input'; textInput.maxLength = 200;
+    textInput.placeholder = "Message envoyé au voyageur";
+    textInput.value = textVal;
+    textInput.style.cssText = 'padding:9px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:13px;font-family:DM Sans,sans-serif;outline:none;';
+    textInput.addEventListener('focus', function() { this.style.borderColor='#10B981'; });
+    textInput.addEventListener('blur',  function() { this.style.borderColor='#d1d5db'; });
+
+    fields.appendChild(titleInput);
+    fields.appendChild(textInput);
+
+    var del = document.createElement('button');
+    del.type = 'button';
+    del.style.cssText = 'flex-shrink:0;width:30px;height:30px;border:none;background:#fee2e2;color:#dc2626;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:7px;';
+    del.innerHTML = '<i class="fas fa-times"></i>';
+    del.addEventListener('click', function() {
+      div.remove();
+      document.querySelectorAll('#quickRepliesList .qr-item').forEach(function(el, i) {
+        var b = el.querySelector('span'); if (b) b.textContent = i + 1;
+      });
+      if (btn) btn.style.display = 'flex';
+    });
+
+    div.appendChild(badge); div.appendChild(fields); div.appendChild(del);
+    list.appendChild(div);
+    if (btn) btn.style.display = (count + 1) >= MAX ? 'none' : 'flex';
+  };
+
+  // --- Collecter les valeurs ---
+  function collectReplies() {
+    return Array.from(document.querySelectorAll('#quickRepliesList .qr-item'))
+      .map(function(item) {
+        var titleEl = item.querySelector('.qr-title');
+        var textEl  = item.querySelector('.qr-input');
+        var textVal  = textEl  ? textEl.value.trim()  : '';
+        var titleVal = titleEl ? titleEl.value.trim() : '';
+        if (!textVal) return null;
+        return { title: titleVal || textVal.slice(0, 30), text: textVal };
+      }).filter(Boolean);
+  }
+
+  // --- Sauvegarder via route dédiée ---
+  async function saveQuickReplies(propertyId) {
+    if (!propertyId) return;
+    var token = localStorage.getItem('lcc_token');
+    var replies = collectReplies();
+    try {
+      var res = await fetch(API + '/api/properties/' + propertyId + '/quick-replies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ quickReplies: replies })
+      });
+      if (res.ok) console.log('✅ Raccourcis sauvegardés:', replies);
+      else console.warn('⚠️ Erreur save raccourcis:', res.status);
+    } catch(e) { console.warn('Erreur raccourcis:', e); }
+  }
+
+  // --- Hook saveProperty pour déclencher save raccourcis après ---
+  setTimeout(function() {
+    // Hook editProperty pour charger les valeurs à l'ouverture
+    var _prevEdit = window.editProperty;
+    window.editProperty = function(prop) {
+      if (typeof _prevEdit === 'function') _prevEdit(prop);
+      var list = document.getElementById('quickRepliesList');
+      if (list) list.innerHTML = '';
+      var btn = document.getElementById('addQuickReplyBtn');
+      if (btn) btn.style.display = 'flex';
+      var replies = prop.quick_replies || prop.quickReplies || [];
+      if (typeof replies === 'string') { try { replies = JSON.parse(replies); } catch(e) { replies = []; } }
+      if (!Array.isArray(replies)) replies = [];
+      console.log('📋 Raccourcis chargés:', replies);
+      replies.forEach(function(t) { window.addQuickReplyField(t); });
+    };
+
+    // Hook saveProperty pour sauvegarder les raccourcis juste après
+    var _prevSave = window.saveProperty;
+    window.saveProperty = async function(event) {
+      var result = typeof _prevSave === 'function' ? await _prevSave(event) : undefined;
+      // Attendre 300ms que le save principal finisse puis sauvegarder les raccourcis
+      setTimeout(function() {
+        var pidInput = document.getElementById('propertyId');
+        if (pidInput && pidInput.value) {
+          saveQuickReplies(pidInput.value);
+        }
+      }, 300);
+      return result;
+    };
+
+    console.log('✅ Module raccourcis installé');
+  }, 500);
+})();
+</script>
+<script>
+// ── Min Stay Save Hook ──
+(function() {
+  setTimeout(function() {
+    var _prevSave2 = window.saveProperty;
+    window.saveProperty = async function(event) {
+      var result = typeof _prevSave2 === 'function' ? await _prevSave2(event) : undefined;
+      setTimeout(async function() {
+        var pidInput = document.getElementById('propertyId');
+        var minStayInput = document.getElementById('propertyMinStay');
+        if (!pidInput || !pidInput.value || !minStayInput) return;
+        var minNights = parseInt(minStayInput.value) || 1;
+        var ruleId = minStayInput.dataset.ruleId;
+        var token = localStorage.getItem('lcc_token');
+        try {
+          if (ruleId) {
+            await fetch('/api/pricing/rules/' + ruleId, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+              body: JSON.stringify({ min_nights: minNights, name: 'Nuitées minimum (défaut)', rule_type: 'min_stay' })
+            });
+          } else {
+            var resp = await fetch('/api/pricing/rules', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+              body: JSON.stringify({ property_id: pidInput.value, name: 'Nuitées minimum (défaut)', rule_type: 'min_stay', min_nights: minNights })
+            });
+            var data = await resp.json();
+            if (data.rule && data.rule.id) minStayInput.dataset.ruleId = data.rule.id;
+          }
+          console.log('✅ Min stay sauvegardé:', minNights);
+        } catch(e) { console.error('Erreur save min_stay:', e); }
+      }, 400);
+      return result;
+    };
+    console.log('✅ Module nuitées minimum installé');
+  }, 600);
+})();
+</script>
+<script>
+// ── Channex Property Selector ──────────────────────────────
+let _channexPropertiesCache = null;
+let _currentEditingPropertyId = null;
+let _currentEditingPropertyConnected = false;
+let _currentEditingPropertyName = '';
+
+document.addEventListener('DOMContentLoaded', function() {
+  // loadPlatformIds(); // supprimé — fonction retirée du JS
+});
+</script>
+<script src="/js/bh-onboarding-pages.js"></script>
+<!-- AVIS OTA : fonctions dans settings.js -->
