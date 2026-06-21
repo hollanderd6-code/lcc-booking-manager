@@ -50,8 +50,11 @@ function buildTemporalContext(ctx) {
   const checkin  = ctx.checkinDt  ? new Date(ctx.checkinDt)  : null;
   const checkout = ctx.checkoutDt ? new Date(ctx.checkoutDt) : null;
 
-  const fmtDate = (d) => d ? d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' }) : null;
-  const fmtTime = (d) => d ? d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }) : null;
+  // ⚠️ timeZone explicite : sans ça, le serveur (Render = UTC) donne l'heure UTC à l'IA,
+  // qui résout alors les heures relatives ("dans 30 min") contre une horloge décalée.
+  const TZ = 'Europe/Paris';
+  const fmtDate = (d) => d ? d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', timeZone: TZ }) : null;
+  const fmtTime = (d) => d ? d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', timeZone: TZ }) : null;
 
   let phase = 'before';
   let daysUntilCheckin = null;
@@ -80,7 +83,7 @@ function buildTemporalContext(ctx) {
   }
 
   const lines = [];
-  lines.push(`- Date/heure actuelle : ${now.toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'})} à ${fmtTime(now)}`);
+  lines.push(`- Date/heure actuelle : ${now.toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:TZ})} à ${fmtTime(now)}`);
   if (checkin)  lines.push(`- Date d'arrivée prévue : ${fmtDate(checkin)} (check-in à partir de ${ctx.arrivalTime || '15h00'})`);
   if (checkout) lines.push(`- Date de départ prévue : ${fmtDate(checkout)} (check-out avant ${ctx.departureTime || '11h00'})`);
 
