@@ -12824,6 +12824,9 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
            FROM reservations
            WHERE property_id = $1
            AND status != 'cancelled'
+           AND COALESCE(reservation_type,'') != 'block'
+           AND COALESCE(source,'') != 'BLOCK'
+           AND COALESCE(platform,'') != 'BLOCK'
            AND DATE(end_date) >= $2
            AND DATE(end_date) <= $3`,
           [propId, todayStr, endOfNextMonth]
@@ -12843,6 +12846,7 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
         // Dédupliquer par dates — garder la résa la plus récente
         const seenDates = new Map();
         for (const r of propReservations) {
+          if (r.type === 'block' || r.source === 'BLOCK' || r.platform === 'BLOCK') continue;
           const rEnd   = String(r.end   || r.end_date   || '').slice(0, 10);
           const rStart = String(r.start || r.start_date || '').slice(0, 10);
           if (!rEnd || !rStart) continue;
@@ -12928,7 +12932,7 @@ if (reservation_key && reservation_key !== null) {
   let reservationNotes = '';
   try {
     const resaRow = await pool.query(
-      `SELECT guest_name, notes FROM reservations
+      `SELECT guest_name, notes, reservation_type, source, platform FROM reservations
        WHERE property_id = $1
        AND TO_CHAR(start_date, 'YYYY-MM-DD') = $2
        AND TO_CHAR(end_date, 'YYYY-MM-DD') = $3
@@ -12936,14 +12940,18 @@ if (reservation_key && reservation_key !== null) {
        LIMIT 1`,
       [property_id, startDate, endDate]
     );
-    guestName = resaRow.rows[0]?.guest_name || '';
-    reservationNotes = cleanReservationNote(resaRow.rows[0]?.notes);
+    const _resa = resaRow.rows[0];
+    // Ne pas générer de tâche de ménage pour un blocage calendrier (manuel ou iCal)
+    if (_resa && (_resa.reservation_type === 'block' || _resa.source === 'BLOCK' || _resa.platform === 'BLOCK')) continue;
+    guestName = _resa?.guest_name || '';
+    reservationNotes = cleanReservationNote(_resa?.notes);
   } catch(e) {
     const r = (reservationsStore.properties[property_id] || []).find(r => {
       const rStart = String(r.start || '').slice(0, 10);
       const rEnd   = String(r.end   || '').slice(0, 10);
       return `${property_id}_${rStart}_${rEnd}` === reservation_key;
     });
+    if (r && (r.type === 'block' || r.source === 'BLOCK' || r.platform === 'BLOCK')) continue;
     guestName = r?.guestName || r?.name || '';
     reservationNotes = cleanReservationNote(r?.notes);
   }
@@ -12967,6 +12975,7 @@ if (reservation_key && reservation_key !== null) {
         const propertyReservations = reservationsStore.properties[property_id] || [];
         propertyReservations.forEach(r => {
           if (!r.end) return;
+          if (r.type === 'block' || r.source === 'BLOCK' || r.platform === 'BLOCK') return;
           const endStr = String(r.end).slice(0, 10);
           if (endStr < todayStr) return;
           
