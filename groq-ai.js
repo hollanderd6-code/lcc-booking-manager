@@ -113,6 +113,52 @@ function buildTemporalContext(ctx) {
 }
 
 // ─────────────────────────────────────────────
+// Résolution FIABLE d'une heure relative ("dans 30 min", "dans 1h30"…)
+// Le calcul est fait ICI (heure de Paris), pas par le LLM — les modèles se
+// trompent souvent sur l'arithmétique horaire. Renvoie { matched, timeLabel } ou null.
+// ─────────────────────────────────────────────
+const _WORD_NUM = { 'quarante-cinq':45,'quarante':40,'cinquante':50,'trente':30,'vingt':20,'quinze':15,'douze':12,'onze':11,'dix':10,'neuf':9,'huit':8,'sept':7,'cinq':5,'quatre':4,'trois':3,'deux':2,'une':1,'un':1 };
+function _numFr(s) {
+  if (s == null) return null;
+  s = String(s).trim().toLowerCase();
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  return _WORD_NUM[s] != null ? _WORD_NUM[s] : null;
+}
+function resolveRelativeTime(text, now) {
+  if (!text) return null;
+  const t = String(text).toLowerCase();
+  const numPat = '(\\d{1,3}|' + Object.keys(_WORD_NUM).join('|') + ')';
+  let addMin = null, matched = null, m;
+
+  // "dans 1h30", "dans 1 h 30"
+  m = t.match(/\b(?:dans|in)\s+(\d{1,2})\s*h(?:eures?)?\s*(\d{1,2})\b/);
+  if (m) { addMin = parseInt(m[1],10)*60 + parseInt(m[2],10); matched = m[0]; }
+
+  // "dans une demi-heure", "dans 1/2 heure"
+  if (addMin == null) {
+    m = t.match(/\b(?:dans|in)\s+(?:une\s+)?demi[-\s]?heure\b/) || t.match(/\bdans\s+1\/2\s*h(?:eure)?\b/);
+    if (m) { addMin = 30; matched = m[0]; }
+  }
+  // "dans X heure(s)" / "in X hour(s)" / "dans Xh"
+  if (addMin == null) {
+    m = t.match(new RegExp('\\b(?:dans|in)\\s+' + numPat + '\\s*(?:h\\b|heures?\\b|hours?\\b|hr\\b)'));
+    if (m) { const n = _numFr(m[1]); if (n != null) { addMin = n*60; matched = m[0]; } }
+  }
+  // "dans X minute(s)" / "in X min"
+  if (addMin == null) {
+    m = t.match(new RegExp('\\b(?:dans|in)\\s+' + numPat + '\\s*(?:min\\b|mins?\\b|minutes?\\b|mn\\b)'));
+    if (m) { const n = _numFr(m[1]); if (n != null) { addMin = n; matched = m[0]; } }
+  }
+
+  if (addMin == null || addMin <= 0 || addMin > 24*60) return null;
+  const target = new Date(now.getTime() + addMin*60*1000);
+  const timeLabel = target
+    .toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Paris' })
+    .replace(':', 'h');
+  return { matched: String(matched).trim(), timeLabel, addMin };
+}
+
+// ─────────────────────────────────────────────
 // Construction du prompt système
 // ─────────────────────────────────────────────
 
@@ -444,7 +490,13 @@ async function getGroqResponse(userMessage, conversationContext = {}, messageHis
       departureTime: conversationContext.departureTime,
     });
 
-    const systemPrompt = buildSystemPrompt(conversationContext, temporalCtx, fewShotExamples);
+    let systemPrompt = buildSystemPrompt(conversationContext, temporalCtx, fewShotExamples);
+
+    // Heure relative ("dans 30 min"…) résolue côté code → l'IA ne calcule pas elle-même.
+    const _rel = resolveRelativeTime(userMessage, new Date());
+    if (_rel) {
+      systemPrompt += `\n\n⏱️ HEURE RELATIVE DÉJÀ CALCULÉE (FIABLE) : le voyageur écrit « ${_rel.matched} », ce qui correspond exactement à ${_rel.timeLabel} (heure de Paris). Si tu mentionnes une heure, emploie EXACTEMENT ${_rel.timeLabel}. N'effectue toi-même AUCUN calcul d'heure.`;
+    }
 
     const groqMessages = [
       { role: 'system', content: systemPrompt },
@@ -506,7 +558,12 @@ async function getOwnerDraftResponse(lastGuestMessage, conversationContext = {},
     });
 
     const ctx = { ...conversationContext, ownerDraftMode: true };
-    const systemPrompt = buildSystemPrompt(ctx, temporalCtx, fewShotExamples);
+    let systemPrompt = buildSystemPrompt(ctx, temporalCtx, fewShotExamples);
+
+    const _rel = resolveRelativeTime(lastGuestMessage, new Date());
+    if (_rel) {
+      systemPrompt += `\n\n⏱️ HEURE RELATIVE DÉJÀ CALCULÉE (FIABLE) : le voyageur écrit « ${_rel.matched} », ce qui correspond exactement à ${_rel.timeLabel} (heure de Paris). Si tu mentionnes une heure, emploie EXACTEMENT ${_rel.timeLabel}. N'effectue toi-même AUCUN calcul d'heure.`;
+    }
 
     const groqMessages = [
       { role: 'system', content: systemPrompt },
