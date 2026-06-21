@@ -305,6 +305,18 @@
       color: white;
     }
 
+    .maint-filter {
+      cursor:pointer; border:1px solid var(--border); background:var(--bg-card,#f7f5f0);
+      color:var(--text-secondary); font-family:inherit; font-size:13px; font-weight:600;
+      padding:6px 13px; border-radius:18px; transition:all .15s;
+    }
+    .maint-filter.active { background:var(--accent,#1A7A5E); color:#fff; border-color:var(--accent,#1A7A5E); }
+    .maint-label { display:block; font-size:12.5px; font-weight:600; color:var(--text-secondary); margin-bottom:5px; }
+    .maint-input {
+      width:100%; padding:10px 12px; border:1px solid var(--border,#ddd); border-radius:10px;
+      font-size:14px; font-family:inherit; background:var(--bg,#fff); color:var(--text,#111); box-sizing:border-box;
+    }
+
     .cleaning-tab-panel {
       display: none;
     }
@@ -1559,6 +1571,10 @@ html[data-theme-v3="1"] #templatesList > div {
     <i class="fas fa-basket-shopping"></i><span class="tab-label"> Réassort</span>
     <span class="tab-badge" id="restockBadge" style="display:none">0</span>
   </button>
+  <button class="cleaning-tab" data-tab="maintenance" onclick="switchTab('maintenance')">
+    <i class="fas fa-screwdriver-wrench"></i><span class="tab-label"> Maintenance</span>
+    <span class="tab-badge" id="maintBadge" style="display:none">0</span>
+  </button>
 </div>
 
 <!-- ===== TAB 1 : ÉQUIPE & ASSIGNATION ===== -->
@@ -1884,6 +1900,119 @@ html[data-theme-v3="1"] #templatesList > div {
       </button>
     </div>
   </section>
+</div>
+
+<!-- ════════ PANEL MAINTENANCE ════════ -->
+<div class="cleaning-tab-panel" id="panel-maintenance">
+  <section class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-screwdriver-wrench"></i> Incidents &amp; interventions</div>
+      <button style="cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;font-weight:700;padding:8px 14px;border-radius:10px;font-size:13px;white-space:nowrap;flex:0 0 auto;width:auto;" onclick="openTicketModal()">
+        <i class="fas fa-plus"></i> Nouveau ticket
+      </button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 14px;" id="maintFilters">
+      <button class="maint-filter active" data-st="open" onclick="setMaintFilter('open')">À traiter</button>
+      <button class="maint-filter" data-st="in_progress" onclick="setMaintFilter('in_progress')">En cours</button>
+      <button class="maint-filter" data-st="resolved" onclick="setMaintFilter('resolved')">Résolus</button>
+      <button class="maint-filter" data-st="" onclick="setMaintFilter('')">Tous</button>
+    </div>
+    <div id="maintTicketsList"><p class="text-secondary">Chargement…</p></div>
+  </section>
+
+  <section class="card" style="margin-top:16px;">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-address-book"></i> Carnet d'artisans</div>
+      <button style="cursor:pointer;border:none;background:#fff;color:var(--accent,#1A7A5E);border:1px solid var(--border);font-weight:700;padding:8px 14px;border-radius:10px;font-size:13px;white-space:nowrap;flex:0 0 auto;width:auto;" onclick="openArtisanModal()">
+        <i class="fas fa-plus"></i> Ajouter
+      </button>
+    </div>
+    <div id="maintArtisansList"><p class="text-secondary">Chargement…</p></div>
+  </section>
+</div>
+
+<!-- Modal ticket -->
+<div class="checklist-detail-modal" id="ticketModal">
+  <div class="checklist-detail-overlay" onclick="closeTicketModal()"></div>
+  <div class="checklist-detail-panel" style="max-width:460px;">
+    <div class="checklist-detail-header">
+      <div style="font-size:17px;font-weight:700;" id="ticketModalTitle">Nouveau ticket</div>
+      <button class="checklist-detail-close" onclick="closeTicketModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <input type="hidden" id="ticketId">
+      <div>
+        <label class="maint-label">Logement</label>
+        <select id="ticketProperty" class="maint-input"></select>
+      </div>
+      <div>
+        <label class="maint-label">Objet</label>
+        <input id="ticketTitle" class="maint-input" type="text" maxlength="140" placeholder="Ex : Chauffe-eau en panne">
+      </div>
+      <div>
+        <label class="maint-label">Détails (optionnel)</label>
+        <textarea id="ticketDesc" class="maint-input" rows="3" maxlength="2000" placeholder="Décrivez le problème…"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <label class="maint-label">Priorité</label>
+          <select id="ticketPriority" class="maint-input">
+            <option value="low">Faible</option>
+            <option value="normal" selected>Normale</option>
+            <option value="high">Haute</option>
+            <option value="urgent">Urgente</option>
+          </select>
+        </div>
+        <div style="flex:1;">
+          <label class="maint-label">Statut</label>
+          <select id="ticketStatus" class="maint-input">
+            <option value="open">À traiter</option>
+            <option value="in_progress">En cours</option>
+            <option value="resolved">Résolu</option>
+            <option value="closed">Clôturé</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="maint-label">Artisan assigné</label>
+        <select id="ticketArtisan" class="maint-input"><option value="">— Aucun —</option></select>
+        <p class="text-secondary" style="font-size:12px;margin:5px 0 0;">L'artisan reçoit un email + SMS lors de l'assignation.</p>
+      </div>
+      <button onclick="saveTicket()" style="margin-top:4px;cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:15px;">
+        <i class="fas fa-check"></i> Enregistrer
+      </button>
+      <button id="ticketDeleteBtn" onclick="deleteTicket()" style="display:none;cursor:pointer;border:none;background:transparent;color:#dc2626;font-weight:600;padding:6px;font-size:13px;">
+        <i class="fas fa-trash"></i> Supprimer ce ticket
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal artisan -->
+<div class="checklist-detail-modal" id="artisanModal">
+  <div class="checklist-detail-overlay" onclick="closeArtisanModal()"></div>
+  <div class="checklist-detail-panel" style="max-width:420px;">
+    <div class="checklist-detail-header">
+      <div style="font-size:17px;font-weight:700;" id="artisanModalTitle">Nouvel artisan</div>
+      <button class="checklist-detail-close" onclick="closeArtisanModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <input type="hidden" id="artisanId">
+      <div><label class="maint-label">Nom</label><input id="artisanName" class="maint-input" type="text" maxlength="100" placeholder="Ex : Plomberie Martin"></div>
+      <div><label class="maint-label">Métier (optionnel)</label><input id="artisanTrade" class="maint-input" type="text" maxlength="60" placeholder="Ex : Plombier"></div>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;"><label class="maint-label">Téléphone</label><input id="artisanPhone" class="maint-input" type="tel" maxlength="30" placeholder="06…"></div>
+        <div style="flex:1;"><label class="maint-label">Email</label><input id="artisanEmail" class="maint-input" type="email" maxlength="120" placeholder="email@…"></div>
+      </div>
+      <div><label class="maint-label">Notes (optionnel)</label><input id="artisanNotes" class="maint-input" type="text" maxlength="500" placeholder="Ex : Dispo le week-end"></div>
+      <button onclick="saveArtisan()" style="margin-top:4px;cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:15px;">
+        <i class="fas fa-check"></i> Enregistrer
+      </button>
+      <button id="artisanDeleteBtn" onclick="deleteArtisan()" style="display:none;cursor:pointer;border:none;background:transparent;color:#dc2626;font-weight:600;padding:6px;font-size:13px;">
+        <i class="fas fa-trash"></i> Supprimer cet artisan
+      </button>
+    </div>
+  </div>
 </div>
 
 <div class="checklist-detail-modal" id="qrModal">
@@ -2822,6 +2951,7 @@ function formatDateFr(dateStr) {
         if (tabId === 'templates') loadTemplates();
         if (tabId === 'stats') loadStats();
         if (tabId === 'restock') { loadRestockAlerts(); initRestockPropertySelect(); loadRestockCatalog(); }
+        if (tabId === 'maintenance') { loadMaintTickets(); loadArtisans(); }
       }
       window.switchTab = switchTab;
 
@@ -2987,6 +3117,227 @@ function formatDateFr(dateStr) {
         } catch (e) { console.error(e); }
       }
       window.deleteRestockItem = deleteRestockItem;
+
+      // ========== MAINTENANCE / INCIDENTS ==========
+      let maintTickets = [];
+      let maintArtisans = [];
+      let maintFilter = 'open';
+      const MAINT_PRIO = { low:{l:'Faible',c:'#64748b'}, normal:{l:'Normale',c:'#0ea5e9'}, high:{l:'Haute',c:'#f59e0b'}, urgent:{l:'Urgente',c:'#dc2626'} };
+      const MAINT_ST = { open:{l:'À traiter',c:'#dc2626'}, in_progress:{l:'En cours',c:'#f59e0b'}, resolved:{l:'Résolu',c:'#10b981'}, closed:{l:'Clôturé',c:'#64748b'} };
+
+      function _maintHeaders() {
+        const token = localStorage.getItem('lcc_token');
+        return token ? { Authorization: 'Bearer ' + token } : {};
+      }
+      function _maintEsc(s) {
+        return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      }
+
+      function setMaintFilter(st) {
+        maintFilter = st;
+        document.querySelectorAll('#maintFilters .maint-filter').forEach(b => b.classList.toggle('active', b.dataset.st === st));
+        renderMaintTickets();
+      }
+      window.setMaintFilter = setMaintFilter;
+
+      async function loadMaintTickets() {
+        const wrap = document.getElementById('maintTicketsList');
+        if (!wrap) return;
+        try {
+          const res = await fetch(API_URL + '/api/maintenance/tickets', { headers: _maintHeaders() });
+          if (!res.ok) throw new Error('err');
+          const data = await res.json();
+          maintTickets = data.tickets || [];
+          const openCount = maintTickets.filter(t => t.status === 'open').length;
+          const badge = document.getElementById('maintBadge');
+          if (badge) { if (openCount > 0) { badge.textContent = openCount; badge.style.display = 'inline-flex'; } else badge.style.display = 'none'; }
+          renderMaintTickets();
+        } catch (err) {
+          console.error('Erreur tickets:', err);
+          wrap.innerHTML = '<p class="text-secondary">Impossible de charger les tickets.</p>';
+        }
+      }
+      window.loadMaintTickets = loadMaintTickets;
+
+      function renderMaintTickets() {
+        const wrap = document.getElementById('maintTicketsList');
+        if (!wrap) return;
+        const list = maintFilter ? maintTickets.filter(t => t.status === maintFilter) : maintTickets;
+        if (list.length === 0) {
+          wrap.innerHTML = '<div style="text-align:center;padding:26px 12px;color:var(--text-secondary);">'
+            + '<i class="fas fa-clipboard-check" style="font-size:28px;color:#10b981;margin-bottom:10px;"></i>'
+            + '<p style="margin:0;font-weight:600;">Aucun ticket</p></div>';
+          return;
+        }
+        wrap.innerHTML = list.map(t => {
+          const prio = MAINT_PRIO[t.priority] || MAINT_PRIO.normal;
+          const st = MAINT_ST[t.status] || MAINT_ST.open;
+          const pname = getPropertyNameById(t.property_id);
+          const when = t.created_at ? new Date(t.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
+          const byTxt = t.created_by === 'cleaner' ? ('🧹 ' + _maintEsc(t.created_by_name || 'Agent'))
+                      : (t.created_by_name ? _maintEsc(t.created_by_name) : 'Hôte');
+          return '<div onclick="openTicketModal(' + t.id + ')" style="cursor:pointer;border:1px solid var(--border);border-left:4px solid ' + prio.c + ';border-radius:12px;padding:13px 15px;margin-bottom:10px;">'
+            + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
+            + '<div style="font-weight:700;font-size:15px;">' + _maintEsc(t.title) + '</div>'
+            + '<span style="flex-shrink:0;font-size:11px;font-weight:700;padding:3px 9px;border-radius:14px;background:' + st.c + '1a;color:' + st.c + ';">' + st.l + '</span>'
+            + '</div>'
+            + '<div style="font-size:12.5px;color:var(--text-secondary);margin-top:5px;">'
+            + '<span style="color:var(--accent,#1A7A5E);font-weight:600;">' + _maintEsc(pname) + '</span>'
+            + ' · ' + byTxt + (when ? ' · ' + when : '')
+            + (t.artisan_name ? ' · <i class="fas fa-screwdriver-wrench"></i> ' + _maintEsc(t.artisan_name) : '')
+            + '</div>'
+            + (t.description ? '<div style="font-size:13px;color:var(--text);margin-top:7px;opacity:.85;">' + _maintEsc(String(t.description).slice(0,120)) + (t.description.length>120?'…':'') + '</div>' : '')
+            + '</div>';
+        }).join('');
+      }
+
+      function fillTicketSelects() {
+        // Logements
+        const psel = document.getElementById('ticketProperty');
+        if (psel && Array.isArray(PROPERTIES)) {
+          psel.innerHTML = '';
+          const seen = new Set();
+          PROPERTIES.forEach(p => {
+            const id = p.id != null ? p.id : p.propertyId;
+            if (!id || seen.has(String(id))) return; seen.add(String(id));
+            const o = document.createElement('option'); o.value = String(id);
+            o.textContent = p.name || p.title || p.label || ('Logement ' + id);
+            psel.appendChild(o);
+          });
+        }
+        // Artisans
+        const asel = document.getElementById('ticketArtisan');
+        if (asel) {
+          asel.innerHTML = '<option value="">— Aucun —</option>';
+          maintArtisans.forEach(a => {
+            const o = document.createElement('option'); o.value = String(a.id);
+            o.textContent = a.name + (a.trade ? ' (' + a.trade + ')' : '');
+            asel.appendChild(o);
+          });
+        }
+      }
+
+      function openTicketModal(id) {
+        fillTicketSelects();
+        const t = id ? maintTickets.find(x => x.id === id) : null;
+        document.getElementById('ticketModalTitle').textContent = t ? 'Modifier le ticket' : 'Nouveau ticket';
+        document.getElementById('ticketId').value = t ? t.id : '';
+        document.getElementById('ticketProperty').value = t ? t.property_id : (document.getElementById('ticketProperty').options[0]?.value || '');
+        document.getElementById('ticketTitle').value = t ? t.title : '';
+        document.getElementById('ticketDesc').value = t ? (t.description || '') : '';
+        document.getElementById('ticketPriority').value = t ? t.priority : 'normal';
+        document.getElementById('ticketStatus').value = t ? t.status : 'open';
+        document.getElementById('ticketArtisan').value = t && t.artisan_id ? String(t.artisan_id) : '';
+        document.getElementById('ticketDeleteBtn').style.display = t ? 'block' : 'none';
+        document.getElementById('ticketModal').classList.add('active');
+      }
+      window.openTicketModal = openTicketModal;
+      function closeTicketModal() { document.getElementById('ticketModal').classList.remove('active'); }
+      window.closeTicketModal = closeTicketModal;
+
+      async function saveTicket() {
+        const id = document.getElementById('ticketId').value;
+        const body = {
+          propertyId: document.getElementById('ticketProperty').value,
+          title: document.getElementById('ticketTitle').value.trim(),
+          description: document.getElementById('ticketDesc').value.trim(),
+          priority: document.getElementById('ticketPriority').value,
+          status: document.getElementById('ticketStatus').value,
+          artisanId: document.getElementById('ticketArtisan').value || null
+        };
+        if (!body.propertyId || !body.title) { alert('Logement et objet requis'); return; }
+        try {
+          const url = id ? (API_URL + '/api/maintenance/tickets/' + id) : (API_URL + '/api/maintenance/tickets');
+          const method = id ? 'PATCH' : 'POST';
+          const res = await fetch(url, { method, headers: Object.assign({'Content-Type':'application/json'}, _maintHeaders()), body: JSON.stringify(body) });
+          if (!res.ok) throw new Error('err');
+          const data = await res.json();
+          closeTicketModal();
+          loadMaintTickets();
+          if (data.notified) alert('Artisan notifié par email + SMS ✅');
+        } catch (e) { console.error(e); alert('Erreur lors de l\'enregistrement'); }
+      }
+      window.saveTicket = saveTicket;
+
+      async function deleteTicket() {
+        const id = document.getElementById('ticketId').value;
+        if (!id || !confirm('Supprimer ce ticket ?')) return;
+        try {
+          await fetch(API_URL + '/api/maintenance/tickets/' + id, { method: 'DELETE', headers: _maintHeaders() });
+          closeTicketModal(); loadMaintTickets();
+        } catch (e) { console.error(e); }
+      }
+      window.deleteTicket = deleteTicket;
+
+      // ── Artisans ──
+      async function loadArtisans() {
+        const wrap = document.getElementById('maintArtisansList');
+        try {
+          const res = await fetch(API_URL + '/api/maintenance/artisans', { headers: _maintHeaders() });
+          if (!res.ok) throw new Error('err');
+          const data = await res.json();
+          maintArtisans = data.artisans || [];
+          if (!wrap) return;
+          if (maintArtisans.length === 0) {
+            wrap.innerHTML = '<p class="text-secondary" style="font-size:13px;">Aucun artisan. Ajoutez vos prestataires pour les assigner en un clic.</p>';
+            return;
+          }
+          wrap.innerHTML = maintArtisans.map(a =>
+            '<div onclick="openArtisanModal(' + a.id + ')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-top:1px solid var(--border);">'
+            + '<div><div style="font-weight:600;font-size:14px;">' + _maintEsc(a.name) + (a.trade ? ' <span style="font-size:12px;color:var(--text-secondary);font-weight:400;">· ' + _maintEsc(a.trade) + '</span>' : '') + '</div>'
+            + '<div style="font-size:12px;color:var(--text-secondary);">' + [a.phone, a.email].filter(Boolean).map(_maintEsc).join(' · ') + '</div></div>'
+            + '<i class="fas fa-chevron-right" style="color:var(--text-tertiary);font-size:12px;"></i></div>'
+          ).join('');
+        } catch (e) { console.error('Erreur artisans:', e); if (wrap) wrap.innerHTML = '<p class="text-secondary">Impossible de charger.</p>'; }
+      }
+      window.loadArtisans = loadArtisans;
+
+      function openArtisanModal(id) {
+        const a = id ? maintArtisans.find(x => x.id === id) : null;
+        document.getElementById('artisanModalTitle').textContent = a ? 'Modifier l\'artisan' : 'Nouvel artisan';
+        document.getElementById('artisanId').value = a ? a.id : '';
+        document.getElementById('artisanName').value = a ? a.name : '';
+        document.getElementById('artisanTrade').value = a ? (a.trade || '') : '';
+        document.getElementById('artisanPhone').value = a ? (a.phone || '') : '';
+        document.getElementById('artisanEmail').value = a ? (a.email || '') : '';
+        document.getElementById('artisanNotes').value = a ? (a.notes || '') : '';
+        document.getElementById('artisanDeleteBtn').style.display = a ? 'block' : 'none';
+        document.getElementById('artisanModal').classList.add('active');
+      }
+      window.openArtisanModal = openArtisanModal;
+      function closeArtisanModal() { document.getElementById('artisanModal').classList.remove('active'); }
+      window.closeArtisanModal = closeArtisanModal;
+
+      async function saveArtisan() {
+        const id = document.getElementById('artisanId').value;
+        const body = {
+          name: document.getElementById('artisanName').value.trim(),
+          trade: document.getElementById('artisanTrade').value.trim(),
+          phone: document.getElementById('artisanPhone').value.trim(),
+          email: document.getElementById('artisanEmail').value.trim(),
+          notes: document.getElementById('artisanNotes').value.trim()
+        };
+        if (!body.name) { alert('Nom requis'); return; }
+        try {
+          const url = id ? (API_URL + '/api/maintenance/artisans/' + id) : (API_URL + '/api/maintenance/artisans');
+          const method = id ? 'PATCH' : 'POST';
+          const res = await fetch(url, { method, headers: Object.assign({'Content-Type':'application/json'}, _maintHeaders()), body: JSON.stringify(body) });
+          if (!res.ok) throw new Error('err');
+          closeArtisanModal(); loadArtisans();
+        } catch (e) { console.error(e); alert('Erreur'); }
+      }
+      window.saveArtisan = saveArtisan;
+
+      async function deleteArtisan() {
+        const id = document.getElementById('artisanId').value;
+        if (!id || !confirm('Supprimer cet artisan ?')) return;
+        try {
+          await fetch(API_URL + '/api/maintenance/artisans/' + id, { method: 'DELETE', headers: _maintHeaders() });
+          closeArtisanModal(); loadArtisans();
+        } catch (e) { console.error(e); }
+      }
+      window.deleteArtisan = deleteArtisan;
+
 
 
       // ========== CHECKLISTS ==========
@@ -3719,6 +4070,8 @@ function formatDateFr(dateStr) {
         loadChecklistsList();
         // Charger les alertes réassort en arrière-plan pour le badge
         if (typeof loadRestockAlerts === 'function') loadRestockAlerts();
+        // Charger les tickets maintenance en arrière-plan pour le badge
+        if (typeof loadMaintTickets === 'function') { loadMaintTickets(); loadArtisans(); }
       })();
     });
   </script>

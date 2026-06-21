@@ -2022,6 +2022,39 @@ ON invoice_download_tokens(token);
       );
       CREATE INDEX IF NOT EXISTS idx_consumable_alerts_user ON consumable_alerts(user_id, status);
       CREATE INDEX IF NOT EXISTS idx_consumable_alerts_prop ON consumable_alerts(user_id, property_id, status);
+
+      -- ═══ MAINTENANCE / INCIDENTS ═══
+      CREATE TABLE IF NOT EXISTS maintenance_artisans (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        trade TEXT DEFAULT NULL,
+        phone TEXT DEFAULT NULL,
+        email TEXT DEFAULT NULL,
+        notes TEXT DEFAULT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_maint_artisans_user ON maintenance_artisans(user_id);
+
+      CREATE TABLE IF NOT EXISTS maintenance_tickets (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        property_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT DEFAULT NULL,
+        priority TEXT NOT NULL DEFAULT 'normal',
+        status TEXT NOT NULL DEFAULT 'open',
+        artisan_id INTEGER DEFAULT NULL REFERENCES maintenance_artisans(id) ON DELETE SET NULL,
+        photos JSONB DEFAULT '[]'::jsonb,
+        created_by TEXT DEFAULT 'host',
+        created_by_name TEXT DEFAULT NULL,
+        reservation_key TEXT DEFAULT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        resolved_at TIMESTAMPTZ DEFAULT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_maint_tickets_user ON maintenance_tickets(user_id, status);
+      CREATE INDEX IF NOT EXISTS idx_maint_tickets_prop ON maintenance_tickets(user_id, property_id, status);
     `);
 
     console.log('✅ Tables users, welcome_books, cleaners, user_settings, cleaning_assignments, cleaning_checklists & cleaning_templates OK dans Postgres');
@@ -13095,6 +13128,63 @@ app.get('/api/cleaning/consumables/:pinCode', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
+// POST - L'agent de ménage signale un problème → crée un ticket maintenance (accès via PIN)
+app.post('/api/cleaning/maintenance/:pinCode', async (req, res) => {
+  try {
+    const { pinCode } = req.params;
+    const { propertyId, title, description, priority, photos, reservationKey } = req.body;
+    if (!pinCode || !propertyId || !title || !title.trim()) {
+      return res.status(400).json({ error: 'Données manquantes' });
+    }
+    const cleanerResult = await pool.query(
+      'SELECT id, user_id, name FROM cleaners WHERE pin_code = $1 AND is_active = TRUE',
+      [pinCode]
+    );
+    if (cleanerResult.rows.length === 0) {
+      return res.status(401).json({ error: 'Code PIN invalide' });
+    }
+    const cleaner = cleanerResult.rows[0];
+    const prio = ['low','normal','high','urgent'].includes(priority) ? priority : 'normal';
+    const photoArr = Array.isArray(photos) ? photos.slice(0, 10) : [];
+
+    const result = await pool.query(
+      `INSERT INTO maintenance_tickets
+       (user_id, property_id, title, description, priority, photos, created_by, created_by_name, reservation_key)
+       VALUES ($1, $2, $3, $4, $5, $6, 'cleaner', $7, $8) RETURNING id`,
+      [cleaner.user_id, propertyId, title.trim().slice(0,140), (description||'').trim().slice(0,2000)||null,
+       prio, JSON.stringify(photoArr), cleaner.name, reservationKey || null]
+    );
+
+    try {
+      const property = PROPERTIES.find(p => p.id === propertyId);
+      const propName = displayName(property) || propertyId;
+      const prioTxt = prio === 'urgent' ? '🔴 URGENT — ' : '';
+      const ntitle = `🔧 Incident — ${propName}`;
+      const nbody = `${prioTxt}${cleaner.name} signale : ${title.trim()}`;
+      const pushData = { type: 'maintenance_ticket', propertyId, click_action: '/cleaning.html' };
+      const tokRes = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL', [cleaner.user_id]
+      );
+      if (tokRes.rows.length > 0) {
+        await sendNotificationToMultipleLogged(tokRes.rows.map(r => r.fcm_token), ntitle, nbody, pushData);
+      }
+      try {
+        await sendNotificationToSubAccountsOf(cleaner.user_id, 'can_view_cleaning', ntitle, nbody, pushData, 'notif_sub_cleaning_completed');
+      } catch(_) {}
+      if (typeof io !== 'undefined' && io) {
+        io.to(`user_${cleaner.user_id}`).emit('maintenance:new', { propertyId, title: title.trim() });
+      }
+    } catch (notifErr) {
+      console.error('❌ [MAINT] Notif incident échouée:', notifErr.message);
+    }
+
+    res.status(201).json({ success: true, ticketId: result.rows[0].id });
+  } catch (err) {
+    console.error('Erreur POST /api/cleaning/maintenance/:pinCode :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 // POST - Soumettre une checklist complétée (avec timer + notification propriétaire)
 // Route upload photo ménage (upload immédiat vers Cloudinary pour éviter crash mémoire iOS)
 app.post('/api/cleaning/photo-upload', async (req, res) => {
@@ -14125,6 +14215,269 @@ app.patch('/api/consumables/alerts/property/:propertyId/clear',
       res.json({ success: true, cleared: result.rows.length });
     } catch (err) {
       console.error('Erreur PATCH clear alerts :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// ═══════════════════════════════════════════════════════════
+// MAINTENANCE / INCIDENTS
+// ═══════════════════════════════════════════════════════════
+
+const MAINT_PRIORITIES = ['low', 'normal', 'high', 'urgent'];
+const MAINT_STATUSES = ['open', 'in_progress', 'resolved', 'closed'];
+
+async function notifyArtisanAssigned(ownerId, ticket, artisan) {
+  if (!artisan) return;
+  const property = PROPERTIES.find(p => p.id === ticket.property_id);
+  const propName = displayName(property) || ticket.property_id;
+  const prioLabel = { low: 'Faible', normal: 'Normale', high: 'Haute', urgent: 'URGENTE' }[ticket.priority] || 'Normale';
+
+  if (artisan.email) {
+    try {
+      const html = `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
+          <h2 style="color:#1A7A5E;">Nouvelle intervention demandée</h2>
+          <p>Bonjour ${artisan.name || ''},</p>
+          <p>Une intervention vous est assignée :</p>
+          <table style="border-collapse:collapse;width:100%;font-size:14px;">
+            <tr><td style="padding:6px 0;color:#666;">Logement</td><td style="padding:6px 0;font-weight:600;">${propName}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;">Objet</td><td style="padding:6px 0;font-weight:600;">${ticket.title}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;">Priorité</td><td style="padding:6px 0;font-weight:600;">${prioLabel}</td></tr>
+            ${ticket.description ? `<tr><td style="padding:6px 0;color:#666;vertical-align:top;">Détails</td><td style="padding:6px 0;">${String(ticket.description).replace(/</g,'&lt;')}</td></tr>` : ''}
+          </table>
+          <p style="margin-top:18px;color:#888;font-size:12px;">Envoyé via Boostinghost</p>
+        </div>`;
+      await sendEmail({
+        from: process.env.EMAIL_FROM ? `Boostinghost <${process.env.EMAIL_FROM}>` : undefined,
+        to: artisan.email,
+        subject: `🔧 Intervention — ${propName} : ${ticket.title}`,
+        html
+      });
+    } catch (e) { console.warn('⚠️ [MAINT] Email artisan échoué:', e.message); }
+  }
+
+  if (artisan.phone) {
+    try {
+      const sms = `Boostinghost — Intervention ${prioLabel} au logement ${propName} : ${ticket.title}.${ticket.description ? ' ' + String(ticket.description).slice(0, 120) : ''}`;
+      await sendSmsGateway(artisan.phone, sms, ownerId);
+    } catch (e) { console.warn('⚠️ [MAINT] SMS artisan échoué:', e.message); }
+  }
+}
+
+// ── ARTISANS (carnet) ──
+app.get('/api/maintenance/artisans',
+  authenticateAny, requirePermission(pool, 'can_view_cleaning'), loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount ? (await getRealUserId(pool, req)) : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+      const agencyIds = await getAgencyUserIds(req, userId);
+      const result = await pool.query(
+        `SELECT * FROM maintenance_artisans WHERE user_id = ANY($1::text[]) ORDER BY name ASC`,
+        [agencyIds]
+      );
+      res.json({ success: true, artisans: result.rows });
+    } catch (err) {
+      console.error('Erreur GET artisans :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+app.post('/api/maintenance/artisans',
+  authenticateAny, requirePermission(pool, 'can_manage_cleaning'), loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount ? (await getRealUserId(pool, req)) : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+      const { name, trade, phone, email, notes } = req.body;
+      if (!name || !name.trim()) return res.status(400).json({ error: 'Nom requis' });
+      const result = await pool.query(
+        `INSERT INTO maintenance_artisans (user_id, name, trade, phone, email, notes)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [userId, name.trim().slice(0,100), (trade||'').trim().slice(0,60)||null,
+         (phone||'').trim().slice(0,30)||null, (email||'').trim().slice(0,120)||null, (notes||'').trim().slice(0,500)||null]
+      );
+      res.status(201).json({ success: true, artisan: result.rows[0] });
+    } catch (err) {
+      console.error('Erreur POST artisan :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+app.patch('/api/maintenance/artisans/:id',
+  authenticateAny, requirePermission(pool, 'can_manage_cleaning'), loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount ? (await getRealUserId(pool, req)) : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+      const agencyIds = await getAgencyUserIds(req, userId);
+      const { name, trade, phone, email, notes } = req.body;
+      const result = await pool.query(
+        `UPDATE maintenance_artisans
+         SET name = COALESCE($1, name), trade = $2, phone = $3, email = $4, notes = $5
+         WHERE id = $6 AND user_id = ANY($7::text[]) RETURNING *`,
+        [name ? name.trim().slice(0,100) : null, (trade||'').trim().slice(0,60)||null,
+         (phone||'').trim().slice(0,30)||null, (email||'').trim().slice(0,120)||null,
+         (notes||'').trim().slice(0,500)||null, req.params.id, agencyIds]
+      );
+      if (result.rows.length === 0) return res.status(404).json({ error: 'Artisan non trouvé' });
+      res.json({ success: true, artisan: result.rows[0] });
+    } catch (err) {
+      console.error('Erreur PATCH artisan :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+app.delete('/api/maintenance/artisans/:id',
+  authenticateAny, requirePermission(pool, 'can_manage_cleaning'), loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount ? (await getRealUserId(pool, req)) : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+      const agencyIds = await getAgencyUserIds(req, userId);
+      const result = await pool.query(
+        `DELETE FROM maintenance_artisans WHERE id = $1 AND user_id = ANY($2::text[]) RETURNING id`,
+        [req.params.id, agencyIds]
+      );
+      if (result.rows.length === 0) return res.status(404).json({ error: 'Artisan non trouvé' });
+      res.json({ success: true, deleted: req.params.id });
+    } catch (err) {
+      console.error('Erreur DELETE artisan :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// ── TICKETS ──
+app.get('/api/maintenance/tickets',
+  authenticateAny, requirePermission(pool, 'can_view_cleaning'), loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount ? (await getRealUserId(pool, req)) : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+      const agencyIds = await getAgencyUserIds(req, userId);
+
+      const params = [agencyIds];
+      let query = `SELECT t.*, a.name AS artisan_name, a.phone AS artisan_phone, a.email AS artisan_email, a.trade AS artisan_trade
+                   FROM maintenance_tickets t
+                   LEFT JOIN maintenance_artisans a ON a.id = t.artisan_id
+                   WHERE t.user_id = ANY($1::text[])`;
+      if (req.query.propertyId) { params.push(req.query.propertyId); query += ` AND t.property_id = $${params.length}`; }
+      if (req.query.status) { params.push(req.query.status); query += ` AND t.status = $${params.length}`; }
+      query += ` ORDER BY
+        CASE t.status WHEN 'open' THEN 0 WHEN 'in_progress' THEN 1 WHEN 'resolved' THEN 2 ELSE 3 END,
+        CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,
+        t.created_at DESC`;
+
+      const result = await pool.query(query, params);
+      res.json({ success: true, tickets: result.rows });
+    } catch (err) {
+      console.error('Erreur GET tickets :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+app.post('/api/maintenance/tickets',
+  authenticateAny, requirePermission(pool, 'can_view_cleaning'), loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount ? (await getRealUserId(pool, req)) : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+      const { propertyId, title, description, priority, photos } = req.body;
+      if (!propertyId || !title || !title.trim()) {
+        return res.status(400).json({ error: 'Logement et objet requis' });
+      }
+      const prio = MAINT_PRIORITIES.includes(priority) ? priority : 'normal';
+      const photoArr = Array.isArray(photos) ? photos.slice(0, 10) : [];
+      const creatorName = (await getUserFromRequest(req))?.first_name || (req.user.isSubAccount ? 'Sous-compte' : 'Hôte');
+
+      const result = await pool.query(
+        `INSERT INTO maintenance_tickets (user_id, property_id, title, description, priority, photos, created_by, created_by_name)
+         VALUES ($1, $2, $3, $4, $5, $6, 'host', $7) RETURNING *`,
+        [userId, propertyId, title.trim().slice(0,140), (description||'').trim().slice(0,2000)||null, prio, JSON.stringify(photoArr), creatorName]
+      );
+      res.status(201).json({ success: true, ticket: result.rows[0] });
+    } catch (err) {
+      console.error('Erreur POST ticket :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+app.patch('/api/maintenance/tickets/:id',
+  authenticateAny, requirePermission(pool, 'can_manage_cleaning'), loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount ? (await getRealUserId(pool, req)) : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+      const agencyIds = await getAgencyUserIds(req, userId);
+
+      const existing = await pool.query(
+        `SELECT * FROM maintenance_tickets WHERE id = $1 AND user_id = ANY($2::text[])`,
+        [req.params.id, agencyIds]
+      );
+      if (existing.rows.length === 0) return res.status(404).json({ error: 'Ticket non trouvé' });
+      const ticket = existing.rows[0];
+
+      const { title, description, priority, status, artisanId, photos } = req.body;
+      const newStatus = MAINT_STATUSES.includes(status) ? status : ticket.status;
+      const newPrio = MAINT_PRIORITIES.includes(priority) ? priority : ticket.priority;
+      const newArtisanId = (artisanId === null || artisanId === undefined) ? ticket.artisan_id : artisanId;
+      const resolvedAt = (newStatus === 'resolved' || newStatus === 'closed')
+        ? (ticket.resolved_at || new Date()) : null;
+
+      const updated = await pool.query(
+        `UPDATE maintenance_tickets
+         SET title = COALESCE($1, title),
+             description = COALESCE($2, description),
+             priority = $3, status = $4, artisan_id = $5,
+             photos = COALESCE($6, photos),
+             resolved_at = $7, updated_at = NOW()
+         WHERE id = $8 RETURNING *`,
+        [title ? title.trim().slice(0,140) : null,
+         (description !== undefined ? (description||'').slice(0,2000) : null),
+         newPrio, newStatus, newArtisanId,
+         (Array.isArray(photos) ? JSON.stringify(photos.slice(0,10)) : null),
+         resolvedAt, req.params.id]
+      );
+
+      const justAssigned = newArtisanId && String(newArtisanId) !== String(ticket.artisan_id);
+      if (justAssigned) {
+        const artRes = await pool.query(`SELECT * FROM maintenance_artisans WHERE id = $1`, [newArtisanId]);
+        if (artRes.rows.length > 0) {
+          notifyArtisanAssigned(ticket.user_id, updated.rows[0], artRes.rows[0]).catch(()=>{});
+        }
+      }
+
+      res.json({ success: true, ticket: updated.rows[0], notified: !!justAssigned });
+    } catch (err) {
+      console.error('Erreur PATCH ticket :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+app.delete('/api/maintenance/tickets/:id',
+  authenticateAny, requirePermission(pool, 'can_manage_cleaning'), loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount ? (await getRealUserId(pool, req)) : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+      const agencyIds = await getAgencyUserIds(req, userId);
+      const result = await pool.query(
+        `DELETE FROM maintenance_tickets WHERE id = $1 AND user_id = ANY($2::text[]) RETURNING id`,
+        [req.params.id, agencyIds]
+      );
+      if (result.rows.length === 0) return res.status(404).json({ error: 'Ticket non trouvé' });
+      res.json({ success: true, deleted: req.params.id });
+    } catch (err) {
+      console.error('Erreur DELETE ticket :', err);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   }

@@ -844,6 +844,42 @@ html, body {
 .restock-chip.on i { color: #f97316; }
 .restock-chip:active { transform: scale(0.96); }
 
+/* ===== SIGNALEMENT INCIDENT ===== */
+.maint-report-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px 6px;
+  margin: 0 0 14px;
+}
+.maint-report-toggle {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--font); font-size: 15px; font-weight: 700; color: var(--text);
+  padding: 12px 10px;
+}
+.maint-report-toggle i.fa-screwdriver-wrench { color: #f59e0b; margin-right: 8px; }
+.maint-report-toggle .fa-chevron-down { font-size: 13px; color: var(--text-tertiary); transition: transform .2s; }
+#maintForm { padding: 4px 10px 12px; }
+.maint-field {
+  width: 100%; box-sizing: border-box; margin-bottom: 9px;
+  padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px;
+  font-family: var(--font); font-size: 14px; background: var(--bg); color: var(--text);
+}
+.maint-prio-row { display: flex; gap: 7px; margin-bottom: 11px; }
+.maint-prio {
+  flex: 1; padding: 9px 6px; border-radius: 9px; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--bg); color: var(--text-secondary);
+  font-family: var(--font); font-size: 13px; font-weight: 600; transition: all .15s;
+}
+.maint-prio.on { border-color: #dc2626; background: #fef2f2; color: #b91c1c; }
+.maint-send {
+  width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer;
+  background: #f59e0b; color: #fff; font-family: var(--font); font-size: 14.5px; font-weight: 700;
+}
+.maint-send:disabled { opacity: .7; }
+
 /* ===== SUBMIT BUTTON (FIXED BOTTOM) ===== */
 .checklist-submit-bar {
   position: fixed;
@@ -1959,6 +1995,50 @@ function toggleRestock(idx) {
   renderRestockSection();
 }
 
+// ── Signalement d'incident (maintenance) ──
+let maintPrio = 'urgent';
+function toggleMaintForm() {
+  const f = document.getElementById('maintForm');
+  const ch = document.getElementById('maintChevron');
+  if (!f) return;
+  const open = f.style.display === 'none';
+  f.style.display = open ? 'block' : 'none';
+  if (ch) ch.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+function setMaintPrio(p) {
+  maintPrio = p;
+  document.querySelectorAll('.maint-prio').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+}
+async function sendMaintReport() {
+  const title = (document.getElementById('maintTitle')?.value || '').trim();
+  const desc = (document.getElementById('maintDesc')?.value || '').trim();
+  if (!title) { alert('Décrivez le problème en quelques mots.'); return; }
+  const btn = document.getElementById('maintSendBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi…'; }
+  try {
+    const res = await fetch(`${API_URL}/api/cleaning/maintenance/${currentPin}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        propertyId: currentTask.propertyId,
+        title, description: desc, priority: maintPrio,
+        reservationKey: currentTask.reservationKey
+      })
+    });
+    if (!res.ok) throw new Error('err');
+    document.getElementById('maintTitle').value = '';
+    document.getElementById('maintDesc').value = '';
+    maintPrio = 'urgent'; setMaintPrio('urgent');
+    toggleMaintForm();
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Signalement envoyé !'; }
+    setTimeout(() => { if (btn) btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le signalement'; }, 2500);
+  } catch (e) {
+    console.error(e);
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le signalement'; }
+    alert('Erreur lors de l\'envoi. Réessayez.');
+  }
+}
+
 async function loadChecklistTemplate(task) {
   // Try to load template from API
   try {
@@ -2098,6 +2178,28 @@ function renderChecklistBody() {
   
   // Réassort / consommables (rempli par renderRestockSection)
   html += `<div id="restockSection"></div>`;
+
+  // Signalement d'incident / maintenance
+  html += `
+    <div class="maint-report-card">
+      <button type="button" class="maint-report-toggle" onclick="toggleMaintForm()">
+        <span><i class="fas fa-screwdriver-wrench"></i> Signaler un problème</span>
+        <i class="fas fa-chevron-down" id="maintChevron"></i>
+      </button>
+      <div id="maintForm" style="display:none;">
+        <input id="maintTitle" type="text" maxlength="140" placeholder="Quoi ? (ex : Fuite sous l'évier)" class="maint-field">
+        <textarea id="maintDesc" rows="2" maxlength="2000" placeholder="Détails (optionnel)" class="maint-field"></textarea>
+        <div class="maint-prio-row">
+          <button type="button" class="maint-prio" data-p="normal" onclick="setMaintPrio('normal')">Normal</button>
+          <button type="button" class="maint-prio" data-p="high" onclick="setMaintPrio('high')">Important</button>
+          <button type="button" class="maint-prio on" data-p="urgent" onclick="setMaintPrio('urgent')">Urgent</button>
+        </div>
+        <button type="button" class="maint-send" id="maintSendBtn" onclick="sendMaintReport()">
+          <i class="fas fa-paper-plane"></i> Envoyer le signalement
+        </button>
+      </div>
+    </div>
+  `;
 
   // Notes section
   html += `
