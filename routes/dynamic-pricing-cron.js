@@ -25,6 +25,7 @@ const {
   tensionLabel,
   getSelfOccupancy,
 } = require('./dynamic-pricing-routes');
+const { applyDynamicPricingForProperty } = require('./pricing-apply');
 
 // ── Constantes ───────────────────────────────────────────────
 const APIFY_ACTOR_ID  = 'tri_angle~airbnb-scraper';
@@ -319,128 +320,10 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
 
       console.log(`✅ [DP-CRON] market_data inséré: médiane=${marketStats.median}€ occ=${marketStats.occupancy}% tension=${marketStats.tensionLevel}`);
 
-      // 5. Taux d'occupation de l'hôte (30 jours)
-      const selfOccupancy = await getSelfOccupancy(pool, cfg.property_id);
-
-      // 6. Calcul du prix recommandé
-      const { priceCalculated, factorMarket, factorSelf, factorSeason } = calcRecommendedPrice({
-        medianPrice:     marketStats.median,
-        marketOccupancy: marketStats.occupancy,
-        selfOccupancy,
-        priceMin:        parseFloat(cfg.price_min),
-        priceMax:        parseFloat(cfg.price_max),
-        date:            new Date(),
+      // 5-8. Moteur per-night : calcul, stockage planning, push Channex, notif
+      const apply = await applyDynamicPricingForProperty(pool, {
+        cfg, marketStats, isMock, sendPushNotification,
       });
-
-      // Récupérer le prix actuel (depuis Channex ou la DB)
-      let priceBefore = marketStats.median; // fallback
-      try {
-        const priceRes = await pool.query(
-          `SELECT price_applied FROM pricing_history
-           WHERE property_id = $1 AND status = 'applied'
-           ORDER BY week_start DESC LIMIT 1`,
-          [cfg.property_id]
-        );
-        if (priceRes.rows[0]?.price_applied) {
-          priceBefore = parseFloat(priceRes.rows[0].price_applied);
-        }
-      } catch {}
-
-      // Détecter si le prix est stable (différence < 3%)
-      const diff     = Math.abs(priceCalculated - priceBefore) / priceBefore;
-      const isStable = diff < 0.03;
-      const status   = isStable ? 'skipped' : (cfg.mode === 'auto' ? 'applied' : 'pending');
-      const reason   = isStable
-        ? 'Prix aligné sur le marché'
-        : `${tensionLabel(marketStats.tensionLevel)} — ${marketStats.occupancy}% occupé${isMock ? ' (simulation)' : ''}`;
-
-      // 7. INSERT pricing_history (upsert)
-      const histResult = await pool.query(
-        `INSERT INTO pricing_history (
-           user_id, property_id, week_start,
-           price_before, price_calculated,
-           price_applied,
-           market_median, market_occupancy, tension_level,
-           factor_market, factor_self, factor_season,
-           self_occupancy, status, mode_used, reason,
-           applied_by, applied_at, created_at, updated_at
-         )
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,NOW(),NOW())
-         ON CONFLICT (property_id, week_start) DO UPDATE SET
-           price_calculated = EXCLUDED.price_calculated,
-           price_applied    = EXCLUDED.price_applied,
-           market_median    = EXCLUDED.market_median,
-           market_occupancy = EXCLUDED.market_occupancy,
-           tension_level    = EXCLUDED.tension_level,
-           factor_market    = EXCLUDED.factor_market,
-           factor_self      = EXCLUDED.factor_self,
-           factor_season    = EXCLUDED.factor_season,
-           status           = EXCLUDED.status,
-           reason           = EXCLUDED.reason,
-           updated_at       = NOW()
-         RETURNING id`,
-        [
-          cfg.user_id, cfg.property_id, weekStart,
-          priceBefore, priceCalculated,
-          status === 'applied' ? priceCalculated : null,
-          marketStats.median, marketStats.occupancy, marketStats.tensionLevel,
-          factorMarket, factorSelf, factorSeason,
-          selfOccupancy, status, cfg.mode, reason,
-          status === 'applied' ? 'auto' : null,
-          status === 'applied' ? new Date() : null,
-        ]
-      );
-
-      const historyId = histResult.rows[0]?.id;
-      console.log(`✅ [DP-CRON] pricing_history #${historyId}: status=${status} prix=${priceCalculated}€`);
-
-      // 7b. Si appliqué (auto) → push vers Channex
-      if (status === 'applied') {
-        try {
-          const { pushRates } = require('../channex');
-          const propRes = await pool.query(
-            `SELECT channex_enabled, channex_property_id, channex_rate_plan_id
-             FROM properties WHERE id = $1`, [cfg.property_id]
-          );
-          const prop = propRes.rows[0];
-          if (prop?.channex_enabled && prop.channex_rate_plan_id) {
-            const ws = new Date(weekStart);
-            const rates = [];
-            for (let i = 0; i < 7; i++) {
-              const d = new Date(ws); d.setDate(ws.getDate() + i);
-              rates.push({ date: d.toISOString().slice(0, 10), price: priceCalculated });
-            }
-            await pushRates(pool, {
-              property_id: cfg.property_id,
-              channex_property_id: prop.channex_property_id,
-              channex_rate_plan_id: prop.channex_rate_plan_id,
-              rates
-            });
-            console.log(`📡 [DP-CRON] Prix poussé sur Channex: ${priceCalculated}€ × 7 jours`);
-          }
-        } catch (chErr) {
-          console.error('⚠️ [DP-CRON] Channex push error:', chErr.message);
-        }
-      }
-
-      // 8. Notification push
-      if (!isStable && cfg.notify_push) {
-        const pushMsg = cfg.mode === 'auto'
-          ? `${cfg.property_name} : prix mis à jour à ${priceCalculated}€/nuit (${tensionLabel(marketStats.tensionLevel)})`
-          : `${cfg.property_name} : suggestion ${priceCalculated}€/nuit disponible — ${tensionLabel(marketStats.tensionLevel)}`;
-
-        if (sendPushNotification) {
-          try {
-            await sendPushNotification(cfg.user_id, {
-              title: cfg.mode === 'auto' ? '💰 Prix mis à jour' : '💡 Suggestion de prix',
-              body:  pushMsg,
-              data:  { type: 'dynamic_pricing', propertyId: cfg.property_id, historyId: String(historyId) },
-            });
-          } catch (pushErr) {
-            console.error('❌ [DP-CRON] Push failed:', pushErr.message);
-          }
-        }
-      }
 
       results.push({
         userId:       cfg.user_id,
@@ -448,11 +331,12 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
         firstName:    cfg.user_first_name,
         propertyId:   cfg.property_id,
         propertyName: cfg.property_name,
-        status,
-        priceBefore,
-        priceApplied: status === 'applied' ? priceCalculated : null,
-        priceCalculated,
+        status:       apply.status,
+        priceBefore:  apply.priceBefore,
+        priceApplied: apply.priceApplied,
+        priceCalculated: apply.priceCalculated,
         tensionLevel: marketStats.tensionLevel,
+        nights:       apply.nights,
         isMock,
       });
 
