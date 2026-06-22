@@ -503,6 +503,36 @@ function getSidebarHTML() {
   }
 
 
+  // Header mobile IDENTIQUE sur toutes les pages internes (sauf app.html).
+  // Les pages stylent leur .mobile-header différemment (center / flex-start /
+  // space-between, voire pas du tout) → logo tantôt à gauche tantôt centré.
+  // On injecte une feuille CSS PURE (aucune logique JS, donc zéro risque pour
+  // le logo lui-même) qui : 1) centre le header, 2) empêche le .mobile-logo de
+  // s'étirer pour qu'il soit réellement centré. Double-classe = spécificité
+  // suffisante pour gagner contre les règles !important des pages.
+  function injectUniformHeaderCSS() {
+    if (isAppPage()) return;
+    if (document.getElementById('bh-uniform-header-css')) return;
+    const css = `
+      html body .mobile-header.mobile-header {
+        justify-content: center !important;
+        align-items: center !important;
+      }
+      html body .mobile-header.mobile-header .mobile-logo.mobile-logo {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        justify-content: center !important;
+      }
+    `;
+    const style = document.createElement('style');
+    style.id = 'bh-uniform-header-css';
+    style.textContent = css;
+    (document.head || document.documentElement).appendChild(style);
+  }
+
+
   function injectMobileTitle() {
     // Considérer iPad et tablettes tactiles comme mobile (pointer:coarse = écran tactile)
     const isTouch = window.matchMedia('(pointer: coarse)').matches;
@@ -705,6 +735,7 @@ function getSidebarHTML() {
     injectTopBar();
     injectSidebar();
     injectHeader();
+    injectUniformHeaderCSS();
     normalizeBranding();
     injectMobileTitle();
     applyDesktopLayout();
