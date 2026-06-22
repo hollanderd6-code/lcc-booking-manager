@@ -1303,6 +1303,59 @@ html[data-theme-v3="1"] .cleaning-tab:not(.active):hover {
   background: rgba(26,122,94,.08); color: #1A7A5E;
 }
 
+/* ===== MOBILE : menu d'onglets repensé + fix scroll bas ===== */
+@media (max-width: 700px) {
+  html[data-theme-v3="1"] .cleaning-tabs,
+  .cleaning-tabs {
+    display: flex !important; gap: 6px !important;
+    width: 100% !important; max-width: 100% !important; box-sizing: border-box !important;
+    padding: 5px !important; margin: 0 0 18px !important;
+    background: #EEE8DD !important; border: 1px solid rgba(200,184,154,.45) !important;
+    border-radius: 16px !important;
+    overflow-x: auto !important; -webkit-overflow-scrolling: touch !important;
+    scroll-snap-type: x proximity; scrollbar-width: none; -ms-overflow-style: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+            mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  }
+  html[data-theme-v3="1"] .cleaning-tabs::-webkit-scrollbar,
+  .cleaning-tabs::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+  html[data-theme-v3="1"] .cleaning-tab,
+  .cleaning-tab {
+    flex: 0 0 auto !important; min-width: 0 !important;
+    flex-direction: row !important; align-items: center !important; justify-content: center !important;
+    gap: 7px !important; padding: 9px 15px !important; border-radius: 12px !important;
+    font-family: 'DM Sans', sans-serif !important; font-size: 13px !important; font-weight: 600 !important;
+    line-height: 1 !important; color: #6E7787 !important; white-space: nowrap !important;
+    scroll-snap-align: center;
+    transition: background .18s ease, color .18s ease, box-shadow .18s ease, transform .12s ease !important;
+  }
+  html[data-theme-v3="1"] .cleaning-tab i,
+  .cleaning-tab i { font-size: 14px !important; }
+  html[data-theme-v3="1"] .cleaning-tab.active,
+  .cleaning-tab.active {
+    background: #1A7A5E !important; color: #fff !important;
+    box-shadow: 0 3px 10px rgba(26,122,94,.30) !important; transform: none !important;
+  }
+  html[data-theme-v3="1"] .cleaning-tab:active,
+  .cleaning-tab:active { transform: scale(.95) !important; }
+  .cleaning-tab .tab-badge {
+    min-width: 18px !important; height: 18px !important; padding: 0 5px !important;
+    font-size: 10.5px !important; background: #EF4444 !important;
+  }
+  .cleaning-tab.active .tab-badge { background: #fff !important; color: #1A7A5E !important; }
+  .cleaning-tab .tab-label { display: inline !important; }
+}
+
+/* ===== FIX SCROLL : le contenu ne doit plus passer sous la barre du bas ===== */
+@media (max-width: 1366px) {
+  html[data-theme-v3="1"] .page-content {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  html[data-theme-v3="1"] main.main-content {
+    -webkit-overflow-scrolling: touch !important; overscroll-behavior: contain;
+  }
+}
+
 /* Cards modernization */
 html[data-theme-v3="1"] .card {
   background: white !important;
@@ -2947,8 +3000,11 @@ function formatDateFr(dateStr) {
       function switchTab(tabId) {
         document.querySelectorAll('.cleaning-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.cleaning-tab-panel').forEach(p => p.classList.remove('active'));
-        document.querySelector('[data-tab="' + tabId + '"]').classList.add('active');
+        var _activeTab = document.querySelector('[data-tab="' + tabId + '"]');
+        _activeTab.classList.add('active');
         document.getElementById('panel-' + tabId).classList.add('active');
+        try { _activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } catch (e) {}
+        try { var _mc = document.querySelector('main.main-content'); if (_mc) _mc.scrollTo({ top: 0, behavior: 'auto' }); } catch (e) {}
         if (tabId === 'checklists') loadChecklistsList();
         if (tabId === 'templates') loadTemplates();
         if (tabId === 'stats') loadStats();
