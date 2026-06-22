@@ -277,8 +277,8 @@ function getSidebarHTML() {
 `;
 }
 
-  const BRAND_TEXT_HTML = `<span class="mobile-logo-title" style="font-size:16px; line-height:1.15;">
-    <span style="color:#1A7A5E; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
+  const BRAND_TEXT_HTML = `<span class="mobile-logo-title" style="font-size:16px !important; line-height:1.15;">
+    <span style="color:#1A7A5E; font-weight:800 !important;">Boosting</span><span style="color:#111827; font-weight:600 !important;">host</span>
   </span>
   <span class="mobile-logo-subtitle" style="font-size:7px !important; color:#6B7280; font-weight:700 !important; letter-spacing:0 !important; text-transform:uppercase !important; display:block !important; margin-top:1px; width:100% !important; text-align:justify !important; text-align-last:justify !important; -moz-text-align-last:justify !important;">Smart Property Manager</span>`;
 
@@ -509,11 +509,15 @@ function getSidebarHTML() {
     if (window.innerWidth > 1400 && !isTouch) return;
     if (document.getElementById('bh-mobile-page-title')) return;
 
-    // Si la page a déjà un .mobile-header natif actif (avec contenu et non caché),
-    // on ne crée pas de doublon — on le laisse gérer son propre affichage.
-    // On ignore les .mobile-header avec display:none inline (anciens headers désactivés).
+    // Si la page a déjà un .mobile-header natif actif (avec contenu et non caché) :
+    //   - sur app.html : on n'y touche pas (header maison).
+    //   - sur toutes les autres pages : on NE retourne PAS, on laisse la suite
+    //     ré-appliquer le centrage + le branding standard pour uniformiser
+    //     l'affichage (logo centré, gras identique partout).
     const existingNative = document.querySelector('.mobile-header');
-    if (existingNative && existingNative.innerHTML.trim().length > 0 && existingNative.style.display !== 'none') return;
+    if (existingNative && existingNative.innerHTML.trim().length > 0 && existingNative.style.display !== 'none') {
+      if (isAppPage()) return;
+    }
 
     // Trouver ou créer la mobile-header.
     // Chercher d'abord le placeholder #bhMobileHeader (div vide sans classe .mobile-header)
