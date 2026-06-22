@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Bienvenue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F5F0E8; --card:#FFFFFF; --green:#1A7A5E; --green-deep:#155F49;
+    --ink:#1B2B24; --muted:#6B7A72; --line:rgba(26,122,94,.14);
+    --soft:#EFF6F1; --amber:#B7791F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'DM Sans',system-ui,sans-serif;
+    background:var(--cream); color:var(--ink);
+    min-height:100dvh; display:flex; flex-direction:column;
+    padding:env(safe-area-inset-top,0) 20px env(safe-area-inset-bottom,0);
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{flex:1; width:100%; max-width:460px; margin:0 auto; display:flex; flex-direction:column; justify-content:center; padding:32px 0 40px;}
+  .brand{display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:28px;}
+  .brand-b{width:30px;height:30px;border-radius:8px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;}
+  .brand-t{font-weight:700;font-size:15px;letter-spacing:.2px}
+  .brand-t span{color:var(--green)}
+
+  .hello{font-family:'Instrument Serif',serif; font-size:40px; line-height:1.05; letter-spacing:.3px; margin-bottom:10px;}
+  .hello em{font-style:italic; color:var(--green)}
+  .sub{font-size:16px; color:var(--muted); line-height:1.5; margin-bottom:30px;}
+  .prop{font-weight:600; color:var(--ink)}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:20px; padding:22px; box-shadow:0 8px 30px rgba(26,122,94,.06);}
+
+  .btn{width:100%; border:none; cursor:pointer; font-family:inherit; font-weight:700; border-radius:14px; transition:transform .12s ease, background .2s;}
+  .btn:active{transform:scale(.98)}
+  .btn-primary{background:var(--green); color:#fff; font-size:18px; padding:18px;}
+  .btn-primary:hover{background:var(--green-deep)}
+  .btn-ghost{background:transparent; color:var(--muted); font-weight:600; font-size:15px; padding:14px; margin-top:6px;}
+  .btn-ghost:hover{color:var(--ink)}
+
+  .issue{margin-top:14px; display:none}
+  .issue.open{display:block; animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  label.lab{display:block; font-size:13.5px; font-weight:600; color:var(--ink); margin:0 0 7px}
+  textarea{width:100%; min-height:96px; resize:vertical; border:1px solid var(--line); border-radius:12px; padding:13px 14px; font-family:inherit; font-size:15px; color:var(--ink); background:#fff;}
+  textarea:focus{outline:none; border-color:var(--green)}
+  .photos{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px}
+  .photo{position:relative; width:72px; height:72px; border-radius:12px; overflow:hidden; border:1px solid var(--line)}
+  .photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo button{position:absolute; top:3px; right:3px; width:20px;height:20px;border:none;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:12px;line-height:1;cursor:pointer}
+  .addphoto{width:72px;height:72px;border-radius:12px;border:1.5px dashed var(--line);background:var(--soft);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.45}
+  .send-issue{margin-top:14px; background:var(--green); color:#fff; font-size:16px; padding:15px;}
+
+  /* écran de remerciement */
+  .done{display:none; text-align:center; animation:fade .3s ease}
+  .done.show{display:block}
+  .checkwrap{width:84px;height:84px;border-radius:50%;background:var(--soft);display:flex;align-items:center;justify-content:center;margin:0 auto 22px}
+  .checkwrap svg{width:42px;height:42px}
+  .done h2{font-family:'Instrument Serif',serif;font-size:34px;line-height:1.1;margin-bottom:10px}
+  .done p{color:var(--muted);font-size:16px;line-height:1.5}
+
+  .state{text-align:center;color:var(--muted);padding:40px 0}
+  .foot{text-align:center;font-size:12px;color:var(--muted);opacity:.8;padding-top:22px}
+  .foot span{color:var(--green);font-weight:600}
+</style>
+</head>
+<body>
+  <div class="wrap" id="wrap">
+    <div class="brand">
+      <div class="brand-b">B</div>
+      <div class="brand-t">Boosting<span>host</span></div>
+    </div>
+
+    <!-- chargement -->
+    <div id="loading" class="state">Un instant…</div>
+
+    <!-- contenu principal -->
+    <div id="main" style="display:none">
+      <h1 class="hello">Bienvenue<span id="nameWrap"></span> <em>👋</em></h1>
+      <p class="sub" id="subline">Installez-vous tranquillement. On espère que tout est à votre goût dans le logement.</p>
+
+      <div class="card">
+        <button class="btn btn-primary" id="allGoodBtn" onclick="sendAllGood()">Tout est parfait 👍</button>
+        <button class="btn btn-ghost" id="toggleIssue" onclick="toggleIssue()">Signaler un petit souci</button>
+
+        <div class="issue" id="issueBlock">
+          <label class="lab" for="issueText">Qu'est-ce qui pourrait être amélioré ?</label>
+          <textarea id="issueText" placeholder="Ex : il manque des serviettes, une ampoule à changer…"></textarea>
+          <div class="photos" id="photos">
+            <div class="addphoto" onclick="document.getElementById('photoInput').click()">+</div>
+          </div>
+          <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="addPhotos(event)">
+          <p class="hint">Ajoutez une photo si ça aide (facultatif). On s'en occupe au plus vite — rien à signer, c'est juste pour vous aider.</p>
+          <button class="btn send-issue" id="sendIssueBtn" onclick="sendIssue()">Envoyer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- remerciement -->
+    <div id="done" class="done">
+      <div class="checkwrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <h2 id="doneTitle">Merci !</h2>
+      <p id="doneText">Très bon séjour à vous. ✨</p>
+    </div>
+
+    <!-- état indisponible -->
+    <div id="unavailable" class="state" style="display:none">
+      Ce lien n'est plus actif.<br>Bon séjour à vous ✨
+    </div>
+
+    <div class="foot">Propulsé par <span>Boostinghost</span></div>
+  </div>
+
+<script>
+  const API = (location.origin || '').replace(/\/$/,'');
+  const token = new URLSearchParams(location.search).get('token') || '';
+  let photos = [];
+
+  function show(id){ ['loading','main','done','unavailable'].forEach(x=>{
+    const el=document.getElementById(x); if(el) el.style.display = (x===id)?'block':'none';
+  }); if(id==='done'){document.getElementById('done').classList.add('show');} }
+
+  async function init(){
+    if(!token){ show('unavailable'); return; }
+    try{
+      const r = await fetch(`${API}/api/arrival/${encodeURIComponent(token)}`);
+      const d = await r.json();
+      if(!r.ok || !d.ok || d.expired){ show('unavailable'); return; }
+      if(d.status && d.status !== 'pending'){
+        // déjà répondu
+        document.getElementById('doneTitle').textContent = 'C\'est déjà noté';
+        document.getElementById('doneText').textContent = 'Merci, on a bien reçu votre retour. Très bon séjour ! ✨';
+        show('done'); return;
+      }
+      if(d.guestFirstName){
+        document.getElementById('nameWrap').textContent = ' ' + d.guestFirstName;
+      }
+      if(d.propertyName){
+        document.getElementById('subline').innerHTML =
+          'Installez-vous tranquillement dans <span class="prop">'+escapeHtml(d.propertyName)+'</span>. On espère que tout est à votre goût.';
+      }
+      show('main');
+    }catch(e){ show('unavailable'); }
+  }
+
+  function toggleIssue(){
+    const b=document.getElementById('issueBlock');
+    const t=document.getElementById('toggleIssue');
+    const open=b.classList.toggle('open');
+    t.style.display = open ? 'none' : 'block';
+    if(open) document.getElementById('issueText').focus();
+  }
+
+  function addPhotos(ev){
+    const files=[...ev.target.files].slice(0,3-photos.length);
+    files.forEach(f=>{
+      const reader=new FileReader();
+      reader.onload=()=>compress(reader.result,(small)=>{ photos.push(small); renderPhotos(); });
+      reader.readAsDataURL(f);
+    });
+    ev.target.value='';
+  }
+  function compress(dataUrl, cb){
+    const img=new Image();
+    img.onload=()=>{
+      const max=1024; let {width:w,height:h}=img;
+      if(w>max||h>max){ if(w>h){h=h*max/w;w=max;}else{w=w*max/h;h=max;} }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      cb(c.toDataURL('image/jpeg',0.7));
+    };
+    img.src=dataUrl;
+  }
+  function renderPhotos(){
+    const wrap=document.getElementById('photos');
+    wrap.querySelectorAll('.photo').forEach(n=>n.remove());
+    const add=wrap.querySelector('.addphoto');
+    photos.forEach((p,i)=>{
+      const d=document.createElement('div'); d.className='photo';
+      d.innerHTML='<img src="'+p+'"><button onclick="removePhoto('+i+')">×</button>';
+      wrap.insertBefore(d,add);
+    });
+    add.style.display = photos.length>=3 ? 'none':'flex';
+  }
+  function removePhoto(i){ photos.splice(i,1); renderPhotos(); }
+
+  async function sendAllGood(){
+    const btn=document.getElementById('allGoodBtn');
+    btn.disabled=true; btn.textContent='…';
+    await submit('all_good','',[]);
+  }
+  async function sendIssue(){
+    const msg=document.getElementById('issueText').value.trim();
+    if(!msg && photos.length===0){ alert('Ajoutez un petit mot ou une photo 🙂'); return; }
+    const btn=document.getElementById('sendIssueBtn');
+    btn.disabled=true; btn.textContent='Envoi…';
+    await submit('issue',msg,photos);
+  }
+  async function submit(status,message,imgs){
+    try{
+      const r=await fetch(`${API}/api/arrival/${encodeURIComponent(token)}`,{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({status,message,photos:imgs})
+      });
+      if(!r.ok) throw new Error('err');
+      if(status==='issue'){
+        document.getElementById('doneTitle').textContent='C\'est noté, merci !';
+        document.getElementById('doneText').textContent='On s\'en occupe au plus vite. Très bon séjour à vous. ✨';
+      }
+      show('done');
+    }catch(e){
+      alert('Oups, réessayez dans un instant.');
+      document.getElementById('allGoodBtn').disabled=false;
+      document.getElementById('allGoodBtn').textContent='Tout est parfait 👍';
+      document.getElementById('sendIssueBtn').disabled=false;
+      document.getElementById('sendIssueBtn').textContent='Envoyer';
+    }
+  }
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+  init();
+</script>
+</body>
+</html>

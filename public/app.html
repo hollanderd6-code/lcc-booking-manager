@@ -9714,6 +9714,65 @@ try {
       }
     } catch(e) { console.warn('Lien BHGuest modal:', e.message); }
 
+    // 6bis️⃣ État des lieux d'arrivée (tour de bienvenue voyageur)
+    try {
+      const _arrOld = detailsContent.querySelector('[data-arrival-checkin="1"]');
+      if (_arrOld) _arrOld.remove();
+      const _arrPropId = booking.propertyId || booking.property_id || '';
+      const _arrDate = String(booking.startDate || booking.start || rawStart || '').split('T')[0];
+      if (_arrPropId && _arrDate) {
+        const arrGroup = document.createElement('div');
+        arrGroup.setAttribute('data-arrival-checkin', '1');
+        arrGroup.style.cssText = 'margin-top:16px;';
+        arrGroup.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text-secondary,#6B7280);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;"><i class="fas fa-hand-sparkles" style="font-size:11px;"></i> Tour de bienvenue</div><div style="font-size:13px;color:#9CA3AF;">Chargement…</div>';
+        detailsContent.appendChild(arrGroup);
+
+        (async () => {
+          try {
+            const tk = localStorage.getItem('lcc_token');
+            const r = await fetch(`${API_URL}/api/arrival/reservation/lookup?propertyId=${encodeURIComponent(_arrPropId)}&date=${encodeURIComponent(_arrDate)}`, {
+              headers: tk ? { Authorization: 'Bearer ' + tk } : {}
+            });
+            const d = await r.json();
+            const c = d && d.checkin;
+            const box = arrGroup;
+            const head = '<div style="font-size:11px;font-weight:700;color:var(--text-secondary,#6B7280);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;"><i class="fas fa-hand-sparkles" style="font-size:11px;"></i> Tour de bienvenue</div>';
+
+            if (!c) {
+              box.innerHTML = head + '<div style="background:var(--surface-secondary,#F5F0E8);border:1px solid var(--border-color,#E8E0D0);border-radius:12px;padding:12px 14px;font-size:13px;color:#6B7280;">Le lien sera envoyé automatiquement au voyageur le jour de l\'arrivée (1h après l\'heure de check-in).</div>';
+              return;
+            }
+
+            if (c.status === 'pending') {
+              box.innerHTML = head + '<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:12px 14px;">'
+                + '<div style="font-size:13px;color:#9A6B00;font-weight:600;margin-bottom:8px;"><i class="far fa-clock"></i> Lien envoyé — en attente de la réponse du voyageur</div>'
+                + '<div style="font-size:11px;color:#9CA3AF;word-break:break-all;font-family:monospace;margin-bottom:8px;">' + c.shareUrl + '</div>'
+                + '<button type="button" data-arr-copy style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px;background:#1A7A5E;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;"><i class="fas fa-copy"></i> Copier le lien</button></div>';
+            } else if (c.status === 'all_good') {
+              box.innerHTML = head + '<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:12px;padding:13px 15px;font-size:14px;color:#065F46;font-weight:600;"><i class="fas fa-check-circle"></i> Le voyageur a indiqué que tout est parfait 👍</div>';
+            } else if (c.status === 'issue') {
+              const photos = Array.isArray(c.photos) ? c.photos : [];
+              const photoHtml = photos.length
+                ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' + photos.map(p => '<a href="' + p + '" target="_blank" style="display:block;width:64px;height:64px;border-radius:10px;overflow:hidden;border:1px solid #E8E0D0;"><img src="' + p + '" style="width:100%;height:100%;object-fit:cover;"></a>').join('') + '</div>'
+                : '';
+              box.innerHTML = head + '<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:13px 15px;">'
+                + '<div style="font-size:13px;color:#B91C1C;font-weight:700;margin-bottom:6px;"><i class="fas fa-bell"></i> Le voyageur a signalé un point</div>'
+                + (c.message ? '<div style="font-size:14px;color:#1A1A1A;line-height:1.5;white-space:pre-wrap;">' + (c.message.replace(/[<>]/g, '')) + '</div>' : '')
+                + photoHtml + '</div>';
+            }
+
+            const copyBtn = box.querySelector('[data-arr-copy]');
+            if (copyBtn) copyBtn.addEventListener('click', () => {
+              const done = () => { copyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !'; setTimeout(()=>{ copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copier le lien'; }, 2000); };
+              if (navigator.clipboard) navigator.clipboard.writeText(c.shareUrl).then(done).catch(done); else done();
+            });
+          } catch (e) {
+            arrGroup.innerHTML = '';
+          }
+        })();
+      }
+    } catch(e) { console.warn('Arrival checkin modal:', e.message); }
+
     // 7️⃣ Raccourcis rapides : Messages + Caution + Paiement
     try {
       const existingShortcuts = detailsContent.querySelector('[data-shortcuts="1"]');

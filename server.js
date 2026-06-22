@@ -2040,6 +2040,28 @@ ON invoice_download_tokens(token);
       CREATE UNIQUE INDEX IF NOT EXISTS idx_restock_resp_global ON restock_responsibles(user_id) WHERE property_id IS NULL;
       CREATE UNIQUE INDEX IF NOT EXISTS idx_restock_resp_prop ON restock_responsibles(user_id, property_id) WHERE property_id IS NOT NULL;
 
+      -- ═══ ÉTAT DES LIEUX D'ARRIVÉE (tour de bienvenue voyageur) ═══
+      CREATE TABLE IF NOT EXISTS arrival_checkins (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token TEXT NOT NULL UNIQUE,
+        conversation_id INTEGER DEFAULT NULL,
+        reservation_uid TEXT DEFAULT NULL,
+        property_id TEXT NOT NULL,
+        reservation_start_date DATE DEFAULT NULL,
+        guest_first_name TEXT DEFAULT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',   -- pending | all_good | issue
+        message TEXT DEFAULT NULL,
+        photos JSONB DEFAULT '[]'::jsonb,
+        link_sent_at TIMESTAMPTZ DEFAULT NULL,
+        submitted_at TIMESTAMPTZ DEFAULT NULL,
+        expires_at TIMESTAMPTZ DEFAULT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_arrival_token ON arrival_checkins(token);
+      CREATE INDEX IF NOT EXISTS idx_arrival_lookup ON arrival_checkins(user_id, property_id, reservation_start_date);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_arrival_conv ON arrival_checkins(conversation_id) WHERE conversation_id IS NOT NULL;
+
       -- ═══ MAINTENANCE / INCIDENTS ═══
       CREATE TABLE IF NOT EXISTS maintenance_artisans (
         id SERIAL PRIMARY KEY,
@@ -14692,6 +14714,210 @@ app.delete('/api/maintenance/tickets/:id',
     }
   }
 );
+
+// ═══════════════════════════════════════════════════════════
+// ÉTAT DES LIEUX D'ARRIVÉE (tour de bienvenue voyageur)
+// ═══════════════════════════════════════════════════════════
+
+function genArrivalToken() {
+  return crypto.randomBytes(20).toString('hex');
+}
+
+// GET public — le voyageur ouvre son lien
+app.get('/api/arrival/:token', async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT a.*, p.name AS property_name, p.internal_name AS property_internal
+       FROM arrival_checkins a
+       LEFT JOIN properties p ON p.id = a.property_id
+       WHERE a.token = $1`,
+      [req.params.token]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ ok: false, error: 'Lien invalide' });
+    const a = r.rows[0];
+    const expired = a.expires_at && new Date(a.expires_at) < new Date();
+    res.json({
+      ok: true,
+      expired: !!expired,
+      status: a.status,
+      guestFirstName: a.guest_first_name || null,
+      propertyName: a.property_name || a.property_internal || null
+    });
+  } catch (err) {
+    console.error('Erreur GET /api/arrival/:token :', err);
+    res.status(500).json({ ok: false, error: 'Erreur serveur' });
+  }
+});
+
+// POST public — le voyageur répond (tout est ok / signale un souci)
+app.post('/api/arrival/:token', async (req, res) => {
+  try {
+    const { status, message, photos } = req.body;
+    const st = (status === 'issue') ? 'issue' : 'all_good';
+    const photoArr = Array.isArray(photos) ? photos.slice(0, 3) : [];
+
+    const r = await pool.query('SELECT * FROM arrival_checkins WHERE token = $1', [req.params.token]);
+    if (r.rows.length === 0) return res.status(404).json({ ok: false, error: 'Lien invalide' });
+    const a = r.rows[0];
+    if (a.expires_at && new Date(a.expires_at) < new Date()) {
+      return res.status(410).json({ ok: false, error: 'Lien expiré' });
+    }
+
+    await pool.query(
+      `UPDATE arrival_checkins
+       SET status = $1, message = $2, photos = $3, submitted_at = NOW()
+       WHERE id = $4`,
+      [st, (message || '').slice(0, 2000) || null, JSON.stringify(photoArr), a.id]
+    );
+
+    // Notifier l'hôte (push + sous-comptes) — surtout si un souci est signalé
+    try {
+      const property = PROPERTIES.find(p => p.id === a.property_id);
+      const propName = displayName(property) || a.property_id;
+      const isIssue = st === 'issue';
+      const title = isIssue ? `🛎️ Signalement arrivée — ${propName}` : `✅ Arrivée OK — ${propName}`;
+      const body = isIssue
+        ? `${a.guest_first_name || 'Le voyageur'} signale : ${(message || '').slice(0, 120) || 'voir détails'}`
+        : `${a.guest_first_name || 'Le voyageur'} : tout est parfait 👍`;
+      const pushData = { type: 'arrival_checkin', propertyId: a.property_id, click_action: '/app.html' };
+
+      const tok = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL', [a.user_id]
+      );
+      if (tok.rows.length > 0) {
+        await sendNotificationToMultipleLogged(tok.rows.map(t => t.fcm_token), title, body, pushData);
+      }
+      try {
+        await sendNotificationToSubAccountsOf(a.user_id, 'can_view_cleaning', title, body, pushData, 'notif_sub_cleaning_completed');
+      } catch(_) {}
+    } catch (notifErr) {
+      console.error('❌ [ARRIVAL] Notif hôte échouée:', notifErr.message);
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Erreur POST /api/arrival/:token :', err);
+    res.status(500).json({ ok: false, error: 'Erreur serveur' });
+  }
+});
+
+// GET hôte — récupérer l'état des lieux d'une réservation (par logement + date d'arrivée)
+app.get('/api/arrival/reservation/lookup',
+  authenticateAny, requirePermission(pool, 'can_view_cleaning'), loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount ? (await getRealUserId(pool, req)) : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+      const agencyIds = await getAgencyUserIds(req, userId);
+      const { propertyId, date } = req.query;
+      if (!propertyId || !date) return res.status(400).json({ error: 'propertyId et date requis' });
+
+      const r = await pool.query(
+        `SELECT * FROM arrival_checkins
+         WHERE user_id = ANY($1::text[]) AND property_id = $2 AND reservation_start_date = $3
+         ORDER BY created_at DESC LIMIT 1`,
+        [agencyIds, propertyId, date]
+      );
+      const row = r.rows[0] || null;
+      const baseUrl = (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+      res.json({
+        success: true,
+        checkin: row ? {
+          status: row.status,
+          message: row.message,
+          photos: row.photos || [],
+          submittedAt: row.submitted_at,
+          linkSentAt: row.link_sent_at,
+          shareUrl: `${baseUrl}/arrival.html?token=${row.token}`
+        } : null
+      });
+    } catch (err) {
+      console.error('Erreur GET arrival lookup :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// Crée (si besoin) le check-in d'arrivée pour une conversation et renvoie le lien
+async function ensureArrivalCheckin(conv) {
+  // conv : { id, user_id, property_id, reservation_uid, reservation_start_date, guest_name }
+  const existing = await pool.query('SELECT token FROM arrival_checkins WHERE conversation_id = $1', [conv.id]);
+  if (existing.rows.length > 0) return existing.rows[0].token;
+
+  const token = genArrivalToken();
+  const firstName = (conv.guest_name || '').trim().split(/\s+/)[0] || null;
+  const startDate = conv.reservation_start_date
+    ? new Date(conv.reservation_start_date).toISOString().split('T')[0] : null;
+  // Expire 24h après l'envoi
+  const expires = new Date(Date.now() + 24 * 3600 * 1000);
+
+  await pool.query(
+    `INSERT INTO arrival_checkins
+     (user_id, token, conversation_id, reservation_uid, property_id, reservation_start_date, guest_first_name, link_sent_at, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)
+     ON CONFLICT (conversation_id) WHERE conversation_id IS NOT NULL DO NOTHING`,
+    [conv.user_id, token, conv.id, conv.reservation_uid || null, conv.property_id, startDate, firstName, expires]
+  );
+  return token;
+}
+
+// CRON horaire — envoie le « tour de bienvenue » à l'heure de check-in du logement + 1h
+async function sendArrivalWelcomeTours(io) {
+  try {
+    const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const currentHour = nowParis.getHours();
+    const today = nowParis.toISOString().split('T')[0];
+
+    const convs = (await pool.query(
+      `SELECT c.id, c.user_id, c.property_id, c.guest_name, c.reservation_start_date,
+              c.reservation_uid, p.arrival_time, p.name AS property_name
+       FROM conversations c
+       LEFT JOIN properties p ON p.id = c.property_id
+       WHERE DATE(c.reservation_start_date) = $1
+         AND c.status != 'cancelled'
+         AND NOT EXISTS (SELECT 1 FROM arrival_checkins a WHERE a.conversation_id = c.id)`,
+      [today]
+    )).rows;
+
+    if (convs.length === 0) return;
+
+    for (const conv of convs) {
+      // Heure d'envoi = check-in + 1h (défaut 15:00 → 16:00 si non renseigné)
+      let checkinHour = 15;
+      if (conv.arrival_time) {
+        const m = String(conv.arrival_time).match(/(\d{1,2})/);
+        if (m) checkinHour = parseInt(m[1], 10);
+      }
+      const sendHour = Math.min(checkinHour + 1, 23);
+      if (currentHour < sendHour) continue; // pas encore l'heure
+
+      try {
+        const token = await ensureArrivalCheckin(conv);
+        const baseUrl = (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+        const link = `${baseUrl}/arrival.html?token=${token}`;
+        const firstName = (conv.guest_name || '').trim().split(/\s+/)[0];
+        const message = `Bonjour ${firstName || ''} 👋\n\nVous voilà arrivé(e) ! On espère que tout est à votre goût.\n\nEn un clic, dites-nous si tout est parfait — ou signalez-nous un petit souci pour qu'on s'en occupe vite :\n${link}\n\nTrès bon séjour ! ✨`;
+        await sendAutomatedMessage(conv.id, message, io);
+        console.log(`🛎️ [ARRIVAL] Tour de bienvenue envoyé — conv ${conv.id} (${conv.property_name || conv.property_id})`);
+      } catch (e) {
+        console.error(`❌ [ARRIVAL] Échec envoi conv ${conv.id}:`, e.message);
+      }
+    }
+  } catch (err) {
+    console.error('❌ [ARRIVAL] sendArrivalWelcomeTours:', err.message);
+  }
+}
+
+// Programme le cron (toutes les heures, Europe/Paris)
+try {
+  cron.schedule('5 * * * *', async () => {
+    console.log('⏰ CRON — Tours de bienvenue (check-in +1h)');
+    try { await sendArrivalWelcomeTours(io); } catch (e) { console.error('cron arrival:', e.message); }
+  }, { timezone: 'Europe/Paris' });
+  console.log('✅ Cron tour de bienvenue initialisé (horaire, Europe/Paris)');
+} catch (e) {
+  console.error('❌ Init cron arrival:', e.message);
+}
 
 // PUT /api/cleaning/checklists/:id/validate — Validation propriétaire
 app.put('/api/cleaning/checklists/:id/validate',
