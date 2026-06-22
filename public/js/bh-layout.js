@@ -503,30 +503,6 @@ function getSidebarHTML() {
   }
 
 
-  // Impose un header mobile IDENTIQUE sur toutes les pages internes (sauf app.html).
-  // Chaque page définit son propre CSS .mobile-header avec !important (certains en
-  // justify-content:flex-start, d'autres center) → divergence. On injecte ici une
-  // feuille à forte spécificité (html .mobile-header) qui gagne contre ces règles.
-  function injectUniformHeaderCSS() {
-    if (isAppPage()) return;
-    if (document.getElementById('bh-uniform-header-css')) return;
-    const css = `
-      html body .mobile-header {
-        justify-content: center !important;
-        align-items: center !important;
-        text-align: center !important;
-      }
-      html body .mobile-header .mobile-logo {
-        margin: 0 auto !important;
-        justify-content: center !important;
-      }
-    `;
-    const style = document.createElement('style');
-    style.id = 'bh-uniform-header-css';
-    style.textContent = css;
-    (document.head || document.documentElement).appendChild(style);
-  }
-
   function injectMobileTitle() {
     // Considérer iPad et tablettes tactiles comme mobile (pointer:coarse = écran tactile)
     const isTouch = window.matchMedia('(pointer: coarse)').matches;
@@ -535,7 +511,6 @@ function getSidebarHTML() {
 
     // Si la page a déjà un .mobile-header natif actif (avec contenu et non caché),
     // on ne crée pas de doublon — on le laisse gérer son propre affichage.
-    // Le centrage uniforme est imposé via injectUniformHeaderCSS() (feuille globale).
     const existingNative = document.querySelector('.mobile-header');
     if (existingNative && existingNative.innerHTML.trim().length > 0 && existingNative.style.display !== 'none') return;
 
@@ -730,7 +705,6 @@ function getSidebarHTML() {
     injectTopBar();
     injectSidebar();
     injectHeader();
-    injectUniformHeaderCSS();
     normalizeBranding();
     injectMobileTitle();
     applyDesktopLayout();
