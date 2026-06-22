@@ -230,8 +230,8 @@ function getSidebarHTML() {
       <div class="nav-section-title">Revenus intelligents</div>
       <a class="nav-item" data-page="pricing" href="/dynamic-pricing.html">
         <i class="fas fa-bolt" style="font-size:13px;color:#B45309;"></i>
-        <span>Pricing dynamique</span>
-        <span style="margin-left:auto;font-size:10px;font-weight:700;background:rgba(245,158,11,.15);color:#B45309;border:1px solid rgba(245,158,11,.3);padding:1px 7px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;">Bêta</span>
+        <span>BoostPrice</span>
+        <span style="margin-left:6px;font-size:10px;font-weight:700;background:rgba(245,158,11,.15);color:#B45309;border:1px solid rgba(245,158,11,.3);padding:1px 7px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;">Bêta</span>
       </a>
     </div>
     ` : ''}
@@ -277,10 +277,10 @@ function getSidebarHTML() {
 `;
 }
 
-  const BRAND_TEXT_HTML = `<span class="mobile-logo-title">
-    <span style="color:#1A7A5E; font-weight:800;">Boosting</span><span style="color:#111827; font-weight:600;">host</span>
+  const BRAND_TEXT_HTML = `<span class="mobile-logo-title" style="font-size:16px !important; line-height:1.15; font-family:'DM Sans',sans-serif !important;">
+    <span style="color:#1A7A5E; font-weight:700 !important;">Boosting</span><span style="color:#111827; font-weight:700 !important;">host</span>
   </span>
-  <span class="mobile-logo-subtitle" style="font-size: 10px; color: #6B7280; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">Smart Property Manager</span>`;
+  <span class="mobile-logo-subtitle" style="font-size:7px !important; color:#6B7280; font-weight:700 !important; letter-spacing:0 !important; text-transform:uppercase !important; display:block !important; margin-top:1px; width:100% !important; text-align:justify !important; text-align-last:justify !important; -moz-text-align-last:justify !important;">Smart Property Manager</span>`;
 
   function escapeHtml(str) {
     return (str || "").replace(/[&<>"']/g, (m) => ({
@@ -311,74 +311,6 @@ function getSidebarHTML() {
         byHref.classList.add("active");
       }
     }
-
-    // ── Liquid Glass : sliding pill indicator ──────────────────
-    (function initGlassPill() {
-      if (document.documentElement.getAttribute('data-theme-v3') !== '1') return;
-      const nav = ph.querySelector('.sidebar-nav');
-      if (!nav) return;
-
-      const pill = document.createElement('div');
-      pill.className = 'glass-pill';
-      nav.style.position = 'relative';
-      nav.insertBefore(pill, nav.firstChild);
-
-      function movePill(target, animate) {
-        if (!target) { pill.classList.remove('visible'); return; }
-        const navRect = nav.getBoundingClientRect();
-        const itemRect = target.getBoundingClientRect();
-        const top = itemRect.top - navRect.top + nav.scrollTop;
-        const left = itemRect.left - navRect.left;
-        const width = itemRect.width;
-        const height = itemRect.height;
-
-        if (!animate) {
-          pill.style.transition = 'none';
-          pill.offsetHeight; // force reflow
-        } else {
-          pill.style.transition = '';
-        }
-
-        pill.style.top = top + 'px';
-        pill.style.left = left + 'px';
-        pill.style.width = width + 'px';
-        pill.style.height = height + 'px';
-        pill.classList.add('visible');
-
-        if (!animate) {
-          requestAnimationFrame(() => { pill.style.transition = ''; });
-        }
-      }
-
-      // Position initiale sur l'item actif (sans animation)
-      const activeItem = nav.querySelector('.nav-item.active');
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => movePill(activeItem, false));
-      });
-
-      // Hover : la pill glisse vers l'item survolé
-      const navItems = nav.querySelectorAll('.nav-item');
-      navItems.forEach(item => {
-        item.addEventListener('mouseenter', function() {
-          movePill(this, true);
-        });
-      });
-
-      // Mouse leave sur la nav : retour sur l'item actif
-      nav.addEventListener('mouseleave', function() {
-        const current = nav.querySelector('.nav-item.active');
-        movePill(current, true);
-      });
-
-      // Recalculer au scroll de la sidebar
-      const sidebarEl = ph.querySelector('.sidebar-nav') || ph;
-      if (sidebarEl) {
-        sidebarEl.addEventListener('scroll', () => {
-          const current = nav.querySelector('.nav-item.active');
-          movePill(current, false);
-        }, { passive: true });
-      }
-    })();
 
     const sidebar = document.getElementById("sidebar") || document.querySelector("aside.sidebar");
     const overlay = document.getElementById("sidebarOverlay");
@@ -513,10 +445,14 @@ function getSidebarHTML() {
       mobileLogo.appendChild(mobileLogoText);
     }
 
-    // Injecter le logo SVG si absent ou incorrect
+    // Toujours (ré)injecter l'image standard du logo pour garantir un rendu
+    // identique sur toutes les pages, même si la page avait déjà sa propre image.
     const existingImg = mobileLogo.querySelector("img[src^='data:']");
     const existingSvg = mobileLogo.querySelector("svg");
-    if (!existingImg && !existingSvg) {
+    const isStandardLogo = existingImg && existingImg.getAttribute('alt') === 'Boostinghost' && existingImg.style.borderRadius === '50%';
+    if (!isStandardLogo) {
+      if (existingImg) existingImg.remove();
+      if (existingSvg) existingSvg.remove();
       const oldIcon = mobileLogo.querySelector("i.fas, i.fa, img");
       if (oldIcon) oldIcon.remove();
       mobileLogo.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
@@ -537,8 +473,11 @@ function getSidebarHTML() {
           }
         } catch(e) {}
       }
-      const hasCorrectBranding = mobileLogoText.querySelector(".mobile-logo-title");
-      if (!hasCorrectBranding) {
+      // Toujours réinjecter le branding standard pour garantir un logo+texte
+      // STRICTEMENT identique sur toutes les pages, peu importe ce que contenait
+      // le HTML statique de la page. (On ne réécrit pas si c'est déjà exactement
+      // le bon HTML, pour éviter de recréer le DOM à chaque appel.)
+      if (mobileLogoText.innerHTML.replace(/\s+/g,'') !== BRAND_TEXT_HTML.replace(/\s+/g,'')) {
         mobileLogoText.innerHTML = BRAND_TEXT_HTML;
       }
     }
@@ -572,7 +511,6 @@ function getSidebarHTML() {
 
     // Si la page a déjà un .mobile-header natif actif (avec contenu et non caché),
     // on ne crée pas de doublon — on le laisse gérer son propre affichage.
-    // On ignore les .mobile-header avec display:none inline (anciens headers désactivés).
     const existingNative = document.querySelector('.mobile-header');
     if (existingNative && existingNative.innerHTML.trim().length > 0 && existingNative.style.display !== 'none') return;
 
@@ -591,7 +529,7 @@ function getSidebarHTML() {
     if (!mobileHeader.classList.contains('mobile-header')) mobileHeader.classList.add('mobile-header');
     if (!mobileHeader.id) mobileHeader.id = 'bhMobileHeader';
     if (!mobileHeader.querySelector('.mobile-logo')) {
-      mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="flex-shrink:0;display:flex;align-items:center;gap:10px;text-decoration:none;"><span class="mobile-logo-text"></span></a>';
+      mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="min-width:0;display:flex;align-items:center;gap:10px;text-decoration:none;overflow:hidden;"><span class="mobile-logo-text"></span></a>';
     }
 
     // Style : logo centré, rien d'autre (comme messages.html)
@@ -604,7 +542,7 @@ function getSidebarHTML() {
     mobileHeader.style.setProperty('z-index', '1100', 'important');
     mobileHeader.style.setProperty('align-items', 'center', 'important');
     mobileHeader.style.setProperty('justify-content', 'center', 'important');
-    mobileHeader.style.setProperty('padding', 'env(safe-area-inset-top,0px) 16px 0', 'important');
+    mobileHeader.style.setProperty('padding', 'env(safe-area-inset-top,0px) 10px 0', 'important');
     mobileHeader.style.setProperty('background', 'rgba(245,242,236,0.97)', 'important');
     mobileHeader.style.setProperty('backdrop-filter', 'blur(12px)', 'important');
     mobileHeader.style.setProperty('border-bottom', '1px solid rgba(200,184,154,0.4)', 'important');
@@ -817,22 +755,24 @@ function getSidebarHTML() {
     if (document.getElementById('bhAnnPopup')) return;
     var popup = document.createElement('div');
     popup.id = 'bhAnnPopup';
-    var isMob = window.innerWidth <= 768; popup.style.cssText = 'position:fixed;top:' + (isMob ? 'calc(60px + env(safe-area-inset-top,0px))' : '48px') + ';right:' + (isMob ? '8px' : '16px') + ';width:' + (isMob ? 'calc(100vw - 16px)' : '360px') + ';max-height:480px;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:99999;display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.08);';
+    var isMob = window.innerWidth <= 768; popup.style.cssText = 'position:fixed;top:' + (isMob ? 'calc(60px + env(safe-area-inset-top,0px))' : '48px') + ';right:' + (isMob ? '8px' : '16px') + ';width:' + (isMob ? 'calc(100vw - 16px)' : '360px') + ';max-height:480px;background:rgba(255,255,255,.85);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);border-radius:18px;box-shadow:0 16px 48px rgba(0,0,0,.2);z-index:99999;display:none;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,.5);';
     var hdr = document.createElement('div');
-    hdr.style.cssText = 'padding:16px 18px 12px;border-bottom:1px solid rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
+    hdr.style.cssText = 'padding:16px 18px;background:linear-gradient(135deg,#1A7A5E 0%,#145f4a 100%);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
     var ttl = document.createElement('div');
-    ttl.style.cssText = 'font-size:15px;font-weight:700;color:#0D1117;';
-    ttl.textContent = '\u2139\uFE0F Informations';
+    ttl.style.cssText = 'font-size:15px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px;';
+    ttl.innerHTML = '<i class="fas fa-info-circle" style="font-size:14px;opacity:.85;"></i> Informations';
     var cls = document.createElement('button');
-    cls.style.cssText = 'background:none;border:none;cursor:pointer;font-size:20px;color:#9CA3AF;line-height:1;padding:0 4px;';
+    cls.style.cssText = 'background:rgba(255,255,255,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.25);cursor:pointer;font-size:15px;color:#fff;line-height:1;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s;';
     cls.textContent = '×';
+    cls.onmouseover = function(){ this.style.background = 'rgba(255,255,255,.3)'; };
+    cls.onmouseout = function(){ this.style.background = 'rgba(255,255,255,.18)'; };
     cls.onclick = function() { window.bhCloseAnnouncements(); };
     hdr.appendChild(ttl);
     hdr.appendChild(cls);
     var lst = document.createElement('div');
     lst.id = 'bhAnnList';
     lst.style.cssText = 'overflow-y:auto;flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:10px;';
-    lst.innerHTML = '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;">Chargement...</div>';
+    lst.innerHTML = '<div class="bh-skel bh-skel-card"></div><div class="bh-skel bh-skel-card"></div>';
     popup.appendChild(hdr);
     popup.appendChild(lst);
     document.body.appendChild(popup);
@@ -853,7 +793,7 @@ function getSidebarHTML() {
       termine:  { emoji: '✔️', label: 'Terminé', bg: '#F3F4F6', color: '#6B7280' }
     };
     if (!list.length) {
-      container.innerHTML = '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;">Aucune annonce pour l\u0027instant.</div>';
+      container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('inbox', 'Aucune annonce', 'Les nouveautés et informations apparaîtront ici.') : '<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:13px;">Aucune annonce pour l\u0027instant.</div>');
       return;
     }
     container.innerHTML = list.map(function(a) {
@@ -920,6 +860,7 @@ function getSidebarHTML() {
       popup.style.display = 'none';
     } else {
       popup.style.display = 'flex';
+      popup.style.animation = 'bhSheetIn .3s cubic-bezier(.22,1.1,.36,1)';
       // Marquer comme lus
       localStorage.setItem('bh_ann_last_seen', Date.now().toString());
       var badge = document.getElementById('bhAnnBadge');
@@ -967,42 +908,46 @@ window.showToast = function(message, type = 'success', duration = 4000) {
   if (existing) existing.remove();
 
   const colors = {
-    success: { bg: '#1A7A5E', icon: 'fa-check-circle' },
-    error:   { bg: '#dc2626', icon: 'fa-times-circle'  },
-    info:    { bg: '#2563eb', icon: 'fa-info-circle'   },
-    warning: { bg: '#d97706', icon: 'fa-exclamation-circle' }
+    success: { accent: '#1A7A5E', icon: 'fa-check', pill: 'rgba(26,122,94,.14)' },
+    error:   { accent: '#dc2626', icon: 'fa-xmark', pill: 'rgba(220,38,38,.12)' },
+    info:    { accent: '#2563eb', icon: 'fa-info',  pill: 'rgba(37,99,235,.12)' },
+    warning: { accent: '#d97706', icon: 'fa-exclamation', pill: 'rgba(217,119,6,.14)' }
   };
-  const { bg, icon } = colors[type] || colors.success;
+  const { accent, icon, pill } = colors[type] || colors.success;
+  const isMobile = window.innerWidth <= 768;
 
   const toast = document.createElement('div');
   toast.id = 'bh-toast';
   toast.style.cssText = `
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: ${bg};
-    color: white;
-    padding: 14px 20px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    box-shadow: 0 4px 20px rgba(0,0,0,.2);
+    ${isMobile ? 'top: calc(env(safe-area-inset-top,0px) + 12px); left: 12px; right: 12px;' : 'bottom: 24px; right: 24px; max-width: 360px;'}
+    background: rgba(255,255,255,.82);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,.5);
+    border-left: 3px solid ${accent};
+    color: #0D1117;
+    padding: 13px 16px;
+    border-radius: 14px;
+    font-size: 13.5px;
+    font-weight: 500;
+    font-family: "DM Sans", system-ui, sans-serif;
+    box-shadow: 0 8px 32px rgba(13,17,23,.16);
     z-index: 99999;
     display: flex;
     align-items: center;
-    gap: 10px;
-    max-width: 320px;
-    animation: bhToastIn .25s ease;
+    gap: 11px;
+    animation: bhToastIn .3s cubic-bezier(.22,1.1,.36,1);
   `;
-  toast.innerHTML = `<i class="fas ${icon}" style="font-size:17px;flex-shrink:0;"></i><span>${message}</span>`;
+  toast.innerHTML = `<span style="width:26px;height:26px;border-radius:50%;background:${pill};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas ${icon}" style="font-size:12px;color:${accent};"></i></span><span style="flex:1;line-height:1.35;">${message}</span>`;
 
   // Inject keyframes once
   if (!document.getElementById('bh-toast-style')) {
     const style = document.createElement('style');
     style.id = 'bh-toast-style';
     style.textContent = `
-      @keyframes bhToastIn  { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-      @keyframes bhToastOut { from { opacity:1; transform:translateY(0); } to { opacity:0; transform:translateY(12px); } }
+      @keyframes bhToastIn  { from { opacity:0; transform:translateY(-14px); } to { opacity:1; transform:translateY(0); } }
+      @keyframes bhToastOut { from { opacity:1; transform:translateY(0); } to { opacity:0; transform:translateY(-14px); } }
     `;
     document.head.appendChild(style);
   }
@@ -1043,7 +988,7 @@ window.bhConfirm = function(title, message, confirmLabel, cancelLabel, variant) 
         '#bh-confirm-overlay{position:fixed;inset:0;z-index:999999;background:rgba(13,17,23,.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;animation:bhCfIn .15s ease;}',
         '@keyframes bhCfIn{from{opacity:0}to{opacity:1}}',
         '@keyframes bhCfSlide{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}',
-        '#bh-confirm-box{background:white;border-radius:20px;padding:28px 24px 24px;max-width:360px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.18);text-align:center;animation:bhCfSlide .18s cubic-bezier(0.175,0.885,0.32,1.275);}',
+        '#bh-confirm-box{background:rgba(255,255,255,.9);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border:1px solid rgba(255,255,255,.5);border-radius:22px;padding:28px 24px 24px;max-width:360px;width:100%;box-shadow:0 24px 64px rgba(13,17,23,.24);text-align:center;animation:bhCfSlide .18s cubic-bezier(0.175,0.885,0.32,1.275);}',
         '#bh-confirm-title{font-family:"Instrument Serif",Georgia,serif;font-size:20px;font-weight:400;color:#0D1117;margin-bottom:8px;line-height:1.3;}',
         '#bh-confirm-message{font-family:"DM Sans",sans-serif;font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:24px;}',
         '#bh-confirm-actions{display:flex;gap:10px;}',
@@ -1089,15 +1034,17 @@ window.bhConfirm = function(title, message, confirmLabel, cancelLabel, variant) 
     setTimeout(function() { if (okBtn) okBtn.focus(); }, 50);
   });
 };
+// Référence stable du bhConfirm global, pour les pages qui surchargent window.bhConfirm
+// avec une signature différente mais veulent quand même router vers la modale unifiée.
+window.__bhLayoutConfirm = window.bhConfirm;
 
-// Patch window.confirm : remplace les confirm() natifs par bhConfirm
-// IMPORTANT : les appels existants doivent être migrés vers await bhConfirm()
-// pour que la valeur de retour soit respectée.
-// Ce patch évite l'alerte moche du navigateur en cas d'appel non migré.
-window.confirm = function(msg) {
-  window.bhConfirm(msg || '', '', 'Confirmer', 'Annuler', 'danger');
-  return true;
-};
+// window.confirm : on NE patche PAS le confirm natif.
+// Raison : confirm() est synchrone et bloquant ; le remplacer par bhConfirm
+// (asynchrone) en retournant toujours true ferait exécuter les actions
+// (suppressions, etc.) SANS attendre la réponse de l'utilisateur — dangereux.
+// Pour une jolie modale, utiliser directement « await bhConfirm(...) » dans le code.
+// Les confirm() natifs restants restent fonctionnels (bloquants, sûrs).
+var _bhNativeConfirm = window.confirm;
 
 // ── Agency Switcher Modal (bh-layout.js) ─────────────────────
 (function() {
@@ -1108,14 +1055,14 @@ window.confirm = function(msg) {
     modal.id = 'agencySwitcherModal';
     modal.onclick = function(e) { if (e.target === modal) window.closeAgencySwitcherModal(); };
     modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;align-items:center;justify-content:center;opacity:0;transition:opacity .2s ease;';
-    modal.innerHTML = '<div style="background:white;border-radius:20px;width:90%;max-width:400px;padding:0;box-shadow:0 24px 64px rgba(13,17,23,.25);max-height:80vh;overflow:hidden;display:flex;flex-direction:column;transform:scale(.95) translateY(8px);transition:transform .25s cubic-bezier(.4,0,.2,1);" id="agencySwitcherInner">'
-      + '<div style="padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.2);">'
+    modal.innerHTML = '<div style="background:rgba(255,255,255,.9);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border-radius:22px;width:90%;max-width:400px;padding:0;box-shadow:0 24px 64px rgba(13,17,23,.28);max-height:80vh;overflow:hidden;display:flex;flex-direction:column;transform:scale(.95) translateY(8px);transition:transform .25s cubic-bezier(.4,0,.2,1);border:1px solid rgba(255,255,255,.5);" id="agencySwitcherInner">'
+      + '<div style="padding:18px 20px;background:linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%);">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;">'
-      + '<div style="font-size:15px;font-weight:700;color:#1F2937;display:flex;align-items:center;gap:8px;"><i class="fas fa-building" style="color:#7c3aed;font-size:14px;"></i>Changer de compte</div>'
-      + '<button onclick="closeAgencySwitcherModal()" style="background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;transition:background .15s;" onmouseover="this.style.background=\'rgba(0,0,0,.05)\'" onmouseout="this.style.background=\'none\'"><i class="fas fa-times" style="color:#9CA3AF;font-size:14px;"></i></button>'
+      + '<div style="font-size:15px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px;"><i class="fas fa-building" style="color:rgba(255,255,255,.85);font-size:14px;"></i>Changer de compte</div>'
+      + '<button onclick="closeAgencySwitcherModal()" style="background:rgba(255,255,255,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.25);cursor:pointer;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s;" onmouseover="this.style.background=\'rgba(255,255,255,.3)\'" onmouseout="this.style.background=\'rgba(255,255,255,.18)\'"><i class="fas fa-times" style="color:#fff;font-size:14px;"></i></button>'
       + '</div>'
       + '</div>'
-      + '<div id="agencySwitcherList" style="overflow-y:auto;padding:6px 8px 10px;"></div>'
+      + '<div id="agencySwitcherList" style="overflow-y:auto;padding:8px;"></div>'
       + '</div>';
     document.body.appendChild(modal);
   }
@@ -1155,10 +1102,10 @@ window.confirm = function(msg) {
   };
 
   function agencyAccountBtn(onclick, avatarBg, avatarContent, title, subtitle, isActive, checkColor) {
-    return '<button onclick="' + onclick + '" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:12px;border:none;background:' + (isActive ? 'rgba(26,122,94,.06)' : 'transparent') + ';cursor:pointer;text-align:left;transition:all .15s;" onmouseover="this.style.background=\'' + (isActive ? 'rgba(26,122,94,.06)' : 'rgba(0,0,0,.03)') + '\'" onmouseout="this.style.background=\'' + (isActive ? 'rgba(26,122,94,.06)' : 'transparent') + '\'">'
-      + '<span style="width:30px;height:30px;border-radius:50%;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + avatarContent + '</span>'
-      + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#1F2937;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + title + '</div>' + (subtitle ? '<div style="font-size:11px;color:#9CA3AF;">' + subtitle + '</div>' : '') + '</div>'
-      + (isActive ? '<i class="fas fa-check-circle" style="color:' + (checkColor || '#1A7A5E') + ';font-size:15px;flex-shrink:0;"></i>' : '')
+    return '<button onclick="' + onclick + '" style="display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:13px;border:none;background:' + (isActive ? 'rgba(26,122,94,.08)' : 'transparent') + ';cursor:pointer;text-align:left;transition:all .15s;margin-bottom:2px;" onmouseover="this.style.background=\'' + (isActive ? 'rgba(26,122,94,.08)' : 'rgba(0,0,0,.035)') + '\'" onmouseout="this.style.background=\'' + (isActive ? 'rgba(26,122,94,.08)' : 'transparent') + '\'">'
+      + '<span style="width:34px;height:34px;border-radius:50%;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 6px ' + avatarBg + '40;">' + avatarContent + '</span>'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:#1F2937;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + title + '</div>' + (subtitle ? '<div style="font-size:11px;color:#9CA3AF;margin-top:1px;">' + subtitle + '</div>' : '') + '</div>'
+      + (isActive ? '<i class="fas fa-check-circle" style="color:' + (checkColor || '#1A7A5E') + ';font-size:16px;flex-shrink:0;"></i>' : '')
       + '</button>';
   }
 
@@ -1231,8 +1178,8 @@ window.confirm = function(msg) {
     var btn = document.createElement('button');
     btn.id = 'agencySwitcherBtnMobile';
     btn.onclick = function() { if (window.openAgencySwitcherModal) window.openAgencySwitcherModal(); };
-    btn.style.cssText = 'display:none;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.25);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:13px;color:#7c3aed;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:all .2s;width:32px;height:32px;flex-shrink:0;';
-    btn.innerHTML = '<i class="fas fa-building"></i>';
+    btn.style.cssText = 'display:none;background:rgba(124,58,237,.10);border:1px solid rgba(124,58,237,.22);border-radius:10px;cursor:pointer;color:#7c3aed;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s;width:32px;height:32px;flex-shrink:0;';
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/></svg>';
     if (rightContainer) {
       rightContainer.insertBefore(btn, rightContainer.firstChild);
     } else {
@@ -1240,9 +1187,18 @@ window.confirm = function(msg) {
     }
   }
 
+  function _updateAgencyHeaderClass() {
+    var mh = document.getElementById('bhMobileHeader') || document.querySelector('.mobile-header');
+    if (!mh) return;
+    var btnMobile = document.getElementById('agencySwitcherBtnMobile');
+    var visible = btnMobile && btnMobile.style.display !== 'none' && getComputedStyle(btnMobile).display !== 'none';
+    mh.classList.toggle('bh-has-agency', !!visible);
+    mh.classList.toggle('bh-no-agency', !visible);
+  }
+
   window.initAgencySwitcherBtn = function() {
     // Pas de bouton agence sur settings-account et help
-    if (isAgencyBtnHiddenPage()) return;
+    if (isAgencyBtnHiddenPage()) { _updateAgencyHeaderClass(); return; }
     if (window.innerWidth <= 1366) injectMobileAgencyBtn();
     var btn = document.getElementById('agencySwitcherBtn');
     var btnMobile = document.getElementById('agencySwitcherBtnMobile');
@@ -1253,6 +1209,7 @@ window.confirm = function(msg) {
       if (btnMobile) btnMobile.style.display = 'inline-flex';
       updateAgencySwitcherLabel();
     }
+    _updateAgencyHeaderClass();
   };
 
   // Watch for agency accounts to be loaded
@@ -1264,6 +1221,7 @@ window.confirm = function(msg) {
     if (btn) btn.style.display = 'inline-flex';
     if (btnMobile) btnMobile.style.display = 'inline-flex';
     updateAgencySwitcherLabel();
+    _updateAgencyHeaderClass();
     // Don't call old bar rendering
   };
 
@@ -1276,4 +1234,614 @@ window.confirm = function(msg) {
       }
     }, 600);
   });
+})();
+
+
+
+// ═══════════════════════════════════════════════════════════════
+// 🧊 LIQUID GLASS — Pill position via CSS custom properties
+// Ultra-robuste : pas de DOM inject, juste des --pill-x / --pill-w
+// ═══════════════════════════════════════════════════════════════
+(function() {
+  'use strict';
+
+  // ── Mobile pill ──
+  function updateMobilePill() {
+    var tabs = document.querySelector('.mobile-tabs');
+    if (!tabs) return;
+    var active = tabs.querySelector('.tab-btn.active');
+    if (!active || active.offsetWidth === 0) {
+      tabs.style.setProperty('--pill-opacity', '0');
+      return;
+    }
+    var x = active.offsetLeft;
+    var w = active.offsetWidth;
+    tabs.style.setProperty('--pill-x', x + 'px');
+    tabs.style.setProperty('--pill-w', w + 'px');
+    tabs.style.setProperty('--pill-opacity', '0'); /* ancienne pill désactivée — remplacée par .lg-capsule */
+  }
+
+  // ── Sidebar pill ──
+  function updateSidebarPill() {
+    if (window.innerWidth <= 1366) return;
+    var nav = document.querySelector('.sidebar .sidebar-nav');
+    if (!nav) return;
+    var active = nav.querySelector('a.nav-item.active');
+    if (!active || active.offsetHeight === 0) {
+      nav.style.setProperty('--spill-opacity', '0');
+      return;
+    }
+    var y = active.offsetTop;
+    var h = active.offsetHeight;
+    nav.style.setProperty('--spill-y', y + 'px');
+    nav.style.setProperty('--spill-h', h + 'px');
+    nav.style.setProperty('--spill-opacity', '1');
+  }
+
+  // ── Init : poll jusqu'à ce que les tabs existent ──
+  var attempts = 0;
+  var poller = setInterval(function() {
+    attempts++;
+    var tabs = document.querySelector('.mobile-tabs');
+    var hasActive = tabs && tabs.querySelector('.tab-btn.active');
+    if (hasActive && hasActive.offsetWidth > 0) {
+      clearInterval(poller);
+      // Position initiale SANS transition
+      tabs.style.transition = 'none';
+      var before = getComputedStyle(tabs, '::before');
+      updateMobilePill();
+      // Forcer le reflow puis réactiver la transition
+      tabs.offsetHeight;
+      setTimeout(function() { tabs.style.transition = ''; }, 50);
+
+      // Écouter les clics
+      tabs.addEventListener('click', function() {
+        setTimeout(updateMobilePill, 50);
+      });
+
+      // Observer les changements de classe
+      tabs.querySelectorAll('.tab-btn').forEach(function(btn) {
+        new MutationObserver(function() { updateMobilePill(); })
+          .observe(btn, { attributes: true, attributeFilter: ['class'] });
+      });
+    }
+    if (attempts > 50) clearInterval(poller); // stop après 5s
+  }, 100);
+
+  // Sidebar
+  setTimeout(function() {
+    updateSidebarPill();
+    var nav = document.querySelector('.sidebar .sidebar-nav');
+    if (nav) {
+      nav.querySelectorAll('a.nav-item').forEach(function(item) {
+        item.addEventListener('mouseenter', function() {
+          if (item.classList.contains('active')) return;
+          nav.style.setProperty('--spill-y', item.offsetTop + 'px');
+          nav.style.setProperty('--spill-h', item.offsetHeight + 'px');
+          nav.style.setProperty('--spill-opacity', '0.4');
+        });
+        item.addEventListener('mouseleave', function() {
+          updateSidebarPill();
+        });
+      });
+    }
+  }, 800);
+
+  window.addEventListener('resize', function() {
+    updateMobilePill();
+    updateSidebarPill();
+  });
+})();
+
+
+// ═══════════════════════════════════════════════════════════════
+// 🧊✨ LIQUID GLASS TAB BAR — v5
+// • détection par LIBELLÉ visible (settings = page logement → Logements)
+// • capsule "Plus" pilotée par le tap (toggle) + détecteur de fermeture
+// • touch-action:none → drag fluide ; icônes FontAwesome jamais cassées
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+
+  var JADE = '#1A7A5E';
+
+  function injectStyle() {
+    if (document.getElementById('lg-tabbar-style')) return;
+    var css =
+    '@media (max-width:1366px){' +
+      '.mobile-tabs::before,.mobile-tabs::after{content:none!important;display:none!important;background:none!important;}' +
+      '.mobile-tabs .tab-btn::before,.mobile-tabs .tab-btn::after{content:none!important;display:none!important;}' +
+      '.mobile-tabs .glass-pill-mobile,.mobile-tabs .glass-pill{display:none!important;}' +
+      '.mobile-tabs .tab-btn:focus,.mobile-tabs .tab-btn:focus-visible,.mobile-tabs .tab-btn:active{outline:none!important;-webkit-tap-highlight-color:transparent!important;}' +
+      '.mobile-tabs .tab-btn.active{background:transparent!important;box-shadow:none!important;}' +
+      '.mobile-tabs{position:fixed!important;z-index:10001!important;pointer-events:auto!important;touch-action:none!important;}' +
+      // la feuille "Plus" passe AU-DESSUS de la barre (sinon la barre masque le bouton Déconnexion)
+      '#moreMenuSheet,#moreMenuOverlay{z-index:10060!important;}' +
+      // vrai conteneur scrollable : sinon le bouton Déconnexion est coupé et rebondit
+      '#moreMenuSheet{overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;overscroll-behavior:contain!important;max-height:calc(100vh - 48px)!important;max-height:calc(100dvh - 48px)!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 28px)!important;}' +
+
+      '.mobile-tabs .lg-capsule{' +
+        'position:absolute;top:6px;left:0;' +
+        'height:calc(100% - 12px - env(safe-area-inset-bottom,0px));' +
+        'width:0;border-radius:18px;box-sizing:border-box;' +
+        'background:rgba(26,122,94,0.13);' +
+        '-webkit-backdrop-filter:blur(14px) saturate(180%);backdrop-filter:blur(14px) saturate(180%);' +
+        'border:1px solid rgba(26,122,94,0.22);' +
+        'box-shadow:0 4px 16px rgba(26,122,94,0.16),inset 0 1px 0 rgba(255,255,255,0.65),inset 0 -1px 2px rgba(26,122,94,0.10);' +
+        'transform:translateX(0) scaleX(1) translateZ(0);transform-origin:center center;' +
+        'backface-visibility:hidden;-webkit-backface-visibility:hidden;' +
+        'opacity:0;z-index:0;pointer-events:none;will-change:transform,width;' +
+      '}' +
+      '.mobile-tabs .lg-capsule.lg-visible{opacity:1;}' +
+      '.mobile-tabs .lg-capsule.lg-animate{transition:transform .5s cubic-bezier(.34,1.4,.5,1),width .4s cubic-bezier(.34,1.2,.64,1),opacity .25s ease;}' +
+      '.mobile-tabs .lg-capsule.lg-dragging{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:rgba(26,122,94,0.20)!important;box-shadow:none!important;border-color:transparent!important;transition:none!important;}' +
+
+      '.mobile-tabs .tab-btn{position:relative!important;z-index:1!important;background:transparent!important;transition:color .2s ease!important;}' +
+      '.mobile-tabs .tab-btn,.mobile-tabs .tab-btn i,.mobile-tabs .tab-btn span{color:#98a3b0!important;}' +
+      '.mobile-tabs .tab-btn.lg-active,.mobile-tabs .tab-btn.lg-active i,.mobile-tabs .tab-btn.lg-active span,' +
+      '.mobile-tabs .tab-btn.lg-hover,.mobile-tabs .tab-btn.lg-hover i,.mobile-tabs .tab-btn.lg-hover span{color:' + JADE + '!important;}' +
+      '.mobile-tabs .tab-btn.lg-active span,.mobile-tabs .tab-btn.lg-hover span{font-weight:700!important;}' +
+      '.mobile-tabs .tab-btn.lg-active i,.mobile-tabs .tab-btn.lg-hover i{transform:none!important;}' +
+      '.mobile-tabs .tab-btn .badge{color:#fff!important;background:#DC2626!important;}' +
+      '.mobile-tabs .tab-btn.active:not(.lg-active),.mobile-tabs .tab-btn.active:not(.lg-active) i,.mobile-tabs .tab-btn.active:not(.lg-active) span{color:#98a3b0!important;}' +
+      '.mobile-tabs .tab-btn.active:not(.lg-active) span{font-weight:500!important;}' +
+
+      '[data-theme="dark"] .mobile-tabs .lg-capsule{background:rgba(42,174,134,0.18);border-color:rgba(42,174,134,0.30);box-shadow:0 4px 18px rgba(0,0,0,0.30),inset 0 1px 0 rgba(255,255,255,0.10);}' +
+      '[data-theme="dark"] .mobile-tabs .lg-capsule.lg-dragging{background:rgba(42,174,134,0.28)!important;}' +
+      '[data-theme="dark"] .mobile-tabs .tab-btn,[data-theme="dark"] .mobile-tabs .tab-btn i,[data-theme="dark"] .mobile-tabs .tab-btn span{color:#7e8a98!important;}' +
+      '[data-theme="dark"] .mobile-tabs .tab-btn.lg-active,[data-theme="dark"] .mobile-tabs .tab-btn.lg-active i,[data-theme="dark"] .mobile-tabs .tab-btn.lg-active span,' +
+      '[data-theme="dark"] .mobile-tabs .tab-btn.lg-hover,[data-theme="dark"] .mobile-tabs .tab-btn.lg-hover i,[data-theme="dark"] .mobile-tabs .tab-btn.lg-hover span{color:#2AAE86!important;}' +
+      '[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active),[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) i,[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) span{color:#7e8a98!important;}' +
+      '[data-theme="dark"] .mobile-tabs .tab-btn.active:not(.lg-active) span{font-weight:500!important;}' +
+
+      '@media (prefers-reduced-motion:reduce){.mobile-tabs .lg-capsule.lg-animate{transition:opacity .2s ease!important;}}' +
+    '}';
+    var s = document.createElement('style');
+    s.id = 'lg-tabbar-style';
+    s.textContent = css;
+    document.head.appendChild(s);
+  }
+
+  function deburr(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); }
+  function tabsOf(bar) { return Array.prototype.slice.call(bar.querySelectorAll('.tab-btn')).filter(function (t) { return t.offsetWidth > 0; }); }
+  function labelOf(t) { var sp = t.querySelector('span'); return deburr(sp ? sp.textContent : t.textContent); }
+
+  var MORE = { 'settings-account': 1, help: 1, support: 1, factures: 1, clients: 1, deposits: 1, cautions: 1,
+    cleaning: 1, menages: 1, welcome: 1, livrets: 1, contrat: 1, contrats: 1, reporting: 1, revenus: 1,
+    pricing: 1, finances: 1, notifications: 1, avis: 1 };
+  var TOLABEL = { app: 'accueil', dashboard: 'accueil', accueil: 'accueil', index: 'accueil',
+    reservations: 'reservations', messages: 'messages',
+    logements: 'logements', properties: 'logements', biens: 'logements',
+    settings: 'logements', 'smart-locks': 'logements', smart_locks: 'logements', serrures: 'logements' };
+
+  function keyForPage(page) { page = deburr(page); if (TOLABEL[page]) return TOLABEL[page]; if (MORE[page]) return 'plus'; return ''; }
+  function findByLabel(tabs, key) { if (!key) return -1; for (var i = 0; i < tabs.length; i++) if (labelOf(tabs[i]).indexOf(key) !== -1) return i; return -1; }
+  function plusIndex(tabs) { return findByLabel(tabs, 'plus'); }
+
+  function pageIndex(tabs) {
+    var idx = findByLabel(tabs, keyForPage(document.body && document.body.dataset && document.body.dataset.page));
+    if (idx >= 0) return idx;
+    var file = deburr((location.pathname || '').split('/').pop()).replace('.html', '');
+    idx = findByLabel(tabs, keyForPage(file));
+    if (idx >= 0) return idx;
+    for (var m = 0; m < tabs.length; m++) if (tabs[m].classList.contains('active')) return m;
+    return -1;
+  }
+
+  function moreOpen() {
+    var el = document.getElementById('moreMenuSheet');
+    if (!el) return false;
+    var cs = window.getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity || '1') < 0.05) return false;
+    var r = el.getBoundingClientRect();
+    return r.height > 40 && r.top < (window.innerHeight - 40);
+  }
+
+  function setup(bar) {
+    if (bar.__lgReady) return;
+    bar.__lgReady = true;
+
+    var dupes = bar.querySelectorAll('.lg-capsule');
+    for (var d = 1; d < dupes.length; d++) dupes[d].remove();
+    var cap = bar.querySelector('.lg-capsule');
+    if (!cap) { cap = document.createElement('div'); cap.className = 'lg-capsule'; bar.insertBefore(cap, bar.firstChild); }
+
+    var dragging = false, moved = false, startX = 0, lastX = 0, lastT = 0, vx = 0;
+    var startIdx = -1, hoverIdx = -1, suppressClick = false, mc = [], rafId = 0, pendX = 0, curIdx = -1;
+    var pinned = false, pinWatch = null, sawOpen = false;
+    var navTargetIdx = -1; // onglet cible d'une navigation : la capsule y reste pendant le chargement de la nouvelle page
+
+    function snapshot() { mc = tabsOf(bar).map(function (t) { return { el: t, left: t.offsetLeft, width: t.offsetWidth, center: t.offsetLeft + t.offsetWidth / 2 }; }); }
+    function markActive(idx) { var ts = tabsOf(bar); for (var i = 0; i < ts.length; i++) ts[i].classList.toggle('lg-active', i === idx); }
+    function paintHover(idx) { for (var i = 0; i < mc.length; i++) mc[i].el.classList.toggle('lg-hover', i === idx && i !== curIdx); }
+    function clearHover() { for (var i = 0; i < mc.length; i++) mc[i].el.classList.remove('lg-hover'); }
+
+    function settle(idx, animate) {
+      snapshot(); curIdx = idx; markActive(idx);
+      if (idx < 0 || idx >= mc.length) { cap.classList.remove('lg-visible'); return; }
+      var m = mc[idx];
+      cap.classList.remove('lg-dragging');
+      cap.classList.toggle('lg-animate', !!animate);
+      cap.style.width = m.width + 'px';
+      cap.style.transform = 'translateX(' + m.left + 'px) scaleX(1) translateZ(0)';
+      cap.classList.add('lg-visible');
+    }
+
+    function sync(animate) {
+      var ts = tabsOf(bar);
+      // Navigation en cours : on garde la capsule sur l'onglet cible. La page
+      // courante est encore l'ancienne, donc pageIndex() renverrait l'onglet
+      // d'origine → la capsule rebondirait en arrière avant le chargement.
+      if (navTargetIdx >= 0 && navTargetIdx < ts.length) { settle(navTargetIdx, animate); return; }
+      if (pinned || moreOpen()) { var pi = plusIndex(ts); if (pi >= 0) { settle(pi, animate); return; } }
+      settle(pageIndex(ts), animate);
+    }
+    bar.__lgSync = sync;
+
+    function startPinWatch() {
+      sawOpen = false; if (pinWatch) clearInterval(pinWatch);
+      var misses = 0;
+      pinWatch = setInterval(function () {
+        if (!pinned) { clearInterval(pinWatch); return; }
+        if (moreOpen()) { sawOpen = true; misses = 0; }
+        else if (sawOpen) { misses++; if (misses >= 2) { pinned = false; clearInterval(pinWatch); sync(true); } }
+      }, 250);
+    }
+
+    function applyFollow() {
+      rafId = 0; if (!mc.length) return;
+      var x = Math.max(mc[0].center, Math.min(mc[mc.length - 1].center, pendX));
+      var w = mc[startIdx] ? mc[startIdx].width : mc[0].width;
+      var st = Math.min(0.12, Math.abs(vx) * 0.010);
+      cap.style.width = w + 'px';
+      cap.style.transform = 'translateX(' + (x - w / 2) + 'px) scaleX(' + (1 + st) + ') translateZ(0)';
+      var best = 0, bd = Infinity;
+      for (var i = 0; i < mc.length; i++) { var dd = Math.abs(mc[i].center - x); if (dd < bd) { bd = dd; best = i; } }
+      if (best !== hoverIdx) { hoverIdx = best; paintHover(best); if (navigator.vibrate) { try { navigator.vibrate(3); } catch (e) {} } }
+    }
+    function follow(px) { pendX = px; if (!rafId) rafId = requestAnimationFrame(applyFollow); }
+
+    function onDown(e) {
+      var p = (e.touches ? e.touches[0] : e); snapshot(); if (!mc.length) return;
+      dragging = true; moved = false; startX = lastX = p.clientX; lastT = e.timeStamp || Date.now(); vx = 0; hoverIdx = curIdx;
+      startIdx = 0;
+      for (var i = 0; i < mc.length; i++) { if (p.clientX >= mc[i].left && p.clientX <= mc[i].left + mc[i].width) { startIdx = i; break; } }
+      cap.classList.remove('lg-animate');
+      if (bar.setPointerCapture && e.pointerId != null) { try { bar.setPointerCapture(e.pointerId); } catch (er) {} }
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      var p = (e.touches ? e.touches[0] : e);
+      var dx = p.clientX - lastX, dt = (e.timeStamp || Date.now()) - lastT;
+      if (dt > 0) vx = dx / dt * 16; lastX = p.clientX; lastT = e.timeStamp || Date.now();
+      if (!moved && Math.abs(p.clientX - startX) > 6) { moved = true; cap.classList.add('lg-dragging'); }
+      if (moved) { if (e.cancelable) e.preventDefault(); follow(p.clientX); }
+    }
+    function onUp() {
+      if (!dragging) return; dragging = false;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } clearHover();
+      if (!moved) { return; }
+      var target = hoverIdx >= 0 ? hoverIdx : startIdx;
+      pinned = (target === plusIndex(tabsOf(bar)));
+      if (pinned) startPinWatch();
+      // Drag vers un onglet de navigation : verrouiller la cible AVANT settle, sinon
+      // le markActive() de settle redéclenche un sync qui repart sur l'ancienne page
+      // pendant les ~120ms avant que le clic programmatique ne pose le verrou.
+      if (!pinned && target !== startIdx) { navTargetIdx = target; }
+      settle(target, true);
+      if (target !== startIdx && mc[target]) {
+        suppressClick = true; setTimeout(function () { suppressClick = false; }, 450);
+        var el = mc[target].el;
+        setTimeout(function () { var ev; try { ev = new MouseEvent('click', { bubbles: true, cancelable: true }); } catch (er) { ev = document.createEvent('MouseEvents'); ev.initEvent('click', true, true); } ev.__lgProg = true; el.dispatchEvent(ev); }, 120);
+      }
+      moved = false;
+    }
+
+    function swallowClick(e) { if (e.__lgProg) return; if (suppressClick) { e.preventDefault(); e.stopPropagation(); } }
+
+    function onBarClick(e) {
+      var t = e.target.closest ? e.target.closest('.tab-btn') : null;
+      if (!t) return;
+      var ts = tabsOf(bar); var idx = ts.indexOf(t); var pi = plusIndex(ts);
+      if (e.__lgProg) { pinned = (idx === pi); }
+      else if (idx === pi) { pinned = !pinned; }
+      else { pinned = false; }
+      if (pinned) startPinWatch(); else if (pinWatch) { clearInterval(pinWatch); }
+      // Onglet de navigation (pas le Plus) : la capsule reste sur l'onglet cliqué
+      // jusqu'au chargement de la nouvelle page, au lieu de rebondir vers l'origine.
+      if (!pinned && idx >= 0 && idx !== pi) { navTargetIdx = idx; settle(idx, true); }
+      else { setTimeout(function () { if (!dragging) sync(true); }, 0); }
+    }
+
+    if (window.PointerEvent) {
+      bar.addEventListener('pointerdown', onDown, { passive: true });
+      bar.addEventListener('pointermove', onMove, { passive: false });
+      bar.addEventListener('pointerup', onUp, { passive: true });
+      bar.addEventListener('pointercancel', function () { dragging = false; if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } clearHover(); sync(true); }, { passive: true });
+    } else {
+      bar.addEventListener('touchstart', onDown, { passive: true });
+      bar.addEventListener('touchmove', onMove, { passive: false });
+      bar.addEventListener('touchend', onUp, { passive: true });
+    }
+    bar.addEventListener('click', swallowClick, true);
+    bar.addEventListener('click', onBarClick, false);
+
+    sync(false);
+    requestAnimationFrame(function () { bar.offsetHeight; cap.classList.add('lg-animate'); });
+
+    tabsOf(bar).forEach(function (t) {
+      new MutationObserver(function () { if (!dragging) sync(true); }).observe(t, { attributes: true, attributeFilter: ['class'] });
+    });
+    var sheet = document.getElementById('moreMenuSheet');
+    if (sheet) new MutationObserver(function () { if (!dragging) sync(true); }).observe(sheet, { attributes: true, attributeFilter: ['style', 'class'] });
+  }
+
+  function boot() {
+    injectStyle();
+    var tries = 0;
+    var poll = setInterval(function () {
+      tries++;
+      var bar = document.querySelector('.mobile-tabs');
+      if (bar && tabsOf(bar).length) { clearInterval(poll); setup(bar); }
+      if (tries > 60) clearInterval(poll);
+    }, 100);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+
+  window.addEventListener('resize', function () { var b = document.querySelector('.mobile-tabs'); if (b && b.__lgSync) b.__lgSync(false); });
+  window.addEventListener('pageshow', function () { var b = document.querySelector('.mobile-tabs'); if (b && b.__lgSync) b.__lgSync(false); });
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// 🧊 HEADER v4.0 — icônes Lucide + boutons glass (toutes les pages)
+// Remplace les <i> FontAwesome du .mobile-header par des SVG Lucide
+// et applique le style glass, SANS toucher aux id/badges/handlers
+// (le <i> est conservé : la rotation du bouton sync continue de marcher).
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+  var P = {
+    server: '<rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/>',
+    plug: '<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/>',
+    bell: '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8a6 6 0 0 0-12 0c0 4.499-1.411 5.956-2.738 7.326"/>'
+  };
+  function svg(name, size) {
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + P[name] + '</svg>';
+  }
+  function swap(iEl, name, size) {
+    if (!iEl) return;
+    iEl.className = 'lg-hicon';
+    iEl.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;line-height:0;';
+    iEl.innerHTML = svg(name, size);
+  }
+  // Helper global : état vide illustré (icône + titre + texte), dispo sur toutes les pages.
+  // ── bhAnimateValue : anime un nombre de 0 (ou valeur courante) vers une cible ──
+  // Gère préfixe/suffixe (%, €), décimales, et respecte prefers-reduced-motion.
+  // Usage : bhAnimateValue(el, 375, { suffix:'€' });  bhAnimateValue(el, 8, { suffix:'%' });
+  if (!window.bhAnimateValue) {
+    window.bhAnimateValue = function(el, target, opts) {
+      if (!el) return;
+      opts = opts || {};
+      var prefix = opts.prefix || '';
+      var suffix = opts.suffix || '';
+      var decimals = opts.decimals || 0;
+      var duration = opts.duration || 900;
+      target = Number(target) || 0;
+      // Respecte la préférence d'accessibilité : pas d'animation
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        el.textContent = prefix + target.toFixed(decimals) + suffix;
+        return;
+      }
+      var start = 0;
+      var startTime = null;
+      function fmt(v){ return prefix + (decimals ? v.toFixed(decimals) : Math.round(v).toLocaleString('fr-FR')) + suffix; }
+      function step(ts) {
+        if (!startTime) startTime = ts;
+        var p = Math.min((ts - startTime) / duration, 1);
+        // easeOutCubic
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = fmt(start + (target - start) * eased);
+        if (p < 1) requestAnimationFrame(step);
+        else el.textContent = fmt(target);
+      }
+      requestAnimationFrame(step);
+    };
+  }
+
+  // ── bhHaptic : vibration légère sur les actions (iOS Capacitor + fallback web) ──
+  // Usage : bhHaptic() pour un tap léger ; bhHaptic('medium') / bhHaptic('heavy')
+  if (!window.bhHaptic) {
+    window.bhHaptic = function(intensity) {
+      try {
+        // Capacitor Haptics si dispo (app iOS native)
+        var Cap = window.Capacitor;
+        if (Cap && Cap.Plugins && Cap.Plugins.Haptics) {
+          var style = intensity === 'heavy' ? 'HEAVY' : intensity === 'medium' ? 'MEDIUM' : 'LIGHT';
+          Cap.Plugins.Haptics.impact({ style: style });
+          return;
+        }
+        // Fallback web : navigator.vibrate (Android surtout)
+        if (navigator.vibrate) {
+          navigator.vibrate(intensity === 'heavy' ? 18 : intensity === 'medium' ? 12 : 7);
+        }
+      } catch(e) { /* silencieux */ }
+    };
+  }
+
+  if (!window.bhEmptyState) {
+    window.bhEmptyState = function(icon, title, text) {
+      var icons = {
+        note: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>',
+        calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+        invoice: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>',
+        check: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+        inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+        users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+        message: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+        chart: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+        broom: '<path d="M19.4 7.34 16.66 4.6A2 2 0 0 0 14 4.53l-9 9a2 2 0 0 0-.57 1.21L4 18l3.27-.43a2 2 0 0 0 1.21-.57l9-9a2 2 0 0 0 .07-2.66Z"/>'
+      };
+      var path = icons[icon] || icons.inbox;
+      return '<div class="bh-empty">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + path + '</svg>' +
+        '<div class="bh-empty-title">' + title + '</div>' +
+        (text ? '<div class="bh-empty-text">' + text + '</div>' : '') +
+        '</div>';
+    };
+  }
+
+  function injectStyleV4() {
+    if (document.getElementById('bh-style-v4-css')) return;
+    var s = document.createElement('style');
+    s.id = 'bh-style-v4-css';
+    s.textContent = [
+      '@keyframes bhSheetIn{from{transform:translateY(100%);}to{transform:translateY(0);}}',
+      '@keyframes bhPanelSlideIn{from{transform:translateX(100%);}to{transform:translateX(0);}}',
+      '@keyframes bhOverlayIn{from{opacity:0;}to{opacity:1;}}',
+      '[style*="position: fixed"][style*="align-items: flex-end"]{animation:bhOverlayIn .2s ease;}',
+      '[style*="position:fixed"][style*="align-items:flex-end"] > div:first-child,',
+      '[style*="position: fixed"][style*="align-items: flex-end"] > div:first-child{animation:bhSheetIn .34s cubic-bezier(.22,1.1,.36,1);}',
+      '.bh-close-glass,',
+      '[id*="Close"][style*="border-radius:50%"],',
+      '[id*="closeDetails"],[id*="ModalClose"]{',
+        'background:rgba(255,255,255,.55)!important;',
+        '-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);',
+        'border:1px solid rgba(0,0,0,.06)!important;color:#6B7280!important;',
+        'box-shadow:0 1px 3px rgba(0,0,0,.06)!important;',
+        'transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s!important;}',
+      '[id*="Close"][style*="border-radius:50%"]:hover,',
+      '[id*="closeDetails"]:hover{background:rgba(255,255,255,.85)!important;color:#1A1F2E!important;}',
+      '[id*="Close"][style*="border-radius:50%"]:active,',
+      '[id*="closeDetails"]:active{transform:scale(.9)!important;}',
+      '.kpi-card,[class*="kpi-card"]{transition:transform .2s cubic-bezier(.34,1.2,.5,1),box-shadow .2s!important;}',
+      '.kpi-card:hover,[class*="kpi-card"]:hover{transform:translateY(-3px)!important;box-shadow:0 8px 24px rgba(26,122,94,.12)!important;}',
+      '.kpi-card:active,[class*="kpi-card"]:active{transform:translateY(-1px) scale(.99)!important;}',
+      '.bh-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:32px 20px;text-align:center;color:#9CA3AF;}',
+      '.bh-empty svg,.bh-empty .bh-empty-icon{width:40px;height:40px;opacity:.5;}',
+      '.bh-empty-title{font-size:14px;font-weight:600;color:#6B7280;}',
+      '.bh-empty-text{font-size:12.5px;color:#9CA3AF;max-width:240px;line-height:1.5;}',
+      '@keyframes bhShimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}',
+      '.bh-skel{background:linear-gradient(90deg,rgba(0,0,0,.04) 25%,rgba(0,0,0,.08) 37%,rgba(0,0,0,.04) 63%);background-size:200% 100%;animation:bhShimmer 1.4s ease-in-out infinite;border-radius:8px;}',
+      '.bh-skel-line{height:12px;margin:6px 0;}',
+      '.bh-skel-card{height:64px;border-radius:14px;margin-bottom:8px;}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+  function injectLogoCSS() {
+    if (document.getElementById('bh-logo-size-css')) return;
+    var s = document.createElement('style');
+    s.id = 'bh-logo-size-css';
+    // Tailles du logo/texte appliquées sur TOUTES les pages (pas seulement le dashboard),
+    // pour que le logo soit cohérent partout. Cible large : .mobile-header et .mobile-logo.
+    s.textContent =
+      '.mobile-header .mobile-logo,.mobile-logo{gap:6px!important;min-width:0!important;flex:1 1 auto!important;overflow:hidden!important;}' +
+      '.mobile-header .mobile-logo img,.mobile-logo img{width:30px!important;height:30px!important;min-width:30px!important;border-radius:8px!important;flex-shrink:0!important;}' +
+      // Texte en colonne : titre au-dessus, sous-titre dessous, calés à la même largeur
+      '.mobile-header .mobile-logo-text,.mobile-logo-text{display:inline-flex!important;flex-direction:column!important;align-items:stretch!important;min-width:0!important;overflow:hidden!important;}' +
+      '.mobile-header .mobile-logo-title,.mobile-logo-title{font-family:\'DM Sans\',sans-serif!important;font-size:15px!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}' +
+      // Sous-titre réduit + justifié → s'étire EXACTEMENT sur la largeur de "Boostinghost"
+      '.mobile-header .mobile-logo-subtitle,.mobile-logo-subtitle{font-size:6.5px!important;letter-spacing:0!important;margin-top:1px!important;display:block!important;width:100%!important;white-space:nowrap!important;overflow:hidden!important;text-align:justify!important;text-align-last:justify!important;-moz-text-align-last:justify!important;}';
+    document.head.appendChild(s);
+  }
+  function injectCSS() {
+    injectLogoCSS();
+    injectStyleV4();
+    if (document.getElementById('bh-header-v4-css')) return;
+    var s = document.createElement('style');
+    s.id = 'bh-header-v4-css';
+    s.textContent =
+      '.mobile-header{justify-content:space-between!important;overflow:hidden!important;max-width:100%!important;box-sizing:border-box!important;}' +
+      // Le groupe de boutons à droite ne doit jamais se comprimer ni sortir de l'écran
+      '.mobile-header>[style*="flex-end"]{flex-shrink:0!important;}' +
+      '.mobile-header #bh-mobile-ann-btn{margin-right:6px!important;}' +
+      '.mobile-header>[style*="flex-end"]{gap:5px!important;margin-left:8px!important;}' +
+      /* Sans bouton agence : le groupe droit (2 boutons) laisse un vide entre le logo
+         et les boutons. On décolle le groupe du bord droit pour le ramener vers le
+         centre, ce qui rééquilibre comme s'il y avait 3 boutons. */
+      '.mobile-header.bh-no-agency>[style*="flex-end"]{margin-right:12px!important;}' +
+      '.mobile-header #bh-mobile-svc,.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{' +
+        'background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);' +
+        'border:1px solid rgba(26,122,94,.16)!important;border-radius:10px!important;height:32px!important;cursor:pointer;' +
+        'transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s,color .2s,border-color .2s!important;}' +
+      '.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{width:32px!important;}' +
+      '.mobile-header #bh-mobile-svc{border-radius:999px!important;padding:0 10px!important;gap:7px!important;}' +
+      '.mobile-header #syncBtnMobile{color:#1A7A5E!important;}' +
+      '.mobile-header #bh-mobile-ann-btn,.mobile-header #bh-mobile-notif-btn{color:#6B7280!important;}' +
+      '.mobile-header #bh-mobile-svc .lg-hicon{color:#94a3b8!important;}' +
+      '.mobile-header #bh-mobile-svc:hover,.mobile-header #bh-mobile-ann-btn:hover,.mobile-header #syncBtnMobile:hover,.mobile-header #bh-mobile-notif-btn:hover{background:rgba(255,255,255,.82)!important;}' +
+      '.mobile-header #bh-mobile-ann-btn:hover,.mobile-header #bh-mobile-notif-btn:hover{color:#1A7A5E!important;}' +
+      '.mobile-header #bh-mobile-svc:active,.mobile-header #bh-mobile-ann-btn:active,.mobile-header #syncBtnMobile:active,.mobile-header #bh-mobile-notif-btn:active,.mobile-header #agencySwitcherBtnMobile:active{transform:scale(.92);}' +
+      '.mobile-header #agencySwitcherBtnMobile:hover{background:rgba(124,58,237,.18)!important;}' +
+      '.mobile-header .lg-hicon svg{display:block;}';
+    document.head.appendChild(s);
+  }
+  function enhance() {
+    var mh = document.querySelector('.mobile-header');
+    if (!mh || mh.dataset.v4) return;
+    injectCSS();
+    swap(mh.querySelector('#bh-mobile-svc i.fa-server'), 'server', 13);
+    swap(mh.querySelector('#bh-mobile-svc i.fa-plug'), 'plug', 13);
+    swap(mh.querySelector('#bh-mobile-ann-btn i.fa-info-circle'), 'info', 16);
+    swap(mh.querySelector('#syncBtnMobile i.fa-sync-alt'), 'refresh', 16);
+    swap(mh.querySelector('#bh-mobile-notif-btn i.fa-bell'), 'bell', 16);
+    mh.dataset.v4 = '1';
+  }
+  // Haptic global : léger retour tactile au tap sur les éléments interactifs clés.
+  function attachHaptics() {
+    if (window.__bhHapticsAttached) return;
+    window.__bhHapticsAttached = true;
+    document.addEventListener('touchstart', function(e) {
+      var t = e.target;
+      if (!t || !t.closest) return;
+      // Boutons, cards KPI, FAB, onglets, liens d'action
+      var hit = t.closest('button, .kpi-card, [class*="kpi-card"], .fab, [class*="fab"], .mobile-tabs a, [role="button"], .bh-close-glass');
+      if (hit) { try { window.bhHaptic && window.bhHaptic('light'); } catch(_){} }
+    }, { passive: true });
+  }
+  // ── Transitions de page : fondu à l'arrivée + léger fondu sortant à la navigation ──
+  // Supprime le "flash blanc" entre les pages. Filets de sécurité inclus.
+  function injectPageTransition() {
+    if (document.getElementById('bh-page-transition-css')) return;
+    var s = document.createElement('style');
+    s.id = 'bh-page-transition-css';
+    s.textContent = [
+      '@keyframes bhPageIn{from{opacity:0;}to{opacity:1;}}',
+      'body.bh-page-ready{animation:bhPageIn .28s ease;}',
+      'body.bh-page-leaving{opacity:0;transition:opacity .18s ease;}'
+    ].join('');
+    document.head.appendChild(s);
+  }
+  function setupPageTransitions() {
+    injectPageTransition();
+    // Fade-in à l'arrivée
+    document.body.classList.add('bh-page-ready');
+    // Si la page revient du cache (retour arrière), retirer tout état "leaving"
+    window.addEventListener('pageshow', function() {
+      document.body.classList.remove('bh-page-leaving');
+    });
+    // Fade-out sortant sur les liens internes de navigation
+    document.addEventListener('click', function(e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (!a) return;
+      var href = a.getAttribute('href');
+      if (!href || href.charAt(0) === '#') return;
+      if (a.target === '_blank' || a.hasAttribute('download')) return;
+      if (/^(mailto:|tel:|javascript:)/i.test(href)) return;
+      // Seulement les liens internes .html de l'app
+      if (!/\.html(\?|#|$)/.test(href) && href.charAt(0) !== '/') return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+      // Lance le fondu sortant ; le navigateur enchaîne la navigation
+      document.body.classList.add('bh-page-leaving');
+      // Filet de sécurité : si la nav est annulée, on rétablit après 1s
+      setTimeout(function(){ document.body.classList.remove('bh-page-leaving'); }, 1000);
+    }, true);
+  }
+  function boot() { injectLogoCSS(); injectStyleV4(); enhance(); attachHaptics(); setupPageTransitions(); setTimeout(function(){ injectLogoCSS(); injectStyleV4(); enhance(); }, 600); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
