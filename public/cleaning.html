@@ -1346,13 +1346,27 @@ html[data-theme-v3="1"] .cleaning-tab:not(.active):hover {
   .cleaning-tab .tab-label { display: inline !important; }
 }
 
-/* ===== FIX SCROLL : le contenu ne doit plus passer sous la barre du bas ===== */
+/* ===== FIX SCROLL MOBILE : bas de page atteignable (fix iOS 100vh) ===== */
 @media (max-width: 1366px) {
-  html[data-theme-v3="1"] .page-content {
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important;
+  /* Hauteur dynamique : sur iOS, 100vh dépasse la zone visible -> bas inatteignable.
+     100dvh suit la zone réellement visible, donc le scroll va jusqu'au bout. */
+  html[data-theme-v3="1"] .app-container {
+    height: calc(100dvh - 40px) !important;
+    min-height: calc(100dvh - 40px) !important;
+    overflow: hidden !important;
   }
   html[data-theme-v3="1"] main.main-content {
-    -webkit-overflow-scrolling: touch !important; overscroll-behavior: contain;
+    height: 100% !important;
+    max-height: calc(100dvh - 40px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain;
+    /* espace pour que le dernier élément passe AU-DESSUS de la barre du bas */
+    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important;
+    box-sizing: border-box !important;
+  }
+  html[data-theme-v3="1"] .page-content {
+    padding-bottom: 8px !important;
   }
 }
 
