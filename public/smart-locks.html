@@ -256,6 +256,19 @@ html[data-theme-v3="1"] .page-content { max-width: none !important; width: 100% 
 })();
 </script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
+<style id="bh-logo-bold-fix">
+/* Logo header mobile en gras — forte spécificité + fin de <head> pour battre tout CSS externe */
+html body .mobile-header .mobile-logo,
+html body .mobile-header .mobile-logo .mobile-logo-text,
+html body .mobile-header .mobile-logo .mobile-logo-text *:not(.mobile-logo-subtitle),
+html body .mobile-header .mobile-logo .mobile-logo-title,
+html body .mobile-header .mobile-logo .mobile-logo-title > span {
+  font-weight: 800 !important;
+}
+html body .mobile-header .mobile-logo .mobile-logo-subtitle {
+  font-weight: 700 !important;
+}
+</style>
 </head>
 <body data-page="smart-locks" data-title="Serrures connectées" data-kicker="Avancé" data-back-href="/app.html" data-back-label="Retour au dashboard">
 

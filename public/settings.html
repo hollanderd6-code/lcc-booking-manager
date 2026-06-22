@@ -1218,6 +1218,19 @@ html[data-theme-v3="1"] .sidebar {
     })();
   </script>
 <link rel="stylesheet" href="/css/mobile-native-styles.css">
+<style id="bh-logo-bold-fix">
+/* Logo header mobile en gras — forte spécificité + fin de <head> pour battre tout CSS externe */
+html body .mobile-header .mobile-logo,
+html body .mobile-header .mobile-logo .mobile-logo-text,
+html body .mobile-header .mobile-logo .mobile-logo-text *:not(.mobile-logo-subtitle),
+html body .mobile-header .mobile-logo .mobile-logo-title,
+html body .mobile-header .mobile-logo .mobile-logo-title > span {
+  font-weight: 800 !important;
+}
+html body .mobile-header .mobile-logo .mobile-logo-subtitle {
+  font-weight: 700 !important;
+}
+</style>
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Gestion" data-page="settings" data-subtitle="Ajoutez, modifiez et organisez vos logements." data-title="Mes logements">
 
@@ -3468,18 +3481,6 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
     max-width: 100% !important;
     margin: 0 auto !important;
     justify-content: center !important;
-  }
-  /* Logo en gras (uniforme avec les autres pages) */
-  .mobile-header .mobile-logo .mobile-logo-text,
-  .mobile-header .mobile-logo .mobile-logo-title,
-  .mobile-header .mobile-logo .mobile-logo-title > span:first-child {
-    font-weight: 800 !important;
-  }
-  .mobile-header .mobile-logo .mobile-logo-title > span:last-child {
-    font-weight: 600 !important;
-  }
-  .mobile-header .mobile-logo .mobile-logo-subtitle {
-    font-weight: 700 !important;
   }
 
   .mobile-menu-btn, #mobileMenuBtn,
