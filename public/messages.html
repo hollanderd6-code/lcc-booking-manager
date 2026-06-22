@@ -2880,6 +2880,18 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     margin: 0 auto !important;
     justify-content: center !important;
   }
+  /* Logo en gras (uniforme avec les autres pages) */
+  .mobile-header .mobile-logo .mobile-logo-text,
+  .mobile-header .mobile-logo .mobile-logo-title,
+  .mobile-header .mobile-logo .mobile-logo-title > span:first-child {
+    font-weight: 800 !important;
+  }
+  .mobile-header .mobile-logo .mobile-logo-title > span:last-child {
+    font-weight: 600 !important;
+  }
+  .mobile-header .mobile-logo .mobile-logo-subtitle {
+    font-weight: 700 !important;
+  }
 
   .mobile-menu-btn, #mobileMenuBtn { display: none !important; }
 
