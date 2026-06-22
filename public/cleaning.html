@@ -2108,7 +2108,13 @@ html[data-theme-v3="1"] #templatesList > div {
       <div id="respSubBlock">
         <label class="maint-label">Collaborateur (sous-compte)</label>
         <select id="respSubSelect" class="maint-input"><option value="">— Choisir —</option></select>
-        <p class="text-secondary" style="font-size:12px;margin:5px 0 0;">Prévenu par notification push dans l'app.</p>
+        <p class="text-secondary" style="font-size:12px;margin:5px 0 8px;">Prévenu par notification push dans l'app.</p>
+        <label class="maint-label">Email + SMS en plus (optionnel)</label>
+        <div style="display:flex;gap:10px;">
+          <div style="flex:1;"><input id="respSubEmail" class="maint-input" type="email" maxlength="120" placeholder="email@…"></div>
+          <div style="flex:1;"><input id="respSubPhone" class="maint-input" type="tel" maxlength="30" placeholder="06…"></div>
+        </div>
+        <p class="text-secondary" style="font-size:12px;margin:5px 0 0;">Utile si le collaborateur n'a pas toujours l'app ouverte.</p>
       </div>
 
       <div id="respContactBlock" style="display:none;">
@@ -3289,7 +3295,10 @@ function formatDateFr(dateStr) {
         if (!r) return null;
         if (r.assignee_type === 'sub') {
           const n = [r.sub_first_name, r.sub_last_name].filter(Boolean).join(' ').trim();
-          return (n || 'Collaborateur') + ' · app';
+          const extra = [];
+          if (r.contact_email) extra.push('email');
+          if (r.contact_phone) extra.push('SMS');
+          return (n || 'Collaborateur') + ' · push' + (extra.length ? '+' + extra.join('+') : '');
         }
         const ways = [];
         if (r.contact_email) ways.push('email');
@@ -3378,6 +3387,9 @@ function formatDateFr(dateStr) {
         document.getElementById('respContactPhone').value = existing && existing.assignee_type === 'contact' ? (existing.contact_phone || '') : '';
         setRespType(existing && existing.assignee_type === 'contact' ? 'contact' : 'sub');
         if (ssel) ssel.value = existing && existing.assignee_type === 'sub' && existing.sub_account_id ? String(existing.sub_account_id) : '';
+        // Email/SMS complémentaires (cas sous-compte)
+        document.getElementById('respSubEmail').value = existing && existing.assignee_type === 'sub' ? (existing.contact_email || '') : '';
+        document.getElementById('respSubPhone').value = existing && existing.assignee_type === 'sub' ? (existing.contact_phone || '') : '';
         document.getElementById('responsibleModal').classList.add('active');
       }
       window.openResponsibleModal = openResponsibleModal;
@@ -3390,6 +3402,9 @@ function formatDateFr(dateStr) {
         if (respCurrentType === 'sub') {
           body.subAccountId = document.getElementById('respSubSelect').value;
           if (!body.subAccountId) { alert('Choisissez un collaborateur.'); return; }
+          // Email/SMS optionnels en complément du push
+          body.contactEmail = document.getElementById('respSubEmail').value.trim();
+          body.contactPhone = document.getElementById('respSubPhone').value.trim();
         } else {
           body.contactName = document.getElementById('respContactName').value.trim();
           body.contactEmail = document.getElementById('respContactEmail').value.trim();

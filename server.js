@@ -14270,6 +14270,7 @@ async function notifyRestockResponsible(responsible, propName, items) {
   if (!responsible) return;
   const list = Array.isArray(items) ? items.join(', ') : String(items || '');
 
+  // Push (si c'est un sous-compte)
   if (responsible.assignee_type === 'sub' && responsible.sub_account_id) {
     try {
       const tok = await pool.query(
@@ -14285,37 +14286,37 @@ async function notifyRestockResponsible(responsible, propName, items) {
         );
       }
     } catch (e) { console.warn('⚠️ [CONSO] Push responsable échoué:', e.message); }
-    return;
   }
 
-  if (responsible.assignee_type === 'contact') {
-    if (responsible.contact_email) {
-      try {
-        const html = `
-          <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
-            <h2 style="color:#1A7A5E;">Articles à racheter</h2>
-            <p>Bonjour ${responsible.contact_name || ''},</p>
-            <p>Pour le logement <strong>${propName}</strong>, les articles suivants sont à racheter :</p>
-            <p style="font-size:15px;font-weight:600;">${list}</p>
-            <p style="margin-top:18px;color:#888;font-size:12px;">Envoyé via Boostinghost</p>
-          </div>`;
-        await sendEmail({
-          from: process.env.EMAIL_FROM ? `Boostinghost <${process.env.EMAIL_FROM}>` : undefined,
-          to: responsible.contact_email,
-          subject: `🛒 Achats à prévoir — ${propName}`,
-          html
-        });
-      } catch (e) { console.warn('⚠️ [CONSO] Email responsable échoué:', e.message); }
-    }
-    if (responsible.contact_phone) {
-      try {
-        await sendSmsGateway(
-          responsible.contact_phone,
-          `Boostinghost — Achats à prévoir pour ${propName} : ${list}`,
-          responsible.user_id
-        );
-      } catch (e) { console.warn('⚠️ [CONSO] SMS responsable échoué:', e.message); }
-    }
+  // Email (pour un contact, ou en complément pour un sous-compte si renseigné)
+  if (responsible.contact_email) {
+    try {
+      const html = `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
+          <h2 style="color:#1A7A5E;">Articles à racheter</h2>
+          <p>Bonjour ${responsible.contact_name || ''},</p>
+          <p>Pour le logement <strong>${propName}</strong>, les articles suivants sont à racheter :</p>
+          <p style="font-size:15px;font-weight:600;">${list}</p>
+          <p style="margin-top:18px;color:#888;font-size:12px;">Envoyé via Boostinghost</p>
+        </div>`;
+      await sendEmail({
+        from: process.env.EMAIL_FROM ? `Boostinghost <${process.env.EMAIL_FROM}>` : undefined,
+        to: responsible.contact_email,
+        subject: `🛒 Achats à prévoir — ${propName}`,
+        html
+      });
+    } catch (e) { console.warn('⚠️ [CONSO] Email responsable échoué:', e.message); }
+  }
+
+  // SMS (idem : contact, ou complément sous-compte)
+  if (responsible.contact_phone) {
+    try {
+      await sendSmsGateway(
+        responsible.contact_phone,
+        `Boostinghost — Achats à prévoir pour ${propName} : ${list}`,
+        responsible.user_id
+      );
+    } catch (e) { console.warn('⚠️ [CONSO] SMS responsable échoué:', e.message); }
   }
 }
 
@@ -14394,8 +14395,9 @@ app.put('/api/consumables/responsibles',
         [userId, pid, assigneeType,
          assigneeType === 'sub' ? subAccountId : null,
          assigneeType === 'contact' ? (contactName || '').trim().slice(0,100) : null,
-         assigneeType === 'contact' ? (contactEmail || '').trim().slice(0,120) || null : null,
-         assigneeType === 'contact' ? (contactPhone || '').trim().slice(0,30) || null : null]
+         // Email/SMS : stockés pour un contact, ET en complément optionnel pour un sous-compte
+         (contactEmail || '').trim().slice(0,120) || null,
+         (contactPhone || '').trim().slice(0,30) || null]
       );
       res.json({ success: true, responsible: result.rows[0] });
     } catch (err) {
