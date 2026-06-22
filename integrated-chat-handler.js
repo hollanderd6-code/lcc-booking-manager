@@ -1597,6 +1597,37 @@ async function createHostQuestion(conversation, pool, io, { question, guestMessa
     } catch(e) {}
   }
 
+  // Dispo avant/après le séjour (utile pour décider arrivée anticipée / départ tardif).
+  // Un blocage compte comme "occupé" (donc non libre). On exclut la résa courante.
+  let freeBefore = null, freeAfter = null;
+  if (conversation.property_id && conversation.reservation_start_date && conversation.reservation_end_date) {
+    try {
+      const av = await pool.query(
+        `SELECT
+           EXISTS(SELECT 1 FROM reservations
+                  WHERE property_id = $1 AND status != 'cancelled'
+                    AND DATE(start_date) <= DATE($2) - 1 AND DATE(end_date) >= DATE($2)
+                    AND NOT (DATE(start_date) = DATE($2) AND DATE(end_date) = DATE($3))) AS occupied_before,
+           EXISTS(SELECT 1 FROM reservations
+                  WHERE property_id = $1 AND status != 'cancelled'
+                    AND DATE(start_date) <= DATE($3) AND DATE(end_date) > DATE($3)
+                    AND NOT (DATE(start_date) = DATE($2) AND DATE(end_date) = DATE($3))) AS occupied_after`,
+        [conversation.property_id, conversation.reservation_start_date, conversation.reservation_end_date]
+      );
+      freeBefore = !av.rows[0].occupied_before;
+      freeAfter  = !av.rows[0].occupied_after;
+    } catch(e) { console.error('❌ [QHOTE] check dispo:', e.message); }
+  }
+
+  // Meta enrichie pour le modal hôte (nom logement, dates, dispo) — fusionnée avec la meta reçue
+  const enrichedMeta = Object.assign({}, meta || {}, {
+    property_name: propName || null,
+    checkin:  conversation.reservation_start_date || null,
+    checkout: conversation.reservation_end_date || null,
+    free_before: freeBefore,
+    free_after:  freeAfter
+  });
+
   // Enregistrer la question (status pending). Une seule question pending par conv : on remplace l'ancienne.
   let questionId = null;
   try {
@@ -1612,7 +1643,7 @@ async function createHostQuestion(conversation, pool, io, { question, guestMessa
        RETURNING id`,
       [conversation.user_id, conversation.id, conversation.property_id || null,
        conversation.guest_name || 'Voyageur', question, guestMessage || '', language || 'fr',
-       kind, meta ? JSON.stringify(meta) : null]
+       kind, JSON.stringify(enrichedMeta)]
     );
     questionId = ins.rows[0].id;
   } catch(e) {
