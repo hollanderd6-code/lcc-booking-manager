@@ -754,6 +754,19 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 }
 @media (max-width: 1366px) { .bh-desktop-header { display: none !important; } }
 </style>
+<style>
+/* Header mobile : logo centré et non étiré (header créé par bh-layout.js) */
+@media (max-width: 1366px) {
+  .mobile-header { justify-content: center !important; align-items: center !important; }
+  .mobile-header .mobile-logo {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    justify-content: center !important;
+  }
+}
+</style>
 </head>
 <body data-page="contrat" data-title="Contrats">
 

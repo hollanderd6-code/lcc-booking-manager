@@ -1196,6 +1196,19 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
       }
     })();
   </script>
+<style>
+/* Header mobile : logo centré et non étiré (header créé par bh-layout.js) */
+@media (max-width: 1366px) {
+  .mobile-header { justify-content: center !important; align-items: center !important; }
+  .mobile-header .mobile-logo {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    justify-content: center !important;
+  }
+}
+</style>
 </head>
 <body data-page="deposits" data-title="Cautions &amp; Paiements" data-kicker="Avancé" data-back-href="/app.html" data-back-label="Retour au dashboard">
 
