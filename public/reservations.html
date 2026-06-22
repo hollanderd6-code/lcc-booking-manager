@@ -413,6 +413,14 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
     padding: env(safe-area-inset-top, 0px) 16px 0 !important;
     gap: 12px !important;
   }
+  /* Le logo ne doit pas s'étirer : il reste compact et centré dans le header */
+  .mobile-header .mobile-logo {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    justify-content: center !important;
+  }
   .resa-back-btn { display: none !important; }
   #bhHeader { display: none !important; }
 
