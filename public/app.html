@@ -3479,19 +3479,6 @@ setTimeout(function() {
 }
 </style>
 
-<style id="bh-logo-bold-fix">
-/* Logo header mobile en gras — forte spécificité + fin de <head> pour battre tout CSS externe */
-html body .mobile-header .mobile-logo,
-html body .mobile-header .mobile-logo .mobile-logo-text,
-html body .mobile-header .mobile-logo .mobile-logo-text *:not(.mobile-logo-subtitle),
-html body .mobile-header .mobile-logo .mobile-logo-title,
-html body .mobile-header .mobile-logo .mobile-logo-title > span {
-  font-weight: 800 !important;
-}
-html body .mobile-header .mobile-logo .mobile-logo-subtitle {
-  font-weight: 700 !important;
-}
-</style>
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none; position: sticky; top: 40px; z-index: 9998; width: 100%;">
@@ -15462,6 +15449,26 @@ function notifSwitchTab(tab) {
     if (typeof loadPushNotifHistory === 'function') loadPushNotifHistory();
   }
 }
+</script>
+<script id="bh-logo-bold-js">
+(function(){
+  function bold(){
+    try{
+      ['.mobile-header .mobile-logo .mobile-logo-text',
+       '.mobile-header .mobile-logo .mobile-logo-title',
+       '.mobile-header .mobile-logo .mobile-logo-title span'].forEach(function(s){
+        document.querySelectorAll(s).forEach(function(el){
+          el.style.setProperty('font-weight','800','important');
+        });
+      });
+      var sub=document.querySelector('.mobile-header .mobile-logo .mobile-logo-subtitle');
+      if(sub) sub.style.setProperty('font-weight','700','important');
+    }catch(e){}
+  }
+  if(document.readyState!=='loading') bold();
+  document.addEventListener('DOMContentLoaded',bold);
+  [200,600,1200,2000].forEach(function(t){ setTimeout(bold,t); });
+})();
 </script>
 </body>
 </html>
