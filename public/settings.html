@@ -1225,7 +1225,7 @@ html[data-theme-v3="1"] .sidebar {
 <div class="mobile-header">
 <a class="mobile-logo" href="/app.html">
 <i class="fas fa-calendar-check"></i>
-<span class="mobile-logo-text">Bookingmanage</span>
+<span class="mobile-logo-text"><span class="mobile-logo-title" style="font-size:16px;line-height:1.15;font-weight:700;"><span style="color:#1A7A5E;font-weight:700;">Boosting</span><span style="color:#111827;font-weight:700;">host</span></span><span class="mobile-logo-subtitle" style="font-size:7px;color:#6B7280;font-weight:700;letter-spacing:0.3px;text-transform:uppercase;display:block;margin-top:1px;">Smart Property Manager</span></span>
 </a>
 <button class="mobile-menu-btn" id="mobileMenuBtn">
 <i class="fas fa-bars"></i>
@@ -4351,23 +4351,3 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/js/bh-onboarding-pages.js"></script>
 <!-- AVIS OTA : fonctions dans settings.js -->
 
-<script id="bh-logo-bold-js">
-(function(){
-  function bold(){
-    try{
-      ['.mobile-header .mobile-logo .mobile-logo-text',
-       '.mobile-header .mobile-logo .mobile-logo-title',
-       '.mobile-header .mobile-logo .mobile-logo-title span'].forEach(function(s){
-        document.querySelectorAll(s).forEach(function(el){
-          el.style.setProperty('font-weight','800','important');
-        });
-      });
-      var sub=document.querySelector('.mobile-header .mobile-logo .mobile-logo-subtitle');
-      if(sub) sub.style.setProperty('font-weight','700','important');
-    }catch(e){}
-  }
-  if(document.readyState!=='loading') bold();
-  document.addEventListener('DOMContentLoaded',bold);
-  [200,600,1200,2000].forEach(function(t){ setTimeout(bold,t); });
-})();
-</script>
