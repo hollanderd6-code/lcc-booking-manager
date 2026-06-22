@@ -2023,6 +2023,23 @@ ON invoice_download_tokens(token);
       CREATE INDEX IF NOT EXISTS idx_consumable_alerts_user ON consumable_alerts(user_id, status);
       CREATE INDEX IF NOT EXISTS idx_consumable_alerts_prop ON consumable_alerts(user_id, property_id, status);
 
+      -- ═══ RESPONSABLE DES ACHATS (réassort) ═══
+      -- property_id NULL = responsable global par défaut ; sinon override par logement
+      CREATE TABLE IF NOT EXISTS restock_responsibles (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        property_id TEXT DEFAULT NULL,
+        assignee_type TEXT NOT NULL,            -- 'sub' | 'contact'
+        sub_account_id INTEGER DEFAULT NULL,
+        contact_name TEXT DEFAULT NULL,
+        contact_email TEXT DEFAULT NULL,
+        contact_phone TEXT DEFAULT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_restock_resp_global ON restock_responsibles(user_id) WHERE property_id IS NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_restock_resp_prop ON restock_responsibles(user_id, property_id) WHERE property_id IS NOT NULL;
+
       -- ═══ MAINTENANCE / INCIDENTS ═══
       CREATE TABLE IF NOT EXISTS maintenance_artisans (
         id SERIAL PRIMARY KEY,
@@ -13403,6 +13420,13 @@ app.post('/api/cleaning/checklist', async (req, res) => {
           if (typeof io !== 'undefined' && io) {
             io.to(`user_${cleaner.user_id}`).emit('consumable:restock', { propertyId, items: cleanRestock });
           }
+          // 👤 Notifier le RESPONSABLE DES ACHATS désigné (push si sous-compte, sinon email+SMS)
+          try {
+            const responsible = await resolveRestockResponsible(cleaner.user_id, propertyId);
+            await notifyRestockResponsible(responsible, propName, cleanRestock);
+          } catch (respErr) {
+            console.error('❌ [CONSO] Notif responsable achats échouée:', respErr.message);
+          }
           console.log(`🛒 [CONSO] ${cleanRestock.length} signalement(s) pour ${propName} par ${cleaner.name}`);
         } catch (notifErr) {
           console.error('❌ [CONSO] Notif réassort échouée:', notifErr.message);
@@ -14215,6 +14239,190 @@ app.patch('/api/consumables/alerts/property/:propertyId/clear',
       res.json({ success: true, cleared: result.rows.length });
     } catch (err) {
       console.error('Erreur PATCH clear alerts :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// ═══════════════════════════════════════════════════════════
+// RESPONSABLE DES ACHATS (réassort)
+// ═══════════════════════════════════════════════════════════
+
+// Résout le responsable applicable à un logement : override logement sinon défaut global
+async function resolveRestockResponsible(ownerId, propertyId) {
+  try {
+    const r = await pool.query(
+      `SELECT * FROM restock_responsibles
+       WHERE user_id = $1 AND (property_id = $2 OR property_id IS NULL)
+       ORDER BY (property_id IS NULL) ASC
+       LIMIT 1`,
+      [ownerId, propertyId]
+    );
+    return r.rows[0] || null;
+  } catch (e) {
+    console.error('resolveRestockResponsible:', e.message);
+    return null;
+  }
+}
+
+// Notifie le responsable désigné : push si sous-compte, email + SMS si contact externe
+async function notifyRestockResponsible(responsible, propName, items) {
+  if (!responsible) return;
+  const list = Array.isArray(items) ? items.join(', ') : String(items || '');
+
+  if (responsible.assignee_type === 'sub' && responsible.sub_account_id) {
+    try {
+      const tok = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE sub_account_id = $1 AND fcm_token IS NOT NULL',
+        [responsible.sub_account_id]
+      );
+      if (tok.rows.length > 0) {
+        await sendNotificationToMultipleLogged(
+          tok.rows.map(r => r.fcm_token),
+          `🛒 Achats à prévoir — ${propName}`,
+          `À racheter : ${list}`,
+          { type: 'restock_assigned', click_action: '/cleaning.html' }
+        );
+      }
+    } catch (e) { console.warn('⚠️ [CONSO] Push responsable échoué:', e.message); }
+    return;
+  }
+
+  if (responsible.assignee_type === 'contact') {
+    if (responsible.contact_email) {
+      try {
+        const html = `
+          <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
+            <h2 style="color:#1A7A5E;">Articles à racheter</h2>
+            <p>Bonjour ${responsible.contact_name || ''},</p>
+            <p>Pour le logement <strong>${propName}</strong>, les articles suivants sont à racheter :</p>
+            <p style="font-size:15px;font-weight:600;">${list}</p>
+            <p style="margin-top:18px;color:#888;font-size:12px;">Envoyé via Boostinghost</p>
+          </div>`;
+        await sendEmail({
+          from: process.env.EMAIL_FROM ? `Boostinghost <${process.env.EMAIL_FROM}>` : undefined,
+          to: responsible.contact_email,
+          subject: `🛒 Achats à prévoir — ${propName}`,
+          html
+        });
+      } catch (e) { console.warn('⚠️ [CONSO] Email responsable échoué:', e.message); }
+    }
+    if (responsible.contact_phone) {
+      try {
+        await sendSmsGateway(
+          responsible.contact_phone,
+          `Boostinghost — Achats à prévoir pour ${propName} : ${list}`,
+          responsible.user_id
+        );
+      } catch (e) { console.warn('⚠️ [CONSO] SMS responsable échoué:', e.message); }
+    }
+  }
+}
+
+// GET — responsable global + overrides par logement + liste des sous-comptes (pour le sélecteur)
+app.get('/api/consumables/responsibles',
+  authenticateAny, requirePermission(pool, 'can_view_cleaning'), loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount ? (await getRealUserId(pool, req)) : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+      const agencyIds = await getAgencyUserIds(req, userId);
+
+      const rows = (await pool.query(
+        `SELECT r.*, sa.first_name AS sub_first_name, sa.last_name AS sub_last_name
+         FROM restock_responsibles r
+         LEFT JOIN sub_accounts sa ON sa.id = r.sub_account_id
+         WHERE r.user_id = ANY($1::text[])`,
+        [agencyIds]
+      )).rows;
+
+      const global = rows.find(r => r.property_id === null) || null;
+      const byProperty = rows.filter(r => r.property_id !== null);
+
+      // Sous-comptes disponibles (du compte courant uniquement)
+      let subAccounts = [];
+      try {
+        subAccounts = (await pool.query(
+          `SELECT id, first_name, last_name FROM sub_accounts
+           WHERE parent_user_id = $1 AND is_active = TRUE ORDER BY first_name ASC`,
+          [userId]
+        )).rows;
+      } catch (_) {}
+
+      res.json({ success: true, global, byProperty, subAccounts });
+    } catch (err) {
+      console.error('Erreur GET responsibles :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// PUT — définir/mettre à jour un responsable (global si propertyId absent, sinon override logement)
+app.put('/api/consumables/responsibles',
+  authenticateAny, requirePermission(pool, 'can_manage_cleaning'), loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount ? (await getRealUserId(pool, req)) : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+      const { propertyId, assigneeType, subAccountId, contactName, contactEmail, contactPhone } = req.body;
+      const pid = propertyId || null;
+
+      if (assigneeType === 'sub') {
+        if (!subAccountId) return res.status(400).json({ error: 'Sous-compte requis' });
+        // Vérifier que le sous-compte appartient bien à l'utilisateur
+        const ok = await pool.query('SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = $2', [subAccountId, userId]);
+        if (ok.rows.length === 0) return res.status(403).json({ error: 'Sous-compte invalide' });
+      } else if (assigneeType === 'contact') {
+        if (!contactName || !contactName.trim()) return res.status(400).json({ error: 'Nom du contact requis' });
+        if (!contactEmail && !contactPhone) return res.status(400).json({ error: 'Email ou téléphone requis' });
+      } else {
+        return res.status(400).json({ error: 'Type invalide' });
+      }
+
+      // Upsert manuel (suppression de l'éventuel responsable du même périmètre puis insertion)
+      if (pid === null) {
+        await pool.query('DELETE FROM restock_responsibles WHERE user_id = $1 AND property_id IS NULL', [userId]);
+      } else {
+        await pool.query('DELETE FROM restock_responsibles WHERE user_id = $1 AND property_id = $2', [userId, pid]);
+      }
+
+      const result = await pool.query(
+        `INSERT INTO restock_responsibles
+         (user_id, property_id, assignee_type, sub_account_id, contact_name, contact_email, contact_phone)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [userId, pid, assigneeType,
+         assigneeType === 'sub' ? subAccountId : null,
+         assigneeType === 'contact' ? (contactName || '').trim().slice(0,100) : null,
+         assigneeType === 'contact' ? (contactEmail || '').trim().slice(0,120) || null : null,
+         assigneeType === 'contact' ? (contactPhone || '').trim().slice(0,30) || null : null]
+      );
+      res.json({ success: true, responsible: result.rows[0] });
+    } catch (err) {
+      console.error('Erreur PUT responsibles :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// DELETE — retirer le responsable (scope = 'global' ou un propertyId) → revient au défaut
+app.delete('/api/consumables/responsibles/:scope',
+  authenticateAny, requirePermission(pool, 'can_manage_cleaning'), loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount ? (await getRealUserId(pool, req)) : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+      const agencyIds = await getAgencyUserIds(req, userId);
+      const scope = req.params.scope;
+
+      if (scope === 'global') {
+        await pool.query('DELETE FROM restock_responsibles WHERE user_id = ANY($1::text[]) AND property_id IS NULL', [agencyIds]);
+      } else {
+        await pool.query('DELETE FROM restock_responsibles WHERE user_id = ANY($1::text[]) AND property_id = $2', [agencyIds, scope]);
+      }
+      res.json({ success: true, deleted: scope });
+    } catch (err) {
+      console.error('Erreur DELETE responsibles :', err);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   }

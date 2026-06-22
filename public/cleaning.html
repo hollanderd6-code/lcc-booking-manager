@@ -313,6 +313,12 @@
       padding:6px 13px; border-radius:18px; transition:all .15s;
     }
     .maint-filter.active { background:var(--accent,#1A7A5E); color:#fff; border-color:var(--accent,#1A7A5E); }
+    .resp-type {
+      flex:1; cursor:pointer; border:1.5px solid var(--border); background:var(--bg,#fff);
+      color:var(--text-secondary); font-family:inherit; font-size:13px; font-weight:600;
+      padding:9px 6px; border-radius:9px; transition:all .15s;
+    }
+    .resp-type.on { border-color:var(--accent,#1A7A5E); background:#e9f5f0; color:var(--accent,#1A7A5E); }
     .maint-label { display:block; font-size:12.5px; font-weight:600; color:var(--text-secondary); margin-bottom:5px; }
     .maint-input {
       width:100%; padding:10px 12px; border:1px solid var(--border,#ddd); border-radius:10px;
@@ -1933,6 +1939,25 @@ html[data-theme-v3="1"] #templatesList > div {
   <section class="card">
     <div class="card-header">
       <div class="card-title">
+        <i class="fas fa-user-tag"></i>
+        Responsable des achats
+      </div>
+      <button style="cursor:pointer;border:none;background:#fff;color:var(--accent,#1A7A5E);border:1px solid var(--border);font-weight:700;padding:8px 14px;border-radius:10px;font-size:13px;white-space:nowrap;flex:0 0 auto;width:auto;" onclick="openResponsibleModal('')">
+        <i class="fas fa-plus"></i> Par logement
+      </button>
+    </div>
+    <p class="text-secondary" style="font-size:13px;margin:-4px 0 12px;">
+      La personne désignée est prévenue automatiquement (push si collaborateur, sinon email + SMS) dès qu'un agent signale un article à racheter.
+    </p>
+    <div id="responsibleDefault" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;border:1px solid var(--border);border-radius:12px;">
+      <span class="text-secondary">Chargement…</span>
+    </div>
+    <div id="responsibleOverrides" style="margin-top:10px;"></div>
+  </section>
+
+  <section class="card" style="margin-top:16px;">
+    <div class="card-header">
+      <div class="card-title">
         <i class="fas fa-basket-shopping"></i>
         Liste de courses
       </div>
@@ -2052,6 +2077,52 @@ html[data-theme-v3="1"] #templatesList > div {
       </button>
       <button id="ticketDeleteBtn" onclick="deleteTicket()" style="display:none;cursor:pointer;border:none;background:transparent;color:#dc2626;font-weight:600;padding:6px;font-size:13px;">
         <i class="fas fa-trash"></i> Supprimer ce ticket
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal responsable des achats -->
+<div class="checklist-detail-modal" id="responsibleModal">
+  <div class="checklist-detail-overlay" onclick="closeResponsibleModal()"></div>
+  <div class="checklist-detail-panel" style="max-width:440px;">
+    <div class="checklist-detail-header">
+      <div style="font-size:17px;font-weight:700;" id="responsibleModalTitle">Responsable des achats</div>
+      <button class="checklist-detail-close" onclick="closeResponsibleModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+      <input type="hidden" id="responsibleScope">
+      <div id="responsibleScopeRow">
+        <label class="maint-label">Logement</label>
+        <select id="responsibleProperty" class="maint-input"></select>
+        <p class="text-secondary" style="font-size:12px;margin:5px 0 0;">Laisser « Tous les logements » pour définir le responsable par défaut.</p>
+      </div>
+      <div>
+        <label class="maint-label">Type de responsable</label>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="resp-type on" data-t="sub" onclick="setRespType('sub')">Collaborateur</button>
+          <button type="button" class="resp-type" data-t="contact" onclick="setRespType('contact')">Contact externe</button>
+        </div>
+      </div>
+
+      <div id="respSubBlock">
+        <label class="maint-label">Collaborateur (sous-compte)</label>
+        <select id="respSubSelect" class="maint-input"><option value="">— Choisir —</option></select>
+        <p class="text-secondary" style="font-size:12px;margin:5px 0 0;">Prévenu par notification push dans l'app.</p>
+      </div>
+
+      <div id="respContactBlock" style="display:none;">
+        <label class="maint-label">Nom</label>
+        <input id="respContactName" class="maint-input" type="text" maxlength="100" placeholder="Ex : Jean (mari)">
+        <div style="display:flex;gap:10px;margin-top:10px;">
+          <div style="flex:1;"><label class="maint-label">Email</label><input id="respContactEmail" class="maint-input" type="email" maxlength="120" placeholder="email@…"></div>
+          <div style="flex:1;"><label class="maint-label">Téléphone</label><input id="respContactPhone" class="maint-input" type="tel" maxlength="30" placeholder="06…"></div>
+        </div>
+        <p class="text-secondary" style="font-size:12px;margin:5px 0 0;">Prévenu par email + SMS (au moins l'un des deux).</p>
+      </div>
+
+      <button onclick="saveResponsible()" style="margin-top:4px;cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:15px;">
+        <i class="fas fa-check"></i> Enregistrer
       </button>
     </div>
   </div>
@@ -3022,7 +3093,7 @@ function formatDateFr(dateStr) {
         if (tabId === 'checklists') loadChecklistsList();
         if (tabId === 'templates') loadTemplates();
         if (tabId === 'stats') loadStats();
-        if (tabId === 'restock') { loadRestockAlerts(); initRestockPropertySelect(); loadRestockCatalog(); }
+        if (tabId === 'restock') { loadRestockAlerts(); initRestockPropertySelect(); loadRestockCatalog(); loadResponsibles(); }
         if (tabId === 'maintenance') { loadMaintTickets(); loadArtisans(); }
       }
       window.switchTab = switchTab;
@@ -3189,6 +3260,166 @@ function formatDateFr(dateStr) {
         } catch (e) { console.error(e); }
       }
       window.deleteRestockItem = deleteRestockItem;
+
+      // ========== RESPONSABLE DES ACHATS ==========
+      let respGlobal = null;
+      let respOverrides = [];
+      let respSubAccounts = [];
+      let respCurrentType = 'sub';
+
+      async function loadResponsibles() {
+        try {
+          const res = await fetch(API_URL + '/api/consumables/responsibles', { headers: _maintHeaders() });
+          if (!res.ok) throw new Error('err');
+          const data = await res.json();
+          respGlobal = data.global || null;
+          respOverrides = data.byProperty || [];
+          respSubAccounts = data.subAccounts || [];
+          renderResponsibleDefault();
+          renderResponsibleOverrides();
+        } catch (e) {
+          console.error('Erreur responsables:', e);
+          const d = document.getElementById('responsibleDefault');
+          if (d) d.innerHTML = '<span class="text-secondary">Impossible de charger.</span>';
+        }
+      }
+      window.loadResponsibles = loadResponsibles;
+
+      function respLabel(r) {
+        if (!r) return null;
+        if (r.assignee_type === 'sub') {
+          const n = [r.sub_first_name, r.sub_last_name].filter(Boolean).join(' ').trim();
+          return (n || 'Collaborateur') + ' · app';
+        }
+        const ways = [];
+        if (r.contact_email) ways.push('email');
+        if (r.contact_phone) ways.push('SMS');
+        return (r.contact_name || 'Contact') + (ways.length ? ' · ' + ways.join('+') : '');
+      }
+
+      function renderResponsibleDefault() {
+        const d = document.getElementById('responsibleDefault');
+        if (!d) return;
+        const lbl = respLabel(respGlobal);
+        if (lbl) {
+          d.innerHTML =
+            '<div><div style="font-size:12px;color:var(--text-secondary);">Par défaut</div>'
+            + '<div style="font-weight:600;">' + _maintEsc(lbl) + '</div></div>'
+            + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+            + '<button onclick="openResponsibleModal(\'\')" style="cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text);border-radius:9px;padding:7px 11px;font-size:13px;font-weight:600;">Modifier</button>'
+            + '<button onclick="removeResponsible(\'global\')" style="cursor:pointer;border:none;background:transparent;color:#dc2626;border-radius:9px;padding:7px 9px;font-size:13px;"><i class="fas fa-trash"></i></button>'
+            + '</div>';
+        } else {
+          d.innerHTML =
+            '<div><div style="font-size:12px;color:var(--text-secondary);">Par défaut</div>'
+            + '<div style="font-weight:600;color:var(--text-secondary);">Personne — c\'est vous qui recevez les alertes</div></div>'
+            + '<button onclick="openResponsibleModal(\'\')" style="cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;border-radius:9px;padding:7px 13px;font-size:13px;font-weight:700;flex-shrink:0;">Désigner</button>';
+        }
+      }
+
+      function renderResponsibleOverrides() {
+        const wrap = document.getElementById('responsibleOverrides');
+        if (!wrap) return;
+        if (!respOverrides.length) { wrap.innerHTML = ''; return; }
+        wrap.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);margin:4px 0 6px;">Exceptions par logement</div>'
+          + respOverrides.map(r =>
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--border);">'
+            + '<div><span style="font-weight:600;color:var(--accent,#1A7A5E);">' + _maintEsc(getPropertyNameById(r.property_id)) + '</span>'
+            + ' <span class="text-secondary" style="font-size:13px;">→ ' + _maintEsc(respLabel(r)) + '</span></div>'
+            + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+            + '<button onclick="openResponsibleModal(\'' + r.property_id + '\')" style="cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text);border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:600;">Modifier</button>'
+            + '<button onclick="removeResponsible(\'' + r.property_id + '\')" style="cursor:pointer;border:none;background:transparent;color:#dc2626;border-radius:8px;padding:6px 8px;font-size:12.5px;"><i class="fas fa-trash"></i></button>'
+            + '</div></div>'
+          ).join('');
+      }
+
+      function setRespType(t) {
+        respCurrentType = t;
+        document.querySelectorAll('.resp-type').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+        document.getElementById('respSubBlock').style.display = t === 'sub' ? 'block' : 'none';
+        document.getElementById('respContactBlock').style.display = t === 'contact' ? 'block' : 'none';
+      }
+      window.setRespType = setRespType;
+
+      function openResponsibleModal(propertyId) {
+        // Logements
+        const psel = document.getElementById('responsibleProperty');
+        if (psel && Array.isArray(PROPERTIES)) {
+          psel.innerHTML = '<option value="">Tous les logements (par défaut)</option>';
+          const seen = new Set();
+          PROPERTIES.forEach(p => {
+            const id = p.id != null ? p.id : p.propertyId;
+            if (!id || seen.has(String(id))) return; seen.add(String(id));
+            const o = document.createElement('option'); o.value = String(id);
+            o.textContent = p.name || p.title || p.label || ('Logement ' + id);
+            psel.appendChild(o);
+          });
+          psel.value = propertyId || '';
+        }
+        // Sous-comptes
+        const ssel = document.getElementById('respSubSelect');
+        if (ssel) {
+          ssel.innerHTML = '<option value="">— Choisir —</option>';
+          respSubAccounts.forEach(s => {
+            const o = document.createElement('option'); o.value = String(s.id);
+            o.textContent = [s.first_name, s.last_name].filter(Boolean).join(' ') || ('Collaborateur ' + s.id);
+            ssel.appendChild(o);
+          });
+        }
+        // Pré-remplir si on modifie un existant
+        const existing = propertyId
+          ? respOverrides.find(r => String(r.property_id) === String(propertyId))
+          : respGlobal;
+        document.getElementById('responsibleScope').value = propertyId || '';
+        document.getElementById('responsibleModalTitle').textContent =
+          propertyId ? 'Responsable — ' + getPropertyNameById(propertyId) : 'Responsable par défaut';
+        document.getElementById('respContactName').value = existing && existing.assignee_type === 'contact' ? (existing.contact_name || '') : '';
+        document.getElementById('respContactEmail').value = existing && existing.assignee_type === 'contact' ? (existing.contact_email || '') : '';
+        document.getElementById('respContactPhone').value = existing && existing.assignee_type === 'contact' ? (existing.contact_phone || '') : '';
+        setRespType(existing && existing.assignee_type === 'contact' ? 'contact' : 'sub');
+        if (ssel) ssel.value = existing && existing.assignee_type === 'sub' && existing.sub_account_id ? String(existing.sub_account_id) : '';
+        document.getElementById('responsibleModal').classList.add('active');
+      }
+      window.openResponsibleModal = openResponsibleModal;
+      function closeResponsibleModal() { document.getElementById('responsibleModal').classList.remove('active'); }
+      window.closeResponsibleModal = closeResponsibleModal;
+
+      async function saveResponsible() {
+        const propertyId = document.getElementById('responsibleProperty').value || null;
+        const body = { propertyId, assigneeType: respCurrentType };
+        if (respCurrentType === 'sub') {
+          body.subAccountId = document.getElementById('respSubSelect').value;
+          if (!body.subAccountId) { alert('Choisissez un collaborateur.'); return; }
+        } else {
+          body.contactName = document.getElementById('respContactName').value.trim();
+          body.contactEmail = document.getElementById('respContactEmail').value.trim();
+          body.contactPhone = document.getElementById('respContactPhone').value.trim();
+          if (!body.contactName) { alert('Nom du contact requis.'); return; }
+          if (!body.contactEmail && !body.contactPhone) { alert('Renseignez un email ou un téléphone.'); return; }
+        }
+        try {
+          const res = await fetch(API_URL + '/api/consumables/responsibles', {
+            method: 'PUT',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, _maintHeaders()),
+            body: JSON.stringify(body)
+          });
+          if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error || 'err'); }
+          closeResponsibleModal();
+          loadResponsibles();
+        } catch (e) { console.error(e); alert('Erreur : ' + e.message); }
+      }
+      window.saveResponsible = saveResponsible;
+
+      async function removeResponsible(scope) {
+        if (!confirm('Retirer ce responsable ?')) return;
+        try {
+          await fetch(API_URL + '/api/consumables/responsibles/' + encodeURIComponent(scope), {
+            method: 'DELETE', headers: _maintHeaders()
+          });
+          loadResponsibles();
+        } catch (e) { console.error(e); }
+      }
+      window.removeResponsible = removeResponsible;
 
       // ========== MAINTENANCE / INCIDENTS ==========
       let maintTickets = [];
