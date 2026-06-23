@@ -33,6 +33,8 @@
 const DEFAULTS = {
   horizonDays: 365,        // nombre de nuits calculées à partir d'aujourd'hui
   aggressiveness: 0.85,    // 0 = prudent (faibles écarts) … 1 = agressif
+  strategy: 50,            // 0 = Occupation (remplir) … 50 = Équilibré … 100 = Revenu (tenir le prix)
+  strategyBiasMax: 0.15,   // amplitude max du biais stratégie (±15%)
 
   // Courbe de saisonnalité : 12 ancres mensuelles (Île-de-France / Paris).
   // Interpolées en continu jour par jour. À ajuster par zone.
@@ -276,11 +278,21 @@ function computeNightPrice(date, ctx) {
   // structurels (saison/dow) à plein, dynamiques modulés par l'agressivité
   const fSeason = fSeasonRaw;
   const fLead   = applyAggr(fLeadRaw, aggr);
-  const fPace   = applyAggr(fPaceRaw, aggr);
+
+  // ── Stratégie (curseur 0 = Occupation … 50 = Équilibré … 100 = Revenu) ──
+  const strat = (cfg.strategy != null ? cfg.strategy : 50);
+  const s = (strat - 50) / 50;                          // -1 … +1
+  const fStrategy = 1 + s * (cfg.strategyBiasMax != null ? cfg.strategyBiasMax : 0.15);
+  // la stratégie creuse (occupation) ou atténue (revenu) la remise de pacing
+  let fPaceStrat = fPaceRaw;
+  if (s < 0 && fPaceRaw < 1) fPaceStrat = 1 + (fPaceRaw - 1) * (1 + (-s) * 0.6);
+  if (s > 0 && fPaceRaw < 1) fPaceStrat = 1 + (fPaceRaw - 1) * (1 - s * 0.5);
+
+  const fPace   = applyAggr(fPaceStrat, aggr);
   const fEvent  = applyAggr(evt.mult, aggr);
 
-  // prix avant marché
-  let price = base * fSeason * fDow * fLead * fPace * fEvent;
+  // prix avant marché (× biais stratégie)
+  let price = base * fSeason * fDow * fLead * fPace * fEvent * fStrategy;
 
   // correcteur marché (borné), appliqué sur le prix déjà construit
   const mk = marketMult(price, ctx.market, cfg);
@@ -313,8 +325,9 @@ function computeNightPrice(date, ctx) {
       season:  round3(fSeason),
       dow:     round3(fDow),
       lead:    round3(fLead),
-      pacing:  round3(fPace),
-      market:  round3(fMarket),
+      pacing:   round3(fPace),
+      strategy: round3(fStrategy),
+      market:   round3(fMarket),
       event:   round3(fEvent),
       gap:     round3(fGap),
       rawBeforeClamp: Math.round(rawBeforeClamp),

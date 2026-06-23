@@ -1582,6 +1582,7 @@ async function loadConfig() {
         isActive: cfg?.isActive ?? false,
         priceMin: cfg?.priceMin ?? 40,
         priceMax: cfg?.priceMax ?? 200,
+        strategy: cfg?.strategy ?? 50,
         mode: cfg?.mode ?? 'manual',
       };
     });
@@ -1656,6 +1657,19 @@ function renderConfigCard(cfg, idx) {
       </div>
     </div>
 
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <label style="font-size:11.5px;font-weight:600;color:var(--muted);">Stratégie</label>
+        <span id="strat-label-${pid}" style="font-size:11.5px;font-weight:700;color:var(--pg);">${stratLabel(cfg.strategy ?? 50)}</span>
+      </div>
+      <input type="range" min="0" max="100" step="5" value="${cfg.strategy ?? 50}" id="strat-${pid}"
+        oninput="updateStrat('${pid}', this.value); markDirty('${pid}')"
+        style="width:100%;accent-color:var(--pg);cursor:pointer;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;">
+        <span>🏠 Remplir</span><span>Équilibré</span><span>Tenir le prix 💰</span>
+      </div>
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
       <div onclick="setMode('${pid}','manual')" id="mode-manual-${pid}"
         style="padding:10px 12px;border-radius:10px;border:1.5px solid ${!modeAuto ? 'var(--pg)' : 'rgba(200,184,154,.3)'};background:${!modeAuto ? 'var(--pg-soft2)' : 'white'};cursor:pointer;transition:all .15s;">
@@ -1725,6 +1739,19 @@ function markDirty(pid) {
   if (btn) btn.style.display = 'flex';
 }
 
+function stratLabel(v){
+  v = parseInt(v);
+  if (v <= 15) return '🏠 Occupation max';
+  if (v < 45)  return 'Plutôt occupation';
+  if (v <= 55) return 'Équilibré';
+  if (v < 85)  return 'Plutôt revenu';
+  return 'Revenu max 💰';
+}
+function updateStrat(pid, v){
+  const el = document.getElementById('strat-label-' + pid);
+  if (el) el.textContent = stratLabel(v);
+}
+
 async function savePropertyConfig(pid) {
   const cfg = state.configs.find(c => String(c.propertyId) === String(pid));
   const minEl = document.getElementById('pmin-' + pid);
@@ -1732,6 +1759,8 @@ async function savePropertyConfig(pid) {
   const priceMin = minEl ? parseFloat(minEl.value) : (cfg?.priceMin || 40);
   const priceMax = maxEl ? parseFloat(maxEl.value) : (cfg?.priceMax || 200);
   const mode = cfg?.mode || 'manual';
+  const stratEl = document.getElementById('strat-' + pid);
+  const strategy = stratEl ? parseInt(stratEl.value) : (cfg?.strategy ?? 50);
 
   if (priceMin >= priceMax) { showToast('Prix min doit être < prix max', ''); return; }
 
@@ -1739,14 +1768,14 @@ async function savePropertyConfig(pid) {
     const res = await fetch(`${API_BASE}${DP}/config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ propertyId: pid, priceMin, priceMax, mode, isActive: true }),
+      body: JSON.stringify({ propertyId: pid, priceMin, priceMax, mode, strategy, isActive: true }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     showToast('Configuration sauvegardée ✓', '');
     const btn = document.getElementById('save-' + pid);
     if (btn) btn.style.display = 'none';
     const wasInactive = !(cfg && cfg.isActive);
-    if (cfg) { cfg.priceMin = priceMin; cfg.priceMax = priceMax; cfg.isActive = true; }
+    if (cfg) { cfg.priceMin = priceMin; cfg.priceMax = priceMax; cfg.strategy = strategy; cfg.isActive = true; }
 
     // 🎯 Première activation → lancer l'analyse marché tout de suite (sans attendre lundi)
     if (wasInactive) {

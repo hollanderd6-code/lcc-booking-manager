@@ -97,6 +97,7 @@ function configToOverride(cfg) {
   if (cfg.aggressiveness != null)  ov.aggressiveness = parseFloat(cfg.aggressiveness);
   if (cfg.market_weight  != null)  ov.marketWeight   = parseFloat(cfg.market_weight);
   if (cfg.horizon_days   != null)  ov.horizonDays    = parseInt(cfg.horizon_days);
+  if (cfg.strategy       != null)  ov.strategy       = parseInt(cfg.strategy);
   return ov;
 }
 

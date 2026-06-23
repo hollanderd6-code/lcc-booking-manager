@@ -396,6 +396,7 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
         zoneRadiusKm:  parseFloat(c.zone_radius_km || 1.5),
         propertyType:  c.property_type,
         bedrooms:      c.bedrooms,
+        strategy:      c.strategy != null ? parseInt(c.strategy) : 50,
         createdAt:     c.created_at,
         updatedAt:     c.updated_at,
       }));
@@ -429,7 +430,12 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
         notifyAlert  = true,
         propertyType = null,
         bedrooms     = 1,
+        strategy     = 50,
       } = req.body || {};
+
+      // colonne stratégie (curseur Occupation↔Revenu) — auto-créée
+      await pool.query('ALTER TABLE pricing_config ADD COLUMN IF NOT EXISTS strategy INTEGER DEFAULT 50').catch(() => {});
+      const strategyVal = Math.max(0, Math.min(100, parseInt(strategy) || 50));
 
       // Validation
       if (!propertyId) {
@@ -448,10 +454,10 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
       const result = await pool.query(
         `INSERT INTO pricing_config (
            user_id, property_id, price_min, price_max, mode, is_active,
-           notify_push, notify_email, notify_alert, property_type, bedrooms,
+           notify_push, notify_email, notify_alert, property_type, bedrooms, strategy,
            created_at, updated_at
          )
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
          ON CONFLICT (user_id, property_id) DO UPDATE SET
            price_min    = EXCLUDED.price_min,
            price_max    = EXCLUDED.price_max,
@@ -462,10 +468,11 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
            notify_alert = EXCLUDED.notify_alert,
            property_type = EXCLUDED.property_type,
            bedrooms     = EXCLUDED.bedrooms,
+           strategy     = EXCLUDED.strategy,
            updated_at   = NOW()
          RETURNING *`,
         [userId, propertyId, priceMin, priceMax, mode, isActive,
-         notifyPush, notifyEmail, notifyAlert, propertyType, bedrooms]
+         notifyPush, notifyEmail, notifyAlert, propertyType, bedrooms, strategyVal]
       );
 
       console.log(`✅ [DYNAMIC-PRICING] Config sauvegardée — ${userId} / ${propertyId} — mode:${mode} [${priceMin}€-${priceMax}€]`);
