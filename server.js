@@ -369,7 +369,7 @@ async function getCalendarPricesForRange(propertyId, userId, days = 500) {
 async function triggerChannexRatesSync(propertyId, userId) {
   try {
     const propResult = await pool.query(
-      `SELECT id, name, base_price, weekend_price,
+      `SELECT id, user_id, name, base_price, weekend_price,
               channex_enabled, channex_property_id, channex_room_type_id, channex_rate_plan_id,
               external_pricing
        FROM properties WHERE id = $1`,
@@ -378,16 +378,20 @@ async function triggerChannexRatesSync(propertyId, userId) {
     const prop = propResult.rows[0];
     if (!prop || !prop.channex_enabled || !prop.channex_rate_plan_id) return;
 
+    // ✅ Mode agence : les règles/overrides sont stockés sous le compte PROPRIÉTAIRE
+    // du logement, pas sous l'utilisateur connecté. On utilise donc prop.user_id.
+    const ownerId = prop.user_id || userId;
+
     // Skip rate push si tarification externe (PriceLabs, etc.)
     if (prop.external_pricing) {
       console.log(`ℹ️ [CHANNEX RATES SYNC] ${propertyId} — tarification externe, skip push tarifs (restrictions uniquement)`);
     }
 
-    console.log(`💰 [CHANNEX RATES SYNC] Déclenchement pour ${propertyId}`);
+    console.log(`💰 [CHANNEX RATES SYNC] Déclenchement pour ${propertyId} (owner ${ownerId})`);
 
     const rulesResult = await pool.query(
       'SELECT * FROM pricing_rules WHERE property_id = $1 AND user_id = $2 AND active = true ORDER BY priority DESC',
-      [propertyId, userId]
+      [propertyId, ownerId]
     );
     const rules = rulesResult.rows;
 
@@ -398,7 +402,7 @@ async function triggerChannexRatesSync(propertyId, userId) {
     const overridesResult = await pool.query(
       `SELECT TO_CHAR(date,'YYYY-MM-DD') as date, price FROM pricing_overrides
        WHERE property_id = $1 AND user_id = $2 AND date >= $3 AND date <= $4`,
-      [propertyId, userId, fmt(today), fmt(endDate)]
+      [propertyId, ownerId, fmt(today), fmt(endDate)]
     );
     const overridesMap = {};
     overridesResult.rows.forEach(o => { overridesMap[o.date] = parseFloat(o.price); });
@@ -16026,34 +16030,38 @@ app.post('/api/pricing/overrides', authenticateAny, requirePermission(pool, 'can
       return res.status(400).json({ error: 'property_id et date sont requis' });
     }
 
-    // Vérifier que le logement appartient à l'utilisateur
+    // Vérifier l'accès au logement (mode agence inclus) + récupérer le propriétaire
+    const agencyIds = await getAgencyUserIds(req, user.id);
     const propCheck = await pool.query(
-      'SELECT id FROM properties WHERE id = $1 AND user_id = $2',
-      [property_id, user.id]
+      'SELECT id, user_id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [property_id, agencyIds]
     );
     if (propCheck.rows.length === 0) {
       return res.status(403).json({ error: 'Logement introuvable ou accès refusé' });
     }
+    const ownerId = propCheck.rows[0].user_id; // compte propriétaire (délégué en mode agence)
 
     if (price === null || price === undefined || price === '') {
       // Supprimer l'override
       await pool.query(
         'DELETE FROM pricing_overrides WHERE user_id = $1 AND property_id = $2 AND date = $3',
-        [user.id, property_id, date]
+        [ownerId, property_id, date]
       );
-      return res.json({ success: true, deleted: true });
+      res.json({ success: true, deleted: true });
+      setImmediate(() => triggerChannexRatesSync(property_id, ownerId));
+      return;
     }
 
-    // Upsert
+    // Upsert (sous le compte propriétaire pour cohérence avec les règles + la sync)
     await pool.query(`
       INSERT INTO pricing_overrides (user_id, property_id, date, price, updated_at)
       VALUES ($1, $2, $3, $4, NOW())
       ON CONFLICT (user_id, property_id, date)
       DO UPDATE SET price = $4, updated_at = NOW()
-    `, [user.id, property_id, date, parseFloat(price)]);
+    `, [ownerId, property_id, date, parseFloat(price)]);
 
     res.json({ success: true, property_id, date, price: parseFloat(price) });
-    setImmediate(() => triggerChannexRatesSync(property_id, user.id));
+    setImmediate(() => triggerChannexRatesSync(property_id, ownerId));
   } catch (err) {
     console.error('❌ POST /api/pricing/overrides:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -16501,15 +16509,17 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, requir
     const { property_id } = req.params;
 
     // Récupérer le logement avec ses infos Channex
+    const agencyIds = await getAgencyUserIds(req, user.id);
     const propResult = await pool.query(
-      `SELECT id, name, base_price, weekend_price,
+      `SELECT id, user_id, name, base_price, weekend_price,
               channex_enabled, channex_property_id, channex_room_type_id, channex_rate_plan_id
-       FROM properties WHERE id = $1 AND user_id = $2`,
-      [property_id, user.id]
+       FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [property_id, agencyIds]
     );
     if (propResult.rows.length === 0) return res.status(404).json({ error: 'Logement introuvable' });
 
     const prop = propResult.rows[0];
+    const ownerId = prop.user_id;
     if (!prop.channex_enabled || !prop.channex_property_id || !prop.channex_rate_plan_id) {
       return res.status(400).json({ error: 'Ce logement n\'est pas connecté à Channex' });
     }
@@ -16517,7 +16527,7 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, requir
     // Récupérer les règles actives pour ce logement
     const rulesResult = await pool.query(
       'SELECT * FROM pricing_rules WHERE property_id = $1 AND user_id = $2 AND active = true ORDER BY priority DESC',
-      [property_id, user.id]
+      [property_id, ownerId]
     );
     const rules = rulesResult.rows;
 
@@ -16529,7 +16539,7 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, requir
     const overridesResult = await pool.query(
       `SELECT TO_CHAR(date,'YYYY-MM-DD') as date, price FROM pricing_overrides
        WHERE property_id = $1 AND user_id = $2 AND date >= $3 AND date <= $4`,
-      [property_id, user.id, fmt(today), fmt(endDate)]
+      [property_id, ownerId, fmt(today), fmt(endDate)]
     );
     const overridesMap = {};
     overridesResult.rows.forEach(o => { overridesMap[o.date] = parseFloat(o.price); });
@@ -17947,6 +17957,8 @@ userId: userId
       message: 'Logement modifié avec succès',
       property: updated
     });
+    // Pousser les nouveaux tarifs (prix de base/weekend) vers Channex
+    setImmediate(() => triggerChannexRatesSync(propertyId, userId));
   } catch (err) {
     console.error('❌ Erreur modification logement:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -35012,9 +35024,10 @@ app.post('/api/channex/push-availability/:property_id', authenticateAny, async (
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
 
     const property_id = req.params.property_id;
+    const agencyIds = await getAgencyUserIds(req, user.id);
     const prop = await pool.query(
-      'SELECT channex_property_id, channex_room_type_id, channex_rate_plan_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2',
-      [property_id, user.id]
+      'SELECT channex_property_id, channex_room_type_id, channex_rate_plan_id, channex_enabled FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [property_id, agencyIds]
     );
     if (!prop.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
     const { channex_property_id, channex_room_type_id, channex_enabled } = prop.rows[0];
