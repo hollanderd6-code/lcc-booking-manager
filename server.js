@@ -38,7 +38,7 @@ const PDFDocument = require('pdfkit');
 const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeRoutes');
 const { setupDynamicPricingRoutes } = require('./routes/dynamic-pricing-routes');
 const { setupPricingCalendarRoutes } = require('./routes/pricing-calendars');
-const { initDynamicPricingCron, runDynamicPricingJob } = require('./routes/dynamic-pricing-cron');
+const { initDynamicPricingCron, runDynamicPricingJob, runDynamicPricingForOneProperty } = require('./routes/dynamic-pricing-cron');
 const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
 
 // ============================================
@@ -23486,6 +23486,33 @@ async function sendPushForDynamicPricing(userId, { title, body, data }) {
     console.error('❌ [DP-CRON] Push error:', err.message);
   }
 }
+
+// ── Analyse marché à la demande pour UN logement (activation d'un nouveau logement) ──
+// POST /api/pricing/analyze-now/:propertyId  (auth utilisateur)
+app.post('/api/pricing/analyze-now/:propertyId', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+    const propertyId = req.params.propertyId;
+    const force = req.query.force === '1' || req.body?.force === true;
+
+    // Réponse immédiate : le scrape tourne en arrière-plan (Apify peut prendre 1-2 min)
+    res.status(202).json({ success: true, message: 'Analyse marché lancée en arrière-plan' });
+
+    runDynamicPricingForOneProperty(pool, {
+      userId, propertyId, sendPushNotification: sendPushForDynamicPricing, force
+    })
+      .then(r => {
+        if (r.skipped) console.log(`ℹ️ [DP-ONE] ${propertyId} ignoré: ${r.reason}`);
+        else if (r.ok) console.log(`✅ [DP-ONE] ${propertyId} analysé (médiane ${r.marketStats?.median}€)`);
+        else console.warn(`⚠️ [DP-ONE] ${propertyId} échec: ${r.error}`);
+      })
+      .catch(err => console.error(`❌ [DP-ONE] ${propertyId} erreur:`, err.message));
+  } catch (err) {
+    console.error('Erreur analyze-now:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 // ── Route de test manuel du cron (protégée par CRON_SECRET) ──
 // POST /api/dynamic-pricing/run-now

@@ -1719,7 +1719,16 @@ async function savePropertyConfig(pid) {
     showToast('Configuration sauvegardée ✓', '');
     const btn = document.getElementById('save-' + pid);
     if (btn) btn.style.display = 'none';
+    const wasInactive = !(cfg && cfg.isActive);
     if (cfg) { cfg.priceMin = priceMin; cfg.priceMax = priceMax; cfg.isActive = true; }
+
+    // 🎯 Première activation → lancer l'analyse marché tout de suite (sans attendre lundi)
+    if (wasInactive) {
+      try {
+        await fetch(`${API_BASE}/api/pricing/analyze-now/${encodeURIComponent(pid)}`, { method: 'POST' });
+        showToast('Analyse marché lancée — résultats dans quelques minutes ⏳', '');
+      } catch (e) { /* silencieux : le cron du lundi prendra le relais */ }
+    }
   } catch (err) {
     showToast('Erreur: ' + err.message, '');
   }

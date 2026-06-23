@@ -476,4 +476,86 @@ function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
   console.log('✅ [DP-CRON] Crons initialisés — Hebdo lundi 6h (scrape+recalcul) + Quotidien mar→dim 6h (recalcul+push) — Europe/Paris');
 }
 
-module.exports = { initDynamicPricingCron, runDynamicPricingJob, runDailyPricingRefresh };
+// ============================================================
+// 🎯 ANALYSE À LA DEMANDE — UN SEUL LOGEMENT
+// Utilisé quand on active un nouveau logement : scrape ciblé +
+// market_data immédiat, sans attendre le cron du lundi.
+// ============================================================
+async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendPushNotification = null, force = false }) {
+  const weekStart = getCurrentWeekStart();
+
+  const cfg = (await pool.query(
+    `SELECT pc.*, p.name AS property_name, p.address AS property_address
+       FROM pricing_config pc
+       JOIN properties p ON p.id = pc.property_id
+      WHERE pc.user_id = $1 AND pc.property_id = $2`,
+    [userId, propertyId]
+  )).rows[0];
+
+  if (!cfg) return { ok: false, error: 'Config pricing introuvable pour ce logement' };
+
+  // Évite de re-scraper si l'analyse de la semaine existe déjà (sauf force)
+  if (!force) {
+    const existing = await pool.query(
+      `SELECT 1 FROM market_data WHERE property_id = $1 AND week_start = $2 LIMIT 1`,
+      [propertyId, weekStart]
+    );
+    if (existing.rows.length > 0) {
+      return { ok: true, skipped: true, reason: 'Analyse marché déjà présente cette semaine' };
+    }
+  }
+
+  const zoneLabel = cfg.zone_label
+    || (cfg.property_address?.split(',').slice(-2).join(',').trim())
+    || 'France';
+
+  console.log(`🎯 [DP-ONE] Analyse à la demande: ${cfg.property_name} (${propertyId}) — zone "${zoneLabel}"`);
+
+  const { listings, isMock } = await scrapeZone(
+    zoneLabel,
+    (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
+    MAX_LISTINGS
+  );
+
+  const filtered = cfg.bedrooms
+    ? listings.filter(l => Math.abs((l.bedrooms || 1) - cfg.bedrooms) <= 1)
+    : listings;
+
+  const marketStats = calcMarketStats(filtered.length >= 5 ? filtered : listings);
+  if (!marketStats) return { ok: false, error: 'Pas assez de données marché pour ce logement' };
+
+  await pool.query(
+    `INSERT INTO market_data (
+       user_id, property_id, week_start,
+       median_price, price_p25, price_p75,
+       occupancy_rate, comparable_count, tension_level,
+       zone_label, scraped_at, created_at
+     )
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),NOW())
+     ON CONFLICT (property_id, week_start) DO UPDATE SET
+       median_price     = EXCLUDED.median_price,
+       price_p25        = EXCLUDED.price_p25,
+       price_p75        = EXCLUDED.price_p75,
+       occupancy_rate   = EXCLUDED.occupancy_rate,
+       comparable_count = EXCLUDED.comparable_count,
+       tension_level    = EXCLUDED.tension_level,
+       zone_label       = EXCLUDED.zone_label,
+       scraped_at       = NOW()`,
+    [
+      cfg.user_id, cfg.property_id, weekStart,
+      marketStats.median, marketStats.p25, marketStats.p75,
+      marketStats.occupancy, marketStats.count, marketStats.tensionLevel,
+      zoneLabel,
+    ]
+  );
+
+  console.log(`✅ [DP-ONE] market_data: médiane=${marketStats.median}€ occ=${marketStats.occupancy}% tension=${marketStats.tensionLevel}`);
+
+  const apply = await applyDynamicPricingForProperty(pool, {
+    cfg, marketStats, isMock, sendPushNotification,
+  });
+
+  return { ok: true, isMock, marketStats, apply };
+}
+
+module.exports = { initDynamicPricingCron, runDynamicPricingJob, runDailyPricingRefresh, runDynamicPricingForOneProperty };
