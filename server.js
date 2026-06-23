@@ -1091,6 +1091,8 @@ async function syncSingleIcalUrl(pool, property, entry) {
        platformName, 'ical', icalUid]
     );
     created++;
+    // 🔁 Recalcul pricing ciblé (débouncé) — coalescé pour toute la sync iCal
+    try { require('./routes/pricing-recalc-trigger').schedulePricingRecalc(pool, property.id, property.user_id); } catch (e) {}
 
     // ── Post-création : conversation + templates + notification push ──
     try {
@@ -6101,6 +6103,10 @@ cleanGuestName(reservation.guestName, reservation.platform || reservation.source
     ]);
 
     const reservationId = result.rows[0].id;
+    // 🔁 Recalcul pricing ciblé (débouncé) si nouvelle réservation
+    if (isNewReservation) {
+      try { require('./routes/pricing-recalc-trigger').schedulePricingRecalc(pool, propertyId, realUserId); } catch (e) {}
+    }
    // Verifier si la reservation est dans les 6 prochains mois
 const now = new Date();
 const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Minuit aujourd'hui
