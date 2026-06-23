@@ -31812,10 +31812,35 @@ app.get('/api/host-questions/pending', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const agencyIds = await getAgencyUserIds(req, userId);
     const result = await pool.query(
-      `SELECT id, conversation_id, property_id, guest_name, question, language, kind, meta, created_at
-       FROM ai_host_questions
-       WHERE user_id = ANY($1::text[]) AND status = 'pending'
-       ORDER BY created_at ASC`,
+      `SELECT q.id, q.conversation_id, q.property_id, q.guest_name, q.question, q.language, q.kind, q.meta, q.created_at,
+              p.name AS property_name,
+              c.reservation_start_date AS stay_checkin,
+              c.reservation_end_date   AS stay_checkout,
+              prev_r.end_date   AS prev_checkout,
+              next_r.start_date AS next_checkin
+       FROM ai_host_questions q
+       LEFT JOIN properties p ON p.id = q.property_id
+       LEFT JOIN conversations c ON c.id = q.conversation_id
+       LEFT JOIN LATERAL (
+         SELECT r.end_date FROM reservations r
+         WHERE r.property_id = q.property_id
+           AND r.status NOT IN ('cancelled','hold')
+           AND c.reservation_start_date IS NOT NULL
+           AND r.start_date < c.reservation_start_date
+           AND r.end_date <= c.reservation_start_date
+         ORDER BY r.end_date DESC LIMIT 1
+       ) prev_r ON true
+       LEFT JOIN LATERAL (
+         SELECT r.start_date FROM reservations r
+         WHERE r.property_id = q.property_id
+           AND r.status NOT IN ('cancelled','hold')
+           AND c.reservation_end_date IS NOT NULL
+           AND r.start_date >= c.reservation_end_date
+           AND r.start_date > c.reservation_start_date
+         ORDER BY r.start_date ASC LIMIT 1
+       ) next_r ON true
+       WHERE q.user_id = ANY($1::text[]) AND q.status = 'pending'
+       ORDER BY q.created_at ASC`,
       [agencyIds]
     );
     res.json({ questions: result.rows });
