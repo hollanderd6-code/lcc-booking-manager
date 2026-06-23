@@ -17903,7 +17903,7 @@ userId: userId
          deposit_release_days = $41,
          external_pricing = $42,
          updated_at = NOW()
-       WHERE id = $22 AND user_id = $23`,
+       WHERE id = $22 AND user_id = ANY($23::text[])`,
       [
         newName, newColor, JSON.stringify(newIcalUrls || []), newAddress,
         newArrivalTime, newDepartureTime, newDepositAmount, newPhotoUrl,
@@ -17915,7 +17915,7 @@ userId: userId
         newAutoResponsesEnabled,
         newArrivalMessage,
         JSON.stringify(newQuickReplies),
-        propertyId, userId,
+        propertyId, agencyIds,
         newInternalName,
         newBasePrice,
         newWeekendPrice,
@@ -17945,14 +17945,14 @@ userId: userId
 
     // Lire directement depuis la DB pour éviter les race conditions avec le cache
     const dbRow = await pool.query(
-      'SELECT * FROM properties WHERE id = $1 AND user_id = $2',
-      [propertyId, userId]
+      'SELECT * FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [propertyId, agencyIds]
     );
     const updated = dbRow.rows[0] ? {
       ...dbRow.rows[0],
       airbnbCommissionPct: parseFloat(dbRow.rows[0].airbnb_commission_pct) || 3,
       bookingCommissionPct: parseFloat(dbRow.rows[0].booking_commission_pct) || 15,
-    } : PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    } : PROPERTIES.find(p => p.id === propertyId && agencyIds.includes(p.userId));
     res.json({
       message: 'Logement modifié avec succès',
       property: updated
