@@ -3987,6 +3987,7 @@ app.get('/api/property-groups', cors(), authenticateAny, async (req, res) => {
 app.post('/api/property-groups', cors(), express.json(), authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const { id, name, propertyIds } = req.body || {};
 
     if (!name || typeof name !== 'string' || !name.trim()) {
@@ -4007,8 +4008,8 @@ app.post('/api/property-groups', cors(), express.json(), authenticateAny, async 
          SET name = EXCLUDED.name,
              property_ids = EXCLUDED.property_ids,
              updated_at = NOW()
-         WHERE property_groups.user_id = $2`,
-      [groupId, userId, name.trim(), JSON.stringify(propertyIds)]
+         WHERE property_groups.user_id = ANY($2::text[])`,
+      [groupId, agencyIds, name.trim(), JSON.stringify(propertyIds)]
     );
 
     res.json({
@@ -4025,12 +4026,13 @@ app.post('/api/property-groups', cors(), express.json(), authenticateAny, async 
 app.put('/api/property-groups/:id', cors(), express.json(), authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const groupId = req.params.id;
     const { name, propertyIds } = req.body || {};
 
     const existing = await pool.query(
-      'SELECT id FROM property_groups WHERE id = $1 AND user_id = $2',
-      [groupId, userId]
+      'SELECT id FROM property_groups WHERE id = $1 AND user_id = ANY($2::text[])',
+      [groupId, agencyIds]
     );
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Group not found' });
@@ -4069,10 +4071,11 @@ app.put('/api/property-groups/:id', cors(), express.json(), authenticateAny, asy
 app.delete('/api/property-groups/:id', cors(), authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const groupId = req.params.id;
     const result = await pool.query(
-      'DELETE FROM property_groups WHERE id = $1 AND user_id = $2 RETURNING id',
-      [groupId, userId]
+      'DELETE FROM property_groups WHERE id = $1 AND user_id = ANY($2::text[]) RETURNING id',
+      [groupId, agencyIds]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Group not found' });
@@ -4088,6 +4091,7 @@ app.delete('/api/property-groups/:id', cors(), authenticateAny, async (req, res)
 app.post('/api/property-groups/bulk-import', cors(), express.json(), authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const { groups } = req.body || {};
 
     if (!Array.isArray(groups)) {
@@ -4096,8 +4100,8 @@ app.post('/api/property-groups/bulk-import', cors(), express.json(), authenticat
 
     // Ne rien faire si la DB a déjà des groupes (éviter d'écraser)
     const existing = await pool.query(
-      'SELECT COUNT(*)::int AS count FROM property_groups WHERE user_id = $1',
-      [userId]
+      'SELECT COUNT(*)::int AS count FROM property_groups WHERE user_id = ANY($1::text[])',
+      [agencyIds]
     );
     if (existing.rows[0].count > 0) {
       return res.json({
@@ -9089,6 +9093,7 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
       console.log('❌ Utilisateur non authentifié');
       return res.status(401).json({ error: 'Non autorisé' });
     }
+    const agencyIds = await getAgencyUserIds(req, user.id);
     console.log('✅ Utilisateur authentifié:', user.id);
     
     // 2. EXTRACTION ET VALIDATION DES DONNÉES
@@ -9110,8 +9115,8 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
     
     // 3. VÉRIFICATION DU LOGEMENT EN POSTGRESQL
     const propertyCheck = await pool.query(
-      'SELECT id, name, color FROM properties WHERE id = $1 AND user_id = $2',
-      [propertyId, userId]
+      'SELECT id, name, color FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [propertyId, agencyIds]
     );
     
     if (propertyCheck.rows.length === 0) {
@@ -9126,11 +9131,11 @@ app.post('/api/bookings', authenticateAny, checkSubscription, async (req, res) =
     const overlapCheck = await pool.query(
       `SELECT uid, guest_name, start_date, end_date FROM reservations
        WHERE property_id = $1
-         AND user_id = $4
+         AND user_id = ANY($4::text[])
          AND status NOT IN ('cancelled', 'completed')
          AND start_date::date < $3::date
          AND end_date::date > $2::date`,
-      [propertyId, checkIn, checkOut, user.id]
+      [propertyId, checkIn, checkOut, agencyIds]
     );
     if (overlapCheck.rows.length > 0) {
       const existing = overlapCheck.rows[0];
@@ -12533,6 +12538,7 @@ app.put('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_manag
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
       : (await getUserFromRequest(req))?.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
 
     if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
@@ -12561,9 +12567,9 @@ app.put('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_manag
          notes = COALESCE($6, notes),
          is_active = COALESCE($7, is_active),
          sub_account_id = $8
-       WHERE id = $1 AND user_id = $2
+       WHERE id = $1 AND user_id = ANY($2::text[])
        RETURNING id, name, phone, email, notes, is_active, sub_account_id, created_at`,
-      [id, userId, name, phone, email, notes, isActive, subAccountId || null]
+      [id, agencyIds, name, phone, email, notes, isActive, subAccountId || null]
     );
 
     if (result.rows.length === 0) {
@@ -12587,6 +12593,7 @@ app.put('/api/cleaners/:id/sms-toggle', authenticateAny, requirePermission(pool,
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
       : (await getUserFromRequest(req))?.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const { id } = req.params;
@@ -12594,8 +12601,8 @@ app.put('/api/cleaners/:id/sms-toggle', authenticateAny, requirePermission(pool,
 
     // Vérifier plan SMS
     const subRow = await pool.query(
-      `SELECT plan_type, sms_enabled FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
-      [userId]
+      `SELECT plan_type, sms_enabled FROM subscriptions WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC LIMIT 1`,
+      [agencyIds]
     );
     const sub = subRow.rows[0];
     const basePlan = getBasePlanName(sub?.plan_type || 'solo');
@@ -12604,8 +12611,8 @@ app.put('/api/cleaners/:id/sms-toggle', authenticateAny, requirePermission(pool,
     }
 
     const result = await pool.query(
-      `UPDATE cleaners SET sms_recap_enabled = $1 WHERE id = $2 AND user_id = $3 RETURNING id, name, sms_recap_enabled`,
-      [!!enabled, id, userId]
+      `UPDATE cleaners SET sms_recap_enabled = $1 WHERE id = $2 AND user_id = ANY($3::text[]) RETURNING id, name, sms_recap_enabled`,
+      [!!enabled, id, agencyIds]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Cleaner non trouvé' });
 
@@ -12623,6 +12630,7 @@ app.delete('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_ma
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
       : (await getUserFromRequest(req))?.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
 
     if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
@@ -12632,8 +12640,8 @@ app.delete('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_ma
 
     const result = await pool.query(
       `DELETE FROM cleaners
-       WHERE id = $1 AND user_id = $2`,
-      [id, userId]
+       WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [id, agencyIds]
     );
 
     if (result.rowCount === 0) {
@@ -12649,6 +12657,7 @@ app.delete('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_ma
 app.post('/api/cleaning/assignments', async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
+    const agencyIds = await getAgencyUserIds(req, user.id);
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
@@ -12662,8 +12671,8 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     // Si cleanerId vide → on supprime l'assignation
     if (!cleanerId) {
       await pool.query(
-        'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
-        [user.id, reservationKey]
+        'DELETE FROM cleaning_assignments WHERE user_id = ANY($1::text[]) AND reservation_key = $2',
+        [agencyIds, reservationKey]
       );
       return res.json({
         message: 'Assignation ménage supprimée',
@@ -12681,8 +12690,8 @@ app.post('/api/cleaning/assignments', async (req, res) => {
     const cleanerResult = await pool.query(
       `SELECT id, name, email, phone
        FROM cleaners
-       WHERE id = $1 AND user_id = $2`,
-      [cleanerId, user.id]
+       WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [cleanerId, agencyIds]
     );
 
     if (cleanerResult.rows.length === 0) {
@@ -12691,8 +12700,8 @@ app.post('/api/cleaning/assignments', async (req, res) => {
 
     // D'abord, supprimer toute assignation existante pour cette réservation
     await pool.query(
-      'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
-      [user.id, reservationKey]
+      'DELETE FROM cleaning_assignments WHERE user_id = ANY($1::text[]) AND reservation_key = $2',
+      [agencyIds, reservationKey]
     );
 
     // Puis insérer la nouvelle assignation
@@ -12758,6 +12767,7 @@ app.post('/api/cleaning/assignments',
     const userId = req.user.isSubAccount 
       ? (await getRealUserId(pool, req))
       : (await getUserFromRequest(req))?.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     
     if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
@@ -12779,8 +12789,8 @@ app.post('/api/cleaning/assignments',
     // Si cleanerId vide → on supprime l'assignation
     if (!cleanerId) {
       await pool.query(
-        'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
-        [userId, reservationKey]
+        'DELETE FROM cleaning_assignments WHERE user_id = ANY($1::text[]) AND reservation_key = $2',
+        [agencyIds, reservationKey]
       );
       return res.json({
         message: 'Assignation ménage supprimée',
@@ -12798,8 +12808,8 @@ app.post('/api/cleaning/assignments',
     const cleanerResult = await pool.query(
       `SELECT id, name, email, phone
        FROM cleaners
-       WHERE id = $1 AND user_id = $2`,
-      [cleanerId, userId]
+       WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [cleanerId, agencyIds]
     );
 
     if (cleanerResult.rows.length === 0) {
@@ -12808,8 +12818,8 @@ app.post('/api/cleaning/assignments',
 
     // D'abord, supprimer toute assignation existante pour cette réservation
     await pool.query(
-      'DELETE FROM cleaning_assignments WHERE user_id = $1 AND reservation_key = $2',
-      [userId, reservationKey]
+      'DELETE FROM cleaning_assignments WHERE user_id = ANY($1::text[]) AND reservation_key = $2',
+      [agencyIds, reservationKey]
     );
 
     // Puis insérer la nouvelle assignation
@@ -13921,6 +13931,7 @@ app.post('/api/cleaning/templates',
       const userId = req.user.isSubAccount
         ? (await getRealUserId(pool, req))
         : (await getUserFromRequest(req))?.id;
+      const agencyIds = await getAgencyUserIds(req, userId);
 
       if (!userId) {
         return res.status(401).json({ error: 'Non autorisé' });
@@ -13944,9 +13955,9 @@ app.post('/api/cleaning/templates',
         result = await pool.query(
           `UPDATE cleaning_templates 
            SET name = $1, tasks = $2, property_id = $3, is_default = $4, updated_at = NOW()
-           WHERE id = $5 AND user_id = $6
+           WHERE id = $5 AND user_id = ANY($6::text[])
            RETURNING *`,
-          [name || 'Template ménage', JSON.stringify(sanitizedTasks), propertyId || null, isDefault || false, templateId, userId]
+          [name || 'Template ménage', JSON.stringify(sanitizedTasks), propertyId || null, isDefault || false, templateId, agencyIds]
         );
 
         if (result.rows.length === 0) {
@@ -13955,8 +13966,8 @@ app.post('/api/cleaning/templates',
       } else {
         if (isDefault) {
           await pool.query(
-            'UPDATE cleaning_templates SET is_default = FALSE WHERE user_id = $1',
-            [userId]
+            'UPDATE cleaning_templates SET is_default = FALSE WHERE user_id = ANY($1::text[])',
+            [agencyIds]
           );
         }
 
@@ -14100,6 +14111,7 @@ app.get('/api/consumables/items',
       const userId = req.user.isSubAccount
         ? (await getRealUserId(pool, req))
         : (await getUserFromRequest(req))?.id;
+      const agencyIds = await getAgencyUserIds(req, userId);
       if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
       await ensureDefaultConsumables(userId);
@@ -14109,15 +14121,15 @@ app.get('/api/consumables/items',
       if (propertyId) {
         // Articles standard (property_id NULL) + perso de ce logement
         query = `SELECT * FROM consumable_items
-                 WHERE user_id = $1 AND is_active = TRUE
+                 WHERE user_id = ANY($1::text[]) AND is_active = TRUE
                  AND (property_id IS NULL OR property_id = $2)
                  ORDER BY position ASC, id ASC`;
-        params = [userId, propertyId];
+        params = [agencyIds, propertyId];
       } else {
         query = `SELECT * FROM consumable_items
-                 WHERE user_id = $1 AND is_active = TRUE
+                 WHERE user_id = ANY($1::text[]) AND is_active = TRUE
                  ORDER BY (property_id IS NOT NULL), position ASC, id ASC`;
-        params = [userId];
+        params = [agencyIds];
       }
       const result = await pool.query(query, params);
       res.json({ success: true, items: result.rows });
@@ -14138,6 +14150,7 @@ app.post('/api/consumables/items',
       const userId = req.user.isSubAccount
         ? (await getRealUserId(pool, req))
         : (await getUserFromRequest(req))?.id;
+      const agencyIds = await getAgencyUserIds(req, userId);
       if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
       const { label, icon, propertyId } = req.body;
@@ -14145,8 +14158,8 @@ app.post('/api/consumables/items',
         return res.status(400).json({ error: 'Libellé requis' });
       }
       const posRes = await pool.query(
-        `SELECT COALESCE(MAX(position), -1) + 1 AS pos FROM consumable_items WHERE user_id = $1`,
-        [userId]
+        `SELECT COALESCE(MAX(position), -1) + 1 AS pos FROM consumable_items WHERE user_id = ANY($1::text[])`,
+        [agencyIds]
       );
       const result = await pool.query(
         `INSERT INTO consumable_items (user_id, property_id, label, icon, position)
@@ -14171,11 +14184,12 @@ app.delete('/api/consumables/items/:id',
       const userId = req.user.isSubAccount
         ? (await getRealUserId(pool, req))
         : (await getUserFromRequest(req))?.id;
+      const agencyIds = await getAgencyUserIds(req, userId);
       if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
       const result = await pool.query(
-        'DELETE FROM consumable_items WHERE id = $1 AND user_id = $2 RETURNING id',
-        [req.params.id, userId]
+        'DELETE FROM consumable_items WHERE id = $1 AND user_id = ANY($2::text[]) RETURNING id',
+        [req.params.id, agencyIds]
       );
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Article non trouvé' });
@@ -15323,6 +15337,7 @@ app.put('/api/cleaning/default-cleaner/:propertyId',
       const userId = req.user.isSubAccount
         ? (await getRealUserId(pool, req))
         : (await getUserFromRequest(req))?.id;
+      const agencyIds = await getAgencyUserIds(req, userId);
       if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
       const { propertyId } = req.params;
@@ -15337,8 +15352,8 @@ app.put('/api/cleaning/default-cleaner/:propertyId',
       if (!cleanerId) {
         // Supprimer le cleaner par défaut
         await pool.query(
-          'DELETE FROM property_default_cleaners WHERE user_id = $1 AND property_id = $2',
-          [userId, propertyId]
+          'DELETE FROM property_default_cleaners WHERE user_id = ANY($1::text[]) AND property_id = $2',
+          [agencyIds, propertyId]
         );
         console.log(`🧹 Cleaner par défaut supprimé pour ${propertyId}`);
         return res.json({ success: true, message: 'Cleaner par défaut supprimé' });
@@ -15346,8 +15361,8 @@ app.put('/api/cleaning/default-cleaner/:propertyId',
 
       // Vérifier que le cleaner existe et appartient à l'utilisateur
       const cleanerResult = await pool.query(
-        'SELECT id, name FROM cleaners WHERE id = $1 AND user_id = $2 AND is_active = TRUE',
-        [cleanerId, userId]
+        'SELECT id, name FROM cleaners WHERE id = $1 AND user_id = ANY($2::text[]) AND is_active = TRUE',
+        [cleanerId, agencyIds]
       );
       if (cleanerResult.rows.length === 0) {
         return res.status(404).json({ error: 'Personne de ménage introuvable' });
@@ -15387,6 +15402,7 @@ app.get('/api/cleaning/qr/:propertyId',
   async (req, res) => {
     try {
       const user = await getUserFromRequest(req);
+      const agencyIds = await getAgencyUserIds(req, user.id);
       if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
       const { propertyId } = req.params;
@@ -15404,9 +15420,9 @@ app.get('/api/cleaning/qr/:propertyId',
         `SELECT ca.cleaner_id, c.pin_code, c.name
          FROM cleaning_assignments ca
          LEFT JOIN cleaners c ON c.id = ca.cleaner_id
-         WHERE ca.user_id = $1 AND ca.property_id = $2
+         WHERE ca.user_id = ANY($1::text[]) AND ca.property_id = $2
          LIMIT 1`,
-        [user.id, propertyId]
+        [agencyIds, propertyId]
       );
 
       const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
@@ -16329,13 +16345,14 @@ app.post('/api/blocks/batch', async (req, res) => {
 app.delete('/api/pricing/overrides/:property_id/:date', authenticateAny, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
+    const agencyIds = await getAgencyUserIds(req, user.id);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const { property_id, date } = req.params;
 
     await pool.query(
-      'DELETE FROM pricing_overrides WHERE user_id = $1 AND property_id = $2 AND date = $3',
-      [user.id, property_id, date]
+      'DELETE FROM pricing_overrides WHERE user_id = ANY($1::text[]) AND property_id = $2 AND date = $3',
+      [agencyIds, property_id, date]
     );
 
     res.json({ success: true });
@@ -16716,13 +16733,14 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, requir
 app.get('/api/pricing/rules/channex-check/:property_id', authenticateAny, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
+    const agencyIds = await getAgencyUserIds(req, user.id);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
     const { property_id } = req.params;
     const { date_from, date_to } = req.query;
 
     const prop = await pool.query(
-      `SELECT channex_property_id, channex_rate_plan_id, name FROM properties WHERE id = $1 AND user_id = $2`,
-      [property_id, user.id]
+      `SELECT channex_property_id, channex_rate_plan_id, name FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [property_id, agencyIds]
     );
     if (!prop.rows[0]?.channex_property_id) return res.status(400).json({ error: 'Propriété non connectée à Channex' });
 
@@ -18148,11 +18166,12 @@ app.get('/api/properties-order/bulk', authenticateAny, async (req, res) => {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
       : (await getUserFromRequest(req))?.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const result = await pool.query(
-      `SELECT id FROM properties WHERE user_id = $1 ORDER BY display_order ASC, created_at ASC`,
-      [userId]
+      `SELECT id FROM properties WHERE user_id = ANY($1::text[]) ORDER BY display_order ASC, created_at ASC`,
+      [agencyIds]
     );
     const order = result.rows.map(r => String(r.id));
     res.json({ order });
@@ -18168,6 +18187,7 @@ app.put('/api/properties-order/bulk', authenticateAny, async (req, res) => {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
       : (await getUserFromRequest(req))?.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const { order } = req.body;
@@ -18178,8 +18198,8 @@ app.put('/api/properties-order/bulk', authenticateAny, async (req, res) => {
     // Mettre à jour display_order pour chaque logement
     for (let i = 0; i < order.length; i++) {
       await pool.query(
-        `UPDATE properties SET display_order = $1 WHERE id = $2 AND user_id = $3`,
-        [i + 1, order[i], userId]
+        `UPDATE properties SET display_order = $1 WHERE id = $2 AND user_id = ANY($3::text[])`,
+        [i + 1, order[i], agencyIds]
       );
     }
 
@@ -19245,6 +19265,7 @@ app.post('/api/deposits',
     const userId = req.user.isSubAccount 
       ? (await getRealUserId(pool, req))
       : (await getUserFromRequest(req))?.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     
     if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
@@ -19281,8 +19302,8 @@ app.post('/api/deposits',
       } else if (freeOwnerId) {
         // Chercher un logement lié à ce propriétaire (le premier suffit pour le Stripe)
         const propRes = await pool.query(
-          'SELECT id FROM properties WHERE owner_id = $1 AND user_id = $2 LIMIT 1',
-          [freeOwnerId, userId]
+          'SELECT id FROM properties WHERE owner_id = $1 AND user_id = ANY($2::text[]) LIMIT 1',
+          [freeOwnerId, agencyIds]
         );
         freeModePropertyId = propRes.rows[0]?.id || null;
       }
@@ -19516,7 +19537,8 @@ app.put('/api/payments/:paymentId',
     const { amount, description } = req.body;
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Montant invalide' });
 
-    const { rows } = await pool.query('SELECT * FROM payments WHERE id = $1 AND user_id = $2', [paymentId, user.id]);
+    const agencyIds = await getAgencyUserIds(req, user.id);
+    const { rows } = await pool.query('SELECT * FROM payments WHERE id = $1 AND user_id = ANY($2::text[])', [paymentId, agencyIds]);
     if (!rows.length) return res.status(404).json({ error: 'Paiement introuvable' });
 
     const existing = rows[0];
@@ -19572,7 +19594,8 @@ app.delete('/api/payments/:paymentId',
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const { paymentId } = req.params;
-    const { rows } = await pool.query('SELECT * FROM payments WHERE id = $1 AND user_id = $2', [paymentId, user.id]);
+    const agencyIds = await getAgencyUserIds(req, user.id);
+    const { rows } = await pool.query('SELECT * FROM payments WHERE id = $1 AND user_id = ANY($2::text[])', [paymentId, agencyIds]);
     if (!rows.length) return res.status(404).json({ error: 'Paiement introuvable' });
 
     const existing = rows[0];
@@ -19789,14 +19812,15 @@ app.get('/api/deposits',
 app.get('/api/payments', authenticateAny, requirePermission(pool, 'can_view_payments'), loadSubAccountData(pool), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
+    const agencyIds = await getAgencyUserIds(req, user.id);
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
     const { status, propertyId } = req.query;
     
-    let query = 'SELECT * FROM payments WHERE user_id = $1';
-    const params = [user.id];
+    let query = 'SELECT * FROM payments WHERE user_id = ANY($1::text[])';
+    const params = [agencyIds];
     
     if (status) {
       query += ' AND status = $2';
@@ -24467,6 +24491,7 @@ app.get("/api/billing/invoices/:number/download", authenticateAny, async (req, r
   app.post('/api/chat/generate-booking-message/:conversationId', authenticateAny, checkSubscription, async (req, res) => {
     try {
       const userId = req.user.id;
+      const agencyIds = await getAgencyUserIds(req, userId);
       const { conversationId } = req.params;
       
       // 1. Récupérer la conversation
@@ -24474,8 +24499,8 @@ app.get("/api/billing/invoices/:number/download", authenticateAny, async (req, r
         `SELECT c.*, p.name as property_name 
          FROM conversations c
          LEFT JOIN properties p ON c.property_id = p.id
-         WHERE c.id = $1 AND c.user_id = $2`,
-        [conversationId, userId]
+         WHERE c.id = $1 AND c.user_id = ANY($2::text[])`,
+        [conversationId, agencyIds]
       );
       
       if (convResult.rows.length === 0) {
@@ -24859,6 +24884,7 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
       : (await getUserFromRequest(req))?.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const { convId } = req.params;
@@ -24871,9 +24897,9 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
          (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
          OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date))
        )
-       WHERE c.id = $1 AND c.user_id = $2
+       WHERE c.id = $1 AND c.user_id = ANY($2::text[])
        LIMIT 1`,
-      [convId, userId]
+      [convId, agencyIds]
     );
 
     if (!convResult.rows.length) return res.json({ quickReplies: [], depositUrl: null });
@@ -24889,9 +24915,9 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
     if (row.reservation_uid) {
       const dep = await pool.query(
         `SELECT checkout_url, amount_cents FROM deposits
-         WHERE reservation_uid = $1 AND user_id = $2 AND status IN ('pending','authorized')
+         WHERE reservation_uid = $1 AND user_id = ANY($2::text[]) AND status IN ('pending','authorized')
          ORDER BY created_at DESC LIMIT 1`,
-        [row.reservation_uid, userId]
+        [row.reservation_uid, agencyIds]
       );
       if (dep.rows.length) {
         depositUrl = dep.rows[0].checkout_url;
@@ -24962,12 +24988,13 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
 app.delete('/api/chat/conversations/:conversationId', authenticateAny, checkSubscription, async (req, res) => {
   try {
     const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     const { conversationId } = req.params;
     
     // Vérifier que la conversation appartient à l'utilisateur
     const checkResult = await pool.query(
-      'SELECT id FROM conversations WHERE id = $1 AND user_id = $2',
-      [conversationId, userId]
+      'SELECT id FROM conversations WHERE id = $1 AND user_id = ANY($2::text[])',
+      [conversationId, agencyIds]
     );
     
     if (checkResult.rows.length === 0) {
@@ -31015,14 +31042,15 @@ app.patch('/api/debours/:id/status', authenticateAny, requireFeature('invoices_c
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
       : (await getUserFromRequest(req))?.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const { status } = req.body;
     if (!['pending','billed'].includes(status)) return res.status(400).json({ error: 'Statut invalide' });
 
     await pool.query(
-      'UPDATE debours SET status = $1 WHERE id = $2 AND user_id = $3',
-      [status, req.params.id, userId]
+      'UPDATE debours SET status = $1 WHERE id = $2 AND user_id = ANY($3::text[])',
+      [status, req.params.id, agencyIds]
     );
     res.json({ success: true });
   } catch(e) {
@@ -32667,10 +32695,11 @@ app.get('/api/integrations/channex-key', authenticateToken, async (req, res) => 
 app.get('/api/channex/connected-channels/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
   try {
     const propResult = await pool.query(
-      'SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2',
-      [property_id, user_id]
+      'SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [property_id, agencyIds]
     );
     const prop = propResult.rows[0];
     if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
@@ -32792,6 +32821,7 @@ app.get('/api/channex/rate-plans/:channexRoomTypeId', authenticateToken, async (
 app.post('/api/channex/link-property', authenticateToken, async (req, res) => {
   const { property_id, channex_property_id, channex_room_type_id, channex_rate_plan_id } = req.body;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
   if (!property_id || !channex_property_id || !channex_room_type_id || !channex_rate_plan_id) {
     return res.status(400).json({ error: 'property_id, channex_property_id, channex_room_type_id et channex_rate_plan_id requis' });
   }
@@ -32803,8 +32833,8 @@ app.post('/api/channex/link-property', authenticateToken, async (req, res) => {
          channex_room_type_id = $2,
          channex_rate_plan_id = $3,
          updated_at = NOW()
-       WHERE id = $4 AND user_id = $5`,
-      [channex_property_id, channex_room_type_id, channex_rate_plan_id, property_id, user_id]
+       WHERE id = $4 AND user_id = ANY($5::text[])`,
+      [channex_property_id, channex_room_type_id, channex_rate_plan_id, property_id, agencyIds]
     );
     await loadProperties();
 
@@ -32833,13 +32863,14 @@ app.post('/api/channex/link-property', authenticateToken, async (req, res) => {
 app.post('/api/channex/connect-property', authenticateToken, async (req, res) => {
   const { property_id, channex_property_id: existing_channex_property_id } = req.body;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
 
   if (!property_id) return res.status(400).json({ error: 'property_id requis' });
 
   try {
     const propResult = await pool.query(
-      'SELECT * FROM properties WHERE id = $1 AND user_id = $2',
-      [property_id, user_id]
+      'SELECT * FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [property_id, agencyIds]
     );
 
     if (propResult.rows.length === 0) {
@@ -32858,8 +32889,8 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
       // ── Scénario multi-logements : rattacher à une property Channex existante ──
       // Vérifier que cette channex_property_id appartient bien à l'utilisateur
       const ownerCheck = await pool.query(
-        'SELECT id FROM properties WHERE channex_property_id = $1 AND user_id = $2 LIMIT 1',
-        [existing_channex_property_id, user_id]
+        'SELECT id FROM properties WHERE channex_property_id = $1 AND user_id = ANY($2::text[]) LIMIT 1',
+        [existing_channex_property_id, agencyIds]
       );
       if (ownerCheck.rows.length === 0) {
         return res.status(403).json({ error: 'Property Channex introuvable ou non autorisée' });
@@ -32982,6 +33013,7 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
 // ── Installer l'app Messages & Reviews sur toutes les properties d'un user ──
 app.post('/api/channex/install-messages-app', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
   try {
     const { channexAPI } = require('./channex');
 
@@ -33002,8 +33034,8 @@ app.post('/api/channex/install-messages-app', authenticateToken, async (req, res
 
     // Récupérer toutes les properties Channex de l'utilisateur
     const propsResult = await pool.query(
-      'SELECT DISTINCT channex_property_id FROM properties WHERE user_id = $1 AND channex_enabled = TRUE AND channex_property_id IS NOT NULL',
-      [user_id]
+      'SELECT DISTINCT channex_property_id FROM properties WHERE user_id = ANY($1::text[]) AND channex_enabled = TRUE AND channex_property_id IS NOT NULL',
+      [agencyIds]
     );
 
     let installed = 0, skipped = 0, errors = 0;
@@ -33038,14 +33070,15 @@ app.post('/api/channex/install-messages-app', authenticateToken, async (req, res
 // ── Lister les Channex properties déjà créées par l'utilisateur ─
 app.get('/api/channex/list-user-properties', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
   try {
     // Récupérer les properties BH de l'user qui ont déjà une channex_property_id
     const result = await pool.query(
       `SELECT DISTINCT channex_property_id, name as bh_name, city
        FROM properties
-       WHERE user_id = $1 AND channex_enabled = true AND channex_property_id IS NOT NULL
+       WHERE user_id = ANY($1::text[]) AND channex_enabled = true AND channex_property_id IS NOT NULL
        ORDER BY name ASC`,
-      [user_id]
+      [agencyIds]
     );
 
     if (result.rows.length === 0) {
@@ -33082,11 +33115,12 @@ app.get('/api/channex/list-user-properties', authenticateToken, async (req, res)
 app.post('/api/channex/disconnect-property', authenticateToken, async (req, res) => {
   const { property_id } = req.body;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
 
   try {
     await pool.query(
-      'UPDATE properties SET channex_enabled = false, channex_property_id = NULL, channex_room_type_id = NULL, channex_rate_plan_id = NULL WHERE id = $1 AND user_id = $2',
-      [property_id, user_id]
+      'UPDATE properties SET channex_enabled = false, channex_property_id = NULL, channex_room_type_id = NULL, channex_rate_plan_id = NULL WHERE id = $1 AND user_id = ANY($2::text[])',
+      [property_id, agencyIds]
     );
     await loadProperties(); // Rafraîchir le cache mémoire
     res.json({ success: true, message: 'Logement déconnecté de Channex' });
@@ -33100,11 +33134,12 @@ app.post('/api/channex/disconnect-property', authenticateToken, async (req, res)
 app.get('/api/channex/property-status/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
 
   try {
     const result = await pool.query(
-      'SELECT channex_enabled, channex_property_id, channex_room_type_id, channex_rate_plan_id FROM properties WHERE id = $1 AND user_id = $2',
-      [property_id, user_id]
+      'SELECT channex_enabled, channex_property_id, channex_room_type_id, channex_rate_plan_id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [property_id, agencyIds]
     );
 
     if (result.rows.length === 0) return res.status(404).json({ error: 'Logement non trouvé' });
@@ -34471,6 +34506,7 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
 app.post('/api/chat/conversations/:conversationId/send-sms', authenticateAny, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
+    const agencyIds = await getAgencyUserIds(req, user.id);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const { conversationId } = req.params;
@@ -34479,8 +34515,8 @@ app.post('/api/chat/conversations/:conversationId/send-sms', authenticateAny, as
 
     // Vérifier que l'utilisateur a l'option SMS active
     const subResult = await pool.query(
-      `SELECT sms_enabled FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
-      [user.id]
+      `SELECT sms_enabled FROM subscriptions WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC LIMIT 1`,
+      [agencyIds]
     );
     if (!subResult.rows[0]?.sms_enabled) {
       return res.status(403).json({ error: "L'option SMS n'est pas activée sur votre compte" });
@@ -34807,11 +34843,12 @@ app.post('/api/channex/register-webhooks', authenticateToken, async (req, res) =
 app.post('/api/channex/sync-availability/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
 
   try {
     const propResult = await pool.query(
-      'SELECT channex_property_id, channex_room_type_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2',
-      [property_id, user_id]
+      'SELECT channex_property_id, channex_room_type_id, channex_enabled FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [property_id, agencyIds]
     );
 
     const property = propResult.rows[0];
@@ -34851,13 +34888,14 @@ app.post('/api/channex/sync-availability/:property_id', authenticateToken, async
 app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
 
   try {
     const propResult = await pool.query(
       `SELECT channex_property_id, channex_room_type_id, channex_rate_plan_id, channex_enabled,
               base_price, weekend_price
-       FROM properties WHERE id = $1 AND user_id = $2`,
-      [property_id, user_id]
+       FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [property_id, agencyIds]
     );
 
     const prop = propResult.rows[0];
@@ -34868,9 +34906,9 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
     // Récupérer toutes les règles actives
     const rulesResult = await pool.query(
       `SELECT * FROM pricing_rules
-       WHERE property_id = $1 AND user_id = $2 AND active = true
+       WHERE property_id = $1 AND user_id = ANY($2::text[]) AND active = true
        ORDER BY priority DESC`,
-      [property_id, user_id]
+      [property_id, agencyIds]
     );
     const rules = rulesResult.rows;
     const minStayRules  = rules.filter(r => r.rule_type === 'min_stay');
@@ -34963,12 +35001,13 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
 app.post('/api/channex/sync-revisions/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
   const { from_date } = req.body; // ex: '2026-01-01'
 
   try {
     const propResult = await pool.query(
-      `SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2`,
-      [property_id, user_id]
+      `SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [property_id, agencyIds]
     );
     const prop = propResult.rows[0];
     if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
@@ -35069,11 +35108,12 @@ app.post('/api/channex/push-availability/:property_id', authenticateAny, async (
 app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
 
   try {
     const propResult = await pool.query(
-      `SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2`,
-      [property_id, user_id]
+      `SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [property_id, agencyIds]
     );
     const prop = propResult.rows[0];
     if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
@@ -35125,8 +35165,8 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
         let targetPropertyId = null;
         if (room_type_id) {
           const rtResult = await pool.query(
-            'SELECT id FROM properties WHERE channex_room_type_id = $1 AND user_id = $2',
-            [room_type_id, user_id]
+            'SELECT id FROM properties WHERE channex_room_type_id = $1 AND user_id = ANY($2::text[])',
+            [room_type_id, agencyIds]
           );
           if (rtResult.rows.length > 0) targetPropertyId = rtResult.rows[0].id;
         }
@@ -35247,11 +35287,12 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
 app.post('/api/channex/pull-bookings/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
 
   try {
     const propResult = await pool.query(
-      'SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = $2',
-      [property_id, user_id]
+      'SELECT channex_property_id, channex_enabled FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [property_id, agencyIds]
     );
     const prop = propResult.rows[0];
     if (!prop?.channex_enabled || !prop?.channex_property_id) {
@@ -35299,6 +35340,7 @@ app.post('/api/channex/pull-bookings/:property_id', authenticateToken, async (re
 app.post('/api/channex/sync-messages/:reservation_uid', authenticateToken, async (req, res) => {
   const { reservation_uid } = req.params;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
 
   try {
     // Trouver la réservation
@@ -35306,8 +35348,8 @@ app.post('/api/channex/sync-messages/:reservation_uid', authenticateToken, async
       `SELECT r.*, c.id as conv_id
        FROM reservations r
        LEFT JOIN conversations c ON c.channex_booking_id = r.channex_booking_id
-       WHERE r.uid = $1 AND r.user_id = $2`,
-      [reservation_uid, user_id]
+       WHERE r.uid = $1 AND r.user_id = ANY($2::text[])`,
+      [reservation_uid, agencyIds]
     );
 
     if (resaRes.rows.length === 0) {
@@ -35377,12 +35419,13 @@ app.post('/api/channex/sync-messages/:reservation_uid', authenticateToken, async
 app.post('/api/channex/accept-booking/:reservation_uid', authenticateToken, async (req, res) => {
   const { reservation_uid } = req.params;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
   try {
     const resaRes = await pool.query(
       `SELECT r.*, p.channex_property_id FROM reservations r
        JOIN properties p ON p.id = r.property_id
-       WHERE r.uid = $1 AND r.user_id = $2 AND r.status = 'pending_approval'`,
-      [reservation_uid, user_id]
+       WHERE r.uid = $1 AND r.user_id = ANY($2::text[]) AND r.status = 'pending_approval'`,
+      [reservation_uid, agencyIds]
     );
     if (resaRes.rows.length === 0) return res.status(404).json({ error: 'Demande non trouvée' });
     const resa = resaRes.rows[0];
@@ -35414,11 +35457,12 @@ app.post('/api/channex/accept-booking/:reservation_uid', authenticateToken, asyn
 app.post('/api/channex/decline-booking/:reservation_uid', authenticateToken, async (req, res) => {
   const { reservation_uid } = req.params;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
   try {
     const resaRes = await pool.query(
       `SELECT r.* FROM reservations r
-       WHERE r.uid = $1 AND r.user_id = $2 AND r.status = 'pending_approval'`,
-      [reservation_uid, user_id]
+       WHERE r.uid = $1 AND r.user_id = ANY($2::text[]) AND r.status = 'pending_approval'`,
+      [reservation_uid, agencyIds]
     );
     if (resaRes.rows.length === 0) return res.status(404).json({ error: 'Demande non trouvée' });
     const resa = resaRes.rows[0];
@@ -35443,11 +35487,12 @@ app.post('/api/channex/decline-booking/:reservation_uid', authenticateToken, asy
 // ── Réassigner les bookings Channex au bon logement via room_type_id ──
 app.post('/api/channex/reassign-bookings', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
   try {
     // Récupérer tous les logements de l'user avec leurs room_type_id
     const propsResult = await pool.query(
-      'SELECT id, channex_room_type_id FROM properties WHERE user_id = $1 AND channex_enabled = true AND channex_room_type_id IS NOT NULL',
-      [user_id]
+      'SELECT id, channex_room_type_id FROM properties WHERE user_id = ANY($1::text[]) AND channex_enabled = true AND channex_room_type_id IS NOT NULL',
+      [agencyIds]
     );
     const roomTypeMap = {};
     propsResult.rows.forEach(p => { roomTypeMap[p.channex_room_type_id] = p.id; });
@@ -35459,8 +35504,8 @@ app.post('/api/channex/reassign-bookings', authenticateToken, async (req, res) =
                 SELECT (jsonb_each(days_breakdown::jsonb)).key as room_type_id LIMIT 1
               ) x) as room_type_id_from_breakdown
        FROM reservations r
-       WHERE r.user_id = $1 AND r.source = 'channex'`,
-      [user_id]
+       WHERE r.user_id = ANY($1::text[]) AND r.source = 'channex'`,
+      [agencyIds]
     );
 
     // Meilleure approche : utiliser ota_reservation_id ou chercher via channex API
@@ -35469,8 +35514,8 @@ app.post('/api/channex/reassign-bookings', authenticateToken, async (req, res) =
     const resResult2 = await pool.query(
       `SELECT id, channex_booking_id, property_id, channex_revision_id
        FROM reservations
-       WHERE user_id = $1 AND source = 'channex'`,
-      [user_id]
+       WHERE user_id = ANY($1::text[]) AND source = 'channex'`,
+      [agencyIds]
     );
 
     let reassigned = 0;
@@ -35572,10 +35617,11 @@ app.post('/api/channex/iframe-token', authenticateToken, async (req, res) => {
 // ── Logs Channex ─────────────────────────────────────────────
 app.get('/api/channex/logs', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
   try {
     const result = await pool.query(
-      'SELECT * FROM channex_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
-      [user_id]
+      'SELECT * FROM channex_logs WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC LIMIT 50',
+      [agencyIds]
     );
     res.json(result.rows);
   } catch (e) {
@@ -35715,6 +35761,7 @@ app.get('/api/channex/certification/check-webhooks', authenticateToken, async (r
 app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
 
   try {
     const { channexAPI } = require('./channex');
@@ -35722,8 +35769,8 @@ app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res)
     // 1. Vérifier que le logement appartient à l'utilisateur et est connecté à Channex
     const propResult = await pool.query(
       `SELECT channex_property_id, channex_enabled
-       FROM properties WHERE id = $1 AND user_id = $2`,
-      [property_id, user_id]
+       FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [property_id, agencyIds]
     );
 
     const prop = propResult.rows[0];
@@ -35823,6 +35870,7 @@ app.post('/api/channex/reviews/:review_id/reply', authenticateToken, async (req,
   const { review_id } = req.params;
   const { reply, property_id } = req.body;
   const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
 
   if (!reply?.trim()) return res.status(400).json({ error: 'Réponse vide' });
   if (!property_id)    return res.status(400).json({ error: 'property_id requis' });
@@ -35833,8 +35881,8 @@ app.post('/api/channex/reviews/:review_id/reply', authenticateToken, async (req,
     // 1. Vérifier que le logement appartient à l'utilisateur
     const propResult = await pool.query(
       `SELECT channex_property_id, channex_enabled
-       FROM properties WHERE id = $1 AND user_id = $2`,
-      [property_id, user_id]
+       FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [property_id, agencyIds]
     );
 
     const prop = propResult.rows[0];
