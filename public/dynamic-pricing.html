@@ -1914,7 +1914,7 @@ async function initCalendarTab(){
 }
 async function loadCalendar(){
   const id=$('calProp').value; if(!id) return;
-  $('calGrid').innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px;">Chargement…</div>';
+  $('calGrid').innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px;padding:28px;">Chargement…</div>';
   $('calDetail').classList.remove('show');
   try{
     const r=await fetch(`/api/pricing/schedule/${id}?days=60`);
@@ -1922,11 +1922,11 @@ async function loadCalendar(){
     _calRows=d.nights||[];
     renderMode(d.mode, d.isActive, d.configured);
     if(!_calRows.length){
-      $('calGrid').innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px;">Aucun planning encore. Clique « Recalculer » pour générer les prix.</div>';
+      $('calGrid').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:34px 16px;color:var(--muted);"><div style=\'font-size:30px;margin-bottom:8px;\'>📅</div><div style=\'font-size:14px;color:var(--ink);font-weight:600;\'>Aucun planning pour ce logement</div><div style=\'font-size:12.5px;margin-top:4px;\'>Clique « Recalculer » pour générer les prix.</div></div>';
       $('calMeta').textContent=''; return;
     }
     renderCalendar(_calRows);
-  }catch(e){ $('calGrid').innerHTML='<div style="color:#EF4444;padding:12px;">Erreur : '+e.message+'</div>'; }
+  }catch(e){ $('calGrid').innerHTML='<div style="grid-column:1/-1;text-align:center;color:#EF4444;padding:18px;">Erreur : '+e.message+'</div>'; }
 }
 function priceColor(a){
   a=Math.max(0,Math.min(1,a));
@@ -1981,7 +1981,7 @@ async function recomputeCalendar(){
     const r=await fetch(`/api/pricing/recompute/${id}`,{method:'POST'});
     const d=await r.json();
     if(d.error){ showToast('Erreur : '+d.error,'error'); return; }
-    showToast(`${d.nights||0} nuits ${d.status==='applied'?'poussées sur Channex':'calculées'}`,'success');
+    showToast(`${d.nights||0} nuits ${d.status==='applied'?'publiées sur vos plateformes':'calculées'}`,'success');
     loadCalendar();
   }catch(e){ showToast('Erreur : '+e.message,'error'); }
 }
@@ -2056,18 +2056,18 @@ function renderMode(mode, active, configured){
   if(active===false){ el.innerHTML='<span style="font-size:12px;color:var(--muted);">pricing en pause</span>'; return; }
   el.innerHTML='<span style="font-size:11px;color:var(--muted);margin-right:8px;">Mode</span>'
     +'<span class="mode-seg">'
-    +'<button class="'+(mode!=='auto'?'on':'')+'" onclick="setMode(\'manual\')">Suggestions</button>'
-    +'<button class="'+(mode==='auto'?'on':'')+'" onclick="setMode(\'auto\')">Auto · Channex</button>'
+    +'<button class="'+(mode!=='auto'?'on':'')+'" onclick="setCalMode(\'manual\')">Suggestions</button>'
+    +'<button class="'+(mode==='auto'?'on':'')+'" onclick="setCalMode(\'auto\')">Auto</button>'
     +'</span>';
 }
-async function setMode(mode){
+async function setCalMode(mode){
   const id=$('calProp').value; if(!id) return;
-  if(mode==='auto' && !confirm('En mode Auto, les prix calculés seront poussés automatiquement sur Channex (donc sur les plateformes). Continuer ?')) return;
+  if(mode==='auto' && !confirm('En mode Auto, les prix seront mis à jour automatiquement sur vos plateformes (Airbnb, Booking…). Continuer ?')) return;
   try{
     const r=await fetch('/api/pricing/mode/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode})});
     const d=await r.json();
     if(d.error){ showToast('Erreur : '+d.error,'error'); return; }
-    showToast(mode==='auto'?'Mode Auto activé · les prochains calculs seront poussés':'Mode Suggestions activé','success');
+    showToast(mode==='auto'?'Mode Auto activé':'Mode Suggestions activé','success');
     renderMode(mode, true, true);
   }catch(e){ showToast('Erreur : '+e.message,'error'); }
 }
