@@ -1262,8 +1262,9 @@ function switchTab(name) {
   $('panel-' + name).classList.add('active');
   $('tab-' + name).classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (name === 'dashboard') loadDashboard();
   if (name === 'history' && !state.history.length) loadHistory();
-  if (name === 'config'  && !state.configs.length)  loadConfig();
+  if (name === 'config') loadConfig();
   if (name === 'calendar') initCalendarTab();
   if (name === 'events')   initEventsTab();
 }
@@ -1331,8 +1332,11 @@ function renderPropCard(p) {
         <div class="mlbl">Comparables</div>
       </div>
     </div>` : `
-    <div style="padding:10px;background:var(--cream2);border-radius:10px;font-size:12.5px;color:var(--muted);margin-bottom:12px;">
-      <i class="fas fa-hourglass-half"></i> Données marché en attente — première analyse lundi prochain
+    <div style="padding:12px;background:var(--cream2);border-radius:10px;font-size:12.5px;color:var(--muted);margin-bottom:12px;">
+      <div style="margin-bottom:9px;"><i class="fas fa-hourglass-half"></i> Données marché en attente</div>
+      <button onclick="runAnalysisNow('${p.propertyId}', this)" style="width:100%;padding:9px;background:var(--pg,#1A7A5E);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;">
+        <i class="fas fa-bolt"></i> Lancer l'analyse maintenant
+      </button>
     </div>`;
 
   // Comparaison de prix
@@ -1418,6 +1422,27 @@ function renderPropCard(p) {
 }
 
 // ── Charger le dashboard ─────────────────────────────────────
+async function runAnalysisNow(propertyId, btn) {
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyse en cours…'; }
+  try {
+    const res = await fetch(`${API_BASE}/api/pricing/analyze-now/${encodeURIComponent(propertyId)}?force=1`, { method: 'POST' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    showToast('Analyse marché lancée — résultats dans ~1 min ⏳', '');
+    // Recharge le dashboard après un délai (le scrape tourne en arrière-plan)
+    let tries = 0;
+    const poll = setInterval(async () => {
+      tries++;
+      await loadDashboard();
+      const card = document.getElementById('pcard-' + propertyId);
+      const stillPending = card && card.innerHTML.includes('Données marché en attente');
+      if (!stillPending || tries >= 6) clearInterval(poll); // ~ jusqu'à 3 min
+    }, 30000);
+  } catch (e) {
+    showToast('Erreur : ' + e.message, '');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bolt"></i> Lancer l\'analyse maintenant'; }
+  }
+}
+
 async function loadDashboard() {
   $('dashboard-loading').style.display = 'block';
   $('dashboard-content').style.display = 'none';
