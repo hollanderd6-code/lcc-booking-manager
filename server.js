@@ -3235,6 +3235,12 @@ async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission,
   data = data || {};
   // Extraire propertyId depuis data si pas passé directement
   if (!propertyId && data.propertyId) propertyId = data.propertyId;
+
+  // ── Toujours prévenir les agents agence qui gèrent ce compte ──
+  // (indépendant de la présence de sous-comptes : un propriétaire géré
+  //  par une agence n'a souvent pas de sous-compte à lui)
+  await sendNotificationToDelegatesOf(parentUserId, title, body, data);
+
   try {
     console.log('🔍 [SubNotif] parentUserId:', parentUserId, '| permission:', requiredPermission, '| notifColumn:', notifColumn, '| propertyId:', propertyId);
 
@@ -3281,9 +3287,6 @@ async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission,
     if (!tokens.length) return;
     await sendNotificationToMultipleLogged(tokens, title, body, data);
     console.log('✅ Notif sous-comptes envoyée à ' + tokens.length + ' appareil(s)');
-
-    // ── Envoyer aussi aux agents agence qui gèrent ce compte ──
-    await sendNotificationToDelegatesOf(parentUserId, title, body, data);
   } catch (err) {
     console.error('❌ sendNotificationToSubAccountsOf [' + requiredPermission + ']:', err.message);
   }
@@ -4504,6 +4507,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                   // 🔔 Notif nouvelle réservation BHGuest
                   try {
                     const tokensRes = await pool.query('SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1', [ownerId]);
+                    await sendNotificationToDelegatesOf(ownerId, `🎉 Nouvelle réservation BHGuest`, `${guestName || 'Voyageur'} · ${startDate} → ${endDate}`, { type: 'new_booking', reservationUid: `BHGUEST_${paymentId || session.id}` });
                     for (const tok of tokensRes.rows) {
                       await sendNotificationLogged(
                         tok.fcm_token,
@@ -27817,6 +27821,7 @@ cron.schedule('0 9 1 * *', async () => {
         const { sendNotification } = require('./services/notifications-service');
         const title = `📊 Résumé ${monthLabel}`;
         const body  = `${nSejours} séjour${nSejours>1?'s':''} · ${nMessages} messages · ${pctAuto}% traités automatiquement · ${nEscalades} main${nEscalades>1?'s':''} passée${nEscalades>1?'s':''}`;
+        await sendNotificationToDelegatesOf(user.id, title, body, { type: 'monthly_summary', month: monthLabel, screen: 'dashboard' });
         for (const tok of tokens.rows) {
           await sendNotificationLogged(tok.fcm_token, title, body,
             { type: 'monthly_summary', month: monthLabel, screen: 'dashboard' }
@@ -28757,6 +28762,7 @@ app.post('/api/notifications/today-arrivals', authenticateAny, async (req, res) 
       type: 'arrivals',
       count: arrivals.length.toString()
     });
+    await sendNotificationToDelegatesOf(userId, title, body, { type: 'arrivals', count: arrivals.length.toString() });
     
     res.json(result);
   } catch (error) {
@@ -28842,6 +28848,7 @@ const body = `Ménages à prévoir : ${uniqueProperties.join(', ')}`;
       type: 'departures',
       count: departures.length.toString()
     });
+    await sendNotificationToDelegatesOf(userId, title, body, { type: 'departures', count: departures.length.toString() });
     
     res.json(result);
   } catch (error) {
@@ -29026,6 +29033,7 @@ cron.schedule('0 9 * * *', async () => {
               body,
               { type: 'smart_lock_battery', lockId: lock.id, battery: String(status.battery), userId: lock.user_id }
             );
+            await sendNotificationToDelegatesOf(lock.user_id, title, body, { type: 'smart_lock_battery', lockId: lock.id, battery: String(status.battery) });
             console.log(`  ${emoji} ${lock.lock_name}: ${status.battery}%${propertyLabel} → notif envoyée`);
             alerts++;
           }
@@ -29131,6 +29139,7 @@ cron.schedule('0 8 * * *', async () => {
         const title = `📅 ${arrivalsCount} arrivée(s) · ${departuresCount} départ(s) aujourd'hui`;
         const body = arrivalsLine + ' | ' + departuresLine;
 
+        await sendNotificationToDelegatesOf(parentUserId, title, body, { type: 'daily_summary', arrivals: arrivalsCount.toString(), departures: departuresCount.toString() });
         for (const token of tokens) {
           try {
             await sendNotificationLogged(token.fcm_token, title, body,
@@ -29287,6 +29296,7 @@ cron.schedule('0 18 * * *', async () => {
             propertiesList,
             { type: 'reminder_j1', count: count.toString() }
           );
+          await sendNotificationToDelegatesOf(user.id, `Rappel : ${count} arrivee(s) demain`, propertiesList, { type: 'reminder_j1', count: count.toString() });
         
         console.log(`Rappel J-1 envoye a user ${user.id} : ${count} arrivee(s) sur ${allTokens.length} appareil(s)`);
         } // end shouldSendNotification
@@ -29514,6 +29524,7 @@ cron.schedule('*/15 * * * *', async () => {
         reservation_uid: row.reservation_uid,
         property_id: row.property_id
       });
+      await sendNotificationToDelegatesOf(row.user_id, title, body, { type: 'cleaning_alert', reservation_uid: row.reservation_uid, property_id: row.property_id });
 
       console.log(`🧹 Alerte ménage envoyée → ${propName} (${guestName})`);
     }
@@ -30326,6 +30337,7 @@ app.post('/api/contrat/sign/:token', async (req, res) => {
       const docLabel = isMandat
         ? `Mandat – ${data.propAddress || data.companyName || ''}`
         : `Contrat – ${data.propertyName || ''}`;
+      await sendNotificationToDelegatesOf(contract.user_id, `✍️ ${isMandat ? 'Mandat' : 'Contrat'} signé`, `${signerName} a signé · ${docLabel}`, { type: 'contract_signed', contractId: String(contract.id) });
       for (const tok of tokensRes.rows) {
         await sendNotificationLogged(
           tok.fcm_token,
@@ -36541,6 +36553,7 @@ app.post('/api/guest/book', async (req, res) => {
         'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
         [prop.owner_user_id]
       );
+      await sendNotificationToDelegatesOf(prop.owner_user_id, '🏠 Nouvelle réservation BHGuest', `${guest_name} · ${displayName(prop)} · ${checkin} → ${checkout}`, { type: 'new_booking_guest', uid, propertyId: property_id, screen: 'calendar' });
       for (const tok of tokensRes.rows) {
         await sendNotificationLogged(tok.fcm_token,
           '🏠 Nouvelle réservation BHGuest',
