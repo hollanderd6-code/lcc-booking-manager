@@ -789,6 +789,9 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .ev-mult{font-weight:700;color:#1A7A5E}
 .icon-btn{border:none;background:none;cursor:pointer;color:var(--muted);font-size:14px;padding:4px 6px}
 .icon-btn:hover{color:#1A7A5E}.icon-btn.del:hover{color:#EF4444}
+.mode-seg{display:inline-flex;background:var(--cream);border-radius:9px;padding:3px;gap:2px}
+.mode-seg button{border:none;background:none;font-size:12px;font-weight:600;color:var(--muted);padding:6px 11px;border-radius:7px;cursor:pointer;transition:background .15s,color .15s}
+.mode-seg button.on{background:#1A7A5E;color:#fff}
 </style>
 </head>
 <body data-back-href="/app.html" data-back-label="Tableau de bord" data-kicker="Revenus" data-page="pricing" data-subtitle="Ajustement automatique des prix selon le marché." data-title="BoostPrice">
@@ -1044,6 +1047,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
       <select id="calProp" onchange="loadCalendar()"></select>
       <button class="btn-accept" style="width:auto;padding:9px 16px;" onclick="recomputeCalendar()"><i class="fas fa-rotate"></i> Recalculer</button>
       <span id="calMeta" style="font-size:12px;color:var(--muted);"></span>
+      <span id="calMode" style="margin-left:auto;display:flex;align-items:center;"></span>
     </div>
     <div class="cal-legend">
       <span><i style="background:#E7EFE9;"></i>Prix bas</span>
@@ -1916,6 +1920,7 @@ async function loadCalendar(){
     const r=await fetch(`/api/pricing/schedule/${id}?days=60`);
     const d=await r.json();
     _calRows=d.nights||[];
+    renderMode(d.mode, d.isActive, d.configured);
     if(!_calRows.length){
       $('calGrid').innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px;">Aucun planning encore. Clique « Recalculer » pour générer les prix.</div>';
       $('calMeta').textContent=''; return;
@@ -2042,6 +2047,29 @@ async function deleteEvent(id){
   if(!confirm('Supprimer cet événement ?')) return;
   try{ await fetch('/api/pricing/events/'+id,{method:'DELETE'}); showToast('Supprimé','success'); loadEvents(); }
   catch(e){ showToast('Erreur : '+e.message,'error'); }
+}
+
+// ---- Toggle mode manual/auto (onglet Calendrier) ----
+function renderMode(mode, active, configured){
+  const el=$('calMode'); if(!el) return;
+  if(configured===false){ el.innerHTML='<span style="font-size:12px;color:var(--muted);">pricing non activé sur ce logement</span>'; return; }
+  if(active===false){ el.innerHTML='<span style="font-size:12px;color:var(--muted);">pricing en pause</span>'; return; }
+  el.innerHTML='<span style="font-size:11px;color:var(--muted);margin-right:8px;">Mode</span>'
+    +'<span class="mode-seg">'
+    +'<button class="'+(mode!=='auto'?'on':'')+'" onclick="setMode(\'manual\')">Suggestions</button>'
+    +'<button class="'+(mode==='auto'?'on':'')+'" onclick="setMode(\'auto\')">Auto · Channex</button>'
+    +'</span>';
+}
+async function setMode(mode){
+  const id=$('calProp').value; if(!id) return;
+  if(mode==='auto' && !confirm('En mode Auto, les prix calculés seront poussés automatiquement sur Channex (donc sur les plateformes). Continuer ?')) return;
+  try{
+    const r=await fetch('/api/pricing/mode/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode})});
+    const d=await r.json();
+    if(d.error){ showToast('Erreur : '+d.error,'error'); return; }
+    showToast(mode==='auto'?'Mode Auto activé · les prochains calculs seront poussés':'Mode Suggestions activé','success');
+    renderMode(mode, true, true);
+  }catch(e){ showToast('Erreur : '+e.message,'error'); }
 }
 </script>
 </body>

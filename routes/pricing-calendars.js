@@ -257,7 +257,25 @@ function setupPricingCalendarRoutes(app, pool, authenticateAny) {
           ORDER BY date LIMIT $3`,
         [req.user.id, req.params.propertyId, days]
       )).rows;
-      res.json({ nights: rows });
+      const cfg = (await pool.query(
+        `SELECT mode, is_active FROM pricing_config WHERE user_id = $1 AND property_id = $2`,
+        [req.user.id, req.params.propertyId]
+      )).rows[0] || {};
+      res.json({ nights: rows, mode: cfg.mode || 'manual', isActive: cfg.is_active !== false, configured: !!cfg.mode });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Bascule manual/auto d'un logement (depuis l'onglet Calendrier)
+  app.put('/api/pricing/mode/:propertyId', json, authenticateAny, async (req, res) => {
+    try {
+      const { mode } = req.body || {};
+      if (!['manual', 'auto'].includes(mode)) return res.status(400).json({ error: 'mode manual|auto requis' });
+      const r = await pool.query(
+        `UPDATE pricing_config SET mode = $1, updated_at = NOW() WHERE user_id = $2 AND property_id = $3`,
+        [mode, req.user.id, req.params.propertyId]
+      );
+      if (r.rowCount === 0) return res.status(404).json({ error: 'Active d\'abord le pricing dynamique sur ce logement.' });
+      res.json({ ok: true, mode });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
