@@ -937,7 +937,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
     </div>
     <div id="history-empty" style="display:none;text-align:center;padding:48px 24px;">
       <div style="font-size:48px;margin-bottom:12px;">📭</div>
-      <p style="color:var(--muted);font-size:14px;">Aucun ajustement effectué pour le moment.<br>L'historique apparaîtra après la première analyse hebdomadaire.</p>
+      <p style="color:var(--muted);font-size:14px;">Aucun ajustement pour le moment.<br>Lance un calcul depuis l'onglet Calendrier (« Recalculer ») ou attends l'analyse automatique.</p>
     </div>
     <div id="history-content" style="display:none;"></div>
   </div>
@@ -1333,7 +1333,8 @@ function renderPropCard(p) {
       </div>
     </div>` : `
     <div style="padding:12px;background:var(--cream2);border-radius:10px;font-size:12.5px;color:var(--muted);margin-bottom:12px;">
-      <div style="margin-bottom:9px;"><i class="fas fa-hourglass-half"></i> Données marché en attente</div>
+      <div style="margin-bottom:6px;color:var(--ink);"><i class="fas fa-circle-check" style="color:var(--pg,#1A7A5E);"></i> Prix déjà actifs — calculés sur ton tarif de base, ta demande réelle, la saison et les événements.</div>
+      <div style="margin-bottom:9px;font-size:12px;"><i class="fas fa-hourglass-half"></i> Données marché en attente — elles affineront les prix.</div>
       <button onclick="runAnalysisNow('${p.propertyId}', this)" style="width:100%;padding:9px;background:var(--pg,#1A7A5E);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;">
         <i class="fas fa-bolt"></i> Lancer l'analyse maintenant
       </button>
