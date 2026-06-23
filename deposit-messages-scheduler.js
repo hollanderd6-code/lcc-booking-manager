@@ -403,7 +403,9 @@ async function sendDepositReleasedMessage(pool, io, depositId) {
     const amountEuros = (deposit.amount_cents / 100).toFixed(2);
     const message = `🎉 Caution libérée
 
-Bonne nouvelle ! Votre caution de ${amountEuros}€ pour ${propertyName} a été libérée.
+Bonne nouvelle ! Votre caution de ${amountEuros}€ pour ${propertyName} vient d'être libérée.
+
+Elle apparaîtra sur votre compte sous un délai de 5 à 10 jours.
 
 Merci pour votre séjour et à très bientôt ! 😊`;
 

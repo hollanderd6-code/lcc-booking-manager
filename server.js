@@ -5129,29 +5129,47 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
       case 'payment_intent.canceled': {
         const paymentIntent = event.data.object;
         
-        // Vérifier si c'est une caution
+        // Vérifier si c'est une caution (+ son statut AVANT annulation)
         const depositResult = await pool.query(
-          'SELECT id FROM deposits WHERE stripe_payment_intent_id = $1',
+          'SELECT id, status FROM deposits WHERE stripe_payment_intent_id = $1',
           [paymentIntent.id]
         );
         
         if (depositResult.rows.length > 0) {
           const depositId = depositResult.rows[0].id;
-          
-          await pool.query(
-            `UPDATE deposits 
-             SET status = 'canceled', cancelled_at = NOW(), updated_at = NOW()
-             WHERE id = $1`,
-            [depositId]
-          );
-          
-          console.log(`❌ Caution annulée: ${depositId}`);
-          
-          // 📨 ENVOYER MESSAGE : ÉCHEC
-          try {
-            await sendDepositFailedMessage(pool, io, depositId);
-          } catch (msgError) {
-            console.error('❌ Erreur envoi message caution annulée:', msgError);
+          const prevStatus = depositResult.rows[0].status;
+          // Une caution déjà autorisée/capturée/libérée qu'on annule = LIBÉRATION (hold relâché),
+          // pas un échec. Un échec = caution jamais autorisée (abandon).
+          const isRelease = ['authorized', 'captured', 'released'].includes(prevStatus);
+
+          if (isRelease) {
+            await pool.query(
+              `UPDATE deposits 
+               SET status = 'released', released_at = NOW(), updated_at = NOW()
+               WHERE id = $1`,
+              [depositId]
+            );
+            console.log(`🎉 Caution libérée (annulation du hold): ${depositId}`);
+            // 📨 ENVOYER MESSAGE : CAUTION LIBÉRÉE
+            try {
+              await sendDepositReleasedMessage(pool, io, depositId);
+            } catch (msgError) {
+              console.error('❌ Erreur envoi message caution libérée:', msgError);
+            }
+          } else {
+            await pool.query(
+              `UPDATE deposits 
+               SET status = 'canceled', cancelled_at = NOW(), updated_at = NOW()
+               WHERE id = $1`,
+              [depositId]
+            );
+            console.log(`❌ Caution annulée (échec/abandon): ${depositId}`);
+            // 📨 ENVOYER MESSAGE : ÉCHEC
+            try {
+              await sendDepositFailedMessage(pool, io, depositId);
+            } catch (msgError) {
+              console.error('❌ Erreur envoi message caution annulée:', msgError);
+            }
           }
         }
         break;
