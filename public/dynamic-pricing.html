@@ -758,6 +758,37 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   .pricing-header { display: none !important; }
   html[data-theme-v3="1"] main.main-content { padding-top: 64px !important; }
 }
+
+/* ── Calendrier des prix ── */
+.cal-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.cal-toolbar select{padding:9px 12px;border:1px solid var(--cream);border-radius:10px;background:#fff;font-size:14px}
+.cal-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.cal-legend i{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:middle}
+.cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:6px}
+.cal-cell{border:1px solid rgba(200,184,154,.35);border-radius:10px;padding:7px 5px;cursor:pointer;text-align:center;transition:transform .1s,box-shadow .1s}
+.cal-cell:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08)}
+.cal-cell.sel{outline:2px solid #1A7A5E;outline-offset:1px}
+.cal-dow{font-size:10px;color:var(--muted);text-transform:uppercase}
+.cal-date{font-size:11px;font-weight:600}
+.cal-price{font-size:15px;font-weight:800;margin-top:2px}
+.cal-min{font-size:9px;margin-top:1px;opacity:.85}
+.cal-detail{margin-top:16px;border:1px solid var(--cream);border-radius:14px;padding:16px;background:#fff;display:none}
+.cal-detail.show{display:block}
+.cal-formula{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 4px}
+.fchip{font-size:12px;padding:4px 9px;border-radius:8px;background:var(--cream);color:var(--text)}
+.fchip b{color:#1A7A5E}
+.fchip.up{background:rgba(26,122,94,.12)}
+.fchip.down{background:rgba(239,68,68,.12)}
+/* ── Événements ── */
+.ev-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
+.ev-row label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px}
+.ev-row input,.ev-row select{padding:8px 10px;border:1px solid var(--cream);border-radius:9px;font-size:13px;background:#fff}
+.ev-table{width:100%;border-collapse:collapse;font-size:13px}
+.ev-table th{text-align:left;color:var(--muted);font-weight:600;padding:8px;border-bottom:1px solid var(--cream)}
+.ev-table td{padding:8px;border-bottom:1px solid rgba(200,184,154,.25)}
+.ev-mult{font-weight:700;color:#1A7A5E}
+.icon-btn{border:none;background:none;cursor:pointer;color:var(--muted);font-size:14px;padding:4px 6px}
+.icon-btn:hover{color:#1A7A5E}.icon-btn.del:hover{color:#EF4444}
 </style>
 </head>
 <body data-back-href="/app.html" data-back-label="Tableau de bord" data-kicker="Revenus" data-page="pricing" data-subtitle="Ajustement automatique des prix selon le marché." data-title="BoostPrice">
@@ -801,6 +832,12 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
     </button>
     <button class="ptab" onclick="switchTab('settings')" id="tab-settings">
       <i class="fas fa-cog"></i> Paramètres
+    </button>
+    <button class="ptab" onclick="switchTab('calendar')" id="tab-calendar">
+      <i class="fas fa-calendar-days"></i> Calendrier
+    </button>
+    <button class="ptab" onclick="switchTab('events')" id="tab-events">
+      <i class="fas fa-bullhorn"></i> Événements
     </button>
   </div>
 
@@ -1000,6 +1037,58 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
     </div>
   </div>
 
+
+  <!-- TAB 5 — CALENDRIER -->
+  <div class="tab-panel" id="panel-calendar">
+    <div class="cal-toolbar">
+      <select id="calProp" onchange="loadCalendar()"></select>
+      <button class="btn-accept" style="width:auto;padding:9px 16px;" onclick="recomputeCalendar()"><i class="fas fa-rotate"></i> Recalculer</button>
+      <span id="calMeta" style="font-size:12px;color:var(--muted);"></span>
+    </div>
+    <div class="cal-legend">
+      <span><i style="background:#E7EFE9;"></i>Prix bas</span>
+      <span><i style="background:#9CC4AE;"></i>Moyen</span>
+      <span><i style="background:#1A7A5E;"></i>Élevé</span>
+      <span style="opacity:.8;">Clique une nuit pour voir « pourquoi ce prix »</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-detail" id="calDetail"></div>
+  </div>
+
+  <!-- TAB 6 — ÉVÉNEMENTS -->
+  <div class="tab-panel" id="panel-events">
+    <div style="margin-bottom:22px;">
+      <h3 style="font-size:15px;margin-bottom:8px;">Zone scolaire du logement</h3>
+      <div class="ev-row">
+        <div><label>Logement</label><select id="zoneProp" onchange="loadZone()"></select></div>
+        <div><label>Zone (vacances)</label>
+          <select id="zoneSel">
+            <option value="A">Zone A</option>
+            <option value="B">Zone B</option>
+            <option value="C">Zone C (Île-de-France)</option>
+          </select>
+        </div>
+        <button class="btn-accept" style="width:auto;padding:9px 16px;" onclick="saveZone()">Enregistrer</button>
+      </div>
+      <p style="font-size:12px;color:var(--muted);">Les vacances scolaires de cette zone sont appliquées automatiquement aux prix.</p>
+    </div>
+
+    <h3 style="font-size:15px;margin-bottom:8px;">Mes événements</h3>
+    <div class="ev-row">
+      <div><label>Nom</label><input id="evLabel" placeholder="Salon, concert…" style="min-width:150px;"></div>
+      <div><label>Du</label><input id="evStart" type="date"></div>
+      <div><label>Au</label><input id="evEnd" type="date"></div>
+      <div><label>Multiplicateur</label><input id="evMult" type="number" step="0.01" min="0.5" max="2" value="1.15" style="width:80px;"></div>
+      <div><label>Logement</label><select id="evScope"></select></div>
+      <input type="hidden" id="evId">
+      <button class="btn-accept" style="width:auto;padding:9px 16px;" onclick="saveEvent()"><i class="fas fa-plus"></i> Ajouter</button>
+    </div>
+    <table class="ev-table">
+      <thead><tr><th>Événement</th><th>Période</th><th>×</th><th>Portée</th><th></th></tr></thead>
+      <tbody id="evBody"></tbody>
+    </table>
+  </div>
+
 </div><!-- /pricing-page -->
 </section><!-- /settings-container -->
 </div><!-- /page-content -->
@@ -1171,6 +1260,8 @@ function switchTab(name) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (name === 'history' && !state.history.length) loadHistory();
   if (name === 'config'  && !state.configs.length)  loadConfig();
+  if (name === 'calendar') initCalendarTab();
+  if (name === 'events')   initEventsTab();
 }
 
 // ── Week mini chart ──────────────────────────────────────────
@@ -1791,5 +1882,167 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+
+<script>
+// ===== Pricing : Calendrier + Événements =====
+let _dpProps = null;
+async function dpProps(){
+  if(_dpProps) return _dpProps;
+  const r = await fetch('/api/properties',{headers:{'Authorization':'Bearer '+localStorage.getItem('lcc_token')}});
+  const d = await r.json();
+  _dpProps = (d.properties||d||[]).map(p=>({id:p.id,name:p.name||p.nom||p.id}));
+  return _dpProps;
+}
+function dpFill(sel,props,withAll){
+  if(!sel) return;
+  sel.innerHTML = (withAll?'<option value="">Tous les logements</option>':'') + props.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+}
+function ffmt(x){ return (x==null?'—':(Math.round(x*100)/100)); }
+function dpShort(iso){ const d=new Date(iso+'T00:00:00'); return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}); }
+
+// ---- Calendrier ----
+let _calRows=[];
+async function initCalendarTab(){
+  const props=await dpProps();
+  const sel=$('calProp');
+  if(sel && !sel.options.length){ dpFill(sel,props,false); }
+  if(sel && sel.value) loadCalendar();
+}
+async function loadCalendar(){
+  const id=$('calProp').value; if(!id) return;
+  $('calGrid').innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px;">Chargement…</div>';
+  $('calDetail').classList.remove('show');
+  try{
+    const r=await fetch(`/api/pricing/schedule/${id}?days=60`);
+    const d=await r.json();
+    _calRows=d.nights||[];
+    if(!_calRows.length){
+      $('calGrid').innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px;">Aucun planning encore. Clique « Recalculer » pour générer les prix.</div>';
+      $('calMeta').textContent=''; return;
+    }
+    renderCalendar(_calRows);
+  }catch(e){ $('calGrid').innerHTML='<div style="color:#EF4444;padding:12px;">Erreur : '+e.message+'</div>'; }
+}
+function priceColor(a){
+  a=Math.max(0,Math.min(1,a));
+  const c1=[231,239,233], c2=[26,122,94];
+  const m=c1.map((v,i)=>Math.round(v+(c2[i]-v)*a));
+  return `rgb(${m[0]},${m[1]},${m[2]})`;
+}
+function renderCalendar(rows){
+  const prices=rows.map(r=>+r.price);
+  const min=Math.min(...prices), max=Math.max(...prices), span=(max-min)||1;
+  const DOW=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  $('calGrid').innerHTML=rows.map((r,i)=>{
+    const d=new Date(r.date+'T00:00:00');
+    const dow=d.getDay(); const we=(dow===5||dow===6);
+    const a=(+r.price-min)/span; const bg=priceColor(a); const dark=a>0.55;
+    const tc=dark?'#fff':'var(--ink)'; const sc=dark?'rgba(255,255,255,.85)':'var(--muted)';
+    return `<div class="cal-cell ${we?'we':''}" data-i="${i}" onclick="showNight(${i})" style="background:${bg};${dark?'border-color:transparent;':''}">
+      <div class="cal-dow" style="color:${sc}">${DOW[dow]}</div>
+      <div class="cal-date" style="color:${tc}">${d.getDate()}/${d.getMonth()+1}</div>
+      <div class="cal-price" style="color:${tc}">${Math.round(r.price)}€</div>
+      <div class="cal-min" style="color:${sc}">min ${r.min_stay||1}n</div>
+    </div>`;
+  }).join('');
+  const avg=Math.round(prices.reduce((a,b)=>a+b,0)/prices.length);
+  $('calMeta').textContent=`${rows.length} nuits · moy ${avg}€ · ${min}–${max}€`;
+}
+function showNight(i){
+  const r=_calRows[i]; if(!r) return;
+  document.querySelectorAll('.cal-cell').forEach(c=>c.classList.remove('sel'));
+  const cell=document.querySelector(`.cal-cell[data-i="${i}"]`); if(cell) cell.classList.add('sel');
+  const b=r.breakdown||{};
+  const chip=(label,val)=>{ if(val==null) return ''; const cls=val>1.001?'up':(val<0.999?'down':''); return `<span class="fchip ${cls}">${label} <b>×${ffmt(val)}</b></span>`; };
+  const d=new Date(r.date+'T00:00:00');
+  $('calDetail').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <strong>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</strong>
+      <span style="font-size:20px;font-weight:800;color:#1A7A5E;">${Math.round(r.price)}€</span>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:2px;">${r.reason||''} · min ${r.min_stay||1} nuit(s)</div>
+    <div class="cal-formula">
+      <span class="fchip">base <b>${ffmt(b.base)}€</b></span>
+      ${chip('saison',b.season)}${chip('jour',b.dow)}${chip('lead',b.lead)}${chip('pacing',b.pacing)}${chip('marché',b.market)}${chip('événement',b.event)}${chip('gap',b.gap)}
+    </div>
+    ${b.eventLabel?`<div style="font-size:12px;color:#1A7A5E;">🎪 ${b.eventLabel}</div>`:''}
+    ${(b.clampedToMin||b.clampedToMax)?`<div style="font-size:12px;color:var(--muted);">⚠️ borné au ${b.clampedToMin?'minimum':'maximum'} configuré</div>`:''}`;
+  $('calDetail').classList.add('show');
+}
+async function recomputeCalendar(){
+  const id=$('calProp').value; if(!id){ showToast('Choisis un logement'); return; }
+  showToast('Calcul en cours…');
+  try{
+    const r=await fetch(`/api/pricing/recompute/${id}`,{method:'POST'});
+    const d=await r.json();
+    if(d.error){ showToast('Erreur : '+d.error,'error'); return; }
+    showToast(`${d.nights||0} nuits ${d.status==='applied'?'poussées sur Channex':'calculées'}`,'success');
+    loadCalendar();
+  }catch(e){ showToast('Erreur : '+e.message,'error'); }
+}
+
+// ---- Événements + zone ----
+let _evRows=[];
+async function initEventsTab(){
+  const props=await dpProps();
+  dpFill($('zoneProp'),props,false);
+  dpFill($('evScope'),props,true);
+  loadZone(); loadEvents();
+}
+async function loadZone(){
+  const id=$('zoneProp').value; if(!id) return;
+  try{ const r=await fetch(`/api/pricing/calendars/${id}`); const d=await r.json(); if(d.zone) $('zoneSel').value=d.zone; }catch(e){}
+}
+async function saveZone(){
+  const propertyId=$('zoneProp').value, zone=$('zoneSel').value;
+  if(!propertyId){ showToast('Choisis un logement'); return; }
+  try{
+    const r=await fetch('/api/pricing/zone',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({propertyId,zone})});
+    const d=await r.json(); showToast(d.ok?'Zone enregistrée':('Erreur'+(d.error?' : '+d.error:'')), d.ok?'success':'error');
+  }catch(e){ showToast('Erreur : '+e.message,'error'); }
+}
+async function loadEvents(){
+  try{
+    const r=await fetch('/api/pricing/events'); const d=await r.json();
+    _evRows=d.events||[];
+    const props=await dpProps(); const pname=id=>{const p=props.find(x=>x.id===id);return p?p.name:id;};
+    $('evBody').innerHTML = _evRows.length ? _evRows.map(e=>`
+      <tr>
+        <td><strong>${e.label}</strong></td>
+        <td style="color:var(--muted)">${dpShort(e.date_start)} → ${dpShort(e.date_end)}</td>
+        <td class="ev-mult">×${e.multiplier}</td>
+        <td style="color:var(--muted)">${e.property_id?pname(e.property_id):'Tous'}</td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button class="icon-btn" onclick="editEvent(${e.id})"><i class="fas fa-pen"></i></button>
+          <button class="icon-btn del" onclick="deleteEvent(${e.id})"><i class="fas fa-trash"></i></button>
+        </td>
+      </tr>`).join('') : '<tr><td colspan="5" style="color:var(--muted);padding:16px;">Aucun événement. Ajoute tes salons, concerts, festivals…</td></tr>';
+  }catch(e){ $('evBody').innerHTML='<tr><td colspan="5" style="color:#EF4444;padding:12px;">'+e.message+'</td></tr>'; }
+}
+function editEvent(id){
+  const e=_evRows.find(x=>x.id===id); if(!e) return;
+  $('evId').value=e.id; $('evLabel').value=e.label; $('evStart').value=e.date_start; $('evEnd').value=e.date_end;
+  $('evMult').value=e.multiplier; $('evScope').value=e.property_id||'';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+async function saveEvent(){
+  const body={ id:$('evId').value||undefined, label:$('evLabel').value.trim(),
+    date_start:$('evStart').value, date_end:$('evEnd').value,
+    multiplier:parseFloat($('evMult').value)||1.15, property_id:$('evScope').value||null };
+  if(!body.label||!body.date_start||!body.date_end){ showToast('Nom + dates requis'); return; }
+  try{
+    const r=await fetch('/api/pricing/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(d.error){ showToast('Erreur : '+d.error,'error'); return; }
+    ['evId','evLabel','evStart','evEnd'].forEach(k=>$(k).value=''); $('evMult').value='1.15'; $('evScope').value='';
+    showToast('Événement enregistré','success'); loadEvents();
+  }catch(e){ showToast('Erreur : '+e.message,'error'); }
+}
+async function deleteEvent(id){
+  if(!confirm('Supprimer cet événement ?')) return;
+  try{ await fetch('/api/pricing/events/'+id,{method:'DELETE'}); showToast('Supprimé','success'); loadEvents(); }
+  catch(e){ showToast('Erreur : '+e.message,'error'); }
+}
+</script>
 </body>
 </html>

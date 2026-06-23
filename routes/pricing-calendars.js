@@ -246,6 +246,49 @@ function setupPricingCalendarRoutes(app, pool, authenticateAny) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
+  // Planning par nuit (lecture) — pour l'onglet Calendrier de l'UI
+  app.get('/api/pricing/schedule/:propertyId', authenticateAny, async (req, res) => {
+    try {
+      const days = Math.min(120, Math.max(7, parseInt(req.query.days) || 60));
+      const rows = (await pool.query(
+        `SELECT TO_CHAR(date,'YYYY-MM-DD') AS date, price, min_stay, reason, breakdown, status
+           FROM pricing_schedule
+          WHERE user_id = $1 AND property_id = $2 AND date >= CURRENT_DATE
+          ORDER BY date LIMIT $3`,
+        [req.user.id, req.params.propertyId, days]
+      )).rows;
+      res.json({ nights: rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Recalcul à la demande (sans scrape : réutilise le dernier market_data)
+  app.post('/api/pricing/recompute/:propertyId', authenticateAny, async (req, res) => {
+    try {
+      const cfg = (await pool.query(
+        `SELECT pc.*, p.name AS property_name
+           FROM pricing_config pc JOIN properties p ON p.id = pc.property_id
+          WHERE pc.user_id = $1 AND pc.property_id = $2`,
+        [req.user.id, req.params.propertyId]
+      )).rows[0];
+      if (!cfg) return res.status(404).json({ error: 'Active d\'abord le pricing dynamique sur ce logement.' });
+
+      const md = (await pool.query(
+        `SELECT median_price, occupancy_rate, tension_level
+           FROM market_data WHERE property_id = $1 ORDER BY week_start DESC LIMIT 1`,
+        [req.params.propertyId]
+      )).rows[0] || {};
+      const marketStats = {
+        median: md.median_price, occupancy: md.occupancy_rate, tensionLevel: md.tension_level,
+      };
+
+      const { applyDynamicPricingForProperty } = require('./pricing-apply'); // lazy (évite cycle)
+      const result = await applyDynamicPricingForProperty(pool, {
+        cfg, marketStats, isMock: false, sendPushNotification: null,
+      });
+      res.json(result);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
   console.log('✅ [DP-CAL] routes calendriers pricing montées');
 }
 
