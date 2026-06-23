@@ -405,6 +405,46 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
   return results;
 }
 
+// ── Refresh QUOTIDIEN : recalcul + push SANS scrape (réutilise le dernier market_data) ──
+async function runDailyPricingRefresh(pool, sendPushNotification = null) {
+  console.log('\n🔄 [DP-CRON] === Refresh quotidien des prix (sans scrape marché) ===');
+  let configs;
+  try {
+    configs = (await pool.query(
+      `SELECT pc.*, p.name AS property_name
+         FROM pricing_config pc
+         JOIN properties p ON p.id = pc.property_id
+        WHERE pc.is_active = TRUE
+        ORDER BY pc.user_id, pc.created_at`
+    )).rows;
+  } catch (err) {
+    console.error('❌ [DP-CRON] Configs (refresh quotidien):', err.message);
+    return;
+  }
+  if (configs.length === 0) { console.log('ℹ️ [DP-CRON] Aucune config active — rien à faire'); return; }
+
+  let done = 0, pushed = 0;
+  for (const cfg of configs) {
+    try {
+      const md = (await pool.query(
+        `SELECT median_price, occupancy_rate, tension_level
+           FROM market_data WHERE property_id = $1 ORDER BY week_start DESC LIMIT 1`,
+        [cfg.property_id]
+      )).rows[0] || {};
+      const marketStats = { median: md.median_price, occupancy: md.occupancy_rate, tensionLevel: md.tension_level };
+      const apply = await applyDynamicPricingForProperty(pool, {
+        cfg, marketStats, isMock: false, sendPushNotification,
+      });
+      done++;
+      if (apply.status === 'applied') pushed += (apply.pushed || 0);
+    } catch (e) {
+      console.error(`⚠️ [DP-CRON] refresh ${cfg.property_name}:`, e.message);
+    }
+  }
+  console.log(`✅ [DP-CRON] Refresh quotidien terminé — ${done} logements, ${pushed} nuits poussées sur Channex`);
+  return { done, pushed };
+}
+
 // ── Init (appelée depuis server.js) ─────────────────────────
 function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
   const cron = require('node-cron');
@@ -417,6 +457,14 @@ function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
     timezone: 'Europe/Paris',
   });
 
+  // Refresh quotidien (mardi → dimanche, 6h00) : recalcul + push, sans scrape, silencieux
+  cron.schedule('0 6 * * 2,3,4,5,6,0', async () => {
+    console.log('\n⏰ [DP-CRON] Refresh quotidien (6h00)');
+    await runDailyPricingRefresh(pool);
+  }, {
+    timezone: 'Europe/Paris',
+  });
+
   if (MOCK_MODE) {
     console.log('⚠️  [DP-CRON] Mode MOCK actif — APIFY_TOKEN non défini');
     console.log('   → Données simulées utilisées lors du scraping');
@@ -425,7 +473,7 @@ function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
     console.log('✅ [DP-CRON] Mode LIVE actif — Apify activé');
   }
 
-  console.log('✅ [DP-CRON] Cron initialisé — Lundi 6h00 (Europe/Paris)');
+  console.log('✅ [DP-CRON] Crons initialisés — Hebdo lundi 6h (scrape+recalcul) + Quotidien mar→dim 6h (recalcul+push) — Europe/Paris');
 }
 
-module.exports = { initDynamicPricingCron, runDynamicPricingJob };
+module.exports = { initDynamicPricingCron, runDynamicPricingJob, runDailyPricingRefresh };
