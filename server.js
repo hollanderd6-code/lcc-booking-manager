@@ -37,6 +37,7 @@ const PDFDocument = require('pdfkit');
 // ============================================
 const { router: welcomeRouter, initWelcomeBookTables } = require('./routes/welcomeRoutes');
 const { setupDynamicPricingRoutes } = require('./routes/dynamic-pricing-routes');
+const { setupPricingCalendarRoutes } = require('./routes/pricing-calendars');
 const { initDynamicPricingCron, runDynamicPricingJob } = require('./routes/dynamic-pricing-cron');
 const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
 
@@ -23469,6 +23470,7 @@ app.use('/api/welcome-books', welcomeRouter);
 
 // Dynamic Pricing routes
 setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail);
+setupPricingCalendarRoutes(app, pool, authenticateAny);
 
 // ── Wrapper push pour le cron dynamic pricing ──
 async function sendPushForDynamicPricing(userId, { title, body, data }) {
