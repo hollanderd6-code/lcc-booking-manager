@@ -382,7 +382,15 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
     }
     // biometryType: 'faceId'/'touchId' (iOS), 'fingerprintAuthentication'/'faceAuthentication' (Android)
     const t = String(type || '').toLowerCase();
-    if (t.includes('face')) {
+    if (IS_IOS) {
+      // iOS : toujours "Face ID" (Touch ID rare sur les appareils récents)
+      label.textContent = 'Se connecter avec Face ID';
+      if (ico) ico.className = t.includes('touch') ? 'fas fa-fingerprint' : 'fas fa-face-viewfinder';
+    } else if (IS_ANDROID) {
+      // Android : libellé générique "biométrie"
+      label.textContent = 'Se connecter avec la biométrie';
+      if (ico) ico.className = t.includes('face') ? 'fas fa-face-viewfinder' : 'fas fa-fingerprint';
+    } else if (t.includes('face')) {
       label.textContent = 'Se connecter avec le visage';
       if (ico) ico.className = 'fas fa-face-viewfinder';
     } else if (t.includes('finger') || t.includes('touch')) {
@@ -434,7 +442,7 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
               window.Capacitor.Plugins.Preferences.remove({ key: FACE_ID_TOKEN_KEY }).catch(() => {});
               window.Capacitor.Plugins.Preferences.remove({ key: FACE_ID_KEY }).catch(() => {});
             }
-            showToast('Votre session a expiré. Reconnectez-vous pour réactiver Face ID.');
+            showToast('Votre session a expiré. Reconnectez-vous pour réactiver ' + (IS_IOS ? 'Face ID' : 'la biométrie') + '.');
             document.getElementById('faceIdContainer').style.display = 'none';
             return;
           }
@@ -479,7 +487,7 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
     if (alreadyEnabled) return;
     const available = await isBiometricAvailable();
     if (!available) return;
-    const confirm = window.confirm('Activer la connexion biométrique (empreinte / visage) pour vous connecter plus rapidement ?');
+    const confirm = window.confirm('Activer la connexion ' + (IS_IOS ? 'Face ID' : 'biométrique') + ' pour vous connecter plus rapidement ?');
     if (confirm) {
       localStorage.setItem(FACE_ID_KEY, 'true');
       if (IS_NATIVE && window.Capacitor?.Plugins?.Preferences) {
