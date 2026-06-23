@@ -10,7 +10,7 @@
     const originalFetch = window.fetch.bind(window);
 
     // URL de l'API en production (mobile)
-    const API_BASE_URL = 'https://lcc-booking-manager.onrender.com';
+    const API_BASE_URL = 'https://www.boostinghost.fr';
 
     // ============================================
     // 🔍 DÉTECTION NATIVE
