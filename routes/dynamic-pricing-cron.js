@@ -34,6 +34,125 @@ const MAX_LISTINGS    = 100;   // concurrents max à scraper par zone
 const ZONE_RADIUS_KM  = 1.5;   // rayon de recherche autour du logement
 const MOCK_MODE       = !process.env.APIFY_TOKEN; // mode mock si pas de token
 
+// ── Extrait une ZONE DE RECHERCHE exploitable (ville) depuis une adresse ──
+// "18 bis rue Gambetta 91300 Massy" → "Massy, France"
+function extractSearchZone(address, zoneLabel) {
+  if (zoneLabel && zoneLabel.trim()) return zoneLabel.trim();
+  const addr = (address || '').trim();
+  if (!addr) return 'France';
+
+  // 1) Code postal FR (5 chiffres) suivi de la ville → on prend la ville
+  const m = addr.match(/\b\d{5}\b[\s,]+([A-Za-zÀ-ÿ'’.\- ]+?)(?:,|$)/);
+  if (m && m[1]) {
+    const city = m[1].replace(/\b(france|fr)\b/i, '').trim();
+    if (city) return city + ', France';
+  }
+
+  // 2) Sinon, dernier segment après virgule (hors "France")
+  const parts = addr.split(',').map(s => s.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    let last = parts[parts.length - 1];
+    if (/^france$/i.test(last) && parts.length >= 2) last = parts[parts.length - 2];
+    if (last && !/^\d/.test(last)) return last + ', France';
+  }
+
+  // 3) Dernier mot « propre » (souvent la ville si pas de virgule ni CP)
+  const words = addr.split(/\s+/).filter(w => !/^\d/.test(w));
+  if (words.length) return words[words.length - 1] + ', France';
+
+  return 'France';
+}
+
+// ── Préfecture + région par département (pour élargir la recherche) ──
+const DEPT_INFO = {
+  '01':['Bourg-en-Bresse','Auvergne-Rhône-Alpes'],'02':['Laon','Hauts-de-France'],'03':['Moulins','Auvergne-Rhône-Alpes'],
+  '04':['Digne-les-Bains',"Provence-Alpes-Côte d'Azur"],'05':['Gap',"Provence-Alpes-Côte d'Azur"],'06':['Nice',"Provence-Alpes-Côte d'Azur"],
+  '07':['Privas','Auvergne-Rhône-Alpes'],'08':['Charleville-Mézières','Grand Est'],'09':['Foix','Occitanie'],
+  '10':['Troyes','Grand Est'],'11':['Carcassonne','Occitanie'],'12':['Rodez','Occitanie'],'13':['Marseille',"Provence-Alpes-Côte d'Azur"],
+  '14':['Caen','Normandie'],'15':['Aurillac','Auvergne-Rhône-Alpes'],'16':['Angoulême','Nouvelle-Aquitaine'],
+  '17':['La Rochelle','Nouvelle-Aquitaine'],'18':['Bourges','Centre-Val de Loire'],'19':['Tulle','Nouvelle-Aquitaine'],
+  '2A':['Ajaccio','Corse'],'2B':['Bastia','Corse'],'21':['Dijon','Bourgogne-Franche-Comté'],'22':['Saint-Brieuc','Bretagne'],
+  '23':['Guéret','Nouvelle-Aquitaine'],'24':['Périgueux','Nouvelle-Aquitaine'],'25':['Besançon','Bourgogne-Franche-Comté'],
+  '26':['Valence','Auvergne-Rhône-Alpes'],'27':['Évreux','Normandie'],'28':['Chartres','Centre-Val de Loire'],
+  '29':['Quimper','Bretagne'],'30':['Nîmes','Occitanie'],'31':['Toulouse','Occitanie'],'32':['Auch','Occitanie'],
+  '33':['Bordeaux','Nouvelle-Aquitaine'],'34':['Montpellier','Occitanie'],'35':['Rennes','Bretagne'],'36':['Châteauroux','Centre-Val de Loire'],
+  '37':['Tours','Centre-Val de Loire'],'38':['Grenoble','Auvergne-Rhône-Alpes'],'39':['Lons-le-Saunier','Bourgogne-Franche-Comté'],
+  '40':['Mont-de-Marsan','Nouvelle-Aquitaine'],'41':['Blois','Centre-Val de Loire'],'42':['Saint-Étienne','Auvergne-Rhône-Alpes'],
+  '43':['Le Puy-en-Velay','Auvergne-Rhône-Alpes'],'44':['Nantes','Pays de la Loire'],'45':['Orléans','Centre-Val de Loire'],
+  '46':['Cahors','Occitanie'],'47':['Agen','Nouvelle-Aquitaine'],'48':['Mende','Occitanie'],'49':['Angers','Pays de la Loire'],
+  '50':['Saint-Lô','Normandie'],'51':['Châlons-en-Champagne','Grand Est'],'52':['Chaumont','Grand Est'],'53':['Laval','Pays de la Loire'],
+  '54':['Nancy','Grand Est'],'55':['Bar-le-Duc','Grand Est'],'56':['Vannes','Bretagne'],'57':['Metz','Grand Est'],
+  '58':['Nevers','Bourgogne-Franche-Comté'],'59':['Lille','Hauts-de-France'],'60':['Beauvais','Hauts-de-France'],
+  '61':['Alençon','Normandie'],'62':['Arras','Hauts-de-France'],'63':['Clermont-Ferrand','Auvergne-Rhône-Alpes'],
+  '64':['Pau','Nouvelle-Aquitaine'],'65':['Tarbes','Occitanie'],'66':['Perpignan','Occitanie'],'67':['Strasbourg','Grand Est'],
+  '68':['Colmar','Grand Est'],'69':['Lyon','Auvergne-Rhône-Alpes'],'70':['Vesoul','Bourgogne-Franche-Comté'],'71':['Mâcon','Bourgogne-Franche-Comté'],
+  '72':['Le Mans','Pays de la Loire'],'73':['Chambéry','Auvergne-Rhône-Alpes'],'74':['Annecy','Auvergne-Rhône-Alpes'],
+  '75':['Paris','Île-de-France'],'76':['Rouen','Normandie'],'77':['Melun','Île-de-France'],'78':['Versailles','Île-de-France'],
+  '79':['Niort','Nouvelle-Aquitaine'],'80':['Amiens','Hauts-de-France'],'81':['Albi','Occitanie'],'82':['Montauban','Occitanie'],
+  '83':['Toulon',"Provence-Alpes-Côte d'Azur"],'84':['Avignon',"Provence-Alpes-Côte d'Azur"],'85':['La Roche-sur-Yon','Pays de la Loire'],
+  '86':['Poitiers','Nouvelle-Aquitaine'],'87':['Limoges','Nouvelle-Aquitaine'],'88':['Épinal','Grand Est'],'89':['Auxerre','Bourgogne-Franche-Comté'],
+  '90':['Belfort','Bourgogne-Franche-Comté'],'91':['Évry','Île-de-France'],'92':['Nanterre','Île-de-France'],'93':['Bobigny','Île-de-France'],
+  '94':['Créteil','Île-de-France'],'95':['Pontoise','Île-de-France'],
+  '971':['Pointe-à-Pitre','Guadeloupe'],'972':['Fort-de-France','Martinique'],'973':['Cayenne','Guyane'],
+  '974':['Saint-Denis','La Réunion'],'976':['Mamoudzou','Mayotte'],
+};
+
+// Seuil de comparables jugé « suffisant » pour une médiane fiable
+const MIN_COMPARABLES = 8;
+
+// Renvoie la liste ORDONNÉE des zones à essayer : ville → préfecture → région → France
+function getFallbackZones(address, zoneLabel) {
+  if (zoneLabel && zoneLabel.trim()) return [zoneLabel.trim()];
+  const zones = [];
+  const city = extractSearchZone(address, null);
+  if (city && city !== 'France') zones.push(city);
+
+  const pcMatch = (address || '').match(/\b(\d{5})\b/);
+  if (pcMatch) {
+    const pc = pcMatch[1];
+    let dept = pc.slice(0, 2);
+    if (dept === '97' || dept === '98') dept = pc.slice(0, 3);
+    if (dept === '20') dept = (parseInt(pc.slice(2,3),10) >= 2) ? '2B' : '2A'; // Corse
+    const info = DEPT_INFO[dept];
+    if (info) {
+      const pref = info[0] + ', France';
+      const reg  = info[1] + ', France';
+      if (!zones.includes(pref)) zones.push(pref);
+      if (!zones.includes(reg))  zones.push(reg);
+    }
+  }
+  if (zones.length === 0) zones.push('France');
+  return zones;
+}
+
+// Scrape en élargissant progressivement jusqu'à atteindre MIN_COMPARABLES.
+// Retourne le meilleur résultat (zone la plus dense si aucune n'atteint le seuil).
+async function scrapeBestZone(zones, medianFallback, maxListings, bedrooms) {
+  let best = { listings: [], isMock: false, zoneUsed: zones[zones.length - 1] || 'France' };
+  for (const zone of zones) {
+    let res;
+    try {
+      res = await scrapeZone(zone, medianFallback, maxListings);
+    } catch (e) {
+      console.warn(`⚠️ [DP] Scrape "${zone}" échoué: ${e.message}`);
+      continue;
+    }
+    const listings = res.listings || [];
+    const filtered = bedrooms ? listings.filter(l => Math.abs((l.bedrooms || 1) - bedrooms) <= 1) : listings;
+    const usable = filtered.length >= 5 ? filtered.length : listings.length;
+    console.log(`🔎 [DP] Zone "${zone}": ${listings.length} listings (${usable} exploitables, seuil ${MIN_COMPARABLES})`);
+
+    if (listings.length > best.listings.length) {
+      best = { listings, isMock: res.isMock, zoneUsed: zone };
+    }
+    if (usable >= MIN_COMPARABLES) {
+      return { listings, isMock: res.isMock, zoneUsed: zone };
+    }
+  }
+  if (best.zoneUsed) console.log(`ℹ️ [DP] Aucune zone ≥ seuil — on garde la plus dense: "${best.zoneUsed}" (${best.listings.length})`);
+  return best;
+}
+
 // ── Lundi de la semaine courante ─────────────────────────────
 function getCurrentWeekStart() {
   const d = new Date();
@@ -264,22 +383,22 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
     try {
       console.log(`\n🏠 [DP-CRON] Traitement: ${cfg.property_name} (${cfg.property_id})`);
 
-      // 2. Zone de recherche (ville extraite de l'adresse, ou label personnalisé)
-      const zoneLabel = cfg.zone_label
-        || (cfg.property_address?.split(',').slice(-2).join(',').trim())
-        || 'France';
+      // 2. Zones de recherche ordonnées (ville → préfecture → région)
+      const zones = getFallbackZones(cfg.property_address, cfg.zone_label);
+      const cacheKey = zones.join('|');
 
-      // 3. Scraping (avec cache par zone)
-      if (!zoneCache[zoneLabel]) {
-        const { listings, isMock } = await scrapeZone(
-          zoneLabel,
+      // 3. Scraping avec élargissement progressif (cache par jeu de zones)
+      if (!zoneCache[cacheKey]) {
+        zoneCache[cacheKey] = await scrapeBestZone(
+          zones,
           (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
-          MAX_LISTINGS
+          MAX_LISTINGS,
+          cfg.bedrooms
         );
-        zoneCache[zoneLabel] = { listings, isMock };
       }
 
-      const { listings, isMock } = zoneCache[zoneLabel];
+      const { listings, isMock, zoneUsed } = zoneCache[cacheKey];
+      const zoneLabel = zoneUsed;
 
       // Filtrer par nombre de chambres si renseigné
       const filtered = cfg.bedrooms
@@ -505,17 +624,16 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
     }
   }
 
-  const zoneLabel = cfg.zone_label
-    || (cfg.property_address?.split(',').slice(-2).join(',').trim())
-    || 'France';
+  const zones = getFallbackZones(cfg.property_address, cfg.zone_label);
+  console.log(`🎯 [DP-ONE] Analyse à la demande: ${cfg.property_name} (${propertyId}) — zones: ${zones.join(' → ')}`);
 
-  console.log(`🎯 [DP-ONE] Analyse à la demande: ${cfg.property_name} (${propertyId}) — zone "${zoneLabel}"`);
-
-  const { listings, isMock } = await scrapeZone(
-    zoneLabel,
+  const { listings, isMock, zoneUsed } = await scrapeBestZone(
+    zones,
     (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
-    MAX_LISTINGS
+    MAX_LISTINGS,
+    cfg.bedrooms
   );
+  const zoneLabel = zoneUsed;
 
   const filtered = cfg.bedrooms
     ? listings.filter(l => Math.abs((l.bedrooms || 1) - cfg.bedrooms) <= 1)
