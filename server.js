@@ -13236,7 +13236,7 @@ app.get('/api/cleaning/consumables/:pinCode', async (req, res) => {
 app.post('/api/cleaning/maintenance/:pinCode', async (req, res) => {
   try {
     const { pinCode } = req.params;
-    const { propertyId, title, description, priority, photos, reservationKey } = req.body;
+    const { propertyId, title, description, priority, photos, reservationKey, kind } = req.body;
     if (!pinCode || !propertyId || !title || !title.trim()) {
       return res.status(400).json({ error: 'Données manquantes' });
     }
@@ -13249,23 +13249,28 @@ app.post('/api/cleaning/maintenance/:pinCode', async (req, res) => {
     }
     const cleaner = cleanerResult.rows[0];
     const prio = ['low','normal','high','urgent'].includes(priority) ? priority : 'normal';
+    const ticketKind = (kind === 'damage') ? 'damage' : 'maintenance';
     const photoArr = Array.isArray(photos) ? photos.slice(0, 10) : [];
 
     const result = await pool.query(
       `INSERT INTO maintenance_tickets
-       (user_id, property_id, title, description, priority, photos, created_by, created_by_name, reservation_key)
-       VALUES ($1, $2, $3, $4, $5, $6, 'cleaner', $7, $8) RETURNING id`,
+       (user_id, property_id, title, description, priority, photos, created_by, created_by_name, reservation_key, kind)
+       VALUES ($1, $2, $3, $4, $5, $6, 'cleaner', $7, $8, $9) RETURNING id`,
       [cleaner.user_id, propertyId, title.trim().slice(0,140), (description||'').trim().slice(0,2000)||null,
-       prio, JSON.stringify(photoArr), cleaner.name, reservationKey || null]
+       prio, JSON.stringify(photoArr), cleaner.name, reservationKey || null, ticketKind]
     );
 
     try {
       const property = PROPERTIES.find(p => p.id === propertyId);
       const propName = displayName(property) || propertyId;
+      const isDamage = ticketKind === 'damage';
       const prioTxt = prio === 'urgent' ? '🔴 URGENT — ' : '';
-      const ntitle = `🔧 Incident — ${propName}`;
-      const nbody = `${prioTxt}${cleaner.name} signale : ${title.trim()}`;
-      const pushData = { type: 'maintenance_ticket', propertyId, click_action: '/cleaning.html' };
+      const ntitle = isDamage ? `⚠️ Dégradation — ${propName}` : `🔧 Incident — ${propName}`;
+      const nbody = isDamage
+        ? `${cleaner.name} a signalé une dégradation${photoArr.length ? ` (${photoArr.length} photo${photoArr.length>1?'s':''})` : ''}. Vérifie pour une éventuelle retenue sur la caution.`
+        : `${prioTxt}${cleaner.name} signale : ${title.trim()}`;
+      const pushData = { type: isDamage ? 'damage_report' : 'maintenance_ticket', propertyId, ticketId: String(result.rows[0].id), click_action: '/cleaning.html', screen: 'cleaning' };
+      if (photoArr[0]) pushData.image = photoArr[0];
       const tokRes = await pool.query(
         'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL', [cleaner.user_id]
       );
@@ -13276,13 +13281,13 @@ app.post('/api/cleaning/maintenance/:pinCode', async (req, res) => {
         await sendNotificationToSubAccountsOf(cleaner.user_id, 'can_view_cleaning', ntitle, nbody, pushData, 'notif_sub_cleaning_completed');
       } catch(_) {}
       if (typeof io !== 'undefined' && io) {
-        io.to(`user_${cleaner.user_id}`).emit('maintenance:new', { propertyId, title: title.trim() });
+        io.to(`user_${cleaner.user_id}`).emit('maintenance:new', { propertyId, title: title.trim(), kind: ticketKind });
       }
     } catch (notifErr) {
       console.error('❌ [MAINT] Notif incident échouée:', notifErr.message);
     }
 
-    res.status(201).json({ success: true, ticketId: result.rows[0].id });
+    res.status(201).json({ success: true, ticketId: result.rows[0].id, kind: ticketKind });
   } catch (err) {
     console.error('Erreur POST /api/cleaning/maintenance/:pinCode :', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -13334,6 +13339,16 @@ app.post('/api/cleaning/photo-upload', async (req, res) => {
     console.log('✅ Colonnes signature checklist OK');
   } catch(e) {
     console.error('❌ Migration signature checklist:', e.message);
+  }
+})();
+
+// Migration — distinguer incident "maintenance" et "dégradation" (lien caution)
+(async () => {
+  try {
+    await pool.query(`ALTER TABLE maintenance_tickets ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'maintenance'`);
+    console.log('✅ Colonne maintenance_tickets.kind OK');
+  } catch(e) {
+    console.error('❌ Migration maintenance_tickets.kind:', e.message);
   }
 })();
 
