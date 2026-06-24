@@ -144,7 +144,10 @@ function generateAutoResponse(property, detectedQuestions) {
  * @param {Object} pool - PostgreSQL pool
  * @param {Object} io - Socket.io instance
  */
-function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription) {
+function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps = {}) {
+  // Fonctions injectées depuis server.js (envoi e-mail / SMS pour résas directes)
+  const sendSmsGateway = deps.sendSmsGateway || null;
+  const sendEmailViaBrevo = deps.sendEmailViaBrevo || null;
   
   // ✅ Import des fonctions de gestion des permissions depuis le middleware
   const { 
@@ -1001,6 +1004,87 @@ if (sender_type === 'owner' || sender_type === 'property') {
     }
   } catch (notifError) {
     console.error('❌ Erreur notification push guest:', notifError.message);
+  }
+}
+
+// ============================================
+// 📨 RELAIS E-MAIL / SMS — PROPRIÉTAIRE → VOYAGEUR (RÉSA DIRECTE SANS APP)
+// Si le propriétaire écrit dans un fil "direct" et que le voyageur n'a pas
+// l'application (aucun token guest, pas de compte BHGuest), le message part
+// par e-mail et/ou SMS selon les coordonnées renseignées.
+// On ne relaie JAMAIS pour les conversations OTA (Airbnb/Booking…).
+// ============================================
+if (sender_type === 'owner' && (message && message.trim())) {
+  try {
+    const _convRes = await pool.query(
+      `SELECT c.platform, c.guest_email, c.guest_phone, c.guest_name, c.user_id,
+              p.name AS property_name, p.internal_name
+       FROM conversations c
+       LEFT JOIN properties p ON p.id = c.property_id
+       WHERE c.id = $1`,
+      [conversation_id]
+    );
+
+    const _conv = _convRes.rows[0] || {};
+    const _platform = (_conv.platform || '').toLowerCase();
+    const _isDirect = ['direct', 'manuel', 'manual', 'bhguest', 'bhguest_hold'].includes(_platform);
+
+    if (_isDirect && (_conv.guest_email || _conv.guest_phone)) {
+      // Le voyageur a-t-il l'app ? (token guest sur ce fil OU compte BHGuest avec token)
+      let _guestHasApp = false;
+
+      const _tok = await pool.query(
+        `SELECT 1 FROM guest_fcm_tokens WHERE conversation_id = $1 AND fcm_token IS NOT NULL LIMIT 1`,
+        [conversation_id]
+      );
+      if (_tok.rows.length > 0) _guestHasApp = true;
+
+      if (!_guestHasApp && _conv.guest_email) {
+        const _acc = await pool.query(
+          `SELECT 1 FROM users u JOIN user_fcm_tokens t ON u.id = t.user_id
+           WHERE u.email = $1 AND t.fcm_token IS NOT NULL LIMIT 1`,
+          [_conv.guest_email]
+        );
+        if (_acc.rows.length > 0) _guestHasApp = true;
+      }
+
+      if (!_guestHasApp) {
+        const _propName = (_conv.internal_name && _conv.internal_name.trim())
+          || _conv.property_name || 'votre logement';
+
+        // E-mail
+        if (_conv.guest_email && typeof sendEmailViaBrevo === 'function') {
+          try {
+            await sendEmailViaBrevo({
+              to: _conv.guest_email,
+              subject: `Message — ${_propName}`,
+              text: message,
+              html: `<p>${String(message).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</p>`
+            });
+            console.log(`✅ [DIRECT] Message relayé par e-mail à ${_conv.guest_email}`);
+          } catch (_e) {
+            console.error('❌ [DIRECT] Échec e-mail:', _e.message);
+          }
+        }
+
+        // SMS (réutilise le module existant — gating plan géré dedans)
+        if (_conv.guest_phone && typeof sendSmsGateway === 'function') {
+          try {
+            await sendSmsGateway(_conv.guest_phone, message, _conv.user_id, {
+              property_name: _propName,
+              guest_name: _conv.guest_name || null
+            });
+            console.log(`✅ [DIRECT] Message relayé par SMS à ${_conv.guest_phone}`);
+          } catch (_e) {
+            console.error('❌ [DIRECT] Échec SMS:', _e.message);
+          }
+        }
+      } else {
+        console.log('ℹ️ [DIRECT] Voyageur a l\'app → relais e-mail/SMS ignoré (push déjà envoyé)');
+      }
+    }
+  } catch (_relayErr) {
+    console.error('❌ [DIRECT] Erreur relais e-mail/SMS:', _relayErr.message);
   }
 }
 

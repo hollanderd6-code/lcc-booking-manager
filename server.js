@@ -8145,6 +8145,88 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
   reservationsStore.properties[propertyId].push(reservation);
   console.log('✅ Ajouté à reservationsStore');
 }
+
+    // ============================================
+    // 💬 CRÉATION CONVERSATION POUR RÉSERVATION DIRECTE
+    // Uniquement pour une vraie résa directe (pas une OTA saisie à la main)
+    // ET uniquement si on a un email et/ou un téléphone pour joindre le voyageur.
+    // La conversation sert alors de centre d'envoi e-mail/SMS + historique.
+    // ============================================
+    try {
+      const _rawPlatform = (req.body.platform || '').toLowerCase();
+      const _isDirect = !_rawPlatform || ['manuel', 'manual', 'direct'].includes(_rawPlatform);
+      const _guestEmail = req.body.email || null;
+      const _guestPhone = req.body.phone || null;
+
+      if (_isDirect && (_guestEmail || _guestPhone)) {
+        // Ne pas dupliquer si une conversation existe déjà sur la même clé
+        // (user_id + property_id + date d'arrivée + platform 'direct')
+        const _existingConv = await pool.query(
+          `SELECT id FROM conversations
+           WHERE user_id = $1 AND property_id = $2 AND reservation_start_date = $3 AND platform = 'direct'`,
+          [ownerId, propertyId, start]
+        );
+
+        if (_existingConv.rows.length === 0) {
+          const _crypto = require('crypto');
+          const _uniqueToken = _crypto.randomBytes(32).toString('hex');
+          const _photosToken = _crypto.randomBytes(32).toString('hex');
+          const _pinCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+          const _convRes = await pool.query(
+            `INSERT INTO conversations
+             (user_id, property_id, reservation_start_date, reservation_end_date, platform,
+              guest_name, guest_email, guest_phone, reservation_uid,
+              pin_code, unique_token, photos_token, is_verified, verified_at, status)
+             VALUES ($1, $2, $3, $4, 'direct', $5, $6, $7, $8, $9, $10, $11, TRUE, NOW(), 'active')
+             RETURNING id`,
+            [
+              ownerId, propertyId, start, end,
+              guestName || 'Réservation manuelle',
+              _guestEmail, _guestPhone, uid,
+              _pinCode, _uniqueToken, _photosToken
+            ]
+          );
+
+          const _convId = _convRes.rows[0].id;
+
+          // Décrire le canal selon ce qui est renseigné
+          let _canal;
+          if (_guestEmail && _guestPhone) _canal = 'par e-mail et par SMS';
+          else if (_guestEmail) _canal = 'par e-mail';
+          else _canal = 'par SMS';
+
+          const _noteText =
+            'ℹ️ Réservation directe — le voyageur n\'a pas l\'application. '
+            + 'Vos messages envoyés ici partent automatiquement ' + _canal + ' au voyageur '
+            + 'et restent enregistrés dans ce fil. '
+            + (_guestEmail ? ('E-mail : ' + _guestEmail + '. ') : '')
+            + (_guestPhone ? ('Tél : ' + _guestPhone + '.') : '');
+
+          // Note système (sender_name 'BH_INFO' → rendu en bandeau d'info côté front)
+          await pool.query(
+            `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+             VALUES ($1, 'system', 'BH_INFO', $2, TRUE, NOW())`,
+            [_convId, _noteText]
+          );
+
+          await pool.query(
+            `UPDATE conversations SET last_message_at = NOW() WHERE id = $1`,
+            [_convId]
+          );
+
+          console.log(`✅ Conversation directe ${_convId} créée pour résa ${uid} (canal: ${_canal})`);
+        } else {
+          console.log(`ℹ️ Conversation directe déjà existante pour ${uid} — pas de doublon`);
+        }
+      } else {
+        console.log(`ℹ️ Pas de conversation directe (isDirect=${_isDirect}, email=${!!_guestEmail}, tel=${!!_guestPhone})`);
+      }
+    } catch (_convErr) {
+      console.error('❌ Erreur création conversation directe:', _convErr.message);
+      // Non bloquant : la réservation reste créée
+    }
+
     // ✅ Sync Channex — bloquer les dates de cette résa
     setImmediate(async () => {
       try {
@@ -26289,7 +26371,7 @@ io.on('connection', (socket) => {
 // ============================================
 // ✅ INITIALISATION DES ROUTES DU CHAT
 // ============================================
-setupChatRoutes(app, pool, io, authenticateAny, checkSubscription);
+setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, { sendSmsGateway, sendEmailViaBrevo });
 console.log('✅ Routes du chat initialisées');
 
 

@@ -951,6 +951,19 @@ function appendMessage(message) {
     return;
   }
 
+  // ── Note système d'information (résa directe : canal e-mail/SMS) ──
+  if (message.sender_type === 'system' && message.sender_name === 'BH_INFO') {
+    const noteDiv = document.createElement('div');
+    if (message.id) noteDiv.setAttribute('data-msg-id', message.id);
+    noteDiv.style.cssText = 'max-width:88%;margin:10px auto;padding:10px 14px;'
+      + 'background:#FFF7E6;border:1px solid #FFE0A3;border-radius:12px;'
+      + 'color:#7A5B16;font-size:12.5px;line-height:1.45;text-align:center;';
+    noteDiv.textContent = message.message || '';
+    container.appendChild(noteDiv);
+    scrollToBottom();
+    return;
+  }
+
   const isOwner = message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
   
   const messageDiv = document.createElement('div');
