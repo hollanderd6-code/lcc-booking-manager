@@ -2082,6 +2082,20 @@ html[data-theme-v3="1"] #templatesList > div {
   </div>
 </div>
 
+<!-- Modal retenue sur caution -->
+<div class="checklist-detail-modal" id="retainModal">
+  <div class="checklist-detail-overlay" onclick="closeRetainModal()"></div>
+  <div class="checklist-detail-panel" style="max-width:440px;">
+    <div class="checklist-detail-header">
+      <div style="font-size:17px;font-weight:700;"><i class="fas fa-hand-holding-dollar" style="color:#dc2626;"></i> Retenir sur la caution</div>
+      <button class="checklist-detail-close" onclick="closeRetainModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:16px;">
+      <div id="retainBody"><p class="text-secondary" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Recherche de la caution…</p></div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal responsable des achats -->
 <div class="checklist-detail-modal" id="responsibleModal">
   <div class="checklist-detail-overlay" onclick="closeResponsibleModal()"></div>
@@ -3494,9 +3508,24 @@ function formatDateFr(dateStr) {
           const when = t.created_at ? new Date(t.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
           const byTxt = t.created_by === 'cleaner' ? ('🧹 ' + _maintEsc(t.created_by_name || 'Agent'))
                       : (t.created_by_name ? _maintEsc(t.created_by_name) : 'Hôte');
-          return '<div onclick="openTicketModal(' + t.id + ')" style="cursor:pointer;border:1px solid var(--border);border-left:4px solid ' + prio.c + ';border-radius:12px;padding:13px 15px;margin-bottom:10px;">'
+          const isDamage = t.kind === 'damage';
+          let photos = [];
+          try { photos = typeof t.photos === 'string' ? JSON.parse(t.photos) : (t.photos || []); } catch(e) { photos = []; }
+          const damageBadge = isDamage
+            ? '<span style="flex-shrink:0;font-size:11px;font-weight:700;padding:3px 9px;border-radius:14px;background:#fef2f2;color:#dc2626;margin-right:6px;">⚠️ Dégradation</span>'
+            : '';
+          const photosHtml = (isDamage && photos.length)
+            ? '<div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;">'
+              + photos.slice(0,4).map((p,i) => '<img src="' + p + '" onclick="event.stopPropagation();window.open(\'' + p + '\',\'_blank\')" style="width:54px;height:54px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer;">').join('')
+              + (photos.length>4 ? '<div style="width:54px;height:54px;border-radius:8px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text-secondary);">+' + (photos.length-4) + '</div>' : '')
+              + '</div>'
+            : '';
+          const retainBtn = isDamage
+            ? '<button onclick="event.stopPropagation();retainOnDeposit(' + t.id + ')" style="margin-top:11px;cursor:pointer;border:none;background:#dc2626;color:#fff;font-weight:700;padding:9px 14px;border-radius:9px;font-size:13px;display:inline-flex;align-items:center;gap:7px;"><i class="fas fa-hand-holding-dollar"></i> Retenir sur la caution</button>'
+            : '';
+          return '<div onclick="openTicketModal(' + t.id + ')" style="cursor:pointer;border:1px solid var(--border);border-left:4px solid ' + (isDamage ? '#dc2626' : prio.c) + ';border-radius:12px;padding:13px 15px;margin-bottom:10px;">'
             + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
-            + '<div style="font-weight:700;font-size:15px;">' + _maintEsc(t.title) + '</div>'
+            + '<div style="font-weight:700;font-size:15px;">' + damageBadge + _maintEsc(t.title) + '</div>'
             + '<span style="flex-shrink:0;font-size:11px;font-weight:700;padding:3px 9px;border-radius:14px;background:' + st.c + '1a;color:' + st.c + ';">' + st.l + '</span>'
             + '</div>'
             + '<div style="font-size:12.5px;color:var(--text-secondary);margin-top:5px;">'
@@ -3505,9 +3534,115 @@ function formatDateFr(dateStr) {
             + (t.artisan_name ? ' · <i class="fas fa-screwdriver-wrench"></i> ' + _maintEsc(t.artisan_name) : '')
             + '</div>'
             + (t.description ? '<div style="font-size:13px;color:var(--text);margin-top:7px;opacity:.85;">' + _maintEsc(String(t.description).slice(0,120)) + (t.description.length>120?'…':'') + '</div>' : '')
+            + photosHtml
+            + retainBtn
             + '</div>';
         }).join('');
       }
+
+      // ── Retenue sur la caution depuis un incident de dégradation ──
+      let _retainCtx = null;
+      function _parseResaKey(key) {
+        // format: propertyId_YYYY-MM-DD_YYYY-MM-DD
+        if (!key) return null;
+        const m = String(key).match(/^(.*)_(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})$/);
+        if (!m) return null;
+        return { propertyId: m[1], start: m[2], end: m[3] };
+      }
+      async function retainOnDeposit(ticketId) {
+        const t = maintTickets.find(x => x.id === ticketId);
+        if (!t) return;
+        let photos = [];
+        try { photos = typeof t.photos === 'string' ? JSON.parse(t.photos) : (t.photos || []); } catch(e) {}
+        document.getElementById('retainModal').classList.add('active');
+        document.getElementById('retainBody').innerHTML = '<p class="text-secondary" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Recherche de la caution…</p>';
+
+        const parsed = _parseResaKey(t.reservation_key);
+        if (!parsed) {
+          _retainNoDeposit("Cet incident n'est pas rattaché à une réservation précise.");
+          return;
+        }
+        try {
+          const res = await fetch(API_URL + '/api/reservations-with-deposits', { headers: _maintHeaders() });
+          const list = await res.json();
+          const match = (Array.isArray(list) ? list : []).find(r =>
+            String(r.propertyId) === String(parsed.propertyId)
+            && r.startDate && r.startDate.slice(0,10) === parsed.start
+            && r.endDate && r.endDate.slice(0,10) === parsed.end
+          );
+          if (!match || !match.deposit) {
+            _retainNoDeposit("Aucune caution trouvée pour cette réservation.");
+            return;
+          }
+          const dep = match.deposit;
+          if (dep.status !== 'authorized') {
+            const stTxt = dep.status === 'captured' ? 'déjà débitée' : (dep.status === 'released' ? 'déjà libérée' : dep.status);
+            _retainNoDeposit('La caution de cette réservation est ' + stTxt + '. Aucune retenue possible.');
+            return;
+          }
+          _retainCtx = { depositId: dep.id, maxCents: dep.amountCents, ticketId: t.id, guest: match.guestName, prop: getPropertyNameById(t.property_id) };
+          const maxEur = (dep.amountCents/100).toFixed(2);
+          const thumbs = photos.length
+            ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px;">' + photos.slice(0,6).map(p => '<img src="' + p + '" onclick="window.open(\'' + p + '\',\'_blank\')" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer;">').join('') + '</div>'
+            : '<p style="font-size:12px;color:var(--text-secondary);">Aucune photo jointe.</p>';
+          document.getElementById('retainBody').innerHTML =
+            '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;">' + _maintEsc(_retainCtx.prop) + (match.guestName ? ' · ' + _maintEsc(match.guestName) : '') + '</div>'
+            + '<div style="font-size:13px;color:var(--text);font-weight:600;margin-bottom:8px;">Caution (empreinte) : ' + maxEur + ' €</div>'
+            + '<div style="font-size:13px;font-weight:700;margin-bottom:4px;">Justificatif</div>'
+            + thumbs
+            + '<label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 6px;">Montant à retenir (€)</label>'
+            + '<input id="retainAmount" type="number" min="1" max="' + maxEur + '" step="0.01" placeholder="0,00" style="width:100%;box-sizing:border-box;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;background:var(--bg);color:var(--text);">'
+            + '<p style="font-size:11.5px;color:var(--text-secondary);margin:8px 0 0;line-height:1.45;">⚠️ Le débit est définitif et ne peut se faire qu\'une fois : le montant retenu est prélevé, le reste de l\'empreinte est automatiquement libéré.</p>'
+            + '<button onclick="confirmRetain()" style="margin-top:14px;width:100%;cursor:pointer;border:none;background:#dc2626;color:#fff;font-weight:700;padding:13px;border-radius:10px;font-size:15px;"><i class="fas fa-hand-holding-dollar"></i> Confirmer la retenue</button>';
+        } catch (e) {
+          console.error(e);
+          _retainNoDeposit('Erreur lors de la recherche de la caution.');
+        }
+      }
+      window.retainOnDeposit = retainOnDeposit;
+
+      function _retainNoDeposit(msg) {
+        _retainCtx = null;
+        document.getElementById('retainBody').innerHTML =
+          '<div style="text-align:center;padding:14px 6px;">'
+          + '<i class="fas fa-circle-info" style="font-size:26px;color:var(--text-secondary);margin-bottom:10px;"></i>'
+          + '<p style="margin:0 0 14px;font-weight:600;color:var(--text);">' + _maintEsc(msg) + '</p>'
+          + '<a href="deposits.html" style="display:inline-block;background:var(--accent,#1A7A5E);color:#fff;text-decoration:none;font-weight:700;padding:10px 16px;border-radius:9px;font-size:13px;">Ouvrir les cautions</a>'
+          + '</div>';
+      }
+
+      async function confirmRetain() {
+        if (!_retainCtx) return;
+        const val = parseFloat((document.getElementById('retainAmount').value || '').replace(',', '.'));
+        if (!val || val <= 0) { alert('Indiquez un montant à retenir.'); return; }
+        const cents = Math.round(val * 100);
+        if (cents > _retainCtx.maxCents) { alert('Le montant dépasse la caution (' + (_retainCtx.maxCents/100).toFixed(2) + ' €).'); return; }
+        if (!confirm('Confirmer la retenue de ' + val.toFixed(2) + ' € sur la caution ? Cette action est définitive.')) return;
+        try {
+          const res = await fetch(API_URL + '/api/deposits/' + _retainCtx.depositId + '/capture', {
+            method: 'POST',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, _maintHeaders()),
+            body: JSON.stringify({ amountCents: cents })
+          });
+          if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Erreur'); }
+          // Marquer le ticket comme résolu
+          try {
+            await fetch(API_URL + '/api/maintenance/tickets/' + _retainCtx.ticketId, {
+              method: 'PUT',
+              headers: Object.assign({ 'Content-Type': 'application/json' }, _maintHeaders()),
+              body: JSON.stringify({ status: 'resolved' })
+            });
+          } catch(e) {}
+          closeRetainModal();
+          alert('✅ ' + val.toFixed(2) + ' € retenus sur la caution.');
+          loadMaintTickets();
+        } catch (e) {
+          alert('Erreur : ' + e.message);
+        }
+      }
+      window.confirmRetain = confirmRetain;
+      function closeRetainModal() { document.getElementById('retainModal').classList.remove('active'); _retainCtx = null; }
+      window.closeRetainModal = closeRetainModal;
 
       function fillTicketSelects() {
         // Logements
