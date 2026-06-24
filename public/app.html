@@ -11122,7 +11122,7 @@ html[data-theme-v3="1"] .sidebar .nav-section {
             headers: { 'Authorization': 'Bearer ' + token }
           });
           const d = await r.json();
-          const convs = d.conversations || [];
+          const convs = (d.conversations || []).filter(c => c.status !== 'cancelled');
           const guestN = bookingForMsg.guestName || bookingForMsg.guest_display_name || bookingForMsg.guest || '';
           const propId = bookingForMsg.propertyId || bookingForMsg.property_id || '';
           const startD = (bookingForMsg.startDate || bookingForMsg.start || '').toString().split('T')[0];
