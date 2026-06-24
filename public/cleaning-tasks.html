@@ -852,6 +852,32 @@ html, body {
   padding: 4px 6px;
   margin: 0 0 14px;
 }
+/* ===== ÉTAT DU LOGEMENT / DÉGRADATIONS (haut de checklist) ===== */
+.damage-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid #dc2626;
+  border-radius: 14px;
+  padding: 14px;
+  margin: 0 0 16px;
+}
+.damage-title { font-size: 15px; font-weight: 800; color: var(--text); }
+.damage-subtitle { font-size: 12.5px; color: var(--text-secondary); margin: 2px 0 12px; }
+.damage-choice { display: flex; gap: 9px; }
+.damage-btn {
+  flex: 1; padding: 12px 8px; border-radius: 11px; cursor: pointer;
+  border: 1.5px solid var(--border); background: var(--bg); color: var(--text-secondary);
+  font-family: var(--font); font-size: 13.5px; font-weight: 700; transition: all .15s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+}
+.damage-btn.ras.on { border-color: #16a34a; background: #f0fdf4; color: #15803d; }
+.damage-btn.report.on { border-color: #dc2626; background: #fef2f2; color: #b91c1c; }
+#damageForm { margin-top: 12px; }
+.damage-photos-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 14px; font-weight: 700; color: var(--text); margin: 4px 0 2px;
+}
+.damage-photos-subtitle { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
 .maint-report-toggle {
   width: 100%;
   display: flex; align-items: center; justify-content: space-between;
@@ -1539,6 +1565,7 @@ html[data-theme-v3="1"] .top-bar {
 
 <!-- Hidden file input for photos -->
 <input type="file" id="photoInput" accept="image/*" style="display:none"/>
+<input type="file" id="damagePhotoInput" accept="image/*" style="display:none"/>
 
 <script>
 // ==========================================
@@ -1565,6 +1592,9 @@ let tasks = [];
 let currentTask = null;
 let checklistTasks = [];
 let checklistPhotos = []; // base64 strings
+// État du logement / dégradations (bloc obligatoire en haut de checklist)
+let damageState = '';     // '' (non renseigné) | 'ras' | 'reported'
+let damagePhotos = [];    // base64 strings (photos de la dégradation)
 let consumableItems = [];       // catalogue du logement (label/icon)
 let restockSelected = new Set(); // libellés cochés "à racheter"
 let startedAt = null;
@@ -1915,6 +1945,8 @@ async function openChecklist(reservationKey) {
   
   // Reset state
   checklistPhotos = [];
+  damageState = '';
+  damagePhotos = [];
   timerSeconds = 0;
   startedAt = new Date();
   
@@ -2123,8 +2155,36 @@ function renderChecklistBody() {
   });
   
   let html = '';
-  
-  // Rooms
+
+  // ── BLOC OBLIGATOIRE : État du logement / dégradations (tout en haut) ──
+  html += `
+    <div class="damage-card" id="damageCard">
+      <div class="damage-title">🏠 État du logement à l'arrivée</div>
+      <div class="damage-subtitle">À vérifier avant de commencer le ménage.</div>
+      <div class="damage-choice">
+        <button type="button" class="damage-btn ras ${damageState==='ras'?'on':''}" onclick="setDamageState('ras')">
+          <i class="fas fa-check-circle"></i> RAS
+        </button>
+        <button type="button" class="damage-btn report ${damageState==='reported'?'on':''}" onclick="setDamageState('reported')">
+          <i class="fas fa-triangle-exclamation"></i> Signaler une dégradation
+        </button>
+      </div>
+      <div id="damageForm" style="display:${damageState==='reported'?'block':'none'};">
+        <textarea id="damageDesc" rows="2" maxlength="2000" placeholder="Décrivez la dégradation (ex : table rayée, vaisselle cassée, tache sur le canapé…)" class="maint-field"></textarea>
+        <div class="damage-photos-head">
+          📸 Photos de la dégradation
+          <span class="photo-counter ${damagePhotos.length>=2?'enough':'not-enough'}" id="damagePhotoCounter">${damagePhotos.length}/2 min.</span>
+        </div>
+        <div class="damage-photos-subtitle">Au moins 2 photos — nécessaires pour justifier une retenue sur la caution.</div>
+        <div class="photos-grid" id="damagePhotosGrid"></div>
+        <button type="button" class="photo-add-btn" onclick="setTimeout(() => document.getElementById('damagePhotoInput').click(), 100)">
+          <i class="fas fa-camera"></i> Prendre une photo
+        </button>
+      </div>
+    </div>
+  `;
+
+
   const roomOrder = ['kitchen', 'bathroom', 'bedroom', 'living', 'terrace', 'general'];
   roomOrder.forEach(roomKey => {
     const roomTasks = byRoom[roomKey];
@@ -2213,6 +2273,7 @@ function renderChecklistBody() {
   
   body.innerHTML = html;
   renderPhotosGrid();
+  renderDamagePhotosGrid();
   renderRestockSection();
 }
 
@@ -2346,6 +2407,61 @@ function removePhoto(idx) {
   updateProgress();
 }
 
+// ── État du logement / dégradations ──
+function setDamageState(state) {
+  damageState = state;
+  const card = document.getElementById('damageCard');
+  if (!card) return;
+  card.querySelectorAll('.damage-btn').forEach(b => b.classList.remove('on'));
+  const form = document.getElementById('damageForm');
+  if (state === 'ras') {
+    card.querySelector('.damage-btn.ras')?.classList.add('on');
+    if (form) form.style.display = 'none';
+  } else if (state === 'reported') {
+    card.querySelector('.damage-btn.report')?.classList.add('on');
+    if (form) form.style.display = 'block';
+  }
+}
+
+document.getElementById('damagePhotoInput').addEventListener('change', (e) => {
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      compressImage(ev.target.result, 1000, 0.7, (compressed) => {
+        damagePhotos.push(compressed);
+        renderDamagePhotosGrid();
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+});
+
+function renderDamagePhotosGrid() {
+  const grid = document.getElementById('damagePhotosGrid');
+  if (!grid) return;
+  grid.innerHTML = damagePhotos.map((photo, idx) => `
+    <div class="photo-thumb">
+      <img src="${photo}" alt="Dégradation ${idx + 1}" loading="lazy"/>
+      <button class="photo-thumb-delete" onclick="event.stopPropagation(); removeDamagePhoto(${idx})">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `).join('');
+  const counter = document.getElementById('damagePhotoCounter');
+  if (counter) {
+    counter.textContent = `${damagePhotos.length}/2 min.`;
+    counter.className = `photo-counter ${damagePhotos.length >= 2 ? 'enough' : 'not-enough'}`;
+  }
+}
+
+function removeDamagePhoto(idx) {
+  damagePhotos.splice(idx, 1);
+  renderDamagePhotosGrid();
+}
+
 // ===== TIMER (désactivé - timerSeconds conservé pour compatibilité) =====
 let timerInterval = null;
 let timerSeconds = 0;
@@ -2450,7 +2566,19 @@ function confirmSignature() {
 async function handleSubmit() {
   const allChecked = checklistTasks.every(t => t.checked);
   const hasEnoughPhotos = checklistPhotos.length >= 5;
-  
+
+  // État du logement obligatoire
+  if (damageState !== 'ras' && damageState !== 'reported') {
+    showToast("Indiquez l'état du logement : RAS ou signaler une dégradation", 'error');
+    document.getElementById('damageCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  if (damageState === 'reported' && damagePhotos.length < 2) {
+    showToast(`Dégradation : ajoutez au moins ${2 - damagePhotos.length} photo(s)`, 'error');
+    document.getElementById('damageCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
   if (!allChecked) {
     showToast('Veuillez cocher toutes les tâches', 'error');
     return;
@@ -2464,6 +2592,39 @@ async function handleSubmit() {
   openSigModal();
 }
 
+// Envoie le signalement de dégradation : upload des photos vers Cloudinary
+// puis création d'un ticket d'incident (kind=damage) + notif hôte.
+async function sendDamageReport() {
+  if (damageState !== 'reported' || damagePhotos.length < 2) return;
+  const desc = (document.getElementById('damageDesc')?.value || '').trim();
+  // 1) Upload des photos (base64 -> URL Cloudinary)
+  const urls = [];
+  for (const dataUrl of damagePhotos) {
+    try {
+      const up = await fetch(`${API_URL}/api/cleaning/photo-upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinCode: currentPin, dataUrl })
+      });
+      if (up.ok) { const d = await up.json(); if (d.url) urls.push(d.url); }
+    } catch (e) { console.warn('upload photo dégradation échoué', e); }
+  }
+  // 2) Création du ticket "dégradation"
+  await fetch(`${API_URL}/api/cleaning/maintenance/${currentPin}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      propertyId: currentTask.propertyId,
+      title: 'Dégradation constatée',
+      description: desc || 'Dégradation constatée lors du ménage.',
+      priority: 'high',
+      photos: urls,
+      reservationKey: currentTask.reservationKey,
+      kind: 'damage'
+    })
+  });
+}
+
 async function doSubmit() {
   
   const btn = document.getElementById('submitBtn');
@@ -2473,6 +2634,11 @@ async function doSubmit() {
   try {
     const notes = document.getElementById('cleaningNotes')?.value || '';
     const certifiedAt = new Date().toISOString();
+
+    // Envoi du signalement de dégradation (si renseigné) — non bloquant pour la checklist
+    if (damageState === 'reported') {
+      try { await sendDamageReport(); } catch (e) { console.warn('Signalement dégradation:', e); }
+    }
     
     const payload = {
       pinCode: currentPin,
