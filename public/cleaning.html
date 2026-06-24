@@ -3820,12 +3820,16 @@ function formatDateFr(dateStr) {
           var st = c.owner_status || 'pending', pn = getPropertyNameById(c.property_id) || c.property_id;
           var cd = c.checkout_date ? formatDateFr(String(c.checkout_date).slice(0,10)) : '';
           var completedAt = c.completed_at ? new Date(c.completed_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-          var ph = typeof c.photos === 'string' ? JSON.parse(c.photos) : (c.photos || []);
+          // La liste renvoie photo_count (les photos elles-mêmes ne sont chargées
+          // qu'à l'ouverture du détail). On utilise donc photo_count en priorité.
+          var phCount = (typeof c.photo_count === 'number')
+            ? c.photo_count
+            : (function(){ try { var a = typeof c.photos === 'string' ? JSON.parse(c.photos) : (c.photos || []); return a.length; } catch(e){ return 0; } })();
           return '<div class="checklist-item"><div class="checklist-item-header"><div class="checklist-item-property">' + pn + '</div><span class="checklist-item-status ' + sC[st] + '">' + sL[st] + '</span></div>'
             + '<div class="checklist-item-meta"><div class="checklist-item-meta-item"><i class="fas fa-calendar"></i> ' + cd + '</div>'
             + '<div class="checklist-item-meta-item"><i class="fas fa-user-check"></i> ' + (c.cleaner_name || 'N/A') + '</div>'
             + (completedAt ? '<div class="checklist-item-meta-item"><i class="fas fa-clock"></i> ' + completedAt + '</div>' : '')
-            + '<div class="checklist-item-meta-item"><i class="fas fa-camera"></i> ' + ph.length + ' photos</div></div>'
+            + '<div class="checklist-item-meta-item"><i class="fas fa-camera"></i> ' + phCount + ' photos</div></div>'
             + '<div class="checklist-item-actions"><button class="btn btn-ghost btn-sm" onclick="openChecklistDetail(' + c.id + ')"><i class="fas fa-eye"></i> Détails</button>'
             + (st === 'pending' ? '<button class="btn btn-sm btn-validate" onclick="validateChecklist(' + c.id + ')"><i class="fas fa-check"></i> Valider</button><button class="btn btn-sm btn-reject" onclick="rejectChecklist(' + c.id + ')"><i class="fas fa-undo"></i> Complément</button>' : '')
             + '</div></div>';
