@@ -27131,8 +27131,9 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
       console.warn('⚠️ [SMS] Erreur non bloquante:', smsErr.message);
     }
 
-    // 📧 Envoi par EMAIL — quand on a une vraie adresse (typiquement BHGuest/direct,
-    // ou alias Booking). Jamais Airbnb (pas d'email réel + règles OTA off-platform).
+    // 📧 Envoi par EMAIL — UNIQUEMENT pour les résas où l'email est le vrai canal
+    // (direct / BHGuest / manuel). JAMAIS pour les OTA (Booking, Airbnb, Expedia…) :
+    // le voyageur reçoit déjà le message dans sa messagerie OTA → l'email ferait doublon.
     try {
       let guestEmail = conv.guest_email || null;
       if (!guestEmail && conv.id) {
@@ -27146,9 +27147,15 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
         guestEmail = emRow.rows[0]?.guest_email || null;
       }
       const convPlatform2 = (conv.platform || conv.channex_platform || conv.ota_name || '').toLowerCase();
-      const isAirbnb2 = convPlatform2.includes('airbnb') || convPlatform2 === 'abb';
+      // Plateformes où l'email est légitime (canal direct, pas d'OTA derrière)
+      const isDirectOrBHGuest = convPlatform2 === '' || convPlatform2 === 'direct'
+        || convPlatform2 === 'manuel' || convPlatform2 === 'manual'
+        || convPlatform2.includes('guest_app') || convPlatform2.includes('bhguest')
+        || convPlatform2.includes('boostinghost');
+      // Garde-fou : ne jamais écrire à un alias e-mail OTA (même si la plateforme est mal renseignée)
+      const isOtaAliasEmail = /airbnb|booking\.com|guest\.booking|expedia|vrbo|abritel|homeaway|agoda/i.test(guestEmail || '');
       const emailValid = guestEmail && guestEmail.includes('@') && guestEmail.length >= 5
-        && !/airbnb/i.test(guestEmail) && !isAirbnb2;
+        && isDirectOrBHGuest && !isOtaAliasEmail;
       if (emailValid) {
         const propName = property?.name || conv.property_name || '';
         const htmlMsg = String(msg).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g, '<br>');
