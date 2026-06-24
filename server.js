@@ -2191,6 +2191,7 @@ ON invoice_download_tokens(token);
         CREATE INDEX IF NOT EXISTS idx_invoice_requests_uid ON invoice_requests(reservation_uid);
       `);
       console.log('✅ Table invoice_requests OK');
+      await pool.query(`ALTER TABLE invoice_requests ADD COLUMN IF NOT EXISTS host_notified_no_email BOOLEAN DEFAULT FALSE`).catch(()=>{});
     } catch(e) { console.log('ℹ️ invoice_requests déjà existante:', e.message); }
 
     // ✅ Migration : colonnes pour régénération automatique des liens Stripe
@@ -27906,6 +27907,28 @@ async function runInvoiceQueue(mode) {
 
         if (!clientEmail || !clientEmail.includes('@') || clientEmail.length < 5) {
           console.warn(`⚠️ [INVOICE CRON] Email invalide ou manquant pour demande ${req.id}: "${clientEmail}"`);
+          // Le voyageur a demandé une facture mais on n'a pas d'email exploitable
+          // (fréquent sur Booking). On prévient l'hôte UNE fois pour qu'il la génère
+          // manuellement, au lieu de laisser la demande bloquée en silence.
+          if (!req.host_notified_no_email) {
+            try {
+              const toks = await pool.query(
+                'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+                [req.user_id]
+              );
+              const guestLabel = req.client_name || req.guest_name || 'Un voyageur';
+              const propLabel = req.property_name ? ' — ' + req.property_name : '';
+              for (const t of toks.rows) {
+                await sendNotificationLogged(
+                  t.fcm_token,
+                  '🧾 Facture à envoyer manuellement',
+                  `${guestLabel}${propLabel} a demandé une facture, mais aucun email n'est disponible. Génère-la depuis la conversation.`,
+                  { type: 'invoice_no_email', conversation_id: String(req.conversation_id), user_id: req.user_id, screen: 'messages' }
+                );
+              }
+              await pool.query('UPDATE invoice_requests SET host_notified_no_email = TRUE, updated_at = NOW() WHERE id = $1', [req.id]);
+            } catch (nErr) { console.warn('⚠️ [INVOICE CRON] Notif email manquant:', nErr.message); }
+          }
           continue;
         }
 

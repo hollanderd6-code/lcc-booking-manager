@@ -13,6 +13,27 @@ const stripe = process.env.STRIPE_SECRET_KEY
   : null;
 
 // ============================================
+// 🧾 Détection d'une demande de facture
+// Une demande de facture ne doit JAMAIS escalader (filet de sécurité
+// si Groq escalade à tort ou ne répond pas).
+// ============================================
+function isInvoiceRequest(message) {
+  if (!message || typeof message !== 'string') return false;
+  const m = message.toLowerCase();
+  return /\b(facture|factur|invoice|rechnung|factura|fattura|receipt|reçu|recu|justificatif)\b/.test(m);
+}
+
+const INVOICE_CONFIRM = {
+  fr: `Bien noté, je m'occupe de votre facture 😊 Elle vous sera envoyée par email très prochainement.`,
+  en: `Noted, I'll take care of your invoice 😊 It will be sent to you by email very shortly.`,
+  es: `Anotado, me encargo de su factura 😊 Se la enviaremos por email muy pronto.`,
+  it: `Annotato, mi occupo della sua fattura 😊 Le verrà inviata via email a breve.`,
+  de: `Notiert, ich kümmere mich um Ihre Rechnung 😊 Sie wird Ihnen in Kürze per E-Mail zugesandt.`,
+  pt: `Anotado, vou tratar da sua fatura 😊 Será enviada por email muito em breve.`,
+  nl: `Genoteerd, ik regel uw factuur 😊 Deze wordt u zeer binnenkort per e-mail toegestuurd.`,
+};
+
+// ============================================
 // ⏳ DEBOUNCE — Grouper les messages rapprochés
 // ============================================
 
@@ -758,13 +779,21 @@ async function handleIncomingMessage(message, conversation, pool, io) {
 
     // ─── Appel Groq ───────────────────────────────────────────────
     console.log('🚀 [HANDLER] → Groq AI');
-    const aiResponse = await getGroqResponse(message.message, context, messageHistory, fewShotExamples);
+    let aiResponse = await getGroqResponse(message.message, context, messageHistory, fewShotExamples);
 
     if (aiResponse) {
       if (aiResponse.trim() === '[ESCALADE]' || aiResponse.includes('[ESCALADE]')) {
-        console.log('🔄 [HANDLER] Groq → escalade');
-        await escalateToOwner(conversation, pool, io, language, channexId);
-        return false;
+        // 🧾 Filet de sécurité : une demande de facture ne doit jamais escalader.
+        if (isInvoiceRequest(message.message)) {
+          console.log('🧾 [HANDLER] Groq a voulu escalader une demande de facture → on force le flux FACTURE');
+          const lang = (conversation.language || 'fr');
+          aiResponse = (INVOICE_CONFIRM[lang] || INVOICE_CONFIRM.fr) + '\n[FACTURE]';
+          // pas de return : on laisse l'exécution atteindre le bloc [FACTURE] plus bas
+        } else {
+          console.log('🔄 [HANDLER] Groq → escalade');
+          await escalateToOwner(conversation, pool, io, language, channexId);
+          return false;
+        }
       }
 
       // ─── Détection tag [QUESTION_HOTE:...] ────────────────────
@@ -1193,6 +1222,36 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     }
 
     // ─── Fallback : escalade si Groq ne répond pas ────────────────
+    // 🧾 Sauf demande de facture : on enregistre la demande et on confirme, sans escalader.
+    if (isInvoiceRequest(message.message)) {
+      console.log('🧾 [HANDLER] Groq sans réponse sur une demande de facture → enregistrement sans escalade');
+      try {
+        const existing = await pool.query(
+          `SELECT id FROM invoice_requests WHERE conversation_id = $1 AND status = 'pending' LIMIT 1`,
+          [conversation.id]
+        );
+        if (existing.rows.length === 0) {
+          const resRow = await pool.query(
+            `SELECT r.uid FROM reservations r
+             WHERE (r.channex_booking_id = $1 AND $1 IS NOT NULL)
+                OR (r.property_id = $2 AND DATE(r.start_date) = DATE($3) AND r.status != 'cancelled')
+             ORDER BY (r.channex_booking_id = $1) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
+            [conversation.channex_booking_id || null, conversation.property_id, conversation.reservation_start_date]
+          );
+          await pool.query(
+            `INSERT INTO invoice_requests
+             (conversation_id, reservation_uid, user_id, property_id, client_name, client_email, status, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,'pending',NOW(),NOW())`,
+            [conversation.id, resRow.rows[0]?.uid || null, conversation.user_id, conversation.property_id,
+             conversation.guest_name || null, conversation.guest_email || null]
+          );
+          console.log(`🧾 [FACTURE] Demande créée (fallback) pour conv ${conversation.id}`);
+        }
+      } catch (fErr) { console.warn('⚠️ [FACTURE] Erreur création demande (fallback):', fErr.message); }
+      const lang = (conversation.language || 'fr');
+      await sendBotMessage(conversation.id, INVOICE_CONFIRM[lang] || INVOICE_CONFIRM.fr, pool, io, channexId);
+      return true;
+    }
     console.log('⚠️ [HANDLER] Groq sans réponse → escalade');
     await escalateToOwner(conversation, pool, io, language, channexId);
     return false;
