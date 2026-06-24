@@ -2305,9 +2305,16 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
       if (sep2) sep2.style.display = 'none';
     }
 
-    // Garder chatPropertyName visible
+    // Garder chatPropertyName visible (+ badge ANNULÉ si réservation annulée)
     var propEl = document.getElementById('chatPropertyName');
-    if (conv && propEl) propEl.textContent = conv.property_name || '';
+    if (conv && propEl) {
+      var _pn = (conv.property_name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      if (conv.status === 'cancelled') {
+        propEl.innerHTML = '<span style="display:inline-block;font-size:10px;font-weight:800;color:#DC2626;background:#FEF2F2;border:1px solid #FECACA;border-radius:5px;padding:1px 6px;margin-right:6px;vertical-align:middle;">⊘ ANNULÉ</span>' + _pn;
+      } else {
+        propEl.textContent = conv.property_name || '';
+      }
+    }
 
     // Stocker la conv courante pour la facture
     window.currentChatConv = conv || null;
