@@ -27049,6 +27049,43 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
       console.warn('⚠️ [SMS] Erreur non bloquante:', smsErr.message);
     }
 
+    // 📧 Envoi par EMAIL — quand on a une vraie adresse (typiquement BHGuest/direct,
+    // ou alias Booking). Jamais Airbnb (pas d'email réel + règles OTA off-platform).
+    try {
+      let guestEmail = conv.guest_email || null;
+      if (!guestEmail && conv.id) {
+        const emRow = await pool.query(
+          `SELECT r.guest_email FROM reservations r
+           WHERE ($3::text IS NOT NULL AND r.channex_booking_id = $3)
+              OR (r.property_id = $1 AND DATE(r.start_date) = DATE($2) AND r.status != 'cancelled')
+           ORDER BY (r.channex_booking_id = $3) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
+          [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
+        ).catch(() => ({ rows: [] }));
+        guestEmail = emRow.rows[0]?.guest_email || null;
+      }
+      const convPlatform2 = (conv.platform || conv.channex_platform || conv.ota_name || '').toLowerCase();
+      const isAirbnb2 = convPlatform2.includes('airbnb') || convPlatform2 === 'abb';
+      const emailValid = guestEmail && guestEmail.includes('@') && guestEmail.length >= 5
+        && !/airbnb/i.test(guestEmail) && !isAirbnb2;
+      if (emailValid) {
+        const propName = property?.name || conv.property_name || '';
+        const htmlMsg = String(msg).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g, '<br>');
+        await sendEmailViaBrevo({
+          to: guestEmail,
+          subject: `Votre séjour${propName ? ' — ' + propName : ''}`,
+          html: bhEmailTemplate({
+            icon: '💬',
+            title: propName || 'Votre séjour',
+            subtitle: '',
+            bodyHtml: `<p>${htmlMsg}</p>`
+          })
+        });
+        console.log(`📧 [TPL EMAIL] Envoyé à ${guestEmail} (conv ${conv.id})`);
+      }
+    } catch(emailErr) {
+      console.warn('⚠️ [TPL EMAIL] Erreur non bloquante:', emailErr.message);
+    }
+
   } catch(e) {
     status = 'error';
     errorMessage = e.message;
