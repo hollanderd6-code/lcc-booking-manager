@@ -27904,32 +27904,11 @@ async function runInvoiceQueue(mode) {
         const userId = req.user_id;
         const clientName = req.client_name || req.guest_name || 'Client';
         const clientEmail = (req.client_email || req.guest_email || '').trim();
-
-        if (!clientEmail || !clientEmail.includes('@') || clientEmail.length < 5) {
-          console.warn(`⚠️ [INVOICE CRON] Email invalide ou manquant pour demande ${req.id}: "${clientEmail}"`);
-          // Le voyageur a demandé une facture mais on n'a pas d'email exploitable
-          // (fréquent sur Booking). On prévient l'hôte UNE fois pour qu'il la génère
-          // manuellement, au lieu de laisser la demande bloquée en silence.
-          if (!req.host_notified_no_email) {
-            try {
-              const toks = await pool.query(
-                'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-                [req.user_id]
-              );
-              const guestLabel = req.client_name || req.guest_name || 'Un voyageur';
-              const propLabel = req.property_name ? ' — ' + req.property_name : '';
-              for (const t of toks.rows) {
-                await sendNotificationLogged(
-                  t.fcm_token,
-                  '🧾 Facture à envoyer manuellement',
-                  `${guestLabel}${propLabel} a demandé une facture, mais aucun email n'est disponible. Génère-la depuis la conversation.`,
-                  { type: 'invoice_no_email', conversation_id: String(req.conversation_id), user_id: req.user_id, screen: 'messages' }
-                );
-              }
-              await pool.query('UPDATE invoice_requests SET host_notified_no_email = TRUE, updated_at = NOW() WHERE id = $1', [req.id]);
-            } catch (nErr) { console.warn('⚠️ [INVOICE CRON] Notif email manquant:', nErr.message); }
-          }
-          continue;
+        // Email exploitable ? Si NON (fréquent sur Booking), on n'abandonne pas :
+        // on génère quand même la facture et on envoie le lien directement DANS la conversation.
+        const hasEmail = !!(clientEmail && clientEmail.includes('@') && clientEmail.length >= 5);
+        if (!hasEmail) {
+          console.log(`ℹ️ [INVOICE CRON] Pas d'email pour demande ${req.id} → envoi dans la conversation`);
         }
 
         // Calculer les nuits
@@ -28017,28 +27996,30 @@ async function runInvoiceQueue(mode) {
         ).catch(() => {});
         const downloadUrl = `${appUrl}/api/invoice/download/${publicToken}`;
 
-        const emailHtml = bhEmailTemplate({
-          icon: '📄',
-          title: `Facture ${invoiceNumber}`,
-          subtitle: req.property_name || '',
-          bodyHtml: `
-            <p>Bonjour <strong>${clientName}</strong>,</p>
-            <p>Comme convenu, veuillez trouver ci-joint votre facture pour votre séjour à <strong>${req.property_name || ''}</strong> du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date(req.end_date).toLocaleDateString('fr-FR')}.</p>
-            <div style="text-align:center;margin:24px 0;">
-              <a href="${downloadUrl}" style="display:inline-block;padding:14px 32px;background:#1A7A5E;color:white;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
-                📥 Télécharger ma facture
-              </a>
-            </div>
-            <p style="font-size:12px;color:#9ca3af;text-align:center;">Lien valable 1 an</p>
-            <p style="font-size:14px;color:#666;">Cordialement,</p>
-          `
-        });
+        if (hasEmail) {
+          const emailHtml = bhEmailTemplate({
+            icon: '📄',
+            title: `Facture ${invoiceNumber}`,
+            subtitle: req.property_name || '',
+            bodyHtml: `
+              <p>Bonjour <strong>${clientName}</strong>,</p>
+              <p>Comme convenu, veuillez trouver ci-joint votre facture pour votre séjour à <strong>${req.property_name || ''}</strong> du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date(req.end_date).toLocaleDateString('fr-FR')}.</p>
+              <div style="text-align:center;margin:24px 0;">
+                <a href="${downloadUrl}" style="display:inline-block;padding:14px 32px;background:#1A7A5E;color:white;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
+                  📥 Télécharger ma facture
+                </a>
+              </div>
+              <p style="font-size:12px;color:#9ca3af;text-align:center;">Lien valable 1 an</p>
+              <p style="font-size:14px;color:#666;">Cordialement,</p>
+            `
+          });
 
-        await sendEmailViaBrevo({
-          to: clientEmail,
-          subject: `Votre facture ${invoiceNumber} – ${req.property_name || ''}`,
-          html: emailHtml
-        });
+          await sendEmailViaBrevo({
+            to: clientEmail,
+            subject: `Votre facture ${invoiceNumber} – ${req.property_name || ''}`,
+            html: emailHtml
+          });
+        }
 
         // Marquer comme envoyée
         await pool.query(
@@ -28058,17 +28039,26 @@ async function runInvoiceQueue(mode) {
           const convId = req.conversation_id || convRow.rows[0]?.id;
           const channexBookingId = convRow.rows[0]?.channex_booking_id;
 
+          const stayLabel = `Séjour du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date(req.end_date).toLocaleDateString('fr-FR')}`;
+
           if (convId) {
-            const invoiceMsg = `📄 Votre facture a été envoyée par email à ${clientEmail}.
+            // Avec email → on confirme l'envoi email. Sans email → on met le lien direct dans la conversation.
+            const invoiceMsg = hasEmail
+              ? `📄 Votre facture a été envoyée par email à ${clientEmail}.
 
 Numéro : ${invoiceNumber}
-Séjour du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date(req.end_date).toLocaleDateString('fr-FR')}`;
+${stayLabel}`
+              : `📄 Voici votre facture (n° ${invoiceNumber}) pour votre ${stayLabel.toLowerCase()}.
+
+👉 Télécharger : ${downloadUrl}`;
             await sendAutomatedMessage(convId, invoiceMsg, io);
 
             // Envoyer aussi via Channex si booking_id disponible
             if (channexBookingId) {
               try {
-                const channexMsg = `Votre facture a été envoyée par email. Référence : ${invoiceNumber}`;
+                const channexMsg = hasEmail
+                  ? `Votre facture a été envoyée par email. Référence : ${invoiceNumber}`
+                  : `Voici votre facture (n° ${invoiceNumber}). Téléchargement : ${downloadUrl}`;
                 await channexAPI.post(`/bookings/${channexBookingId}/messages`, {
                   message: { content: channexMsg }
                 });
@@ -28077,12 +28067,33 @@ Séjour du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date
                 console.warn(`⚠️ [INVOICE CRON] Erreur message Channex (non bloquant):`, chErr.message);
               }
             }
+          } else if (!hasEmail) {
+            // Aucun email ET aucune conversation pour livrer → là seulement, on prévient l'hôte.
+            if (!req.host_notified_no_email) {
+              try {
+                const toks = await pool.query(
+                  'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+                  [req.user_id]
+                );
+                const guestLabel = req.client_name || req.guest_name || 'Un voyageur';
+                const propLabel = req.property_name ? ' — ' + req.property_name : '';
+                for (const t of toks.rows) {
+                  await sendNotificationLogged(
+                    t.fcm_token,
+                    '🧾 Facture à envoyer manuellement',
+                    `${guestLabel}${propLabel} a demandé une facture mais ni email ni conversation ne sont disponibles. À envoyer manuellement.`,
+                    { type: 'invoice_no_email', conversation_id: String(req.conversation_id || ''), user_id: req.user_id, screen: 'messages' }
+                  );
+                }
+                await pool.query('UPDATE invoice_requests SET host_notified_no_email = TRUE, updated_at = NOW() WHERE id = $1', [req.id]);
+              } catch (nErr) { console.warn('⚠️ [INVOICE CRON] Notif email/conv manquants:', nErr.message); }
+            }
           }
         } catch(msgErr) {
           console.warn('⚠️ [INVOICE CRON] Erreur envoi message conv (non bloquant):', msgErr.message);
         }
 
-        console.log(`✅ [INVOICE CRON] Facture ${invoiceNumber} envoyée à ${clientEmail}`);
+        console.log(`✅ [INVOICE CRON] Facture ${invoiceNumber} ${hasEmail ? 'envoyée à ' + clientEmail : 'envoyée dans la conversation (pas d\'email)'}`);
       } catch(e) {
         console.error(`❌ [INVOICE CRON] Erreur facture req ${req.id}:`, e.message);
       }
