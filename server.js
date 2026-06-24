@@ -18253,12 +18253,33 @@ app.put('/api/properties-order/bulk', authenticateAny, async (req, res) => {
       return res.status(400).json({ error: 'Ordre invalide' });
     }
 
-    // Mettre à jour display_order pour chaque logement
-    for (let i = 0; i < order.length; i++) {
-      await pool.query(
-        `UPDATE properties SET display_order = $1 WHERE id = $2 AND user_id = ANY($3::text[])`,
-        [i + 1, order[i], agencyIds]
-      );
+    // Mise à jour en 2 temps dans une transaction pour ne jamais violer
+    // la contrainte d'unicité (user_id, display_order) pendant le ré-ordonnancement :
+    //   1) on déplace temporairement tous les ordres en négatif (zone sans collision)
+    //   2) on pose les ordres définitifs (1, 2, 3, …)
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Phase 1 : décalage temporaire en négatif (offset pour éviter toute collision)
+      for (let i = 0; i < order.length; i++) {
+        await client.query(
+          `UPDATE properties SET display_order = $1 WHERE id = $2 AND user_id = ANY($3::text[])`,
+          [-(i + 1), order[i], agencyIds]
+        );
+      }
+      // Phase 2 : ordres définitifs
+      for (let i = 0; i < order.length; i++) {
+        await client.query(
+          `UPDATE properties SET display_order = $1 WHERE id = $2 AND user_id = ANY($3::text[])`,
+          [i + 1, order[i], agencyIds]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
     }
 
     console.log(`✅ [REORDER] Ordre sauvegardé pour user ${userId}: ${order.join(', ')}`);
