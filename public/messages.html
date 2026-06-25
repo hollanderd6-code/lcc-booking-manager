@@ -1539,6 +1539,7 @@ function insertTplVar(variable) {
             <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Condition d'envoi</label>
             <select id="tplCondition" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
               <option value="always">Toujours envoyer</option>
+              <option value="checkin_complete">Seulement si check-in complet (caution + fiche de police étrangers)</option>
               <option value="deposit_pending">Seulement si caution non payée</option>
               <option value="deposit_active">Seulement si caution active (capturée)</option>
               <option value="platform_booking">Seulement si Booking.com</option>
@@ -4767,7 +4768,7 @@ async function loadTemplates() {
               const isAfter  = (t.trigger_type||'').startsWith('after_');
               return (isBefore||isAfter) && d > 0 ? ` · J${isBefore?'-':'+'}${d}` : '';
             })()}
-            ${t.send_condition && t.send_condition !== 'always' ? ` · <span style="color:#92400E;background:#FEF3C7;padding:1px 6px;border-radius:99px;font-size:10px;">${{'deposit_pending':'Caution non payée','deposit_active':'Caution active','platform_booking':'Booking','platform_airbnb':'Airbnb','platform_direct':'Direct'}[t.send_condition]||t.send_condition}</span>` : ''}
+            ${t.send_condition && t.send_condition !== 'always' ? ` · <span style="color:#92400E;background:#FEF3C7;padding:1px 6px;border-radius:99px;font-size:10px;">${{'deposit_pending':'Caution non payée','deposit_active':'Caution active','checkin_complete':'Check-in complet','platform_booking':'Booking','platform_airbnb':'Airbnb','platform_direct':'Direct'}[t.send_condition]||t.send_condition}</span>` : ''}
             ${(() => {
               const ids = t.property_ids
                 ? (Array.isArray(t.property_ids) ? t.property_ids : (() => { try { return JSON.parse(t.property_ids); } catch(e) { return []; } })())

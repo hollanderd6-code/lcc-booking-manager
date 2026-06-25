@@ -1098,6 +1098,8 @@ function openDetail(r) {
       ${_country ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Pays</span><span class="bh-modal-row-val">${_flag} ${_country}</span></div>` : ''}
     </div></div>` : ''}
 
+    <div id="policeSection"></div>
+
     <div class="bh-modal-section"><div class="bh-modal-label">Réservation</div><div class="bh-modal-card">
       <div class="bh-modal-row"><span class="bh-modal-row-label">Plateforme</span><span class="bh-modal-row-val">${pltLabel(r)}</span></div>
       ${_created ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Réservé le</span><span class="bh-modal-row-val">${fmtDate(String(_created).split('T')[0])}</span></div>` : ''}
@@ -1116,6 +1118,68 @@ function openDetail(r) {
   if (sheet) sheet.classList.add('open');
   overlay.onclick = function(e) { if (e.target === overlay) closeDetail(); };
   document.body.style.overflow = 'hidden';
+  try { loadPoliceRecord(r); } catch(_) {}
+}
+
+// ── Fiche de police : chargement + affichage dans le détail réservation ──
+function _polEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _polFmtDate(d){ if(!d) return '—'; try { return new Date(d).toLocaleDateString('fr-FR'); } catch(_) { return String(d).slice(0,10); } }
+async function loadPoliceRecord(r){
+  const sec = document.getElementById('policeSection');
+  if (!sec) return;
+  const country = (r.guest_country||r.guestCountry||'').trim().toUpperCase();
+  const isForeigner = country && country !== 'FR' && country !== 'FRA' && country !== 'FRANCE';
+  const uid = r.uid || r.reservation_uid || '';
+  const propertyId = r.propertyId || r.property_id || '';
+  const start = (r.start||r.startDate||'').toString().split('T')[0];
+  // Si voyageur français ET pas de pays étranger, on n'affiche rien sauf si une fiche existe quand même
+  let records = [];
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const qs = uid ? ('uid='+encodeURIComponent(uid)) : ('propertyId='+encodeURIComponent(propertyId)+'&start='+encodeURIComponent(start));
+    const res = await fetch((window.API_URL||'')+'/api/police-records?'+qs, { headers: { 'Authorization': 'Bearer '+token } });
+    const d = await res.json();
+    records = (d && d.records) ? d.records : [];
+  } catch(_) {}
+
+  if (!isForeigner && records.length === 0) { sec.innerHTML = ''; return; }
+
+  let inner;
+  if (records.length === 0) {
+    inner = `<div class="bh-modal-card"><div class="bh-modal-row">
+      <span class="bh-modal-row-label">Fiche individuelle de police</span>
+      <span class="bh-modal-row-val" style="color:#D97706;font-weight:700;">⏳ En attente</span></div>
+      <div style="padding:0 14px 12px;font-size:12px;color:var(--text-muted);">Voyageur étranger — le check-in en ligne n'a pas encore été complété.</div>
+    </div>`;
+  } else {
+    inner = `<div class="bh-modal-card">` + records.map(rec => {
+      const name = _polEsc((rec.guest_prenoms||'')+' '+(rec.guest_nom||'')).trim() || '—';
+      const hasId = !!rec.id_document_url;
+      return `<div class="bh-modal-row"><span class="bh-modal-row-label">${name}</span>
+        <span class="bh-modal-row-val" style="color:var(--green);font-weight:700;">✓ Signée</span></div>
+        <div style="padding:4px 14px 12px;font-size:12.5px;color:var(--text);line-height:1.7;">
+          <div><b>Né(e) le</b> ${_polFmtDate(rec.guest_naissance_date)} à ${_polEsc(rec.guest_naissance_lieu)}</div>
+          <div><b>Nationalité</b> ${_polEsc(rec.guest_nationalite)}</div>
+          <div><b>Domicile</b> ${_polEsc(rec.guest_domicile)}</div>
+          ${rec.guest_tel?`<div><b>Tél</b> ${_polEsc(rec.guest_tel)}</div>`:''}
+          ${rec.guest_email?`<div><b>Email</b> ${_polEsc(rec.guest_email)}</div>`:''}
+          ${rec.enfants_moins_15?`<div><b>Enfants -15 ans</b> ${_polEsc(rec.enfants_moins_15)}</div>`:''}
+          <div style="color:var(--text-muted);margin-top:4px;">Signée le ${_polFmtDate(rec.signed_at)}${rec.signer_ip?' · IP '+_polEsc(rec.signer_ip):''}</div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+            ${rec.signature_data?`<button class="btn" style="font-size:12px;padding:6px 12px;background:var(--white);border:1px solid rgba(0,0,0,.12);color:var(--text);" onclick="viewPoliceSignature('${rec.id}')">✍️ Signature</button>`:''}
+            ${hasId?`<a class="btn" style="font-size:12px;padding:6px 12px;background:var(--white);border:1px solid rgba(0,0,0,.12);color:var(--text);text-decoration:none;" href="${_polEsc(rec.id_document_url)}" target="_blank">📄 Pièce d'identité</a>`:''}
+          </div>
+        </div>`;
+    }).join('<div style="border-top:1px solid rgba(0,0,0,.06);"></div>') + `</div>`;
+  }
+  sec.innerHTML = `<div class="bh-modal-section"><div class="bh-modal-label">Fiche de police</div>${inner}</div>`;
+  window._policeRecordsCache = records;
+}
+function viewPoliceSignature(id){
+  const rec = (window._policeRecordsCache||[]).find(x => String(x.id) === String(id));
+  if (!rec || !rec.signature_data) return;
+  const w = window.open('');
+  if (w) w.document.write('<title>Signature</title><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#F5F2EC;"><img src="'+rec.signature_data+'" style="max-width:92%;border:1px solid #ccc;border-radius:8px;background:#fff;"></body>');
 }
 function closeDetail() {
   const overlay = document.getElementById('detailOverlay');

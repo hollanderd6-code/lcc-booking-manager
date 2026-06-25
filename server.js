@@ -15333,6 +15333,34 @@ app.post('/api/checkin/:token', async (req, res) => {
   }
 });
 
+// GET hôte — récupérer la/les fiche(s) de police d'une réservation
+app.get('/api/police-records', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user?.id || req.userId;
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const { uid, propertyId, start } = req.query;
+    if (!uid && !(propertyId && start)) {
+      return res.status(400).json({ error: 'uid ou (propertyId + start) requis' });
+    }
+    const rows = await pool.query(
+      `SELECT id, guest_nom, guest_prenoms, guest_naissance_date, guest_naissance_lieu,
+              guest_nationalite, guest_domicile, guest_tel, guest_email,
+              date_arrivee, date_depart, enfants_moins_15,
+              signature_data, id_document_url, signer_ip, signed_at, status, expires_at
+       FROM police_records
+       WHERE user_id = ANY($1::text[])
+         AND ( ($2::text IS NOT NULL AND reservation_uid = $2)
+            OR ($3::text IS NOT NULL AND $4::text IS NOT NULL AND property_id = $3 AND date_arrivee = $4::date) )
+       ORDER BY created_at DESC`,
+      [agencyIds, uid || null, propertyId || null, start ? String(start).slice(0,10) : null]
+    );
+    res.json({ ok: true, records: rows.rows });
+  } catch (err) {
+    console.error('Erreur GET /api/police-records:', err);
+    res.status(500).json({ ok: false, error: 'Erreur serveur' });
+  }
+});
+
 // GET hôte — état du récapitulatif des arrivées
 app.get('/api/arrival/reservation/lookup',
   authenticateAny, requirePermission(pool, 'can_view_cleaning'), loadSubAccountData(pool),
