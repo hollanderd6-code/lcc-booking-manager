@@ -27005,110 +27005,104 @@ async function regenExpiredStripeLinks(pool) {
 async function shouldSkipForDepositCondition(pool, conv, sendCond) {
   if (!sendCond || sendCond === 'always') return { skip: false };
 
+  // Conditions multiples (cases à cocher) : liste séparée par virgules. Rétrocompatible avec une valeur unique.
+  let tokens = String(sendCond).split(',').map(s => s.trim()).filter(Boolean);
+  // Alias historique : checkin_complete = caution + fiche de police
+  if (tokens.includes('checkin_complete')) {
+    tokens = tokens.filter(t => t !== 'checkin_complete').concat(['deposit_active', 'police_complete']);
+  }
+  tokens = [...new Set(tokens)];
+  if (tokens.length === 0) return { skip: false };
+
   const platformRaw = (conv.platform || conv.channex_platform || conv.ota_name || '').toLowerCase().replace(/[_\-\s]/g, '');
   const isAirbnb   = platformRaw.includes('airbnb') || platformRaw === 'abb';
   const isBHGuest  = platformRaw.includes('boostinghost') || platformRaw === 'bhguest';
   const isBooking  = platformRaw.includes('booking') || platformRaw === 'bdc';
   const isDirect   = platformRaw === 'direct' || platformRaw === '';
 
-  // Filtres par plateforme
-  if (sendCond === 'platform_booking') {
-    if (!isBooking) return { skip: true, reason: `condition platform_booking non remplie (platform=${conv.platform})` };
-    return { skip: false };
-  }
-  if (sendCond === 'platform_airbnb') {
-    if (!isAirbnb) return { skip: true, reason: `condition platform_airbnb non remplie (platform=${conv.platform})` };
-    return { skip: false };
-  }
-  if (sendCond === 'platform_direct') {
-    if (!isDirect) return { skip: true, reason: `condition platform_direct non remplie (platform=${conv.platform})` };
-    return { skip: false };
+  // 1) Filtres plateforme (OU : au moins une plateforme cochée doit correspondre)
+  const platTokens = tokens.filter(t => t.startsWith('platform_'));
+  if (platTokens.length) {
+    const ok = platTokens.some(t =>
+      (t === 'platform_booking' && isBooking) ||
+      (t === 'platform_airbnb'  && isAirbnb)  ||
+      (t === 'platform_direct'  && (isDirect || isBHGuest))
+    );
+    if (!ok) return { skip: true, reason: `plateforme non autorisée (platform=${conv.platform})` };
   }
 
-  // Vérification caution
-  if (sendCond === 'deposit_captured' || sendCond === 'deposit_active') {
-    // Airbnb : gère sa propre garantie → toujours autoriser
-    if (isAirbnb) return { skip: false, reason: 'Airbnb — deposit_condition ignorée' };
-    // BHGuest : paiement Stripe = confirmation → toujours autoriser
-    if (isBHGuest) return { skip: false, reason: 'BHGuest — deposit_condition ignorée' };
+  // 2) Exigences (ET) : toutes doivent être satisfaites
+  const reqTokens = tokens.filter(t => !t.startsWith('platform_'));
+  if (reqTokens.length === 0) return { skip: false };
 
-    // Autres plateformes : vérifier le deposit en DB
+  // Contexte réservation (une seule requête)
+  let resa = null;
+  try {
+    const resRow = await pool.query(
+      `SELECT r.uid, r.guest_country, p.deposit_amount
+       FROM reservations r
+       LEFT JOIN properties p ON p.id = r.property_id
+       WHERE ($3::text IS NOT NULL AND r.channex_booking_id = $3)
+          OR (r.property_id = $1 AND DATE(r.start_date) = DATE($2) AND r.status != 'cancelled')
+       ORDER BY (r.channex_booking_id = $3) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
+      [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
+    ).catch(() => ({ rows: [] }));
+    resa = resRow.rows[0] || null;
+  } catch(e) {
+    console.warn('⚠️ [send_condition] Erreur lookup résa:', e.message);
+    return { skip: false }; // erreur DB → ne pas bloquer
+  }
+  const resaUid = resa?.uid || null;
+  const country = (resa?.guest_country || '').trim().toUpperCase();
+  const isForeigner = country && country !== 'FR' && country !== 'FRA' && country !== 'FRANCE';
+  const depositAmt = resa?.deposit_amount ? parseFloat(resa.deposit_amount) : 0;
+
+  async function depositStatus() {
+    if (!resaUid) return null;
+    const dep = await pool.query(
+      `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
+      [resaUid]
+    ).catch(() => ({ rows: [] }));
+    return dep.rows[0]?.status || null;
+  }
+
+  for (const t of reqTokens) {
     try {
-      const resRow = await pool.query(
-        `SELECT uid FROM reservations
-         WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
-            OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
-         ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC LIMIT 1`,
-        [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
-      ).catch(() => ({ rows: [] }));
-
-      if (!resRow.rows[0]) {
-        return { skip: true, reason: 'aucune réservation trouvée pour vérif caution' };
-      }
-      const dep = await pool.query(
-        `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
-        [resRow.rows[0].uid]
-      ).catch(() => ({ rows: [] }));
-      const depStatus = dep.rows[0]?.status;
-      if (depStatus !== 'captured' && depStatus !== 'authorized') {
-        return { skip: true, reason: `caution non validée (status=${depStatus || 'aucune'})` };
-      }
-    } catch(e) {
-      console.warn('⚠️ [shouldSkipForDepositCondition] Erreur vérif caution:', e.message);
-      // En cas d'erreur DB : ne pas bloquer l'envoi
-    }
-    return { skip: false };
-  }
-
-  // ── Check-in complet : caution (si applicable) + fiche de police (étrangers) ──
-  if (sendCond === 'checkin_complete') {
-    try {
-      const resRow = await pool.query(
-        `SELECT r.uid, r.guest_country, p.deposit_amount
-         FROM reservations r
-         LEFT JOIN properties p ON p.id = r.property_id
-         WHERE ($3::text IS NOT NULL AND r.channex_booking_id = $3)
-            OR (r.property_id = $1 AND DATE(r.start_date) = DATE($2) AND r.status != 'cancelled')
-         ORDER BY (r.channex_booking_id = $3) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
-        [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
-      ).catch(() => ({ rows: [] }));
-      const resa = resRow.rows[0];
-      const resaUid = resa?.uid || null;
-      const country = (resa?.guest_country || '').trim().toUpperCase();
-      const isForeigner = country && country !== 'FR' && country !== 'FRA' && country !== 'FRANCE';
-
-      // 1) Caution : Airbnb/BHGuest exemptés ; sinon si deposit_amount>0 → exiger authorized/captured
-      const depositAmt = resa?.deposit_amount ? parseFloat(resa.deposit_amount) : 0;
-      const needsDeposit = !isAirbnb && !isBHGuest && depositAmt > 0;
-      if (needsDeposit) {
-        const dep = await pool.query(
-          `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
-          [resaUid]
-        ).catch(() => ({ rows: [] }));
-        const depStatus = dep.rows[0]?.status;
-        if (depStatus !== 'captured' && depStatus !== 'authorized') {
-          return { skip: true, reason: `check-in incomplet : caution non validée (status=${depStatus || 'aucune'})` };
+      if (t === 'deposit_active' || t === 'deposit_captured') {
+        // Caution validée — Airbnb/BHGuest exemptés ; ignorée si le logement n'a pas de caution
+        if (!isAirbnb && !isBHGuest && depositAmt > 0) {
+          const st = await depositStatus();
+          if (st !== 'captured' && st !== 'authorized') {
+            return { skip: true, reason: `caution non validée (status=${st || 'aucune'})` };
+          }
         }
-      }
-
-      // 2) Fiche de police : exigée uniquement pour les voyageurs étrangers
-      if (isForeigner) {
-        const pr = await pool.query(
-          `SELECT id FROM police_records
-           WHERE status = 'signed'
-             AND (conversation_id = $1 OR (reservation_uid IS NOT NULL AND reservation_uid = $2))
-           LIMIT 1`,
-          [conv.id || null, resaUid]
-        ).catch(() => ({ rows: [] }));
-        if (pr.rows.length === 0) {
-          return { skip: true, reason: 'check-in incomplet : fiche de police manquante (voyageur étranger)' };
+      } else if (t === 'deposit_pending') {
+        // Caution PAS encore validée (relances)
+        if (!isAirbnb && !isBHGuest && depositAmt > 0) {
+          const st = await depositStatus();
+          if (st === 'captured' || st === 'authorized') {
+            return { skip: true, reason: 'caution déjà validée' };
+          }
+        }
+      } else if (t === 'police_complete') {
+        // Fiche de police — exigée uniquement pour les voyageurs étrangers
+        if (isForeigner) {
+          const pr = await pool.query(
+            `SELECT id FROM police_records
+             WHERE status = 'signed'
+               AND (conversation_id = $1 OR (reservation_uid IS NOT NULL AND reservation_uid = $2))
+             LIMIT 1`,
+            [conv.id || null, resaUid]
+          ).catch(() => ({ rows: [] }));
+          if (pr.rows.length === 0) {
+            return { skip: true, reason: 'fiche de police manquante (voyageur étranger)' };
+          }
         }
       }
     } catch(e) {
-      console.warn('⚠️ [checkin_complete] Erreur vérif:', e.message);
-      // En cas d'erreur DB : ne pas bloquer l'envoi
+      console.warn(`⚠️ [send_condition] Erreur condition ${t}:`, e.message);
+      // erreur DB sur une condition → ne pas bloquer
     }
-    return { skip: false };
   }
 
   return { skip: false };

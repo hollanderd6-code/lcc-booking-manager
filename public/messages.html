@@ -1536,17 +1536,25 @@ function insertTplVar(variable) {
 
           <!-- Condition d'envoi -->
           <div style="margin-bottom:14px;">
-            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Condition d'envoi</label>
-            <select id="tplCondition" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;">
-              <option value="always">Toujours envoyer</option>
-              <option value="checkin_complete">Seulement si check-in complet (caution + fiche de police étrangers)</option>
-              <option value="deposit_pending">Seulement si caution non payée</option>
-              <option value="deposit_active">Seulement si caution active (capturée)</option>
-              <option value="platform_booking">Seulement si Booking.com</option>
-              <option value="platform_airbnb">Seulement si Airbnb</option>
-              <option value="platform_direct">Seulement si Direct</option>
-            </select>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Conditions d'envoi</label>
+            <div style="font-size:11.5px;color:#9CA3AF;margin-bottom:8px;line-height:1.5;">Coche une ou plusieurs conditions. Le message ne part que si <b>toutes</b> sont remplies. Sans coche : envoyé toujours.</div>
+            <div id="tplConditions" style="display:flex;flex-direction:column;gap:7px;">
+              <div style="font-size:10.5px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;">Avant d'envoyer, exiger…</div>
+              <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="deposit_active"><span>💳 Caution validée <span style="color:#9CA3AF;">(si le logement en a une, hors Airbnb)</span></span></label>
+              <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="police_complete"><span>🛂 Fiche de police signée <span style="color:#9CA3AF;">(voyageurs étrangers)</span></span></label>
+              <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="deposit_pending"><span>⏳ Caution <b>non</b> encore payée <span style="color:#9CA3AF;">(relances)</span></span></label>
+              <div style="font-size:10.5px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;margin-top:8px;">Limiter à la plateforme…</div>
+              <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="platform_booking"><span>Booking.com</span></label>
+              <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="platform_airbnb"><span>Airbnb</span></label>
+              <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="platform_direct"><span>Direct / BHGuest</span></label>
+            </div>
           </div>
+          <style>
+            .tpl-cond-row{display:flex;align-items:center;gap:9px;font-size:13px;color:#374151;cursor:pointer;padding:7px 10px;border:1px solid #e5e7eb;border-radius:9px;background:#fff;transition:.12s;font-family:'DM Sans',sans-serif;}
+            .tpl-cond-row:hover{background:#F9FAFB;}
+            .tpl-cond-row input{width:17px;height:17px;accent-color:#1A7A5E;flex-shrink:0;cursor:pointer;}
+            .tpl-cond-row span{line-height:1.35;}
+          </style>
 
           <div style="margin-bottom:8px;">
             <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Message</label>
@@ -4768,7 +4776,7 @@ async function loadTemplates() {
               const isAfter  = (t.trigger_type||'').startsWith('after_');
               return (isBefore||isAfter) && d > 0 ? ` · J${isBefore?'-':'+'}${d}` : '';
             })()}
-            ${t.send_condition && t.send_condition !== 'always' ? ` · <span style="color:#92400E;background:#FEF3C7;padding:1px 6px;border-radius:99px;font-size:10px;">${{'deposit_pending':'Caution non payée','deposit_active':'Caution active','checkin_complete':'Check-in complet','platform_booking':'Booking','platform_airbnb':'Airbnb','platform_direct':'Direct'}[t.send_condition]||t.send_condition}</span>` : ''}
+            ${t.send_condition && t.send_condition !== 'always' ? String(t.send_condition).split(',').map(x => x.trim()).filter(Boolean).map(x => ` · <span style="color:#92400E;background:#FEF3C7;padding:1px 6px;border-radius:99px;font-size:10px;">${{'deposit_pending':'Caution non payée','deposit_active':'Caution validée','deposit_captured':'Caution validée','checkin_complete':'Check-in complet','police_complete':'Fiche police','platform_booking':'Booking','platform_airbnb':'Airbnb','platform_direct':'Direct'}[x]||x}</span>`).join('') : ''}
             ${(() => {
               const ids = t.property_ids
                 ? (Array.isArray(t.property_ids) ? t.property_ids : (() => { try { return JSON.parse(t.property_ids); } catch(e) { return []; } })())
@@ -4941,7 +4949,14 @@ function openTemplateModal(template = null, isCopy = false) {
     || Math.abs(Math.round((template?.trigger_offset_hours || 0) / 24))
     || 2;
   document.getElementById('tplOffsetDays').value = offsetDays;
-  document.getElementById('tplCondition').value = template?.send_condition || 'always';
+  // ── Conditions d'envoi (cases à cocher) ──
+  (function(){
+    let raw = template?.send_condition || '';
+    let toks = String(raw).split(',').map(s => s.trim()).filter(Boolean);
+    if (toks.includes('checkin_complete')) toks = toks.filter(t => t!=='checkin_complete').concat(['deposit_active','police_complete']);
+    if (toks.includes('deposit_captured')) toks = toks.map(t => t==='deposit_captured' ? 'deposit_active' : t);
+    document.querySelectorAll('.tplCond').forEach(cb => { cb.checked = toks.includes(cb.value); });
+  })();
 
   updateOffsetLabel();
   updateTriggerOffsetVisibility();
@@ -4988,7 +5003,10 @@ async function saveTemplate() {
     trigger_type: trigger,
     trigger_offset_days: offsetDays,
     trigger_offset_hours: isAfter ? offsetDays * 24 : -(offsetDays * 24),
-    send_condition: document.getElementById('tplCondition').value || 'always',
+    send_condition: (function(){
+      const sel = Array.from(document.querySelectorAll('.tplCond:checked')).map(cb => cb.value);
+      return sel.length ? sel.join(',') : 'always';
+    })(),
     property_id: document.getElementById('tplProperty').value || null,
     property_ids: getTplSelectedPropertyIds(),
   };
