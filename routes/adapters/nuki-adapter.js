@@ -2,6 +2,9 @@ const SmartLockAdapter = require('./base-adapter');
 
 const BASE_URL = 'https://api.nuki.io';
 
+// Heure de fin de validité d'un code = jour de départ à cette heure (Europe/Paris).
+const CHECKOUT_END_HOUR_PARIS = 14;
+
 class NukiAdapter extends SmartLockAdapter {
   constructor(connection, pool) {
     super(connection, pool);
@@ -46,12 +49,16 @@ class NukiAdapter extends SmartLockAdapter {
     // Type 13 = Keypad code
     const code = this._generatePin(6);
 
+    // Fin de validité = jour de départ à 14:00 Paris (au lieu de minuit)
+    const effectiveEndDate = endDate ? this._checkoutEndParis(endDate) : endDate;
+
     const body = {
       name: (guestName || 'Guest').substring(0, 32),
       type: 13,  // Keypad code
       code: parseInt(code),
       allowedFromDate: this._toNukiDate(startDate),
-      allowedUntilDate: this._toNukiDate(endDate),
+      // Datetime complet (ISO) pour honorer l'heure de fin — pas seulement la date
+      allowedUntilDate: effectiveEndDate ? new Date(effectiveEndDate).toISOString() : this._toNukiDate(endDate),
       allowedWeekDays: 127,  // tous les jours (bitmask: 1111111)
       allowedFromTime: 0,
       allowedUntilTime: 0,
@@ -68,7 +75,7 @@ class NukiAdapter extends SmartLockAdapter {
       externalCodeId: data.id || data.authId || String(Date.now()),
       code: code,
       validFrom: startDate,
-      validUntil: endDate,
+      validUntil: effectiveEndDate,
     };
   }
 
@@ -120,6 +127,24 @@ class NukiAdapter extends SmartLockAdapter {
   _toNukiDate(dateStr) {
     const d = new Date(dateStr);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  // Ramène une date de départ au jour J à HH:00 heure de Paris (robuste été/hiver).
+  // Évite que le code expire à minuit le matin du départ.
+  _checkoutEndParis(date, hour = CHECKOUT_END_HOUR_PARIS) {
+    const d = new Date(date);
+    const ymd = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(d);
+    const hh = String(hour).padStart(2, '0');
+    for (const off of ['+02:00', '+01:00']) {
+      const cand = new Date(`${ymd}T${hh}:00:00${off}`);
+      const parisHour = parseInt(new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Paris', hour: '2-digit', hour12: false
+      }).format(cand), 10);
+      if (parisHour === hour) return cand;
+    }
+    return new Date(`${ymd}T${hh}:00:00+01:00`);
   }
 }
 

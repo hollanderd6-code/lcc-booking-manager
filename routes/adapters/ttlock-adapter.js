@@ -8,6 +8,9 @@ const REGIONS = {
   cn: 'https://cnapi.ttlock.com',
 };
 
+// Heure de fin de validité d'un code = jour de départ à cette heure (Europe/Paris).
+const CHECKOUT_END_HOUR_PARIS = 14;
+
 class TTLockAdapter extends SmartLockAdapter {
   constructor(connection, pool) {
     super(connection, pool);
@@ -137,7 +140,9 @@ class TTLockAdapter extends SmartLockAdapter {
     const lockId = lock.device_id;
 
     const startMs = new Date(startDate).getTime();
-    const endMs = new Date(endDate).getTime();
+    // Fin = jour de départ à 14:00 Paris (au lieu de minuit)
+    const effectiveEndDate = endDate ? this._checkoutEndParis(endDate) : endDate;
+    const endMs = new Date(effectiveEndDate).getTime();
 
     // Vérifier si la serrure supporte les codes clavier (featureValue bit 2)
     const hasKeypad = lock.metadata?.featureValue
@@ -163,7 +168,7 @@ class TTLockAdapter extends SmartLockAdapter {
         externalCodeId: String(data.keyboardPwdId),
         code: code,
         validFrom: startDate,
-        validUntil: endDate,
+        validUntil: effectiveEndDate,
       };
     }
 
@@ -182,7 +187,7 @@ class TTLockAdapter extends SmartLockAdapter {
       externalCodeId: data.keyboardPwdId ? String(data.keyboardPwdId) : String(Date.now()),
       code: String(data.keyboardPwd),
       validFrom: startDate,
-      validUntil: endDate,
+      validUntil: effectiveEndDate,
     };
   }
 
@@ -246,6 +251,24 @@ class TTLockAdapter extends SmartLockAdapter {
     for (let i = 0; i < length; i++) pin += Math.floor(Math.random() * 10);
     if (/^(\d)\1+$/.test(pin) || pin === '123456') return this._generatePin(length);
     return pin;
+  }
+
+  // Ramène une date de départ au jour J à HH:00 heure de Paris (robuste été/hiver).
+  // Évite que le code expire à minuit le matin du départ.
+  _checkoutEndParis(date, hour = CHECKOUT_END_HOUR_PARIS) {
+    const d = new Date(date);
+    const ymd = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(d);
+    const hh = String(hour).padStart(2, '0');
+    for (const off of ['+02:00', '+01:00']) {
+      const cand = new Date(`${ymd}T${hh}:00:00${off}`);
+      const parisHour = parseInt(new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Paris', hour: '2-digit', hour12: false
+      }).format(cand), 10);
+      if (parisHour === hour) return cand;
+    }
+    return new Date(`${ymd}T${hh}:00:00+01:00`);
   }
 }
 
