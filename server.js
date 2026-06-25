@@ -24174,6 +24174,22 @@ app.post('/api/sms/incoming', async (req, res) => {
 
     console.log(`📩 [SMS-IN] ${isMms ? 'MMS' : 'SMS'} reçu de ${from}: "${text}"`);
 
+    // ── Anti-doublon : un même MMS peut déclencher mms:received ET mms:downloaded.
+    // On ignore les répétitions du même message dans une fenêtre courte (5 min).
+    try {
+      const dedupKey = String(payload?.messageId || payload?.id || `${from}|${text}`);
+      const now = Date.now();
+      if (!global.__smsInSeen) global.__smsInSeen = new Map();
+      const seen = global.__smsInSeen;
+      // Purge des entrées de plus de 5 min
+      for (const [k, t] of seen) { if (now - t > 300000) seen.delete(k); }
+      if (seen.has(dedupKey)) {
+        console.log(`📩 [SMS-IN] Doublon ignoré (${event || 'n/a'}) : ${dedupKey.slice(0, 40)}`);
+        return;
+      }
+      seen.set(dedupKey, now);
+    } catch (_d) { /* dédup best-effort, non bloquant */ }
+
     // Normaliser le numéro pour chercher dans la DB
     let normalizedPhone = from.replace(/\s|-/g, '');
     if (normalizedPhone.startsWith('+33')) {
@@ -33202,7 +33218,10 @@ console.log('✅ Service de notifications initialisé');
 
       // Événements entrants à couvrir : SMS classiques ET MMS (au cas où un
       // cleaner/voyageur répond depuis un téléphone qui bascule en MMS/RCS).
-      const desiredEvents = ['sms:received', 'mms:received'];
+      // Événements entrants à couvrir : SMS classiques, MMS reçus, ET MMS
+      // entièrement téléchargés (mms:downloaded porte le corps + pièces jointes ;
+      // selon les versions c'est lui qui contient réellement le texte du MMS).
+      const desiredEvents = ['sms:received', 'mms:received', 'mms:downloaded'];
 
       // 🧹 Supprimer les webhooks SMS/MMS qui ne pointent PAS vers la bonne URL
       // (anciens boostinghost.fr / doublons www qui cassaient ou dupliquaient l'entrant)
