@@ -13473,21 +13473,27 @@ app.post('/api/cleaning/photo-upload', async (req, res) => {
 
 // ── PDF : certificat d'état du logement à l'arrivée (côté hôte, JWT) ──
 // GET /api/cleaning/state-certificate?propertyId=...&reservationKey=...
-app.get('/api/cleaning/state-certificate', authenticateAny, async (req, res) => {
+app.get('/api/cleaning/state-certificate', async (req, res) => {
   try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
     const { propertyId, reservationKey } = req.query;
     if (!propertyId || !reservationKey) {
       return res.status(400).json({ error: 'propertyId et reservationKey requis' });
     }
-    const userId = req.user?.id;
 
-    // Récupérer les certificats de cette résa/logement, restreints au propriétaire
+    // Accès agence : mêmes droits que la consultation des checklists.
+    // En mode agence (?agency=all), inclut les propriétaires délégués.
+    const agencyIds = await getAgencyUserIds(req, user.id);
+
+    // Récupérer les certificats de cette résa/logement, restreints aux comptes accessibles
     const rows = (await pool.query(
       `SELECT * FROM cleaning_state_certificates
        WHERE property_id = $1 AND reservation_key = $2 AND kind = 'arrival_state'
-         AND ($3::text IS NULL OR user_id = $3)
+         AND user_id = ANY($3::text[])
        ORDER BY server_received_at ASC`,
-      [String(propertyId), String(reservationKey), userId || null]
+      [String(propertyId), String(reservationKey), agencyIds]
     )).rows;
 
     if (rows.length === 0) {
