@@ -11045,7 +11045,6 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
       userProps = userProps.filter(p => req.subAccountData.accessible_property_ids.includes(p.id));
     }
     const propIds = userProps.map(p => p.id);
-    console.log('[deposits-kpi] propIds=' + propIds.length + ': ' + propIds.join(', '));
     if (!propIds.length) return res.json([]);
 
 
@@ -11088,8 +11087,6 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
         setIfNewer(d.reservation_uid.slice(4)); // sans 'CHX_'
       }
     });
-
-    console.log('[deposits-kpi] userId=' + userId + ' | deposits trouvés en DB=' + depositsResult.rows.length + ' | statuts=' + JSON.stringify(depositsResult.rows.map(d => ({uid: d.reservation_uid, status: d.status}))));
 
     // ── 2. Toutes les réservations depuis la DB (TOUTES sources) ──────────
     // On lit directement depuis reservations — pas depuis reservationsStore
