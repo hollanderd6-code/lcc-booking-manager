@@ -110,13 +110,17 @@ async function sendNotification(fcmToken, title, body, data = {}) {
     apns: {
       headers: {
         'apns-expiration': String(Math.floor(Date.now() / 1000) + 86400),
-        'apns-priority': '10'
+        'apns-priority': '10',
+        // Push d'alerte visible (PAS un push d'arrière-plan).
+        // ⚠️ Ne JAMAIS remettre 'content-available': 1 ici : ça transforme la notif
+        // en push silencieux qu'iOS bride et JETTE après une période hors-ligne
+        // (ex. mode avion la nuit) → notifications perdues au réveil.
+        'apns-push-type': 'alert'
       },
       payload: {
         aps: {
           sound: 'default',
-          badge: 1,
-          'content-available': 1
+          badge: 1
         }
       }
     }
