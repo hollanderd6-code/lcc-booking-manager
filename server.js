@@ -2131,6 +2131,40 @@ ON invoice_download_tokens(token);
       await pool.query(`ALTER TABLE message_templates ADD COLUMN IF NOT EXISTS property_ids JSONB DEFAULT '[]'`).catch(()=>{});
       console.log('✅ Table message_templates OK');
 
+      // ── Table fiches individuelles de police (check-in étrangers) ──
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS police_records (
+          id SERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          property_id TEXT,
+          conversation_id INTEGER,
+          reservation_uid TEXT,
+          guest_nom TEXT,
+          guest_prenoms TEXT,
+          guest_naissance_date DATE,
+          guest_naissance_lieu TEXT,
+          guest_nationalite TEXT,
+          guest_domicile TEXT,
+          guest_tel TEXT,
+          guest_email TEXT,
+          date_arrivee DATE,
+          date_depart DATE,
+          enfants_moins_15 TEXT,
+          signature_data TEXT,
+          id_document_url TEXT,
+          id_doc_expires_at TIMESTAMPTZ,
+          signer_ip TEXT,
+          signed_at TIMESTAMPTZ DEFAULT NOW(),
+          status TEXT DEFAULT 'signed',
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '6 months')
+        );
+        CREATE INDEX IF NOT EXISTS idx_police_records_user ON police_records(user_id);
+        CREATE INDEX IF NOT EXISTS idx_police_records_conv ON police_records(conversation_id);
+        CREATE INDEX IF NOT EXISTS idx_police_records_resa ON police_records(reservation_uid);
+      `).catch(e => console.warn('⚠️ Table police_records:', e.message));
+      console.log('✅ Table police_records OK');
+
       // Table blocages d'envoi par réservation
       await pool.query(`
         CREATE TABLE IF NOT EXISTS message_template_blocks (
@@ -15149,7 +15183,157 @@ app.post('/api/arrival/:token', async (req, res) => {
   }
 });
 
-// GET hôte — récupérer l'état des lieux d'une réservation (par logement + date d'arrivée)
+// ============================================================
+// 🛂 CHECK-IN EN LIGNE — Fiche individuelle de police (étrangers)
+// Accès public par le token de conversation (unique_token)
+// ============================================================
+app.get('/api/checkin/:token', async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT c.id AS conversation_id, c.property_id, c.user_id, c.guest_name,
+              c.reservation_start_date, c.reservation_end_date, c.channex_booking_id,
+              c.platform,
+              p.name AS property_name, p.deposit_amount,
+              r.uid AS reservation_uid, r.guest_country, r.guest_email, r.guest_phone
+       FROM conversations c
+       LEFT JOIN properties p ON p.id = c.property_id
+       LEFT JOIN reservations r ON (
+         (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+         OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
+             AND DATE(r.start_date) = DATE(c.reservation_start_date))
+       )
+       WHERE c.unique_token = $1
+       LIMIT 1`,
+      [req.params.token]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ ok: false, error: 'Lien invalide' });
+    const c = r.rows[0];
+
+    // Déjà soumise ?
+    const existing = await pool.query(
+      `SELECT id, signed_at FROM police_records
+       WHERE conversation_id = $1 OR (reservation_uid IS NOT NULL AND reservation_uid = $2)
+       ORDER BY created_at DESC LIMIT 1`,
+      [c.conversation_id, c.reservation_uid || null]
+    ).catch(() => ({ rows: [] }));
+
+    const platformRaw = (c.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
+    const isAirbnb = platformRaw.includes('airbnb') || platformRaw === 'abb';
+    const hasDeposit = !isAirbnb && c.deposit_amount && parseFloat(c.deposit_amount) > 0;
+
+    res.json({
+      ok: true,
+      alreadySubmitted: existing.rows.length > 0,
+      submittedAt: existing.rows[0]?.signed_at || null,
+      propertyName: c.property_name || 'le logement',
+      guestName: c.guest_name || '',
+      guestEmail: c.guest_email || '',
+      guestPhone: c.guest_phone || '',
+      guestCountry: c.guest_country || '',
+      dateArrivee: c.reservation_start_date ? String(c.reservation_start_date).slice(0, 10) : '',
+      dateDepart: c.reservation_end_date ? String(c.reservation_end_date).slice(0, 10) : '',
+      hasDeposit: !!hasDeposit
+    });
+  } catch (err) {
+    console.error('Erreur GET /api/checkin/:token :', err);
+    res.status(500).json({ ok: false, error: 'Erreur serveur' });
+  }
+});
+
+app.post('/api/checkin/:token', async (req, res) => {
+  try {
+    const b = req.body || {};
+    // Champs obligatoires (fiche individuelle de police, art. R.611-42 / R.814-1)
+    const required = ['nom', 'prenoms', 'naissanceDate', 'naissanceLieu', 'nationalite', 'domicile'];
+    for (const f of required) {
+      if (!b[f] || !String(b[f]).trim()) {
+        return res.status(400).json({ ok: false, error: `Champ manquant : ${f}` });
+      }
+    }
+    if (!b.signature) {
+      return res.status(400).json({ ok: false, error: 'Signature requise' });
+    }
+
+    const r = await pool.query(
+      `SELECT c.id AS conversation_id, c.property_id, c.user_id,
+              c.reservation_start_date, c.reservation_end_date, c.channex_booking_id,
+              r.uid AS reservation_uid
+       FROM conversations c
+       LEFT JOIN reservations r ON (
+         (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+         OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
+             AND DATE(r.start_date) = DATE(c.reservation_start_date))
+       )
+       WHERE c.unique_token = $1
+       LIMIT 1`,
+      [req.params.token]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ ok: false, error: 'Lien invalide' });
+    const c = r.rows[0];
+
+    const ip = (req.headers['x-forwarded-for'] || req.connection?.remoteAddress || '').toString().split(',')[0].trim();
+
+    // Upload pièce d'identité (optionnel) vers Cloudinary, purge à 14 jours
+    let idDocUrl = null, idDocExpires = null;
+    if (b.idDocument && typeof b.idDocument === 'string' && b.idDocument.startsWith('data:')) {
+      try {
+        const up = await cloudinary.uploader.upload(b.idDocument, {
+          folder: 'police_id_docs',
+          resource_type: 'image',
+          type: 'authenticated'   // accès restreint (non public)
+        });
+        idDocUrl = up.secure_url || up.url || null;
+        idDocExpires = new Date(Date.now() + 14 * 24 * 3600 * 1000);
+      } catch (upErr) {
+        console.warn('⚠️ [CHECKIN] Upload pièce échoué (non bloquant):', upErr.message);
+      }
+    }
+
+    await pool.query(
+      `INSERT INTO police_records (
+        user_id, property_id, conversation_id, reservation_uid,
+        guest_nom, guest_prenoms, guest_naissance_date, guest_naissance_lieu,
+        guest_nationalite, guest_domicile, guest_tel, guest_email,
+        date_arrivee, date_depart, enfants_moins_15,
+        signature_data, id_document_url, id_doc_expires_at, signer_ip, signed_at, status
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NOW(),'signed')`,
+      [
+        c.user_id, c.property_id, c.conversation_id, c.reservation_uid || null,
+        String(b.nom).slice(0, 120), String(b.prenoms).slice(0, 120),
+        b.naissanceDate || null, String(b.naissanceLieu).slice(0, 160),
+        String(b.nationalite).slice(0, 80), String(b.domicile).slice(0, 300),
+        (b.tel || '').slice(0, 40) || null, (b.email || '').slice(0, 160) || null,
+        c.reservation_start_date || null, c.reservation_end_date || null,
+        (b.enfants || '').slice(0, 500) || null,
+        b.signature, idDocUrl, idDocExpires, ip
+      ]
+    );
+
+    // Notifier l'hôte
+    try {
+      const property = PROPERTIES.find(p => p.id === c.property_id);
+      const propName = displayName(property) || c.property_id;
+      const title = `🛂 Fiche de police complétée — ${propName}`;
+      const body = `${String(b.prenoms)} ${String(b.nom)} a complété son enregistrement.`;
+      const pushData = { type: 'police_checkin', propertyId: c.property_id, click_action: '/reservations.html' };
+      const tok = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL', [c.user_id]
+      );
+      if (tok.rows.length > 0) {
+        await sendNotificationToMultipleLogged(tok.rows.map(t => t.fcm_token), title, body, pushData);
+      }
+    } catch (notifErr) {
+      console.warn('⚠️ [CHECKIN] Notif hôte échouée:', notifErr.message);
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Erreur POST /api/checkin/:token :', err);
+    res.status(500).json({ ok: false, error: 'Erreur serveur' });
+  }
+});
+
+// GET hôte — état du récapitulatif des arrivées
 app.get('/api/arrival/reservation/lookup',
   authenticateAny, requirePermission(pool, 'can_view_cleaning'), loadSubAccountData(pool),
   async (req, res) => {
@@ -26848,6 +27032,57 @@ async function shouldSkipForDepositCondition(pool, conv, sendCond) {
     return { skip: false };
   }
 
+  // ── Check-in complet : caution (si applicable) + fiche de police (étrangers) ──
+  if (sendCond === 'checkin_complete') {
+    try {
+      const resRow = await pool.query(
+        `SELECT r.uid, r.guest_country, p.deposit_amount
+         FROM reservations r
+         LEFT JOIN properties p ON p.id = r.property_id
+         WHERE ($3::text IS NOT NULL AND r.channex_booking_id = $3)
+            OR (r.property_id = $1 AND DATE(r.start_date) = DATE($2) AND r.status != 'cancelled')
+         ORDER BY (r.channex_booking_id = $3) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
+        [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
+      ).catch(() => ({ rows: [] }));
+      const resa = resRow.rows[0];
+      const resaUid = resa?.uid || null;
+      const country = (resa?.guest_country || '').trim().toUpperCase();
+      const isForeigner = country && country !== 'FR' && country !== 'FRA' && country !== 'FRANCE';
+
+      // 1) Caution : Airbnb/BHGuest exemptés ; sinon si deposit_amount>0 → exiger authorized/captured
+      const depositAmt = resa?.deposit_amount ? parseFloat(resa.deposit_amount) : 0;
+      const needsDeposit = !isAirbnb && !isBHGuest && depositAmt > 0;
+      if (needsDeposit) {
+        const dep = await pool.query(
+          `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
+          [resaUid]
+        ).catch(() => ({ rows: [] }));
+        const depStatus = dep.rows[0]?.status;
+        if (depStatus !== 'captured' && depStatus !== 'authorized') {
+          return { skip: true, reason: `check-in incomplet : caution non validée (status=${depStatus || 'aucune'})` };
+        }
+      }
+
+      // 2) Fiche de police : exigée uniquement pour les voyageurs étrangers
+      if (isForeigner) {
+        const pr = await pool.query(
+          `SELECT id FROM police_records
+           WHERE status = 'signed'
+             AND (conversation_id = $1 OR (reservation_uid IS NOT NULL AND reservation_uid = $2))
+           LIMIT 1`,
+          [conv.id || null, resaUid]
+        ).catch(() => ({ rows: [] }));
+        if (pr.rows.length === 0) {
+          return { skip: true, reason: 'check-in incomplet : fiche de police manquante (voyageur étranger)' };
+        }
+      }
+    } catch(e) {
+      console.warn('⚠️ [checkin_complete] Erreur vérif:', e.message);
+      // En cas d'erreur DB : ne pas bloquer l'envoi
+    }
+    return { skip: false };
+  }
+
   return { skip: false };
 }
 
@@ -27196,6 +27431,13 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
       msg = msg.replace(/{caution_url}/gi, '');
       console.warn('⚠️ [TPL] Erreur résolution {caution_url}:', e.message);
     }
+  }
+
+  // {checkin_link} — lien vers le check-in en ligne / fiche de police
+  if (/\{checkin_link\}/i.test(msg)) {
+    const baseUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+    const tok = conv.unique_token || '';
+    msg = msg.replace(/\{checkin_link\}/gi, tok ? `${baseUrl}/checkin.html?token=${tok}` : '');
   }
 
   // 🌍 Traduction automatique via DeepL selon la nationalité du voyageur
@@ -28136,6 +28378,33 @@ cron.schedule('0 3 * * *', async () => {
     const result = await pool.query('DELETE FROM sms_guest_pages WHERE expires_at < NOW()');
     if (result.rowCount > 0) console.log(`🧹 [CRON] ${result.rowCount} page(s) SMS guest expirée(s) supprimée(s)`);
   } catch(e) { console.warn('⚠️ [CRON] Cleanup sms_guest_pages:', e.message); }
+
+  // 🛂 RGPD — purge des fiches de police et pièces d'identité
+  try {
+    // 1) Pièces d'identité : suppression à 14 jours (purge de l'URL ; le fichier Cloudinary est en accès restreint)
+    const docs = await pool.query(
+      `SELECT id, id_document_url FROM police_records
+       WHERE id_document_url IS NOT NULL AND id_doc_expires_at IS NOT NULL AND id_doc_expires_at < NOW()`
+    );
+    for (const row of docs.rows) {
+      try {
+        const m = String(row.id_document_url).match(/police_id_docs\/([^./]+)/);
+        if (m && m[1]) {
+          await cloudinary.uploader.destroy('police_id_docs/' + m[1], { type: 'authenticated', resource_type: 'image' }).catch(() => {});
+        }
+      } catch(_) {}
+    }
+    if (docs.rows.length) {
+      await pool.query(
+        `UPDATE police_records SET id_document_url = NULL, id_doc_expires_at = NULL
+         WHERE id_document_url IS NOT NULL AND id_doc_expires_at IS NOT NULL AND id_doc_expires_at < NOW()`
+      );
+      console.log(`🧹 [CRON] ${docs.rows.length} pièce(s) d'identité purgée(s) (14 j)`);
+    }
+    // 2) Fiches de police : suppression à 6 mois
+    const fiches = await pool.query('DELETE FROM police_records WHERE expires_at < NOW()');
+    if (fiches.rowCount > 0) console.log(`🧹 [CRON] ${fiches.rowCount} fiche(s) de police expirée(s) supprimée(s) (6 mois)`);
+  } catch(e) { console.warn('⚠️ [CRON] Purge police_records:', e.message); }
 }, { timezone: 'Europe/Paris' });
 
 // 9h00 le 1er du mois — résumé mensuel push

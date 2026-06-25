@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Enregistrement en ligne — Boostinghost</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Instrument+Serif&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#F5F2EC; --card:#FFFFFF; --text:#0D1117; --muted:#6B7280;
+  --accent:#1A7A5E; --accent-dark:#15624B; --border:rgba(200,184,154,.45);
+  --danger:#DC2626; --radius:16px; --font:'DM Sans',-apple-system,sans-serif;
+  --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding:calc(20px + var(--safe-top)) 18px calc(40px + var(--safe-bottom))}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.brand-logo{width:40px;height:40px;border-radius:11px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+.brand-name{font-weight:800;font-size:17px}
+.hero{background:var(--accent);color:#fff;border-radius:var(--radius);padding:20px;margin-bottom:18px}
+.hero h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:26px;line-height:1.15;margin-bottom:6px}
+.hero p{font-size:13.5px;opacity:.92;line-height:1.5}
+.hero .prop{margin-top:10px;font-size:13px;font-weight:700;background:rgba(255,255,255,.16);display:inline-block;padding:5px 11px;border-radius:999px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px}
+.card h2{font-size:14px;font-weight:800;margin-bottom:4px}
+.card .sub{font-size:12.5px;color:var(--muted);margin-bottom:14px;line-height:1.5}
+label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 6px}
+input,textarea{width:100%;box-sizing:border-box;padding:12px 13px;border:1.5px solid var(--border);border-radius:11px;font-family:var(--font);font-size:15px;background:#FBFAF7;color:var(--text);transition:border-color .15s,box-shadow .15s}
+input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,122,94,.12)}
+input[readonly]{background:#F0EEE8;color:var(--muted)}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.req::after{content:" *";color:var(--danger)}
+.note{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+/* Upload */
+.upload{border:2px dashed var(--border);border-radius:12px;padding:18px;text-align:center;cursor:pointer;transition:.15s;background:#FBFAF7}
+.upload:active{background:var(--bg)}
+.upload .ico{font-size:24px;margin-bottom:6px}
+.upload .t{font-size:13.5px;font-weight:700;color:var(--accent-dark)}
+.upload .s{font-size:11.5px;color:var(--muted);margin-top:3px}
+.upload-preview{margin-top:10px;display:none}
+.upload-preview img{max-width:100%;border-radius:10px;border:1px solid var(--border)}
+.upload-remove{margin-top:8px;display:inline-block;font-size:12px;color:var(--danger);background:none;border:none;cursor:pointer;font-weight:600;font-family:var(--font)}
+/* Signature */
+.sig-wrap{background:#FBFAF7;border:2px dashed var(--border);border-radius:12px;position:relative;overflow:hidden}
+.sig-wrap.signed{border-style:solid;border-color:var(--accent)}
+#sig{display:block;width:100%;height:170px;touch-action:none;cursor:crosshair}
+.sig-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;color:#9CA3AF;font-size:13px;gap:7px;transition:opacity .2s}
+.sig-hint.hidden{opacity:0}
+.sig-clear{position:absolute;top:8px;right:8px;background:rgba(13,17,23,.06);border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;display:none;font-family:var(--font)}
+.sig-wrap.signed .sig-clear{display:block}
+/* Submit */
+.submit{width:100%;padding:16px;border:none;border-radius:var(--radius);background:var(--accent);color:#fff;font-family:var(--font);font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(26,122,94,.3);transition:.15s;margin-top:6px}
+.submit:active{transform:scale(.98)}
+.submit:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+.legal{font-size:11px;color:var(--muted);line-height:1.55;margin-top:14px;text-align:center}
+/* States */
+.state{text-align:center;padding:50px 20px}
+.state .big{font-size:48px;margin-bottom:14px}
+.state h2{font-size:20px;font-weight:800;margin-bottom:8px}
+.state p{font-size:14px;color:var(--muted);line-height:1.55;max-width:380px;margin:0 auto}
+.spinner{display:inline-block;width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hidden{display:none!important}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--danger);color:#fff;padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,.18);z-index:50;opacity:0;transition:opacity .2s;max-width:90vw}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brand">
+    <div class="brand-logo">B</div>
+    <div class="brand-name">Boostinghost</div>
+  </div>
+
+  <!-- Chargement -->
+  <div id="loading" class="state"><div class="spinner"></div></div>
+
+  <!-- Erreur / expiré -->
+  <div id="errorState" class="state hidden">
+    <div class="big">⚠️</div>
+    <h2 id="errorTitle">Lien invalide</h2>
+    <p id="errorMsg">Ce lien d'enregistrement n'est pas valide. Contactez votre hôte.</p>
+  </div>
+
+  <!-- Déjà fait -->
+  <div id="doneState" class="state hidden">
+    <div class="big">✅</div>
+    <h2>Enregistrement déjà effectué</h2>
+    <p>Votre fiche a bien été enregistrée. Vous recevrez vos informations d'accès le moment venu. Bon séjour !</p>
+  </div>
+
+  <!-- Succès -->
+  <div id="successState" class="state hidden">
+    <div class="big">🎉</div>
+    <h2>C'est fait, merci !</h2>
+    <p>Votre enregistrement est complété. Vos informations d'accès vous seront envoyées automatiquement. Excellent séjour !</p>
+  </div>
+
+  <!-- Formulaire -->
+  <div id="form" class="hidden">
+    <div class="hero">
+      <h1>Enregistrement en ligne</h1>
+      <p>Quelques informations à compléter avant votre arrivée. C'est rapide, sécurisé, et requis par la réglementation française pour les voyageurs de nationalité étrangère.</p>
+      <div class="prop" id="heroProp">—</div>
+    </div>
+
+    <div class="card">
+      <h2>Vos informations</h2>
+      <div class="sub">Fiche individuelle de police (article R.611-42 du CESEDA).</div>
+
+      <label class="req">Nom</label>
+      <input id="nom" type="text" autocomplete="family-name" placeholder="Nom de famille"/>
+
+      <label class="req">Prénom(s)</label>
+      <input id="prenoms" type="text" autocomplete="given-name" placeholder="Prénom(s)"/>
+
+      <div class="row">
+        <div>
+          <label class="req">Date de naissance</label>
+          <input id="naissanceDate" type="date"/>
+        </div>
+        <div>
+          <label class="req">Lieu de naissance</label>
+          <input id="naissanceLieu" type="text" placeholder="Ville, pays"/>
+        </div>
+      </div>
+
+      <label class="req">Nationalité</label>
+      <input id="nationalite" type="text" placeholder="Ex : Allemande, Italienne…"/>
+
+      <label class="req">Domicile habituel</label>
+      <input id="domicile" type="text" autocomplete="street-address" placeholder="Adresse complète"/>
+
+      <div class="row">
+        <div>
+          <label>Téléphone</label>
+          <input id="tel" type="tel" autocomplete="tel" placeholder="+…"/>
+        </div>
+        <div>
+          <label>Email</label>
+          <input id="email" type="email" autocomplete="email" placeholder="vous@email.com"/>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Date d'arrivée</label>
+          <input id="dateArrivee" type="date" readonly/>
+        </div>
+        <div>
+          <label>Date de départ</label>
+          <input id="dateDepart" type="date" readonly/>
+        </div>
+      </div>
+
+      <label>Enfants de moins de 15 ans qui vous accompagnent (optionnel)</label>
+      <textarea id="enfants" rows="2" placeholder="Prénom + date de naissance de chaque enfant"></textarea>
+    </div>
+
+    <!-- Pièce d'identité (optionnel) -->
+    <div class="card" id="idCard">
+      <h2>Pièce d'identité (optionnel)</h2>
+      <div class="sub">Une photo de votre passeport ou carte d'identité peut être demandée par votre hôte. Stockée de façon sécurisée et supprimée automatiquement après votre séjour.</div>
+      <div class="upload" id="idUpload">
+        <div class="ico">📄</div>
+        <div class="t">Ajouter une photo</div>
+        <div class="s">Passeport ou carte d'identité</div>
+      </div>
+      <input id="idInput" type="file" accept="image/*" class="hidden"/>
+      <div class="upload-preview" id="idPreview">
+        <img id="idPreviewImg" alt="aperçu"/>
+        <button type="button" class="upload-remove" id="idRemove">✕ Retirer la photo</button>
+      </div>
+    </div>
+
+    <!-- Signature -->
+    <div class="card">
+      <h2 class="req">Signature</h2>
+      <div class="sub">Signez avec votre doigt pour valider votre enregistrement.</div>
+      <div class="sig-wrap" id="sigWrap">
+        <canvas id="sig"></canvas>
+        <div class="sig-hint" id="sigHint">✍️ Signez ici</div>
+        <button type="button" class="sig-clear" id="sigClear">Effacer</button>
+      </div>
+    </div>
+
+    <button class="submit" id="submitBtn" disabled>Valider mon enregistrement</button>
+    <div class="legal">
+      Données traitées pour l'établissement de la fiche individuelle de police (art. R.611-42 du CESEDA), conservées 6 mois puis supprimées. Conformément au RGPD, vous disposez d'un droit d'accès et de rectification auprès de votre hôte.
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var API = window.location.origin;
+  var token = new URLSearchParams(window.location.search).get('token');
+  var $ = function(id){ return document.getElementById(id); };
+
+  function show(id){ ['loading','errorState','doneState','successState','form'].forEach(function(s){ $(s).classList.toggle('hidden', s!==id); }); }
+  function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); },2800); }
+
+  if(!token){ $('errorMsg').textContent='Lien sans jeton. Contactez votre hôte.'; show('errorState'); return; }
+
+  // ── Charger le contexte ──
+  fetch(API+'/api/checkin/'+encodeURIComponent(token))
+    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,d:d}; }); })
+    .then(function(res){
+      var d=res.d;
+      if(!res.ok || !d.ok){ $('errorMsg').textContent=(d&&d.error)||'Lien invalide.'; show('errorState'); return; }
+      if(d.alreadySubmitted){ show('doneState'); return; }
+      $('heroProp').textContent='📍 '+(d.propertyName||'Votre logement');
+      // Pré-remplissage
+      if(d.guestName){
+        var parts=d.guestName.trim().split(' ');
+        if(parts.length>1){ $('prenoms').value=parts.slice(0,-1).join(' '); $('nom').value=parts.slice(-1).join(' '); }
+        else { $('nom').value=d.guestName; }
+      }
+      if(d.guestEmail) $('email').value=d.guestEmail;
+      if(d.guestPhone) $('tel').value=d.guestPhone;
+      if(d.dateArrivee) $('dateArrivee').value=d.dateArrivee;
+      if(d.dateDepart) $('dateDepart').value=d.dateDepart;
+      show('form');
+      initSignature();
+      wireForm();
+    })
+    .catch(function(){ $('errorMsg').textContent='Erreur de connexion. Réessayez.'; show('errorState'); });
+
+  // ── Pièce d'identité ──
+  var idData=null;
+  $('idUpload').addEventListener('click', function(){ $('idInput').click(); });
+  $('idInput').addEventListener('change', function(e){
+    var f=e.target.files[0]; if(!f) return;
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      compress(ev.target.result, 1280, 0.7, function(out){
+        idData=out;
+        $('idPreviewImg').src=out;
+        $('idPreview').style.display='block';
+        $('idUpload').style.display='none';
+      });
+    };
+    reader.readAsDataURL(f);
+  });
+  $('idRemove').addEventListener('click', function(){
+    idData=null; $('idInput').value=''; $('idPreview').style.display='none'; $('idUpload').style.display='block';
+  });
+  function compress(dataUrl,maxW,q,cb){
+    var img=new Image();
+    img.onload=function(){
+      var c=document.createElement('canvas'); var w=img.width,h=img.height;
+      if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+      c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+      cb(c.toDataURL('image/jpeg',q));
+    };
+    img.src=dataUrl;
+  }
+
+  // ── Signature ──
+  var sigHasDrawn=false, sigData=null, ctx, canvas;
+  function initSignature(){
+    canvas=$('sig'); ctx=canvas.getContext('2d');
+    var rect=canvas.getBoundingClientRect();
+    canvas.width=rect.width*(window.devicePixelRatio||1);
+    canvas.height=rect.height*(window.devicePixelRatio||1);
+    ctx.scale(window.devicePixelRatio||1, window.devicePixelRatio||1);
+    ctx.strokeStyle='#0D1117'; ctx.lineWidth=2.4; ctx.lineCap='round'; ctx.lineJoin='round';
+    var drawing=false;
+    function pos(e){ var r=canvas.getBoundingClientRect(); var s=e.touches?e.touches[0]:e; return {x:s.clientX-r.left,y:s.clientY-r.top}; }
+    function down(e){ e.preventDefault(); drawing=true; var p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); }
+    function move(e){ if(!drawing) return; e.preventDefault(); var p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke();
+      if(!sigHasDrawn){ sigHasDrawn=true; $('sigHint').classList.add('hidden'); $('sigWrap').classList.add('signed'); updateSubmit(); } }
+    function up(e){ e&&e.preventDefault(); drawing=false; }
+    canvas.addEventListener('mousedown',down); canvas.addEventListener('mousemove',move); canvas.addEventListener('mouseup',up);
+    canvas.addEventListener('touchstart',down,{passive:false}); canvas.addEventListener('touchmove',move,{passive:false}); canvas.addEventListener('touchend',up,{passive:false});
+    $('sigClear').addEventListener('click', function(){
+      ctx.clearRect(0,0,canvas.width,canvas.height); sigHasDrawn=false;
+      $('sigHint').classList.remove('hidden'); $('sigWrap').classList.remove('signed'); updateSubmit();
+    });
+  }
+
+  // ── Validation + envoi ──
+  var REQUIRED=['nom','prenoms','naissanceDate','naissanceLieu','nationalite','domicile'];
+  function formValid(){ return REQUIRED.every(function(id){ return $(id).value.trim()!==''; }) && sigHasDrawn; }
+  function updateSubmit(){ $('submitBtn').disabled = !formValid(); }
+  function wireForm(){
+    REQUIRED.forEach(function(id){ $(id).addEventListener('input', updateSubmit); });
+    $('submitBtn').addEventListener('click', submitForm);
+    updateSubmit();
+  }
+  function submitForm(){
+    if(!formValid()) return;
+    var btn=$('submitBtn'); btn.disabled=true; btn.textContent='Envoi…';
+    sigData=canvas.toDataURL('image/png');
+    var payload={
+      nom:$('nom').value.trim(), prenoms:$('prenoms').value.trim(),
+      naissanceDate:$('naissanceDate').value, naissanceLieu:$('naissanceLieu').value.trim(),
+      nationalite:$('nationalite').value.trim(), domicile:$('domicile').value.trim(),
+      tel:$('tel').value.trim(), email:$('email').value.trim(),
+      enfants:$('enfants').value.trim(),
+      signature:sigData, idDocument:idData
+    };
+    fetch(API+'/api/checkin/'+encodeURIComponent(token), {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    })
+    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,d:d}; }); })
+    .then(function(res){
+      if(res.ok && res.d.ok){ show('successState'); }
+      else { toast((res.d&&res.d.error)||'Erreur, réessayez.'); btn.disabled=false; btn.textContent='Valider mon enregistrement'; }
+    })
+    .catch(function(){ toast('Erreur de connexion.'); btn.disabled=false; btn.textContent='Valider mon enregistrement'; });
+  }
+})();
+</script>
+</body>
+</html>
