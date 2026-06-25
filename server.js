@@ -24157,16 +24157,22 @@ app.post('/api/sms/incoming', async (req, res) => {
   try {
     res.status(200).json({ ok: true }); // Répondre immédiatement à SMS Gateway
 
+    const event = (req.body?.event || '').toLowerCase(); // 'sms:received' | 'mms:received'
     const payload = req.body?.payload || req.body;
     const from = payload?.phoneNumber || payload?.from;
-    const text = payload?.message || payload?.text || payload?.body;
+    // Texte : champs SMS classiques + variantes MMS (subject / texte de la 1re partie)
+    let text = payload?.message || payload?.text || payload?.body || payload?.subject || '';
+    const isMms = event.includes('mms') || !!payload?.attachments || !!payload?.parts;
+    // MMS sans texte (ex. photo seule) → on notifie quand même avec un placeholder,
+    // pour ne jamais rater une réponse d'un cleaner/voyageur.
+    if (!text && isMms) text = '[Message multimédia reçu]';
 
     if (!from || !text) {
-      console.log('📩 [SMS-IN] Payload incomplet:', JSON.stringify(req.body));
+      console.log(`📩 [SMS-IN] Payload incomplet (event=${event || 'n/a'}):`, JSON.stringify(req.body));
       return;
     }
 
-    console.log(`📩 [SMS-IN] Message reçu de ${from}: "${text}"`);
+    console.log(`📩 [SMS-IN] ${isMms ? 'MMS' : 'SMS'} reçu de ${from}: "${text}"`);
 
     // Normaliser le numéro pour chercher dans la DB
     let normalizedPhone = from.replace(/\s|-/g, '');
@@ -33172,36 +33178,66 @@ initializeFirebase();
 console.log('✅ Service de notifications initialisé');
   
   // ✅ Enregistrer le webhook SMS entrant (réponses cleaners)
+  // ⚠️ Le webhook DOIT pointer vers le backend qui exécute ce code, en URL DIRECTE
+  // (sans redirection www/apex qui casserait le POST). On utilise l'hôte Render,
+  // SANS toucher à APP_URL/BASE_URL (qui servent aux liens publics e-mail/SMS).
+  // Override possible via SMS_WEBHOOK_URL si besoin.
   try {
     const smsLogin = process.env.SMS_GATEWAY_LOGIN;
     const smsPassword = process.env.SMS_GATEWAY_PASSWORD;
-    const appUrl = process.env.APP_URL || `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`;
-    if (smsLogin && smsPassword && appUrl) {
+    const backendBase = process.env.RENDER_EXTERNAL_HOSTNAME
+      ? `https://${process.env.RENDER_EXTERNAL_HOSTNAME}`
+      : (process.env.APP_URL || null);
+    const webhookUrl = process.env.SMS_WEBHOOK_URL
+      || (backendBase ? `${backendBase}/api/sms/incoming` : null);
+
+    if (smsLogin && smsPassword && webhookUrl) {
       const credentials = Buffer.from(`${smsLogin}:${smsPassword}`).toString('base64');
-      const webhookUrl = `${appUrl}/api/sms/incoming`;
-      // Vérifier si le webhook existe déjà
-      const existing = await fetch('https://api.sms-gate.app/3rdparty/v1/webhooks', {
-        headers: { 'Authorization': `Basic ${credentials}` }
-      });
+      const authHeader = { 'Authorization': `Basic ${credentials}` };
+
+      // Lister les webhooks existants
+      const existing = await fetch('https://api.sms-gate.app/3rdparty/v1/webhooks', { headers: authHeader });
       const webhooks = await existing.json().catch(() => []);
-      const alreadyRegistered = Array.isArray(webhooks) && webhooks.some(w => w.url === webhookUrl && w.event === 'sms:received');
-      if (!alreadyRegistered) {
-        const reg = await fetch('https://api.sms-gate.app/3rdparty/v1/webhooks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
-          body: JSON.stringify({ url: webhookUrl, event: 'sms:received' })
-        });
-        if (reg.ok) {
-          console.log(`✅ Webhook SMS entrant enregistré : ${webhookUrl}`);
-        } else {
-          const err = await reg.text();
-          console.warn(`⚠️ Webhook SMS : erreur enregistrement : ${err}`);
+      const list = Array.isArray(webhooks) ? webhooks : [];
+
+      // Événements entrants à couvrir : SMS classiques ET MMS (au cas où un
+      // cleaner/voyageur répond depuis un téléphone qui bascule en MMS/RCS).
+      const desiredEvents = ['sms:received', 'mms:received'];
+
+      // 🧹 Supprimer les webhooks SMS/MMS qui ne pointent PAS vers la bonne URL
+      // (anciens boostinghost.fr / doublons www qui cassaient ou dupliquaient l'entrant)
+      for (const w of list) {
+        if (desiredEvents.includes(w.event) && w.url !== webhookUrl && w.id) {
+          try {
+            const del = await fetch(`https://api.sms-gate.app/3rdparty/v1/webhooks/${w.id}`, {
+              method: 'DELETE', headers: authHeader
+            });
+            console.log(`🧹 Webhook ${w.event} périmé supprimé (${w.url}) : ${del.ok ? 'ok' : 'échec'}`);
+          } catch (e) { console.warn('⚠️ Suppression webhook périmé:', e.message); }
         }
-      } else {
-        console.log('✅ Webhook SMS entrant déjà enregistré');
+      }
+
+      // Enregistrer chaque événement vers la bonne URL s'il n'existe pas déjà
+      for (const ev of desiredEvents) {
+        const already = list.some(w => w.url === webhookUrl && w.event === ev);
+        if (!already) {
+          const reg = await fetch('https://api.sms-gate.app/3rdparty/v1/webhooks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeader },
+            body: JSON.stringify({ url: webhookUrl, event: ev })
+          });
+          if (reg.ok) {
+            console.log(`✅ Webhook entrant enregistré : ${ev} → ${webhookUrl}`);
+          } else {
+            const err = await reg.text();
+            console.warn(`⚠️ Webhook ${ev} : erreur enregistrement : ${err}`);
+          }
+        } else {
+          console.log(`✅ Webhook entrant déjà enregistré : ${ev} → ${webhookUrl}`);
+        }
       }
     } else {
-      console.log('ℹ️ Webhook SMS ignoré (SMS_GATEWAY_LOGIN/PASSWORD ou APP_URL manquant)');
+      console.log('ℹ️ Webhook SMS ignoré (SMS_GATEWAY_LOGIN/PASSWORD ou URL backend manquant)');
     }
   } catch (webhookErr) {
     console.warn('⚠️ Webhook SMS entrant : erreur:', webhookErr.message);
