@@ -2,6 +2,11 @@ const SmartLockAdapter = require('./base-adapter');
 
 const AUTH_URL = 'https://auth.igloohome.co/oauth2/token';
 const BASE_URL = 'https://api.igloodeveloper.co/igloohome';
+
+// Heure de fin de validité d'un code = jour de départ à cette heure (Europe/Paris).
+// 14h laisse une marge confortable au-delà de l'heure de checkout sans laisser
+// le code ouvert toute la journée.
+const CHECKOUT_END_HOUR_PARIS = 14;
 const SCOPES = 'igloohomeapi/algopin-hourly igloohomeapi/algopin-daily igloohomeapi/algopin-permanent igloohomeapi/algopin-onetime igloohomeapi/get-devices igloohomeapi/unlock-bridge-proxied-job igloohomeapi/lock-bridge-proxied-job igloohomeapi/create-pin-bridge-proxied-job igloohomeapi/delete-pin-bridge-proxied-job igloohomeapi/get-job-status igloohomeapi/get-properties';
 
 class IgloohomeAdapter extends SmartLockAdapter {
@@ -111,6 +116,28 @@ class IgloohomeAdapter extends SmartLockAdapter {
     });
   }
 
+  // ── Helper : ramener une date de départ au jour J à HH:00 heure de Paris ──
+  // Évite que le code expire à minuit le matin du départ. Robuste été/hiver (DST).
+  _checkoutEndParis(date, hour = CHECKOUT_END_HOUR_PARIS) {
+    const d = new Date(date);
+    // Jour calendaire (Paris) de la date de départ
+    const ymd = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(d); // ex. "2026-06-25"
+    const hh = String(hour).padStart(2, '0');
+    // Trouver l'instant UTC dont l'heure murale Paris vaut bien `hour`
+    // en testant les deux offsets possibles (CEST +02:00 / CET +01:00)
+    for (const off of ['+02:00', '+01:00']) {
+      const cand = new Date(`${ymd}T${hh}:00:00${off}`);
+      const parisHour = parseInt(new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Paris', hour: '2-digit', hour12: false
+      }).format(cand), 10);
+      if (parisHour === hour) return cand;
+    }
+    // Fallback (ne devrait pas arriver)
+    return new Date(`${ymd}T${hh}:00:00+01:00`);
+  }
+
   // ── Helper : formater date pour AlgoPIN (YYYY-MM-DDTHH:00:00+hh:mm) ──
   _formatAlgoPinDate(date) {
     const d = new Date(date);
@@ -159,9 +186,13 @@ class IgloohomeAdapter extends SmartLockAdapter {
       }
     }
 
+    // Normaliser la date de fin : jour de départ à 14:00 Paris (au lieu de minuit).
+    // Sert à la fois à la fenêtre posée sur la serrure ET au valid_until stocké en DB.
+    const effectiveEndDate = endDate ? this._checkoutEndParis(endDate) : endDate;
+
     // Formater les dates au format requis : YYYY-MM-DDTHH:00:00+hh:mm
     const formattedStart = startDate ? this._formatAlgoPinDate(startDate) : undefined;
-    const formattedEnd = endDate ? this._formatAlgoPinDate(endDate) : undefined;
+    const formattedEnd = effectiveEndDate ? this._formatAlgoPinDate(effectiveEndDate) : undefined;
 
     // Liste des device IDs à essayer pour AlgoPIN (original d'abord, puis lock lié si différent)
     const algoDeviceIds = [originalDeviceId];
@@ -188,7 +219,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
           externalCodeId: data.pinId || data.id || String(Date.now()),
           code: code,
           validFrom: startDate,
-          validUntil: endDate,
+          validUntil: effectiveEndDate,
         };
       } catch (hourlyErr) {
         console.warn(`⚠️ [Igloohome] AlgoPIN hourly échoué sur ${devId}: ${hourlyErr.message}`);
@@ -216,7 +247,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
           externalCodeId: data.pinId || data.id || String(Date.now()),
           code: code,
           validFrom: startDate,
-          validUntil: endDate,
+          validUntil: effectiveEndDate,
         };
       } catch (algoPinErr) {
         console.warn(`⚠️ [Igloohome] AlgoPIN daily échoué sur ${devId}: ${algoPinErr.message}`);
@@ -239,7 +270,7 @@ class IgloohomeAdapter extends SmartLockAdapter {
       externalCodeId: result.jobResponse?.pinId || job.jobId || String(Date.now()),
       code: code,
       validFrom: startDate,
-      validUntil: endDate,
+      validUntil: effectiveEndDate,
     };
   }
 
