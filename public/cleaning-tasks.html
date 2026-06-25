@@ -2593,21 +2593,36 @@ async function handleSubmit() {
 }
 
 // Envoie le signalement de dégradation : upload des photos vers Cloudinary
+// (certifiées : hash SHA-256 + horodatage serveur + IP côté serveur)
 // puis création d'un ticket d'incident (kind=damage) + notif hôte.
 async function sendDamageReport() {
   if (damageState !== 'reported' || damagePhotos.length < 2) return;
   const desc = (document.getElementById('damageDesc')?.value || '').trim();
-  // 1) Upload des photos (base64 -> URL Cloudinary)
+  // 1) Upload des photos (base64 -> URL Cloudinary) avec certification
   const urls = [];
+  let certifiedCount = 0;
   for (const dataUrl of damagePhotos) {
     try {
       const up = await fetch(`${API_URL}/api/cleaning/photo-upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pinCode: currentPin, dataUrl })
+        body: JSON.stringify({
+          pinCode: currentPin,
+          dataUrl,
+          propertyId: currentTask.propertyId,
+          reservationKey: currentTask.reservationKey,
+          kind: 'arrival_state'   // ← déclenche la certification serveur
+        })
       });
-      if (up.ok) { const d = await up.json(); if (d.url) urls.push(d.url); }
+      if (up.ok) {
+        const d = await up.json();
+        if (d.url) urls.push(d.url);
+        if (d.sha256 && d.certificateId) certifiedCount++;
+      }
     } catch (e) { console.warn('upload photo dégradation échoué', e); }
+  }
+  if (certifiedCount > 0 && typeof showToast === 'function') {
+    showToast(`${certifiedCount} photo(s) certifiée(s) — horodatées côté serveur`, 'success');
   }
   // 2) Création du ticket "dégradation"
   await fetch(`${API_URL}/api/cleaning/maintenance/${currentPin}`, {

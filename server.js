@@ -13379,18 +13379,20 @@ app.post('/api/cleaning/maintenance/:pinCode', async (req, res) => {
 // Route upload photo ménage (upload immédiat vers Cloudinary pour éviter crash mémoire iOS)
 app.post('/api/cleaning/photo-upload', async (req, res) => {
   try {
-    const { pinCode, dataUrl } = req.body;
+    const { pinCode, dataUrl, propertyId, reservationKey, kind } = req.body;
     if (!pinCode || !dataUrl) {
       return res.status(400).json({ error: 'Données manquantes' });
     }
-    // Vérifier le PIN
+    // Vérifier le PIN (on récupère aussi user_id + nom pour le certificat)
     const cleanerResult = await pool.query(
-      'SELECT id FROM cleaners WHERE pin_code = $1 AND is_active = TRUE',
+      'SELECT id, user_id, name FROM cleaners WHERE pin_code = $1 AND is_active = TRUE',
       [pinCode]
     );
     if (cleanerResult.rows.length === 0) {
       return res.status(401).json({ error: 'Code PIN invalide' });
     }
+    const cleaner = cleanerResult.rows[0];
+
     // Convertir base64 en buffer
     const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
@@ -13403,10 +13405,185 @@ app.post('/api/cleaning/photo-upload', async (req, res) => {
       );
       require('stream').Readable.from(buffer).pipe(uploadStream);
     });
-    res.json({ success: true, url });
+
+    // ── CERTIFICATION (état du logement à l'arrivée uniquement) ──
+    // Niveaux 2+3 : ancrage serveur (horodatage + IP + identité + contexte)
+    // et empreinte SHA-256 inaltérable des octets reçus.
+    let certificateId = null;
+    let sha256 = null;
+    let serverReceivedAt = null;
+    if (kind === 'arrival_state') {
+      try {
+        sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+        const captureIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+          || req.socket?.remoteAddress || 'unknown';
+        certificateId = 'cert_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+        const ins = await pool.query(
+          `INSERT INTO cleaning_state_certificates
+             (id, cleaner_id, cleaner_name, user_id, property_id, reservation_key, kind,
+              cloudinary_url, image_sha256, byte_size, capture_ip, server_received_at, created_at)
+           VALUES ($1,$2,$3,$4,$5,$6,'arrival_state',$7,$8,$9,$10,NOW(),NOW())
+           RETURNING server_received_at`,
+          [certificateId, cleaner.id, cleaner.name, cleaner.user_id,
+           propertyId || null, reservationKey || null, url, sha256, buffer.length, captureIp]
+        );
+        serverReceivedAt = ins.rows[0]?.server_received_at || null;
+        console.log(`🔒 [CERTIF] Photo état logement certifiée ${certificateId} (sha256 ${sha256.slice(0,12)}…)`);
+      } catch (certErr) {
+        console.error('❌ [CERTIF] Échec certification (upload conservé):', certErr.message);
+        // Non bloquant : la photo reste uploadée même si la certification échoue
+      }
+    }
+
+    res.json({ success: true, url, certificateId, sha256, serverReceivedAt });
   } catch (err) {
     console.error('❌ Erreur upload photo ménage:', err);
     res.status(500).json({ error: 'Erreur upload photo' });
+  }
+});
+
+// ── Migration : table des certificats d'état du logement à l'arrivée ──
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cleaning_state_certificates (
+        id TEXT PRIMARY KEY,
+        cleaner_id TEXT,
+        cleaner_name TEXT,
+        user_id TEXT,
+        property_id TEXT,
+        reservation_key TEXT,
+        kind TEXT NOT NULL DEFAULT 'arrival_state',
+        cloudinary_url TEXT NOT NULL,
+        image_sha256 TEXT NOT NULL,
+        byte_size INTEGER,
+        capture_ip VARCHAR(64),
+        server_received_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_state_cert_prop_resa
+      ON cleaning_state_certificates(property_id, reservation_key)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_state_cert_user
+      ON cleaning_state_certificates(user_id)`);
+    console.log('✅ Table cleaning_state_certificates OK');
+  } catch (e) {
+    console.error('❌ Migration cleaning_state_certificates:', e.message);
+  }
+})();
+
+// ── PDF : certificat d'état du logement à l'arrivée (côté hôte, JWT) ──
+// GET /api/cleaning/state-certificate?propertyId=...&reservationKey=...
+app.get('/api/cleaning/state-certificate', authenticateAny, async (req, res) => {
+  try {
+    const { propertyId, reservationKey } = req.query;
+    if (!propertyId || !reservationKey) {
+      return res.status(400).json({ error: 'propertyId et reservationKey requis' });
+    }
+    const userId = req.user?.id;
+
+    // Récupérer les certificats de cette résa/logement, restreints au propriétaire
+    const rows = (await pool.query(
+      `SELECT * FROM cleaning_state_certificates
+       WHERE property_id = $1 AND reservation_key = $2 AND kind = 'arrival_state'
+         AND ($3::text IS NULL OR user_id = $3)
+       ORDER BY server_received_at ASC`,
+      [String(propertyId), String(reservationKey), userId || null]
+    )).rows;
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Aucun certificat pour cette réservation' });
+    }
+
+    // Nom du logement
+    let propName = String(propertyId);
+    try {
+      const p = await pool.query(
+        'SELECT COALESCE(NULLIF(internal_name,\'\'), name) AS n FROM properties WHERE id = $1',
+        [propertyId]
+      );
+      if (p.rows[0]?.n) propName = p.rows[0].n;
+    } catch {}
+
+    // Construire le PDF
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition',
+      `inline; filename="certificat-etat-${String(reservationKey).replace(/[^\w.-]/g,'_')}.pdf"`);
+    doc.pipe(res);
+
+    const GREEN = '#10B981', DARK = '#1C1C1C', GREY = '#6B7280';
+    const fmt = (d) => {
+      try { return new Date(d).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) + ' (Paris)'; }
+      catch { return String(d); }
+    };
+
+    // En-tête
+    doc.fillColor(GREEN).fontSize(20).font('Helvetica-Bold')
+       .text('Certificat d\'état du logement', { align: 'left' });
+    doc.moveDown(0.2);
+    doc.fillColor(GREY).fontSize(10).font('Helvetica')
+       .text('Constat à l\'arrivée, avant le ménage — horodatage serveur et empreinte numérique.');
+    doc.moveDown(0.8);
+
+    doc.fillColor(DARK).fontSize(11).font('Helvetica-Bold').text('Logement : ', { continued: true })
+       .font('Helvetica').text(propName);
+    doc.font('Helvetica-Bold').text('Réservation : ', { continued: true })
+       .font('Helvetica').text(String(reservationKey));
+    doc.font('Helvetica-Bold').text('Intervenant : ', { continued: true })
+       .font('Helvetica').text(rows[0].cleaner_name || rows[0].cleaner_id || '—');
+    doc.font('Helvetica-Bold').text('Document généré le : ', { continued: true })
+       .font('Helvetica').text(fmt(new Date()));
+    doc.font('Helvetica-Bold').text('Nombre de photos : ', { continued: true })
+       .font('Helvetica').text(String(rows.length));
+    doc.moveDown(0.6);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#E5E7EB').stroke();
+    doc.moveDown(0.6);
+
+    // Une entrée par photo
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (doc.y > 640) doc.addPage();
+
+      doc.fillColor(DARK).fontSize(12).font('Helvetica-Bold').text(`Photo ${i + 1}`);
+      doc.moveDown(0.2);
+
+      // Image (best-effort : on n'échoue pas le PDF si une image ne charge pas)
+      try {
+        const imgResp = await axios.get(r.cloudinary_url, { responseType: 'arraybuffer', timeout: 8000 });
+        const imgBuf = Buffer.from(imgResp.data);
+        doc.image(imgBuf, { fit: [240, 180] });
+      } catch (e) {
+        doc.fillColor(GREY).fontSize(9).font('Helvetica')
+           .text('[image indisponible — voir lien ci-dessous]');
+      }
+      doc.moveDown(0.3);
+
+      doc.fillColor(DARK).fontSize(9).font('Helvetica-Bold').text('Horodatage serveur : ', { continued: true })
+         .font('Helvetica').text(fmt(r.server_received_at));
+      doc.font('Helvetica-Bold').text('Empreinte SHA-256 : ', { continued: true })
+         .font('Helvetica').fontSize(8).text(r.image_sha256);
+      doc.fontSize(9).font('Helvetica-Bold').text('IP de capture : ', { continued: true })
+         .font('Helvetica').text(r.capture_ip || '—');
+      doc.font('Helvetica-Bold').text('Réf. certificat : ', { continued: true })
+         .font('Helvetica').text(r.id);
+      doc.fillColor('#2563EB').fontSize(8).text(r.cloudinary_url, { link: r.cloudinary_url, underline: true });
+      doc.moveDown(0.8);
+    }
+
+    // Pied de page explicatif
+    if (doc.y > 680) doc.addPage();
+    doc.moveDown(0.5);
+    doc.fillColor(GREY).fontSize(8).font('Helvetica').text(
+      'Vérification d\'intégrité : recalculez l\'empreinte SHA-256 du fichier image ; ' +
+      'si elle correspond à celle indiquée ci-dessus, la photo n\'a pas été modifiée depuis sa réception par le serveur. ' +
+      'L\'horodatage et l\'adresse IP sont enregistrés côté serveur au moment de la réception.',
+      { align: 'left' }
+    );
+
+    doc.end();
+  } catch (err) {
+    console.error('❌ Erreur génération certificat PDF:', err.message);
+    if (!res.headersSent) res.status(500).json({ error: 'Erreur génération certificat' });
   }
 });
 
