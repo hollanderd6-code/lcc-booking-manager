@@ -3878,15 +3878,50 @@ function formatDateFr(dateStr) {
           }
           var footer = document.getElementById('detailFooter');
           var dlBtn = '<button class="btn btn-ghost" onclick="downloadCleaningDetailPDF(' + c.id + ')" style="flex:1;"><i class="fas fa-download"></i> PDF</button>';
+          var certBtn = '<button class="btn btn-ghost" onclick="downloadStateCertificate()" style="flex:1;"><i class="fas fa-shield-halved"></i> Certificat d\'état</button>';
           footer.innerHTML = st === 'pending'
-            ? '<button class="btn btn-validate" onclick="validateChecklist(' + c.id + ');closeChecklistDetail();"><i class="fas fa-check-circle"></i> Valider</button><button class="btn btn-reject" onclick="closeChecklistDetail();setTimeout(()=>openComplementModal(' + c.id + '),200);"><i class="fas fa-undo"></i> Complément</button>' + dlBtn
-            : '<button class="btn btn-ghost" onclick="closeChecklistDetail()" style="flex:1;">Fermer</button>' + dlBtn;
+            ? '<button class="btn btn-validate" onclick="validateChecklist(' + c.id + ');closeChecklistDetail();"><i class="fas fa-check-circle"></i> Valider</button><button class="btn btn-reject" onclick="closeChecklistDetail();setTimeout(()=>openComplementModal(' + c.id + '),200);"><i class="fas fa-undo"></i> Complément</button>' + dlBtn + certBtn
+            : '<button class="btn btn-ghost" onclick="closeChecklistDetail()" style="flex:1;">Fermer</button>' + dlBtn + certBtn;
           window._currentCleaningDetailId = c.id;
+          window._currentCleaningDetailCtx = { propertyId: c.property_id, reservationKey: c.reservation_key };
           document.getElementById('checklistDetailModal').classList.add('active');
           document.body.style.overflow = 'hidden';
         } catch (err) { console.error(err); alert('Erreur chargement'); }
       }
       window.openChecklistDetail = openChecklistDetail;
+
+      // Certificat d'état du logement à l'arrivée (photos certifiées :
+      // SHA-256 + horodatage serveur + IP). Récupère le PDF via fetch authentifié
+      // puis l'ouvre. Gère proprement le cas "aucune photo d'état certifiée".
+      async function downloadStateCertificate() {
+        var ctx = window._currentCleaningDetailCtx || {};
+        if (!ctx.propertyId || !ctx.reservationKey) {
+          if (typeof showToast === 'function') showToast('Référence réservation introuvable', 'error');
+          else alert('Référence réservation introuvable');
+          return;
+        }
+        try {
+          var token = localStorage.getItem('lcc_token');
+          var url = API_URL + '/api/cleaning/state-certificate?propertyId='
+            + encodeURIComponent(ctx.propertyId) + '&reservationKey=' + encodeURIComponent(ctx.reservationKey);
+          var res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+          if (res.status === 404) {
+            if (typeof showToast === 'function') showToast("Aucune photo d'état certifiée pour cette réservation", 'info');
+            else alert("Aucune photo d'état certifiée pour cette réservation");
+            return;
+          }
+          if (!res.ok) throw new Error('http ' + res.status);
+          var blob = await res.blob();
+          var blobUrl = URL.createObjectURL(blob);
+          window.open(blobUrl, '_blank');
+          setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 60000);
+        } catch (e) {
+          console.error('Certificat état:', e);
+          if (typeof showToast === 'function') showToast('Erreur lors de la génération du certificat', 'error');
+          else alert('Erreur lors de la génération du certificat');
+        }
+      }
+      window.downloadStateCertificate = downloadStateCertificate;
 
       async function loadImageAsDataURL(url) {
         return new Promise(function(resolve, reject) {
