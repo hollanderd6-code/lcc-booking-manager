@@ -294,6 +294,31 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     flex-shrink: 0 !important;
   }
 
+  /* Édition groupée : carte en colonne → corps scrollable + footer (Annuler/Appliquer)
+     toujours visible au-dessus de la barre du bas, et plus de glissement horizontal. */
+  #batchEditModal {
+    align-items: center !important;
+    padding: 12px 12px calc(74px + env(safe-area-inset-bottom, 0px) + 12px) !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+  .batch-modal-card {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: calc(100dvh - 74px - env(safe-area-inset-bottom, 0px) - 24px) !important;
+    overflow: hidden !important;          /* la carte ne scrolle plus : c'est le corps qui scrolle */
+  }
+  .batch-modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;             /* indispensable pour qu'un flex-child puisse scroller */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;        /* bloque le slide gauche↔droite */
+    overscroll-behavior: contain !important;
+  }
+  .batch-modal-footer {
+    flex-shrink: 0 !important;            /* footer ancré, jamais poussé hors écran */
+  }
+
   /* Modal checklist : il est CENTRÉ (pas un bottom-sheet flex-end), donc le patch
      global ne l'attrape pas et son bas (bouton "Valider le ménage") passe derrière
      la bottom-bar. On réserve la hauteur de la barre sous l'overlay pour le remonter. */
@@ -14436,7 +14461,7 @@ body.notif-panel-open {
 <!-- MODAL ÉDITION GROUPÉE -->
 <!-- ============================================================ -->
 <div id="batchEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-  <div style="background:white;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.2);">
+  <div class="batch-modal-card" style="background:white;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.2);">
     <!-- Header -->
     <div style="padding:20px 24px 16px;border-bottom:1px solid #f0ede7;display:flex;align-items:center;justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:10px;">
@@ -14452,7 +14477,7 @@ body.notif-panel-open {
     </div>
 
     <!-- Body -->
-    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:20px;">
+    <div class="batch-modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:20px;">
 
       <!-- Action -->
       <div>
@@ -14548,7 +14573,7 @@ body.notif-panel-open {
     </div>
 
     <!-- Footer -->
-    <div style="padding:16px 24px;border-top:1px solid #f0ede7;display:flex;gap:10px;">
+    <div class="batch-modal-footer" style="padding:16px 24px;border-top:1px solid #f0ede7;display:flex;gap:10px;">
       <button onclick="closeBatchEditModal()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid #e2e8f0;background:white;color:#374151;font-size:14px;font-weight:600;cursor:pointer;">Annuler</button>
       <button id="batchApplyBtn" onclick="applyBatchEdit()" style="flex:2;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
         <i class="fas fa-check"></i> Appliquer
