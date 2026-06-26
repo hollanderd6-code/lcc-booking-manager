@@ -317,6 +317,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
+    // 🚫 Entrée ne doit JAMAIS envoyer le message sur mobile (= retour à la ligne).
+    // Sur tactile (téléphone/tablette → pointer: coarse), on bloque tout envoi sur
+    // Entrée, même si le clavier rapporte un faux Shift. Sur desktop, on bloque
+    // seulement Entrée SEULE (l'envoi reste possible via Ctrl/Cmd/Shift+Entrée).
+    // Interception en phase de capture pour neutraliser tout autre handler (scripts mobiles).
+    var _isCoarsePointer = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    var _blockEnterSend = function(e) {
+      if (e.key !== 'Enter' && e.keyCode !== 13 && e.which !== 13) return;
+      if (_isCoarsePointer) {
+        // Mobile/tactile : retour à la ligne, jamais d'envoi.
+        e.stopImmediatePropagation();
+        return; // pas de preventDefault → le saut de ligne s'insère normalement
+      }
+      // Desktop : Entrée seule = retour à la ligne (on bloque tout envoi sur Entrée seule).
+      if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.stopImmediatePropagation();
+      }
+    };
+    chatInput.addEventListener('keydown', _blockEnterSend, true);
+    chatInput.addEventListener('keypress', _blockEnterSend, true);
+
     // Fermer le popup si Escape
     chatInput.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') _closeShortcutPopup();
