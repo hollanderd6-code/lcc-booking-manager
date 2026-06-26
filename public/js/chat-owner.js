@@ -885,6 +885,7 @@ function displayMessages(messages) {
   if (!container) return;
   
   container.innerHTML = '';
+  hideAiThinking(); // reset de l'indicateur "l'IA réfléchit…" au changement de conversation
   
   if (!messages || messages.length === 0) {
     // ✅ Attendre que les messages Channex soient injectés avant d'afficher "Aucun message"
@@ -948,6 +949,68 @@ function displayMessages(messages) {
     });
     scrollToBottom();
   }, 100);
+}
+
+// ════════════════════════════════════════════════════════════════
+// Indicateur "l'IA réfléchit…" (temps réel uniquement)
+// ════════════════════════════════════════════════════════════════
+function _ensureAiThinkingStyle() {
+  if (document.getElementById('aiThinkingStyle')) return;
+  const st = document.createElement('style');
+  st.id = 'aiThinkingStyle';
+  st.textContent = '@keyframes bhAiDot{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}'
+    + '#aiThinkingIndicator .bh-ai-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#1A7A5E;margin:0 1px;animation:bhAiDot 1.2s infinite ease-in-out}'
+    + '#aiThinkingIndicator .bh-ai-dot:nth-child(2){animation-delay:.15s}'
+    + '#aiThinkingIndicator .bh-ai-dot:nth-child(3){animation-delay:.3s}';
+  document.head.appendChild(st);
+}
+
+function showAiThinking() {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+  if (document.getElementById('aiThinkingIndicator')) return; // déjà affiché
+  _ensureAiThinkingStyle();
+  const wrap = document.createElement('div');
+  wrap.id = 'aiThinkingIndicator';
+  wrap.className = 'chat-message owner bot-reply';
+  wrap.innerHTML = '<div class="chat-avatar">🤖</div>'
+    + '<div class="chat-content"><div class="chat-sender">Assistant</div>'
+    + '<div class="chat-bubble" style="display:inline-flex;align-items:center;gap:8px;">'
+    + '<span style="font-size:13px;color:#1A7A5E;font-weight:600;">L\'IA réfléchit</span>'
+    + '<span class="bh-ai-dot"></span><span class="bh-ai-dot"></span><span class="bh-ai-dot"></span>'
+    + '</div></div>';
+  container.appendChild(wrap);
+  scrollToBottom();
+  if (window._aiThinkingTimer) clearTimeout(window._aiThinkingTimer);
+  window._aiThinkingTimer = setTimeout(hideAiThinking, 45000); // filet de sécurité
+}
+
+function hideAiThinking() {
+  if (window._aiThinkingTimer) { clearTimeout(window._aiThinkingTimer); window._aiThinkingTimer = null; }
+  const el = document.getElementById('aiThinkingIndicator');
+  if (el) el.remove();
+}
+
+// Décide d'afficher / masquer l'indicateur selon un message TEMPS RÉEL
+function _bhUpdateAiThinking(message) {
+  try {
+    const sn = (message.sender_name || '');
+    const isInternalNote = message.sender_type === 'internal_note';
+    const isTemplate = /^tpl_/i.test(sn);
+    const isAiReply = !isInternalNote && !isTemplate && (
+      !!message.is_bot_response || !!message.is_auto_response ||
+      message.sender_type === 'system' || message.sender_type === 'bot' ||
+      /assistant/i.test(sn)
+    );
+    const isOwner = message.sender_type === 'owner' || message.sender_type === 'property'
+      || message.sender_type === 'bot' || message.sender_type === 'system';
+    if (isAiReply || isOwner) {
+      hideAiThinking();                    // l'IA a répondu (ou l'hôte a pris la main) → retirer
+    } else if (!isInternalNote && !isTemplate) {
+      const conv = window.currentChatConv; // message voyageur entrant
+      if (conv && conv.ai_disabled !== true) showAiThinking();
+    }
+  } catch (e) { /* non bloquant */ }
 }
 
 function appendMessage(message) {
@@ -1249,6 +1312,7 @@ async function sendMessageOwner() {
       // Afficher immédiatement le message avec son vrai id (pas de doublon possible via socket)
       const savedMsg = data.message || { content: message, sender_type: 'property', created_at: new Date().toISOString(), id: 'tmp_' + Date.now() };
       appendMessage({ ...savedMsg, sender_type: 'owner' });
+      hideAiThinking(); // l'hôte a pris la main → plus besoin de "l'IA réfléchit…"
       scrollToBottom();
       showToast('✅ Envoyé sur la plateforme', 'success');
       return;
@@ -1542,6 +1606,7 @@ function connectSocket() {
     if (currentConversationId && message.conversation_id === currentConversationId) {
       appendMessage(message);
       scrollToBottom();
+      _bhUpdateAiThinking(message); // affiche "l'IA réfléchit…" si voyageur + IA active, retire si réponse IA
     }
     
     // Mettre à jour le compteur de messages non lus
