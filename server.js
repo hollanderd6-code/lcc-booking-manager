@@ -29446,12 +29446,15 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
 
       console.log(`📱 [sous-compte ${subAccountId}] Enregistrement token FCM (${deviceType})`);
 
-      // Supprimer tout ancien enregistrement de ce token (évite conflit multi-contraintes)
+      // Supprimer tout ancien enregistrement de ce token (un même token ne doit rester lié qu'à un seul compte/appareil)
       await pool.query(`DELETE FROM user_fcm_tokens WHERE fcm_token = $1`, [token]);
 
+      // Upsert : si (sub_account_id, device_type) existe déjà avec un autre token, on met à jour au lieu d'échouer
       await pool.query(
         `INSERT INTO user_fcm_tokens (sub_account_id, user_id, fcm_token, device_type, created_at, updated_at)
-         VALUES ($1, NULL, $2, $3, NOW(), NOW())`,
+         VALUES ($1, NULL, $2, $3, NOW(), NOW())
+         ON CONFLICT (sub_account_id, device_type)
+         DO UPDATE SET fcm_token = EXCLUDED.fcm_token, updated_at = NOW()`,
         [subAccountId, token, deviceType]
       );
 
