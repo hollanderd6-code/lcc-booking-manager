@@ -15408,9 +15408,9 @@ app.get('/api/police-records/:id/pdf', authenticateAny, async (req, res) => {
     // ── Bandeau vert d'en-tête + marque Boostinghost ──
     const bandH = 74;
     doc.rect(0, 0, W, bandH).fill(GREEN);
-    // Marque : carré blanc arrondi avec "B" vert
+    // Marque : carré blanc arrondi avec "B" vert centré
     doc.roundedRect(mg, 22, 30, 30, 8).fill('#FFFFFF');
-    doc.font('Helvetica-Bold').fontSize(20).fillColor(GREEN).text('B', mg, 27, { width: 30, align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(18).fillColor(GREEN).text('B', mg, 30, { width: 30, align: 'center' });
     // Wordmark
     doc.font('Helvetica-Bold').fontSize(16).fillColor('#FFFFFF').text('Boostinghost', mg + 40, 24);
     doc.font('Helvetica').fontSize(8.5).fillColor('#CFE3DB')
