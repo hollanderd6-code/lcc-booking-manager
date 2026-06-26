@@ -498,7 +498,7 @@ async function triggerChannexRatesSync(propertyId, userId) {
 
     console.log(`✅ [CHANNEX RATES SYNC] ${rates.length} tarifs + ${restrictions.length} restrictions synchronisés`);
     if (restrictions.length > 0) {
-      console.log(`🔍 [CHANNEX RATES SYNC] Détail restrictions:`, restrictions.map(r => `${r.date}→min_stay=${r.min_stay}`).join(', '));
+      dbg(`🔍 [CHANNEX RATES SYNC] Détail restrictions:`, restrictions.map(r => `${r.date}→min_stay=${r.min_stay}`).join(', '));
     }
   } catch (e) {
     console.error('⚠️ [CHANNEX RATES SYNC] Erreur (non bloquante):', e.message);
@@ -3276,7 +3276,7 @@ async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission,
   await sendNotificationToDelegatesOf(parentUserId, title, body, data);
 
   try {
-    console.log('🔍 [SubNotif] parentUserId:', parentUserId, '| permission:', requiredPermission, '| notifColumn:', notifColumn, '| propertyId:', propertyId);
+    dbg('🔍 [SubNotif] parentUserId:', parentUserId, '| permission:', requiredPermission, '| notifColumn:', notifColumn, '| propertyId:', propertyId);
 
     let q = `SELECT uft.fcm_token, sa.first_name, sa.id as sub_account_id
        FROM user_fcm_tokens uft
@@ -3298,7 +3298,7 @@ async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission,
       )`;
     }
     const result = await pool.query(q, [parentUserId]);
-    console.log('🔍 [SubNotif] rows found:', result.rows.length);
+    dbg('🔍 [SubNotif] rows found:', result.rows.length);
 
     if (result.rows.length === 0) {
       // Debug sans les filtres token/notif pour voir ce qui bloque
@@ -3308,8 +3308,8 @@ async function sendNotificationToSubAccountsOf(parentUserId, requiredPermission,
           + `, uft.fcm_token`;
         const debugQ = `SELECT ` + debugCols + ` FROM sub_accounts sa LEFT JOIN sub_account_permissions sap ON sap.sub_account_id = sa.id LEFT JOIN user_fcm_tokens uft ON uft.sub_account_id = sa.id WHERE sa.parent_user_id = $1`;
         const debugR = await pool.query(debugQ, [parentUserId]);
-        console.log('🔍 [SubNotif] Debug (sans filtre):', JSON.stringify(debugR.rows));
-      } catch(de) { console.log('🔍 [SubNotif] Debug query error:', de.message); }
+        dbg('🔍 [SubNotif] Debug (sans filtre):', JSON.stringify(debugR.rows));
+      } catch(de) { dbg('🔍 [SubNotif] Debug query error:', de.message); }
 
       console.log('ℹ️ Aucun sous-compte [' + requiredPermission + '] avec token pour user ' + parentUserId);
       return;
@@ -3911,6 +3911,11 @@ if ((useBrevo || transporter) && cleanerEmail) {
 // APP / STRIPE / STORE
 // ============================================
 const app = express();
+
+// 🔍 Logs de debug gérés par l'env DEBUG_LOGS (silencieux en production).
+// Pour les réactiver : définir DEBUG_LOGS=1 dans les variables d'environnement Render.
+const DEBUG_LOGS = process.env.DEBUG_LOGS === '1';
+function dbg(...args) { if (DEBUG_LOGS) console.log(...args); }
 
 // ✅ Configuration de l'expéditeur des emails
 const EMAIL_FROM = process.env.EMAIL_FROM || `"Boostinghost" <no-reply@boostinghost.fr>`;
@@ -6115,12 +6120,12 @@ async function saveReservationToDB(reservation, propertyId, userId) {
     
     const isNewReservation = existingResult.rows.length === 0;
     // ✅ AJOUTEZ CES LOGS
-console.log(`🔍 DEBUG saveReservationToDB:`);
-console.log(`   → UID: ${reservation.uid}`);
-console.log(`   → Source: ${reservation.source}`);
-console.log(`   → Type: ${reservation.type}`);
-console.log(`   → isNewReservation: ${isNewReservation}`);
-console.log(`   → realUserId: ${realUserId}`);
+dbg(`🔍 DEBUG saveReservationToDB:`);
+dbg(`   → UID: ${reservation.uid}`);
+dbg(`   → Source: ${reservation.source}`);
+dbg(`   → Type: ${reservation.type}`);
+dbg(`   → isNewReservation: ${isNewReservation}`);
+dbg(`   → realUserId: ${realUserId}`);
     // Insérer ou mettre à jour
     const result = await pool.query(`
       INSERT INTO reservations (
@@ -6322,7 +6327,7 @@ async function sendAutomatedMessage(conversationId, message, io) {
  */
 async function sendDepositRequestMessages(io) {
   try {
-    console.log('🔍 Recherche réservations Booking nécessitant une caution (J-2)...');
+    dbg('🔍 Recherche réservations Booking nécessitant une caution (J-2)...');
     
     // Date J-2 (dans 2 jours)
     const targetDate = new Date();
@@ -6356,7 +6361,7 @@ async function sendDepositRequestMessages(io) {
          FROM conversations c WHERE DATE(c.reservation_start_date) = $1 AND c.status != 'cancelled'`,
         [targetDateStr]
       );
-      console.log(`🔍 [DEBUG] Toutes les conv J+2 (${allJ2.rows.length}):`, allJ2.rows.map(r => `${r.guest_name} | platform="${r.platform}"`).join(', '));
+      dbg(`🔍 [DEBUG] Toutes les conv J+2 (${allJ2.rows.length}):`, allJ2.rows.map(r => `${r.guest_name} | platform="${r.platform}"`).join(', '));
     }
 
     for (const conv of conversations) {
@@ -6496,7 +6501,7 @@ Une fois la caution validée, vous recevrez toutes vos informations d'accès.
  */
 async function sendArrivalInfoMessages(io) {
   try {
-    console.log('🔍 Recherche arrivées du jour pour envoi infos d\'accès...');
+    dbg('🔍 Recherche arrivées du jour pour envoi infos d\'accès...');
     
     // Date du jour
     const today = new Date().toISOString().split('T')[0];
@@ -6977,7 +6982,7 @@ async function loadDepositsFromDB() {
  */
 async function saveDepositToDB(deposit, userId, propertyId = null) {
   try {
-    console.log('🔍 Tentative de sauvegarde deposit:', {
+    dbg('🔍 Tentative de sauvegarde deposit:', {
       depositId: deposit.id,
       userId: userId,
       reservationUid: deposit.reservationUid,
@@ -7115,7 +7120,7 @@ async function ensurePaymentsTable() {
  */
 async function savePaymentToDB(payment, userId, propertyId = null) {
   try {
-    console.log('🔍 Tentative de sauvegarde payment:', {
+    dbg('🔍 Tentative de sauvegarde payment:', {
       paymentId: payment.id,
       userId: userId,
       reservationUid: payment.reservationUid,
@@ -8821,7 +8826,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
       filteredProps = userProps;
     }
 
-    console.log(`🔍 DEBUG: userProps=${userProps.length}, filteredProps=${filteredProps.length}, accessible=${accessibleProperties.length}`);
+    dbg(`🔍 DEBUG: userProps=${userProps.length}, filteredProps=${filteredProps.length}, accessible=${accessibleProperties.length}`);
 
     // ⭐ Fonction pour normaliser les plateformes
     function normalizePlatform(platform) {
@@ -9436,7 +9441,7 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
       } catch(e) {
         agencyIdsForDelete = [realOwnerId];
       }
-      console.log(`🔍 IDs autorisés pour suppression:`, agencyIdsForDelete);
+      dbg(`🔍 IDs autorisés pour suppression:`, agencyIdsForDelete);
 
       const deleteResult = await pool.query(
         `DELETE FROM reservations 
@@ -13177,8 +13182,8 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
 
     for (const assignment of allAssignments) {
       const { reservation_key, property_id } = assignment;
-      console.log('🔍 Assignment:', { reservation_key, property_id });
-  console.log('🔍 reservationsStore.properties[property_id]:', reservationsStore.properties[property_id]);
+      dbg('🔍 Assignment:', { reservation_key, property_id });
+  dbg('🔍 reservationsStore.properties[property_id]:', reservationsStore.properties[property_id]);
       
       // Vérifier si c'est une assignation par réservation (nouveau système)
 if (reservation_key && reservation_key !== null) {
@@ -13191,7 +13196,7 @@ if (reservation_key && reservation_key !== null) {
   const startDate = parts[parts.length - 2];
   const keyPropertyId = parts.slice(0, parts.length - 2).join('_');
   
-  console.log('🔍 Parsed:', { keyPropertyId, startDate, endDate });
+  dbg('🔍 Parsed:', { keyPropertyId, startDate, endDate });
   
   // Ne garder que les réservations du mois en cours et du mois suivant
   // Exception : si une checklist rejected existe pour cette clé, on la garde quand même
@@ -16194,14 +16199,14 @@ app.get('/api/properties',
     }
     
     // Charger les propriétés du compte parent
-    console.log('🔍 userId pour getUserProperties:', userId);
-    console.log('🔍 PROPERTIES total en mémoire:', PROPERTIES.length);
+    dbg('🔍 userId pour getUserProperties:', userId);
+    dbg('🔍 PROPERTIES total en mémoire:', PROPERTIES.length);
     const agencyIds = await getAgencyUserIds(req, userId);
     let userProps = [];
     for (const uid of agencyIds) {
       userProps = userProps.concat(getUserProperties(uid));
     }
-    console.log('🔍 userProps AVANT filtrage:', userProps.length, userProps.map(p => p.id));
+    dbg('🔍 userProps AVANT filtrage:', userProps.length, userProps.map(p => p.id));
     
     // ✅ FILTRER selon les propriétés accessibles (si sous-compte avec restrictions)
     if (accessiblePropertyIds && accessiblePropertyIds.length > 0) {
@@ -25459,7 +25464,7 @@ app.post('/api/chat/:photosToken/checkout-photos', async (req, res) => {
     }
     
     // 🔍 DEBUG : Voir ce qu'on cherche
-    console.log('🔍 Recherche cleaning_checklist avec reservation_key:', reservationKey);
+    dbg('🔍 Recherche cleaning_checklist avec reservation_key:', reservationKey);
     
     // Vérifier si le checklist existe
     const checkExists = await pool.query(
@@ -28946,7 +28951,7 @@ console.log('✅ Routes support chat initialisées');
 // ============================================
 app.get('/api/auth/verify', authenticateAny, async (req, res) => {
   try {
-    console.log('🔍 Vérification auth - Type:', req.isSubAccount ? 'sub-account' : 'main');
+    dbg('🔍 Vérification auth - Type:', req.isSubAccount ? 'sub-account' : 'main');
     
     if (req.isSubAccount) {
       res.json({
@@ -30931,7 +30936,7 @@ app.post('/api/contrat/sign/:token', async (req, res) => {
     const rawData = contract.contract_data;
     const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
     const isMandat = data.contractType === 'mandat';
-    console.log(`🔍 Sign route — contractType: "${data.contractType}" — isMandat: ${isMandat}`);
+    dbg(`🔍 Sign route — contractType: "${data.contractType}" — isMandat: ${isMandat}`);
     const nights = data.checkin && data.checkout
       ? Math.round((new Date(data.checkout) - new Date(data.checkin)) / 86400000) : 0;
     const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
@@ -33646,7 +33651,7 @@ app.get('/api/channex/connected-channels/:property_id', authenticateToken, async
         }
       });
       channexChannels = r.data?.data || [];
-      console.log(`🔍 [channels] ${property_id}: ${channexChannels.length} channels Channex`);
+      dbg(`🔍 [channels] ${property_id}: ${channexChannels.length} channels Channex`);
     } catch(e) {
       console.warn(`⚠️ [channels] Channex API échouée pour ${property_id}: ${e.message}`);
     }
@@ -34678,7 +34683,7 @@ app.post('/api/channex/webhook', async (req, res) => {
           // Seul on_booking est déclenché immédiatement
           const triggerTypes = ['on_booking'];
 
-          console.log(`🔍 [TPL] Recherche templates on_booking pour user=${result.user_id} property=${result.property_id}${isArrivalToday ? ' (arrivée aujourd\'hui)' : daysUntilArrival <= 0 ? ` (J${daysUntilArrival})` : ` (J-${daysUntilArrival})`}`);
+          dbg(`🔍 [TPL] Recherche templates on_booking pour user=${result.user_id} property=${result.property_id}${isArrivalToday ? ' (arrivée aujourd\'hui)' : daysUntilArrival <= 0 ? ` (J${daysUntilArrival})` : ` (J-${daysUntilArrival})`}`);
 
           // Requête avec support property_ids (multi-logements)
           const templates = await pool.query(
@@ -34711,7 +34716,7 @@ app.post('/api/channex/webhook', async (req, res) => {
 
           // Envoyer les templates on_booking
           if (templates.rows.length > 0 && conv) {
-            console.log(`🔍 [TPL] ${templates.rows.length} template(s) on_booking trouvé(s)`);
+            dbg(`🔍 [TPL] ${templates.rows.length} template(s) on_booking trouvé(s)`);
             for (const tmpl of templates.rows) {
               await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
               console.log(`✅ [TPL on_booking] Template "${tmpl.title}" envoyé`);
@@ -39246,7 +39251,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     // 🔒 Vérifier le hold : par hold_token (prioritaire) ou par email+dates (fallback)
     let activeHoldUntil = null;
     let holdRow = null;
-    console.log(`🔍 [GUEST] Checkout: hold_token=${hold_token || 'NONE'}, fixed_price_override=${fixed_price_override || 'NONE'}, email=${guest_email}`);
+    dbg(`🔍 [GUEST] Checkout: hold_token=${hold_token || 'NONE'}, fixed_price_override=${fixed_price_override || 'NONE'}, email=${guest_email}`);
     try {
       if (hold_token) {
         // Recherche par token (fiable, pas de problème d'email)
@@ -39255,7 +39260,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
           [hold_token]
         );
         holdRow = holdRes.rows[0] || null;
-        console.log(`🔍 [GUEST] Hold by token: ${holdRow ? 'FOUND (fixed_price=' + holdRow.fixed_price + ', status=' + holdRow.status + ')' : 'NOT FOUND'}`);
+        dbg(`🔍 [GUEST] Hold by token: ${holdRow ? 'FOUND (fixed_price=' + holdRow.fixed_price + ', status=' + holdRow.status + ')' : 'NOT FOUND'}`);
       }
       if (!holdRow && guest_email) {
         // Fallback par email+dates
@@ -39266,7 +39271,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
           [property_id, checkin, checkout, guest_email]
         );
         holdRow = holdRes.rows[0] || null;
-        console.log(`🔍 [GUEST] Hold by email: ${holdRow ? 'FOUND' : 'NOT FOUND'}`);
+        dbg(`🔍 [GUEST] Hold by email: ${holdRow ? 'FOUND' : 'NOT FOUND'}`);
       }
       if (!holdRow) {
         // Fallback par property+dates seulement (pas d'email match requis)
@@ -39278,7 +39283,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
           [property_id, checkin, checkout]
         );
         holdRow = holdRes.rows[0] || null;
-        console.log(`🔍 [GUEST] Hold by dates only: ${holdRow ? 'FOUND (fixed_price=' + holdRow.fixed_price + ')' : 'NOT FOUND'}`);
+        dbg(`🔍 [GUEST] Hold by dates only: ${holdRow ? 'FOUND (fixed_price=' + holdRow.fixed_price + ')' : 'NOT FOUND'}`);
       }
 
       if (holdRow) {
