@@ -1285,6 +1285,84 @@ html, body { overflow-x: hidden !important; max-width: 100vw !important; }
   </div>
 </section>
 
+<!-- ═══ COMPARATIF ═══ -->
+<section class="section" style="background:var(--cream);padding:100px 0;">
+  <div class="container">
+    <div class="reveal" style="text-align:center;max-width:760px;margin:0 auto 40px;">
+      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-circle-check"></i> Comparatif</div>
+      <h2 class="section-title" style="text-align:center;">Le seul vraiment tout-en-un</h2>
+      <p class="section-sub" style="margin:0 auto;">De la réservation directe à la conformité française, tout est intégré — là où les autres solutions facturent chaque brique en supplément.</p>
+    </div>
+
+    <style>
+      .cmp-card{max-width:660px;margin:0 auto;background:var(--white);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 10px 40px rgba(13,17,23,.06);}
+      .cmp-row{display:grid;grid-template-columns:1fr 128px 128px;align-items:stretch;}
+      .cmp-row + .cmp-row{border-top:1px solid rgba(200,184,154,.35);}
+      .cmp-head{padding:14px 8px;text-align:center;font-weight:700;font-size:14px;}
+      .cmp-feat{padding:13px 18px;font-size:13.5px;color:var(--text);font-weight:500;line-height:1.35;display:flex;align-items:center;}
+      .cmp-bh{background:rgba(26,122,94,.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:11px 8px;}
+      .cmp-other{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:11px 8px;}
+      .cmp-ico{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;}
+      .cmp-ico.ok{background:#1A7A5E;}
+      .cmp-ico.no{background:#D8D4CC;}
+      .cmp-tag{font-size:11px;font-weight:600;}
+      .cmp-tag.ok{color:#15624B;}
+      .cmp-tag.no{color:#9AA0A6;font-weight:500;}
+      .cmp-zebra{background:#FBF9F4;}
+      @media(max-width:560px){
+        .cmp-row{grid-template-columns:1fr 64px 64px;}
+        .cmp-feat{font-size:12px;padding:12px 12px;}
+        .cmp-head{font-size:11.5px;padding:12px 4px;}
+        .cmp-tag{display:none;}
+      }
+    </style>
+
+    <div class="cmp-card reveal">
+      <div class="cmp-row">
+        <div class="cmp-feat" style="font-weight:700;"></div>
+        <div class="cmp-head" style="background:#1A7A5E;color:#fff;">Boostinghost</div>
+        <div class="cmp-head" style="background:#EDEAE3;color:var(--muted);">Autres solutions</div>
+      </div>
+      <div id="cmpBody"></div>
+    </div>
+
+    <div class="reveal" style="text-align:center;margin-top:36px;">
+      <a href="/register.html" class="btn btn-primary btn-lg"><i class="fas fa-rocket"></i> Essayer gratuitement 14 jours</a>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    var rows=[
+      ["Réservations en direct (site + app BHGuest)","Inclus","Rare ou payant"],
+      ["Conformité française : fiche de police, e-facturation","Inclus","Rarement"],
+      ["Channel manager (Airbnb, Booking, Abritel…)","Inclus","En supplément"],
+      ["Messagerie IA 24/7 · 26 langues","Inclus","Basique ou payant"],
+      ["Pricing dynamique","Inclus","Souvent payant"],
+      ["Cautions par empreinte, sans commission","Intégré","Souvent en option"],
+      ["État des lieux à l'arrivée + réassort + maintenance auto","Inclus","Rare"],
+      ["Mode agence : sous-comptes & droits par équipe","Inclus","Limité"],
+      ["Contrats de mandat de gestion","Inclus","Absent"],
+      ["Support en français","Oui","Souvent anglophone"]
+    ];
+    var b=document.getElementById('cmpBody');
+    if(b){ b.innerHTML=rows.map(function(r,i){
+      return '<div class="cmp-row'+(i%2===1?' ':'')+'">'
+        +'<div class="cmp-feat'+(i%2===1?' cmp-zebra':'')+'">'+r[0]+'</div>'
+        +'<div class="cmp-bh">'
+          +'<span class="cmp-ico ok"><i class="fas fa-check"></i></span>'
+          +'<span class="cmp-tag ok">'+r[1]+'</span>'
+        +'</div>'
+        +'<div class="cmp-other'+(i%2===1?' cmp-zebra':'')+'">'
+          +'<span class="cmp-ico no"><i class="fas fa-xmark"></i></span>'
+          +'<span class="cmp-tag no">'+r[2]+'</span>'
+        +'</div>'
+      +'</div>';
+    }).join(''); }
+  })();
+  </script>
+</section>
+
 <!-- ═══ CTA ═══ -->
 <section class="cta-section">
   <div class="container">
