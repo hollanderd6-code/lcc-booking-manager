@@ -534,7 +534,7 @@ html[data-theme-v3="1"] .page-back-btn {
   white-space: pre-wrap;
 }
 .chat-message.owner .chat-bubble {
-  background: #0D1117 !important;
+  background: #1A7A5E !important;
   color: white !important;
   border-radius: 16px 16px 4px 16px !important;
 }
@@ -2692,13 +2692,65 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
 <style>
 /* FINAL OVERRIDES */
-/* Owner bubble dark */
+/* Owner bubble — vert BH */
 .chat-message.owner .chat-bubble,
 [class*="chat"] .owner .chat-bubble,
 .chat-bubble.owner-bubble { 
-  background: #0D1117 !important; 
+  background: #1A7A5E !important; 
   color: #ffffff !important; 
 }
+/* Réponses IA — vert clair distinct */
+.chat-message.owner.bot-reply .chat-bubble,
+.chat-message.bot-reply .chat-bubble {
+  background: #E3F1EA !important;
+  color: #14503D !important;
+  border: 1px solid rgba(26,122,94,.18) !important;
+}
+.chat-message.bot-reply .chat-bubble a { color: #14503D !important; }
+
+/* Badge IA */
+.ai-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #1A7A5E; color: #fff;
+  font-size: 10.5px; font-weight: 600;
+  padding: 2px 9px; border-radius: 999px;
+  line-height: 1.5;
+}
+.ai-badge .ai-badge-spark { font-size: 11px; }
+
+/* Accusé de lecture */
+.chat-status.read { color: #1A7A5E !important; font-weight: 600; }
+
+/* Séparateur de date */
+.chat-date-sep {
+  display: flex; align-items: center; justify-content: center;
+  margin: 14px 0 10px;
+}
+.chat-date-sep span {
+  font-size: 11px; color: #8A8275;
+  background: rgba(0,0,0,.05);
+  padding: 3px 12px; border-radius: 999px;
+  font-weight: 500;
+}
+
+/* Pastilles de traduction — version allégée/discrète */
+.tx-bar { margin-top: 4px; }
+.tx-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: transparent !important;
+  border: 1px solid rgba(0,0,0,.10) !important;
+  color: #9AA0A6 !important;
+  font-size: 10.5px !important; font-weight: 500 !important;
+  padding: 2px 8px !important; border-radius: 999px !important;
+  cursor: pointer; line-height: 1.5;
+  box-shadow: none !important;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.tx-chip:hover { background: rgba(26,122,94,.07) !important; color: #1A7A5E !important; border-color: rgba(26,122,94,.3) !important; }
+.tx-chip.translated { background: rgba(26,122,94,.10) !important; color: #15624B !important; border-color: rgba(26,122,94,.3) !important; }
+.tx-chip .tx-flags { font-size: 10px; opacity: .85; }
+.tx-chip .tx-label { letter-spacing: .01em; }
+
 /* Messages area beige */
 #chatMessages,
 .chat-modal-messages { 

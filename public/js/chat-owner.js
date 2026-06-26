@@ -915,7 +915,24 @@ function displayMessages(messages) {
     return true;
   });
 
-  filtered.forEach(msg => appendMessage(msg));
+  let _lastSepDay = null;
+  filtered.forEach(msg => {
+    const d = msg.created_at ? new Date(msg.created_at) : null;
+    if (d && !isNaN(d.getTime())) {
+      const dayKey = d.toDateString();
+      if (dayKey !== _lastSepDay) {
+        _lastSepDay = dayKey;
+        const c = document.getElementById('chatMessages');
+        if (c) {
+          const sep = document.createElement('div');
+          sep.className = 'chat-date-sep';
+          sep.innerHTML = '<span>' + formatDateSep(d) + '</span>';
+          c.appendChild(sep);
+        }
+      }
+    }
+    appendMessage(msg);
+  });
 
   // ✅ Nettoyer les divs .chat-message sans contenu (artefacts DOM)
   setTimeout(() => {
@@ -944,9 +961,10 @@ function appendMessage(message) {
   }
 
   const isOwner = message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
+  const isAiReply = !!(message.is_bot_response || message.is_auto_response);
   
   const messageDiv = document.createElement('div');
-  messageDiv.className = `chat-message ${isOwner ? 'owner' : 'guest'}`;
+  messageDiv.className = `chat-message ${isOwner ? 'owner' : 'guest'}${isAiReply ? ' bot-reply' : ''}`;
   if (message.id) messageDiv.setAttribute('data-msg-id', message.id);
   if (message.created_at) {
     messageDiv.setAttribute('data-ts', new Date(message.created_at).getTime());
@@ -1000,12 +1018,21 @@ function appendMessage(message) {
   time.textContent = _ts ? formatTime(_ts) : '';
   
   const status = document.createElement('span');
-  status.className = 'chat-status';
+  status.className = 'chat-status' + (message.is_read ? ' read' : '');
   const _isOwnerMsg = message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
-  status.textContent = _isOwnerMsg ? 'Envoyé' : '';
+  if (_isOwnerMsg) status.textContent = message.is_read ? '✓✓ Lu' : '✓ Envoyé';
+  else status.textContent = '';
   
   meta.appendChild(time);
   meta.appendChild(status);
+
+  // Badge IA sous les réponses générées automatiquement
+  if (isAiReply) {
+    const aiBadge = document.createElement('span');
+    aiBadge.className = 'ai-badge';
+    aiBadge.innerHTML = '<span class="ai-badge-spark">✦</span> Répondu par l\'IA';
+    meta.appendChild(aiBadge);
+  }
   
   contentDiv.appendChild(sender);
   contentDiv.appendChild(bubble);
@@ -1279,6 +1306,16 @@ function _injectChannexMessages(channexMsgs) {
     }
   });
   chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function formatDateSep(d) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const that = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round((today - that) / 86400000);
+  if (diffDays === 0) return "Aujourd'hui";
+  if (diffDays === 1) return 'Hier';
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
 }
 
 function formatTime(timestamp) {
