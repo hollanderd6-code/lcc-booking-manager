@@ -2747,6 +2747,22 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 .chat-message.internal-note .note-body { font-size: 13.5px; line-height: 1.45; color: #5C4E1A; white-space: pre-wrap; }
 .chat-message.internal-note .chat-meta { justify-content: center !important; }
 
+/* ── Lisibilité des métadonnées (dates, heure, statut) ── */
+/* Dates sous le nom du client (en-tête conversation) */
+.msgs-chat-meta { color: #1F2937 !important; }
+.msgs-chat-meta .sep { opacity: .55 !important; }
+/* Heure + méta sous les bulles (sur fond crème) → quasi-noir lisible */
+.chat-time, .chat-meta { color: #1F2937 !important; }
+.chat-message.owner .chat-time, .chat-message.owner .chat-meta { color: #1F2937 !important; }
+.chat-message.guest .chat-meta { color: #1F2937 !important; }
+/* Statut "Envoyé" */
+.chat-status { color: #374151 !important; }
+.chat-status.read { color: #1A7A5E !important; }
+/* Heure À L'INTÉRIEUR d'une bulle owner (verte) → texte clair lisible */
+.chat-message.owner .chat-bubble .chat-time { color: rgba(255,255,255,.88) !important; }
+/* Heure À L'INTÉRIEUR d'une bulle voyageur (blanche) → foncé */
+.chat-message.guest .chat-bubble .chat-time { color: #4B5563 !important; }
+
 /* Accusé de lecture */
 .chat-status.read { color: #1A7A5E !important; font-weight: 600; }
 
