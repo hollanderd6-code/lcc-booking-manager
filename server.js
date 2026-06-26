@@ -15358,6 +15358,160 @@ app.get('/api/police-records', authenticateAny, async (req, res) => {
   }
 });
 
+// GET hôte — PDF de la fiche individuelle de police
+app.get('/api/police-records/:id/pdf', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user?.id || req.userId;
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const q = await pool.query(
+      `SELECT pr.*, p.name AS property_name
+       FROM police_records pr
+       LEFT JOIN properties p ON p.id = pr.property_id
+       WHERE pr.id = $1 AND pr.user_id = ANY($2::text[]) LIMIT 1`,
+      [req.params.id, agencyIds]
+    );
+    if (q.rows.length === 0) return res.status(404).json({ error: 'Fiche introuvable' });
+    const r = q.rows[0];
+
+    // Logo hôte (users.logo_url) sinon logo BH local
+    let logoBuf = null;
+    try {
+      const uRes = await pool.query('SELECT logo_url FROM users WHERE id = $1', [r.user_id]);
+      const url = uRes.rows[0]?.logo_url;
+      if (url) {
+        const lr = await axios.get(url, { responseType: 'arraybuffer', timeout: 5000 });
+        if (lr.data.byteLength > 0) logoBuf = Buffer.from(lr.data);
+      }
+    } catch(_) {}
+    if (!logoBuf) {
+      try {
+        const lp = path.join(__dirname, 'public', 'images', 'logo-bh.png');
+        if (fs.existsSync(lp)) logoBuf = fs.readFileSync(lp);
+      } catch(_) {}
+    }
+    if (logoBuf) {
+      const isPng = logoBuf.length>=4 && logoBuf[0]===0x89 && logoBuf[1]===0x50;
+      const isJpg = logoBuf.length>=3 && logoBuf[0]===0xFF && logoBuf[1]===0xD8;
+      if (!isPng && !isJpg) logoBuf = null;
+    }
+
+    // Pièce d'identité (si encore présente) → URL signée Cloudinary puis fetch
+    let idBuf = null, idPurged = false;
+    if (r.id_document_url) {
+      try {
+        const m = String(r.id_document_url).match(/police_id_docs\/([^./]+)/);
+        const ext = (String(r.id_document_url).match(/\.([a-zA-Z0-9]+)(?:\?|$)/) || [])[1] || 'jpg';
+        if (m && m[1]) {
+          const signed = cloudinary.url('police_id_docs/' + m[1], {
+            type: 'authenticated', resource_type: 'image', secure: true, sign_url: true, format: ext
+          });
+          const ir = await axios.get(signed, { responseType: 'arraybuffer', timeout: 8000 });
+          if (ir.data.byteLength > 0) {
+            const b = Buffer.from(ir.data);
+            const okPng = b[0]===0x89 && b[1]===0x50, okJpg = b[0]===0xFF && b[1]===0xD8;
+            if (okPng || okJpg) idBuf = b;
+          }
+        }
+      } catch(e) { console.warn('[PDF police] pièce non récupérée:', e.message); }
+    } else if (r.id_doc_expires_at === null && r.status === 'signed') {
+      // pas de pièce jointe (ou déjà purgée) — neutre
+    }
+
+    const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
+    res.setHeader('Content-Type', 'application/pdf');
+    const fname = ('fiche-police-' + (r.guest_nom||'') + '-' + (r.guest_prenoms||'')).replace(/[^a-zA-Z0-9_-]/g,'_') + '.pdf';
+    const disposition = req.query.download === '1' ? 'attachment' : 'inline';
+    res.setHeader('Content-Disposition', `${disposition}; filename="${fname}"`);
+    doc.pipe(res);
+
+    const W = 595, mg = 50;
+    const GREEN = '#1A7A5E', DARK = '#111827', GRAY = '#6B7280', BORDER = '#E5E7EB', LIGHT = '#F9FAF7';
+    let y = mg;
+
+    if (logoBuf) {
+      try { doc.image(logoBuf, mg, y - 6, { fit: [110, 40], align: 'left', valign: 'top' }); } catch(_) {}
+    }
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(GRAY)
+       .text('Boostinghost', W - mg - 150, y, { width: 150, align: 'right' });
+    y += 46;
+
+    doc.font('Helvetica-Bold').fontSize(19).fillColor(GREEN).text('FICHE INDIVIDUELLE DE POLICE', mg, y);
+    y += 24;
+    doc.font('Helvetica').fontSize(8.5).fillColor(GRAY)
+       .text('Établie en application de l\'article R.611-42 du CESEDA (hébergement de voyageurs de nationalité étrangère).', mg, y, { width: W - 2*mg });
+    y += 22;
+    doc.moveTo(mg, y).lineTo(W - mg, y).strokeColor(BORDER).lineWidth(1).stroke();
+    y += 18;
+
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+    // Bloc logement / séjour
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text('Logement', mg, y);
+    doc.font('Helvetica').fontSize(10).fillColor(DARK).text(r.property_name || r.property_id || '—', mg + 90, y);
+    y += 16;
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text('Séjour', mg, y);
+    doc.font('Helvetica').fontSize(10).fillColor(DARK).text(`du ${fmtDate(r.date_arrivee)} au ${fmtDate(r.date_depart)}`, mg + 90, y);
+    y += 22;
+
+    // Encadré identité
+    const rows = [
+      ['Nom', r.guest_nom || '—'],
+      ['Prénom(s)', r.guest_prenoms || '—'],
+      ['Date de naissance', fmtDate(r.guest_naissance_date)],
+      ['Lieu de naissance', r.guest_naissance_lieu || '—'],
+      ['Nationalité', r.guest_nationalite || '—'],
+      ['Domicile', r.guest_domicile || '—'],
+      ['Téléphone', r.guest_tel || '—'],
+      ['Email', r.guest_email || '—']
+    ];
+    if (r.enfants_moins_15) rows.push(['Enfants de moins de 15 ans', r.enfants_moins_15]);
+
+    const boxTop = y;
+    doc.roundedRect(mg, boxTop, W - 2*mg, rows.length * 22 + 16, 8).fillAndStroke(LIGHT, BORDER);
+    y += 10;
+    rows.forEach(([label, val]) => {
+      doc.font('Helvetica-Bold').fontSize(9.5).fillColor(GRAY).text(label, mg + 14, y, { width: 150 });
+      doc.font('Helvetica').fontSize(10).fillColor(DARK).text(String(val), mg + 170, y, { width: W - 2*mg - 184 });
+      y += 22;
+    });
+    y += 18;
+
+    // Signature
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text('Signature du voyageur', mg, y);
+    y += 6;
+    if (r.signature_data && String(r.signature_data).startsWith('data:image')) {
+      try {
+        const sigBuf = Buffer.from(String(r.signature_data).split(',')[1], 'base64');
+        doc.image(sigBuf, mg, y, { fit: [200, 80], align: 'left' });
+      } catch(_) {}
+    }
+    y += 90;
+    doc.font('Helvetica').fontSize(8.5).fillColor(GRAY)
+       .text(`Signée le ${r.signed_at ? new Date(r.signed_at).toLocaleString('fr-FR') : '—'}${r.signer_ip ? ' · IP ' + r.signer_ip : ''}`, mg, y);
+    y += 24;
+
+    // Pièce d'identité
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text("Pièce d'identité", mg, y);
+    y += 8;
+    if (idBuf) {
+      try { doc.image(idBuf, mg, y, { fit: [W - 2*mg, 300], align: 'left', valign: 'top' }); }
+      catch(_) { doc.font('Helvetica').fontSize(9).fillColor(GRAY).text('Pièce jointe illisible.', mg, y); }
+    } else if (r.id_document_url) {
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY).text("Pièce jointe non récupérable.", mg, y);
+    } else {
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY).text("Aucune pièce jointe (ou supprimée automatiquement après 14 jours — RGPD).", mg, y, { width: W - 2*mg });
+    }
+
+    // Pied de page
+    doc.font('Helvetica').fontSize(7.5).fillColor(GRAY)
+       .text('Document confidentiel — conservé 6 mois puis supprimé (RGPD). Remis aux services de police ou de gendarmerie sur demande.', mg, 800, { width: W - 2*mg, align: 'center' });
+
+    doc.end();
+  } catch (err) {
+    console.error('Erreur GET /api/police-records/:id/pdf:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Erreur génération PDF' });
+  }
+});
+
 // GET hôte — état du récapitulatif des arrivées
 app.get('/api/arrival/reservation/lookup',
   authenticateAny, requirePermission(pool, 'can_view_cleaning'), loadSubAccountData(pool),

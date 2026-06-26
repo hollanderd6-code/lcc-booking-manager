@@ -1166,8 +1166,8 @@ async function loadPoliceRecord(r){
           ${rec.enfants_moins_15?`<div><b>Enfants -15 ans</b> ${_polEsc(rec.enfants_moins_15)}</div>`:''}
           <div style="color:var(--text-muted);margin-top:4px;">Signée le ${_polFmtDate(rec.signed_at)}${rec.signer_ip?' · IP '+_polEsc(rec.signer_ip):''}</div>
           <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
-            ${rec.signature_data?`<button class="btn" style="font-size:12px;padding:6px 12px;background:var(--white);border:1px solid rgba(0,0,0,.12);color:var(--text);" onclick="viewPoliceSignature('${rec.id}')">✍️ Signature</button>`:''}
-            ${hasId?`<a class="btn" style="font-size:12px;padding:6px 12px;background:var(--white);border:1px solid rgba(0,0,0,.12);color:var(--text);text-decoration:none;" href="${_polEsc(rec.id_document_url)}" target="_blank">📄 Pièce d'identité</a>`:''}
+            <button class="btn" style="font-size:12px;padding:6px 12px;background:var(--green,#1A7A5E);border:none;color:#fff;font-weight:600;border-radius:8px;cursor:pointer;" onclick="viewPoliceFiche('${rec.id}')">📄 Voir la fiche</button>
+            <button class="btn" style="font-size:12px;padding:6px 12px;background:var(--white,#fff);border:1px solid rgba(0,0,0,.12);color:var(--text);border-radius:8px;cursor:pointer;" onclick="downloadPoliceFiche('${rec.id}','${_polEsc((rec.guest_prenoms||'')+'-'+(rec.guest_nom||''))}')">⬇️ Télécharger</button>
           </div>
         </div>`;
     }).join('<div style="border-top:1px solid rgba(0,0,0,.06);"></div>') + `</div>`;
@@ -1175,11 +1175,32 @@ async function loadPoliceRecord(r){
   sec.innerHTML = `<div class="bh-modal-section"><div class="bh-modal-label">Fiche de police</div>${inner}</div>`;
   window._policeRecordsCache = records;
 }
-function viewPoliceSignature(id){
-  const rec = (window._policeRecordsCache||[]).find(x => String(x.id) === String(id));
-  if (!rec || !rec.signature_data) return;
-  const w = window.open('');
-  if (w) w.document.write('<title>Signature</title><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#F5F2EC;"><img src="'+rec.signature_data+'" style="max-width:92%;border:1px solid #ccc;border-radius:8px;background:#fff;"></body>');
+async function _fetchFicheBlob(id){
+  const token = localStorage.getItem('lcc_token');
+  const res = await fetch((window.API_URL||'')+'/api/police-records/'+encodeURIComponent(id)+'/pdf', {
+    headers: { 'Authorization': 'Bearer '+token }
+  });
+  if(!res.ok) throw new Error('PDF indisponible');
+  return await res.blob();
+}
+async function viewPoliceFiche(id){
+  try {
+    const blob = await _fetchFicheBlob(id);
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+  } catch(e){ alert('Impossible d\'ouvrir la fiche : '+e.message); }
+}
+async function downloadPoliceFiche(id, name){
+  try {
+    const blob = await _fetchFicheBlob(id);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'fiche-police-'+(name||id).replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+  } catch(e){ alert('Téléchargement impossible : '+e.message); }
 }
 function closeDetail() {
   const overlay = document.getElementById('detailOverlay');
