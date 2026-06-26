@@ -4007,6 +4007,16 @@ function showBHToast(msg, type = 'info') {
 @media (max-width: 768px) {
   #invoiceModal .inv-body { grid-template-columns: 1fr; }
   #invoiceModal .inv-preview-panel { display: none; }
+  /* Verrouillage : empêche le modal de glisser gauche↔droite.
+     .inv-form-panel a overflow-y:auto → le navigateur calcule overflow-x:auto,
+     d'où le slide dès qu'un champ déborde. On force x à hidden + pan vertical seul. */
+  #invoiceModal { overflow: hidden; }
+  #invoiceModal .inv-content { max-width: 100%; }
+  #invoiceModal .inv-form-panel {
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
 }
 </style>
 
