@@ -2718,6 +2718,40 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 }
 .ai-badge .ai-badge-spark { font-size: 11px; }
 
+/* Badge Modèle (template) */
+.tpl-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #EAF1FB; color: #2563A6;
+  font-size: 10.5px; font-weight: 600;
+  padding: 2px 9px; border-radius: 999px;
+  line-height: 1.5;
+}
+.tpl-badge .tpl-badge-ico { font-size: 10px; }
+
+/* Note interne — encart ambré centré */
+.chat-message.internal-note {
+  align-self: center !important;
+  max-width: 88% !important;
+  margin: 6px auto 10px !important;
+}
+.chat-message.internal-note .chat-avatar,
+.chat-message.internal-note .chat-sender,
+.chat-message.internal-note .chat-meta .chat-status { display: none !important; }
+.chat-message.internal-note .chat-bubble {
+  background: #FFF8E6 !important;
+  border: 1px solid #F2DFA8 !important;
+  color: #6B5A1E !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+.chat-message.internal-note .note-label {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+  text-transform: uppercase; color: #B58A1E; margin-bottom: 4px;
+}
+.chat-message.internal-note .note-body { font-size: 13.5px; line-height: 1.45; color: #5C4E1A; white-space: pre-wrap; }
+.chat-message.internal-note .chat-meta { justify-content: center !important; }
+
 /* Accusé de lecture */
 .chat-status.read { color: #1A7A5E !important; font-weight: 600; }
 

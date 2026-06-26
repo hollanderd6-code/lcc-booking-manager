@@ -960,11 +960,22 @@ function appendMessage(message) {
     return;
   }
 
+  const _sn = (message.sender_name || '');
+  const isInternalNote = message.sender_type === 'internal_note';
+  const isTemplate = /^tpl_/i.test(_sn);
+  const isAiReply = !isInternalNote && !isTemplate && (
+        !!message.is_bot_response || !!message.is_auto_response ||
+        message.sender_type === 'system' || message.sender_type === 'bot' ||
+        /assistant/i.test(_sn)
+      );
   const isOwner = message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
-  const isAiReply = !!(message.is_bot_response || message.is_auto_response);
   
   const messageDiv = document.createElement('div');
-  messageDiv.className = `chat-message ${isOwner ? 'owner' : 'guest'}${isAiReply ? ' bot-reply' : ''}`;
+  let _cls = 'chat-message ' + (isOwner ? 'owner' : 'guest');
+  if (isAiReply) _cls += ' bot-reply';
+  if (isTemplate) _cls += ' tpl-reply';
+  if (isInternalNote) _cls = 'chat-message internal-note';
+  messageDiv.className = _cls;
   if (message.id) messageDiv.setAttribute('data-msg-id', message.id);
   if (message.created_at) {
     messageDiv.setAttribute('data-ts', new Date(message.created_at).getTime());
@@ -1004,6 +1015,16 @@ function appendMessage(message) {
       + '<div style="font-size:11px;opacity:0.75;margin-top:2px;">Cliquer pour déposer en ligne</div></div>'
       + '<span style="margin-left:auto;font-size:16px;">→</span>';
     bubble.appendChild(card);
+  } else if (isInternalNote) {
+    const _noteTxt = (message.message || '').replace(/^⟦NOTE_INTERNE⟧\s*/, '').trim();
+    const _noteHead = document.createElement('div');
+    _noteHead.className = 'note-label';
+    _noteHead.innerHTML = '<span class="note-ico">🗒️</span> Note interne';
+    const _noteBody = document.createElement('div');
+    _noteBody.className = 'note-body';
+    _noteBody.textContent = _noteTxt;
+    bubble.appendChild(_noteHead);
+    bubble.appendChild(_noteBody);
   } else {
     bubble.textContent = message.message;
   }
@@ -1018,20 +1039,24 @@ function appendMessage(message) {
   time.textContent = _ts ? formatTime(_ts) : '';
   
   const status = document.createElement('span');
-  status.className = 'chat-status' + (message.is_read ? ' read' : '');
+  status.className = 'chat-status';
   const _isOwnerMsg = message.sender_type === 'owner' || message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
-  if (_isOwnerMsg) status.textContent = message.is_read ? '✓✓ Lu' : '✓ Envoyé';
-  else status.textContent = '';
+  status.textContent = (_isOwnerMsg && !isInternalNote) ? '✓ Envoyé' : '';
   
   meta.appendChild(time);
   meta.appendChild(status);
 
-  // Badge IA sous les réponses générées automatiquement
+  // Badge selon l'origine du message
   if (isAiReply) {
     const aiBadge = document.createElement('span');
     aiBadge.className = 'ai-badge';
     aiBadge.innerHTML = '<span class="ai-badge-spark">✦</span> Répondu par l\'IA';
     meta.appendChild(aiBadge);
+  } else if (isTemplate) {
+    const tplBadge = document.createElement('span');
+    tplBadge.className = 'tpl-badge';
+    tplBadge.innerHTML = '<span class="tpl-badge-ico">📋</span> Modèle';
+    meta.appendChild(tplBadge);
   }
   
   contentDiv.appendChild(sender);
@@ -1042,7 +1067,7 @@ function appendMessage(message) {
   // Affiché sur : messages voyageur + messages bot/propriétaire (pour voir la traduction en FR)
   const msgTextOnly = (message.message || '').replace(/\[IMAGE:[^\]]+\]/g, '').trim();
   const isBotOrOwner = message.sender_type === 'property' || message.sender_type === 'bot' || message.sender_type === 'system';
-  const showTxBtn = msgTextOnly && (!isOwner || isBotOrOwner);
+  const showTxBtn = msgTextOnly && !isInternalNote && (!isOwner || isBotOrOwner);
 
   if (showTxBtn) {
     // Détecter la langue source du message pour afficher le bon drapeau
