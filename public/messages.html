@@ -2339,12 +2339,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     var aiLabel = document.getElementById('btnToggleAILabel');
     if (aiBtn && conv) {
       aiBtn.style.display = 'inline-flex';
-      var isDisabled = conv.ai_disabled === true;
-      aiLabel.textContent = isDisabled ? 'IA off' : 'IA on';
-      aiBtn.style.background = isDisabled ? 'rgba(239,68,68,.1)' : 'rgba(16,185,129,.1)';
-      aiBtn.style.color = isDisabled ? '#EF4444' : '#10B981';
-      aiBtn.style.border = isDisabled ? '1px solid rgba(239,68,68,.25)' : '1px solid rgba(16,185,129,.25)';
-      aiBtn.title = isDisabled ? 'IA désactivée — cliquez pour réactiver' : 'IA active — cliquez pour désactiver';
+      window._bhRenderAiToggle(conv.ai_disabled === true);
     } else if (aiBtn) {
       aiBtn.style.display = 'none';
     }
@@ -4774,6 +4769,32 @@ window._saveQuickNote = async function() {
 };
 
 // ── Toggle IA par conversation ──
+// Rendu du bouton "Reprendre la main" / "Laisser l'IA" (orienté action).
+// La couleur reflète l'état courant : vert = l'IA gère, rouge = vous gérez.
+window._bhRenderAiToggle = function(isDisabled) {
+  var aiBtn = document.getElementById('btnToggleAI');
+  var aiLabel = document.getElementById('btnToggleAILabel');
+  if (!aiBtn || !aiLabel) return;
+  var icon = aiBtn.querySelector('i');
+  if (isDisabled) {
+    // Vous gérez la conversation → un clic redonne la main à l'IA
+    aiLabel.textContent = "Laisser l'IA répondre";
+    if (icon) icon.className = 'fas fa-robot';
+    aiBtn.style.background = 'rgba(239,68,68,.1)';
+    aiBtn.style.color = '#EF4444';
+    aiBtn.style.border = '1px solid rgba(239,68,68,.25)';
+    aiBtn.title = "Vous gérez cette conversation — cliquez pour laisser l'IA répondre";
+  } else {
+    // L'IA répond automatiquement → un clic vous fait reprendre la main
+    aiLabel.textContent = 'Reprendre la main';
+    if (icon) icon.className = 'fas fa-hand-paper';
+    aiBtn.style.background = 'rgba(16,185,129,.1)';
+    aiBtn.style.color = '#10B981';
+    aiBtn.style.border = '1px solid rgba(16,185,129,.25)';
+    aiBtn.title = "L'IA répond automatiquement — cliquez pour reprendre la main";
+  }
+};
+
 window.toggleConversationAI = async function() {
   var conv = window.currentChatConv;
   if (!conv) return;
@@ -4786,16 +4807,7 @@ window.toggleConversationAI = async function() {
     var data = await res.json();
     if (data.success) {
       conv.ai_disabled = data.ai_disabled;
-      var aiBtn = document.getElementById('btnToggleAI');
-      var aiLabel = document.getElementById('btnToggleAILabel');
-      if (aiBtn) {
-        var isOff = data.ai_disabled;
-        aiLabel.textContent = isOff ? 'IA off' : 'IA on';
-        aiBtn.style.background = isOff ? 'rgba(239,68,68,.1)' : 'rgba(16,185,129,.1)';
-        aiBtn.style.color = isOff ? '#EF4444' : '#10B981';
-        aiBtn.style.border = isOff ? '1px solid rgba(239,68,68,.25)' : '1px solid rgba(16,185,129,.25)';
-        aiBtn.title = isOff ? 'IA désactivée — cliquez pour réactiver' : 'IA active — cliquez pour désactiver';
-      }
+      window._bhRenderAiToggle(data.ai_disabled);
       if (window._allConversations) {
         var c = window._allConversations.find(function(x) { return x.id == conv.id; });
         if (c) c.ai_disabled = data.ai_disabled;
