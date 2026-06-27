@@ -22780,15 +22780,47 @@ app.post('/api/invoice/create',
       sendEmail
     } = req.body;
 
+    // ── Mode agence : la facture appartient au PROPRIÉTAIRE du logement ──
+    // On résout le compte propriétaire (émetteur + numérotation lui appartiennent),
+    // indépendamment du compte de l'opérateur qui déclenche la facture.
+    let billingUserId = userId;
+    let ownerInfo = null;
+    try {
+      const delg = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [userId]
+      ).catch(() => ({ rows: [] }));
+      const candidateIds = [userId, ...delg.rows.map(d => d.delegator_user_id)];
+      const propResult = await pool.query(
+        `SELECT user_id, owner_id FROM properties
+         WHERE name = $1 AND user_id = ANY($2::text[])
+         ORDER BY (owner_id IS NOT NULL) DESC LIMIT 1`,
+        [propertyName, candidateIds]
+      );
+      if (propResult.rows[0]) {
+        billingUserId = propResult.rows[0].user_id || userId;
+        const ownerId = propResult.rows[0].owner_id;
+        if (ownerId) {
+          const ownerResult = await pool.query(
+            'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
+            [ownerId, billingUserId]
+          );
+          ownerInfo = ownerResult.rows[0] || null;
+        }
+      }
+    } catch(e) {
+      console.error('Erreur résolution propriétaire (mode agence):', e.message);
+    }
+
     // Générer le numéro de facture lisible : FACT-2026-0001
-    // On utilise invoice_download_tokens comme compteur (factures voyageurs uniquement)
+    // Compteur basé sur invoice_download_tokens, scopé au COMPTE PROPRIÉTAIRE (numérotation continue)
     const yearStr = new Date().getFullYear();
     const maxResult = await pool.query(
       `SELECT MAX(CAST(SPLIT_PART(invoice_number, '-', 3) AS INTEGER)) as max_seq
        FROM invoice_download_tokens
        WHERE user_id = $1
          AND invoice_number LIKE $2`,
-      [userId, `FACT-${yearStr}-%`]
+      [billingUserId, `FACT-${yearStr}-%`]
     ).catch(() => ({ rows: [{ max_seq: 0 }] }));
     const nextSeq = (parseInt(maxResult.rows[0]?.max_seq || 0) + 1);
     const seq = String(nextSeq).padStart(4, '0');
@@ -22800,24 +22832,7 @@ app.post('/api/invoice/create',
     const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
     const total = subtotal + vatAmount;
 
-    // Récupérer les infos du propriétaire du logement si disponible
-    let ownerInfo = null;
-    try {
-      const propResult = await pool.query(
-        'SELECT owner_id FROM properties WHERE name = $1 AND user_id = $2',
-        [propertyName, userId]
-      );
-      const ownerId = propResult.rows[0]?.owner_id;
-      if (ownerId) {
-        const ownerResult = await pool.query(
-          'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
-          [ownerId, userId]
-        );
-        ownerInfo = ownerResult.rows[0] || null;
-      }
-    } catch(e) {
-      console.error('Erreur récupération propriétaire pour PDF:', e.message);
-    }
+    // (ownerInfo + billingUserId déjà résolus plus haut en mode agence)
 // Générer un PDF professionnel avec PDFKit - délègue à la fonction globale
     async function generateInvoicePdfToFile(outputPath) {
       return generateInvoicePdf(outputPath, {
@@ -23018,7 +23033,7 @@ app.post('/api/invoice/create',
         });
         await pool.query(
           `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at) VALUES ($1, $2, $3, $4, $5)`,
-          [_token, userId, invoiceNumber, _meta, _expires]
+          [_token, billingUserId, invoiceNumber, _meta, _expires]
         );
       } catch(e) { /* ignore */ }
 
@@ -23187,7 +23202,7 @@ app.post('/api/invoice/create',
         `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at)
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT DO NOTHING`,
-        [dlToken, userId, invoiceNumber, dlMeta, dlExpires]
+        [dlToken, billingUserId, invoiceNumber, dlMeta, dlExpires]
       );
 
       const baseUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
