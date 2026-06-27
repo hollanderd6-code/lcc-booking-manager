@@ -335,7 +335,7 @@ function getSidebarHTML() {
       logoutBtn.addEventListener("click", async function(e) {
         e.preventDefault();
         e.stopPropagation();
-        console.log("🚪 Déconnexion...");
+        console.log("🚪 Déconnexion... [BH-VERSION v-LOGOUT-FIX-2]");
         const _keys = ["lcc_token","lcc_user","lcc_account_type","lcc_permissions","lcc_is_sub_account","lcc_sub_account","lcc_faceid_token","lcc_faceid_enabled"];
         _keys.forEach(function(k){ try { localStorage.removeItem(k); } catch(_){} });
         // 📱 Natif (Android/iOS) : vider AUSSI le stockage persistant Capacitor Preferences,
