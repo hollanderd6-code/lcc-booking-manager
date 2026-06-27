@@ -21179,9 +21179,22 @@ app.get('/api/owner-clients/:id', authenticateAny, requireFeature('facturation_p
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
+    // Mode agence : autoriser aussi la lecture du propriétaire d'un compte délégué,
+    // sinon l'aperçu de facture retombe sur la conciergerie de l'opérateur.
+    // On résout les délégations directement (indépendamment du flag ?agency=all)
+    // pour que l'aperçu affiche le bon émetteur même sans ce paramètre.
+    let candidateIds = [user.id];
+    try {
+      const deleg = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [user.id]
+      );
+      candidateIds = [user.id, ...deleg.rows.map(d => d.delegator_user_id)];
+    } catch (e) { /* fallback : opérateur seul */ }
+
     const result = await pool.query(
-      'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
-      [req.params.id, user.id]
+      'SELECT * FROM owner_clients WHERE id = $1 AND user_id = ANY($2::text[])',
+      [req.params.id, candidateIds]
     );
 
     if (result.rows.length === 0) {
