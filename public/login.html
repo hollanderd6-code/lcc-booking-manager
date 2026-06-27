@@ -337,9 +337,16 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   }
 
   // Plugin biométrique Capacitor (cross-platform iOS + Android).
-  // Accès via window.Capacitor.Plugins.BiometricAuth (enregistré par le plugin natif).
+  // Accès au plugin biométrique. Selon le package/version, il est exposé sous
+  // 'BiometricAuth' OU 'BiometricAuthNative' (@aparajita). On cherche les deux.
   function getBiometricPlugin() {
-    return window.Capacitor?.Plugins?.BiometricAuth || null;
+    const P = window.Capacitor?.Plugins || {};
+    const plugin = P.BiometricAuth || P.BiometricAuthNative || null;
+    if (plugin && !window._bhBioLogged) {
+      window._bhBioLogged = true;
+      console.log('🔐 [FaceID] Plugin biométrique détecté:', P.BiometricAuth ? 'BiometricAuth' : 'BiometricAuthNative');
+    }
+    return plugin;
   }
 
   async function isBiometricAvailable() {
@@ -367,9 +374,10 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
     if (!IS_NATIVE) return false;
     // 1) Plugin Capacitor cross-platform
     const plugin = getBiometricPlugin();
-    if (plugin?.authenticate) {
+    const authFn = plugin && (plugin.authenticate || plugin.internalAuthenticate);
+    if (authFn) {
       try {
-        await plugin.authenticate({
+        await authFn.call(plugin, {
           reason: 'Connectez-vous à Boostinghost',
           cancelTitle: 'Annuler',
           allowDeviceCredential: true,                 // PIN/schéma en repli
