@@ -221,10 +221,31 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
     if (window._syncTokenToNative) { try { window._syncTokenToNative(token); } catch {} }
   }
   function showToast(msg,type='error'){document.getElementById('bh-toast')?.remove();const c=type==='error'?'#DC2626':'#1A7A5E',ic=type==='error'?'fa-circle-exclamation':'fa-circle-check',t=document.createElement('div');t.id='bh-toast';t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#fff;color:#1C1C1C;border-left:4px solid ${c};border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.12);font-family:'DM Sans',sans-serif;font-size:14px;z-index:9999;max-width:90vw;width:380px;animation:toastIn .25s ease;`;t.innerHTML=`<i class="fas ${ic}" style="color:${c};font-size:18px;flex-shrink:0;"></i><span style="flex:1;">${msg}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#999;font-size:18px;line-height:1;padding:0;">×</button>`;if(!document.getElementById('bh-toast-style')){const s=document.createElement('style');s.id='bh-toast-style';s.textContent='@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';document.head.appendChild(s);}document.body.appendChild(t);setTimeout(()=>t?.remove(),5000);}
+  // 🤖 ANDROID UNIQUEMENT : si l'utilisateur s'est déconnecté volontairement, on purge tout
+  // et on reste sur le login (aucune restauration auto). iOS : retourne false immédiatement.
+  async function consumeForceLogout(){
+    try {
+      if (!(window.Capacitor?.getPlatform?.() === 'android')) return false;
+      const P = window.Capacitor?.Plugins?.Preferences;
+      let flag = null;
+      if (P) { try { flag = (await P.get({ key:'lcc_force_logout' }))?.value; } catch(_){} }
+      if (!flag) { try { flag = localStorage.getItem('lcc_force_logout'); } catch(_){} }
+      if (flag === '1') {
+        const keys = ['lcc_token','lcc_user','lcc_account_type','lcc_permissions','lcc_is_sub_account','lcc_sub_account','lcc_faceid_token','lcc_faceid_enabled'];
+        keys.forEach(k=>{ try{ localStorage.removeItem(k);}catch(_){} });
+        if (P) { for (const k of keys){ try{ await P.remove({key:k}); }catch(_){} } try{ await P.remove({key:'lcc_force_logout'}); }catch(_){} }
+        try{ localStorage.removeItem('lcc_force_logout'); }catch(_){}
+        console.log('🤖 [Auth] Déconnexion volontaire Android → login affiché, pas de restauration.');
+        return true;
+      }
+    } catch(_){}
+    return false;
+  }
   async function checkAuth(){const tk=localStorage.getItem('lcc_token');if(!tk)return false;try{const r=await fetch('/api/auth/verify',{headers:{'Authorization':'Bearer '+tk}});if(r.ok){window.location.href=IS_NATIVE?'app.html':'/app.html';return true;}if(r.status===401)localStorage.removeItem('lcc_token');return false;}catch{return false;}}
   async function checkMagicToken(){const mt=new URLSearchParams(window.location.search).get('magic_token');if(!mt)return false;const ld=document.createElement('div');ld.style.cssText='position:fixed;inset:0;background:rgba(13,17,23,.7);backdrop-filter:blur(8px);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';ld.innerHTML='<div style="width:52px;height:52px;border:3px solid rgba(255,255,255,.15);border-top-color:#1A7A5E;border-radius:50%;animation:spin .8s linear infinite;"></div><p style="color:white;font-family:\'DM Sans\',sans-serif;font-size:15px;">Connexion en cours…</p>';if(!document.getElementById('spin-s')){const s=document.createElement('style');s.id='spin-s';s.textContent='@keyframes spin{to{transform:rotate(360deg)}}';document.head.appendChild(s);}document.body.appendChild(ld);try{const r=await fetch(API_BASE+'/api/auth/magic-link/verify?token='+encodeURIComponent(mt));const d=await r.json();if(r.ok&&d.token){await persistToken(d.token, d.user?{lcc_user:JSON.stringify(d.user)}:null);window.history.replaceState({},'','/login.html');window.location.href=IS_NATIVE?'app.html':'/app.html';return true;}else{ld.remove();showToast(d.error||'Lien invalide ou expiré.');return false;}}catch{ld.remove();showToast('Erreur de connexion.');return false;}}
   checkMagicToken().then(async (h) => {
     if (!h) {
+      if (await consumeForceLogout()) return; // Android : déconnexion volontaire → on reste sur login
       await restoreFromPreferences();
       const faceEnabled = localStorage.getItem(FACE_ID_KEY) === 'true'
         && !!localStorage.getItem(FACE_ID_TOKEN_KEY);

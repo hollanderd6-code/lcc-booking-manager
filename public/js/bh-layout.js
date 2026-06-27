@@ -344,6 +344,13 @@ function getSidebarHTML() {
         try {
           const P = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences;
           if (P) { for (const k of _keys) { try { await P.remove({ key: k }); } catch(_){} } }
+          // 🤖 ANDROID UNIQUEMENT : drapeau de déconnexion volontaire pour empêcher
+          // toute reconnexion auto au retour sur login (anti-course). iOS NON touché.
+          const _plat = window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform();
+          if (_plat === 'android') {
+            try { if (P) await P.set({ key: 'lcc_force_logout', value: '1' }); } catch(_){}
+            try { localStorage.setItem('lcc_force_logout', '1'); } catch(_){}
+          }
         } catch(_){}
         window.location.href = "/login.html";
       });
