@@ -1070,6 +1070,124 @@ html[data-theme-v3="1"] .btn-ghost {
 })();
 </script>
 <script>
+    // ════════════════════════════════════════════════════════════════
+    // Visionneuse PDF intégrée (mobile) — évite la navigation hors de l'app.
+    // Sur mobile/natif, ouvrir un PDF via <a download> fait naviguer la WebView
+    // vers le PDF (aucun retour possible). On rend le PDF en interne avec PDF.js,
+    // avec un bouton "Retour". Sur desktop, on garde le téléchargement classique.
+    // ════════════════════════════════════════════════════════════════
+    function _bhIsMobileViewer() {
+      try { if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return true; } catch(e){}
+      return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    }
+
+    let _bhPdfjsLoading = null;
+    function _bhLoadPdfJs() {
+      if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+      if (_bhPdfjsLoading) return _bhPdfjsLoading;
+      _bhPdfjsLoading = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        s.onload = () => {
+          try {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            resolve(window.pdfjsLib);
+          } catch(e) { reject(e); }
+        };
+        s.onerror = () => reject(new Error('Chargement PDF.js échoué'));
+        document.head.appendChild(s);
+      });
+      return _bhPdfjsLoading;
+    }
+
+    function _bhEnsurePdfViewerStyle() {
+      if (document.getElementById('bhPdfViewerStyle')) return;
+      const st = document.createElement('style');
+      st.id = 'bhPdfViewerStyle';
+      st.textContent =
+        '#bhPdfViewer{position:fixed;inset:0;z-index:100000;background:#525659;display:none;flex-direction:column;}'
+      + '#bhPdfViewer .bh-pdf-bar{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;background:#2C3E35;color:#fff;}'
+      + '#bhPdfViewer .bh-pdf-back{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}'
+      + '#bhPdfViewer .bh-pdf-title{flex:1;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.9;}'
+      + '#bhPdfViewer .bh-pdf-dl{background:transparent;color:#fff;border:none;font-size:17px;cursor:pointer;padding:6px 8px;}'
+      + '#bhPdfViewer .bh-pdf-pages{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:12px 8px calc(env(safe-area-inset-bottom,0px) + 16px);text-align:center;}'
+      + '#bhPdfViewer .bh-pdf-canvas{display:block;margin:0 auto 12px;max-width:100%;box-shadow:0 4px 18px rgba(0,0,0,.35);border-radius:2px;background:#fff;}'
+      + '#bhPdfViewer .bh-pdf-loading{color:#fff;opacity:.85;font-size:14px;padding:40px 16px;}';
+      document.head.appendChild(st);
+    }
+
+    function _bhClosePdfViewer() {
+      const overlay = document.getElementById('bhPdfViewer');
+      if (overlay) overlay.style.display = 'none';
+      document.body.style.overflow = '';
+      const pages = document.getElementById('bhPdfPages');
+      if (pages) pages.innerHTML = ''; // libère la mémoire des canvas
+    }
+
+    async function _bhShowPdfViewer(blob, filename) {
+      _bhEnsurePdfViewerStyle();
+      let overlay = document.getElementById('bhPdfViewer');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'bhPdfViewer';
+        overlay.innerHTML =
+          '<div class="bh-pdf-bar">'
+        + '<button class="bh-pdf-back" id="bhPdfBack"><i class="fas fa-arrow-left"></i> Retour</button>'
+        + '<span class="bh-pdf-title" id="bhPdfTitle"></span>'
+        + '<button class="bh-pdf-dl" id="bhPdfDl" title="Télécharger"><i class="fas fa-download"></i></button>'
+        + '</div><div class="bh-pdf-pages" id="bhPdfPages"></div>';
+        document.body.appendChild(overlay);
+        document.getElementById('bhPdfBack').onclick = _bhClosePdfViewer;
+      }
+      const pages = document.getElementById('bhPdfPages');
+      document.getElementById('bhPdfTitle').textContent = filename || 'Facture';
+      pages.innerHTML = '<div class="bh-pdf-loading">Chargement du PDF…</div>';
+      overlay.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      // Bouton télécharger (best-effort selon plateforme)
+      document.getElementById('bhPdfDl').onclick = () => {
+        try {
+          const u = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = u; a.download = filename;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(u), 10000);
+        } catch(e) {}
+      };
+      try {
+        const pdfjsLib = await _bhLoadPdfJs();
+        const buf = await blob.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+        pages.innerHTML = '';
+        const dpr = Math.min(2, (window.devicePixelRatio || 1));
+        for (let n = 1; n <= pdf.numPages; n++) {
+          const page = await pdf.getPage(n);
+          const base = page.getViewport({ scale: 1 });
+          const cssScale = Math.max(0.1, (pages.clientWidth - 16) / base.width);
+          const vp = page.getViewport({ scale: cssScale * dpr });
+          const canvas = document.createElement('canvas');
+          canvas.className = 'bh-pdf-canvas';
+          canvas.width = vp.width; canvas.height = vp.height;
+          canvas.style.width = (base.width * cssScale) + 'px';
+          canvas.style.height = (base.height * cssScale) + 'px';
+          pages.appendChild(canvas);
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+        }
+      } catch(e) {
+        pages.innerHTML = '<div class="bh-pdf-loading">Impossible d\'afficher le PDF.<br>' + (e && e.message ? e.message : '') + '</div>';
+      }
+    }
+
+    // Point d'entrée unique : mobile → visionneuse intégrée ; desktop → téléchargement.
+    window.bhViewOrDownloadPdf = async function(blob, filename) {
+      if (_bhIsMobileViewer()) { await _bhShowPdfViewer(blob, filename); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+    };
+
     (async function checkSubscriptionAccess() {
       const token = localStorage.getItem('lcc_token');
       
@@ -1547,11 +1665,7 @@ html[data-theme-v3="1"] .btn-ghost {
           });
           if (!res.ok) { alert('Erreur téléchargement'); return; }
           const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url; a.download = invoiceNumber + '.pdf';
-          document.body.appendChild(a); a.click();
-          document.body.removeChild(a); URL.revokeObjectURL(url);
+          await window.bhViewOrDownloadPdf(blob, invoiceNumber + '.pdf');
         } catch(e) { alert('Erreur : ' + e.message); }
       };
 
@@ -1674,11 +1788,7 @@ html[data-theme-v3="1"] .btn-ghost {
           });
           if (!res.ok) { alert('Erreur téléchargement'); return; }
           const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url; a.download = invoiceNumber + '.pdf';
-          document.body.appendChild(a); a.click();
-          document.body.removeChild(a); URL.revokeObjectURL(url);
+          await window.bhViewOrDownloadPdf(blob, invoiceNumber + '.pdf');
         } catch(e) { alert('Erreur : ' + e.message); }
       };
 
