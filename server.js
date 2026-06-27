@@ -5810,6 +5810,33 @@ async function getAgencyUserIds(req, userId) {
 }
 
 // ============================================
+// Numéro de facture voyageur UNIFIÉ
+// Compteur continu basé sur les DEUX sources (manuel → invoice_download_tokens,
+// auto → owner_invoices), scopé au compte propriétaire. Évite tout doublon
+// entre le chemin manuel et le chemin automatique.
+// ============================================
+async function getNextInvoiceNumber(pool, ownerUserId, yearStr) {
+  const like = `FACT-${yearStr}-%`;
+  const r = await pool.query(
+    `SELECT MAX(seq) AS max_seq FROM (
+        SELECT CAST(SPLIT_PART(invoice_number, '-', 3) AS INTEGER) AS seq
+          FROM invoice_download_tokens
+         WHERE user_id = $1 AND invoice_number LIKE $2
+           AND SPLIT_PART(invoice_number, '-', 3) ~ '^[0-9]+$'
+        UNION ALL
+        SELECT CAST(SPLIT_PART(invoice_number, '-', 3) AS INTEGER) AS seq
+          FROM owner_invoices
+         WHERE user_id = $1 AND invoice_number LIKE $2
+           AND SPLIT_PART(invoice_number, '-', 3) ~ '^[0-9]+$'
+           AND (is_credit_note IS NULL OR is_credit_note = FALSE)
+     ) t`,
+    [ownerUserId, like]
+  ).catch(() => ({ rows: [{ max_seq: 0 }] }));
+  const next = (parseInt(r.rows[0]?.max_seq || 0) + 1);
+  return `FACT-${yearStr}-${String(next).padStart(4, '0')}`;
+}
+
+// ============================================
 // MIDDLEWARE D'AUTHENTIFICATION ET ABONNEMENT
 // À COPIER-COLLER APRÈS LA FONCTION getUserFromRequest
 // ============================================
@@ -22813,18 +22840,9 @@ app.post('/api/invoice/create',
     }
 
     // Générer le numéro de facture lisible : FACT-2026-0001
-    // Compteur basé sur invoice_download_tokens, scopé au COMPTE PROPRIÉTAIRE (numérotation continue)
+    // Compteur UNIFIÉ (manuel + auto), scopé au COMPTE PROPRIÉTAIRE → numérotation continue, sans doublon
     const yearStr = new Date().getFullYear();
-    const maxResult = await pool.query(
-      `SELECT MAX(CAST(SPLIT_PART(invoice_number, '-', 3) AS INTEGER)) as max_seq
-       FROM invoice_download_tokens
-       WHERE user_id = $1
-         AND invoice_number LIKE $2`,
-      [billingUserId, `FACT-${yearStr}-%`]
-    ).catch(() => ({ rows: [{ max_seq: 0 }] }));
-    const nextSeq = (parseInt(maxResult.rows[0]?.max_seq || 0) + 1);
-    const seq = String(nextSeq).padStart(4, '0');
-    const invoiceNumber = `FACT-${yearStr}-${seq}`;
+    const invoiceNumber = await getNextInvoiceNumber(pool, billingUserId, yearStr);
     const invoiceId = 'inv_' + Date.now();
 
     // Calculer les montants
@@ -28771,16 +28789,9 @@ async function runInvoiceQueue(mode) {
         const cleaningFee = req.cleaning_fee || req.prop_cleaning_fee || 0;
         const touristTax = req.tourist_tax || (req.tourist_tax_per_night ? req.tourist_tax_per_night * nights : 0);
 
-        // Générer le numéro de facture
+        // Générer le numéro de facture (compteur UNIFIÉ : manuel + auto)
         const yearStr = new Date().getFullYear();
-        const maxResult = await pool.query(
-          `SELECT MAX(CAST(SPLIT_PART(invoice_number, '-', 3) AS INTEGER)) as max_seq
-           FROM owner_invoices WHERE user_id = $1 AND invoice_number LIKE $2
-           AND (is_credit_note IS NULL OR is_credit_note = FALSE)`,
-          [userId, `FACT-${yearStr}-%`]
-        ).catch(() => ({ rows: [{ max_seq: 0 }] }));
-        const nextSeq = (parseInt(maxResult.rows[0]?.max_seq || 0) + 1);
-        const invoiceNumber = `FACT-${yearStr}-${String(nextSeq).padStart(4, '0')}`;
+        const invoiceNumber = await getNextInvoiceNumber(pool, userId, yearStr);
 
         // Appeler la route interne /api/invoice/create
         const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
