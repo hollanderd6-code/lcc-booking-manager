@@ -332,16 +332,19 @@ function getSidebarHTML() {
 
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
-      logoutBtn.addEventListener("click", function(e) {
+      logoutBtn.addEventListener("click", async function(e) {
         e.preventDefault();
         e.stopPropagation();
         console.log("🚪 Déconnexion...");
-        localStorage.removeItem("lcc_token");
-        localStorage.removeItem("lcc_user");
-        localStorage.removeItem("lcc_account_type");
-        localStorage.removeItem("lcc_permissions");
-        localStorage.removeItem("lcc_is_sub_account");
-        localStorage.removeItem("lcc_sub_account");
+        const _keys = ["lcc_token","lcc_user","lcc_account_type","lcc_permissions","lcc_is_sub_account","lcc_sub_account","lcc_faceid_token","lcc_faceid_enabled"];
+        _keys.forEach(function(k){ try { localStorage.removeItem(k); } catch(_){} });
+        // 📱 Natif (Android/iOS) : vider AUSSI le stockage persistant Capacitor Preferences,
+        // sinon login.html restaure le token et reconnecte automatiquement. On attend
+        // l'effacement avant de rediriger (sur Android, naviguer trop vite coupe l'écriture).
+        try {
+          const P = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences;
+          if (P) { for (const k of _keys) { try { await P.remove({ key: k }); } catch(_){} } }
+        } catch(_){}
         window.location.href = "/login.html";
       });
     }
