@@ -15237,21 +15237,51 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
       (_bhProperties.length ? Promise.resolve() : bhLoadProperties()),
       fetch(BH_API + '/api/chat/conversations', { headers: { 'Authorization': 'Bearer ' + getToken() } })
         .then(function(r){ return r.json(); })
-        .then(function(d){ _bhUpsellConvs = (d.conversations || []).filter(function(c){ return c.status !== 'cancelled'; }); })
+        .then(function(d){ _bhUpsellConvs = (d.conversations || []).filter(function(c){ return c.status !== 'cancelled' && _bhUpActive(c); }); })
         .catch(function(){ _bhUpsellConvs = []; })
     ]).then(function(){ bhPaintUpsellTab(); });
   }
 
+  // Date ISO → JJ/MM/AA
+  function _bhFmtFr(iso){
+    if(!iso) return '';
+    var p = String(iso).split('T')[0].split('-');
+    if(p.length<3) return String(iso);
+    return p[2] + '/' + p[1] + '/' + p[0].slice(2);
+  }
+  // Résa en cours ou à venir (date de départ >= aujourd'hui)
+  function _bhUpActive(c){
+    var ds = c.reservation_end_date || c.reservation_start_date;
+    if(!ds) return true;
+    var d = new Date(String(ds).split('T')[0]);
+    var today = new Date(); today.setHours(0,0,0,0);
+    return !isNaN(d.getTime()) ? (d >= today) : true;
+  }
+  // Construit les <option> filtrées par nom
+  function _bhUpConvOptions(term){
+    term = (term || '').trim().toLowerCase();
+    var list = _bhUpsellConvs.filter(function(c){
+      if(!term) return true;
+      var who = (c.guest_name || '').toLowerCase();
+      var prop = (c.property_name || c.property_internal_name || '').toLowerCase();
+      return who.indexOf(term) !== -1 || prop.indexOf(term) !== -1;
+    });
+    if(!list.length) return '<option value="">Aucune réservation</option>';
+    return list.map(function(c){
+      var who = (c.guest_name || 'Voyageur');
+      var prop = c.property_name || c.property_internal_name || '';
+      var d = c.reservation_start_date ? (' · ' + _bhFmtFr(c.reservation_start_date)) : '';
+      return '<option value="' + c.id + '">' + who + (prop ? ' — ' + prop : '') + d + '</option>';
+    }).join('');
+  }
+  window.bhFilterUpsellConvs = function(term){
+    var sel = document.getElementById('bhUpConv');
+    if(sel) sel.innerHTML = '<option value="">— Sélectionner —</option>' + _bhUpConvOptions(term);
+  };
+
   function bhPaintUpsellTab() {
     var body = document.getElementById('bhPromoBody');
-    var convOptions = _bhUpsellConvs.length
-      ? _bhUpsellConvs.map(function(c){
-          var who = (c.guest_name || 'Voyageur');
-          var prop = c.property_name || c.property_internal_name || '';
-          var d = c.reservation_start_date ? (' · ' + String(c.reservation_start_date).split('T')[0]) : '';
-          return '<option value="' + c.id + '">' + who + (prop ? ' — ' + prop : '') + d + '</option>';
-        }).join('')
-      : '<option value="">Aucune conversation</option>';
+    var convOptions = _bhUpConvOptions('');
     var propOptions = _bhProperties.length
       ? _bhProperties.map(function(p){ return '<option value="' + p.id + '">' + (p.name || p.internalName || p.id) + '</option>'; }).join('')
       : '<option value="">Chargement...</option>';
@@ -15274,7 +15304,8 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     + '<div style="flex:1;"><label style="' + lbl + '">Heure (optionnel)</label><input type="text" id="bhUpReqLabel" placeholder="14h00" style="' + inp + '"></div>'
     + '</div>'
     + '<div id="bhUpAttachedBlock"><label style="' + lbl + '">Réservation / voyageur <span style="color:#EF4444;">*</span></label>'
-    + '<select id="bhUpConv" style="' + inp + '"><option value="">— Sélectionner —</option>' + convOptions + '</select></div>'
+    + '<input type="text" id="bhUpSearch" placeholder="🔍 Rechercher un nom…" oninput="bhFilterUpsellConvs(this.value)" style="' + inp + 'margin-bottom:7px;">'
+    + '<select id="bhUpConv" size="6" style="' + inp + 'padding:6px;height:auto;"><option value="">— Sélectionner —</option>' + convOptions + '</select></div>'
     + '<div id="bhUpFlyingBlock" style="display:none;">'
     + '<label style="' + lbl + '">Logement <span style="color:#EF4444;">*</span></label>'
     + '<select id="bhUpProp" style="' + inp + 'margin-bottom:10px;"><option value="">— Sélectionner —</option>' + propOptions + '</select>'
