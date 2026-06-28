@@ -30255,7 +30255,10 @@ cron.schedule('0 20 * * *', async () => {
            JOIN property_default_cleaners pdc ON pdc.property_id = r.property_id AND pdc.user_id = $2
            WHERE pdc.cleaner_id = $1
              AND TO_CHAR(r.end_date, 'YYYY-MM-DD') = $3
-             AND r.status NOT IN ('cancelled','hold','block')`,
+             AND r.status NOT IN ('cancelled','hold','block')
+             AND COALESCE(r.reservation_type,'') <> 'block'
+             AND COALESCE(r.platform,'') <> 'BLOCK'
+             AND COALESCE(r.source,'') <> 'BLOCK'`,
           [cleaner.id, cleaner.user_id, tomorrowStr]
         );
 
