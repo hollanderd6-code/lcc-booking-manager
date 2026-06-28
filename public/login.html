@@ -250,12 +250,17 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
       await restoreFromPreferences();
       const faceEnabled = localStorage.getItem(FACE_ID_KEY) === 'true'
         && !!localStorage.getItem(FACE_ID_TOKEN_KEY);
+      const isAndroid = window.Capacitor?.getPlatform?.() === 'android';
       if (faceEnabled) {
         // Biométrie activée → on la propose AVANT d'entrer (sécurité).
         await initFaceID();
+      } else if (isAndroid) {
+        // 🤖 ANDROID : arriver sur login = afficher le login, JAMAIS auto-reconnecter.
+        // (la persistance "rester connecté après kill" est gérée par app.html, pas ici →
+        //  sinon une déconnexion sans biométrie reconnecte tout de suite). iOS inchangé.
+        await initFaceID();
       } else {
-        // Pas de biométrie : auto-login silencieux si session encore valide.
-        // (corrige la reconnexion forcée après kill de l'app)
+        // iOS / web : auto-login silencieux si session encore valide.
         const auto = await autoLoginSilent();
         if (!auto) {
           await checkAuth();
