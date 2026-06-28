@@ -3830,7 +3830,7 @@ window.closeChecklistsKpiModal = function() {
 <!-- Actions droite -->
 <div class="calendar-actions-top">
   <button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher"><i class="fas fa-search"></i></button>
-  <button class="calendar-action-btn" id="calendarPromoBtn" title="Réservation directe · 3 % seulement (BHGuest)" onclick="openPromoPanel()" style="width:auto;height:36px;padding:0 14px;gap:7px;display:inline-flex;align-items:center;background:linear-gradient(135deg,#7C3AED,#5B21B6);border:none;color:#fff;font-weight:700;font-size:12.5px;white-space:nowrap;box-shadow:0 2px 10px rgba(124,58,237,.3);"><span style="font-size:15px;font-weight:800;font-family:Georgia,serif;line-height:1;">B</span><span>Réservation directe · 3 %</span></button>
+  <button class="calendar-action-btn" id="calendarPromoBtn" title="Plutôt réservation avec BHGuest · 3 % seulement" onclick="openPromoPanel()" style="width:auto;height:36px;padding:0 14px;gap:7px;display:inline-flex;align-items:center;background:linear-gradient(135deg,#7C3AED,#5B21B6);border:none;color:#fff;font-weight:700;font-size:12.5px;white-space:nowrap;box-shadow:0 2px 10px rgba(124,58,237,.3);"><span style="font-size:15px;font-weight:800;font-family:Georgia,serif;line-height:1;">B</span><span>Plutôt réservation avec BHGuest</span></button>
   <button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres"><i class="fas fa-sliders-h"></i></button>
   <button id="batchEditBtn" onclick="openBatchEditModal()" title="Édition groupée" style="display:flex;align-items:center;gap:6px;padding:7px 14px;font-size:12px;font-weight:600;white-space:nowrap;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:white;border-radius:10px;cursor:pointer;height:36px;transition:all .15s;" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
     <i class="fas fa-layer-group" style="font-size:13px;"></i><span style="font-size:12px;">Édition groupée</span>
@@ -3936,8 +3936,8 @@ window.closeChecklistsKpiModal = function() {
             <span style="font-size:22px;font-weight:800;color:#fff;font-family:Georgia,serif;line-height:1;">B</span>
           </div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:14px;font-weight:700;color:#fff;letter-spacing:-.01em;margin-bottom:2px;">✦ Réservation directe · 3 % seulement</div>
-            <div style="font-size:11.5px;color:rgba(255,255,255,.82);line-height:1.4;">Envoyez un lien : le voyageur paie en ligne, les dates se bloquent. Bien moins cher que les ~15 % des OTA.</div>
+            <div style="font-size:14px;font-weight:700;color:#fff;letter-spacing:-.01em;margin-bottom:2px;">✦ Plutôt réservation avec BHGuest</div>
+            <div style="font-size:11.5px;color:rgba(255,255,255,.82);line-height:1.4;">Envoyez un lien : le voyageur paie en ligne, les dates se bloquent. 3 % seulement — bien moins que les ~15 % des OTA.</div>
           </div>
           <i class="fas fa-arrow-right" style="color:rgba(255,255,255,.9);font-size:14px;flex-shrink:0;"></i>
         </button>
@@ -6956,7 +6956,7 @@ try {
     // Right: actions
     var right = div('display:flex;align-items:center;gap:6px;padding:12px 0;');
     right.innerHTML = '<button id="bhCalSearchBtn" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Rechercher"><i class="fas fa-search" style="font-size:13px;"></i></button>'
-      + '<button id="bhCalPromoBtn" onclick="openPromoPanel && openPromoPanel()" style="display:flex;align-items:center;gap:6px;padding:0 12px;height:34px;background:linear-gradient(135deg,#7C3AED,#5B21B6);border:none;border-radius:9px;cursor:pointer;color:#fff;font-weight:700;font-size:12px;white-space:nowrap;box-shadow:0 2px 10px rgba(124,58,237,.3);" title="Réservation directe · 3 % seulement (BHGuest)"><span style="font-size:14px;font-weight:800;font-family:Georgia,serif;line-height:1;">B</span><span class="bh-desktop-only">Réservation directe · 3 %</span></button>'
+      + '<button id="bhCalPromoBtn" onclick="openPromoPanel && openPromoPanel()" style="display:flex;align-items:center;gap:6px;padding:0 12px;height:34px;background:linear-gradient(135deg,#7C3AED,#5B21B6);border:none;border-radius:9px;cursor:pointer;color:#fff;font-weight:700;font-size:12px;white-space:nowrap;box-shadow:0 2px 10px rgba(124,58,237,.3);" title="Plutôt réservation avec BHGuest · 3 % seulement"><span style="font-size:14px;font-weight:800;font-family:Georgia,serif;line-height:1;">B</span><span class="bh-desktop-only">Plutôt réservation avec BHGuest</span></button>'
       + '<button id="bhCalSettingsBtn" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Paramètres"><i class="fas fa-sliders-h" style="font-size:13px;"></i></button>'
       + '<button onclick="openBatchEditModal && openBatchEditModal()" style="display:flex;align-items:center;gap:5px;padding:0 12px;height:34px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:9px;color:white;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;"><i class="fas fa-layer-group" style="font-size:12px;"></i><span class="bh-desktop-only">Édition groupée</span></button>';
 
@@ -14841,7 +14841,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
   function getToken() { return localStorage.getItem('lcc_token') || ''; }
 
   // ── Ouvrir / fermer ──────────────────────────────────────────
-  // Pré-remplir l'onglet "Lien personnalisé" (report depuis la modale nouvelle résa)
+  // Pré-remplir l'onglet "Lien" (report depuis la modale nouvelle résa)
   function bhApplyLinkPrefill(pf) {
     try {
       if (!pf) return;
@@ -14855,9 +14855,9 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
   // Depuis la modale "Nouvelle réservation" → bascule vers le générateur de lien direct
   window.bhPromoteDirect = function() {
     var pf = {
-      property: (document.getElementById('nrProperty')   || {}).value || '',
-      checkin:  (document.getElementById('nrStartDate')  || {}).value || '',
-      checkout: (document.getElementById('nrEndDate')    || {}).value || ''
+      property: (document.getElementById('nrProperty')  || {}).value || '',
+      checkin:  (document.getElementById('nrStartDate') || {}).value || '',
+      checkout: (document.getElementById('nrEndDate')   || {}).value || ''
     };
     try {
       var m = document.getElementById('newReservationModal');
@@ -14886,7 +14886,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
     // Header
     panel.innerHTML = `
-      <div style="background:#1A7A5E;padding:20px 18px 16px;flex-shrink:0;">
+      <div style="background:linear-gradient(135deg,#7C3AED,#5B21B6);padding:20px 18px 16px;flex-shrink:0;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
           <div style="display:flex;align-items:center;gap:9px;">
             <i class="fas fa-tag" style="color:rgba(255,255,255,.8);font-size:15px;"></i>
@@ -14899,11 +14899,14 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
       <!-- Onglets -->
       <div id="bhPromoTabs" style="display:flex;gap:0;background:white;border-bottom:1px solid #E5E7EB;flex-shrink:0;">
-        <button onclick="bhPromoTab('link')" id="bhTabLink" style="flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;">
-          <i class="fas fa-link" style="margin-right:5px;"></i>Lien personnalisé
+        <button onclick="bhPromoTab('link')" id="bhTabLink" style="flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#7C3AED;border-bottom:2px solid #7C3AED;transition:all .15s;">
+          <i class="fas fa-link" style="margin-right:4px;"></i>Lien
         </button>
-        <button onclick="bhPromoTab('codes')" id="bhTabCodes" style="flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;">
-          <i class="fas fa-ticket-alt" style="margin-right:5px;"></i>Codes promo
+        <button onclick="bhPromoTab('codes')" id="bhTabCodes" style="flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;">
+          <i class="fas fa-ticket-alt" style="margin-right:4px;"></i>Codes
+        </button>
+        <button onclick="bhPromoTab('upsell')" id="bhTabUpsell" style="flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;">
+          <i class="fas fa-concierge-bell" style="margin-right:4px;"></i>Prestations
         </button>
       </div>
 
@@ -14931,14 +14934,17 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
   // ── Onglets ──────────────────────────────────────────────────
   window.bhPromoTab = function(tab) {
-    document.getElementById('bhTabCodes').style.cssText = tab === 'codes'
-      ? 'flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;'
-      : 'flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;';
-    document.getElementById('bhTabLink').style.cssText = tab === 'link'
-      ? 'flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;'
-      : 'flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;';
+    var act = 'flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#7C3AED;border-bottom:2px solid #7C3AED;transition:all .15s;';
+    var ina = 'flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;';
+    var tl = document.getElementById('bhTabLink');
+    var tc = document.getElementById('bhTabCodes');
+    var tu = document.getElementById('bhTabUpsell');
+    if (tl) tl.style.cssText = tab === 'link' ? act : ina;
+    if (tc) tc.style.cssText = tab === 'codes' ? act : ina;
+    if (tu) tu.style.cssText = tab === 'upsell' ? act : ina;
 
     if (tab === 'codes') bhRenderCodesTab();
+    else if (tab === 'upsell') bhRenderUpsellTab();
     else bhRenderLinkTab();
   };
 
@@ -14977,7 +14983,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     var html = `
       <!-- Formulaire création -->
       <div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-        <div style="font-size:12px;font-weight:700;color:#1A7A5E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">
           <i class="fas fa-plus-circle" style="margin-right:5px;"></i>Nouveau code
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
@@ -14986,13 +14992,13 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
             <input id="bhPromoCode" type="text" placeholder="Ex: BEEN10" maxlength="20"
               style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;box-sizing:border-box;font-family:inherit;outline:none;"
               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
-              onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+              onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
           </div>
           <div style="display:flex;gap:8px;">
             <div style="flex:1;">
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Type</label>
               <select id="bhPromoType" style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;background:white;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
                 <option value="percent">% remise</option>
                 <option value="fixed">€ fixe</option>
               </select>
@@ -15001,7 +15007,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Valeur</label>
               <input id="bhPromoValue" type="number" placeholder="10" min="1"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
           </div>
           <div style="display:flex;gap:8px;">
@@ -15009,23 +15015,23 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Utilisations max</label>
               <input id="bhPromoMaxUses" type="number" placeholder="∞" min="1"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
             <div style="flex:1;">
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Expiration</label>
               <input id="bhPromoExpiry" type="date"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
           </div>
           <div>
             <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Description (optionnel)</label>
             <input id="bhPromoDesc" type="text" placeholder="Ex: Remise fidélité Jean"
               style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-              onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+              onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
           </div>
           <button onclick="bhCreatePromo()" id="bhPromoCreateBtn"
-            style="width:100%;padding:11px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
+            style="width:100%;padding:11px;background:#7C3AED;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
             <i class="fas fa-plus"></i> Créer le code promo
           </button>
           <div id="bhPromoCreateMsg" style="display:none;font-size:12px;text-align:center;padding:6px 10px;border-radius:8px;"></div>
@@ -15064,7 +15070,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     return `
       <div style="background:white;border-radius:12px;padding:13px 14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;align-items:center;gap:12px;opacity:${active ? 1 : 0.55};">
         <div style="width:48px;height:48px;background:${active ? '#ECFDF5' : '#F3F4F6'};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <span style="font-size:13px;font-weight:800;color:${active ? '#1A7A5E' : '#9CA3AF'};">${badge}</span>
+          <span style="font-size:13px;font-weight:800;color:${active ? '#7C3AED' : '#9CA3AF'};">${badge}</span>
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:14px;font-weight:700;color:#111827;letter-spacing:.04em;">${c.code}</div>
@@ -15148,7 +15154,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
     body.innerHTML = `
       <div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-        <div style="font-size:12px;font-weight:700;color:#1A7A5E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;">
           <i class="fas fa-magic" style="margin-right:5px;"></i>Générateur de lien
         </div>
         <div style="display:flex;flex-direction:column;gap:11px;">
@@ -15157,7 +15163,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
             <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Logement <span style="color:#EF4444;">*</span></label>
             <select id="bhLinkProp" onchange="bhUpdateLink()"
               style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;background:white;outline:none;"
-              onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+              onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
               <option value="">— Sélectionner —</option>
               ${propOptions}
             </select>
@@ -15168,13 +15174,13 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Arrivée</label>
               <input type="date" id="bhLinkCheckin" onchange="bhUpdateLink()"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
             <div style="flex:1;">
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Départ</label>
               <input type="date" id="bhLinkCheckout" onchange="bhUpdateLink()"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
           </div>
 
@@ -15183,14 +15189,14 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
             <input type="text" id="bhLinkPromo" placeholder="Ex: BEEN10" maxlength="20"
               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');bhUpdateLink()"
               style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;font-weight:600;letter-spacing:.04em;box-sizing:border-box;font-family:inherit;outline:none;"
-              onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+              onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
           </div>
 
           <div>
             <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Voyageurs</label>
             <input type="number" id="bhLinkGuests" value="2" min="1" max="20" onchange="bhUpdateLink()"
               style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-              onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+              onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
           </div>
 
           <div style="border-top:1.5px dashed #E5E7EB;padding-top:12px;margin-top:2px;">
@@ -15199,20 +15205,20 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Email client (optionnel)</label>
               <input type="email" id="bhLinkEmail" placeholder="client@email.com" oninput="bhUpdateLink()"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
             <!-- Téléphone client -->
             <div style="margin-bottom:12px;">
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Téléphone client (optionnel)</label>
               <input type="tel" id="bhLinkPhone" placeholder="+33 6 00 00 00 00" oninput="bhUpdateLink()"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
-            <label style="font-size:11px;font-weight:600;color:#1A7A5E;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">
+            <label style="font-size:11px;font-weight:600;color:#7C3AED;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">
               💶 Prix fixe total (optionnel)
             </label>
             <div style="display:flex;align-items:center;border:1.5px solid #E5E7EB;border-radius:9px;overflow:hidden;background:white;" id="bhFixedPriceWrap"
-              onfocusin="this.style.borderColor='#1A7A5E'" onfocusout="this.style.borderColor='#E5E7EB'">
+              onfocusin="this.style.borderColor='#7C3AED'" onfocusout="this.style.borderColor='#E5E7EB'">
               <span style="padding:0 10px;font-size:14px;color:#9CA3AF;font-weight:600;flex-shrink:0;border-right:1.5px solid #E5E7EB;height:100%;display:flex;align-items:center;background:#F9FAFB;">€</span>
               <input type="number" id="bhLinkFixedPrice" placeholder="350" min="1" onchange="bhUpdateLink()" oninput="bhUpdateLink()"
                 style="flex:1;padding:9px 12px;border:none;font-size:14px;font-weight:600;box-sizing:border-box;font-family:inherit;outline:none;background:transparent;">
@@ -15237,7 +15243,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button onclick="bhCopyLink()" id="bhCopyBtn"
-            style="flex:1;min-width:100px;padding:11px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
+            style="flex:1;min-width:100px;padding:11px;background:#7C3AED;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
             <i class="fas fa-copy"></i> Copier le lien
           </button>
           <button onclick="bhShareLink()" id="bhShareBtn"
@@ -15255,6 +15261,174 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
       </div>
     `;
   }
+
+  // ══════════════════════════════════════════════════════════════
+  // ONGLET PRESTATIONS — upsell manuel (départ tardif / arrivée anticipée / panier)
+  // Réutilise POST /api/upsell/manual (moteur de Lia).
+  // ══════════════════════════════════════════════════════════════
+  var _bhUpsellConvs = [];
+  var _bhUpsellMode = 'attached'; // 'attached' | 'flying'
+  var _bhUpLastUrl = '';
+
+  function bhRenderUpsellTab() {
+    var body = document.getElementById('bhPromoBody');
+    body.innerHTML = '<div style="text-align:center;padding:30px;color:#9CA3AF;"><i class="fas fa-spinner fa-spin"></i></div>';
+    Promise.all([
+      (_bhProperties.length ? Promise.resolve() : bhLoadProperties()),
+      fetch(BH_API + '/api/chat/conversations', { headers: { 'Authorization': 'Bearer ' + getToken() } })
+        .then(function(r){ return r.json(); })
+        .then(function(d){ _bhUpsellConvs = (d.conversations || []).filter(function(c){ return c.status !== 'cancelled' && _bhUpActive(c); }); })
+        .catch(function(){ _bhUpsellConvs = []; })
+    ]).then(function(){ bhPaintUpsellTab(); });
+  }
+
+  // Date ISO → JJ/MM/AA
+  function _bhFmtFr(iso){
+    if(!iso) return '';
+    var p = String(iso).split('T')[0].split('-');
+    if(p.length<3) return String(iso);
+    return p[2] + '/' + p[1] + '/' + p[0].slice(2);
+  }
+  // Résa en cours ou à venir (date de départ >= aujourd'hui)
+  function _bhUpActive(c){
+    var ds = c.reservation_end_date || c.reservation_start_date;
+    if(!ds) return true;
+    var d = new Date(String(ds).split('T')[0]);
+    var today = new Date(); today.setHours(0,0,0,0);
+    return !isNaN(d.getTime()) ? (d >= today) : true;
+  }
+  // Construit les <option> filtrées par nom
+  function _bhUpConvOptions(term){
+    term = (term || '').trim().toLowerCase();
+    var list = _bhUpsellConvs.filter(function(c){
+      if(!term) return true;
+      var who = (c.guest_name || '').toLowerCase();
+      var prop = (c.property_name || c.property_internal_name || '').toLowerCase();
+      return who.indexOf(term) !== -1 || prop.indexOf(term) !== -1;
+    });
+    if(!list.length) return '<option value="">Aucune réservation</option>';
+    return list.map(function(c){
+      var who = (c.guest_name || 'Voyageur');
+      var prop = c.property_name || c.property_internal_name || '';
+      var d = c.reservation_start_date ? (' · ' + _bhFmtFr(c.reservation_start_date)) : '';
+      return '<option value="' + c.id + '">' + who + (prop ? ' — ' + prop : '') + d + '</option>';
+    }).join('');
+  }
+  window.bhFilterUpsellConvs = function(term){
+    var sel = document.getElementById('bhUpConv');
+    if(sel) sel.innerHTML = '<option value="">— Sélectionner —</option>' + _bhUpConvOptions(term);
+  };
+
+  function bhPaintUpsellTab() {
+    var body = document.getElementById('bhPromoBody');
+    var convOptions = _bhUpConvOptions('');
+    var propOptions = _bhProperties.length
+      ? _bhProperties.map(function(p){ return '<option value="' + p.id + '">' + (p.name || p.internalName || p.id) + '</option>'; }).join('')
+      : '<option value="">Chargement...</option>';
+
+    var lbl = 'font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;';
+    var inp = 'width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;background:white;outline:none;';
+
+    body.innerHTML =
+      '<div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">'
+    + '<div style="font-size:12px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;"><i class="fas fa-concierge-bell" style="margin-right:5px;"></i>Prestation payante</div>'
+    + '<div style="display:flex;flex-direction:column;gap:11px;">'
+    + '<div style="display:flex;gap:6px;background:#F3F4F6;border-radius:10px;padding:4px;">'
+    + '<button type="button" id="bhUpMTab_attached" onclick="bhUpsellMode(\'attached\')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:white;color:#7C3AED;box-shadow:0 1px 2px rgba(0,0,0,.08);">Rattacher à une résa</button>'
+    + '<button type="button" id="bhUpMTab_flying" onclick="bhUpsellMode(\'flying\')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:#6B7280;">Lien volant</button>'
+    + '</div>'
+    + '<div><label style="' + lbl + '">Type de prestation <span style="color:#EF4444;">*</span></label>'
+    + '<select id="bhUpKind" style="' + inp + '"><option value="late_checkout">Départ tardif</option><option value="early_checkin">Arrivée anticipée</option><option value="welcome_basket">Panier d\'accueil</option></select></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<div style="flex:1;"><label style="' + lbl + '">Montant (€) <span style="color:#EF4444;">*</span></label><input type="number" id="bhUpAmount" placeholder="20" min="1" style="' + inp + '"></div>'
+    + '<div style="flex:1;"><label style="' + lbl + '">Heure (optionnel)</label><input type="text" id="bhUpReqLabel" placeholder="14h00" style="' + inp + '"></div>'
+    + '</div>'
+    + '<div id="bhUpAttachedBlock"><label style="' + lbl + '">Réservation / voyageur <span style="color:#EF4444;">*</span></label>'
+    + '<input type="text" id="bhUpSearch" placeholder="🔍 Rechercher un nom…" oninput="bhFilterUpsellConvs(this.value)" style="' + inp + 'margin-bottom:7px;">'
+    + '<select id="bhUpConv" size="6" style="' + inp + 'padding:6px;height:auto;"><option value="">— Sélectionner —</option>' + convOptions + '</select></div>'
+    + '<div id="bhUpFlyingBlock" style="display:none;">'
+    + '<label style="' + lbl + '">Logement <span style="color:#EF4444;">*</span></label>'
+    + '<select id="bhUpProp" style="' + inp + 'margin-bottom:10px;"><option value="">— Sélectionner —</option>' + propOptions + '</select>'
+    + '<label style="' + lbl + '">Email client</label><input type="email" id="bhUpEmail" placeholder="client@email.com" style="' + inp + 'margin-bottom:10px;">'
+    + '<label style="' + lbl + '">Téléphone client</label><input type="tel" id="bhUpPhone" placeholder="+33 6 00 00 00 00" style="' + inp + '">'
+    + '<div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Email ou téléphone requis. Le lien volant n\'envoie pas de confirmation auto au paiement.</div>'
+    + '</div>'
+    + '<button onclick="bhCreateUpsell()" id="bhUpBtn" style="width:100%;padding:12px;background:#7C3AED;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;"><i class="fas fa-paper-plane"></i> Générer & envoyer</button>'
+    + '<div id="bhUpMsg" style="display:none;font-size:12px;text-align:center;padding:8px 10px;border-radius:8px;"></div>'
+    + '<div id="bhUpResult" style="display:none;border-top:1.5px dashed #E5E7EB;padding-top:12px;">'
+    + '<div id="bhUpLinkText" style="font-size:11px;color:#374151;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;word-break:break-all;line-height:1.5;margin-bottom:10px;font-family:monospace;"></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="bhUpCopy()" style="flex:1;padding:10px;background:#7C3AED;color:white;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-copy"></i> Copier</button>'
+    + '<button onclick="bhUpShare()" style="padding:10px 14px;background:#F3F4F6;color:#374151;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-share-alt"></i> Partager</button>'
+    + '</div></div>'
+    + '</div></div>';
+
+    bhUpsellMode(_bhUpsellMode);
+  }
+
+  window.bhUpsellMode = function(mode) {
+    _bhUpsellMode = mode;
+    var a = document.getElementById('bhUpAttachedBlock');
+    var f = document.getElementById('bhUpFlyingBlock');
+    if (a) a.style.display = mode === 'attached' ? '' : 'none';
+    if (f) f.style.display = mode === 'flying' ? '' : 'none';
+    var ta = document.getElementById('bhUpMTab_attached');
+    var tf = document.getElementById('bhUpMTab_flying');
+    if (ta && tf) {
+      var on = 'flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:white;color:#7C3AED;box-shadow:0 1px 2px rgba(0,0,0,.08);';
+      var off = 'flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:#6B7280;';
+      ta.style.cssText = mode === 'attached' ? on : off;
+      tf.style.cssText = mode === 'flying' ? on : off;
+    }
+  };
+
+  window.bhCreateUpsell = function() {
+    var kind = document.getElementById('bhUpKind').value;
+    var amount = document.getElementById('bhUpAmount').value;
+    var reqLabel = (document.getElementById('bhUpReqLabel').value || '').trim();
+    var msg = document.getElementById('bhUpMsg');
+    var btn = document.getElementById('bhUpBtn');
+    function showMsg(txt, ok){ msg.style.display='block'; msg.textContent=txt; msg.style.background= ok?'#DCFCE7':'#FEE2E2'; msg.style.color= ok?'#166534':'#991B1B'; }
+
+    if (!amount || parseFloat(amount) <= 0) { showMsg('Montant invalide', false); return; }
+    var payload = { kind: kind, amountEuros: amount, reqLabel: reqLabel };
+    if (_bhUpsellMode === 'attached') {
+      var conv = document.getElementById('bhUpConv').value;
+      if (!conv) { showMsg('Sélectionne une réservation', false); return; }
+      payload.conversationId = conv;
+    } else {
+      var prop = document.getElementById('bhUpProp').value;
+      var email = (document.getElementById('bhUpEmail').value || '').trim();
+      var phone = (document.getElementById('bhUpPhone').value || '').trim();
+      if (!prop) { showMsg('Sélectionne un logement', false); return; }
+      if (!email && !phone) { showMsg('Email ou téléphone requis', false); return; }
+      payload.propertyId = prop; payload.email = email; payload.phone = phone;
+    }
+
+    btn.disabled = true; btn.style.opacity = '.6';
+    showMsg('Création du lien…', true);
+    fetch(BH_API + '/api/upsell/manual', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(d){
+      btn.disabled = false; btn.style.opacity = '1';
+      if (!d || !d.success) { showMsg((d && d.error) || 'Erreur lors de la création', false); return; }
+      _bhUpLastUrl = d.url;
+      var parts = [];
+      if (d.sentChat) parts.push('envoyé dans le chat');
+      if (d.sentEmail) parts.push('envoyé par email');
+      showMsg('Lien créé' + (parts.length ? ' (' + parts.join(', ') + ')' : '') + ' ✅', true);
+      document.getElementById('bhUpResult').style.display = 'block';
+      document.getElementById('bhUpLinkText').textContent = d.url;
+    }).catch(function(){
+      btn.disabled = false; btn.style.opacity = '1';
+      showMsg('Erreur réseau', false);
+    });
+  };
+
+  window.bhUpCopy = function(){ if (_bhUpLastUrl && navigator.clipboard) { navigator.clipboard.writeText(_bhUpLastUrl); } };
+  window.bhUpShare = function(){ if (_bhUpLastUrl && navigator.share) { navigator.share({ url: _bhUpLastUrl }).catch(function(){}); } else if (_bhUpLastUrl && navigator.clipboard) { navigator.clipboard.writeText(_bhUpLastUrl); } };
 
   window.bhUpdateLink = function() {
     var propId     = document.getElementById('bhLinkProp')?.value;
@@ -15471,18 +15645,33 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
       if (linkText) linkText.textContent = url;
     }
 
+    var _copied = false;
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(url);
-      else { var ta = document.createElement('textarea'); ta.value = url; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
-    } catch(e) {}
+      if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(url); _copied = true; }
+    } catch(e) { _copied = false; }
+    if (!_copied) {
+      // Repli : clipboard.writeText est souvent refusé APRÈS un await (geste utilisateur expiré).
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = url; ta.style.position='fixed'; ta.style.top='0'; ta.style.left='0'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try { ta.setSelectionRange(0, url.length); } catch(e2){}
+        _copied = document.execCommand('copy'); ta.remove();
+      } catch(e) {}
+    }
+    if (!_copied) {
+      // Dernier recours : sélectionner le lien pour copie manuelle.
+      var lt = document.getElementById('bhLinkText');
+      if (lt) { try { var rng=document.createRange(); rng.selectNodeContents(lt); var seln=window.getSelection(); seln.removeAllRanges(); seln.addRange(rng); } catch(e3){} }
+    }
 
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-    btn.style.background = '#059669';
+    btn.innerHTML = _copied ? '<i class="fas fa-check"></i> Copié !' : '<i class="fas fa-copy"></i> Sélectionné — Cmd/Ctrl+C';
+    btn.style.background = _copied ? '#059669' : '#7C3AED';
     setTimeout(() => {
       btn.innerHTML = '<i class="fas fa-copy"></i> Copier le lien';
-      btn.style.background = '#1A7A5E';
-    }, 2000);
+      btn.style.background = '#7C3AED';
+    }, 2500);
   };
 
   window.bhShareLink = async function() {
