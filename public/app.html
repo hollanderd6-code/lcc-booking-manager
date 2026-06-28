@@ -15605,18 +15605,33 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
       if (linkText) linkText.textContent = url;
     }
 
+    var _copied = false;
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(url);
-      else { var ta = document.createElement('textarea'); ta.value = url; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
-    } catch(e) {}
+      if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(url); _copied = true; }
+    } catch(e) { _copied = false; }
+    if (!_copied) {
+      // Repli : clipboard.writeText est souvent refusé APRÈS un await (geste utilisateur expiré).
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = url; ta.style.position='fixed'; ta.style.top='0'; ta.style.left='0'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try { ta.setSelectionRange(0, url.length); } catch(e2){}
+        _copied = document.execCommand('copy'); ta.remove();
+      } catch(e) {}
+    }
+    if (!_copied) {
+      // Dernier recours : sélectionner le lien pour copie manuelle.
+      var lt = document.getElementById('bhLinkText');
+      if (lt) { try { var rng=document.createRange(); rng.selectNodeContents(lt); var seln=window.getSelection(); seln.removeAllRanges(); seln.addRange(rng); } catch(e3){} }
+    }
 
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-    btn.style.background = '#059669';
+    btn.innerHTML = _copied ? '<i class="fas fa-check"></i> Copié !' : '<i class="fas fa-copy"></i> Sélectionné — Cmd/Ctrl+C';
+    btn.style.background = _copied ? '#059669' : '#1A7A5E';
     setTimeout(() => {
       btn.innerHTML = '<i class="fas fa-copy"></i> Copier le lien';
       btn.style.background = '#1A7A5E';
-    }, 2000);
+    }, 2500);
   };
 
   window.bhShareLink = async function() {
