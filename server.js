@@ -25,7 +25,7 @@ const { Pool } = require('pg');
 // ============================================
 const { handleIncomingMessage, handleIncomingMessageDebounced } = require('./integrated-chat-handler');
 const { generateOwnerSuggestion } = require('./integrated-chat-handler');
-const { confirmUpsellPaid } = require('./integrated-chat-handler');
+const { confirmUpsellPaid, sendBotMessage } = require('./integrated-chat-handler');
 // onboarding-system supprimé — données voyageur via Channex
 const crypto = require('crypto');
 const axios = require('axios');
@@ -40447,6 +40447,95 @@ app.get('/api/guest/promo/list', authenticateToken, async (req, res) => {
     res.json(result.rows);
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/upsell/manual', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { createUpsellPaymentLink } = require('./upsell-service');
+    const { kind, amountEuros, conversationId, propertyId, email, phone, reqLabel, refLabel, description } = req.body || {};
+
+    const KIND_LABELS = { late_checkout: 'Départ tardif', early_checkin: 'Arrivée anticipée', welcome_basket: "Panier d'accueil" };
+    if (!KIND_LABELS[kind]) return res.status(400).json({ error: 'Type de prestation invalide' });
+
+    const amountCents = Math.round(parseFloat(amountEuros) * 100);
+    if (!amountCents || amountCents < 50) return res.status(400).json({ error: 'Montant invalide (minimum 0,50 €)' });
+
+    const label = KIND_LABELS[kind] + (reqLabel ? ` ${reqLabel}` : '');
+
+    // Comptes autorisés (opérateur + comptes délégués acceptés) — sécurité agence.
+    let candidateIds = [user.id];
+    try {
+      const d = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [user.id]
+      );
+      candidateIds = [user.id, ...d.rows.map(r => r.delegator_user_id)];
+    } catch (e) {}
+
+    let conversation = null, property = null, attached = false;
+
+    if (conversationId) {
+      // ── Mode rattaché : on réutilise toute la machinerie (confirmUpsellPaid au paiement) ──
+      const cRes = await pool.query('SELECT * FROM conversations WHERE id = $1', [conversationId]);
+      conversation = cRes.rows[0];
+      if (!conversation) return res.status(404).json({ error: 'Conversation introuvable' });
+      if (!candidateIds.includes(conversation.user_id)) return res.status(403).json({ error: 'Accès refusé à cette conversation' });
+      if (conversation.property_id) {
+        const pRes = await pool.query('SELECT id, name FROM properties WHERE id = $1', [conversation.property_id]);
+        property = pRes.rows[0] || null;
+      }
+      attached = true;
+    } else {
+      // ── Mode volant : logement + email/téléphone, sans conversation → pas de confirmation auto ──
+      if (!propertyId) return res.status(400).json({ error: 'Logement requis pour un lien volant' });
+      if (!email && !phone) return res.status(400).json({ error: 'Email ou téléphone requis pour un lien volant' });
+      const pRes = await pool.query('SELECT id, name, user_id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])', [propertyId, candidateIds]);
+      property = pRes.rows[0];
+      if (!property) return res.status(404).json({ error: 'Logement introuvable' });
+      // Conversation synthétique (id null) : confirmUpsellPaid s'arrêtera proprement (voulu).
+      conversation = { id: null, user_id: property.user_id || user.id, property_id: propertyId, reservation_uid: '', guest_name: '', channex_booking_id: null };
+    }
+
+    const link = await createUpsellPaymentLink({
+      pool, stripe, conversation, property, kind, label,
+      description: description || (property && property.name ? property.name : ''),
+      amountCents,
+      extraMeta: { req_label: reqLabel || '', ref_label: refLabel || '', manual: '1' },
+    });
+    if (!link || !link.url) return res.status(500).json({ error: 'Création du lien de paiement échouée' });
+
+    // ── Envoi ──
+    let sentChat = false, sentEmail = false;
+    if (attached && conversation.id) {
+      try {
+        const channexId = conversation.channex_booking_id || null;
+        const text = `Voici votre lien pour ${KIND_LABELS[kind].toLowerCase()}${reqLabel ? ' (' + reqLabel + ')' : ''} : ${link.url}`;
+        await sendBotMessage(conversation.id, text, pool, io, channexId);
+        sentChat = true;
+      } catch (e) { console.warn('⚠️ [UPSELL manuel] post chat:', e.message); }
+    }
+    if (email) {
+      try {
+        await sendEmail({
+          to: email,
+          subject: `${KIND_LABELS[kind]}${property && property.name ? ' — ' + property.name : ''}`,
+          html: `<p>Bonjour,</p>`
+              + `<p>Voici votre lien pour <strong>${KIND_LABELS[kind].toLowerCase()}</strong>${reqLabel ? ' (' + reqLabel + ')' : ''} :</p>`
+              + `<p><a href="${link.url}" style="display:inline-block;background:#1A7A5E;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Payer ${(amountCents/100).toFixed(2)} €</a></p>`
+              + `<p style="color:#6B7280;font-size:13px;">Ou copiez ce lien : ${link.url}</p>`,
+        });
+        sentEmail = true;
+      } catch (e) { console.warn('⚠️ [UPSELL manuel] email:', e.message); }
+    }
+
+    res.json({ success: true, url: link.url, feeCents: link.feeCents || 0, attached, sentChat, sentEmail });
+  } catch (e) {
+    console.error('❌ [UPSELL manuel]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

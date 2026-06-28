@@ -14861,11 +14861,14 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
       <!-- Onglets -->
       <div id="bhPromoTabs" style="display:flex;gap:0;background:white;border-bottom:1px solid #E5E7EB;flex-shrink:0;">
-        <button onclick="bhPromoTab('link')" id="bhTabLink" style="flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;">
-          <i class="fas fa-link" style="margin-right:5px;"></i>Lien personnalisé
+        <button onclick="bhPromoTab('link')" id="bhTabLink" style="flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;">
+          <i class="fas fa-link" style="margin-right:4px;"></i>Lien
         </button>
-        <button onclick="bhPromoTab('codes')" id="bhTabCodes" style="flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;">
-          <i class="fas fa-ticket-alt" style="margin-right:5px;"></i>Codes promo
+        <button onclick="bhPromoTab('codes')" id="bhTabCodes" style="flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;">
+          <i class="fas fa-ticket-alt" style="margin-right:4px;"></i>Codes
+        </button>
+        <button onclick="bhPromoTab('upsell')" id="bhTabUpsell" style="flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;">
+          <i class="fas fa-concierge-bell" style="margin-right:4px;"></i>Prestations
         </button>
       </div>
 
@@ -14891,14 +14894,17 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
   // ── Onglets ──────────────────────────────────────────────────
   window.bhPromoTab = function(tab) {
-    document.getElementById('bhTabCodes').style.cssText = tab === 'codes'
-      ? 'flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;'
-      : 'flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;';
-    document.getElementById('bhTabLink').style.cssText = tab === 'link'
-      ? 'flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;'
-      : 'flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;';
+    var act = 'flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;';
+    var ina = 'flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;';
+    var tl = document.getElementById('bhTabLink');
+    var tc = document.getElementById('bhTabCodes');
+    var tu = document.getElementById('bhTabUpsell');
+    if (tl) tl.style.cssText = tab === 'link' ? act : ina;
+    if (tc) tc.style.cssText = tab === 'codes' ? act : ina;
+    if (tu) tu.style.cssText = tab === 'upsell' ? act : ina;
 
     if (tab === 'codes') bhRenderCodesTab();
+    else if (tab === 'upsell') bhRenderUpsellTab();
     else bhRenderLinkTab();
   };
 
@@ -15215,6 +15221,143 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
       </div>
     `;
   }
+
+  // ══════════════════════════════════════════════════════════════
+  // ONGLET PRESTATIONS — upsell manuel (départ tardif / arrivée anticipée / panier)
+  // Réutilise POST /api/upsell/manual (moteur de Lia).
+  // ══════════════════════════════════════════════════════════════
+  var _bhUpsellConvs = [];
+  var _bhUpsellMode = 'attached'; // 'attached' | 'flying'
+  var _bhUpLastUrl = '';
+
+  function bhRenderUpsellTab() {
+    var body = document.getElementById('bhPromoBody');
+    body.innerHTML = '<div style="text-align:center;padding:30px;color:#9CA3AF;"><i class="fas fa-spinner fa-spin"></i></div>';
+    Promise.all([
+      (_bhProperties.length ? Promise.resolve() : bhLoadProperties()),
+      fetch(BH_API + '/api/chat/conversations', { headers: { 'Authorization': 'Bearer ' + getToken() } })
+        .then(function(r){ return r.json(); })
+        .then(function(d){ _bhUpsellConvs = (d.conversations || []).filter(function(c){ return c.status !== 'cancelled'; }); })
+        .catch(function(){ _bhUpsellConvs = []; })
+    ]).then(function(){ bhPaintUpsellTab(); });
+  }
+
+  function bhPaintUpsellTab() {
+    var body = document.getElementById('bhPromoBody');
+    var convOptions = _bhUpsellConvs.length
+      ? _bhUpsellConvs.map(function(c){
+          var who = (c.guest_name || 'Voyageur');
+          var prop = c.property_name || c.property_internal_name || '';
+          var d = c.reservation_start_date ? (' · ' + String(c.reservation_start_date).split('T')[0]) : '';
+          return '<option value="' + c.id + '">' + who + (prop ? ' — ' + prop : '') + d + '</option>';
+        }).join('')
+      : '<option value="">Aucune conversation</option>';
+    var propOptions = _bhProperties.length
+      ? _bhProperties.map(function(p){ return '<option value="' + p.id + '">' + (p.name || p.internalName || p.id) + '</option>'; }).join('')
+      : '<option value="">Chargement...</option>';
+
+    var lbl = 'font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;';
+    var inp = 'width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;background:white;outline:none;';
+
+    body.innerHTML =
+      '<div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">'
+    + '<div style="font-size:12px;font-weight:700;color:#1A7A5E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;"><i class="fas fa-concierge-bell" style="margin-right:5px;"></i>Prestation payante</div>'
+    + '<div style="display:flex;flex-direction:column;gap:11px;">'
+    + '<div style="display:flex;gap:6px;background:#F3F4F6;border-radius:10px;padding:4px;">'
+    + '<button type="button" id="bhUpMTab_attached" onclick="bhUpsellMode(\'attached\')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:white;color:#1A7A5E;box-shadow:0 1px 2px rgba(0,0,0,.08);">Rattacher à une résa</button>'
+    + '<button type="button" id="bhUpMTab_flying" onclick="bhUpsellMode(\'flying\')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:#6B7280;">Lien volant</button>'
+    + '</div>'
+    + '<div><label style="' + lbl + '">Type de prestation <span style="color:#EF4444;">*</span></label>'
+    + '<select id="bhUpKind" style="' + inp + '"><option value="late_checkout">Départ tardif</option><option value="early_checkin">Arrivée anticipée</option><option value="welcome_basket">Panier d\'accueil</option></select></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<div style="flex:1;"><label style="' + lbl + '">Montant (€) <span style="color:#EF4444;">*</span></label><input type="number" id="bhUpAmount" placeholder="20" min="1" style="' + inp + '"></div>'
+    + '<div style="flex:1;"><label style="' + lbl + '">Heure (optionnel)</label><input type="text" id="bhUpReqLabel" placeholder="14h00" style="' + inp + '"></div>'
+    + '</div>'
+    + '<div id="bhUpAttachedBlock"><label style="' + lbl + '">Réservation / voyageur <span style="color:#EF4444;">*</span></label>'
+    + '<select id="bhUpConv" style="' + inp + '"><option value="">— Sélectionner —</option>' + convOptions + '</select></div>'
+    + '<div id="bhUpFlyingBlock" style="display:none;">'
+    + '<label style="' + lbl + '">Logement <span style="color:#EF4444;">*</span></label>'
+    + '<select id="bhUpProp" style="' + inp + 'margin-bottom:10px;"><option value="">— Sélectionner —</option>' + propOptions + '</select>'
+    + '<label style="' + lbl + '">Email client</label><input type="email" id="bhUpEmail" placeholder="client@email.com" style="' + inp + 'margin-bottom:10px;">'
+    + '<label style="' + lbl + '">Téléphone client</label><input type="tel" id="bhUpPhone" placeholder="+33 6 00 00 00 00" style="' + inp + '">'
+    + '<div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Email ou téléphone requis. Le lien volant n\'envoie pas de confirmation auto au paiement.</div>'
+    + '</div>'
+    + '<button onclick="bhCreateUpsell()" id="bhUpBtn" style="width:100%;padding:12px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;"><i class="fas fa-paper-plane"></i> Générer & envoyer</button>'
+    + '<div id="bhUpMsg" style="display:none;font-size:12px;text-align:center;padding:8px 10px;border-radius:8px;"></div>'
+    + '<div id="bhUpResult" style="display:none;border-top:1.5px dashed #E5E7EB;padding-top:12px;">'
+    + '<div id="bhUpLinkText" style="font-size:11px;color:#374151;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;word-break:break-all;line-height:1.5;margin-bottom:10px;font-family:monospace;"></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="bhUpCopy()" style="flex:1;padding:10px;background:#1A7A5E;color:white;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-copy"></i> Copier</button>'
+    + '<button onclick="bhUpShare()" style="padding:10px 14px;background:#F3F4F6;color:#374151;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-share-alt"></i> Partager</button>'
+    + '</div></div>'
+    + '</div></div>';
+
+    bhUpsellMode(_bhUpsellMode);
+  }
+
+  window.bhUpsellMode = function(mode) {
+    _bhUpsellMode = mode;
+    var a = document.getElementById('bhUpAttachedBlock');
+    var f = document.getElementById('bhUpFlyingBlock');
+    if (a) a.style.display = mode === 'attached' ? '' : 'none';
+    if (f) f.style.display = mode === 'flying' ? '' : 'none';
+    var ta = document.getElementById('bhUpMTab_attached');
+    var tf = document.getElementById('bhUpMTab_flying');
+    if (ta && tf) {
+      var on = 'flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:white;color:#1A7A5E;box-shadow:0 1px 2px rgba(0,0,0,.08);';
+      var off = 'flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:#6B7280;';
+      ta.style.cssText = mode === 'attached' ? on : off;
+      tf.style.cssText = mode === 'flying' ? on : off;
+    }
+  };
+
+  window.bhCreateUpsell = function() {
+    var kind = document.getElementById('bhUpKind').value;
+    var amount = document.getElementById('bhUpAmount').value;
+    var reqLabel = (document.getElementById('bhUpReqLabel').value || '').trim();
+    var msg = document.getElementById('bhUpMsg');
+    var btn = document.getElementById('bhUpBtn');
+    function showMsg(txt, ok){ msg.style.display='block'; msg.textContent=txt; msg.style.background= ok?'#DCFCE7':'#FEE2E2'; msg.style.color= ok?'#166534':'#991B1B'; }
+
+    if (!amount || parseFloat(amount) <= 0) { showMsg('Montant invalide', false); return; }
+    var payload = { kind: kind, amountEuros: amount, reqLabel: reqLabel };
+    if (_bhUpsellMode === 'attached') {
+      var conv = document.getElementById('bhUpConv').value;
+      if (!conv) { showMsg('Sélectionne une réservation', false); return; }
+      payload.conversationId = conv;
+    } else {
+      var prop = document.getElementById('bhUpProp').value;
+      var email = (document.getElementById('bhUpEmail').value || '').trim();
+      var phone = (document.getElementById('bhUpPhone').value || '').trim();
+      if (!prop) { showMsg('Sélectionne un logement', false); return; }
+      if (!email && !phone) { showMsg('Email ou téléphone requis', false); return; }
+      payload.propertyId = prop; payload.email = email; payload.phone = phone;
+    }
+
+    btn.disabled = true; btn.style.opacity = '.6';
+    showMsg('Création du lien…', true);
+    fetch(BH_API + '/api/upsell/manual', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(d){
+      btn.disabled = false; btn.style.opacity = '1';
+      if (!d || !d.success) { showMsg((d && d.error) || 'Erreur lors de la création', false); return; }
+      _bhUpLastUrl = d.url;
+      var parts = [];
+      if (d.sentChat) parts.push('envoyé dans le chat');
+      if (d.sentEmail) parts.push('envoyé par email');
+      showMsg('Lien créé' + (parts.length ? ' (' + parts.join(', ') + ')' : '') + ' ✅', true);
+      document.getElementById('bhUpResult').style.display = 'block';
+      document.getElementById('bhUpLinkText').textContent = d.url;
+    }).catch(function(){
+      btn.disabled = false; btn.style.opacity = '1';
+      showMsg('Erreur réseau', false);
+    });
+  };
+
+  window.bhUpCopy = function(){ if (_bhUpLastUrl && navigator.clipboard) { navigator.clipboard.writeText(_bhUpLastUrl); } };
+  window.bhUpShare = function(){ if (_bhUpLastUrl && navigator.share) { navigator.share({ url: _bhUpLastUrl }).catch(function(){}); } else if (_bhUpLastUrl && navigator.clipboard) { navigator.clipboard.writeText(_bhUpLastUrl); } };
 
   window.bhUpdateLink = function() {
     var propId     = document.getElementById('bhLinkProp')?.value;
