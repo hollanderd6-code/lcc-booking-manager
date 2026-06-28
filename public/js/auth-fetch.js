@@ -70,6 +70,19 @@
     (async () => {
       try {
         if (isNative() && window.Capacitor?.Plugins?.Preferences) {
+          // 🤖 ANDROID UNIQUEMENT : si déconnexion volontaire en cours, NE PAS restaurer le token.
+          // (iOS : getPlatform() !== 'android' → comportement inchangé)
+          try {
+            const _plat = window.Capacitor?.getPlatform?.();
+            if (_plat === 'android') {
+              const _fl = await window.Capacitor.Plugins.Preferences.get({ key: 'lcc_force_logout' });
+              if (_fl?.value === '1') {
+                console.log('🤖 [AUTH-FETCH] Déconnexion volontaire Android → restauration token ignorée');
+                return;
+              }
+            }
+          } catch(_) {}
+
           const lsToken = localStorage.getItem(TOKEN_KEY);
           if (!lsToken) {
             const result = await window.Capacitor.Plugins.Preferences.get({ key: TOKEN_KEY });
