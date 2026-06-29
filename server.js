@@ -23456,8 +23456,25 @@ app.get('/api/invoice/download/:token', async (req, res) => {
     const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [row.user_id]);
     const user = profileResult.rows[0];
 
+    // Résoudre le propriétaire/société du logement → émetteur correct
+    // (sinon le PDF retombe sur "Ma Conciergerie" / l'email du compte)
+    let ownerInfo = null;
+    try {
+      if (meta.propertyName) {
+        const ocq = await pool.query(
+          `SELECT oc.* FROM properties p
+           JOIN owner_clients oc ON oc.id = p.owner_id
+           WHERE p.name = $1 AND p.user_id = $2
+           ORDER BY (p.address = $3) DESC
+           LIMIT 1`,
+          [meta.propertyName, row.user_id, meta.propertyAddress || null]
+        );
+        if (ocq.rowCount) ownerInfo = ocq.rows[0];
+      }
+    } catch(e) { console.warn('⚠️ ownerInfo (download invoice):', e.message); }
+
     const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_pub_${token.slice(0,8)}.pdf`);
-    await generateInvoicePdf(pdfPath, meta, user, null);
+    await generateInvoicePdf(pdfPath, meta, user, ownerInfo);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${invoiceNumber}.pdf"`);
