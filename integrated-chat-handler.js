@@ -34,6 +34,38 @@ const INVOICE_CONFIRM = {
 };
 
 // ============================================
+// 🙏 SIMPLE REMERCIEMENT / ACCUSÉ DE RÉCEPTION
+// Un message qui dit juste « merci », « bien arrivé », « parfait »,
+// « merci pour votre disponibilité »… ne doit JAMAIS escalader ni
+// créer une question hôte. Détecteur volontairement CONSERVATEUR :
+// il n'intercepte que s'il n'y a aucune question ni demande.
+// ============================================
+function isPureAcknowledgment(message) {
+  if (!message || typeof message !== 'string') return false;
+  let t = message.toLowerCase().trim();
+  t = t.replace(/[\s!.,;:)]+$/g, '').trim();
+  if (!t) return false;
+  // Une vraie question → ce n'est pas un simple remerciement.
+  if (t.includes('?')) return false;
+  // Mots qui trahissent une demande / question → on n'intercepte pas (sécurité).
+  const actionWords = ['où','ou se','ou est','quand','comment','combien','pourquoi','pouvez','peux','peut-on','est-ce','est ce','code','wifi','wi-fi','clé','cle ','clef','serrure','badge','digicode','panne','cassé','casse','marche pas','fonctionne pas','ne marche','ne fonctionne','problème','probleme','souci','besoin','demande','réclam','reclam','rembours','annul','modifi','changer','heure','checkout','check-out','check out','check-in','check in','parking','chauffage','clim','électri','electri','adresse','itinér','itiner','récupér','recuper','tardif','anticip','early','late','where','when','how','can you','could you','i need','problem','issue','broken','doesn','password'];
+  if (actionWords.some(w => t.includes(w))) return false;
+  // Motifs de remerciement / accusé de réception / arrivée OK / politesse de clôture.
+  const ack = ['merci','thank','grazie','gracias','danke','obrigad','dank u','bien arriv','on est arriv','nous sommes arriv','sommes bien arriv','siamo arriv','hemos llegado','llegamos','arrived','well arrived','angekommen','parfait','super','génial','genial','nickel','au top','c\'est noté','cest note','bien noté','bien note','très bien','tres bien','d\'accord','daccord','noted','perfect','great','bonne soirée','bonne journée','bonne nuit','belle journée','à bientôt','a bientot','cordialement','gentil','disponibilit'];
+  return ack.some(p => t.includes(p));
+}
+
+const ACK_REPLY = {
+  fr: `Avec plaisir ! 😊 N'hésitez pas si vous avez besoin de quoi que ce soit.`,
+  en: `You're very welcome! 😊 Feel free to reach out if you need anything.`,
+  it: `Con piacere! 😊 Non esiti a contattarci per qualsiasi cosa.`,
+  es: `¡Con mucho gusto! 😊 No dude en escribirnos si necesita algo.`,
+  de: `Sehr gerne! 😊 Melden Sie sich jederzeit, wenn Sie etwas brauchen.`,
+  pt: `Com prazer! 😊 Não hesite em contactar-nos se precisar de algo.`,
+  nl: `Graag gedaan! 😊 Neem gerust contact op als u iets nodig heeft.`,
+};
+
+// ============================================
 // ⏳ DEBOUNCE — Grouper les messages rapprochés
 // ============================================
 
@@ -789,6 +821,12 @@ async function handleIncomingMessage(message, conversation, pool, io) {
           const lang = (conversation.language || 'fr');
           aiResponse = (INVOICE_CONFIRM[lang] || INVOICE_CONFIRM.fr) + '\n[FACTURE]';
           // pas de return : on laisse l'exécution atteindre le bloc [FACTURE] plus bas
+        } else if (isPureAcknowledgment(message.message)) {
+          // 🙏 Simple remerciement / « bien arrivé » / « merci pour votre disponibilité »
+          // → réponse chaleureuse, AUCUNE escalade ni notif.
+          console.log('🙏 [HANDLER] Groq a voulu escalader un simple remerciement → réponse chaleureuse, pas d\'escalade');
+          await sendBotMessage(conversation.id, ACK_REPLY[language] || ACK_REPLY.fr, pool, io, channexId);
+          return true;
         } else {
           console.log('🔄 [HANDLER] Groq → escalade');
           await escalateToOwner(conversation, pool, io, language, channexId);
@@ -799,6 +837,13 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       // ─── Détection tag [QUESTION_HOTE:...] ────────────────────
       const questionMatch = aiResponse.match(/\[QUESTION_HOTE:([^\]]+)\]/);
       if (questionMatch) {
+        // 🙏 Filet de sécurité : un simple remerciement ne doit pas créer
+        // de question hôte (ni de notif), même si Groq l'a taggé ainsi.
+        if (isPureAcknowledgment(message.message)) {
+          console.log('🙏 [HANDLER] QUESTION_HOTE sur un simple remerciement → ignorée, réponse chaleureuse');
+          await sendBotMessage(conversation.id, ACK_REPLY[language] || ACK_REPLY.fr, pool, io, channexId);
+          return true;
+        }
         try {
           const hostQuestion = questionMatch[1].trim();
           const cleanMsg = aiResponse.replace(/\[QUESTION_HOTE:[^\]]+\]/, '').trim();
