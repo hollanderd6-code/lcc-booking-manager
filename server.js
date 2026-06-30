@@ -1730,6 +1730,48 @@ async function checkSubscription(req, res, next) {
 Pour protéger une route, ajoutez le middleware après authenticateToken :
 
 AVANT :
+// 🔑 [DIAG] Audit du code d'acces transmis a l'IA, pour TOUS les logements.
+// Voir immediatement (sans attendre un message voyageur) quels logements ont
+// le code dans le champ DEDIE que l'assistant lit (reglages ou livret).
+app.get('/api/debug/access-codes', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) return res.status(403).json({ error: 'Compte requis' });
+    const { rows } = await pool.query(
+      `SELECT id, name, internal_name, access_code, access_instructions, welcome_book_url
+       FROM properties WHERE user_id = $1 ORDER BY internal_name NULLS LAST, name`,
+      [req.user.id]
+    );
+    const out = [];
+    for (const p of rows) {
+      let keyboxCode = null, livretLie = false;
+      if (p.welcome_book_url) {
+        const m = String(p.welcome_book_url).match(/\/welcome\/([a-zA-Z0-9_-]+)/);
+        if (m) {
+          try {
+            const b = await pool.query('SELECT data FROM welcome_books_v2 WHERE unique_id = $1', [m[1]]);
+            if (b.rows[0]) { livretLie = true; keyboxCode = b.rows[0].data?.keyboxCode || null; }
+          } catch (_) {}
+        }
+      }
+      const codeIA = p.access_code || keyboxCode || null; // ce que l'IA recevrait (hors blocage caution/embargo 7h)
+      out.push({
+        logement: p.internal_name || p.name || p.id,
+        reglages_code_acces: p.access_code || null,
+        livret_boite_cles: keyboxCode,
+        livret_lie: livretLie,
+        instructions_acces_texte: p.access_instructions ? true : false,
+        code_recu_par_IA: codeIA,
+        ok: !!codeIA
+      });
+    }
+    const sansCode = out.filter(o => !o.ok).map(o => o.logement);
+    res.json({ total: out.length, sans_code: sansCode, logements: out });
+  } catch (e) {
+    console.error('debug access-codes error:', e);
+    res.status(500).json({ error: 'Erreur diagnostic' });
+  }
+});
+
 app.get('/api/properties', authenticateAny, async (req, res) => {
   // ...
 });
