@@ -220,6 +220,22 @@ function displayName(property) {
   return property.name || property.property_name || 'Logement';
 }
 
+// Rend lisible un libellé de logement qui serait en réalité un slug technique
+// (ex. "u_mmj5c6hq-appart-village-jouy-les-metz-n-4-bus-200m" → "Appart village jouy les metz n 4 bus 200m").
+// Sans effet sur un nom déjà propre ("AM4" reste "AM4").
+function cleanLogementLabel(label) {
+  if (!label) return 'Logement';
+  let s = String(label).trim();
+  if (/^u_[a-z0-9]{4,}-/i.test(s)) {
+    s = s.replace(/^u_[a-z0-9]{4,}-/i, '')   // retire le préfixe identifiant propriétaire
+         .replace(/[-_]+/g, ' ')              // dé-slugifie
+         .replace(/\s+/g, ' ')
+         .trim();
+    if (s) s = s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  return s || 'Logement';
+}
+
 
 // Appelé après chaque création/suppression de réservation
 // ============================================================
@@ -11531,7 +11547,7 @@ app.post('/api/checklists/:reservationUid/complete', authenticateAny, checkSubsc
     );
     
     if (tokensResult.rows.length > 0) {
-      const propertyName = chk.propertyName || chk.title || 'Logement';
+      const propertyName = cleanLogementLabel(chk.propertyName || chk.title || 'Logement');
       const notifData = {
         type: 'cleaning_completed',
         reservation_uid: reservationUid,
@@ -13868,7 +13884,7 @@ app.post('/api/cleaning/checklist', async (req, res) => {
 
     try {
       const property = PROPERTIES.find(p => p.id === propertyId);
-      const propertyName = displayName(property) || propertyId;
+      const propertyName = cleanLogementLabel(displayName(property) || propertyId);
       const durationMin = duration ? Math.round(duration / 60) : null;
 
       // ✅ Notification push Firebase — envoi direct sur TOUS les appareils du propriétaire
