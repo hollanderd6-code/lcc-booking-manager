@@ -764,6 +764,16 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       isAirbnb:           isAirbnbPlatform,
     } : { language };
 
+    // 🔑 Diagnostic : d'où vient (ou pas) le code d'accès transmis à l'IA.
+    // Permet de voir dans les logs Render si le code atteint bien Groq.
+    try {
+      console.log(`🔑 [HANDLER] code accès conv ${conversation.id} (${conversation.property_id}): ` +
+        `access_code=${property?.access_code ? 'oui' : 'non'} | ` +
+        `keyboxCode=${welcomeBookData?.keyboxCode ? 'oui' : 'non'} | ` +
+        `→ envoyé IA=${context.accessCode ? 'OUI' : 'NON'} | ` +
+        `airbnb=${isAirbnbPlatform} | blockAccessCaution=${depositBlocksAccess}`);
+    } catch (_) {}
+
     // ─── Historique de la conversation (contexte Groq) ────────────
     let messageHistory = [];
     try {
