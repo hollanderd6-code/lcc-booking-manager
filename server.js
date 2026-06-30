@@ -1730,6 +1730,9 @@ async function checkSubscription(req, res, next) {
 Pour protéger une route, ajoutez le middleware après authenticateToken :
 
 AVANT :
+// 🔎 [DIAG] Route témoin (sans auth) : si elle répond, le nouveau code est bien déployé.
+app.get('/api/debug/ping', (req, res) => res.json({ ok: true, deployed: true, ts: Date.now() }));
+
 // 🔑 [DIAG] Audit du code d'acces transmis a l'IA, pour TOUS les logements.
 // Voir immediatement (sans attendre un message voyageur) quels logements ont
 // le code dans le champ DEDIE que l'assistant lit (reglages ou livret).
