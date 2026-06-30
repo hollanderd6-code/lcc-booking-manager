@@ -809,6 +809,15 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       }
     } catch(e) { console.warn('⚠️ [HANDLER] Proximité:', e.message); }
 
+    // ─── 🙏 Court-circuit remerciement / politesse de clôture ─────
+    // Un simple "merci", "bonne soirée", "parfait 👍"… ne doit JAMAIS
+    // appeler l'IA ni risquer une escalade. Réponse chaleureuse directe.
+    if (isPureAcknowledgment(message.message)) {
+      console.log('🙏 [HANDLER] Simple remerciement → réponse chaleureuse directe (pas d\'IA, pas d\'escalade)');
+      await sendBotMessage(conversation.id, ACK_REPLY[language] || ACK_REPLY.fr, pool, io, channexId);
+      return true;
+    }
+
     // ─── Appel Groq ───────────────────────────────────────────────
     console.log('🚀 [HANDLER] → Groq AI');
     let aiResponse = await getGroqResponse(message.message, context, messageHistory, fewShotExamples);
