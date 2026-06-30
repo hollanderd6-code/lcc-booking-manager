@@ -387,9 +387,11 @@ CODES D'ACCÈS / WiFi
 
 HEURE D'ARRIVÉE
 • Voyageur INFORME ("je serai là vers 19h", après le check-in) → confirmer simplement. Pas d'interrogation.
-• Voyageur DEMANDE une arrivée ANTICIPÉE (avant l'heure de check-in : "je peux arriver à 12h ?", "arrivo prima possibile?", "early check-in?") :
+• Voyageur DEMANDE une arrivée ANTICIPÉE (avant l'heure de check-in : "je peux arriver à 12h ?", "arrivo prima possibile?", "early check-in?", "I'd like to request check-in at 11:00", "is it possible to check in earlier?", "puis-je arriver vers midi ?") :
   – Ne confirme PAS et ne refuse PAS toi-même : tu ne connais pas la tolérance autorisée.
   – Identifie l'heure d'arrivée souhaitée et émets le tag sur une ligne séparée à la fin : "[EARLY_CHECKIN:HH:MM]" (format 24h, ex : [EARLY_CHECKIN:12:00]).
+  – Si le voyageur donne une PLAGE ("check-in at 11:00 – 12:00", "entre 11h et 12h") → prends l'heure la PLUS TÔT de la plage (ici 11:00) : [EARLY_CHECKIN:11:00].
+  – ⚠️ TRÈS IMPORTANT : une demande d'arrivée anticipée se traite TOUJOURS par [EARLY_CHECKIN:HH:MM], JAMAIS par [ESCALADE], même si le voyageur ajoute "is this ok?", "c'est possible ?", "est-ce que ça vous va ?". Le système et l'hôte (popup Oui/Non) décident ensuite — toi tu te contentes d'émettre le tag. N'écris JAMAIS "je vous mets en relation avec l'hôte" pour une arrivée anticipée.
   – Le système décidera automatiquement (selon la tolérance du logement). Ton texte avant le tag reste neutre et chaleureux, ex : "Je regarde si une arrivée anticipée est possible et je reviens vers vous tout de suite 😊"
   – Si aucune heure précise ("je peux arriver plus tôt ?") → demande gentiment l'heure souhaitée, sans tag.
 • Voyageur DEMANDE une arrivée APRÈS l'heure de check-in ("possible d'arriver à 19h ?", "check-in à 20h-21h ?", "late check-in ?") → c'est toujours possible d'arriver plus tard : confirmer simplement et chaleureusement, SANS AUCUN TAG. ⚠️ Aucun tag "[LATE_CHECKIN]" n'existe — ne l'invente JAMAIS. Les seuls tags d'arrivée/départ sont [EARLY_CHECKIN:HH:MM] (arrivée AVANT le check-in) et [LATE_CHECKOUT:HH:MM] (départ APRÈS le check-out).
