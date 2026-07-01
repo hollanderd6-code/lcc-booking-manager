@@ -22415,12 +22415,12 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
   const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
   const total = subtotal + vatAmount;
 
-  const emitterName  = ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim()) : (data.emitterName || user?.company || 'Ma Conciergerie');
-  const emitterAddr  = ownerInfo?.address     || data.emitterAddress    || '';
-  const emitterCP    = ownerInfo?.postal_code || data.emitterPostalCode || '';
-  const emitterCity  = ownerInfo?.city        || data.emitterCity       || '';
-  const emitterEmail = ownerInfo?.email       || data.emitterEmail      || user?.email || '';
-  const emitterSiret = ownerInfo?.siret       || data.emitterSiret      || '';
+  const emitterName  = ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim()) : (data.emitterName || user?.company || `${user?.first_name||''} ${user?.last_name||''}`.replace(/\s+/g, ' ').trim() || 'Ma Conciergerie');
+  const emitterAddr  = ownerInfo?.address     || data.emitterAddress    || user?.address     || '';
+  const emitterCP    = ownerInfo?.postal_code || data.emitterPostalCode || user?.postal_code || '';
+  const emitterCity  = ownerInfo?.city        || data.emitterCity       || user?.city        || '';
+  const emitterEmail = ownerInfo?.email       || data.emitterEmail      || user?.invoice_email || user?.email || '';
+  const emitterSiret = ownerInfo?.siret       || data.emitterSiret      || user?.siret       || '';
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 0 });
@@ -28876,9 +28876,18 @@ async function runInvoiceQueue(mode) {
         const nights = Math.round((checkout - checkin) / (1000 * 60 * 60 * 24));
 
         // Montants
-        const rentAmount = req.rent_amount || req.amount_rooms || req.amount_total || 0;
-        const cleaningFee = req.cleaning_fee || req.prop_cleaning_fee || 0;
-        const touristTax = req.tourist_tax || (req.tourist_tax_per_night ? req.tourist_tax_per_night * nights : 0);
+        // Loyer fiable : total all-in − ménage − taxe de séjour.
+        // (amount_rooms / rent_amount sont parfois corrompus avec le brut total,
+        //  ce qui gonflait la ligne "Séjour" puis double-comptait ménage + taxe.)
+        const _total    = parseFloat(req.amount_total) || 0;
+        const cleaningFee = parseFloat(req.cleaning_fee || req.amount_cleaning || req.prop_cleaning_fee) || 0;
+        const touristTax  = parseFloat(req.tourist_tax || req.amount_taxes || (req.tourist_tax_per_night ? req.tourist_tax_per_night * nights : 0)) || 0;
+        let rentAmount;
+        if (_total > 0) {
+          rentAmount = Math.max(0, Math.round((_total - cleaningFee - touristTax) * 100) / 100);
+        } else {
+          rentAmount = parseFloat(req.rent_amount || req.amount_rooms) || 0;
+        }
 
         // Générer le numéro de facture (compteur UNIFIÉ : manuel + auto)
         const yearStr = new Date().getFullYear();

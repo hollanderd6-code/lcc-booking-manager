@@ -23,6 +23,19 @@ function isInvoiceRequest(message) {
   return /\b(facture|factur|invoice|rechnung|factura|fattura|receipt|reçu|recu|justificatif)\b/.test(m);
 }
 
+// ============================================
+// ⚖️ Détection d'un LITIGE de facturation
+// Le voyageur ne DEMANDE pas une facture : il CONTESTE un montant, signale
+// une erreur, dit que la facture ne correspond pas à ce qu'il a payé, ou
+// réclame un remboursement. Ce cas NE doit PAS être traité comme une simple
+// demande de facture (accusé auto + envoi) : il doit ESCALADER vers l'hôte.
+// ============================================
+function isBillingDispute(message) {
+  if (!message || typeof message !== 'string') return false;
+  const m = message.toLowerCase();
+  return /(diff[eè]re|diff[eè]rent|ne correspond|correspond pas|pas le (bon|même) montant|montant.{0,25}(pay|re[çc]u)|(pay|re[çc]u).{0,25}montant|trop (pay|factur|pr[eé]lev|cher)|erreur|se trompe|faux montant|incorrect|anormal|abusi|rembours|avoir|d[eé]j[aà] (re[çc]u|pay[eé])|already (paid|received|got)|wrong amount|doesn.?t match|does not match|overcharg|discrepan|not correct|refund|dispute|contest)/.test(m);
+}
+
 const INVOICE_CONFIRM = {
   fr: `Bien noté, je m'occupe de votre facture 😊 Elle vous sera envoyée par email très prochainement.`,
   en: `Noted, I'll take care of your invoice 😊 It will be sent to you by email very shortly.`,
@@ -834,6 +847,13 @@ async function handleIncomingMessage(message, conversation, pool, io) {
 
     if (aiResponse) {
       if (aiResponse.trim() === '[ESCALADE]' || aiResponse.includes('[ESCALADE]')) {
+        // ⚖️ Un litige de facturation (montant contesté, erreur, remboursement)
+        // DOIT escalader vers l'hôte, pas être avalé par le flux facture.
+        if (isBillingDispute(message.message)) {
+          console.log('⚖️ [HANDLER] Litige de facturation détecté → escalade vers l\'hôte');
+          await escalateToOwner(conversation, pool, io, language, channexId);
+          return false;
+        }
         // 🧾 Filet de sécurité : une demande de facture ne doit jamais escalader.
         if (isInvoiceRequest(message.message)) {
           console.log('🧾 [HANDLER] Groq a voulu escalader une demande de facture → on force le flux FACTURE');
@@ -1146,6 +1166,13 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       // ─── Détection tag [FACTURE] ──────────────────────────────
       const factureMatch = aiResponse.match(/\[FACTURE(?::([^\]]*))?\]/);
       if (factureMatch) {
+        // ⚖️ Si Groq a taggé [FACTURE] alors que le voyageur conteste un montant,
+        // on n'enclenche PAS le flux facture : on escalade vers l'hôte.
+        if (isBillingDispute(message.message)) {
+          console.log('⚖️ [HANDLER] [FACTURE] sur un litige de facturation → escalade vers l\'hôte');
+          await escalateToOwner(conversation, pool, io, language, channexId);
+          return false;
+        }
         const cleanMsg = aiResponse.replace(/\[FACTURE(?:[^\]]*)\]/, '').trim();
         try {
           // Parser les infos éventuelles (siret=XXX,company=YYY,address=ZZZ)
@@ -1190,6 +1217,13 @@ async function handleIncomingMessage(message, conversation, pool, io) {
               }
             }
           } else {
+            // Loyer fiable : total all-in − ménage − taxes (amount_rooms parfois corrompu).
+            let reliableRent = null;
+            const _t = parseFloat(res?.amount_total) || 0;
+            const _c = parseFloat(res?.amount_cleaning) || 0;
+            const _x = parseFloat(res?.amount_taxes) || 0;
+            if (_t > 0) reliableRent = Math.max(0, Math.round((_t - _c - _x) * 100) / 100);
+            else if (res?.amount_rooms) reliableRent = parseFloat(res.amount_rooms);
             // Créer la demande
             await pool.query(
               `INSERT INTO invoice_requests
@@ -1207,7 +1241,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
                 params.siret   || null,
                 params.company || null,
                 params.address || null,
-                res?.amount_rooms  || res?.amount_total || null,
+                reliableRent,
                 res?.amount_cleaning || null,
                 res?.amount_taxes  || null,
               ]
@@ -1286,6 +1320,12 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     }
 
     // ─── Fallback : escalade si Groq ne répond pas ────────────────
+    // ⚖️ Un litige de facturation escalade toujours vers l'hôte.
+    if (isBillingDispute(message.message)) {
+      console.log('⚖️ [HANDLER] Litige de facturation (Groq sans réponse) → escalade');
+      await escalateToOwner(conversation, pool, io, language, channexId);
+      return false;
+    }
     // 🧾 Sauf demande de facture : on enregistre la demande et on confirme, sans escalader.
     if (isInvoiceRequest(message.message)) {
       console.log('🧾 [HANDLER] Groq sans réponse sur une demande de facture → enregistrement sans escalade');
