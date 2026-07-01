@@ -531,26 +531,40 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     }
 
     // ─── Détection langue ──────────────────────────────────────────
-    let language = 'auto';
-    if (conversation.language && ['fr','en','es','de','it','pt','nl','ru','zh','ja','ko'].includes(conversation.language)) {
-      language = conversation.language;
-    } else {
-      const scores = {
-        en: (message.message.match(/\b(hello|hi|hey|thanks|thank you|please|what|where|when|how|can|could|would|wifi|password|check.in|check.out|address|arrival|departure|yes|no|perfect|good|got it)\b/gi) || []).length,
-        es: (message.message.match(/\b(hola|gracias|por favor|dónde|cuándo|puedo|quiero|necesito|contraseña|llegada|salida)\b/gi) || []).length,
-        de: (message.message.match(/\b(hallo|danke|bitte|wo|wann|wie|was|können|möchte|passwort|ankunft|abreise)\b/gi) || []).length,
-        it: (message.message.match(/\b(ciao|grazie|dove|quando|posso|vorrei|ho bisogno|indirizzo|arrivo|partenza)\b/gi) || []).length,
-        fr: (message.message.match(/\b(bonjour|bonsoir|merci|où|quand|comment|puis-je|voudrais|besoin|arrivée|départ|avez-vous|est-ce|nous|vous|je)\b/gi) || []).length,
-        pt: (message.message.match(/\b(olá|ola|obrigado|obrigada|por favor|onde|quando|posso|quero|preciso|senha|chegada|saída)\b/gi) || []).length,
-        nl: (message.message.match(/\b(hallo|hoi|bedankt|dank|alsjeblieft|waar|wanneer|kan|wil|nodig|wachtwoord|aankomst|vertrek)\b/gi) || []).length,
-      };
-      const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
-      if (best[1] >= 1) {
-        language = best[0];
-        if (language !== 'fr') {
-          pool.query('UPDATE conversations SET language = $1 WHERE id = $2 AND (language IS NULL OR language = $3)', [language, conversation.id, 'auto']).catch(() => {});
-        }
+    // On score TOUJOURS le message courant. Un signal FORT (≥2 mots) dans une
+    // autre langue outrepasse la langue "épinglée" de la conversation : sinon,
+    // une conv figée en 'en' répondait en anglais à un message clairement français.
+    // Un signal faible (1 mot) ne suffit pas à basculer → évite les allers-retours.
+    const VALID_LANGS = ['fr','en','es','de','it','pt','nl','ru','zh','ja','ko'];
+    const pinnedLang = (conversation.language && VALID_LANGS.includes(conversation.language)) ? conversation.language : null;
+
+    const scores = {
+      en: (message.message.match(/\b(hello|hi|hey|thanks|thank you|please|what|where|when|how|can|could|would|wifi|password|check.in|check.out|address|arrival|departure|yes|no|perfect|good|got it)\b/gi) || []).length,
+      es: (message.message.match(/\b(hola|gracias|por favor|dónde|cuándo|puedo|quiero|necesito|contraseña|llegada|salida)\b/gi) || []).length,
+      de: (message.message.match(/\b(hallo|danke|bitte|wo|wann|wie|was|können|möchte|passwort|ankunft|abreise)\b/gi) || []).length,
+      it: (message.message.match(/\b(ciao|grazie|dove|quando|posso|vorrei|ho bisogno|indirizzo|arrivo|partenza)\b/gi) || []).length,
+      fr: (message.message.match(/\b(bonjour|bonsoir|merci|où|quand|comment|puis-je|voudrais|besoin|arrivée|départ|avez-vous|est-ce|nous|vous|je|pourquoi|pouvez|votre|payé|reçu|facture)\b/gi) || []).length,
+      pt: (message.message.match(/\b(olá|ola|obrigado|obrigada|por favor|onde|quando|posso|quero|preciso|senha|chegada|saída)\b/gi) || []).length,
+      nl: (message.message.match(/\b(hallo|hoi|bedankt|dank|alsjeblieft|waar|wanneer|kan|wil|nodig|wachtwoord|aankomst|vertrek)\b/gi) || []).length,
+    };
+    const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0]; // [lang, score]
+    const bestLang = best[0], bestScore = best[1];
+
+    let language;
+    if (bestScore >= 2 && bestLang !== pinnedLang) {
+      // Signal fort dans une langue différente du pin → on bascule et on met à jour le pin.
+      language = bestLang;
+      pool.query('UPDATE conversations SET language = $1 WHERE id = $2', [language, conversation.id]).catch(() => {});
+      console.log(`🌍 [HANDLER] Bascule de langue ${pinnedLang || 'auto'} → ${language} (signal fort: ${bestScore})`);
+    } else if (pinnedLang) {
+      language = pinnedLang;
+    } else if (bestScore >= 1) {
+      language = bestLang;
+      if (language !== 'fr') {
+        pool.query('UPDATE conversations SET language = $1 WHERE id = $2 AND (language IS NULL OR language = $3)', [language, conversation.id, 'auto']).catch(() => {});
       }
+    } else {
+      language = 'fr';
     }
     console.log(`🌍 [HANDLER] Langue: ${language}`);
 
@@ -857,7 +871,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         // 🧾 Filet de sécurité : une demande de facture ne doit jamais escalader.
         if (isInvoiceRequest(message.message)) {
           console.log('🧾 [HANDLER] Groq a voulu escalader une demande de facture → on force le flux FACTURE');
-          const lang = (conversation.language || 'fr');
+          const lang = language;
           aiResponse = (INVOICE_CONFIRM[lang] || INVOICE_CONFIRM.fr) + '\n[FACTURE]';
           // pas de return : on laisse l'exécution atteindre le bloc [FACTURE] plus bas
         } else if (isPureAcknowledgment(message.message)) {
@@ -1352,7 +1366,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
           console.log(`🧾 [FACTURE] Demande créée (fallback) pour conv ${conversation.id}`);
         }
       } catch (fErr) { console.warn('⚠️ [FACTURE] Erreur création demande (fallback):', fErr.message); }
-      const lang = (conversation.language || 'fr');
+      const lang = language;
       await sendBotMessage(conversation.id, INVOICE_CONFIRM[lang] || INVOICE_CONFIRM.fr, pool, io, channexId);
       return true;
     }
