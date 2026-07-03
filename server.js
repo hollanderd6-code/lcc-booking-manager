@@ -27658,6 +27658,45 @@ async function resolveOrGenerateLockCode(pool, propertyId, userId, reservationUi
 
 async function sendTemplateMessage(pool, io, { template, conv, property }) {
   const { sendBookingMessage } = require('./channex');
+
+  // ══════════════════════════════════════════════════════════════
+  // 🛂 GARDE-FOU FICHE DE POLICE (check-in en ligne / {checkin_link})
+  // ------------------------------------------------------------------
+  // La fiche individuelle de police (art. R.611-42 du CESEDA) ne concerne
+  // QUE les voyageurs de nationalité étrangère. Un template contenant
+  // {checkin_link} ne doit donc jamais partir dans les cas suivants :
+  //   • Voyageur FRANÇAIS            → ne pas envoyer
+  //   • Nationalité INCONNUE/absente → ne pas envoyer (aucune présomption :
+  //     par défaut on N'ENVOIE RIEN tant qu'on ne sait pas)
+  //   • Erreur de lecture DB         → ne pas envoyer (par sécurité)
+  // Seul un voyageur clairement étranger reçoit la fiche.
+  // ══════════════════════════════════════════════════════════════
+  if (template?.message && /\{checkin_link\}/i.test(template.message)) {
+    let country = (conv.guest_country || '').trim().toUpperCase();
+    if (!country) {
+      try {
+        const cRow = await pool.query(
+          `SELECT guest_country FROM reservations
+           WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
+              OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
+           ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC
+           LIMIT 1`,
+          [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
+        ).catch(() => ({ rows: [] }));
+        country = (cRow.rows[0]?.guest_country || '').trim().toUpperCase();
+      } catch (e) {
+        console.warn('⚠️ [TPL police-gate] Erreur lecture nationalité:', e.message);
+        country = ''; // erreur → nationalité considérée inconnue → on n'envoie pas
+      }
+    }
+    const isForeigner = country && country !== 'FR' && country !== 'FRA' && country !== 'FRANCE';
+    if (!isForeigner) {
+      const why = country ? `voyageur français (${country})` : 'nationalité inconnue';
+      console.log(`🛂 [TPL police-gate] Fiche de police NON envoyée — ${why} — conv ${conv.id} (template "${template.title}")`);
+      return { skipped: true, reason: `fiche de police non applicable (${why})` };
+    }
+  }
+
   const guestFirst = (conv.guest_first_name || conv.guest_name || '').split(' ')[0];
 
   // Remplacer les variables
@@ -35236,24 +35275,68 @@ app.get('/api/chat/conversations/:conversationId/messages-channex', authenticate
       [conversationId]
     );
 
-    // Chercher le channex_booking_id lié + statut réservation
-    const resaResult = await pool.query(
-      `SELECT r.channex_booking_id, r.uid as reservation_uid, r.status as reservation_status
-       FROM reservations r
-       JOIN conversations c ON (
-         (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
-         OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
-             AND DATE(r.start_date) = DATE(c.reservation_start_date))
-       )
-       WHERE c.id = $1 AND r.channex_booking_id IS NOT NULL
-       LIMIT 1`,
+    // ══════════════════════════════════════════════════════════════
+    // 🔗 Résolution de la réservation Channex liée à CETTE conversation
+    // ------------------------------------------------------------------
+    // Bug corrigé : une conversation BHGuest (channex_booking_id NULL) ne
+    // doit JAMAIS récupérer les messages Channex d'une autre réservation
+    // qui partagerait seulement le même logement + les mêmes dates
+    // (typiquement une réservation OTA ANNULÉE). Sinon les messages d'un
+    // autre voyageur (ex : Célestin) se mélangent dans le fil (ex : Bouchra).
+    //
+    // Règles :
+    //  1) La conversation a un channex_booking_id → source de vérité directe.
+    //  2) Conversation OTA (Airbnb/Booking) sans lien stocké → repli par
+    //     logement+date, MAIS jamais une réservation annulée.
+    //  3) Conversation BHGuest / directe → AUCUN message Channex.
+    // ══════════════════════════════════════════════════════════════
+    const convRow = await pool.query(
+      `SELECT platform, channex_booking_id, property_id, reservation_start_date
+       FROM conversations WHERE id = $1 LIMIT 1`,
       [conversationId]
     );
+    const convInfo = convRow.rows[0] || null;
+
+    let resaRow = null;
+    if (convInfo) {
+      const platformRaw = (convInfo.platform || '').toLowerCase().replace(/[_\-\s]/g, '');
+      const isOTA = platformRaw.includes('airbnb') || platformRaw.includes('booking')
+                 || platformRaw === 'abb' || platformRaw === 'bdc';
+
+      if (convInfo.channex_booking_id) {
+        // (1) Lien Channex explicite sur la conversation
+        const r = await pool.query(
+          `SELECT channex_booking_id, uid AS reservation_uid, status AS reservation_status
+           FROM reservations
+           WHERE channex_booking_id = $1
+           ORDER BY (status != 'cancelled') DESC, created_at DESC
+           LIMIT 1`,
+          [convInfo.channex_booking_id]
+        ).catch(() => ({ rows: [] }));
+        resaRow = r.rows[0]
+          || { channex_booking_id: convInfo.channex_booking_id, reservation_uid: null, reservation_status: null };
+      } else if (isOTA) {
+        // (2) Conversation OTA sans lien stocké → repli logement+date, annulées EXCLUES
+        const r = await pool.query(
+          `SELECT channex_booking_id, uid AS reservation_uid, status AS reservation_status
+           FROM reservations
+           WHERE property_id = $1
+             AND DATE(start_date) = DATE($2)
+             AND channex_booking_id IS NOT NULL
+             AND status != 'cancelled'
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [convInfo.property_id, convInfo.reservation_start_date]
+        ).catch(() => ({ rows: [] }));
+        resaRow = r.rows[0] || null;
+      }
+      // (3) BHGuest / direct → resaRow reste null → aucun message Channex
+    }
 
     let channexMessages = [];
-    if (resaResult.rows.length > 0 && resaResult.rows[0].channex_booking_id) {
+    if (resaRow && resaRow.channex_booking_id) {
       try {
-        const allChannexMsgs = await getBookingMessages(resaResult.rows[0].channex_booking_id);
+        const allChannexMsgs = await getBookingMessages(resaRow.channex_booking_id);
 
         // ── Filtrer les messages Channex déjà en DB pour éviter le doublon ──
         // Un message Channex est "déjà en DB" si son texte exact se retrouve dans
@@ -35282,9 +35365,9 @@ app.get('/api/chat/conversations/:conversationId/messages-channex', authenticate
     res.json({
       messages: dbMessages.rows,
       channex_messages: channexMessages,
-      channex_booking_id: resaResult.rows[0]?.channex_booking_id || null,
-      reservation_uid: resaResult.rows[0]?.reservation_uid || null,
-      reservation_status: resaResult.rows[0]?.reservation_status || null
+      channex_booking_id: resaRow?.channex_booking_id || null,
+      reservation_uid: resaRow?.reservation_uid || null,
+      reservation_status: resaRow?.reservation_status || null
     });
 
   } catch (err) {
