@@ -590,6 +590,28 @@ async function sendNotificationToMultipleLogged(tokens, title, body, data) {
   return result;
 }
 
+// ── TEMPORAIRE : test push BHGuest/BH. À RETIRER après vérification. ──
+app.get('/api/push-test-bhg', async (req, res) => {
+  try {
+    if (!process.env.PUSH_TEST_SECRET || req.query.secret !== process.env.PUSH_TEST_SECRET) {
+      return res.status(403).json({ error: 'secret invalide' });
+    }
+    const uid = req.query.user_id;
+    if (!uid) return res.status(400).json({ error: 'user_id manquant' });
+    const r = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+      [uid]
+    );
+    const tokens = r.rows.map(x => x.fcm_token).filter(Boolean);
+    if (!tokens.length) return res.json({ ok: true, tokens: 0, note: 'aucun token' });
+    await sendNotificationToMultipleLogged(tokens, 'Test BHGuest 🔔', 'Push OK', { type: 'test', url: '/' });
+    res.json({ ok: true, tokens: tokens.length, user_id: uid });
+  } catch (e) {
+    console.error('push-test-bhg:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Notifications 4.0 : formatage cohérent + constructeur unique ──
 function bhFmtAmount(v){
   const n = Math.round(Number(v) || 0);
