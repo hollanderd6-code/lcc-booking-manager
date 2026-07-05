@@ -4524,6 +4524,9 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                 const existingResa = await pool.query(
                   `SELECT uid FROM reservations
                      WHERE property_id = $1 AND status NOT IN ('cancelled')
+                       AND COALESCE(source,'') <> 'BLOCK'
+                       AND COALESCE(reservation_type,'') <> 'block'
+                       AND COALESCE(platform,'') <> 'BLOCK'
                        AND start_date < $3 AND end_date > $2
                      LIMIT 1`,
                   [propId, startDate, endDate]
@@ -4556,6 +4559,41 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                     [`BHGUEST_${paymentId || session.id}`, paymentId, session.id]
                   );
                   console.log(`✅ [BHGUEST] Réservation créée: BHGUEST_${paymentId || session.id} | ${guestName} | ${startDate} → ${endDate}`);
+
+                  // 🧹 Le paiement prime sur tout blocage manuel : annuler les BLOCK recouverts
+                  try {
+                    const unblocked = await pool.query(
+                      `UPDATE reservations SET status='cancelled', updated_at=NOW()
+                         WHERE property_id=$1 AND status NOT IN ('cancelled')
+                           AND (COALESCE(source,'')='BLOCK' OR COALESCE(reservation_type,'')='block' OR COALESCE(platform,'')='BLOCK')
+                           AND start_date < $3 AND end_date > $2
+                       RETURNING uid`,
+                      [propId, startDate, endDate]
+                    );
+                    for (const b of unblocked.rows) {
+                      for (const pid of Object.keys(reservationsStore.properties || {})) {
+                        const arr = reservationsStore.properties[pid] || [];
+                        const i = arr.findIndex(r => r.uid === b.uid);
+                        if (i !== -1) arr.splice(i, 1);
+                      }
+                    }
+                    if (unblocked.rowCount > 0) console.log(`🧹 [BHGUEST][webhook] ${unblocked.rowCount} blocage(s) annulé(s) — paiement prioritaire`);
+                  } catch(blkErr) { console.warn('⚠️ [BHGUEST][webhook] Annulation blocage:', blkErr.message); }
+
+                  // 🔄 Pousser la résa dans le store en mémoire → affichage immédiat (sans attendre un reboot)
+                  try {
+                    const newUid = `BHGUEST_${paymentId || session.id}`;
+                    if (!reservationsStore.properties[propId]) reservationsStore.properties[propId] = [];
+                    if (!reservationsStore.properties[propId].find(r => r.uid === newUid)) {
+                      reservationsStore.properties[propId].push({
+                        uid: newUid, start: startDate, end: endDate,
+                        guestName: guestName || 'Voyageur', guestEmail, guestPhone,
+                        source: 'guest_app', platform: 'Boostinghost Guest',
+                        status: 'confirmed', price: amountTotal || 0, currency: 'EUR',
+                        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+                      });
+                    }
+                  } catch(storeErr) { console.warn('⚠️ [BHGUEST][webhook] Store push:', storeErr.message); }
 
                   // 💬 Créer la conversation BHGuest
                   try {
