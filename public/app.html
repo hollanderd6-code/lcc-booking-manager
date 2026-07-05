@@ -7068,24 +7068,64 @@ try {
     if (existing) existing.remove();
     if (state.view === 'day') return; // day view has its own date selector
 
-    var nav = div('display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F5F2EC;border-bottom:1px solid rgba(0,0,0,.06);');
+    var nav = div('display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F5F2EC;border-bottom:1px solid rgba(0,0,0,.06);flex-wrap:wrap;');
     nav.className = 'bh-cal-nav';
 
-    var prev = el('button','width:32px;height:32px;border-radius:8px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
+    // Bouton Aujourd'hui — pilule verte token
+    var todayBtn = el('button','height:32px;padding:0 13px;border-radius:999px;border:none;background:#1A7A5E;color:white;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;transition:all .15s;font-family:inherit;box-shadow:0 1px 4px rgba(26,122,94,.25);');
+    todayBtn.textContent = 'Aujourd\u2019hui';
+    todayBtn.title = 'Revenir au mois courant';
+    todayBtn.onclick = function() { state.date = new Date(); render(); };
+    todayBtn.onmouseover = function(){ this.style.background='#15654E'; };
+    todayBtn.onmouseout  = function(){ this.style.background='#1A7A5E'; };
+
+    var prev = el('button','width:32px;height:32px;border-radius:999px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
     prev.innerHTML = '<i class="fas fa-chevron-left" style="font-size:11px;"></i>';
     prev.onclick = function() { navigate(-1); };
 
-    var label = div('flex:1;text-align:center;font-size:15px;font-weight:700;color:#1A1F2E;');
+    // Titre du mois en serif — signature visuelle du dashboard
+    var label = div('flex:1;text-align:center;font-size:17px;font-weight:600;color:#1A1F2E;font-family:Georgia,\'Times New Roman\',serif;letter-spacing:.01em;min-width:140px;');
     label.id = 'bhCalPeriodLabel';
     label.textContent = getPeriodLabel();
 
-    var next = el('button','width:32px;height:32px;border-radius:8px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
+    var next = el('button','width:32px;height:32px;border-radius:999px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
     next.innerHTML = '<i class="fas fa-chevron-right" style="font-size:11px;"></i>';
     next.onclick = function() { navigate(1); };
 
+    // Toggle vue compacte (mois uniquement) — persiste en localStorage
+    var compactBtn = null;
+    if (state.view === 'month') {
+      var isCompact = false;
+      try { isCompact = localStorage.getItem('bhCalCompact') === '1'; } catch(e) {}
+      compactBtn = el('button','height:32px;padding:0 11px;border-radius:999px;border:1px solid '+(isCompact?'#1A7A5E':'rgba(0,0,0,.1)')+';background:'+(isCompact?'rgba(26,122,94,.1)':'white')+';color:'+(isCompact?'#1A7A5E':'#6B7280')+';font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0;display:flex;align-items:center;gap:5px;transition:all .15s;font-family:inherit;');
+      compactBtn.innerHTML = '<i class="fas fa-compress-alt" style="font-size:10px;"></i><span>Compact</span>';
+      compactBtn.title = isCompact ? 'Revenir à la vue confort' : 'Vue compacte (lignes réduites, prix masqués)';
+      compactBtn.onclick = function() {
+        try { localStorage.setItem('bhCalCompact', isCompact ? '0' : '1'); } catch(e) {}
+        render();
+      };
+    }
+
+    nav.appendChild(todayBtn);
     nav.appendChild(prev);
     nav.appendChild(label);
     nav.appendChild(next);
+    if (compactBtn) nav.appendChild(compactBtn);
+
+    // Légende plateformes — la grille devient auto-explicative
+    if (state.view === 'month' || state.view === 'week') {
+      var legend = div('flex-basis:100%;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding-top:7px;');
+      legend.className = 'bh-cal-legend';
+      function lgd(color, txt, radius) {
+        return '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:#6B7280;letter-spacing:.02em;"><span style="width:9px;height:9px;background:'+color+';border-radius:'+(radius||'50%')+';flex-shrink:0;"></span>'+txt+'</span>';
+      }
+      legend.innerHTML = lgd('#FF5A5F','Airbnb')
+        + lgd('#003580','Booking','2.5px')
+        + lgd('#7C3AED','BHGuest')
+        + lgd('#F97316','Direct')
+        + '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:#B7791F;letter-spacing:.02em;"><span style="width:9px;height:9px;border:1.5px solid #B7791F;border-radius:50%;flex-shrink:0;box-sizing:border-box;"></span>Ven &amp; sam \u00b7 nuits premium</span>';
+      nav.appendChild(legend);
+    }
 
     // Insert after header
     var hdr = w.querySelector('.bh-cal-header');
@@ -7454,9 +7494,11 @@ try {
     var startOff   = firstDay.getDay()===0 ? 6 : firstDay.getDay()-1;
     var rangeStart = new Date(firstDay); rangeStart.setDate(1-startOff);
     var numDays    = Math.ceil((startOff + lastDay.getDate())/7)*7;
+    var compactMode = false;
+    try { compactMode = localStorage.getItem('bhCalCompact') === '1'; } catch(e) {}
     var propW = 76;
     var colW  = 48;
-    var rowH  = 52;
+    var rowH  = compactMode ? 30 : 52;
     var hdrH  = 44;
     var nRows = state.properties.length;
 
@@ -7513,8 +7555,8 @@ try {
       var isToday = dstr2===today;
       var isWknd  = dayDate.getDay()===5||dayDate.getDay()===6; // ven + sam = nuits premium
 
-      var hcell = div('position:sticky;top:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #ECEAE6;border-bottom:2px solid #E8E4DF;cursor:pointer;user-select:none;'
-        +(isToday?'background:rgba(26,122,94,.08);':'background:white;'));
+      var hcell = div('position:sticky;top:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #ECEAE6;cursor:pointer;user-select:none;'
+        +(isToday?'background:rgba(26,122,94,.08);border-bottom:2px solid #1A7A5E;':'background:white;border-bottom:2px solid #E8E4DF;'));
       hcell.style.gridColumn = String(di+2);
       hcell.style.gridRow    = '1';
       hcell.className = 'bh-day-hcell';
@@ -7594,7 +7636,7 @@ try {
         dcell.dataset.propId     = String(prop.id);
         dcell.dataset.colIdx     = String(di2);
 
-        if (inMonth2) {
+        if (inMonth2 && !compactMode) {
           var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;pointer-events:none;color:'+(isWknd2?'#B7791F':'#1A7A5E')+';');
           priceEl.className = 'cell-price';
           if (prop.basePrice) priceEl.textContent = Math.round(isWknd2?(prop.weekendPrice||prop.basePrice):prop.basePrice);
@@ -7681,7 +7723,8 @@ try {
         var p2 = pltInfo(r);
 
         // Le bloc est position:absolute dans anchorCell, width = nb cols * colW
-        var blk = div('position:absolute;top:6px;bottom:6px;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;z-index:3;');
+        var blkPad = compactMode ? '3px' : '6px';
+        var blk = div('position:absolute;top:'+blkPad+';bottom:'+blkPad+';border-radius:'+(compactMode?'8px':'10px')+';display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s, box-shadow .15s;z-index:3;');
         blk.className = 'booking-block-bh';
         blk.dataset.propId   = String(prop.id);
         blk.dataset.colStart = String(colStart);   // vrai début (peut être négatif)
@@ -7699,14 +7742,14 @@ try {
         } else {
           blk.style.background = p2.bg;
           blk.style.color      = 'white';
-          blk.style.boxShadow  = '0 2px 6px rgba(0,0,0,.22)';
+          blk.style.boxShadow  = '0 2px 6px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.18)';
           var iconInner = p2.cls === 'airbnb'
             ? '<i class="fa-brands fa-airbnb" style="font-size:8px;color:white;"></i>'
             : (p2.cls === 'booking' ? '<span style="font-size:8px;font-weight:800;color:white;">B</span>' : '<span style="font-size:8px;font-weight:800;color:white;">'+p2.label[0]+'</span>');
-          blk.innerHTML = '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+iconInner+'</div>'
-            +'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
-          blk.onmouseover = function(){ this.style.filter='brightness(1.12)'; };
-          blk.onmouseout  = function(){ this.style.filter=''; };
+          blk.innerHTML = (compactMode ? '' : '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+iconInner+'</div>')
+            +'<span style="font-size:'+(compactMode?'10px':'11.5px')+';font-weight:500;font-family:Georgia,\'Times New Roman\',serif;letter-spacing:.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 1px rgba(0,0,0,.15);">'+guestName(r)+'</span>';
+          blk.onmouseover = function(){ this.style.filter='brightness(1.1)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.22)'; this.style.zIndex='5'; };
+          blk.onmouseout  = function(){ this.style.filter=''; this.style.boxShadow='0 2px 6px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.18)'; this.style.zIndex='3'; };
           blk.onclick     = function(evt){ evt.stopPropagation(); openBooking(r); };
           blk.dataset.bookingId = String(r.id||'');
           // Point rouge sur la cellule de CHECKOUT (fin du séjour)
