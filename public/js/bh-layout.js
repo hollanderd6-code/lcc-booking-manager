@@ -606,8 +606,8 @@ function getSidebarHTML() {
       '<div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;white-space:nowrap;">',
       '  <div style="display:flex;align-items:center;gap:7px;">',
       '    <i class="fas fa-server" style="font-size:11px;color:rgba(255,255,255,.5);"></i>',
-      '    <span style="color:rgba(255,255,255,.6);font-size:11px;font-weight:500;">Fonctionnement du site</span>',
-      '    <span id="svc-status-render" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(107,114,128,.2);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);">',
+      '    <span id="svc-name-render" style="color:rgba(255,255,255,.6);font-size:11px;font-weight:500;">Fonctionnement du site</span>',
+      '    <span id="svc-status-render" title="Fonctionnement du site" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(107,114,128,.2);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);">',
       '      <span id="svc-dot-render" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
       '      <span id="svc-label-render">Verification...</span>',
       '    </span>',
@@ -616,8 +616,8 @@ function getSidebarHTML() {
       '  <div style="width:1px;height:14px;background:rgba(255,255,255,.15);"></div>',
       '  <div style="display:flex;align-items:center;gap:7px;">',
       '    <i class="fas fa-plug" style="font-size:11px;color:rgba(255,255,255,.5);"></i>',
-      '    <span style="color:rgba(255,255,255,.6);font-size:11px;font-weight:500;">Connexion API</span>',
-      '    <span id="svc-status-channex" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(107,114,128,.2);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);">',
+      '    <span id="svc-name-channex" style="color:rgba(255,255,255,.6);font-size:11px;font-weight:500;">Connexion API</span>',
+      '    <span id="svc-status-channex" title="Connexion API" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(107,114,128,.2);color:#9CA3AF;border:1px solid rgba(107,114,128,.3);">',
       '      <span id="svc-dot-channex" style="width:6px;height:6px;border-radius:50%;background:#6B7280;display:inline-block;"></span>',
       '      <span id="svc-label-channex">Verification...</span>',
       '    </span>',
@@ -666,13 +666,20 @@ function getSidebarHTML() {
       var badge = document.getElementById('svc-status-' + id);
       var dot   = document.getElementById('svc-dot-'    + id);
       var lbl   = document.getElementById('svc-label-'  + id);
+      var name  = document.getElementById('svc-name-'   + id);
+      var ago   = document.getElementById('svc-ago-'    + id);
+      var compact = (level === 'ok'); // tout va bien → on s'efface
       if (badge) {
-        badge.style.background  = c.bg;
+        badge.style.background  = compact ? 'transparent' : c.bg;
         badge.style.color       = c.text;
-        badge.style.borderColor = c.border;
+        badge.style.borderColor = compact ? 'transparent' : c.border;
+        badge.style.padding     = compact ? '2px' : '2px 8px';
+        if (badge.title) badge.title = badge.title.split(' — ')[0] + ' — ' + label;
       }
       if (dot) dot.style.background = c.dot;
-      if (lbl) lbl.textContent = label;
+      if (lbl) { lbl.textContent = label; lbl.style.display = compact ? 'none' : ''; }
+      if (name) name.style.display = compact ? 'none' : '';
+      if (ago)  ago.style.display  = compact ? 'none' : '';
       // Sync pastille mobile
       var mdot = document.getElementById('msvc-dot-' + id);
       if (mdot) mdot.style.background = c.dot;
