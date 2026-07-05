@@ -1213,9 +1213,9 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       pointer-events: none;
       user-select: none;
     }
-    /* Vendredi (5) et Samedi (6) = rouge = nuits premium */
+    /* Vendredi (5) et Samedi (6) = ambre = nuits premium (le rouge est réservé à Airbnb) */
     .calendar-cell.weekend .cell-price {
-      color: #dc2626;
+      color: #B7791F;
     }
     .calendar-cell:has(.booking-block) .cell-price {
       display: none;
@@ -7447,8 +7447,8 @@ try {
       hcell.style.gridRow    = '1';
       hcell.className = 'bh-day-hcell';
       hcell.dataset.colIdx = String(di);
-      hcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';">'+DAYS_MIN[dayDate.getDay()]+'</span>'
-        +'<span style="font-size:12px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'#1A7A5E':inMonth?(isWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
+      hcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(isToday?'#1A7A5E':isWknd?'#B7791F':'#9CA3AF')+';">'+DAYS_MIN[dayDate.getDay()]+'</span>'
+        +'<span style="font-size:12px;font-weight:'+(isToday?800:isWknd?700:600)+';color:'+(isToday?'#1A7A5E':inMonth?'#374151':'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
 
       (function(idx5, el){ el.onclick = function(){
         var wasActive = el.classList.contains('bh-col-active');
@@ -7513,7 +7513,7 @@ try {
         var isToday2 = dstr3===today;
 
         var dcell = div('box-sizing:border-box;border-right:1px solid #F5F2EC;border-bottom:1px solid #EEEBE6;position:relative;overflow:hidden;'
-          +(isToday2?'background:rgba(26,122,94,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(220,38,38,.02);':''));
+          +(isToday2?'background:rgba(26,122,94,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(183,121,31,.05);':''));
         dcell.style.gridColumn = String(di2+2);
         dcell.style.gridRow    = gridRow;
         dcell.className = 'calendar-cell bh-day-cell'+(isWknd2?' weekend':'');
@@ -7523,7 +7523,7 @@ try {
         dcell.dataset.colIdx     = String(di2);
 
         if (inMonth2) {
-          var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;pointer-events:none;color:'+(isWknd2?'#dc2626':'#1A7A5E')+';');
+          var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;pointer-events:none;color:'+(isWknd2?'#B7791F':'#1A7A5E')+';');
           priceEl.className = 'cell-price';
           if (prop.basePrice) priceEl.textContent = Math.round(isWknd2?(prop.weekendPrice||prop.basePrice):prop.basePrice);
           dcell.appendChild(priceEl);
@@ -7561,8 +7561,8 @@ try {
       fcell.style.gridRow = String(footerRow);
       fcell.className = 'bh-day-hcell';
       fcell.dataset.colIdx = String(fi);
-      fcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(fIsToday?'#1A7A5E':fIsWknd?'#dc2626':'#9CA3AF')+';">'+DAYS_MIN[fDate.getDay()]+'</span>'
-        +'<span style="font-size:12px;font-weight:'+(fIsToday?800:600)+';color:'+(fIsToday?'#1A7A5E':fInMonth?(fIsWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+fDate.getDate()+'</span>';
+      fcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(fIsToday?'#1A7A5E':fIsWknd?'#B7791F':'#9CA3AF')+';">'+DAYS_MIN[fDate.getDay()]+'</span>'
+        +'<span style="font-size:12px;font-weight:'+(fIsToday?800:fIsWknd?700:600)+';color:'+(fIsToday?'#1A7A5E':fInMonth?'#374151':'#C4C4C4')+';">'+fDate.getDate()+'</span>';
 
       // Même clic que le header : voile + highlight colonne
       (function(idx, el){ el.onclick = function(){
