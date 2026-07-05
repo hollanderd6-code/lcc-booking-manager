@@ -2632,12 +2632,12 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     height: 52px;
     border-radius: 999px;
     border: none;
-    background: #10B981;
+    background: #1A7A5E;
     color: #fff;
     font-size: 28px;
     font-weight: 800;
     line-height: 1;
-    box-shadow: 0 10px 24px rgba(0,0,0,.18);
+    box-shadow: 0 10px 24px rgba(26,122,94,.35);
     z-index: 2147483647;
     cursor: pointer;
     touch-action: manipulation;
@@ -3717,9 +3717,10 @@ window.closeChecklistsKpiModal = function() {
 .bh2-ca-lbl i{color:#6ee7b7;font-size:12px}
 .bh2-ca #kpiCaValue{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:44px;line-height:1.05;margin:10px 0 1px;position:relative;color:#fff !important;display:block}
 .bh2-ca #kpiCaSub{font-size:12.5px;color:rgba(255,255,255,.55);position:relative}
-.bh2-ca-spark{margin-top:auto;position:relative;padding-top:12px}
+.bh2-ca-subrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;position:relative}
+.bh2-ca-spark{margin-top:auto;position:relative;padding-top:14px}
 .bh2-ca-spark svg{display:block;width:100%;height:38px}
-.bh2-ca-delta{position:absolute;right:0;top:10px;font-size:11px;font-weight:700;color:#6ee7b7}
+.bh2-ca-delta{font-size:11px;font-weight:700;color:#6ee7b7;white-space:nowrap}
 .bh2-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
 .bh2-stat{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:all .18s;min-width:0}
 .bh2-stat:hover{border-color:rgba(26,122,94,.4);box-shadow:0 4px 14px rgba(13,17,23,.06)}
@@ -3775,8 +3776,8 @@ window.closeChecklistsKpiModal = function() {
 <section class="bh2-ca" id="kpiCaCard" onclick="window.openCaKpiModal && window.openCaKpiModal()">
 <div class="bh2-ca-lbl">CA mensuel <i class="fas fa-chart-line"></i></div>
 <span class="kpi-value" id="kpiCaValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span id="kpiCaSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
-<div class="bh2-ca-spark"><span class="bh2-ca-delta" id="kpiCaDelta"></span><svg id="kpiCaSpark" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></div>
+<div class="bh2-ca-subrow"><span id="kpiCaSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span><span class="bh2-ca-delta" id="kpiCaDelta"></span></div>
+<div class="bh2-ca-spark"><svg id="kpiCaSpark" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></div>
 </section>
 </div>
 <section class="bh2-stats">

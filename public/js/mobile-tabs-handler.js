@@ -525,14 +525,15 @@
   }
 
   // ============================================
-  // 🎨 LIQUID GLASS v4 — Icônes Lucide colorées
-  // ============================================
+  // 🎨 LIQUID GLASS v4 — Icônes Lucide unifiées (actif vert, inactif gris)
+  var TAB_ACTIVE   = '#1A7A5E';
+  var TAB_INACTIVE = '#7A8695';
   var LUCIDE_TABS = {
-    dashboard: { color: '#1A7A5E', svg: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
-    calendar:  { color: '#3B82F6', svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
-    messages:  { color: '#6366F1', svg: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>' },
-    properties:{ color: '#F59E0B', svg: '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>' },
-    more:      { color: '#64748B', svg: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>' }
+    dashboard: { svg: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
+    calendar:  { svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
+    messages:  { svg: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>' },
+    properties:{ svg: '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>' },
+    more:      { svg: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>' }
   };
 
   function applyLucideIcons() {
@@ -546,7 +547,8 @@
 
       var iconEl = tab.querySelector('i');
       var isActive = tab.classList.contains('active');
-      var svg = '<svg class="lucide-tab" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="' + cfg.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:' + (isActive ? '1' : '0.55') + ';transition:opacity .25s ease;">' + cfg.svg + '</svg>';
+      var col = isActive ? TAB_ACTIVE : TAB_INACTIVE;
+      var svg = '<svg class="lucide-tab" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="' + col + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .25s ease;">' + cfg.svg + '</svg>';
 
       if (iconEl) {
         iconEl.outerHTML = svg;
@@ -556,10 +558,9 @@
       // Couleur du label
       var span = tab.querySelector('span');
       if (span) {
-        span.style.color = cfg.color;
-        span.style.opacity = isActive ? '1' : '0.55';
+        span.style.color = col;
         span.style.fontWeight = isActive ? '700' : '500';
-        span.style.transition = 'opacity .25s ease';
+        span.style.transition = 'color .25s ease';
       }
     });
   }
@@ -570,9 +571,10 @@
       var svg = tab.querySelector('svg.lucide-tab');
       var span = tab.querySelector('span');
       var isActive = tab.classList.contains('active');
-      if (svg) svg.style.opacity = isActive ? '1' : '0.55';
+      var col = isActive ? TAB_ACTIVE : TAB_INACTIVE;
+      if (svg) svg.setAttribute('stroke', col);
       if (span) {
-        span.style.opacity = isActive ? '1' : '0.55';
+        span.style.color = col;
         span.style.fontWeight = isActive ? '700' : '500';
       }
     });
