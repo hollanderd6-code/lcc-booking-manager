@@ -3692,97 +3692,122 @@ window.closeChecklistsKpiModal = function() {
   if (m) { m.style.display = 'none'; window.showFab(); }
 };
 </script>
-<section class="kpi-grid">
-<!-- KPI 1 : Logements actifs -->
-<article class="kpi-card kpi-card--clickable" id="kpiPropertiesCard">
-<div class="kpi-header">
-<span class="kpi-label">Logements </span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
+<style>
+/* ══ Dashboard v2 : héros "Votre journée" + CA + bandeau compact ══ */
+.bh2-hero{display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:14px}
+.bh2-today{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:20px 22px;box-shadow:0 1px 3px rgba(13,17,23,.04)}
+.bh2-today-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+.bh2-today-head h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:20px;color:#0D1117;margin:0}
+.bh2-today-head h2 em{font-style:italic;color:#1A7A5E}
+.bh2-today-date{font-size:12px;color:#7A8695;font-weight:500}
+.bh2-ops{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bh2-op{position:relative;border:1px solid rgba(200,184,154,.45);border-radius:14px;padding:14px 14px 12px;cursor:pointer;transition:all .18s;background:#FBF8F3}
+.bh2-op:hover{border-color:rgba(26,122,94,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
+.bh2-op-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.bh2-op-lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#7A8695}
+.bh2-op-ic{width:26px;height:26px;border-radius:8px;background:rgba(183,121,31,.12);color:#B7791F;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.bh2-op-num{font-family:'Instrument Serif',serif;font-weight:400;font-size:36px;line-height:1;color:#B7791F;margin-bottom:3px}
+.bh2-op-sub{font-size:11.5px;color:#7A8695}
+.bh2-op-go{position:absolute;right:12px;bottom:12px;font-size:10px;color:#1A7A5E;opacity:0;transition:opacity .18s}
+.bh2-op:hover .bh2-op-go{opacity:1}
+.bh2-ca{background:#0D1117;border-radius:20px;padding:20px 22px;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:transform .18s;min-height:170px}
+.bh2-ca:hover{transform:translateY(-2px)}
+.bh2-ca::before{content:'';position:absolute;top:-120px;right:-80px;width:280px;height:280px;border-radius:50%;background:radial-gradient(closest-side,rgba(26,122,94,.45),transparent 70%);pointer-events:none}
+.bh2-ca-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.55);display:flex;justify-content:space-between;align-items:center;position:relative}
+.bh2-ca-lbl i{color:#6ee7b7;font-size:12px}
+.bh2-ca #kpiCaValue{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:44px;line-height:1.05;margin:10px 0 1px;position:relative;color:#fff !important;display:block}
+.bh2-ca #kpiCaSub{font-size:12.5px;color:rgba(255,255,255,.55);position:relative}
+.bh2-ca-spark{margin-top:auto;position:relative;padding-top:12px}
+.bh2-ca-spark svg{display:block;width:100%;height:38px}
+.bh2-ca-delta{position:absolute;right:0;top:10px;font-size:11px;font-weight:700;color:#6ee7b7}
+.bh2-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.bh2-stat{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:all .18s;min-width:0}
+.bh2-stat:hover{border-color:rgba(26,122,94,.4);box-shadow:0 4px 14px rgba(13,17,23,.06)}
+.bh2-stat-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:rgba(26,122,94,.10);color:#1A7A5E}
+.bh2-stat-ic.n{background:rgba(107,114,128,.10);color:#6B7280}
+.bh2-num{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:21px;line-height:1;color:#0D1117}
+.bh2-lbl{font-size:10.5px;color:#7A8695;font-weight:500;margin-top:2px;line-height:1.25}
+@media(max-width:920px){
+  .bh2-hero{grid-template-columns:1fr;gap:10px;margin-bottom:10px}
+  .bh2-today{padding:14px}
+  .bh2-ops{gap:8px}
+  .bh2-op{padding:11px 9px}
+  .bh2-op-lbl{font-size:9px;letter-spacing:.04em}
+  .bh2-op-num{font-size:28px}
+  .bh2-op-sub{font-size:10px}
+  .bh2-ca{padding:16px;min-height:0}
+  .bh2-ca #kpiCaValue{font-size:36px}
+  .bh2-stats{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+  .bh2-stat:last-child{grid-column:1/-1}
+}
+</style>
+<div class="bh2-hero">
+<section class="bh2-today">
+<div class="bh2-today-head">
+<h2>Votre <em>journée</em></h2>
+<span class="bh2-today-date" id="bh2TodayDate"></span>
 </div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiPropertiesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub kpi-sub--green">configurés sur Boostinghost</span>
+<div class="bh2-ops">
+<div id="kpiTodayMovesCard" style="display:contents">
+<span id="kpiTodayMovesValue" style="display:none"></span>
+<span id="kpiTodayMovesSub" style="display:none"></span>
+<div class="bh2-op">
+<div class="bh2-op-top"><span class="bh2-op-lbl">Arrivées</span><span class="bh2-op-ic"><i class="fas fa-arrow-right-to-bracket"></i></span></div>
+<div class="bh2-op-num" id="kpiArrivalsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
+<div class="bh2-op-sub">voyageurs attendus</div>
+<span class="bh2-op-go"><i class="fas fa-arrow-right"></i></span>
 </div>
-</article>
-<!-- KPI 2 : Check-in / Check-out du jour -->
-<article class="kpi-card kpi-card--clickable" id="kpiTodayMovesCard">
-<div class="kpi-header">
-<span class="kpi-label">Check-in / Check-out du jour</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(183,121,31,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-right-left" style="font-size:14px;color:#B7791F;line-height:1;display:inline-block;"></i></div>
+<div class="bh2-op">
+<div class="bh2-op-top"><span class="bh2-op-lbl">Départs</span><span class="bh2-op-ic"><i class="fas fa-arrow-right-from-bracket"></i></span></div>
+<div class="bh2-op-num" id="kpiDeparturesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
+<div class="bh2-op-sub">check-outs ce jour</div>
+<span class="bh2-op-go"><i class="fas fa-arrow-right"></i></span>
 </div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiTodayMovesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub" id="kpiTodayMovesSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
 </div>
-</article>
-<!-- KPI 3 : Ménages à prévoir dans les 48h -->
-<article class="kpi-card kpi-card--clickable" id="kpiCleaning48hCard">
-<div class="kpi-header">
-<span class="kpi-label">Ménages à prévoir (48h)</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(183,121,31,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-broom" style="font-size:14px;color:#B7791F;line-height:1;display:inline-block;"></i></div>
+<div class="bh2-op" id="kpiCleaning48hCard">
+<div class="bh2-op-top"><span class="bh2-op-lbl">Ménages 48h</span><span class="bh2-op-ic"><i class="fas fa-broom"></i></span></div>
+<div class="bh2-op-num" id="kpiCleaning48hValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
+<div class="bh2-op-sub" id="kpiCleaning48hSub">départs à nettoyer</div>
+<span class="bh2-op-go"><i class="fas fa-arrow-right"></i></span>
 </div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiCleaning48hValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub" id="kpiCleaning48hSub">départs à nettoyer sous 48h</span>
 </div>
-</article>
-<!-- KPI 4 : Notes actives -->
-<article class="kpi-card kpi-card--clickable" id="kpiTopRisksCard">
-<div class="kpi-header">
-<span class="kpi-label">Notes</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(107,114,128,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-sticky-note" style="font-size:14px;color:#6B7280;line-height:1;display:inline-block;"></i></div>
-</div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiTopRisksValue">0</span>
-<span class="kpi-sub" id="kpiTopRisksSub">réservations avec note</span>
-</div>
-</article>
-<!-- KPI 5 : Taux d'occupation -->
-<article class="kpi-card kpi-card--clickable" id="kpiOccupancyCard">
-<div class="kpi-header">
-<span class="kpi-label">Taux d'occupation</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-calendar" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
-</div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiOccupancyValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub">sur le mois en cours</span>
-</div>
-</article>
-<!-- KPI 6 : Cautions prises -->
-<article class="kpi-card kpi-card--clickable" id="kpiDepositsCard">
-<div class="kpi-header">
-<span class="kpi-label">Cautions prises</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-shield-halved" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
-</div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiDepositsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub" id="kpiDepositsSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
-</div>
-</article>
-<!-- KPI 7 : Checklists en attente -->
-<article class="kpi-card kpi-card--clickable" id="kpiChecklistsCard" onclick="if(window.openChecklistsKpiModal){window.openChecklistsKpiModal();}else{alert('Fonction non chargée');}">
-<div class="kpi-header">
-<span class="kpi-label">Checklists ménage</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-clipboard-check" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
-</div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiChecklistsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub" id="kpiChecklistsSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
-</div>
-</article>
-
-<!-- KPI 8 : CA mensuel -->
-<article class="kpi-card kpi-card--clickable" id="kpiCaCard" onclick="window.openCaKpiModal && window.openCaKpiModal()">
-<div class="kpi-header">
-<span class="kpi-label">CA mensuel</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-chart-line" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
-</div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiCaValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub" id="kpiCaSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
-</div>
-</article>
 </section>
+<section class="bh2-ca" id="kpiCaCard" onclick="window.openCaKpiModal && window.openCaKpiModal()">
+<div class="bh2-ca-lbl">CA mensuel <i class="fas fa-chart-line"></i></div>
+<span class="kpi-value" id="kpiCaValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
+<span id="kpiCaSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
+<div class="bh2-ca-spark"><span class="bh2-ca-delta" id="kpiCaDelta"></span><svg id="kpiCaSpark" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></div>
+</section>
+</div>
+<section class="bh2-stats">
+<div class="bh2-stat" id="kpiPropertiesCard">
+<span class="bh2-stat-ic"><i class="fas fa-home"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiPropertiesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl">Logements actifs</div></div>
+</div>
+<div class="bh2-stat" id="kpiOccupancyCard">
+<span class="bh2-stat-ic"><i class="fas fa-calendar"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiOccupancyValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl">Occupation du mois</div></div>
+</div>
+<div class="bh2-stat" id="kpiDepositsCard">
+<span class="bh2-stat-ic"><i class="fas fa-shield-halved"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiDepositsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl" id="kpiDepositsSub">Cautions</div></div>
+</div>
+<div class="bh2-stat" id="kpiChecklistsCard" onclick="if(window.openChecklistsKpiModal){window.openChecklistsKpiModal();}">
+<span class="bh2-stat-ic"><i class="fas fa-clipboard-check"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiChecklistsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl" id="kpiChecklistsSub">Checklists ménage</div></div>
+</div>
+<div class="bh2-stat" id="kpiTopRisksCard">
+<span class="bh2-stat-ic n"><i class="fas fa-sticky-note"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiTopRisksValue">0</div><div class="bh2-lbl" id="kpiTopRisksSub">Réservations avec note</div></div>
+</div>
+</section>
+<script>
+(function(){
+  var d=new Date();
+  var el=document.getElementById('bh2TodayDate');
+  if(el){var s=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});el.textContent=s.charAt(0).toUpperCase()+s.slice(1);}
+})();
+</script>
 
 <!-- Calendar Card -->
 <section class="card" id="calendarSection" style="display:block !important;">
@@ -5861,31 +5886,28 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           return;
           
         case 'moves': // Check-in / Check-out
-          color = value >= 1 ? '#10B981' : '#000000';
+          color = '#B7791F';
           break;
           
         case 'cleaning': // Ménages à venir
-          if (value === 0) color = '#000000';
-          else if (value <= 2) color = '#F59E0B'; // Orange
-          else color = '#EF4444'; // Rouge
+          if (value === 0) color = '#0D1117';
+          else color = '#B7791F'; // Ambre = action requise
           break;
           
         case 'risks': // Risques à venir
-          if (value === 0) color = '#10B981'; // Vert = tout va bien
-          else if (value <= 2) color = '#F59E0B'; // Orange
-          else color = '#EF4444'; // Rouge
+          if (value === 0) color = '#1A7A5E'; // Vert = tout va bien
+          else if (value <= 2) color = '#0D1117'; // Neutre
+          else color = '#B7791F'; // Ambre
           break;
           
         case 'deposits': // Cautions prises
-          color = value >= 1 ? '#10B981' : '#000000';
+          color = value >= 1 ? '#1A7A5E' : '#0D1117';
           break;
           
         case 'occupancy': // Taux d\'occupation (en %)
-          if (value <= 30) color = '#EF4444'; // Rouge
-          else if (value <= 50) color = '#F59E0B'; // Orange
-          else if (value <= 70) color = '#FBBF24'; // Jaune
-          else if (value <= 85) color = '#34D399'; // Vert clair
-          else color = '#10B981'; // Vert foncé
+          if (value <= 30) color = '#C2410C'; // Orange brûlé
+          else if (value <= 50) color = '#B7791F'; // Ambre
+          else color = '#1A7A5E'; // Vert
           break;
       }
       
@@ -5913,6 +5935,11 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       applyKpiColor(movesVal, totalMoves, 'moves');
     }
     if (movesSub) movesSub.textContent = `${checkinsToday} arrivées • ${checkoutsToday} départs`;
+    // Dashboard v2 : tuiles séparées Arrivées / Départs
+    const arrEl = document.getElementById('kpiArrivalsValue');
+    const depEl = document.getElementById('kpiDeparturesValue');
+    if (arrEl) { if (window.bhAnimateValue) window.bhAnimateValue(arrEl, checkinsToday); else arrEl.textContent = checkinsToday; }
+    if (depEl) { if (window.bhAnimateValue) window.bhAnimateValue(depEl, checkoutsToday); else depEl.textContent = checkoutsToday; }
 
     const cleanVal = document.getElementById('kpiCleaning48hValue');
     const cleanSub = document.getElementById('kpiCleaning48hSub');
@@ -5993,13 +6020,55 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     const caVal = document.getElementById('kpiCaValue');
     const caSub = document.getElementById('kpiCaSub');
     if (caVal) {
-      caVal.style.color = '#1A7A5E';
-      caVal.style.fontWeight = '700';
+      caVal.style.color = '#FFFFFF';
+      caVal.style.fontWeight = '400';
       if (window.bhAnimateValue) window.bhAnimateValue(caVal, Math.round(caTotal), { suffix: '€' });
       else caVal.textContent = (caTotal > 0 ? Math.round(caTotal).toLocaleString('fr-FR') : '0') + '€';
     }
     const monthNames = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     if (caSub) caSub.textContent = monthNames[m] + ' ' + y;
+
+    // ── Dashboard v2 : sparkline CA sur 6 mois + delta vs mois précédent ──
+    try {
+      const months = [];
+      for (let k = 5; k >= 0; k--) {
+        const ms = new Date(y, m - k, 1, 0, 0, 0, 0);
+        const me = new Date(y, m - k + 1, 0, 23, 59, 59, 999);
+        months.push({ start: ms, end: me, total: 0 });
+      }
+      (reservations || []).forEach((r) => {
+        if (r.type === 'block' || r.source === 'BLOCK') return;
+        if (r.status === 'cancelled') return;
+        const pd = getPaymentDate(r);
+        if (!pd) return;
+        const amt = parseFloat(r.amount_total || r.amountTotal || r.host_payout || r.hostPayout || r.amount_rooms || r.amountRooms || 0);
+        if (!amt) return;
+        for (const mo of months) {
+          if (pd >= mo.start && pd <= mo.end) { mo.total += amt; break; }
+        }
+      });
+      const spark = document.getElementById('kpiCaSpark');
+      const delta = document.getElementById('kpiCaDelta');
+      const prev = months[4].total;
+      if (delta) {
+        if (prev > 0) {
+          const pct = Math.round(((caTotal - prev) / prev) * 100);
+          delta.innerHTML = '<i class="fas fa-arrow-trend-' + (pct >= 0 ? 'up' : 'down') + '"></i> ' + (pct >= 0 ? '+' : '') + pct + ' % vs ' + monthNames[(m + 11) % 12].toLowerCase();
+          delta.style.color = pct >= 0 ? '#6ee7b7' : '#fbbf24';
+        } else { delta.textContent = ''; }
+      }
+      if (spark) {
+        const vals = months.map(mo => mo.total);
+        const max = Math.max.apply(null, vals.concat([1]));
+        const pts = vals.map((v, i) => {
+          const x = (i / (vals.length - 1)) * 300;
+          const yv = 34 - (v / max) * 30;
+          return x.toFixed(1) + ',' + yv.toFixed(1);
+        });
+        spark.innerHTML = '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#6ee7b7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
+          + '<polygon points="0,38 ' + pts.join(' ') + ' 300,38" fill="rgba(110,231,183,.09)"/>';
+      }
+    } catch(e) { console.warn('CA sparkline error', e); }
   }
 
   window.openCaKpiModal = function() {
