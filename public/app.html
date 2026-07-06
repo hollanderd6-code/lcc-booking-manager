@@ -2374,7 +2374,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     font-size: 20px;
   }
 }
-  <style>
+  </style>
+<style>
     /* Spécial dashboard mobile : on garde KPI + calendrier seulement */
     
 
@@ -15911,5 +15912,123 @@ function notifSwitchTab(tab) {
   }
 }
 </script>
+<style id="bh-luxe-modals">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE MODALES — surcharge les styles inline (!important)
+   Zéro logique touchée : uniquement fond, rayons, typo, boutons.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Famille A : bottom-sheets (KPI, nouvelle résa, block, détails) ── */
+#todayMovesModal, #cleaning48hModal, #kpiNotesModal, #activePropertiesModal,
+#cleaningTodayModal, #checklistsKpiModal, #caKpiModal, #occupancyDetailsModal,
+#depositsModal, #newReservationModal, #blockModal, #reservationDetailsModal {
+  background: rgba(13,17,23,.5) !important;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+#todayMovesModal > div, #cleaning48hModal > div, #kpiNotesModal > div,
+#activePropertiesModal > div, #cleaningTodayModal > div, #checklistsKpiModal > div,
+#caKpiModal > div, #occupancyDetailsModal > div, #depositsModal > div,
+#newReservationModal > div, #blockModal > div, #reservationDetailsModal > div {
+  background: #FAF7F2 !important;
+  box-shadow: 0 -18px 60px rgba(13,17,23,.25), inset 0 1px 0 rgba(255,255,255,.9) !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  border-bottom: none !important;
+}
+/* Titres de header en serif — la signature du dashboard */
+#todayMovesModal > div > div:first-of-type div[style*="font-weight:700"],
+#cleaning48hModal > div > div:first-of-type div[style*="font-weight:700"],
+#kpiNotesModal > div > div:first-of-type div[style*="font-weight:700"],
+#activePropertiesModal > div > div:first-of-type div[style*="font-weight:700"],
+#cleaningTodayModal > div > div:first-of-type div[style*="font-weight:700"],
+#checklistsKpiModal > div > div:first-of-type div[style*="font-weight:700"],
+#caKpiModal > div > div:first-of-type div[style*="font-weight:700"],
+#occupancyDetailsModal > div > div:first-of-type div[style*="font-weight:700"],
+#depositsModal > div > div:first-of-type div[style*="font-weight:700"],
+#blockModal > div > div:first-of-type div[style*="font-weight:700"],
+#reservationDetailsModal > div div[style*="font-weight:700"][style*="font-size:16px"],
+#newReservationModal div[style*="font-weight:700"][style*="color:#0D1117"] {
+  font-family: Georgia, 'Times New Roman', serif !important;
+  font-weight: 600 !important;
+  font-size: 19px !important;
+  letter-spacing: .01em;
+}
+/* Total CA du modal en serif aussi */
+#caKpiModalTotal { font-family: Georgia, 'Times New Roman', serif !important; font-weight: 600 !important; }
+/* Boutons de fermeture × : pastille blanche bordée, hover vert */
+#todayMovesModalClose, #cleaning48hModalClose, #kpiNotesModalClose,
+#closeActivePropertiesModal, #closeCleaningTodayModal, #checklistsKpiModalClose,
+#caKpiModalClose, #closeOccupancyDetailsModal, #closeDepositsModal,
+#blockModalClose, #closeDetailsModal, #closeNewReservationModal {
+  background: #fff !important;
+  border: 1px solid rgba(200,184,154,.6) !important;
+  color: #4B5563 !important;
+  transition: all .15s !important;
+}
+#todayMovesModalClose:hover, #cleaning48hModalClose:hover, #kpiNotesModalClose:hover,
+#closeActivePropertiesModal:hover, #closeCleaningTodayModal:hover, #checklistsKpiModalClose:hover,
+#caKpiModalClose:hover, #closeOccupancyDetailsModal:hover, #closeDepositsModal:hover,
+#blockModalClose:hover, #closeDetailsModal:hover, #closeNewReservationModal:hover {
+  border-color: #1A7A5E !important;
+  color: #1A7A5E !important;
+}
+
+/* ── Desktop ≥ 720px : les bottom-sheets deviennent des cartes centrées ── */
+@media (min-width: 720px) {
+  #todayMovesModal, #cleaning48hModal, #kpiNotesModal, #activePropertiesModal,
+  #cleaningTodayModal, #checklistsKpiModal, #caKpiModal, #occupancyDetailsModal,
+  #depositsModal, #blockModal, #reservationDetailsModal, #newReservationModal {
+    align-items: center !important;
+    padding: 28px !important;
+  }
+  #todayMovesModal > div, #cleaning48hModal > div, #kpiNotesModal > div,
+  #activePropertiesModal > div, #cleaningTodayModal > div, #checklistsKpiModal > div,
+  #caKpiModal > div, #occupancyDetailsModal > div, #depositsModal > div,
+  #blockModal > div, #reservationDetailsModal > div, #newReservationModal > div {
+    border-radius: 24px !important;
+    border-bottom: 1px solid rgba(200,184,154,.55) !important;
+    max-height: 84vh !important;
+    box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+  }
+}
+
+/* ── Famille B : modales centrées (confirm, cellule, réorganiser, édition groupée) ── */
+#bhConfirmModal, #cellModal, #reorderModal, #batchEditModal {
+  background: rgba(13,17,23,.5) !important;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+#bhConfirmModal > div, #cellModal > div {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 24px 70px rgba(13,17,23,.28) !important;
+}
+#cellModalTitle { font-family: Georgia, 'Times New Roman', serif !important; font-weight: 600 !important; }
+
+/* ── Famille C : modales à classes (booking, checklist, facture, résa) ── */
+.booking-modal .modal-overlay { background: rgba(13,17,23,.5) !important; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+.booking-modal .modal-content, #reservationModal .modal-content {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 70px rgba(13,17,23,.3) !important;
+}
+.booking-modal .modal-header h2, .booking-modal .modal-header h3,
+#reservationModal .modal-header h2, #reservationModal .modal-header h3,
+.checklist-modal-header h2, #invoiceModal .inv-header h2 {
+  font-family: Georgia, 'Times New Roman', serif !important;
+  font-weight: 600 !important;
+  letter-spacing: .01em;
+}
+.checklist-modal { background: #FAF7F2 !important; border: 1px solid rgba(200,184,154,.55) !important; border-radius: 24px !important; }
+#invoiceModal .inv-content { background: #FAF7F2 !important; border: 1px solid rgba(200,184,154,.55) !important; border-radius: 24px !important; }
+
+/* ── Détails communs : séparateurs plus doux dans les listes KPI ── */
+#todayMovesModalContent > div, #cleaning48hModalContent > div {
+  border-bottom-color: rgba(200,184,154,.35) !important;
+}
+</style>
+
 </body>
 </html>
