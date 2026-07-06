@@ -1919,6 +1919,27 @@ html[data-theme-v3="1"] .subscription-card {
     </div>
   </div>
 
+  <!-- Hosterzz -->
+  <div style="border:1px solid #e5e7eb;border-radius:14px;padding:18px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+      <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#0E6E63,#E8A13A);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="fas fa-broom" style="color:white;font-size:20px;"></i>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:700;color:#0D1117;">Hosterzz</div>
+        <div style="font-size:12px;color:#6B7280;">Marketplace de prestataires (ménage, check-in, conciergerie)</div>
+      </div>
+      <div id="hzIntegrationAction">
+        <button onclick="openHzConnect()" style="padding:8px 18px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+          <i class="fas fa-plug" style="margin-right:4px;"></i> Connecter
+        </button>
+      </div>
+    </div>
+    <div id="hzIntegrationStatus" style="font-size:12px;color:#6B7280;line-height:1.5;">
+      Liez votre compte Hosterzz pour créer des missions de ménage directement depuis vos réservations, et suivre leur statut en temps réel.
+    </div>
+  </div>
+
   <!-- Placeholder futurs -->
   <div style="font-size:12px;color:#9CA3AF;text-align:center;padding:8px 0;">
     D'autres intégrations seront disponibles prochainement.
@@ -1932,6 +1953,146 @@ html[data-theme-v3="1"] .subscription-card {
 </main>
 </div>
 <!-- Script auth + user + logout -->
+<script>
+// ── Hosterzz Connect Modal ──
+function openHzConnect() {
+  let modal = document.getElementById('hzConnectModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'hzConnectModal';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;';
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:20px;width:90%;max-width:480px;max-height:85vh;overflow-y:auto;padding:28px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div style="font-size:18px;font-weight:700;color:#0D1117;">Connecter Hosterzz</div>
+          <button onclick="document.getElementById('hzConnectModal').style.display='none'" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;">×</button>
+        </div>
+
+        <div style="background:#f0fdf4;border-radius:12px;padding:16px;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="background:#1A7A5E;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">1</div>
+            <div style="font-size:14px;font-weight:700;color:#0D1117;">Générez un code sur Hosterzz</div>
+          </div>
+          <div style="font-size:12px;color:#4B5563;line-height:1.5;padding-left:34px;">
+            Connectez-vous sur Hosterzz, ouvrez <b>Mon compte → Liaison Boostinghost</b> et copiez le code à 8 caractères affiché (valable 15 minutes).
+          </div>
+        </div>
+
+        <div style="background:#f9fafb;border-radius:12px;padding:16px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="background:#1A7A5E;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">2</div>
+            <div style="font-size:14px;font-weight:700;color:#0D1117;">Collez le code ici</div>
+          </div>
+          <div style="padding-left:34px;">
+            <input type="text" id="hzLinkCodeInput" maxlength="8" placeholder="Ex : A1B2C3D4"
+              style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-family:'DM Mono',monospace;font-size:14px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;box-sizing:border-box;">
+            <div id="hzLinkError" style="display:none;background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA;border-radius:8px;padding:8px 10px;font-size:12px;margin-bottom:10px;"></div>
+            <button id="hzLinkSubmitBtn" onclick="submitHzLink()" style="width:100%;padding:10px;background:#1A7A5E;color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+              <i class="fas fa-link"></i> Lier mon compte
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;font-size:11px;color:#9CA3AF;text-align:center;">
+          Vous pourrez délier votre compte à tout moment depuis cette page.
+        </div>
+      </div>
+    `;
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  document.getElementById('hzLinkError').style.display = 'none';
+  document.getElementById('hzLinkCodeInput').value = '';
+}
+
+async function submitHzLink() {
+  const codeInput = document.getElementById('hzLinkCodeInput');
+  const errorBox = document.getElementById('hzLinkError');
+  const submitBtn = document.getElementById('hzLinkSubmitBtn');
+  const code = (codeInput.value || '').trim().toUpperCase();
+  errorBox.style.display = 'none';
+
+  if (!code) {
+    errorBox.textContent = 'Merci de saisir le code affiché sur Hosterzz.';
+    errorBox.style.display = 'block';
+    return;
+  }
+
+  const token = localStorage.getItem('lcc_token');
+  submitBtn.disabled = true;
+  const originalLabel = submitBtn.innerHTML;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
+
+  try {
+    const resp = await fetch((window.API_URL || '') + '/api/hosterzz/link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ code })
+    });
+    const data = await resp.json().catch(() => ({}));
+
+    if (!resp.ok || !data.ok) {
+      errorBox.textContent = (data && data.error) || 'Code invalide ou expiré. Générez un nouveau code sur Hosterzz.';
+      errorBox.style.display = 'block';
+      return;
+    }
+
+    document.getElementById('hzConnectModal').style.display = 'none';
+    renderHzIntegrationStatus(true, data.hz_name);
+  } catch (e) {
+    errorBox.textContent = 'Erreur réseau : impossible de contacter Hosterzz.';
+    errorBox.style.display = 'block';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalLabel;
+  }
+}
+
+async function unlinkHz() {
+  if (!confirm('Délier votre compte Hosterzz ? Vous ne pourrez plus créer de missions de ménage depuis Boostinghost tant que vous ne relierez pas votre compte.')) return;
+  const token = localStorage.getItem('lcc_token');
+  try {
+    await fetch((window.API_URL || '') + '/api/hosterzz/unlink', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+  } catch (e) {
+    console.warn('Erreur unlink Hosterzz', e);
+  }
+  renderHzIntegrationStatus(false);
+}
+
+function renderHzIntegrationStatus(connected, hzName) {
+  const actionEl = document.getElementById('hzIntegrationAction');
+  const statusEl = document.getElementById('hzIntegrationStatus');
+  if (!actionEl || !statusEl) return;
+
+  if (connected) {
+    actionEl.innerHTML = `
+      <button onclick="unlinkHz()" style="padding:8px 18px;background:#fff;color:#DC2626;border:1px solid #FECACA;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+        <i class="fas fa-unlink" style="margin-right:4px;"></i> Délier
+      </button>`;
+    const nameSuffix = hzName ? ` (${hzName})` : '';
+    statusEl.innerHTML = `<span style="color:#1A7A5E;font-weight:600;"><i class="fas fa-check-circle"></i> Compte Hosterzz lié${nameSuffix}</span> — vous pouvez créer des missions de ménage depuis vos réservations.`;
+  } else {
+    actionEl.innerHTML = `
+      <button onclick="openHzConnect()" style="padding:8px 18px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+        <i class="fas fa-plug" style="margin-right:4px;"></i> Connecter
+      </button>`;
+    statusEl.textContent = 'Liez votre compte Hosterzz pour créer des missions de ménage directement depuis vos réservations, et suivre leur statut en temps réel.';
+  }
+}
+
+(function checkHzStatus() {
+  const token = localStorage.getItem('lcc_token');
+  if (!token) return;
+  fetch((window.API_URL || '') + '/api/hosterzz/status', { headers: { Authorization: 'Bearer ' + token } })
+    .then(r => r.ok ? r.json() : { linked: false })
+    .then(data => renderHzIntegrationStatus(!!data.linked, data.hz_name))
+    .catch(() => {});
+})();
+</script>
 <script>
 // ── PriceLabs Connect Modal ──
 function openPriceLabsConnect() {
