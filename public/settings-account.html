@@ -4913,7 +4913,7 @@ function bhShowUpgradeModalSettings(plan) {
     + '<div style="font-size:20px;font-weight:800;color:#111827;margin-bottom:8px;">Fonctionnalité ' + plan + '</div>'
     + '<div style="font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:24px;">Cette fonctionnalité est disponible à partir du plan <strong>' + plan + '</strong>.</div>'
     + '<div style="display:flex;gap:12px;justify-content:center;">'
-    + '<button onclick="document.getElementById('bhUpgradeModal').remove()" style="padding:10px 20px;border:1.5px solid #e5e7eb;background:white;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;color:#374151;">Plus tard</button>'
+    + '<button onclick="document.getElementById(\'bhUpgradeModal\').remove()" style="padding:10px 20px;border:1.5px solid rgba(200,184,154,.6);background:white;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;color:#374151;">Plus tard</button>'
     + '<a href="/pricing.html" style="padding:10px 24px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;"><i class="fas fa-arrow-up"></i> Voir les plans</a>'
     + '</div></div>';
   m.onclick = function(e) { if (e.target === m) m.remove(); };
@@ -5055,5 +5055,111 @@ window.addEventListener('DOMContentLoaded', async function() {
 });
 
 </script>
+<style id="bh-luxe-account">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE COMPTE & ÉQUIPE — cohérente v2
+   CSS uniquement — aucune logique modifiée.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Onglets : pilule ── */
+html[data-theme-v3="1"] .settings-tabs {
+  border-radius: 999px !important;
+  border-color: rgba(200,184,154,.5) !important;
+  box-shadow: 0 1px 3px rgba(13,17,23,.04) !important;
+}
+html[data-theme-v3="1"] .settings-tab { border-radius: 999px !important; }
+html[data-theme-v3="1"] .settings-tab.active { box-shadow: 0 1px 4px rgba(26,122,94,.25) !important; }
+
+/* ── Cartes : titres serif ── */
+html[data-theme-v3="1"] .card { border-radius: 20px !important; }
+html[data-theme-v3="1"] .card h2,
+html[data-theme-v3="1"] .card-header,
+html[data-theme-v3="1"] .card-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-weight: 400 !important;
+  font-size: 19px !important;
+  letter-spacing: .01em !important;
+}
+html[data-theme-v3="1"] .card h2 i,
+html[data-theme-v3="1"] .card-title i { color: #1A7A5E; font-size: 15px; }
+
+/* ── Notifications : séparateurs beiges ── */
+.notif-row { border-bottom-color: rgba(200,184,154,.3) !important; }
+
+/* ── Champs : repos beige (focus vert v3 conservé) ── */
+html[data-theme-v3="1"] input[type=text],
+html[data-theme-v3="1"] input[type=email],
+html[data-theme-v3="1"] input[type=tel],
+html[data-theme-v3="1"] input[type=number],
+html[data-theme-v3="1"] input[type=password],
+html[data-theme-v3="1"] select,
+html[data-theme-v3="1"] textarea {
+  border-color: rgba(200,184,154,.55) !important;
+}
+
+/* ── Boutons : pilules (danger reste rouge) ── */
+html[data-theme-v3="1"] .btn-primary {
+  border-radius: 999px !important;
+  box-shadow: 0 1px 4px rgba(26,122,94,.25) !important;
+}
+html[data-theme-v3="1"] .btn-secondary,
+html[data-theme-v3="1"] .btn-ghost {
+  border-radius: 999px !important;
+  border-color: rgba(200,184,154,.6) !important;
+}
+html[data-theme-v3="1"] .btn-secondary:hover,
+html[data-theme-v3="1"] .btn-ghost:hover { border-color: #1A7A5E !important; color: #1A7A5E !important; }
+html[data-theme-v3="1"] .btn-danger { border-radius: 999px !important; }
+
+/* ── Modal ajout membre équipe (pattern booking-modal) ── */
+.booking-modal .modal-overlay {
+  background: rgba(13,17,23,.5) !important;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+.booking-modal .modal-content {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+.booking-modal .modal-content h2,
+.booking-modal .modal-content h3 {
+  font-family: 'Instrument Serif', serif !important;
+  font-weight: 400 !important;
+  font-size: 20px !important;
+  letter-spacing: .015em !important;
+}
+
+/* ── Modales inline (invitation agence, suppression sous-compte) ── */
+#inviteAgencyModal {
+  background: rgba(13,17,23,.5) !important;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+#inviteAgencyModal > div {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+#inviteAgencyModal h3 {
+  font-family: 'Instrument Serif', serif !important;
+  font-weight: 400 !important;
+  font-size: 20px !important;
+}
+#deleteSubModal {
+  background: rgba(13,17,23,.5) !important;
+  backdrop-filter: blur(7px) !important;
+  -webkit-backdrop-filter: blur(7px) !important;
+}
+#deleteSubModal > div {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+</style>
+
 </body>
 </html>
