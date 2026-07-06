@@ -1818,5 +1818,116 @@ body.notif-panel-open {
 })();
 </script>
 
+<style id="bh-luxe-resa">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE RÉSERVATIONS — cohérente avec le dashboard v2
+   CSS uniquement, aucune logique modifiée.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Desktop : le tableau devient une carte ── */
+@media (min-width: 1367px) {
+  .table-wrap {
+    padding: 0 28px 28px;
+  }
+  .reservations-table {
+    background: #fff;
+    border: 1px solid rgba(200,184,154,.45);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(13,17,23,.04);
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .reservations-table thead th {
+    background: #FBF8F3;
+    border-bottom: 1px solid rgba(200,184,154,.45);
+    padding: 13px 14px;
+    color: #7A8695;
+  }
+  .reservations-table thead th.sorted { color: #1A7A5E; }
+  .reservations-table tbody td {
+    padding: 13px 14px;
+    border-bottom: 1px solid rgba(200,184,154,.25);
+  }
+  .reservations-table tbody tr:last-child td { border-bottom: none; }
+  .reservations-table tbody tr {
+    border-bottom: none;
+    transition: background .15s, box-shadow .15s;
+  }
+  .reservations-table tbody tr:hover {
+    background: rgba(26,122,94,.04);
+    box-shadow: inset 3px 0 0 #1A7A5E;
+  }
+  /* Voyageur en serif — la signature */
+  .reservations-table tbody td:nth-child(2) {
+    font-family: 'Instrument Serif', serif;
+    font-size: 15px;
+    color: #0D1117;
+  }
+  /* Montant en serif vert */
+  .reservations-table tbody td:last-child {
+    font-family: 'Instrument Serif', serif !important;
+    font-size: 15px;
+    font-weight: 400 !important;
+    color: #1A7A5E;
+  }
+  /* Filtres : hauteur homogène, focus vert */
+  .search-wrap input, .filter-select { height: 42px; border-radius: 10px; border-color: rgba(200,184,154,.5); transition: border-color .15s, box-shadow .15s; }
+  .search-wrap input:focus { border-color: #1A7A5E; box-shadow: 0 0 0 3px rgba(26,122,94,.1); }
+  .filter-select:hover { border-color: rgba(26,122,94,.4) !important; }
+}
+
+/* ── Pagination pilules ── */
+.page-btn { border-radius: 999px; border-color: rgba(200,184,154,.5); }
+.page-btn.active { background: #1A7A5E; border-color: #1A7A5E; box-shadow: 0 1px 4px rgba(26,122,94,.3); }
+.page-btn:hover:not(.active):not(:disabled) { background: #fff; border-color: #1A7A5E; color: #1A7A5E; }
+
+/* ── Mobile : cartes raffinées ── */
+.resa-card {
+  border: 1px solid rgba(200,184,154,.45);
+  box-shadow: 0 1px 3px rgba(13,17,23,.04);
+}
+.resa-guest {
+  font-family: 'Instrument Serif', serif;
+  font-size: 16.5px;
+  font-weight: 400;
+  letter-spacing: .01em;
+}
+.resa-date-block { background: #FBF8F3; border: 1px solid rgba(200,184,154,.3); }
+
+/* ── Modal détail : aligné sur la couche luxe du dashboard ── */
+.bh-resa-overlay { background: rgba(13,17,23,.5) !important; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+.bh-resa-sheet {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55);
+  box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+  border-radius: 24px !important;
+}
+.bh-resa-header-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: .01em;
+}
+.bh-resa-close {
+  background: #fff !important;
+  border: 1px solid rgba(200,184,154,.6) !important;
+  border-radius: 50%;
+  width: 32px; height: 32px;
+  font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  color: #4B5563;
+  transition: all .15s;
+}
+.bh-resa-close:hover { border-color: #1A7A5E !important; color: #1A7A5E; }
+.bh-modal-card { border: 1px solid rgba(200,184,154,.35); border-radius: 12px; }
+.bh-modal-row { border-bottom-color: rgba(200,184,154,.25); }
+.bh-modal-amount-total {
+  font-family: 'Instrument Serif', serif;
+  font-size: 22px;
+  font-weight: 400;
+}
+</style>
+
 </body>
 </html>
