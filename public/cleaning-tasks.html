@@ -6,7 +6,7 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <title>Boostinghost – Mes tâches ménage</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <style>
 /* ==========================================
@@ -2804,6 +2804,64 @@ const style = document.createElement('style');
 style.textContent = `@keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }`;
 document.head.appendChild(style);
 </script>
+
+<style id="bh-luxe-cleaning-tasks">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE TÂCHES MÉNAGE (interface cleaners) — cohérente v2
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Cartes tâche : nom du logement en serif ── */
+.task-card { border-color: rgba(200,184,154,.5) !important; border-radius: 18px !important; }
+.task-card-property {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 19px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+
+/* ── Chiffres du récap (bandeau sombre) en serif ── */
+.recap-num {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 22px !important;
+  font-weight: 400 !important;
+}
+.recap-pill { border: 1px solid rgba(255,255,255,.12); }
+
+/* ── Filtres : pilules ── */
+.filter-tab { border-radius: 999px !important; border-color: rgba(200,184,154,.55) !important; }
+
+/* ── Boutons de carte : pilules ── */
+.task-card-btn { border-radius: 999px !important; }
+.task-card-btn.btn-start { box-shadow: 0 1px 4px rgba(26,122,94,.25); }
+
+/* ── Champs maintenance ── */
+.maint-field input, .maint-field textarea, .maint-field select {
+  border-color: rgba(200,184,154,.55) !important;
+}
+
+/* ── Modal signature : traitement luxe ── */
+.sig-modal-overlay {
+  background: rgba(13,17,23,.5) !important;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+.sig-modal {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55);
+  border-bottom: none;
+  box-shadow: 0 -18px 60px rgba(13,17,23,.25), inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+.sig-modal-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 20px !important;
+  font-weight: 400 !important;
+  letter-spacing: .015em !important;
+}
+@media (min-width: 720px) {
+  .sig-modal-overlay { align-items: center !important; padding: 28px; }
+  .sig-modal { border-radius: 24px !important; border-bottom: 1px solid rgba(200,184,154,.55); }
+}
+</style>
 
 </body>
 </html>
