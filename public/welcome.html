@@ -2879,5 +2879,79 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 </style>
 <script src="/js/bh-onboarding-pages.js"></script>
+<style id="bh-luxe-welcome">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE LIVRETS D'ACCUEIL — cohérente v2
+   CSS uniquement — aucune logique modifiée.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Cartes livret : nom et stats en serif ── */
+.livret-card-name {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 17.5px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+.livret-stat-val {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+}
+.livret-card-stats, .livret-card-actions { border-top-color: rgba(200,184,154,.4) !important; }
+.livret-card-add-label { font-family: 'Instrument Serif', serif; font-size: 16px; font-weight: 400; }
+
+/* ── Boutons cartes : pilules ── */
+.livret-card-actions .btn-lv { border-radius: 999px !important; }
+.btn-lv-edit { border-color: rgba(200,184,154,.55) !important; }
+.btn-lv-edit:hover { background: #fff !important; border-color: #1A7A5E !important; color: #1A7A5E !important; }
+.btn-lv-view { box-shadow: 0 1px 4px rgba(26,122,94,.25); }
+
+/* ── Stepper ── */
+.wizard-stepper {
+  border-radius: 18px;
+  border-color: rgba(200,184,154,.45) !important;
+  box-shadow: 0 1px 3px rgba(13,17,23,.04);
+}
+.wizard-sep { background: rgba(200,184,154,.45) !important; }
+
+/* ── Cartes du wizard : titres serif, header crème ── */
+.wiz-card { border-radius: 20px; border-color: rgba(200,184,154,.45) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04); }
+.wiz-card-header {
+  background: #FBF8F3 !important;
+  border-bottom-color: rgba(200,184,154,.4) !important;
+}
+.wiz-card-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 18.5px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+
+/* ── Champs : bordures beiges (focus vert déjà en place) ── */
+.wiz-input, .wiz-textarea, .wiz-select {
+  border-color: rgba(200,184,154,.55) !important;
+  background: #FBF8F3;
+}
+.wiz-input:focus, .wiz-textarea:focus, .wiz-select:focus { background: #fff; }
+.wiz-upload { border-color: rgba(200,184,154,.6); background: #FBF8F3; }
+.wiz-repeat-block { border-color: rgba(200,184,154,.4) !important; background: #FBF8F3 !important; border-radius: 14px; }
+.wiz-divider { border-top-color: rgba(200,184,154,.4) !important; }
+.wiz-qr-box { border-color: rgba(200,184,154,.4) !important; background: #FBF8F3 !important; }
+
+/* ── Navigation wizard : pilules ── */
+.wiz-btn-back, .wiz-btn-next, .wiz-btn-submit, .wiz-btn-draft, .wiz-add-btn { border-radius: 999px !important; }
+.wiz-btn-back { border-color: rgba(200,184,154,.6) !important; }
+.wiz-btn-back:hover { border-color: #1A7A5E !important; color: #1A7A5E !important; }
+.wiz-btn-next { box-shadow: 0 1px 4px rgba(26,122,94,.25); }
+.wiz-btn-next:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,122,94,.3); }
+.wiz-btn-submit { box-shadow: 0 1px 4px rgba(13,17,23,.3); }
+
+/* ── Succès : carte crème ── */
+.wiz-success { border-radius: 22px; border-color: rgba(200,184,154,.5) !important; }
+
+/* ── Toast : liseré vert ── */
+#draftToast { border: 1px solid rgba(26,122,94,.4); border-radius: 999px; }
+</style>
+
 </body>
 </html>
