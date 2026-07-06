@@ -1324,5 +1324,64 @@ window.addEventListener('DOMContentLoaded', init);
 })();
 </script>
 
+<style id="bh-luxe-locks">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE SERRURES CONNECTÉES — cohérente v2
+   CSS uniquement — aucune logique modifiée.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Stats : valeurs serif ── */
+.stat-value {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 26px !important;
+  font-weight: 400 !important;
+}
+.stat-card { border-radius: 16px !important; border-color: rgba(200,184,154,.45) !important; transition: border-color .15s, box-shadow .15s; }
+.stat-card:hover { border-color: rgba(26,122,94,.35) !important; box-shadow: 0 6px 20px rgba(13,17,23,.08); }
+
+/* ── Cartes serrure : nom en serif, hover signature ── */
+.lock-card { border-radius: 16px !important; border-color: rgba(200,184,154,.45) !important; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.lock-card:hover { border-color: rgba(26,122,94,.35) !important; box-shadow: 0 8px 24px rgba(13,17,23,.09); transform: translateY(-2px); }
+.lock-name {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 17px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+
+/* ── Codes d'accès : le mono reste (lisibilité PIN), conteneur raffiné ── */
+.code-item, .code-card { border-color: rgba(200,184,154,.45) !important; border-radius: 14px !important; }
+
+/* ── Champs & boutons ── */
+.form-control { border-color: rgba(200,184,154,.55) !important; transition: border-color .15s, box-shadow .15s !important; }
+.form-control:focus { border-color: #1A7A5E !important; box-shadow: 0 0 0 3px rgba(26,122,94,.1) !important; outline: none !important; }
+.btn-primary { border-radius: 999px !important; box-shadow: 0 1px 4px rgba(26,122,94,.25) !important; }
+.btn-ghost, .btn-secondary { border-radius: 999px !important; border-color: rgba(200,184,154,.6) !important; }
+.btn-ghost:hover, .btn-secondary:hover { border-color: #1A7A5E !important; color: #1A7A5E !important; }
+
+/* ── Empty states ── */
+.empty-state { border-radius: 18px; }
+.empty-state-title { font-family: 'Instrument Serif', serif !important; font-size: 18px !important; font-weight: 400 !important; }
+
+/* ── Modales (connexion marque, code, association) : luxe ── */
+.modal-overlay {
+  background: rgba(13,17,23,.5) !important;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+.modal-content {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+.modal-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 20px !important;
+  font-weight: 400 !important;
+  letter-spacing: .015em !important;
+}
+</style>
+
 </body>
 </html>

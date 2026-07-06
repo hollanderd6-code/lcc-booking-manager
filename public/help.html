@@ -1980,5 +1980,85 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 </style>
 <script src="/js/bh-onboarding-pages.js"></script>
+<style id="bh-luxe-help">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE AIDE & SUPPORT — cohérente v2
+   CSS uniquement — aucune logique modifiée.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Cartes : titres serif ── */
+html[data-theme-v3="1"] .card { border-radius: 20px !important; }
+html[data-theme-v3="1"] .card-header { border-radius: 20px 20px 0 0 !important; }
+html[data-theme-v3="1"] .card-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 18px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+
+/* ── FAQ : questions en serif, item ouvert souligné vert ── */
+html[data-theme-v3="1"] .faq-item { border-radius: 14px !important; transition: border-color .15s, background .2s; }
+html[data-theme-v3="1"] .faq-item.open { border-color: rgba(26,122,94,.35) !important; }
+html[data-theme-v3="1"] .faq-question {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 15.5px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+  padding: 12px 14px !important;
+}
+.faq-item.open .faq-toggle-icon { color: #1A7A5E !important; }
+#faqSearch { border-radius: 999px !important; border-color: rgba(200,184,154,.55) !important; padding: 9px 16px !important; }
+
+/* ── Recherche générale : repos beige ── */
+html[data-theme-v3="1"] input[type=text],
+html[data-theme-v3="1"] input[type=search] {
+  border-color: rgba(200,184,154,.55) !important;
+}
+
+/* ── Tutos vidéo : titres serif ── */
+.tuto-card { border-radius: 16px !important; }
+.tuto-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 15.5px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+
+/* ── Guides : titres serif, pilules beiges ── */
+.guide-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+.guide-pill { border: 1px solid rgba(200,184,154,.55) !important; border-radius: 999px !important; }
+
+/* ── Roadmap : cartes harmonisées (points de statut conservés) ── */
+.roadmap-card { border-radius: 16px !important; border-color: rgba(200,184,154,.45) !important; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.roadmap-card:hover { border-color: rgba(26,122,94,.35) !important; transform: translateY(-1px); }
+.roadmap-filter-btn { border-color: rgba(200,184,154,.55) !important; }
+.roadmap-filter-btn.active { box-shadow: 0 1px 4px rgba(26,122,94,.25); }
+
+/* ── Chat support : même langage que la messagerie ── */
+html[data-theme-v3="1"] .support-msg-bubble.user {
+  background: linear-gradient(135deg, #1E8A6B, #15624B) !important;
+  box-shadow: 0 3px 10px rgba(26,122,94,.25), inset 0 1px 0 rgba(255,255,255,.18) !important;
+  border-radius: 18px 18px 6px 18px !important;
+}
+html[data-theme-v3="1"] .support-msg-bubble.support {
+  border-radius: 18px 18px 18px 6px !important;
+  box-shadow: 0 1px 3px rgba(13,17,23,.05) !important;
+}
+.support-msg.admin .support-msg-avatar { background: linear-gradient(135deg, #15624B, #1A7A5E) !important; }
+html[data-theme-v3="1"] .support-input { border-color: rgba(200,184,154,.55) !important; border-radius: 22px !important; background: #FBF8F3 !important; }
+html[data-theme-v3="1"] .support-btn-send {
+  border-radius: 50% !important;
+  box-shadow: 0 2px 8px rgba(26,122,94,.3) !important;
+  transition: all .15s !important;
+}
+html[data-theme-v3="1"] .support-btn-send:hover { transform: translateY(-1px) !important; }
+html[data-theme-v3="1"] .support-btn-attach { border-radius: 50% !important; }
+</style>
+
 </body>
 </html>
