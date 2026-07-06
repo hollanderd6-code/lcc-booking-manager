@@ -33567,6 +33567,200 @@ app.post('/api/messages/trigger-templates', authenticateToken, async (req, res) 
 });
 
 
+
+/* ══════════════════════════════════════════════════════════════
+ * PONT HOSTERZZ ↔ BOOSTINGHOST (API partenaire serveur-à-serveur)
+ *
+ * Variables d'environnement (Render, Boostinghost) :
+ *   HZ_PARTNER_SECRET — LE MÊME secret que BH_PARTNER_SECRET côté Hosterzz
+ *   HZ_PARTNER_URL    — ex. https://hosterz.onrender.com
+ * ══════════════════════════════════════════════════════════════ */
+const HZ_PARTNER_SECRET = process.env.HZ_PARTNER_SECRET || '';
+const HZ_PARTNER_URL = (process.env.HZ_PARTNER_URL || '').replace(/\/$/, '');
+
+// Tables du pont (création paresseuse au démarrage)
+(async () => {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS hosterzz_links (
+      user_id TEXT PRIMARY KEY,
+      hz_user_id TEXT NOT NULL,
+      hz_name TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS hosterzz_missions (
+      bh_reservation_id TEXT PRIMARY KEY,
+      mission_id TEXT NOT NULL,
+      property_id TEXT,
+      user_id TEXT,
+      statut TEXT DEFAULT 'creee',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      terminee_at TIMESTAMPTZ
+    )`);
+    console.log('✅ Tables pont Hosterzz prêtes');
+  } catch (e) { console.log('ℹ️ tables hosterzz:', e.message); }
+})();
+
+function hzPartnerSign(ts, body) {
+  return require('crypto').createHmac('sha256', HZ_PARTNER_SECRET)
+    .update(ts + '.' + JSON.stringify(body)).digest('hex');
+}
+function hzPartnerAuth(req, res, next) {
+  if (!HZ_PARTNER_SECRET) return res.status(503).json({ error: 'Pont non configuré.' });
+  const ts = req.headers['x-partner-timestamp'] || '';
+  const sig = req.headers['x-partner-signature'] || '';
+  const age = Math.abs(Date.now() - parseInt(ts, 10));
+  if (!ts || isNaN(age) || age > 5 * 60 * 1000) return res.status(401).json({ error: 'Horodatage invalide.' });
+  const crypto = require('crypto');
+  const expected = hzPartnerSign(ts, req.body || {});
+  const a = Buffer.from(sig), b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: 'Signature invalide.' });
+  next();
+}
+async function hzPartnerCall(path, body) {
+  if (!HZ_PARTNER_SECRET || !HZ_PARTNER_URL) { const e = new Error('Pont non configuré (env manquantes).'); throw e; }
+  const ts = String(Date.now());
+  const r = await fetch(HZ_PARTNER_URL + path, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-partner-timestamp': ts,
+      'x-partner-signature': hzPartnerSign(ts, body)
+    },
+    body: JSON.stringify(body)
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(d.error || ('HTTP ' + r.status)); e.code = d.code; throw e; }
+  return d;
+}
+
+// ── 1. Lier son compte : l'hôte colle le code généré dans Hosterzz ──
+app.post('/api/hosterzz/link', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user.id) return res.status(403).json({ error: 'Compte principal requis.' });
+    const { code } = req.body || {};
+    if (!code) return res.status(400).json({ error: 'Code requis.' });
+    const d = await hzPartnerCall('/api/partner/link', { code: String(code).trim().toUpperCase(), bh_user_id: req.user.id });
+    await pool.query(
+      `INSERT INTO hosterzz_links (user_id, hz_user_id, hz_name) VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE SET hz_user_id = $2, hz_name = $3, created_at = NOW()`,
+      [req.user.id, d.hz_user_id, d.hz_name || null]
+    );
+    res.json({ ok: true, hz_name: d.hz_name || '' });
+  } catch (e) {
+    console.error('[hosterzz link]', e.message);
+    res.status(400).json({ error: /code/i.test(e.message) ? e.message : 'Liaison impossible. Vérifiez le code.' });
+  }
+});
+
+app.get('/api/hosterzz/status', authenticateToken, async (req, res) => {
+  if (!req.user.id) return res.json({ linked: false });
+  const r = await pool.query(`SELECT hz_name, created_at FROM hosterzz_links WHERE user_id = $1`, [req.user.id]);
+  const row = r.rows[0];
+  res.json({ linked: !!row, hz_name: row ? row.hz_name : null, since: row ? row.created_at : null });
+});
+
+app.post('/api/hosterzz/unlink', authenticateToken, async (req, res) => {
+  if (!req.user.id) return res.status(403).json({ error: 'Compte principal requis.' });
+  try { await hzPartnerCall('/api/partner/unlink', { bh_user_id: req.user.id }); } catch (e) {}
+  await pool.query(`DELETE FROM hosterzz_links WHERE user_id = $1`, [req.user.id]);
+  res.json({ ok: true });
+});
+
+// ── 2. Créer une mission Hosterzz depuis un départ BH ──
+// Body : { reservation_id, heure?, description?, prestataire_user_id? }
+app.post('/api/hosterzz/missions', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user.id) return res.status(403).json({ error: 'Compte principal requis.' });
+    const { reservation_id } = req.body || {};
+    if (!reservation_id) return res.status(400).json({ error: 'reservation_id requis.' });
+
+    const rr = await pool.query(
+      `SELECT id, property_id, user_id,
+              to_char(end_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') AS date_depart,
+              guest_name
+         FROM reservations WHERE id = $1`,
+      [reservation_id]
+    );
+    const resa = rr.rows[0];
+    if (!resa) return res.status(404).json({ error: 'Réservation introuvable.' });
+
+    // Scope : la réservation doit appartenir au périmètre de l'utilisateur (mode agence inclus)
+    const allowedIds = await getAgencyUserIds(req, req.user.id);
+    if (!allowedIds.includes(resa.user_id)) return res.status(403).json({ error: 'Non autorisé.' });
+
+    const pr = await pool.query(`SELECT id, name, address, city FROM properties WHERE id = $1`, [resa.property_id]);
+    const prop = pr.rows[0];
+    if (!prop) return res.status(404).json({ error: 'Logement introuvable.' });
+    // Le code postal n'est pas une colonne de properties : on l'extrait de l'adresse
+    const cpMatch = String(prop.address || '').match(/\b(\d{5})\b/);
+
+    const d = await hzPartnerCall('/api/partner/missions', {
+      bh_user_id: req.user.id,
+      bh_reservation_id: String(resa.id),
+      property: {
+        bh_property_id: String(prop.id),
+        nom: prop.name,
+        adresse: prop.address || null,
+        ville: prop.city || null,
+        code_postal: cpMatch ? cpMatch[1] : null
+      },
+      date: req.body.date || resa.date_depart,
+      heure: req.body.heure || '11:00',
+      task_type: 'menage_approfondi',
+      description: req.body.description || ('Ménage de départ — ' + prop.name + ' — départ le ' + resa.date_depart + (resa.guest_name ? ' (' + resa.guest_name + ')' : '')),
+      prestataire_user_id: req.body.prestataire_user_id || null
+    });
+
+    await pool.query(
+      `INSERT INTO hosterzz_missions (bh_reservation_id, mission_id, property_id, user_id, statut)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (bh_reservation_id) DO UPDATE SET mission_id = $2, statut = $5`,
+      [String(resa.id), d.mission_id, String(prop.id), req.user.id, d.statut || 'creee']
+    );
+    res.json({ ok: true, mission_id: d.mission_id, already: !!d.already, statut: d.statut, url: d.url });
+  } catch (e) {
+    console.error('[hosterzz mission]', e.message);
+    if (e.code === 'NOT_LINKED') return res.status(409).json({ error: "Connectez d'abord votre compte Hosterzz dans Paramètres.", code: 'NOT_LINKED' });
+    res.status(500).json({ error: 'Création de la mission impossible.' });
+  }
+});
+
+// Statuts des missions liées (pour afficher les badges dans le calendrier / la page ménage)
+app.get('/api/hosterzz/missions', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user.id) return res.json({ missions: [] });
+    const allowedIds = await getAgencyUserIds(req, req.user.id);
+    const r = await pool.query(
+      `SELECT bh_reservation_id, mission_id, property_id, statut, created_at, terminee_at
+         FROM hosterzz_missions WHERE user_id = ANY($1)`,
+      [allowedIds]
+    );
+    res.json({ missions: r.rows });
+  } catch (e) {
+    res.json({ missions: [] });
+  }
+});
+
+// ── 3. Webhook entrant : Hosterzz signale une mission terminée (signé) ──
+app.post('/api/partner/hosterzz/mission-status', hzPartnerAuth, async (req, res) => {
+  try {
+    const { bh_reservation_id, mission_id, statut } = req.body || {};
+    if (!bh_reservation_id || !statut) return res.status(400).json({ error: 'Payload incomplet.' });
+    await pool.query(
+      `UPDATE hosterzz_missions SET statut = $2, terminee_at = CASE WHEN $2 = 'terminee' THEN NOW() ELSE terminee_at END
+        WHERE bh_reservation_id = $1`,
+      [String(bh_reservation_id), statut]
+    );
+    console.log('[hosterzz webhook] mission ' + mission_id + ' → ' + statut + ' (resa ' + bh_reservation_id + ')');
+    // TODO : cocher automatiquement la tâche de ménage BH correspondante + push à l'hôte.
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[hosterzz webhook]', e.message);
+    res.status(500).json({ error: 'Erreur webhook.' });
+  }
+});
+/* ══════════════ FIN PONT HOSTERZZ ══════════════ */
+
 server.listen(PORT, async () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════╗');
