@@ -3711,22 +3711,43 @@ window.closeChecklistsKpiModal = function() {
 .bh2-op-sub{font-size:11.5px;color:#7A8695}
 .bh2-op-go{position:absolute;right:12px;bottom:12px;font-size:10px;color:#1A7A5E;opacity:0;transition:opacity .18s}
 .bh2-op:hover .bh2-op-go{opacity:1}
-.bh2-ca{background:#0D1117;border-radius:20px;padding:20px 22px;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:transform .18s;min-height:170px}
+.bh2-feat{display:flex;flex-direction:column;gap:12px;min-width:0}
+.bh2-ca{background:#0D1117;border-radius:20px;padding:16px 20px;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:transform .18s;min-height:0;flex:1}
 .bh2-ca:hover{transform:translateY(-2px)}
 .bh2-ca::before{content:'';position:absolute;top:-120px;right:-80px;width:280px;height:280px;border-radius:50%;background:radial-gradient(closest-side,rgba(26,122,94,.45),transparent 70%);pointer-events:none}
 .bh2-ca-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.55);display:flex;justify-content:space-between;align-items:center;position:relative}
 .bh2-ca-lbl i{color:#6ee7b7;font-size:12px}
-.bh2-ca #kpiCaValue{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:44px;line-height:1.05;margin:10px 0 1px;position:relative;color:#fff !important;display:block}
-.bh2-ca #kpiCaSub{font-size:12.5px;color:rgba(255,255,255,.55);position:relative}
+.bh2-ca #kpiCaValue{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:36px;line-height:1.05;margin:8px 0 1px;position:relative;color:#fff !important;display:block}
+.bh2-ca #kpiCaSub{font-size:12px;color:rgba(255,255,255,.55);position:relative}
 .bh2-ca-subrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;position:relative}
-.bh2-ca-spark{margin-top:auto;position:relative;padding-top:14px}
-.bh2-ca-spark svg{display:block;width:100%;height:38px}
+.bh2-ca-spark{margin-top:auto;position:relative;padding-top:10px}
+.bh2-ca-spark svg{display:block;width:100%;height:30px}
 .bh2-ca-delta{font-size:11px;font-weight:700;color:#6ee7b7;white-space:nowrap}
-.bh2-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+/* Occupation — carte vedette claire, même rang que le CA */
+.bh2-occ{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:16px 20px;cursor:pointer;transition:all .18s;box-shadow:0 1px 3px rgba(13,17,23,.04)}
+.bh2-occ:hover{border-color:rgba(26,122,94,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
+.bh2-occ-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7A8695;display:flex;justify-content:space-between;align-items:center}
+.bh2-occ-lbl i{color:#B7791F;font-size:12px}
+.bh2-occ-num{font-family:'Instrument Serif',serif;font-weight:400;font-size:34px;line-height:1.05;color:#B7791F;margin-top:8px}
+.bh2-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
 .bh2-stat{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:all .18s;min-width:0}
 .bh2-stat:hover{border-color:rgba(26,122,94,.4);box-shadow:0 4px 14px rgba(13,17,23,.06)}
 /* Neutralise tout style hérité (ancien highlight "Logements actifs" dans les CSS externes) */
 html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{background:#fff !important}
+</style>
+<script>
+// Fix définitif fond beige "Logements actifs" : style inline !important, prioritaire sur toute CSS externe
+(function(){
+  function fixPropCard(){
+    var c = document.getElementById('kpiPropertiesCard');
+    if (c) c.style.setProperty('background', '#fff', 'important');
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fixPropCard);
+  else fixPropCard();
+  setTimeout(fixPropCard, 1500); // au cas où une CSS/JS tardive repasse derrière
+})();
+</script>
+<style>
 .bh2-stat-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:rgba(26,122,94,.10);color:#1A7A5E}
 .bh2-stat-ic.n{background:rgba(107,114,128,.10);color:#6B7280}
 .bh2-num{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:21px;line-height:1;color:#0D1117}
@@ -3739,10 +3760,15 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
   .bh2-op-lbl{font-size:9px;letter-spacing:.04em}
   .bh2-op-num{font-size:28px}
   .bh2-op-sub{font-size:10px}
-  .bh2-ca{padding:16px;min-height:0}
-  .bh2-ca #kpiCaValue{font-size:36px}
+  .bh2-feat{flex-direction:row;gap:8px}
+  .bh2-feat > section{flex:1;min-width:0}
+  .bh2-ca{padding:14px;min-height:0}
+  .bh2-ca #kpiCaValue{font-size:26px}
+  .bh2-ca-spark{display:none}
+  .bh2-occ{padding:14px}
+  .bh2-occ-num{font-size:26px}
+  .bh2-occ-lbl,.bh2-ca-lbl{font-size:9px;letter-spacing:.05em}
   .bh2-stats{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
-  .bh2-stat:last-child{grid-column:1/-1}
 }
 </style>
 <div class="bh2-hero">
@@ -3776,21 +3802,23 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 </div>
 </div>
 </section>
+<div class="bh2-feat">
 <section class="bh2-ca" id="kpiCaCard" onclick="window.openCaKpiModal && window.openCaKpiModal()">
 <div class="bh2-ca-lbl">CA mensuel <i class="fas fa-chart-line"></i></div>
 <span class="kpi-value" id="kpiCaValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
 <div class="bh2-ca-subrow"><span id="kpiCaSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span><span class="bh2-ca-delta" id="kpiCaDelta"></span></div>
 <div class="bh2-ca-spark"><svg id="kpiCaSpark" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></div>
 </section>
+<section class="bh2-occ" id="kpiOccupancyCard">
+<div class="bh2-occ-lbl">Occupation du mois <i class="fas fa-calendar"></i></div>
+<div class="bh2-occ-num" id="kpiOccupancyValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
+</section>
+</div>
 </div>
 <section class="bh2-stats">
 <div class="bh2-stat" id="kpiPropertiesCard">
 <span class="bh2-stat-ic"><i class="fas fa-home"></i></span>
 <div style="min-width:0"><div class="bh2-num" id="kpiPropertiesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl">Logements actifs</div></div>
-</div>
-<div class="bh2-stat" id="kpiOccupancyCard">
-<span class="bh2-stat-ic"><i class="fas fa-calendar"></i></span>
-<div style="min-width:0"><div class="bh2-num" id="kpiOccupancyValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl">Occupation du mois</div></div>
 </div>
 <div class="bh2-stat" id="kpiDepositsCard">
 <span class="bh2-stat-ic"><i class="fas fa-shield-halved"></i></span>
@@ -7124,7 +7152,7 @@ try {
         + lgd('#003580','Booking','2.5px')
         + lgd('#7C3AED','BHGuest')
         + lgd('#F97316','Direct')
-        + '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:#B7791F;letter-spacing:.02em;"><span style="width:9px;height:9px;border:1.5px solid #B7791F;border-radius:50%;flex-shrink:0;box-sizing:border-box;"></span>Ven &amp; sam \u00b7 nuits premium</span>';
+        + '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:#B7791F;letter-spacing:.02em;"><span style="width:9px;height:9px;border:1.5px solid #B7791F;border-radius:50%;flex-shrink:0;box-sizing:border-box;"></span>Ven &amp; sam \u00b7 tarif week-end</span>';
       nav.appendChild(legend);
     }
 
@@ -7724,8 +7752,13 @@ try {
         var p2 = pltInfo(r);
 
         // Le bloc est position:absolute dans anchorCell, width = nb cols * colW
-        var blkPad = compactMode ? '3px' : '6px';
-        var blk = div('position:absolute;top:'+blkPad+';bottom:'+blkPad+';border-radius:'+(compactMode?'8px':'10px')+';display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s, box-shadow .15s;z-index:3;');
+        var padPx = compactMode ? 3 : 6;
+        var blk = div('position:absolute;border-radius:'+(compactMode?'8px':'10px')+';display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s, box-shadow .15s;z-index:3;');
+        // Géométrie verticale verrouillée (!important) — imperméable aux CSS externes,
+        // et toujours cohérente avec rowH quel que soit le mode (confort/compact)
+        blk.style.setProperty('top', padPx + 'px', 'important');
+        blk.style.setProperty('height', (rowH - 2*padPx) + 'px', 'important');
+        blk.style.setProperty('bottom', 'auto', 'important');
         blk.className = 'booking-block-bh';
         blk.dataset.propId   = String(prop.id);
         blk.dataset.colStart = String(colStart);   // vrai début (peut être négatif)
