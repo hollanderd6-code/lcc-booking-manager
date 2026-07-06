@@ -1098,14 +1098,16 @@ async function syncSingleIcalUrl(pool, property, entry) {
 
     // Créer la réservation
     const uid = `ICAL_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,6)}`;
-    await pool.query(
+    const insResa1 = await pool.query(
       `INSERT INTO reservations
         (uid, property_id, user_id, start_date, end_date, guest_name,
          platform, source, status, ical_uid, created_at, updated_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'confirmed',$9,NOW(),NOW())`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'confirmed',$9,NOW(),NOW())
+       RETURNING id`,
       [uid, property.id, property.user_id, startStr, endStr, guestName,
        platformName, 'ical', icalUid]
     );
+    try { maybeAutoCreateHzMission(insResa1.rows[0].id, property.user_id); } catch (e) {}
     created++;
     // 🔁 Recalcul pricing ciblé (débouncé) — coalescé pour toute la sync iCal
     try { require('./routes/pricing-recalc-trigger').schedulePricingRecalc(pool, property.id, property.user_id); } catch (e) {}
@@ -4533,7 +4535,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                 );
                 if (existingResa.rows.length === 0) {
                   const amountTotal = session.amount_total ? session.amount_total / 100 : null;
-                  await pool.query(`
+                  const insResa2 = await pool.query(`
                     INSERT INTO reservations (
                       uid, user_id, property_id, source,
                       guest_name, guest_email, guest_phone,
@@ -4541,6 +4543,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                       amount_total, status, created_at, updated_at
                     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'confirmed',NOW(),NOW())
                     ON CONFLICT (uid) DO NOTHING
+                    RETURNING id
                   `, [
                     `BHGUEST_${paymentId || session.id}`,
                     ownerId,
@@ -4553,6 +4556,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                     endDate,
                     amountTotal
                   ]);
+                  if (insResa2.rows[0]) { try { maybeAutoCreateHzMission(insResa2.rows[0].id, ownerId); } catch (e) {} }
                   // Lier le paiement à la nouvelle résa
                   await pool.query(
                     `UPDATE payments SET reservation_uid = $1 WHERE id = $2 OR stripe_session_id = $3`,
@@ -6319,6 +6323,7 @@ cleanGuestName(reservation.guestName, reservation.platform || reservation.source
     // 🔁 Recalcul pricing ciblé (débouncé) si nouvelle réservation
     if (isNewReservation) {
       try { require('./routes/pricing-recalc-trigger').schedulePricingRecalc(pool, propertyId, realUserId); } catch (e) {}
+      try { maybeAutoCreateHzMission(reservationId, realUserId); } catch (e) {}
     }
    // Verifier si la reservation est dans les 6 prochains mois
 const now = new Date();
@@ -8273,7 +8278,7 @@ app.post('/api/reservations/manual', async (req, res) => {
     
     // 🔥 SAUVEGARDER EN BASE DE DONNÉES
     try {
-      await pool.query(`
+      const insResa4 = await pool.query(`
         INSERT INTO reservations (
           uid, property_id, user_id,
           start_date, end_date,
@@ -8290,6 +8295,7 @@ app.post('/api/reservations/manual', async (req, res) => {
           guest_email = EXCLUDED.guest_email,
           price = EXCLUDED.price,
           amount_total = EXCLUDED.amount_total
+        RETURNING id
       `, [
         uid, propertyId, ownerId,
         start, end,
@@ -8309,6 +8315,9 @@ app.post('/api/reservations/manual', async (req, res) => {
         req.body.amount_taxes ? parseFloat(req.body.amount_taxes) : null,
         req.body.ota_commission ? parseFloat(req.body.ota_commission) : null,
       ]);
+      if (insResa4.rows[0]) {
+        try { maybeAutoCreateHzMission(insResa4.rows[0].id, ownerId); } catch (e) {}
+      }
       
       console.log('✅ Réservation sauvegardée en DB');
     } catch (dbError) {
@@ -33596,6 +33605,7 @@ const HZ_PARTNER_URL = (process.env.HZ_PARTNER_URL || '').replace(/\/$/, '');
       created_at TIMESTAMPTZ DEFAULT NOW(),
       terminee_at TIMESTAMPTZ
     )`);
+    await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS hz_auto_mission BOOLEAN DEFAULT FALSE`);
     console.log('✅ Tables pont Hosterzz prêtes');
   } catch (e) { console.log('ℹ️ tables hosterzz:', e.message); }
 })();
@@ -33667,6 +33677,94 @@ app.post('/api/hosterzz/unlink', authenticateToken, async (req, res) => {
 });
 
 // ── 2. Créer une mission Hosterzz depuis un départ BH ──
+// Fonction partagée : réutilisée par la route manuelle ET par le déclencheur automatique (V2).
+// Lève une erreur si non liée (e.code = 'NOT_LINKED'), logement non éligible (e.code = 'NOT_ELIGIBLE'), etc.
+async function createHzMissionForReservation(reservationId, userId, opts = {}) {
+  const rr = await pool.query(
+    `SELECT id, property_id, user_id,
+            to_char(end_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') AS date_depart,
+            guest_name
+       FROM reservations WHERE id = $1`,
+    [reservationId]
+  );
+  const resa = rr.rows[0];
+  if (!resa) { const e = new Error('Réservation introuvable.'); e.code = 'NOT_FOUND'; throw e; }
+
+  const pr = await pool.query(`SELECT id, name, address, city, hz_auto_mission FROM properties WHERE id = $1`, [resa.property_id]);
+  const prop = pr.rows[0];
+  if (!prop) { const e = new Error('Logement introuvable.'); e.code = 'NOT_FOUND'; throw e; }
+
+  if (opts.requireAutoEnabled && !prop.hz_auto_mission) {
+    const e = new Error('Automatisation désactivée pour ce logement.'); e.code = 'AUTO_DISABLED'; throw e;
+  }
+
+  // Le code postal n'est pas une colonne de properties : on l'extrait de l'adresse
+  const cpMatch = String(prop.address || '').match(/\b(\d{5})\b/);
+
+  const d = await hzPartnerCall('/api/partner/missions', {
+    bh_user_id: userId,
+    bh_reservation_id: String(resa.id),
+    property: {
+      bh_property_id: String(prop.id),
+      nom: prop.name,
+      adresse: prop.address || null,
+      ville: prop.city || null,
+      code_postal: cpMatch ? cpMatch[1] : null
+    },
+    date: opts.date || resa.date_depart,
+    heure: opts.heure || '11:00',
+    task_type: 'menage_approfondi',
+    description: opts.description || ('Ménage de départ — ' + prop.name + ' — départ le ' + resa.date_depart + (resa.guest_name ? ' (' + resa.guest_name + ')' : '')),
+    prestataire_user_id: opts.prestataire_user_id || null
+  });
+
+  await pool.query(
+    `INSERT INTO hosterzz_missions (bh_reservation_id, mission_id, property_id, user_id, statut)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (bh_reservation_id) DO UPDATE SET mission_id = $2, statut = $5`,
+    [String(resa.id), d.mission_id, String(prop.id), userId, d.statut || 'creee']
+  );
+
+  return { mission_id: d.mission_id, already: !!d.already, statut: d.statut, url: d.url };
+}
+
+// ── V2 : déclenchement automatique à la création d'une réservation ──
+// Appelé en "fire and forget" (non bloquant) juste après un INSERT INTO reservations.
+// Ne fait rien si le logement n'a pas activé l'automatisation, si le compte n'est pas lié,
+// si c'est un blocage manuel (BLOCK), une résa annulée, ou si le départ est déjà passé.
+function maybeAutoCreateHzMission(reservationId, userId) {
+  (async () => {
+    try {
+      if (!reservationId || !userId) return;
+      const linkCheck = await pool.query(`SELECT 1 FROM hosterzz_links WHERE user_id = $1`, [userId]);
+      if (!linkCheck.rows[0]) return; // pas de compte Hosterzz lié : rien à faire
+
+      const rc = await pool.query(
+        `SELECT source, platform, reservation_type, status,
+                (end_date AT TIME ZONE 'Europe/Paris')::date AS end_date_paris
+           FROM reservations WHERE id = $1`,
+        [reservationId]
+      );
+      const resa = rc.rows[0];
+      if (!resa) return;
+      const isBlock = ['BLOCK'].includes(String(resa.source || '').toUpperCase())
+        || ['BLOCK'].includes(String(resa.platform || '').toUpperCase())
+        || String(resa.reservation_type || '').toLowerCase() === 'block';
+      if (isBlock) return;
+      if (String(resa.status || '').toLowerCase() === 'cancelled') return;
+      const todayParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+      todayParis.setHours(0, 0, 0, 0);
+      if (resa.end_date_paris && new Date(resa.end_date_paris) < todayParis) return; // départ déjà passé
+
+      await createHzMissionForReservation(reservationId, userId, { requireAutoEnabled: true });
+      console.log('[hosterzz auto] mission créée automatiquement pour la réservation ' + reservationId);
+    } catch (e) {
+      if (e.code === 'AUTO_DISABLED') return; // silencieux : comportement normal
+      console.warn('[hosterzz auto] échec pour la réservation ' + reservationId + ' :', e.message);
+    }
+  })();
+}
+
 // Body : { reservation_id, heure?, description?, prestataire_user_id? }
 app.post('/api/hosterzz/missions', authenticateToken, async (req, res) => {
   try {
@@ -33674,13 +33772,7 @@ app.post('/api/hosterzz/missions', authenticateToken, async (req, res) => {
     const { reservation_id } = req.body || {};
     if (!reservation_id) return res.status(400).json({ error: 'reservation_id requis.' });
 
-    const rr = await pool.query(
-      `SELECT id, property_id, user_id,
-              to_char(end_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') AS date_depart,
-              guest_name
-         FROM reservations WHERE id = $1`,
-      [reservation_id]
-    );
+    const rr = await pool.query(`SELECT user_id FROM reservations WHERE id = $1`, [reservation_id]);
     const resa = rr.rows[0];
     if (!resa) return res.status(404).json({ error: 'Réservation introuvable.' });
 
@@ -33688,39 +33780,17 @@ app.post('/api/hosterzz/missions', authenticateToken, async (req, res) => {
     const allowedIds = await getAgencyUserIds(req, req.user.id);
     if (!allowedIds.includes(resa.user_id)) return res.status(403).json({ error: 'Non autorisé.' });
 
-    const pr = await pool.query(`SELECT id, name, address, city FROM properties WHERE id = $1`, [resa.property_id]);
-    const prop = pr.rows[0];
-    if (!prop) return res.status(404).json({ error: 'Logement introuvable.' });
-    // Le code postal n'est pas une colonne de properties : on l'extrait de l'adresse
-    const cpMatch = String(prop.address || '').match(/\b(\d{5})\b/);
-
-    const d = await hzPartnerCall('/api/partner/missions', {
-      bh_user_id: req.user.id,
-      bh_reservation_id: String(resa.id),
-      property: {
-        bh_property_id: String(prop.id),
-        nom: prop.name,
-        adresse: prop.address || null,
-        ville: prop.city || null,
-        code_postal: cpMatch ? cpMatch[1] : null
-      },
-      date: req.body.date || resa.date_depart,
-      heure: req.body.heure || '11:00',
-      task_type: 'menage_approfondi',
-      description: req.body.description || ('Ménage de départ — ' + prop.name + ' — départ le ' + resa.date_depart + (resa.guest_name ? ' (' + resa.guest_name + ')' : '')),
-      prestataire_user_id: req.body.prestataire_user_id || null
+    const d = await createHzMissionForReservation(reservation_id, req.user.id, {
+      date: req.body.date,
+      heure: req.body.heure,
+      description: req.body.description,
+      prestataire_user_id: req.body.prestataire_user_id
     });
-
-    await pool.query(
-      `INSERT INTO hosterzz_missions (bh_reservation_id, mission_id, property_id, user_id, statut)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (bh_reservation_id) DO UPDATE SET mission_id = $2, statut = $5`,
-      [String(resa.id), d.mission_id, String(prop.id), req.user.id, d.statut || 'creee']
-    );
-    res.json({ ok: true, mission_id: d.mission_id, already: !!d.already, statut: d.statut, url: d.url });
+    res.json({ ok: true, mission_id: d.mission_id, already: d.already, statut: d.statut, url: d.url });
   } catch (e) {
     console.error('[hosterzz mission]', e.message);
     if (e.code === 'NOT_LINKED') return res.status(409).json({ error: "Connectez d'abord votre compte Hosterzz dans Paramètres.", code: 'NOT_LINKED' });
+    if (e.code === 'NOT_FOUND') return res.status(404).json({ error: e.message });
     res.status(500).json({ error: 'Création de la mission impossible.' });
   }
 });
@@ -33738,6 +33808,41 @@ app.get('/api/hosterzz/missions', authenticateToken, async (req, res) => {
     res.json({ missions: r.rows });
   } catch (e) {
     res.json({ missions: [] });
+  }
+});
+
+// ── V2 : réglage de l'automatisation par logement ──
+// GET renvoie { properties: [{ id, name, hz_auto_mission }] } pour construire la liste de toggles.
+app.get('/api/hosterzz/auto-mission-settings', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user.id) return res.json({ properties: [] });
+    const allowedIds = await getAgencyUserIds(req, req.user.id);
+    const r = await pool.query(
+      `SELECT id, name, hz_auto_mission FROM properties WHERE user_id = ANY($1) ORDER BY name ASC`,
+      [allowedIds]
+    );
+    res.json({ properties: r.rows });
+  } catch (e) {
+    console.error('[hosterzz auto-mission-settings]', e.message);
+    res.status(500).json({ error: 'Impossible de charger les réglages.' });
+  }
+});
+
+app.put('/api/hosterzz/auto-mission/:property_id', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user.id) return res.status(403).json({ error: 'Compte principal requis.' });
+    const { property_id } = req.params;
+    const enabled = !!(req.body || {}).enabled;
+    const allowedIds = await getAgencyUserIds(req, req.user.id);
+    const pr = await pool.query(`SELECT id, user_id FROM properties WHERE id = $1`, [property_id]);
+    const prop = pr.rows[0];
+    if (!prop) return res.status(404).json({ error: 'Logement introuvable.' });
+    if (!allowedIds.includes(prop.user_id)) return res.status(403).json({ error: 'Non autorisé.' });
+    await pool.query(`UPDATE properties SET hz_auto_mission = $2 WHERE id = $1`, [property_id, enabled]);
+    res.json({ ok: true, property_id, enabled });
+  } catch (e) {
+    console.error('[hosterzz auto-mission toggle]', e.message);
+    res.status(500).json({ error: 'Mise à jour impossible.' });
   }
 });
 
@@ -37721,6 +37826,7 @@ app.post('/api/guest/book', async (req, res) => {
     ]);
 
     const reservation = insertResult.rows[0];
+    try { maybeAutoCreateHzMission(reservation.id, prop.owner_user_id); } catch (e) {}
 
     // Libérer le hold associé à ces dates si existant
     try {
@@ -40049,6 +40155,7 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
     ]);
 
     const reservation = insertResult.rows[0];
+    try { maybeAutoCreateHzMission(reservation.id, prop.owner_user_id); } catch (e) {}
 
     // Libérer le hold associé + rafraîchir calendrier BH
     try {
@@ -40669,12 +40776,13 @@ N'hésitez pas à nous contacter via cette messagerie. Bon séjour ! 🏠`]
         const uid = `GUEST_RECOVER_${Date.now()}_${Math.random().toString(36).substr(2,6)}`;
 
         // Créer la réservation
-        await pool.query(`
+        const insResa9 = await pool.query(`
           INSERT INTO reservations
             (uid, property_id, user_id, start_date, end_date,
              guest_name, guest_email, guest_phone,
              amount_total, platform, source, status, occupancy_adults, currency)
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+          RETURNING id
         `, [
           uid, property_id, ownerId,
           checkin, checkout,
@@ -40682,6 +40790,7 @@ N'hésitez pas à nous contacter via cette messagerie. Bon séjour ! 🏠`]
           amountTotal, 'Boostinghost Guest', 'guest_app', 'confirmed',
           guests, 'EUR'
         ]);
+        try { maybeAutoCreateHzMission(insResa9.rows[0].id, ownerId); } catch (e) {}
 
         // Créer la conversation
         const crypto = require('crypto');
