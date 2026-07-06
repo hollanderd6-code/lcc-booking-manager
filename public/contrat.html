@@ -3267,5 +3267,91 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 
+<style id="bh-luxe-contrat">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE CONTRATS & MANDATS — cohérente v2
+   CSS uniquement — aucune logique modifiée.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Header fixe : titre en serif ── */
+.contrat-static-header .page-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 22px !important;
+  font-weight: 400 !important;
+}
+
+/* ── Onglets ── */
+.contrat-tabs { border-radius: 999px; border-color: rgba(200,184,154,.5) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04); }
+.contrat-tab-btn { border-radius: 999px !important; }
+.contrat-tab-btn.active { box-shadow: 0 1px 3px rgba(26,122,94,.15); }
+
+/* ── Stepper ── */
+.contrat-steps { border-radius: 18px; border-color: rgba(200,184,154,.45) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04); }
+.contrat-sep { background: rgba(200,184,154,.45) !important; }
+
+/* ── Cartes d'étape : titres serif, header crème ── */
+.contrat-card { border-radius: 20px; border-color: rgba(200,184,154,.45) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04); }
+.contrat-card-header { background: #FBF8F3 !important; border-bottom-color: rgba(200,184,154,.4) !important; }
+.contrat-card-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 18.5px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+
+/* ── Champs : bordures beiges, fond crème ── */
+.form-input, .form-textarea, .form-select {
+  border-color: rgba(200,184,154,.55) !important;
+  background: #FBF8F3;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus { background: #fff; }
+
+/* ── Missions & rémunération : repos beige, sélection verte conservée ── */
+.mission-item { border-color: rgba(200,184,154,.45); }
+.remu-card { border-color: rgba(200,184,154,.5); }
+
+/* ── Règles & signature ── */
+.regles-list li { border-bottom-color: rgba(200,184,154,.3); }
+.signature-zone { border-color: rgba(200,184,154,.6); background: #FBF8F3; }
+.signature-actions { border-top-color: rgba(200,184,154,.35); }
+.btn-add-regle { border-radius: 999px; }
+
+/* ── Navigation & actions finales : pilules ── */
+.btn-prev, .btn-next, .btn-download, .btn-email { border-radius: 999px !important; }
+.btn-prev, .btn-email { border-color: rgba(200,184,154,.6) !important; }
+.btn-prev:hover, .btn-email:hover { background: #fff !important; border-color: #1A7A5E !important; color: #1A7A5E !important; }
+.btn-next:not(:disabled), .btn-download { box-shadow: 0 1px 4px rgba(26,122,94,.25); }
+.btn-next:not(:disabled):hover, .btn-download:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,122,94,.3); }
+
+/* ── Aperçu contrat : document soigné ── */
+.contrat-preview { border-radius: 20px; border-color: rgba(200,184,154,.5) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04); }
+.contrat-preview .preview-section-title { border-bottom-color: rgba(200,184,154,.45); }
+
+/* ── Historique ── */
+.history-filter-btn { border-radius: 999px !important; border-color: rgba(200,184,154,.55) !important; }
+.history-filter-btn.active { box-shadow: 0 1px 4px rgba(26,122,94,.25); }
+.history-period-btn { border-color: rgba(200,184,154,.55) !important; }
+.history-card {
+  border-radius: 18px;
+  border-color: rgba(200,184,154,.45) !important;
+  transition: box-shadow .15s, transform .15s, border-color .15s;
+}
+.history-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(26,122,94,.35) !important;
+  box-shadow: 0 8px 24px rgba(13,17,23,.09);
+}
+.history-card-name {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 16.5px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+.history-empty { border-radius: 18px; border-color: rgba(200,184,154,.45) !important; }
+
+/* ── Encart acceptation ── */
+.accept-box { border-radius: 14px; }
+</style>
+
 </body>
 </html>
