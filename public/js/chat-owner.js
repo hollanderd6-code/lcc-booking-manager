@@ -572,7 +572,7 @@ function renderConversations() {
 
           <!-- Ligne 2 : Logement · Date · Plateforme -->
           <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;overflow:hidden;">
-            <span style="font-size:11px;font-weight:600;color:${conv.property_color || '#10B981'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;">${conv.property_name || 'Logement'}</span>
+            <span style="font-size:11px;font-weight:600;color:${conv.property_color || '#1A7A5E'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;">${conv.property_name || 'Logement'}</span>
             <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>
             <span style="font-size:11px;color:#94A3B8;white-space:nowrap;flex-shrink:0;">${checkinDate}</span>
             <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>

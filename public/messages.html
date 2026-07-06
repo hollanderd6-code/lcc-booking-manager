@@ -5924,5 +5924,204 @@ document.addEventListener('click', function(e) {
   styleInternalNotes();
 })();
 </script>
+<style id="bh-luxe-messages">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE MESSAGES — cohérente dashboard/réservations v2
+   CSS uniquement — aucune logique, aucun template JS modifié.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Le split devient un écrin ── */
+.msgs-split {
+  border: 1px solid rgba(200,184,154,.5) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 4px 28px rgba(13,17,23,.07) !important;
+}
+
+/* ── Panneau gauche : crème chaud ── */
+.msgs-left {
+  background: #FBF8F3 !important;
+  border-right: 1px solid rgba(200,184,154,.4) !important;
+}
+.msgs-search {
+  border-radius: 999px !important;
+  border: 1px solid rgba(200,184,154,.5) !important;
+  height: 38px !important;
+  transition: border-color .15s, box-shadow .15s;
+}
+.msgs-search:focus-within {
+  border-color: #1A7A5E !important;
+  box-shadow: 0 0 0 3px rgba(26,122,94,.1);
+}
+.msgs-search i { color: #B7791F !important; opacity: .6; }
+
+/* ── Items de conversation ── */
+#conversationsList .conversation-item {
+  padding: 12px 14px !important;
+  border-bottom: 1px solid rgba(200,184,154,.3) !important;
+  transition: background .15s !important;
+}
+#conversationsList .conversation-item:hover { background: #F3EDE3 !important; }
+#conversationsList .conversation-item.active {
+  background: rgba(26,122,94,.07) !important;
+  border-left: 3px solid #1A7A5E !important;
+}
+/* Nom du voyageur en serif — la signature (bat le style inline du template) */
+#conversationsList .conversation-item h3 {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 15.5px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+#conversationsList .conversation-item.conv-unread h3 { font-weight: 400 !important; text-shadow: 0 0 .4px currentColor; }
+/* Avatar : anneau blanc + ombre douce */
+#conversationsList .conversation-avatar {
+  box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(13,17,23,.12) !important;
+}
+#conversationsList .conversation-time { color: #A89680 !important; }
+#conversationsList .conversation-preview { color: #8A8375 !important; }
+
+/* ── Header du chat ── */
+#msgsChatHeader {
+  border-bottom: 1px solid rgba(200,184,154,.4) !important;
+  background: #fff !important;
+}
+.msgs-chat-name {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 17.5px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+.msgs-chat-avatar { box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(26,122,94,.25); }
+
+/* ── Zone messages : crème + bulles raffinées ── */
+.chat-message .chat-avatar { box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(13,17,23,.12); }
+
+.chat-bubble {
+  border-radius: 18px 18px 18px 6px !important;
+  border: 1px solid rgba(200,184,154,.35);
+  box-shadow: 0 1px 3px rgba(13,17,23,.05) !important;
+  font-size: 14px;
+  line-height: 1.55;
+}
+/* Owner : dégradé vert + liseré lumineux + ombre verte */
+.chat-message.owner .chat-bubble,
+.chat-bubble.owner-bubble {
+  background: linear-gradient(135deg, #1E8A6B, #15624B) !important;
+  border: none !important;
+  border-radius: 18px 18px 6px 18px !important;
+  box-shadow: 0 3px 10px rgba(26,122,94,.25), inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+/* Réponses IA : conserve le vert clair distinct, raffiné */
+.chat-message.owner.bot-reply .chat-bubble,
+.chat-message.bot-reply .chat-bubble {
+  background: #E9F5EF !important;
+  border: 1px solid rgba(26,122,94,.22) !important;
+  box-shadow: 0 1px 3px rgba(26,122,94,.08) !important;
+}
+.chat-message.bot .chat-bubble {
+  background: #F1EDFB !important;
+  border: 1px solid rgba(124,58,237,.18);
+}
+/* Notes internes : intactes (ambre), juste l'ombre douce */
+.chat-message.internal-note .chat-bubble { box-shadow: 0 1px 3px rgba(107,90,30,.08) !important; }
+
+/* ── Séparateur de date : pilule entre deux filets ── */
+.chat-date-sep {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  color: #A89680 !important;
+  font-size: 11px !important;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 10px 0 !important;
+}
+.chat-date-sep::before, .chat-date-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(200,184,154,.45);
+}
+
+/* ── Composer ── */
+.chat-modal-input {
+  border-top: 1px solid rgba(200,184,154,.4) !important;
+  padding: 12px 14px !important;
+}
+.chat-input {
+  border: 1px solid rgba(200,184,154,.5) !important;
+  border-radius: 22px !important;
+  background: #FBF8F3 !important;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.chat-input:focus {
+  border-color: #1A7A5E !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(26,122,94,.1);
+}
+.send-btn {
+  box-shadow: 0 2px 8px rgba(26,122,94,.3);
+  transition: all .15s !important;
+}
+.send-btn:hover:not(:disabled) { background: #15624B; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,122,94,.35); }
+.msgs-attach-btn {
+  border-radius: 50% !important;
+  border-color: rgba(200,184,154,.5) !important;
+}
+.msgs-attach-btn:hover { border-color: #1A7A5E !important; }
+
+/* ── Quick replies : palette token ── */
+.quick-replies-bar { border-top: 1px solid rgba(200,184,154,.35) !important; }
+.qr-chip {
+  background: #FBF8F3 !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  color: #15624B !important;
+}
+.qr-chip:hover { background: #1A7A5E !important; border-color: #1A7A5E !important; color: #fff !important; }
+.qr-chip.deposit { background: #FDF6EC !important; border-color: rgba(183,121,31,.4) !important; color: #92610F !important; }
+.qr-chip.deposit:hover { background: #B7791F !important; border-color: #B7791F !important; color: #fff !important; }
+
+/* ── Suggestion IA : harmonisée ── */
+#ownerSuggestionCard { border-radius: 18px; }
+#ownerSuggestionCard .osg-body { border-radius: 13px; }
+
+/* ── Boutons header page ── */
+.msgs-icon-btn, .msgs-auto-btn {
+  border-color: rgba(200,184,154,.5) !important;
+  border-radius: 999px !important;
+}
+.msgs-icon-btn:hover, .msgs-auto-btn:hover { border-color: #1A7A5E !important; color: #1A7A5E !important; background: #fff !important; }
+.msgs-group-btn { border-radius: 999px !important; box-shadow: 0 1px 4px rgba(26,122,94,.25); }
+
+/* ── Scrollbars beige ── */
+#conversationsList::-webkit-scrollbar-thumb,
+#chatMessages::-webkit-scrollbar-thumb { background: rgba(183,121,31,.25) !important; }
+
+/* ── Modales de la page ── */
+#templateModal, #smsConfirmModal {
+  background: rgba(13,17,23,.5) !important;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+#templateModal > div, #smsConfirmModal > div {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+#tplModalTitle {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 20px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em;
+}
+@media (min-width: 720px) {
+  #templateModal { align-items: center !important; padding: 28px !important; }
+  #templateModal > div { border-radius: 24px !important; max-height: 84vh !important; }
+}
+#invoiceModal .inv-content { background: #FAF7F2 !important; border: 1px solid rgba(200,184,154,.55) !important; border-radius: 24px !important; }
+#invoiceModal .inv-header h2 { font-family: 'Instrument Serif', serif !important; font-weight: 400 !important; }
+</style>
+
 </body>
 </html>
