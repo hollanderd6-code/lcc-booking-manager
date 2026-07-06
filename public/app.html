@@ -8137,8 +8137,55 @@ try {
           <i class="fas fa-trash" style="font-size:11px;"></i> Supprimer
         </button>
       </div>
+      <!-- Ligne 3 : Mission Hosterzz -->
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost" id="hzMissionBtnFromDetails" type="button" onclick="openHzMissionModalFromDetails()" style="flex:1;height:36px;border-radius:10px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:5px;">
+          <i class="fas fa-broom" style="font-size:11px;color:#1A7A5E;"></i> Créer la mission Hosterzz
+        </button>
+      </div>
     </div>
 
+  </div>
+</div>
+<!-- Modale création mission Hosterzz (depuis fiche réservation) -->
+<div id="hzMissionModal" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,.5);z-index:10001;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#FAF7F2;border:1px solid rgba(200,184,154,.55);border-radius:22px;padding:24px;width:100%;max-width:460px;box-shadow:0 24px 70px rgba(13,17,23,.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-family:'Instrument Serif',serif;font-size:20px;font-weight:400;color:#0D1117;">
+        <i class="fas fa-broom" style="color:#1A7A5E;margin-right:8px;"></i>Créer la mission Hosterzz
+      </div>
+      <button onclick="closeHzMissionModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6B7280;">&times;</button>
+    </div>
+
+    <input type="hidden" id="hzModalReservationId"/>
+
+    <div style="font-size:13px;color:#6B7280;margin-bottom:14px;line-height:1.6;">
+      <div><strong id="hzModalPropertyName">Logement</strong></div>
+      <div>Départ le <span id="hzModalEndDate">-</span> · Client : <span id="hzModalGuest">-</span></div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:12px;">
+      <label for="hzModalType">Type de ménage</label>
+      <select id="hzModalType" style="width:100%;padding:8px 10px;border:1px solid rgba(200,184,154,.55);border-radius:8px;background:#fff;font-size:14px;">
+        <option value="depart">Ménage de départ</option>
+        <option value="approfondi">Ménage approfondi</option>
+        <option value="linge">Ménage + linge</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px;">
+      <label for="hzModalPrice">Prix suggéré (€, optionnel)</label>
+      <input id="hzModalPrice" type="number" min="0" step="0.5" placeholder="Ex : 45" style="width:100%;padding:8px 10px;border:1px solid rgba(200,184,154,.55);border-radius:8px;background:#fff;font-size:14px;"/>
+    </div>
+
+    <div id="hzModalError" style="display:none;background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA;border-radius:10px;padding:10px 12px;font-size:12.5px;margin-bottom:14px;"></div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;">
+      <button type="button" onclick="closeHzMissionModal()" class="btn btn-secondary">Annuler</button>
+      <button type="button" id="hzModalSubmitBtn" onclick="submitHzMission()" class="btn btn-primary">
+        <i class="fas fa-paper-plane"></i> Créer la mission
+      </button>
+    </div>
   </div>
 </div>
 <!-- Cleaning Today Modal -->
@@ -16062,6 +16109,115 @@ function notifSwitchTab(tab) {
   border-bottom-color: rgba(200,184,154,.35) !important;
 }
 </style>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// PONT HOSTERZZ — création de mission ménage depuis la fiche réservation
+// ══════════════════════════════════════════════════════════
+(function () {
+  function hzPropertyId(res) {
+    if (!res) return null;
+    if (res.propertyId != null) return String(res.propertyId);
+    if (res.property && res.property.id != null) return String(res.property.id);
+    if (res.property_id != null) return String(res.property_id);
+    return null;
+  }
+
+  function hzPropertyName(res, propertyId) {
+    if (!res) return 'Logement';
+    if (res.propertyName) return res.propertyName;
+    if (res.property && (res.property.name || res.property.title)) return res.property.name || res.property.title;
+    var list = window.PROPERTIES || window.properties || [];
+    var p = list.find(function (x) {
+      return String(x.id) === String(propertyId) || String(x.propertyId) === String(propertyId);
+    });
+    return p ? (p.name || p.title || p.label || propertyId) : (propertyId || 'Logement');
+  }
+
+  function hzGuestName(res) {
+    if (!res) return '-';
+    return res.guestName || res.guest_name || res.name || '-';
+  }
+
+  window.openHzMissionModalFromDetails = function () {
+    var booking = window.currentBookingData || window.currentBooking || null;
+    if (!booking || booking.id == null) {
+      alert("Impossible d'identifier cette réservation pour créer la mission Hosterzz.");
+      return;
+    }
+    var propertyId = hzPropertyId(booking);
+    var endStr = String(booking.end || booking.endDate || booking.checkOut || '').slice(0, 10);
+
+    document.getElementById('hzModalReservationId').value = booking.id;
+    document.getElementById('hzModalPropertyName').textContent = hzPropertyName(booking, propertyId);
+    document.getElementById('hzModalEndDate').textContent = (typeof formatDateFr === 'function' && endStr) ? formatDateFr(endStr) : (endStr || '-');
+    document.getElementById('hzModalGuest').textContent = hzGuestName(booking);
+    document.getElementById('hzModalPrice').value = '';
+    document.getElementById('hzModalType').value = 'depart';
+    document.getElementById('hzMissionModal').style.display = 'flex';
+  };
+
+  window.closeHzMissionModal = function () {
+    document.getElementById('hzMissionModal').style.display = 'none';
+  };
+
+  window.submitHzMission = async function () {
+    var reservationId = document.getElementById('hzModalReservationId').value;
+    var cleaningType = document.getElementById('hzModalType').value;
+    var priceRaw = document.getElementById('hzModalPrice').value;
+    var btnSubmit = document.getElementById('hzModalSubmitBtn');
+    var errorBox = document.getElementById('hzModalError');
+    errorBox.style.display = 'none';
+
+    if (!reservationId) {
+      errorBox.textContent = "Réservation introuvable.";
+      errorBox.style.display = 'block';
+      return;
+    }
+
+    var token = localStorage.getItem('lcc_token');
+    var apiUrl = window.API_URL || 'https://lcc-booking-manager.onrender.com';
+    var payload = { reservation_id: reservationId, cleaning_type: cleaningType };
+    if (priceRaw) payload.suggested_price = parseFloat(priceRaw);
+
+    btnSubmit.disabled = true;
+    var originalLabel = btnSubmit.innerHTML;
+    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
+
+    try {
+      var resp = await fetch(apiUrl + '/api/hosterzz/missions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify(payload)
+      });
+      var data = await resp.json().catch(function () { return {}; });
+
+      if (!resp.ok) {
+        if (resp.status === 409 || (data && data.code === 'not_linked')) {
+          errorBox.textContent = "Aucun compte Hosterzz lié. Rendez-vous dans Paramètres → Intégrations pour connecter votre compte Hosterzz.";
+        } else {
+          errorBox.textContent = (data && data.error) || "Erreur lors de la création de la mission.";
+        }
+        errorBox.style.display = 'block';
+        return;
+      }
+
+      window.closeHzMissionModal();
+      if (typeof window.showToast === 'function') {
+        window.showToast('Mission Hosterzz créée ✅');
+      } else {
+        alert('Mission Hosterzz créée avec succès.');
+      }
+    } catch (e) {
+      errorBox.textContent = "Erreur réseau : impossible de contacter Hosterzz.";
+      errorBox.style.display = 'block';
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = originalLabel;
+    }
+  };
+})();
+</script>
 
 </body>
 </html>
