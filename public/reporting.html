@@ -1752,5 +1752,67 @@ function renderComparator() {
 .card .view-tab.active { background: #1A7A5E !important; color: white !important; }
 </style>
 <script src="/js/bh-onboarding-pages.js"></script>   
+<style id="bh-luxe-reporting">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE REPORTING — cohérente v2
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Cartes : titres serif, coins 20 ── */
+.card { border-radius: 20px !important; border-color: rgba(200,184,154,.45) !important; }
+.card-header { border-bottom-color: rgba(200,184,154,.4) !important; }
+.card-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 17px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+
+/* ── KPI hero & stats : cohérence serif ── */
+.kpi-hero { border-radius: 20px !important; border-color: rgba(200,184,154,.45) !important; }
+.stat-card { border-radius: 16px !important; border-color: rgba(200,184,154,.45) !important; }
+.stat-card:hover { border-color: rgba(26,122,94,.35) !important; }
+.stat-value {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 21px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+}
+.concierge-kpi-value {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 21px !important;
+  font-weight: 400 !important;
+}
+
+/* ── Contrôles : pilules ── */
+.ctrl-select {
+  border-radius: 999px !important;
+  border-color: rgba(200,184,154,.55) !important;
+  transition: border-color .15s, box-shadow .15s;
+}
+.ctrl-select:focus { border-color: #1A7A5E !important; box-shadow: 0 0 0 3px rgba(26,122,94,.1); }
+.btn-export { border-radius: 999px !important; box-shadow: 0 1px 4px rgba(26,122,94,.25); }
+.btn-export:hover { opacity: 1 !important; background: #15624B !important; }
+.btn-csv { border-radius: 999px !important; border-color: rgba(200,184,154,.6) !important; }
+.btn-csv:hover { border-color: #1A7A5E !important; color: #1A7A5E !important; }
+.view-tab { border-radius: 999px !important; }
+
+/* ── Modal export compta : luxe ── */
+#exportComptaModal {
+  backdrop-filter: blur(7px) !important;
+  -webkit-backdrop-filter: blur(7px) !important;
+}
+#exportComptaModal > div {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+#exportComptaModal h3, #exportComptaModal h2 {
+  font-family: 'Instrument Serif', serif !important;
+  font-weight: 400 !important;
+  font-size: 20px !important;
+}
+</style>
+
 </body>
 </html>

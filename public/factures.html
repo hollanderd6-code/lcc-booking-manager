@@ -1994,5 +1994,72 @@ html[data-theme-v3="1"] .btn-ghost {
 }
 </style>
 <script src="/js/bh-onboarding-pages.js"></script>
+<style id="bh-luxe-factures">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE FACTURES — cohérente v2
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Cartes : titres serif, coins 20 ── */
+html[data-theme-v3="1"] .card { border-radius: 20px !important; }
+html[data-theme-v3="1"] .card-header { border-radius: 20px 20px 0 0 !important; }
+html[data-theme-v3="1"] .card-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 18px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+
+/* ── Aperçu facture : document soigné (reste blanc) ── */
+html[data-theme-v3="1"] .invoice-preview-card {
+  border-radius: 20px !important;
+  border-color: rgba(200,184,154,.5) !important;
+}
+.invoice-number {
+  font-family: 'Instrument Serif', serif !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+
+/* ── Champs : repos beige (focus vert déjà en place) ── */
+html[data-theme-v3="1"] input[type=text],
+html[data-theme-v3="1"] input[type=email],
+html[data-theme-v3="1"] input[type=number],
+html[data-theme-v3="1"] input[type=date],
+html[data-theme-v3="1"] textarea,
+html[data-theme-v3="1"] select {
+  border-color: rgba(200,184,154,.55) !important;
+}
+
+/* ── Boutons : pilules ── */
+html[data-theme-v3="1"] .btn-primary,
+html[data-theme-v3="1"] button[type=submit] {
+  border-radius: 999px !important;
+  box-shadow: 0 1px 4px rgba(26,122,94,.25) !important;
+}
+html[data-theme-v3="1"] .btn-secondary,
+html[data-theme-v3="1"] .btn-ghost { border-radius: 999px !important; }
+.history-resend-btn { border-radius: 999px !important; }
+
+/* ── Historique : titres et montants serif ── */
+.history-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 20px !important;
+  font-weight: 400 !important;
+  letter-spacing: .01em !important;
+}
+.history-card { border-bottom-color: rgba(200,184,154,.35) !important; }
+.history-card-num {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 15.5px !important;
+  font-weight: 400 !important;
+}
+.history-card-total {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 17px !important;
+  font-weight: 400 !important;
+  color: #1A7A5E !important;
+}
+</style>
+
 </body>
 </html>
