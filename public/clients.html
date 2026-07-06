@@ -31,7 +31,7 @@
     }
     
     /* DESIGN SYSTEM "FACTURE PRO" */
-    :root { --primary: #10B981; --primary-dark: #059669; --bg-body: #f3f4f6; --paper-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
+    :root { --primary: #1A7A5E; --primary-dark: #15624B; --bg-body: #f3f4f6; --paper-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
 
     html, body { margin: 0; padding: 0; background: var(--bg-body); font-family: 'Inter', sans-serif; height: 100%; overflow-x: hidden; }
     .app-container { display: flex; min-height: 100vh; }
@@ -2450,7 +2450,7 @@ clients.forEach(function(c) {
   htmlContent += 
     '<li style="padding:8px 0; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">' +
       '<span>' + name + '</span>' +
-      "<button onclick=\"editClient('" + c.id + "')\" style=\"padding:4px 12px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; font-size:12px;\">✏️ Modifier</button>" +
+      "<button onclick=\"editClient('" + c.id + "')\" style=\"padding:4px 12px; background:#1A7A5E; color:white; border:none; border-radius:999px; cursor:pointer; font-size:12px;\">✏️ Modifier</button>" +
     '</li>';
 });
 htmlContent += '</ul>';
@@ -6430,5 +6430,86 @@ window.addEventListener('DOMContentLoaded', async function() {
 });
 
 </script>
+<style id="bh-luxe-clients">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE CLIENTS & FACTURATION PROPRIÉTAIRES — cohérente v2
+   CSS uniquement (hors fix var --primary + bouton template).
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Harmonisation des restes mint hardcodés ── */
+.nav-item.active { background: rgba(26,122,94,.08) !important; color: #1A7A5E !important; border-right-color: #1A7A5E !important; }
+
+/* ── Stats : valeurs serif ── */
+html[data-theme-v3="1"] .stat-card { border-radius: 16px !important; transition: border-color .15s, box-shadow .15s; }
+html[data-theme-v3="1"] .stat-card:hover { border-color: rgba(26,122,94,.35) !important; box-shadow: 0 6px 20px rgba(13,17,23,.08) !important; }
+.stat-value {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 26px !important;
+  font-weight: 400 !important;
+}
+
+/* ── Onglets : pilule ── */
+html[data-theme-v3="1"] .nav-tabs { border-radius: 999px !important; border-color: rgba(200,184,154,.5) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04) !important; }
+html[data-theme-v3="1"] .nav-tab { border-radius: 999px !important; }
+html[data-theme-v3="1"] .nav-tab.active { box-shadow: 0 1px 4px rgba(26,122,94,.25) !important; }
+
+/* ── Cartes clients / factures ── */
+html[data-theme-v3="1"] .client-card,
+html[data-theme-v3="1"] .client-item,
+html[data-theme-v3="1"] .invoice-item {
+  border-radius: 14px !important;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+html[data-theme-v3="1"] .client-item:hover,
+html[data-theme-v3="1"] .invoice-item:hover {
+  border-color: rgba(26,122,94,.35) !important;
+  box-shadow: 0 6px 20px rgba(13,17,23,.08);
+}
+
+/* ── Formulaires : repos beige, focus vert halo ── */
+.form-control {
+  border-color: rgba(200,184,154,.55) !important;
+  border-radius: 10px !important;
+  transition: border-color .15s, box-shadow .15s !important;
+}
+.form-control:focus {
+  border-color: #1A7A5E !important;
+  box-shadow: 0 0 0 3px rgba(26,122,94,.1) !important;
+  outline: none !important;
+}
+.fp-select { border-radius: 999px !important; border-color: rgba(200,184,154,.55) !important; }
+
+/* ── Boutons : pilules ── */
+.btn-primary { border-radius: 999px !important; box-shadow: 0 1px 4px rgba(26,122,94,.25) !important; }
+.btn-secondary, .btn-xs { border-radius: 999px !important; }
+.btn-secondary { border-color: rgba(200,184,154,.6) !important; }
+.btn-secondary:hover { border-color: #1A7A5E !important; color: #1A7A5E !important; }
+
+/* ── Modales : traitement complet ── */
+.modal-overlay {
+  background: rgba(13,17,23,.5) !important;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+.modal-content {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+}
+.modal-content > div:first-child h3, .modal-content h3 {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 20px !important;
+  font-weight: 400 !important;
+  letter-spacing: .015em !important;
+}
+/* L'aperçu facture dans son modal reste un document blanc */
+#invoicePreviewModal .modal-content .invoice-paper,
+.invoice-paper { background: white !important; }
+
+/* ── Éditeur de facture : sections ── */
+.editor-section { border-color: rgba(200,184,154,.45) !important; border-radius: 16px !important; }
+</style>
+
 </body>
 </html>
