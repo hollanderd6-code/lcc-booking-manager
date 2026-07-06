@@ -1206,7 +1206,7 @@ html[data-theme-v3="1"] .app-container {
             </div>
           </div>
           <div class="msgs-chat-actions">
-            <button id="btnToggleAI" title="Activer/Désactiver l'IA"  style="display:none;font-size:15px;gap:8px;align-items:center;padding:8px 18px;border-radius:10px;cursor:pointer;transition:all .2s;border:1px solid rgba(16,185,129,.25);background:rgba(16,185,129,.1);color:#10B981;width:auto;height:auto;line-height:1.2;">
+            <button id="btnToggleAI" title="Activer/Désactiver l'IA"  style="display:none;font-size:15px;gap:8px;align-items:center;padding:8px 18px;border-radius:999px;cursor:pointer;transition:all .2s;border:1px solid rgba(26,122,94,.28);background:rgba(26,122,94,.1);color:#1A7A5E;width:auto;height:auto;line-height:1.2;">
               <i class="fas fa-robot"></i>
               <span id="btnToggleAILabel" style="font-size:12.5px;font-weight:600;"></span>
             </button>
@@ -4804,9 +4804,9 @@ window._bhRenderAiToggle = function(isDisabled) {
     // L'IA répond automatiquement → un clic vous fait reprendre la main
     aiLabel.textContent = 'Reprendre la main';
     if (icon) icon.className = 'fas fa-hand-paper';
-    aiBtn.style.background = 'rgba(16,185,129,.1)';
-    aiBtn.style.color = '#10B981';
-    aiBtn.style.border = '1px solid rgba(16,185,129,.25)';
+    aiBtn.style.background = 'rgba(26,122,94,.1)';
+    aiBtn.style.color = '#1A7A5E';
+    aiBtn.style.border = '1px solid rgba(26,122,94,.28)';
     aiBtn.title = "L'IA répond automatiquement — cliquez pour reprendre la main";
   }
 };
@@ -6085,6 +6085,62 @@ document.addEventListener('click', function(e) {
 /* ── Suggestion IA : harmonisée ── */
 #ownerSuggestionCard { border-radius: 18px; }
 #ownerSuggestionCard .osg-body { border-radius: 13px; }
+#ownerSuggestionCard .osg-title {
+  font-family: 'Instrument Serif', serif !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  letter-spacing: .015em !important;
+  color: #15624B !important;
+}
+#ownerSuggestionCard .osg-title i { font-size: 13px; color: #1A7A5E; }
+
+/* ── Mobile : header du chat unifié ── */
+@media (max-width: 1366px) {
+  /* Barre retour + header chat = un seul bloc blanc continu */
+  .msgs-mobile-back {
+    background: #fff !important;
+    border-bottom: none !important;
+    padding: 12px 14px 6px !important;
+  }
+  .msgs-mobile-back i {
+    width: 32px; height: 32px;
+    background: #FBF8F3;
+    border: 1px solid rgba(200,184,154,.5);
+    border-radius: 50%;
+    display: inline-flex !important;
+    align-items: center; justify-content: center;
+    font-size: 13px !important;
+    transition: all .15s;
+  }
+  .msgs-mobile-back:active i { border-color: #1A7A5E; }
+  .msgs-mobile-back span {
+    font-size: 13.5px !important;
+    color: #6B7280 !important;
+    font-weight: 500 !important;
+  }
+  #msgsChatHeader {
+    background: #fff !important;
+    border-bottom: 1px solid rgba(200,184,154,.4) !important;
+    padding: 6px 14px 10px !important;
+  }
+  /* Nom du voyageur : serif aussi sur mobile, lisible */
+  .msgs-chat-name {
+    font-family: 'Instrument Serif', serif !important;
+    font-size: 16px !important;
+    font-weight: 400 !important;
+    letter-spacing: .01em !important;
+  }
+  .msgs-chat-avatar {
+    width: 34px !important; height: 34px !important; min-width: 34px !important;
+    font-size: 13px !important;
+  }
+  /* Pastilles d'action rondes, cohérentes desktop */
+  #msgsChatHeader .msgs-icon-btn {
+    border-radius: 50% !important;
+    border-color: rgba(200,184,154,.5) !important;
+  }
+  #btnToggleAI { border-radius: 999px !important; }
+}
 
 /* ── Boutons header page ── */
 .msgs-icon-btn, .msgs-auto-btn {
