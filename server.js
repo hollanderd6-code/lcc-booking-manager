@@ -26062,7 +26062,7 @@ cron.schedule('0 * * * *', async () => {
                 );
                 for (const prop of propsResult.rows) {
                   try {
-                    await channexAPI('DELETE', `/api/v1/properties/${prop.channex_property_id}`);
+                    await channexAPI.delete(`/properties/${prop.channex_property_id}`);
                     console.log(`✅ [TRIAL-EXPIRY] ${prop.name} supprimé de Channex`);
                   } catch (channexErr) {
                     console.warn(`⚠️ [TRIAL-EXPIRY] Erreur Channex ${prop.name}:`, channexErr.message);
@@ -29711,9 +29711,12 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
       console.log(`📱 [user ${userId}] Enregistrement token FCM (${deviceType}, device_id: ${deviceId || 'non fourni'})`);
 
       if (deviceId) {
-        // Supprimer tout ancien enregistrement de ce token (évite conflit multi-contraintes)
+        // Supprimer tout ancien enregistrement de ce token, y compris ceux rattachés
+        // à un sous-compte (user_id NULL) : IS DISTINCT FROM gère les NULL correctement.
         await pool.query(
-          `DELETE FROM user_fcm_tokens WHERE fcm_token = $1 AND NOT (user_id = $2 AND device_id = $3)`,
+          `DELETE FROM user_fcm_tokens
+             WHERE fcm_token = $1
+               AND (user_id IS DISTINCT FROM $2 OR device_id IS DISTINCT FROM $3)`,
           [token, userId, deviceId]
         );
 
@@ -29756,6 +29759,19 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
     }
 
   } catch (error) {
+    // 23505 = unique_violation : le token est déjà en base (course entre requêtes
+    // concurrentes du même appareil, ou déjà rattaché ailleurs). L'objectif « le token
+    // est enregistré » est atteint → on répond succès au lieu de spammer une 500 et de
+    // déclencher une tempête de retries côté client.
+    if (error && error.code === '23505') {
+      try {
+        await pool.query(
+          `UPDATE user_fcm_tokens SET updated_at = NOW() WHERE fcm_token = $1`,
+          [req.body && req.body.token]
+        );
+      } catch (_) {}
+      return res.json({ success: true, message: 'Token déjà enregistré', deduped: true });
+    }
     console.error('❌ Erreur sauvegarde token:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }

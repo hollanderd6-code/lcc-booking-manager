@@ -770,7 +770,15 @@ async function bookingAcknowledge(revision_id) {
     console.log(`✅ [CHANNEX] Acknowledge envoyé pour revision ${revision_id}`);
     return true;
   } catch (e) {
-    // Ne pas bloquer le traitement si l'acknowledge échoue
+    // Révision introuvable (404 / resource_not_found) = déjà acquittée ou expirée côté
+    // Channex. Ce n'est pas une erreur : l'objectif « la révision est acquittée » est
+    // atteint. On journalise en info et on renvoie succès pour ne pas boucler.
+    const code = e.response?.data?.errors?.code;
+    if (e.response?.status === 404 || code === 'resource_not_found') {
+      console.log(`ℹ️ [CHANNEX] Revision ${revision_id} déjà acquittée / introuvable — ignorée.`);
+      return true;
+    }
+    // Ne pas bloquer le traitement pour les autres erreurs
     console.error(`⚠️ [CHANNEX] Erreur acknowledge revision ${revision_id}:`, e.response?.data || e.message);
     return false;
   }
@@ -809,6 +817,14 @@ async function sendBookingMessage(channex_booking_id, message) {
     return res.data.data;
   } catch (e) {
     const errDetail = e.response?.data || e.message;
+    const code = e.response?.data?.errors?.code;
+    // 403 forbidden / 404 : le canal (ou l'état de la réservation) n'autorise pas la
+    // messagerie via Channex — ce n'est pas un bug de notre code et il ne faut pas
+    // retenter en boucle. On journalise en info et on renvoie null (non fatal).
+    if (e.response?.status === 403 || e.response?.status === 404 || code === 'forbidden') {
+      console.log(`ℹ️ [CHANNEX] Messagerie non autorisée pour booking ${channex_booking_id} (${code || e.response?.status}) — message non envoyé.`);
+      return null;
+    }
     console.error('❌ [CHANNEX] Erreur envoi message:', errDetail);
     throw e;
   }
