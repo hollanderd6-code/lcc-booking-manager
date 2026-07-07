@@ -21958,10 +21958,12 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
 
     const invoiceId = req.params.id;
 
-    // Récupérer facture + items + client
-    const invRes = await pool.query('SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2', [invoiceId, userId]);
+    // Récupérer facture + items + client (périmètre agence inclus)
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const invRes = await pool.query('SELECT * FROM owner_invoices WHERE id = $1 AND user_id = ANY($2::text[])', [invoiceId, agencyIds]);
     if (invRes.rows.length === 0) return res.status(404).json({ error: 'Facture non trouvée' });
     const inv = invRes.rows[0];
+    const ownerUserId = inv.user_id || userId;
 
     const itemsRes = await pool.query('SELECT * FROM owner_invoice_items WHERE invoice_id = $1 ORDER BY order_index', [invoiceId]);
     const items = itemsRes.rows;
@@ -21984,7 +21986,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     const emitter = req.body?.emitter || {};
     const userRes = await pool.query(
       'SELECT company, address, postal_code, city, siret, email FROM users WHERE id = $1',
-      [userId]
+      [ownerUserId]
     );
     const u = userRes.rows[0] || {};
 
@@ -22032,7 +22034,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     }
     if (!senderLogoBuffer) {
       try {
-        const uRes = await pool.query('SELECT logo_url FROM users WHERE id = $1', [userId]);
+        const uRes = await pool.query('SELECT logo_url FROM users WHERE id = $1', [ownerUserId]);
         const dbLogoUrl = uRes.rows[0]?.logo_url;
         if (dbLogoUrl) {
           const lr = await axios.get(dbLogoUrl, { responseType: 'arraybuffer', timeout: 5000 });
@@ -22314,10 +22316,11 @@ app.post('/api/owner-invoices/:id/credit-note',
 
     const invoiceId = req.params.id;
 
-    // Récupérer la facture d'origine
+    // Récupérer la facture d'origine (périmètre agence inclus)
+    const agencyIds = await getAgencyUserIds(req, userId);
     const origResult = await client.query(
-      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [invoiceId, userId]
+      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = ANY($2::text[])',
+      [invoiceId, agencyIds]
     );
 
     if (origResult.rows.length === 0) {
@@ -22667,27 +22670,30 @@ app.post('/api/invoice/resend',
     const { invoiceNumber } = req.body;
     if (!invoiceNumber) return res.status(400).json({ error: 'invoiceNumber requis' });
 
-    // Récupérer les métadonnées
+    // Récupérer les métadonnées (périmètre agence inclus)
+    const agencyIds = await getAgencyUserIds(req, userId);
     const result = await pool.query(
-      `SELECT file_path FROM invoice_download_tokens WHERE user_id = $1 AND invoice_number = $2 ORDER BY created_at DESC LIMIT 1`,
-      [userId, invoiceNumber]
+      `SELECT file_path, user_id FROM invoice_download_tokens WHERE user_id = ANY($1::text[]) AND invoice_number = $2 ORDER BY created_at DESC LIMIT 1`,
+      [agencyIds, invoiceNumber]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Facture introuvable' });
+
+    const ownerUserId = result.rows[0].user_id || userId;
 
     let meta = {};
     try { meta = JSON.parse(result.rows[0].file_path || '{}'); } catch(e) {}
 
     if (!meta.clientEmail) return res.status(400).json({ error: 'Email client introuvable pour cette facture' });
 
-    // Récupérer profil utilisateur
-    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    // Récupérer profil utilisateur (compte propriétaire réel de la facture)
+    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [ownerUserId]);
     const user = profileResult.rows[0];
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     // Récupérer owner si dispo
     let ownerInfo = null;
     if (meta.ownerId) {
-      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [meta.ownerId, userId]);
+      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [meta.ownerId, ownerUserId]);
       if (ownerRes.rows.length > 0) ownerInfo = ownerRes.rows[0];
     }
 
@@ -22797,11 +22803,16 @@ app.get('/api/invoice/download-by-number/:invoiceNumber',
 
     const { invoiceNumber } = req.params;
 
+    // Mode agence : chercher dans le compte agence + comptes clients délégués
+    const agencyIds = await getAgencyUserIds(req, userId);
     const result = await pool.query(
-      `SELECT file_path FROM invoice_download_tokens WHERE user_id = $1 AND invoice_number = $2 ORDER BY created_at DESC LIMIT 1`,
-      [userId, invoiceNumber]
+      `SELECT file_path, user_id FROM invoice_download_tokens WHERE user_id = ANY($1::text[]) AND invoice_number = $2 ORDER BY created_at DESC LIMIT 1`,
+      [agencyIds, invoiceNumber]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Facture introuvable' });
+
+    // Compte propriétaire réel de la facture (peut être un client délégué en mode agence)
+    const ownerUserId = result.rows[0].user_id || userId;
 
     const rawFilePath = result.rows[0].file_path || '{}';
     console.log('📄 download-by-number meta raw:', rawFilePath.substring(0, 200));
@@ -22820,12 +22831,12 @@ app.get('/api/invoice/download-by-number/:invoiceNumber',
     
     console.log('📄 meta parsé:', JSON.stringify(meta).substring(0, 300));
 
-    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [ownerUserId]);
     const user = profileResult.rows[0];
 
     let ownerInfo = null;
     if (meta.ownerId) {
-      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [meta.ownerId, userId]);
+      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [meta.ownerId, ownerUserId]);
       if (ownerRes.rows.length > 0) ownerInfo = ownerRes.rows[0];
     }
 
@@ -23458,10 +23469,11 @@ app.put('/api/owner-invoices/:id',
       : (await getUserFromRequest(req))?.id;
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
-    // Vérifier que c'est un brouillon
+    // Vérifier que c'est un brouillon (périmètre agence inclus)
+    const agencyIds = await getAgencyUserIds(req, userId);
     const checkResult = await client.query(
-      'SELECT status FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [req.params.id, userId]
+      'SELECT status FROM owner_invoices WHERE id = $1 AND user_id = ANY($2::text[])',
+      [req.params.id, agencyIds]
     );
 
     if (checkResult.rows.length === 0) {
@@ -23629,10 +23641,11 @@ app.delete('/api/owner-invoices/:id',
       : (await getUserFromRequest(req))?.id;
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
-    // Vérifier que c'est un brouillon
+    // Vérifier que c'est un brouillon (périmètre agence inclus)
+    const agencyIds = await getAgencyUserIds(req, userId);
     const checkResult = await pool.query(
-      'SELECT status FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [req.params.id, userId]
+      'SELECT status FROM owner_invoices WHERE id = $1 AND user_id = ANY($2::text[])',
+      [req.params.id, agencyIds]
     );
 
     if (checkResult.rows.length === 0) {
@@ -23664,10 +23677,11 @@ app.post('/api/owner-invoices/:id/finalize',
 
     const invoiceId = req.params.id;
 
-    // Récupérer la facture
+    // Récupérer la facture (périmètre agence inclus)
+    const agencyIds = await getAgencyUserIds(req, userId);
     const result = await pool.query(
-      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [invoiceId, userId]
+      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = ANY($2::text[])',
+      [invoiceId, agencyIds]
     );
 
     if (result.rows.length === 0) {
@@ -23675,6 +23689,7 @@ app.post('/api/owner-invoices/:id/finalize',
     }
 
     const invoice = result.rows[0];
+    const ownerUserId = invoice.user_id || userId;
 
     if (invoice.status !== 'draft') {
       return res.status(400).json({ error: 'Seuls les brouillons peuvent être validés.' });
@@ -23690,7 +23705,7 @@ app.post('/api/owner-invoices/:id/finalize',
          WHERE user_id = $1
            AND invoice_number LIKE $2
            AND (is_credit_note IS NULL OR is_credit_note = FALSE)`,
-        [userId, `FACT-${year}-%`]
+        [ownerUserId, `FACT-${year}-%`]
       );
       const nextSeq = (parseInt(seqRes.rows[0]?.max_seq || 0) + 1);
       invoiceNumber = `FACT-${year}-${String(nextSeq).padStart(4, '0')}`;
@@ -23701,7 +23716,7 @@ app.post('/api/owner-invoices/:id/finalize',
        SET status = $1, invoice_number = $2
        WHERE id = $3 AND user_id = $4
        RETURNING *`,
-      ['invoiced', invoiceNumber, invoiceId, userId]
+      ['invoiced', invoiceNumber, invoiceId, ownerUserId]
     );
 
     res.json({ invoice: updateResult.rows[0] });
@@ -24048,10 +24063,11 @@ app.post('/api/owner-invoices/:id/send',
       : (await getUserFromRequest(req))?.id;
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
-    // Récupérer la facture
+    // Récupérer la facture (périmètre agence inclus)
+    const agencyIds = await getAgencyUserIds(req, userId);
     const invoiceResult = await pool.query(
-      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [req.params.id, userId]
+      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = ANY($2::text[])',
+      [req.params.id, agencyIds]
     );
 
     if (invoiceResult.rows.length === 0) {
@@ -24059,6 +24075,7 @@ app.post('/api/owner-invoices/:id/send',
     }
 
     const invoice = invoiceResult.rows[0];
+    const ownerUserId = invoice.user_id || userId;
 
     if (invoice.status === 'paid') {
       return res.status(400).json({ error: 'Cette facture est déjà payée' });
@@ -24076,7 +24093,7 @@ app.post('/api/owner-invoices/:id/send',
          WHERE user_id = $1
            AND invoice_number LIKE $2
            AND (is_credit_note IS NULL OR is_credit_note = FALSE)`,
-        [userId, `FACT-${year}-%`]
+        [ownerUserId, `FACT-${year}-%`]
       );
       const nextSeq = (parseInt(seqRes.rows[0]?.max_seq || 0) + 1);
       invoice.invoice_number = `FACT-${year}-${String(nextSeq).padStart(4, '0')}`;
@@ -24098,7 +24115,7 @@ app.post('/api/owner-invoices/:id/send',
     // Récupérer le profil complet + email du client via JOIN
     const profileResult = await pool.query(
       'SELECT company, email, address, postal_code, city, siret, logo_url FROM users WHERE id = $1',
-      [userId]
+      [ownerUserId]
     );
     const profile = profileResult.rows[0] || {};
 
@@ -24181,10 +24198,11 @@ app.post('/api/owner-invoices/:id/mark-paid',
 
     const invoiceId = req.params.id;
 
-    // Récupérer la facture
+    // Récupérer la facture (périmètre agence inclus)
+    const agencyIds = await getAgencyUserIds(req, userId);
     const result = await pool.query(
-      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [invoiceId, userId]
+      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = ANY($2::text[])',
+      [invoiceId, agencyIds]
     );
 
     if (result.rows.length === 0) {
@@ -24192,6 +24210,7 @@ app.post('/api/owner-invoices/:id/mark-paid',
     }
 
     const invoice = result.rows[0];
+    const ownerUserId = invoice.user_id || userId;
 
     if (invoice.status === 'draft') {
       return res.status(400).json({ error: 'Vous devez d\'abord valider cette facture.' });
@@ -24203,7 +24222,7 @@ app.post('/api/owner-invoices/:id/mark-paid',
        SET status = 'paid'
        WHERE id = $1 AND user_id = $2
        RETURNING *`,
-      [invoiceId, userId]
+      [invoiceId, ownerUserId]
     );
 
     res.json({ success: true, invoice: updateResult.rows[0] });
@@ -24233,10 +24252,11 @@ app.post('/api/owner-credit-notes',
 
     const { invoiceId, reason } = req.body;
 
-    // Récupérer la facture d'origine
+    // Récupérer la facture d'origine (périmètre agence inclus)
+    const agencyIds = await getAgencyUserIds(req, userId);
     const invoiceResult = await client.query(
-      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = $2',
-      [invoiceId, userId]
+      'SELECT * FROM owner_invoices WHERE id = $1 AND user_id = ANY($2::text[])',
+      [invoiceId, agencyIds]
     );
 
     if (invoiceResult.rows.length === 0) {
@@ -24245,6 +24265,7 @@ app.post('/api/owner-credit-notes',
     }
 
     const invoice = invoiceResult.rows[0];
+    const ownerUserId = invoice.user_id || userId;
 
     if (invoice.status !== 'sent' && invoice.status !== 'paid') {
       await client.query('ROLLBACK');
@@ -24265,7 +24286,7 @@ app.post('/api/owner-credit-notes',
     // Générer numéro avoir
     const creditNumberResult = await client.query(
       'SELECT get_next_credit_note_number($1) as credit_note_number',
-      [userId]
+      [ownerUserId]
     );
     const creditNoteNumber = creditNumberResult.rows[0].credit_note_number;
 
@@ -24279,7 +24300,7 @@ app.post('/api/owner-credit-notes',
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
       RETURNING id
     `, [
-      creditNoteNumber, userId, invoiceId, invoice.invoice_number,
+      creditNoteNumber, ownerUserId, invoiceId, invoice.invoice_number,
       invoice.client_id, invoice.client_name, invoice.client_email,
       -invoice.subtotal_ht, -invoice.subtotal_debours, -invoice.vat_amount, -invoice.total_ttc,
       reason, 'issued'
