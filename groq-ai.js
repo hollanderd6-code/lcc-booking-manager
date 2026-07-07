@@ -486,6 +486,51 @@ RÈGLES DE CE MODE :
 // Fonction principale
 // ─────────────────────────────────────────────
 
+// ─────────────────────────────────────────────
+// Appel Groq mutualisé avec backoff sur rate limit (429).
+// Respecte le délai indiqué par Groq ("try again in Xs") ou l'en-tête
+// retry-after ; réessaie au maximum 2 fois avant d'abandonner (retourne null).
+// ─────────────────────────────────────────────
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+
+function _groqRetryMs(headers, bodyText) {
+  const ra = headers && headers.get && headers.get('retry-after');
+  if (ra && !isNaN(parseFloat(ra))) return Math.ceil(parseFloat(ra) * 1000);
+  const m = bodyText && bodyText.match(/try again in ([\d.]+)\s*s/i);
+  if (m) return Math.ceil(parseFloat(m[1]) * 1000) + 300; // petite marge
+  return null;
+}
+
+async function groqComplete({ messages, temperature, top_p, max_tokens = 600, model = GROQ_MODEL, label = 'GROQ' }) {
+  const MAX_RETRIES = 2;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const response = await fetch(GROQ_API_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages, temperature, max_tokens, top_p, stream: false })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.choices[0]?.message?.content?.trim() || null;
+    }
+
+    const errText = await response.text().catch(() => '');
+    if (response.status === 429 && attempt < MAX_RETRIES) {
+      let waitMs = _groqRetryMs(response.headers, errText);
+      if (waitMs == null) waitMs = 1500 * (attempt + 1);   // backoff par défaut
+      waitMs = Math.min(waitMs, 40000);                    // plafond de sécurité 40 s
+      console.warn(`⏳ [GROQ:${label}] Rate limit — nouvelle tentative dans ${Math.ceil(waitMs / 1000)}s (essai ${attempt + 1}/${MAX_RETRIES})`);
+      await new Promise(r => setTimeout(r, waitMs));
+      continue;
+    }
+
+    console.error(`❌ Erreur Groq API (${label}):`, errText);
+    return null;
+  }
+  return null;
+}
+
 async function getGroqResponse(userMessage, conversationContext = {}, messageHistory = [], fewShotExamples = []) {
   if (!GROQ_API_KEY) {
     console.warn('⚠️ GROQ_API_KEY non configurée');
@@ -512,34 +557,16 @@ async function getGroqResponse(userMessage, conversationContext = {}, messageHis
 
     const groqMessages = [
       { role: 'system', content: systemPrompt },
-      ...messageHistory.slice(-30), // 30 messages = 15 échanges de contexte
+      ...messageHistory.slice(-10), // 10 derniers messages = 5 échanges (suffisant, réduit fortement les tokens)
       { role: 'user', content: userMessage }
     ];
 
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: groqMessages,
-        temperature: 0.25,
-        max_tokens: 600,
-        top_p: 0.9,
-        stream: false
-      })
+    const aiResponse = await groqComplete({
+      messages: groqMessages,
+      temperature: 0.25,
+      top_p: 0.9,
+      label: 'réponse voyageur'
     });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('❌ Erreur Groq API:', error);
-      return null;
-    }
-
-    const data = await response.json();
-    const aiResponse = data.choices[0]?.message?.content?.trim();
     console.log('✅ [GROQ] Réponse:', aiResponse?.substring(0, 120) + (aiResponse?.length > 120 ? '...' : ''));
     return aiResponse || null;
 
@@ -579,37 +606,19 @@ async function getOwnerDraftResponse(lastGuestMessage, conversationContext = {},
 
     const groqMessages = [
       { role: 'system', content: systemPrompt },
-      ...messageHistory.slice(-30),
+      ...messageHistory.slice(-10),
       { role: 'user', content: lastGuestMessage || '(le voyageur attend une réponse)' }
     ];
 
     // Température un peu plus haute en régénération pour varier la proposition
     const temperature = opts.regenerate ? 0.6 : 0.35;
 
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: groqMessages,
-        temperature,
-        max_tokens: 600,
-        top_p: 0.95,
-        stream: false
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('❌ Erreur Groq API (brouillon hôte):', error);
-      return null;
-    }
-
-    const data = await response.json();
-    let draft = data.choices[0]?.message?.content?.trim() || '';
+    let draft = await groqComplete({
+      messages: groqMessages,
+      temperature,
+      top_p: 0.95,
+      label: 'brouillon hôte'
+    }) || '';
 
     // Garde-fous : retirer tout tag technique qui aurait fui, et les guillemets enveloppants
     draft = draft
