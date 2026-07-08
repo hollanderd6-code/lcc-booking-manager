@@ -294,6 +294,31 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     flex-shrink: 0 !important;
   }
 
+  /* Édition groupée : carte en colonne → corps scrollable + footer (Annuler/Appliquer)
+     toujours visible au-dessus de la barre du bas, et plus de glissement horizontal. */
+  #batchEditModal {
+    align-items: center !important;
+    padding: 12px 12px calc(74px + env(safe-area-inset-bottom, 0px) + 12px) !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+  .batch-modal-card {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: calc(100dvh - 74px - env(safe-area-inset-bottom, 0px) - 24px) !important;
+    overflow: hidden !important;          /* la carte ne scrolle plus : c'est le corps qui scrolle */
+  }
+  .batch-modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;             /* indispensable pour qu'un flex-child puisse scroller */
+    overflow-y: auto !important;
+    overflow-x: hidden !important;        /* bloque le slide gauche↔droite */
+    overscroll-behavior: contain !important;
+  }
+  .batch-modal-footer {
+    flex-shrink: 0 !important;            /* footer ancré, jamais poussé hors écran */
+  }
+
   /* Modal checklist : il est CENTRÉ (pas un bottom-sheet flex-end), donc le patch
      global ne l'attrape pas et son bas (bouton "Valider le ménage") passe derrière
      la bottom-bar. On réserve la hauteur de la barre sous l'overlay pour le remonter. */
@@ -1188,9 +1213,9 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       pointer-events: none;
       user-select: none;
     }
-    /* Vendredi (5) et Samedi (6) = rouge = nuits premium */
+    /* Vendredi (5) et Samedi (6) = ambre = nuits premium (le rouge est réservé à Airbnb) */
     .calendar-cell.weekend .cell-price {
-      color: #dc2626;
+      color: #B7791F;
     }
     .calendar-cell:has(.booking-block) .cell-price {
       display: none;
@@ -2349,7 +2374,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     font-size: 20px;
   }
 }
-  <style>
+  </style>
+<style>
     /* Spécial dashboard mobile : on garde KPI + calendrier seulement */
     
 
@@ -2607,12 +2633,12 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     height: 52px;
     border-radius: 999px;
     border: none;
-    background: #10B981;
+    background: #1A7A5E;
     color: #fff;
     font-size: 28px;
     font-weight: 800;
     line-height: 1;
-    box-shadow: 0 10px 24px rgba(0,0,0,.18);
+    box-shadow: 0 10px 24px rgba(26,122,94,.35);
     z-index: 2147483647;
     cursor: pointer;
     touch-action: manipulation;
@@ -3329,48 +3355,43 @@ function _bhShowHostQuestionModal(q) {
   modal.id = 'bhHostQModal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
 
-  // --- Contexte : logement, dates du séjour, et résas adjacentes (avant arrivée / après départ) ---
-  const _fmtD = (d) => {
-    if (!d) return '';
-    const dt = new Date(d);
-    if (isNaN(dt)) return '';
-    return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-  };
-  const _sameDay = (a, b) => {
-    if (!a || !b) return false;
-    const x = new Date(a), y = new Date(b);
-    return x.getFullYear() === y.getFullYear() && x.getMonth() === y.getMonth() && x.getDate() === y.getDate();
-  };
-  let ctxHtml = '';
-  if (q.property_name || q.stay_checkin) {
-    let rows = '';
-    if (q.property_name) {
-      rows += `<div style="display:flex;align-items:center;gap:6px;font-size:13px;color:#1A7A5E;font-weight:700;">🏠 ${q.property_name}</div>`;
-    }
-    if (q.stay_checkin && q.stay_checkout) {
-      rows += `<div style="font-size:13px;color:#555;margin-top:3px;">📅 ${_fmtD(q.stay_checkin)} → ${_fmtD(q.stay_checkout)}</div>`;
-    }
-    // Avant l'arrivée
-    if (q.prev_checkout && _sameDay(q.prev_checkout, q.stay_checkin)) {
-      rows += `<div style="font-size:12px;color:#DC2626;margin-top:5px;">⛔ Logement occupé jusqu'à l'arrivée (départ le ${_fmtD(q.prev_checkout)}) — pas d'arrivée anticipée</div>`;
-    } else if (q.prev_checkout) {
-      rows += `<div style="font-size:12px;color:#777;margin-top:5px;">↩︎ Libre avant l'arrivée (départ précédent le ${_fmtD(q.prev_checkout)})</div>`;
-    }
-    // Après le départ
-    if (q.next_checkin && _sameDay(q.next_checkin, q.stay_checkout)) {
-      rows += `<div style="font-size:12px;color:#DC2626;margin-top:3px;">⛔ Réservé dès le départ (arrivée le ${_fmtD(q.next_checkin)}) — pas de départ tardif</div>`;
-    } else if (q.next_checkin) {
-      rows += `<div style="font-size:12px;color:#777;margin-top:3px;">➡︎ Libre après le départ (prochaine arrivée le ${_fmtD(q.next_checkin)})</div>`;
-    }
-    ctxHtml = `<div style="background:#F7FAF8;border:1px solid #E3EFE9;border-radius:10px;padding:10px 12px;margin-bottom:14px;text-align:left;">${rows}</div>`;
-  }
+  // ── Bloc contexte séjour : logement, dates, occupation avant/après ──
+  // (utile pour juger une arrivée anticipée / un départ tardif)
+  const _fmtD = (d) => { try { return d ? new Date(d).toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) : null; } catch(e){ return null; } };
+  const _dPart = (d) => { try { return d ? new Date(d).toISOString().split('T')[0] : null; } catch(e){ return null; } };
+  const _meta = q.meta || {};
+  const _ci = _dPart(q.stay_checkin || _meta.checkin);
+  const _co = _dPart(q.stay_checkout || _meta.checkout);
+  const _prevCo = _dPart(q.prev_checkout);
+  const _nextCi = _dPart(q.next_checkin);
+  // occupé avant = résa précédente qui finit le jour de l'arrivée (enchaînement)
+  let _occBefore = (_prevCo && _ci) ? (_prevCo === _ci) : null;
+  let _occAfter  = (_nextCi && _co) ? (_nextCi === _co) : null;
+  // fallback meta (free_before / free_after) si l'API n'a pas de dates voisines
+  if (_occBefore === null && typeof _meta.free_before === 'boolean') _occBefore = !_meta.free_before;
+  if (_occAfter  === null && typeof _meta.free_after  === 'boolean') _occAfter  = !_meta.free_after;
+  const _propName = q.property_name || _meta.property_name || null;
+  const _ciF = _fmtD(q.stay_checkin || _meta.checkin);
+  const _coF = _fmtD(q.stay_checkout || _meta.checkout);
+  const _rows = [];
+  if (_propName) _rows.push(`<div style="display:flex;align-items:center;gap:7px;"><span>🏠</span><strong style="color:#1f2937;">${_propName}</strong></div>`);
+  if (_ciF && _coF) _rows.push(`<div style="display:flex;align-items:center;gap:7px;"><span>📅</span><span>${_ciF} → ${_coF}</span></div>`);
+  if (_occBefore !== null) _rows.push(_occBefore
+    ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span>🔴</span><span>Loué la veille — départ le jour de l'arrivée</span></div>`
+    : `<div style="display:flex;align-items:center;gap:7px;color:#1A7A5E;"><span>🟢</span><span>Libre la veille de l'arrivée</span></div>`);
+  if (_occAfter !== null) _rows.push(_occAfter
+    ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span>🔴</span><span>Reloué le jour du départ</span></div>`
+    : `<div style="display:flex;align-items:center;gap:7px;color:#1A7A5E;"><span>🟢</span><span>Libre le jour du départ</span></div>`);
+  const infoHtml = _rows.length
+    ? `<div style="background:#F0F4F2;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12.5px;line-height:1.7;color:#374151;">${_rows.join('')}</div>`
+    : '';
 
   modal.innerHTML = `
     <div style="background:white;border-radius:16px;padding:26px;max-width:400px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.25);">
       <div style="font-size:34px;text-align:center;margin-bottom:10px;">❓</div>
       <div style="font-weight:700;font-size:16px;text-align:center;margin-bottom:4px;color:#1a1a1a;">Question d'un voyageur</div>
       <div style="font-size:12px;color:#999;text-align:center;margin-bottom:14px;">${q.guest_name || 'Voyageur'}</div>
-      ${ctxHtml}
+      ${infoHtml}
       <div style="font-size:15px;color:#333;line-height:1.5;background:#F5F2EC;border-radius:10px;padding:14px 16px;margin-bottom:18px;text-align:center;">${q.question}</div>
       <div style="display:flex;gap:10px;margin-bottom:10px;">
         <button id="bhHQNo" style="flex:1;padding:13px;border-radius:10px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;font-weight:700;font-size:15px;cursor:pointer;">Non</button>
@@ -3672,97 +3693,153 @@ window.closeChecklistsKpiModal = function() {
   if (m) { m.style.display = 'none'; window.showFab(); }
 };
 </script>
-<section class="kpi-grid">
-<!-- KPI 1 : Logements actifs -->
-<article class="kpi-card kpi-card--clickable" id="kpiPropertiesCard">
-<div class="kpi-header">
-<span class="kpi-label">Logements </span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
+<style>
+/* ══ Dashboard v2 : héros "Votre journée" + CA + bandeau compact ══ */
+.bh2-hero{display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:14px}
+.bh2-today{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:20px 22px;box-shadow:0 1px 3px rgba(13,17,23,.04)}
+.bh2-today-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+.bh2-today-head h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:20px;color:#0D1117;margin:0}
+.bh2-today-head h2 em{font-style:italic;color:#1A7A5E}
+.bh2-today-date{font-size:12px;color:#7A8695;font-weight:500}
+.bh2-ops{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bh2-op{position:relative;border:1px solid rgba(200,184,154,.45);border-radius:14px;padding:14px 14px 12px;cursor:pointer;transition:all .18s;background:#FBF8F3}
+.bh2-op:hover{border-color:rgba(26,122,94,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
+.bh2-op-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.bh2-op-lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#7A8695}
+.bh2-op-ic{width:26px;height:26px;border-radius:8px;background:rgba(183,121,31,.12);color:#B7791F;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.bh2-op-num{font-family:'Instrument Serif',serif;font-weight:400;font-size:36px;line-height:1;color:#B7791F;margin-bottom:3px}
+.bh2-op-sub{font-size:11.5px;color:#7A8695}
+.bh2-op-go{position:absolute;right:12px;bottom:12px;font-size:10px;color:#1A7A5E;opacity:0;transition:opacity .18s}
+.bh2-op:hover .bh2-op-go{opacity:1}
+.bh2-feat{display:flex;flex-direction:column;gap:12px;min-width:0}
+.bh2-ca{background:#0D1117;border-radius:20px;padding:16px 20px;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:transform .18s;min-height:0;flex:1}
+.bh2-ca:hover{transform:translateY(-2px)}
+.bh2-ca::before{content:'';position:absolute;top:-120px;right:-80px;width:280px;height:280px;border-radius:50%;background:radial-gradient(closest-side,rgba(26,122,94,.45),transparent 70%);pointer-events:none}
+.bh2-ca-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.55);display:flex;justify-content:space-between;align-items:center;position:relative}
+.bh2-ca-lbl i{color:#6ee7b7;font-size:12px}
+.bh2-ca #kpiCaValue{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:36px;line-height:1.05;margin:8px 0 1px;position:relative;color:#fff !important;display:block}
+.bh2-ca #kpiCaSub{font-size:12px;color:rgba(255,255,255,.55);position:relative}
+.bh2-ca-subrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;position:relative}
+.bh2-ca-spark{margin-top:auto;position:relative;padding-top:10px}
+.bh2-ca-spark svg{display:block;width:100%;height:30px}
+.bh2-ca-delta{font-size:11px;font-weight:700;color:#6ee7b7;white-space:nowrap}
+/* Occupation — carte vedette claire, même rang que le CA */
+.bh2-occ{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:16px 20px;cursor:pointer;transition:all .18s;box-shadow:0 1px 3px rgba(13,17,23,.04)}
+.bh2-occ:hover{border-color:rgba(26,122,94,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
+.bh2-occ-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7A8695;display:flex;justify-content:space-between;align-items:center}
+.bh2-occ-lbl i{color:#B7791F;font-size:12px}
+.bh2-occ-num{font-family:'Instrument Serif',serif;font-weight:400;font-size:34px;line-height:1.05;color:#B7791F;margin-top:8px}
+.bh2-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.bh2-stat{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:all .18s;min-width:0}
+.bh2-stat:hover{border-color:rgba(26,122,94,.4);box-shadow:0 4px 14px rgba(13,17,23,.06)}
+/* Neutralise tout style hérité (ancien highlight "Logements actifs" dans les CSS externes) */
+html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{background:#fff !important}
+</style>
+<script>
+// Fix définitif fond beige "Logements actifs" : style inline !important, prioritaire sur toute CSS externe
+(function(){
+  function fixPropCard(){
+    var c = document.getElementById('kpiPropertiesCard');
+    if (c) c.style.setProperty('background', '#fff', 'important');
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fixPropCard);
+  else fixPropCard();
+  setTimeout(fixPropCard, 1500); // au cas où une CSS/JS tardive repasse derrière
+})();
+</script>
+<style>
+.bh2-stat-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:rgba(26,122,94,.10);color:#1A7A5E}
+.bh2-stat-ic.n{background:rgba(107,114,128,.10);color:#6B7280}
+.bh2-num{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:21px;line-height:1;color:#0D1117}
+.bh2-lbl{font-size:10.5px;color:#7A8695;font-weight:500;margin-top:2px;line-height:1.25}
+@media(max-width:920px){
+  .bh2-hero{grid-template-columns:1fr;gap:10px;margin-bottom:10px}
+  .bh2-today{padding:14px}
+  .bh2-ops{gap:8px}
+  .bh2-op{padding:11px 9px}
+  .bh2-op-lbl{font-size:9px;letter-spacing:.04em}
+  .bh2-op-num{font-size:28px}
+  .bh2-op-sub{font-size:10px}
+  .bh2-feat{flex-direction:row;gap:8px}
+  .bh2-feat > section{flex:1;min-width:0}
+  .bh2-ca{padding:14px;min-height:0}
+  .bh2-ca #kpiCaValue{font-size:26px}
+  .bh2-ca-spark{display:none}
+  .bh2-occ{padding:14px}
+  .bh2-occ-num{font-size:26px}
+  .bh2-occ-lbl,.bh2-ca-lbl{font-size:9px;letter-spacing:.05em}
+  .bh2-stats{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+}
+</style>
+<div class="bh2-hero">
+<section class="bh2-today">
+<div class="bh2-today-head">
+<h2>Votre <em>journée</em></h2>
+<span class="bh2-today-date" id="bh2TodayDate"></span>
 </div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiPropertiesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub kpi-sub--green">configurés sur Boostinghost</span>
+<div class="bh2-ops">
+<div id="kpiTodayMovesCard" style="display:contents">
+<span id="kpiTodayMovesValue" style="display:none"></span>
+<span id="kpiTodayMovesSub" style="display:none"></span>
+<div class="bh2-op">
+<div class="bh2-op-top"><span class="bh2-op-lbl">Arrivées</span><span class="bh2-op-ic"><i class="fas fa-arrow-right-to-bracket"></i></span></div>
+<div class="bh2-op-num" id="kpiArrivalsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
+<div class="bh2-op-sub">voyageurs attendus</div>
+<span class="bh2-op-go"><i class="fas fa-arrow-right"></i></span>
 </div>
-</article>
-<!-- KPI 2 : Check-in / Check-out du jour -->
-<article class="kpi-card kpi-card--clickable" id="kpiTodayMovesCard">
-<div class="kpi-header">
-<span class="kpi-label">Check-in / Check-out du jour</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(59,130,246,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-right-left" style="font-size:14px;color:#2563EB;line-height:1;display:inline-block;"></i></div>
+<div class="bh2-op">
+<div class="bh2-op-top"><span class="bh2-op-lbl">Départs</span><span class="bh2-op-ic"><i class="fas fa-arrow-right-from-bracket"></i></span></div>
+<div class="bh2-op-num" id="kpiDeparturesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
+<div class="bh2-op-sub">check-outs ce jour</div>
+<span class="bh2-op-go"><i class="fas fa-arrow-right"></i></span>
 </div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiTodayMovesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub" id="kpiTodayMovesSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
 </div>
-</article>
-<!-- KPI 3 : Ménages à prévoir dans les 48h -->
-<article class="kpi-card kpi-card--clickable" id="kpiCleaning48hCard">
-<div class="kpi-header">
-<span class="kpi-label">Ménages à prévoir (48h)</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(245,158,11,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-broom" style="font-size:14px;color:#D97706;line-height:1;display:inline-block;"></i></div>
+<div class="bh2-op" id="kpiCleaning48hCard">
+<div class="bh2-op-top"><span class="bh2-op-lbl">Ménages 48h</span><span class="bh2-op-ic"><i class="fas fa-broom"></i></span></div>
+<div class="bh2-op-num" id="kpiCleaning48hValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
+<div class="bh2-op-sub" id="kpiCleaning48hSub">départs à nettoyer</div>
+<span class="bh2-op-go"><i class="fas fa-arrow-right"></i></span>
 </div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiCleaning48hValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub" id="kpiCleaning48hSub">départs à nettoyer sous 48h</span>
 </div>
-</article>
-<!-- KPI 4 : Notes actives -->
-<article class="kpi-card kpi-card--clickable" id="kpiTopRisksCard">
-<div class="kpi-header">
-<span class="kpi-label">Notes</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(239,68,68,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-sticky-note" style="font-size:14px;color:#EF4444;line-height:1;display:inline-block;"></i></div>
-</div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiTopRisksValue">0</span>
-<span class="kpi-sub" id="kpiTopRisksSub">réservations avec note</span>
-</div>
-</article>
-<!-- KPI 5 : Taux d'occupation -->
-<article class="kpi-card kpi-card--clickable" id="kpiOccupancyCard">
-<div class="kpi-header">
-<span class="kpi-label">Taux d'occupation</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(139,92,246,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-calendar" style="font-size:14px;color:#7C3AED;line-height:1;display:inline-block;"></i></div>
-</div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiOccupancyValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub">sur le mois en cours</span>
-</div>
-</article>
-<!-- KPI 6 : Cautions prises -->
-<article class="kpi-card kpi-card--clickable" id="kpiDepositsCard">
-<div class="kpi-header">
-<span class="kpi-label">Cautions prises</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-shield-halved" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
-</div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiDepositsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub" id="kpiDepositsSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
-</div>
-</article>
-<!-- KPI 7 : Checklists en attente -->
-<article class="kpi-card kpi-card--clickable" id="kpiChecklistsCard" onclick="if(window.openChecklistsKpiModal){window.openChecklistsKpiModal();}else{alert('Fonction non chargée');}">
-<div class="kpi-header">
-<span class="kpi-label">Checklists ménage</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-clipboard-check" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
-</div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiChecklistsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub" id="kpiChecklistsSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
-</div>
-</article>
-
-<!-- KPI 8 : CA mensuel -->
-<article class="kpi-card kpi-card--clickable" id="kpiCaCard" onclick="window.openCaKpiModal && window.openCaKpiModal()">
-<div class="kpi-header">
-<span class="kpi-label">CA mensuel</span>
-<div style="width:32px;height:32px;border-radius:9px;background:rgba(26,122,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-chart-line" style="font-size:14px;color:#1A7A5E;line-height:1;display:inline-block;"></i></div>
-</div>
-<div class="kpi-main">
-<span class="kpi-value" id="kpiCaValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<span class="kpi-sub" id="kpiCaSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
-</div>
-</article>
 </section>
+<div class="bh2-feat">
+<section class="bh2-ca" id="kpiCaCard" onclick="window.openCaKpiModal && window.openCaKpiModal()">
+<div class="bh2-ca-lbl">CA mensuel <i class="fas fa-chart-line"></i></div>
+<span class="kpi-value" id="kpiCaValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
+<div class="bh2-ca-subrow"><span id="kpiCaSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span><span class="bh2-ca-delta" id="kpiCaDelta"></span></div>
+<div class="bh2-ca-spark"><svg id="kpiCaSpark" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></div>
+</section>
+<section class="bh2-occ" id="kpiOccupancyCard">
+<div class="bh2-occ-lbl">Occupation du mois <i class="fas fa-calendar"></i></div>
+<div class="bh2-occ-num" id="kpiOccupancyValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
+</section>
+</div>
+</div>
+<section class="bh2-stats">
+<div class="bh2-stat" id="kpiPropertiesCard">
+<span class="bh2-stat-ic"><i class="fas fa-home"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiPropertiesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl">Logements actifs</div></div>
+</div>
+<div class="bh2-stat" id="kpiDepositsCard">
+<span class="bh2-stat-ic"><i class="fas fa-shield-halved"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiDepositsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl" id="kpiDepositsSub">Cautions</div></div>
+</div>
+<div class="bh2-stat" id="kpiChecklistsCard" onclick="if(window.openChecklistsKpiModal){window.openChecklistsKpiModal();}">
+<span class="bh2-stat-ic"><i class="fas fa-clipboard-check"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiChecklistsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl" id="kpiChecklistsSub">Checklists ménage</div></div>
+</div>
+<div class="bh2-stat" id="kpiTopRisksCard">
+<span class="bh2-stat-ic n"><i class="fas fa-sticky-note"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiTopRisksValue">0</div><div class="bh2-lbl" id="kpiTopRisksSub">Réservations avec note</div></div>
+</div>
+</section>
+<script>
+(function(){
+  var d=new Date();
+  var el=document.getElementById('bh2TodayDate');
+  if(el){var s=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});el.textContent=s.charAt(0).toUpperCase()+s.slice(1);}
+})();
+</script>
 
 <!-- Calendar Card -->
 <section class="card" id="calendarSection" style="display:block !important;">
@@ -3810,7 +3887,7 @@ window.closeChecklistsKpiModal = function() {
 <!-- Actions droite -->
 <div class="calendar-actions-top">
   <button class="calendar-action-btn" id="calendarSearchBtn" title="Rechercher"><i class="fas fa-search"></i></button>
-  <button class="calendar-action-btn" id="calendarPromoBtn" title="Offres &amp; Codes promo" onclick="openPromoPanel()"><i class="fas fa-tag"></i></button>
+  <button class="calendar-action-btn" id="calendarPromoBtn" title="Réservation avec BHGuest · 3 % seulement" onclick="openPromoPanel()" style="width:auto;height:36px;padding:0 14px;gap:7px;display:inline-flex;align-items:center;background:linear-gradient(135deg,#7C3AED,#5B21B6);border:none;color:#fff;font-weight:700;font-size:12.5px;white-space:nowrap;box-shadow:0 2px 10px rgba(124,58,237,.3);"><span style="font-size:15px;font-weight:800;font-family:Georgia,serif;line-height:1;">B</span><span>Réservation avec BHGuest</span></button>
   <button class="calendar-action-btn" id="calendarSettingsBtn" title="Paramètres"><i class="fas fa-sliders-h"></i></button>
   <button id="batchEditBtn" onclick="openBatchEditModal()" title="Édition groupée" style="display:flex;align-items:center;gap:6px;padding:7px 14px;font-size:12px;font-weight:600;white-space:nowrap;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:white;border-radius:10px;cursor:pointer;height:36px;transition:all .15s;" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
     <i class="fas fa-layer-group" style="font-size:13px;"></i><span style="font-size:12px;">Édition groupée</span>
@@ -3910,6 +3987,19 @@ window.closeChecklistsKpiModal = function() {
     <!-- Scrollable body -->
 <div style="overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;padding:0 16px 8px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;">
       <form id="newReservationForm" onsubmit="return false;">
+        <!-- ✦ Mise en avant Réservation directe (BHGuest) -->
+        <button type="button" onclick="bhPromoteDirect()" style="width:100%;text-align:left;border:none;cursor:pointer;background:linear-gradient(135deg,#7C3AED,#5B21B6);border-radius:16px;padding:14px 16px;margin:2px 0 14px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 14px rgba(124,58,237,.28);">
+          <div style="width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="font-size:22px;font-weight:800;color:#fff;font-family:Georgia,serif;line-height:1;">B</span>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:700;color:#fff;letter-spacing:-.01em;margin-bottom:2px;">✦ Réservation avec BHGuest</div>
+            <div style="font-size:11.5px;color:rgba(255,255,255,.82);line-height:1.4;">Envoyez un lien : le voyageur paie en ligne, les dates se bloquent. 3 % seulement — bien moins que les ~15 % des OTA.</div>
+          </div>
+          <i class="fas fa-arrow-right" style="color:rgba(255,255,255,.9);font-size:14px;flex-shrink:0;"></i>
+        </button>
+        <div style="text-align:center;font-size:10.5px;color:#9CA3AF;margin:-4px 0 14px;text-transform:uppercase;letter-spacing:.06em;">ou saisie manuelle ci-dessous</div>
+
         <!-- Logement -->
         <div class="bh-field">
           <label class="bh-sheet-label" for="nrProperty">Logement</label>
@@ -3989,7 +4079,7 @@ window.closeChecklistsKpiModal = function() {
           <label class="bh-sheet-label" for="nrPlatform">Plateforme</label>
           <select id="nrPlatform" name="platform" class="bh-sheet-input bh-sheet-select">
             <option value="direct">Direct</option>
-              <option value="guest_app">BHGuest</option>
+              <option value="guest_app">✦ BHGuest — Réservation directe (3 %)</option>
             <option value="booking">Booking.com</option>
             <option value="airbnb">Airbnb</option>
             <option value="abritel">Abritel / VRBO</option>
@@ -5548,6 +5638,55 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
 <script>
 (function () {
   const API_URL = 'https://lcc-booking-manager.onrender.com';
+  const HZ_LOGO_DATAURI = 'data:image/png;base64,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';
+  let hzMissionsMap = {};
+  async function loadHzMissionsMapGlobal() {
+    try {
+      const token = localStorage.getItem('lcc_token');
+      if (!token) return;
+      const res = await fetch((window.API_URL || API_URL) + '/api/hosterzz/missions', { headers: { Authorization: 'Bearer ' + token } });
+      if (!res.ok) return;
+      const data = await res.json();
+      const map = {};
+      (data.missions || []).forEach((m) => { map[String(m.bh_reservation_id)] = m; });
+      hzMissionsMap = map;
+    } catch (e) { console.warn('Erreur chargement missions Hosterzz:', e); }
+  }
+  loadHzMissionsMapGlobal();
+
+  function refreshHzBadgeInDetails() {
+    const booking = window.currentBookingData || window.currentBooking || null;
+    const badgeEl = document.getElementById('hzMissionBadgeFromDetails');
+    const btnEl = document.getElementById('hzMissionBtnFromDetails');
+    if (!badgeEl || !btnEl) return;
+    if (!booking || booking.id == null) { badgeEl.innerHTML = ''; btnEl.style.display = ''; return; }
+    const html = hzMissionBadgeHtml(booking.id);
+    badgeEl.innerHTML = html;
+    btnEl.style.display = html ? 'none' : 'flex';
+  }
+
+  (function watchReservationDetailsModal() {
+    const modal = document.getElementById('reservationDetailsModal');
+    if (!modal || !window.MutationObserver) return;
+    const obs = new MutationObserver(() => {
+      if (modal.style.display === 'flex') setTimeout(refreshHzBadgeInDetails, 150);
+    });
+    obs.observe(modal, { attributes: true, attributeFilter: ['style'] });
+  })();
+  function hzMissionBadgeHtml(reservationId) {
+    const m = hzMissionsMap[String(reservationId)];
+    if (!m) return '';
+    const labels = {
+      creee: { txt: 'Mission Hosterzz : en attente', color: '#7A8695' },
+      publiee: { txt: 'Mission Hosterzz : proposée', color: '#7A8695' },
+      ouverte: { txt: 'Mission Hosterzz : proposée', color: '#7A8695' },
+      acceptee: { txt: 'Mission Hosterzz : acceptée', color: '#E8A13A' },
+      en_cours: { txt: 'Mission Hosterzz : en cours', color: '#E8A13A' },
+      terminee: { txt: 'Mission Hosterzz : terminée ✓', color: '#1A7A5E' }
+    };
+    const l = labels[m.statut] || { txt: 'Mission Hosterzz : ' + m.statut, color: '#7A8695' };
+    return '<div style="font-size:11px;margin-top:4px;color:' + l.color + ';font-weight:600;"><img src="' + HZ_LOGO_DATAURI + '" alt="" style="width:11px;height:11px;vertical-align:-1px;object-fit:contain;"> ' + l.txt + '</div>';
+  }
 
   // ---------- helpers ----------
   function dateOnlyStr(v) {
@@ -5828,31 +5967,28 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           return;
           
         case 'moves': // Check-in / Check-out
-          color = value >= 1 ? '#10B981' : '#000000';
+          color = '#B7791F';
           break;
           
         case 'cleaning': // Ménages à venir
-          if (value === 0) color = '#000000';
-          else if (value <= 2) color = '#F59E0B'; // Orange
-          else color = '#EF4444'; // Rouge
+          if (value === 0) color = '#0D1117';
+          else color = '#B7791F'; // Ambre = action requise
           break;
           
         case 'risks': // Risques à venir
-          if (value === 0) color = '#10B981'; // Vert = tout va bien
-          else if (value <= 2) color = '#F59E0B'; // Orange
-          else color = '#EF4444'; // Rouge
+          if (value === 0) color = '#1A7A5E'; // Vert = tout va bien
+          else if (value <= 2) color = '#0D1117'; // Neutre
+          else color = '#B7791F'; // Ambre
           break;
           
         case 'deposits': // Cautions prises
-          color = value >= 1 ? '#10B981' : '#000000';
+          color = value >= 1 ? '#1A7A5E' : '#0D1117';
           break;
           
         case 'occupancy': // Taux d\'occupation (en %)
-          if (value <= 30) color = '#EF4444'; // Rouge
-          else if (value <= 50) color = '#F59E0B'; // Orange
-          else if (value <= 70) color = '#FBBF24'; // Jaune
-          else if (value <= 85) color = '#34D399'; // Vert clair
-          else color = '#10B981'; // Vert foncé
+          if (value <= 30) color = '#C2410C'; // Orange brûlé
+          else if (value <= 50) color = '#B7791F'; // Ambre
+          else color = '#1A7A5E'; // Vert
           break;
       }
       
@@ -5880,6 +6016,11 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       applyKpiColor(movesVal, totalMoves, 'moves');
     }
     if (movesSub) movesSub.textContent = `${checkinsToday} arrivées • ${checkoutsToday} départs`;
+    // Dashboard v2 : tuiles séparées Arrivées / Départs
+    const arrEl = document.getElementById('kpiArrivalsValue');
+    const depEl = document.getElementById('kpiDeparturesValue');
+    if (arrEl) { if (window.bhAnimateValue) window.bhAnimateValue(arrEl, checkinsToday); else arrEl.textContent = checkinsToday; }
+    if (depEl) { if (window.bhAnimateValue) window.bhAnimateValue(depEl, checkoutsToday); else depEl.textContent = checkoutsToday; }
 
     const cleanVal = document.getElementById('kpiCleaning48hValue');
     const cleanSub = document.getElementById('kpiCleaning48hSub');
@@ -5960,13 +6101,55 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     const caVal = document.getElementById('kpiCaValue');
     const caSub = document.getElementById('kpiCaSub');
     if (caVal) {
-      caVal.style.color = '#1A7A5E';
-      caVal.style.fontWeight = '700';
+      caVal.style.color = '#FFFFFF';
+      caVal.style.fontWeight = '400';
       if (window.bhAnimateValue) window.bhAnimateValue(caVal, Math.round(caTotal), { suffix: '€' });
       else caVal.textContent = (caTotal > 0 ? Math.round(caTotal).toLocaleString('fr-FR') : '0') + '€';
     }
     const monthNames = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     if (caSub) caSub.textContent = monthNames[m] + ' ' + y;
+
+    // ── Dashboard v2 : sparkline CA sur 6 mois + delta vs mois précédent ──
+    try {
+      const months = [];
+      for (let k = 5; k >= 0; k--) {
+        const ms = new Date(y, m - k, 1, 0, 0, 0, 0);
+        const me = new Date(y, m - k + 1, 0, 23, 59, 59, 999);
+        months.push({ start: ms, end: me, total: 0 });
+      }
+      (reservations || []).forEach((r) => {
+        if (r.type === 'block' || r.source === 'BLOCK') return;
+        if (r.status === 'cancelled') return;
+        const pd = getPaymentDate(r);
+        if (!pd) return;
+        const amt = parseFloat(r.amount_total || r.amountTotal || r.host_payout || r.hostPayout || r.amount_rooms || r.amountRooms || 0);
+        if (!amt) return;
+        for (const mo of months) {
+          if (pd >= mo.start && pd <= mo.end) { mo.total += amt; break; }
+        }
+      });
+      const spark = document.getElementById('kpiCaSpark');
+      const delta = document.getElementById('kpiCaDelta');
+      const prev = months[4].total;
+      if (delta) {
+        if (prev > 0) {
+          const pct = Math.round(((caTotal - prev) / prev) * 100);
+          delta.innerHTML = '<i class="fas fa-arrow-trend-' + (pct >= 0 ? 'up' : 'down') + '"></i> ' + (pct >= 0 ? '+' : '') + pct + ' % vs ' + monthNames[(m + 11) % 12].toLowerCase();
+          delta.style.color = pct >= 0 ? '#6ee7b7' : '#fbbf24';
+        } else { delta.textContent = ''; }
+      }
+      if (spark) {
+        const vals = months.map(mo => mo.total);
+        const max = Math.max.apply(null, vals.concat([1]));
+        const pts = vals.map((v, i) => {
+          const x = (i / (vals.length - 1)) * 300;
+          const yv = 34 - (v / max) * 30;
+          return x.toFixed(1) + ',' + yv.toFixed(1);
+        });
+        spark.innerHTML = '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#6ee7b7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
+          + '<polygon points="0,38 ' + pts.join(' ') + ' 300,38" fill="rgba(110,231,183,.09)"/>';
+      }
+    } catch(e) { console.warn('CA sparkline error', e); }
   }
 
   window.openCaKpiModal = function() {
@@ -6923,7 +7106,7 @@ try {
     // Right: actions
     var right = div('display:flex;align-items:center;gap:6px;padding:12px 0;');
     right.innerHTML = '<button id="bhCalSearchBtn" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Rechercher"><i class="fas fa-search" style="font-size:13px;"></i></button>'
-      + '<button id="bhCalPromoBtn" onclick="openPromoPanel && openPromoPanel()" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Offres &amp; Codes promo"><span style="font-size:16px;font-weight:900;color:#A855F7;font-family:Georgia,serif;line-height:1;">B</span></button>'
+      + '<button id="bhCalPromoBtn" onclick="openPromoPanel && openPromoPanel()" style="display:flex;align-items:center;gap:6px;padding:0 12px;height:34px;background:linear-gradient(135deg,#7C3AED,#5B21B6);border:none;border-radius:9px;cursor:pointer;color:#fff;font-weight:700;font-size:12px;white-space:nowrap;box-shadow:0 2px 10px rgba(124,58,237,.3);" title="Réservation avec BHGuest · 3 % seulement"><span style="font-size:14px;font-weight:800;font-family:Georgia,serif;line-height:1;">B</span><span class="bh-desktop-only">Réservation avec BHGuest</span></button>'
       + '<button id="bhCalSettingsBtn" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Paramètres"><i class="fas fa-sliders-h" style="font-size:13px;"></i></button>'
       + '<button onclick="openBatchEditModal && openBatchEditModal()" style="display:flex;align-items:center;gap:5px;padding:0 12px;height:34px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:9px;color:white;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;"><i class="fas fa-layer-group" style="font-size:12px;"></i><span class="bh-desktop-only">Édition groupée</span></button>';
 
@@ -6963,24 +7146,64 @@ try {
     if (existing) existing.remove();
     if (state.view === 'day') return; // day view has its own date selector
 
-    var nav = div('display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F5F2EC;border-bottom:1px solid rgba(0,0,0,.06);');
+    var nav = div('display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F5F2EC;border-bottom:1px solid rgba(0,0,0,.06);flex-wrap:wrap;');
     nav.className = 'bh-cal-nav';
 
-    var prev = el('button','width:32px;height:32px;border-radius:8px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
+    // Bouton Aujourd'hui — pilule verte token
+    var todayBtn = el('button','height:32px;padding:0 13px;border-radius:999px;border:none;background:#1A7A5E;color:white;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;transition:all .15s;font-family:inherit;box-shadow:0 1px 4px rgba(26,122,94,.25);');
+    todayBtn.textContent = 'Aujourd\u2019hui';
+    todayBtn.title = 'Revenir au mois courant';
+    todayBtn.onclick = function() { state.date = new Date(); render(); };
+    todayBtn.onmouseover = function(){ this.style.background='#15654E'; };
+    todayBtn.onmouseout  = function(){ this.style.background='#1A7A5E'; };
+
+    var prev = el('button','width:32px;height:32px;border-radius:999px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
     prev.innerHTML = '<i class="fas fa-chevron-left" style="font-size:11px;"></i>';
     prev.onclick = function() { navigate(-1); };
 
-    var label = div('flex:1;text-align:center;font-size:15px;font-weight:700;color:#1A1F2E;');
+    // Titre du mois en serif — signature visuelle du dashboard
+    var label = div('flex:1;text-align:center;font-size:17px;font-weight:600;color:#1A1F2E;font-family:Georgia,\'Times New Roman\',serif;letter-spacing:.01em;min-width:140px;');
     label.id = 'bhCalPeriodLabel';
     label.textContent = getPeriodLabel();
 
-    var next = el('button','width:32px;height:32px;border-radius:8px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
+    var next = el('button','width:32px;height:32px;border-radius:999px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
     next.innerHTML = '<i class="fas fa-chevron-right" style="font-size:11px;"></i>';
     next.onclick = function() { navigate(1); };
 
+    // Toggle vue compacte (mois uniquement) — persiste en localStorage
+    var compactBtn = null;
+    if (state.view === 'month') {
+      var isCompact = false;
+      try { isCompact = localStorage.getItem('bhCalCompact') === '1'; } catch(e) {}
+      compactBtn = el('button','height:32px;padding:0 11px;border-radius:999px;border:1px solid '+(isCompact?'#1A7A5E':'rgba(0,0,0,.1)')+';background:'+(isCompact?'rgba(26,122,94,.1)':'white')+';color:'+(isCompact?'#1A7A5E':'#6B7280')+';font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0;display:flex;align-items:center;gap:5px;transition:all .15s;font-family:inherit;');
+      compactBtn.innerHTML = '<i class="fas fa-compress-alt" style="font-size:10px;"></i><span>Compact</span>';
+      compactBtn.title = isCompact ? 'Revenir à la vue confort' : 'Vue compacte (lignes réduites, prix masqués)';
+      compactBtn.onclick = function() {
+        try { localStorage.setItem('bhCalCompact', isCompact ? '0' : '1'); } catch(e) {}
+        render();
+      };
+    }
+
+    nav.appendChild(todayBtn);
     nav.appendChild(prev);
     nav.appendChild(label);
     nav.appendChild(next);
+    if (compactBtn) nav.appendChild(compactBtn);
+
+    // Légende plateformes — la grille devient auto-explicative
+    if (state.view === 'month' || state.view === 'week') {
+      var legend = div('flex-basis:100%;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding-top:7px;');
+      legend.className = 'bh-cal-legend';
+      function lgd(color, txt, radius) {
+        return '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:#6B7280;letter-spacing:.02em;"><span style="width:9px;height:9px;background:'+color+';border-radius:'+(radius||'50%')+';flex-shrink:0;"></span>'+txt+'</span>';
+      }
+      legend.innerHTML = lgd('#FF5A5F','Airbnb')
+        + lgd('#003580','Booking','2.5px')
+        + lgd('#7C3AED','BHGuest')
+        + lgd('#F97316','Direct')
+        + '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:#B7791F;letter-spacing:.02em;"><span style="width:9px;height:9px;border:1.5px solid #B7791F;border-radius:50%;flex-shrink:0;box-sizing:border-box;"></span>Ven &amp; sam \u00b7 tarif week-end</span>';
+      nav.appendChild(legend);
+    }
 
     // Insert after header
     var hdr = w.querySelector('.bh-cal-header');
@@ -7349,9 +7572,11 @@ try {
     var startOff   = firstDay.getDay()===0 ? 6 : firstDay.getDay()-1;
     var rangeStart = new Date(firstDay); rangeStart.setDate(1-startOff);
     var numDays    = Math.ceil((startOff + lastDay.getDate())/7)*7;
+    var compactMode = false;
+    try { compactMode = localStorage.getItem('bhCalCompact') === '1'; } catch(e) {}
     var propW = 76;
     var colW  = 48;
-    var rowH  = 52;
+    var rowH  = compactMode ? 30 : 52;
     var hdrH  = 44;
     var nRows = state.properties.length;
 
@@ -7408,14 +7633,14 @@ try {
       var isToday = dstr2===today;
       var isWknd  = dayDate.getDay()===5||dayDate.getDay()===6; // ven + sam = nuits premium
 
-      var hcell = div('position:sticky;top:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #ECEAE6;border-bottom:2px solid #E8E4DF;cursor:pointer;user-select:none;'
-        +(isToday?'background:rgba(26,122,94,.08);':'background:white;'));
+      var hcell = div('position:sticky;top:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #ECEAE6;cursor:pointer;user-select:none;'
+        +(isToday?'background:rgba(26,122,94,.08);border-bottom:2px solid #1A7A5E;':'background:white;border-bottom:2px solid #E8E4DF;'));
       hcell.style.gridColumn = String(di+2);
       hcell.style.gridRow    = '1';
       hcell.className = 'bh-day-hcell';
       hcell.dataset.colIdx = String(di);
-      hcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(isToday?'#1A7A5E':isWknd?'#dc2626':'#9CA3AF')+';">'+DAYS_MIN[dayDate.getDay()]+'</span>'
-        +'<span style="font-size:12px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'#1A7A5E':inMonth?(isWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
+      hcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(isToday?'#1A7A5E':isWknd?'#B7791F':'#9CA3AF')+';">'+DAYS_MIN[dayDate.getDay()]+'</span>'
+        +'<span style="font-size:12px;font-weight:'+(isToday?800:isWknd?700:600)+';color:'+(isToday?'#1A7A5E':inMonth?'#374151':'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
 
       (function(idx5, el){ el.onclick = function(){
         var wasActive = el.classList.contains('bh-col-active');
@@ -7480,7 +7705,7 @@ try {
         var isToday2 = dstr3===today;
 
         var dcell = div('box-sizing:border-box;border-right:1px solid #F5F2EC;border-bottom:1px solid #EEEBE6;position:relative;overflow:hidden;'
-          +(isToday2?'background:rgba(26,122,94,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(220,38,38,.02);':''));
+          +(isToday2?'background:rgba(26,122,94,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(183,121,31,.05);':''));
         dcell.style.gridColumn = String(di2+2);
         dcell.style.gridRow    = gridRow;
         dcell.className = 'calendar-cell bh-day-cell'+(isWknd2?' weekend':'');
@@ -7489,8 +7714,8 @@ try {
         dcell.dataset.propId     = String(prop.id);
         dcell.dataset.colIdx     = String(di2);
 
-        if (inMonth2) {
-          var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;pointer-events:none;color:'+(isWknd2?'#dc2626':'#1A7A5E')+';');
+        if (inMonth2 && !compactMode) {
+          var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;pointer-events:none;color:'+(isWknd2?'#B7791F':'#1A7A5E')+';');
           priceEl.className = 'cell-price';
           if (prop.basePrice) priceEl.textContent = Math.round(isWknd2?(prop.weekendPrice||prop.basePrice):prop.basePrice);
           dcell.appendChild(priceEl);
@@ -7528,8 +7753,8 @@ try {
       fcell.style.gridRow = String(footerRow);
       fcell.className = 'bh-day-hcell';
       fcell.dataset.colIdx = String(fi);
-      fcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(fIsToday?'#1A7A5E':fIsWknd?'#dc2626':'#9CA3AF')+';">'+DAYS_MIN[fDate.getDay()]+'</span>'
-        +'<span style="font-size:12px;font-weight:'+(fIsToday?800:600)+';color:'+(fIsToday?'#1A7A5E':fInMonth?(fIsWknd?'#dc2626':'#374151'):'#C4C4C4')+';">'+fDate.getDate()+'</span>';
+      fcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(fIsToday?'#1A7A5E':fIsWknd?'#B7791F':'#9CA3AF')+';">'+DAYS_MIN[fDate.getDay()]+'</span>'
+        +'<span style="font-size:12px;font-weight:'+(fIsToday?800:fIsWknd?700:600)+';color:'+(fIsToday?'#1A7A5E':fInMonth?'#374151':'#C4C4C4')+';">'+fDate.getDate()+'</span>';
 
       // Même clic que le header : voile + highlight colonne
       (function(idx, el){ el.onclick = function(){
@@ -7576,7 +7801,13 @@ try {
         var p2 = pltInfo(r);
 
         // Le bloc est position:absolute dans anchorCell, width = nb cols * colW
-        var blk = div('position:absolute;top:6px;bottom:6px;border-radius:10px;display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s;z-index:3;');
+        var padPx = compactMode ? 3 : 6;
+        var blk = div('position:absolute;border-radius:'+(compactMode?'8px':'10px')+';display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s, box-shadow .15s;z-index:3;');
+        // Géométrie verticale verrouillée (!important) — imperméable aux CSS externes,
+        // et toujours cohérente avec rowH quel que soit le mode (confort/compact)
+        blk.style.setProperty('top', padPx + 'px', 'important');
+        blk.style.setProperty('height', (rowH - 2*padPx) + 'px', 'important');
+        blk.style.setProperty('bottom', 'auto', 'important');
         blk.className = 'booking-block-bh';
         blk.dataset.propId   = String(prop.id);
         blk.dataset.colStart = String(colStart);   // vrai début (peut être négatif)
@@ -7594,14 +7825,14 @@ try {
         } else {
           blk.style.background = p2.bg;
           blk.style.color      = 'white';
-          blk.style.boxShadow  = '0 2px 6px rgba(0,0,0,.22)';
+          blk.style.boxShadow  = '0 2px 6px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.18)';
           var iconInner = p2.cls === 'airbnb'
             ? '<i class="fa-brands fa-airbnb" style="font-size:8px;color:white;"></i>'
             : (p2.cls === 'booking' ? '<span style="font-size:8px;font-weight:800;color:white;">B</span>' : '<span style="font-size:8px;font-weight:800;color:white;">'+p2.label[0]+'</span>');
-          blk.innerHTML = '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+iconInner+'</div>'
-            +'<span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
-          blk.onmouseover = function(){ this.style.filter='brightness(1.12)'; };
-          blk.onmouseout  = function(){ this.style.filter=''; };
+          blk.innerHTML = (compactMode ? '' : '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+iconInner+'</div>')
+            +'<span style="font-size:'+(compactMode?'10px':'11.5px')+';font-weight:500;font-family:Georgia,\'Times New Roman\',serif;letter-spacing:.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 1px rgba(0,0,0,.15);">'+guestName(r)+'</span>';
+          blk.onmouseover = function(){ this.style.filter='brightness(1.1)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.22)'; this.style.zIndex='5'; };
+          blk.onmouseout  = function(){ this.style.filter=''; this.style.boxShadow='0 2px 6px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.18)'; this.style.zIndex='3'; };
           blk.onclick     = function(evt){ evt.stopPropagation(); openBooking(r); };
           blk.dataset.bookingId = String(r.id||'');
           // Point rouge sur la cellule de CHECKOUT (fin du séjour)
@@ -7955,8 +8186,59 @@ try {
           <i class="fas fa-trash" style="font-size:11px;"></i> Supprimer
         </button>
       </div>
+      <!-- Ligne 3 : Mission Hosterzz -->
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost" id="hzMissionBtnFromDetails" type="button" onclick="openHzMissionModalFromDetails()" style="flex:1;height:36px;border-radius:10px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:5px;">
+          <img src="data:image/png;base64,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" alt="Hosterzz" style="width:14px;height:14px;vertical-align:-2px;object-fit:contain;"> Créer la mission Hosterzz
+        </button>
+      </div>
+      <div id="hzMissionBadgeFromDetails" style="padding:0 4px;"></div>
     </div>
 
+  </div>
+</div>
+<!-- Modale création mission Hosterzz (depuis fiche réservation) -->
+<div id="hzMissionModal" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,.5);z-index:10001;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#FAF7F2;border:1px solid rgba(200,184,154,.55);border-radius:22px;padding:24px;width:100%;max-width:460px;box-shadow:0 24px 70px rgba(13,17,23,.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="font-family:'Instrument Serif',serif;font-size:20px;font-weight:400;color:#0D1117;">
+        <img src="data:image/png;base64,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" alt="Hosterzz" style="width:20px;height:20px;vertical-align:-5px;object-fit:contain;margin-right:6px;">Créer la mission Hosterzz
+      </div>
+      <button onclick="closeHzMissionModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6B7280;">&times;</button>
+    </div>
+
+    <input type="hidden" id="hzModalReservationId"/>
+
+    <div style="font-size:13px;color:#6B7280;margin-bottom:14px;line-height:1.6;">
+      <div><strong id="hzModalPropertyName">Logement</strong></div>
+      <div>Départ le <span id="hzModalEndDate">-</span> · Client : <span id="hzModalGuest">-</span></div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:12px;">
+      <label for="hzModalType">Type de prestation</label>
+      <select id="hzModalType" style="width:100%;padding:8px 10px;border:1px solid rgba(200,184,154,.55);border-radius:8px;background:#fff;font-size:14px;">
+        <option value="menage_standard">Ménage standard</option>
+        <option value="menage_approfondi" selected>Ménage de départ</option>
+        <option value="blanchisserie">Blanchisserie à domicile</option>
+        <option value="check_in">Entrée des voyageurs (check-in)</option>
+        <option value="check_out">Sortie des voyageurs (check-out)</option>
+        <option value="conciergerie">Conciergerie</option>
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px;">
+      <label for="hzModalPrice">Prix suggéré (€, optionnel)</label>
+      <input id="hzModalPrice" type="number" min="0" step="0.5" placeholder="Ex : 45" style="width:100%;padding:8px 10px;border:1px solid rgba(200,184,154,.55);border-radius:8px;background:#fff;font-size:14px;"/>
+    </div>
+
+    <div id="hzModalError" style="display:none;background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA;border-radius:10px;padding:10px 12px;font-size:12.5px;margin-bottom:14px;"></div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;">
+      <button type="button" onclick="closeHzMissionModal()" class="btn btn-secondary">Annuler</button>
+      <button type="button" id="hzModalSubmitBtn" onclick="submitHzMission()" class="btn btn-primary">
+        <i class="fas fa-paper-plane"></i> Créer la mission
+      </button>
+    </div>
   </div>
 </div>
 <!-- Cleaning Today Modal -->
@@ -11160,7 +11442,7 @@ html[data-theme-v3="1"] .sidebar .nav-section {
             headers: { 'Authorization': 'Bearer ' + token }
           });
           const d = await r.json();
-          const convs = d.conversations || [];
+          const convs = (d.conversations || []).filter(c => c.status !== 'cancelled');
           const guestN = bookingForMsg.guestName || bookingForMsg.guest_display_name || bookingForMsg.guest || '';
           const propId = bookingForMsg.propertyId || bookingForMsg.property_id || '';
           const startD = (bookingForMsg.startDate || bookingForMsg.start || '').toString().split('T')[0];
@@ -14441,7 +14723,7 @@ body.notif-panel-open {
 <!-- MODAL ÉDITION GROUPÉE -->
 <!-- ============================================================ -->
 <div id="batchEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-  <div style="background:white;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.2);">
+  <div class="batch-modal-card" style="background:white;border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.2);">
     <!-- Header -->
     <div style="padding:20px 24px 16px;border-bottom:1px solid #f0ede7;display:flex;align-items:center;justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:10px;">
@@ -14457,7 +14739,7 @@ body.notif-panel-open {
     </div>
 
     <!-- Body -->
-    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:20px;">
+    <div class="batch-modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:20px;">
 
       <!-- Action -->
       <div>
@@ -14553,7 +14835,7 @@ body.notif-panel-open {
     </div>
 
     <!-- Footer -->
-    <div style="padding:16px 24px;border-top:1px solid #f0ede7;display:flex;gap:10px;">
+    <div class="batch-modal-footer" style="padding:16px 24px;border-top:1px solid #f0ede7;display:flex;gap:10px;">
       <button onclick="closeBatchEditModal()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid #e2e8f0;background:white;color:#374151;font-size:14px;font-weight:600;cursor:pointer;">Annuler</button>
       <button id="batchApplyBtn" onclick="applyBatchEdit()" style="flex:2;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
         <i class="fas fa-check"></i> Appliquer
@@ -14808,7 +15090,32 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
   function getToken() { return localStorage.getItem('lcc_token') || ''; }
 
   // ── Ouvrir / fermer ──────────────────────────────────────────
-  window.openPromoPanel = function() {
+  // Pré-remplir l'onglet "Lien" (report depuis la modale nouvelle résa)
+  function bhApplyLinkPrefill(pf) {
+    try {
+      if (!pf) return;
+      if (pf.property) { var s = document.getElementById('bhLinkProp'); if (s) s.value = pf.property; }
+      if (pf.checkin)  { var ci = document.getElementById('bhLinkCheckin'); if (ci) ci.value = pf.checkin; }
+      if (pf.checkout) { var co = document.getElementById('bhLinkCheckout'); if (co) co.value = pf.checkout; }
+      if (typeof bhUpdateLink === 'function') bhUpdateLink();
+    } catch(e) {}
+  }
+
+  // Depuis la modale "Nouvelle réservation" → bascule vers le générateur de lien direct
+  window.bhPromoteDirect = function() {
+    var pf = {
+      property: (document.getElementById('nrProperty')  || {}).value || '',
+      checkin:  (document.getElementById('nrStartDate') || {}).value || '',
+      checkout: (document.getElementById('nrEndDate')   || {}).value || ''
+    };
+    try {
+      var m = document.getElementById('newReservationModal');
+      if (m) { m.style.display = 'none'; m.classList.remove('active'); }
+    } catch(e) {}
+    openPromoPanel(pf);
+  };
+
+  window.openPromoPanel = function(prefill) {
     if (document.getElementById('bhPromoPanel')) {
       closePromoPanel(); return;
     }
@@ -14828,7 +15135,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
     // Header
     panel.innerHTML = `
-      <div style="background:#1A7A5E;padding:20px 18px 16px;flex-shrink:0;">
+      <div style="background:linear-gradient(135deg,#7C3AED,#5B21B6);padding:20px 18px 16px;flex-shrink:0;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
           <div style="display:flex;align-items:center;gap:9px;">
             <i class="fas fa-tag" style="color:rgba(255,255,255,.8);font-size:15px;"></i>
@@ -14841,11 +15148,14 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
       <!-- Onglets -->
       <div id="bhPromoTabs" style="display:flex;gap:0;background:white;border-bottom:1px solid #E5E7EB;flex-shrink:0;">
-        <button onclick="bhPromoTab('link')" id="bhTabLink" style="flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;">
-          <i class="fas fa-link" style="margin-right:5px;"></i>Lien personnalisé
+        <button onclick="bhPromoTab('link')" id="bhTabLink" style="flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#7C3AED;border-bottom:2px solid #7C3AED;transition:all .15s;">
+          <i class="fas fa-link" style="margin-right:4px;"></i>Lien
         </button>
-        <button onclick="bhPromoTab('codes')" id="bhTabCodes" style="flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;">
-          <i class="fas fa-ticket-alt" style="margin-right:5px;"></i>Codes promo
+        <button onclick="bhPromoTab('codes')" id="bhTabCodes" style="flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;">
+          <i class="fas fa-ticket-alt" style="margin-right:4px;"></i>Codes
+        </button>
+        <button onclick="bhPromoTab('upsell')" id="bhTabUpsell" style="flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;">
+          <i class="fas fa-concierge-bell" style="margin-right:4px;"></i>Prestations
         </button>
       </div>
 
@@ -14857,8 +15167,10 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     // Charger les logements d'abord, puis afficher l'onglet lien
     bhLoadProperties().then(() => {
       bhPromoTab('link');
+      bhApplyLinkPrefill(prefill);
     }).catch(() => {
       bhPromoTab('link');
+      bhApplyLinkPrefill(prefill);
     });
   };
 
@@ -14871,14 +15183,17 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
   // ── Onglets ──────────────────────────────────────────────────
   window.bhPromoTab = function(tab) {
-    document.getElementById('bhTabCodes').style.cssText = tab === 'codes'
-      ? 'flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;'
-      : 'flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;';
-    document.getElementById('bhTabLink').style.cssText = tab === 'link'
-      ? 'flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#1A7A5E;border-bottom:2px solid #1A7A5E;transition:all .15s;'
-      : 'flex:1;padding:11px 8px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;';
+    var act = 'flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#7C3AED;border-bottom:2px solid #7C3AED;transition:all .15s;';
+    var ina = 'flex:1;padding:11px 6px;font-size:12.5px;font-weight:600;border:none;cursor:pointer;background:white;color:#6B7280;border-bottom:2px solid transparent;transition:all .15s;';
+    var tl = document.getElementById('bhTabLink');
+    var tc = document.getElementById('bhTabCodes');
+    var tu = document.getElementById('bhTabUpsell');
+    if (tl) tl.style.cssText = tab === 'link' ? act : ina;
+    if (tc) tc.style.cssText = tab === 'codes' ? act : ina;
+    if (tu) tu.style.cssText = tab === 'upsell' ? act : ina;
 
     if (tab === 'codes') bhRenderCodesTab();
+    else if (tab === 'upsell') bhRenderUpsellTab();
     else bhRenderLinkTab();
   };
 
@@ -14917,7 +15232,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     var html = `
       <!-- Formulaire création -->
       <div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-        <div style="font-size:12px;font-weight:700;color:#1A7A5E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">
           <i class="fas fa-plus-circle" style="margin-right:5px;"></i>Nouveau code
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
@@ -14926,13 +15241,13 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
             <input id="bhPromoCode" type="text" placeholder="Ex: BEEN10" maxlength="20"
               style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;box-sizing:border-box;font-family:inherit;outline:none;"
               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
-              onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+              onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
           </div>
           <div style="display:flex;gap:8px;">
             <div style="flex:1;">
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Type</label>
               <select id="bhPromoType" style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;background:white;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
                 <option value="percent">% remise</option>
                 <option value="fixed">€ fixe</option>
               </select>
@@ -14941,7 +15256,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Valeur</label>
               <input id="bhPromoValue" type="number" placeholder="10" min="1"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
           </div>
           <div style="display:flex;gap:8px;">
@@ -14949,23 +15264,23 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Utilisations max</label>
               <input id="bhPromoMaxUses" type="number" placeholder="∞" min="1"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
             <div style="flex:1;">
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Expiration</label>
               <input id="bhPromoExpiry" type="date"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
           </div>
           <div>
             <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Description (optionnel)</label>
             <input id="bhPromoDesc" type="text" placeholder="Ex: Remise fidélité Jean"
               style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-              onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+              onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
           </div>
           <button onclick="bhCreatePromo()" id="bhPromoCreateBtn"
-            style="width:100%;padding:11px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
+            style="width:100%;padding:11px;background:#7C3AED;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
             <i class="fas fa-plus"></i> Créer le code promo
           </button>
           <div id="bhPromoCreateMsg" style="display:none;font-size:12px;text-align:center;padding:6px 10px;border-radius:8px;"></div>
@@ -15004,7 +15319,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     return `
       <div style="background:white;border-radius:12px;padding:13px 14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;align-items:center;gap:12px;opacity:${active ? 1 : 0.55};">
         <div style="width:48px;height:48px;background:${active ? '#ECFDF5' : '#F3F4F6'};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <span style="font-size:13px;font-weight:800;color:${active ? '#1A7A5E' : '#9CA3AF'};">${badge}</span>
+          <span style="font-size:13px;font-weight:800;color:${active ? '#7C3AED' : '#9CA3AF'};">${badge}</span>
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:14px;font-weight:700;color:#111827;letter-spacing:.04em;">${c.code}</div>
@@ -15088,7 +15403,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
     body.innerHTML = `
       <div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-        <div style="font-size:12px;font-weight:700;color:#1A7A5E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;">
           <i class="fas fa-magic" style="margin-right:5px;"></i>Générateur de lien
         </div>
         <div style="display:flex;flex-direction:column;gap:11px;">
@@ -15097,7 +15412,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
             <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Logement <span style="color:#EF4444;">*</span></label>
             <select id="bhLinkProp" onchange="bhUpdateLink()"
               style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;background:white;outline:none;"
-              onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+              onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
               <option value="">— Sélectionner —</option>
               ${propOptions}
             </select>
@@ -15108,13 +15423,13 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Arrivée</label>
               <input type="date" id="bhLinkCheckin" onchange="bhUpdateLink()"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
             <div style="flex:1;">
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Départ</label>
               <input type="date" id="bhLinkCheckout" onchange="bhUpdateLink()"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
           </div>
 
@@ -15123,14 +15438,14 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
             <input type="text" id="bhLinkPromo" placeholder="Ex: BEEN10" maxlength="20"
               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');bhUpdateLink()"
               style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;font-weight:600;letter-spacing:.04em;box-sizing:border-box;font-family:inherit;outline:none;"
-              onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+              onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
           </div>
 
           <div>
             <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Voyageurs</label>
             <input type="number" id="bhLinkGuests" value="2" min="1" max="20" onchange="bhUpdateLink()"
               style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;outline:none;"
-              onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+              onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
           </div>
 
           <div style="border-top:1.5px dashed #E5E7EB;padding-top:12px;margin-top:2px;">
@@ -15139,20 +15454,20 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Email client (optionnel)</label>
               <input type="email" id="bhLinkEmail" placeholder="client@email.com" oninput="bhUpdateLink()"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
             <!-- Téléphone client -->
             <div style="margin-bottom:12px;">
               <label style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Téléphone client (optionnel)</label>
               <input type="tel" id="bhLinkPhone" placeholder="+33 6 00 00 00 00" oninput="bhUpdateLink()"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;"
-                onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'">
+                onfocus="this.style.borderColor='#7C3AED'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
-            <label style="font-size:11px;font-weight:600;color:#1A7A5E;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">
+            <label style="font-size:11px;font-weight:600;color:#7C3AED;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">
               💶 Prix fixe total (optionnel)
             </label>
             <div style="display:flex;align-items:center;border:1.5px solid #E5E7EB;border-radius:9px;overflow:hidden;background:white;" id="bhFixedPriceWrap"
-              onfocusin="this.style.borderColor='#1A7A5E'" onfocusout="this.style.borderColor='#E5E7EB'">
+              onfocusin="this.style.borderColor='#7C3AED'" onfocusout="this.style.borderColor='#E5E7EB'">
               <span style="padding:0 10px;font-size:14px;color:#9CA3AF;font-weight:600;flex-shrink:0;border-right:1.5px solid #E5E7EB;height:100%;display:flex;align-items:center;background:#F9FAFB;">€</span>
               <input type="number" id="bhLinkFixedPrice" placeholder="350" min="1" onchange="bhUpdateLink()" oninput="bhUpdateLink()"
                 style="flex:1;padding:9px 12px;border:none;font-size:14px;font-weight:600;box-sizing:border-box;font-family:inherit;outline:none;background:transparent;">
@@ -15177,7 +15492,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button onclick="bhCopyLink()" id="bhCopyBtn"
-            style="flex:1;min-width:100px;padding:11px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
+            style="flex:1;min-width:100px;padding:11px;background:#7C3AED;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
             <i class="fas fa-copy"></i> Copier le lien
           </button>
           <button onclick="bhShareLink()" id="bhShareBtn"
@@ -15195,6 +15510,174 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
       </div>
     `;
   }
+
+  // ══════════════════════════════════════════════════════════════
+  // ONGLET PRESTATIONS — upsell manuel (départ tardif / arrivée anticipée / panier)
+  // Réutilise POST /api/upsell/manual (moteur de Lia).
+  // ══════════════════════════════════════════════════════════════
+  var _bhUpsellConvs = [];
+  var _bhUpsellMode = 'attached'; // 'attached' | 'flying'
+  var _bhUpLastUrl = '';
+
+  function bhRenderUpsellTab() {
+    var body = document.getElementById('bhPromoBody');
+    body.innerHTML = '<div style="text-align:center;padding:30px;color:#9CA3AF;"><i class="fas fa-spinner fa-spin"></i></div>';
+    Promise.all([
+      (_bhProperties.length ? Promise.resolve() : bhLoadProperties()),
+      fetch(BH_API + '/api/chat/conversations', { headers: { 'Authorization': 'Bearer ' + getToken() } })
+        .then(function(r){ return r.json(); })
+        .then(function(d){ _bhUpsellConvs = (d.conversations || []).filter(function(c){ return c.status !== 'cancelled' && _bhUpActive(c); }); })
+        .catch(function(){ _bhUpsellConvs = []; })
+    ]).then(function(){ bhPaintUpsellTab(); });
+  }
+
+  // Date ISO → JJ/MM/AA
+  function _bhFmtFr(iso){
+    if(!iso) return '';
+    var p = String(iso).split('T')[0].split('-');
+    if(p.length<3) return String(iso);
+    return p[2] + '/' + p[1] + '/' + p[0].slice(2);
+  }
+  // Résa en cours ou à venir (date de départ >= aujourd'hui)
+  function _bhUpActive(c){
+    var ds = c.reservation_end_date || c.reservation_start_date;
+    if(!ds) return true;
+    var d = new Date(String(ds).split('T')[0]);
+    var today = new Date(); today.setHours(0,0,0,0);
+    return !isNaN(d.getTime()) ? (d >= today) : true;
+  }
+  // Construit les <option> filtrées par nom
+  function _bhUpConvOptions(term){
+    term = (term || '').trim().toLowerCase();
+    var list = _bhUpsellConvs.filter(function(c){
+      if(!term) return true;
+      var who = (c.guest_name || '').toLowerCase();
+      var prop = (c.property_name || c.property_internal_name || '').toLowerCase();
+      return who.indexOf(term) !== -1 || prop.indexOf(term) !== -1;
+    });
+    if(!list.length) return '<option value="">Aucune réservation</option>';
+    return list.map(function(c){
+      var who = (c.guest_name || 'Voyageur');
+      var prop = c.property_name || c.property_internal_name || '';
+      var d = c.reservation_start_date ? (' · ' + _bhFmtFr(c.reservation_start_date)) : '';
+      return '<option value="' + c.id + '">' + who + (prop ? ' — ' + prop : '') + d + '</option>';
+    }).join('');
+  }
+  window.bhFilterUpsellConvs = function(term){
+    var sel = document.getElementById('bhUpConv');
+    if(sel) sel.innerHTML = '<option value="">— Sélectionner —</option>' + _bhUpConvOptions(term);
+  };
+
+  function bhPaintUpsellTab() {
+    var body = document.getElementById('bhPromoBody');
+    var convOptions = _bhUpConvOptions('');
+    var propOptions = _bhProperties.length
+      ? _bhProperties.map(function(p){ return '<option value="' + p.id + '">' + (p.name || p.internalName || p.id) + '</option>'; }).join('')
+      : '<option value="">Chargement...</option>';
+
+    var lbl = 'font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;';
+    var inp = 'width:100%;padding:9px 12px;border:1.5px solid #E5E7EB;border-radius:9px;font-size:13px;box-sizing:border-box;font-family:inherit;background:white;outline:none;';
+
+    body.innerHTML =
+      '<div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">'
+    + '<div style="font-size:12px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;"><i class="fas fa-concierge-bell" style="margin-right:5px;"></i>Prestation payante</div>'
+    + '<div style="display:flex;flex-direction:column;gap:11px;">'
+    + '<div style="display:flex;gap:6px;background:#F3F4F6;border-radius:10px;padding:4px;">'
+    + '<button type="button" id="bhUpMTab_attached" onclick="bhUpsellMode(\'attached\')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:white;color:#7C3AED;box-shadow:0 1px 2px rgba(0,0,0,.08);">Rattacher à une résa</button>'
+    + '<button type="button" id="bhUpMTab_flying" onclick="bhUpsellMode(\'flying\')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:#6B7280;">Lien volant</button>'
+    + '</div>'
+    + '<div><label style="' + lbl + '">Type de prestation <span style="color:#EF4444;">*</span></label>'
+    + '<select id="bhUpKind" style="' + inp + '"><option value="late_checkout">Départ tardif</option><option value="early_checkin">Arrivée anticipée</option><option value="welcome_basket">Panier d\'accueil</option></select></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<div style="flex:1;"><label style="' + lbl + '">Montant (€) <span style="color:#EF4444;">*</span></label><input type="number" id="bhUpAmount" placeholder="20" min="1" style="' + inp + '"></div>'
+    + '<div style="flex:1;"><label style="' + lbl + '">Heure (optionnel)</label><input type="text" id="bhUpReqLabel" placeholder="14h00" style="' + inp + '"></div>'
+    + '</div>'
+    + '<div id="bhUpAttachedBlock"><label style="' + lbl + '">Réservation / voyageur <span style="color:#EF4444;">*</span></label>'
+    + '<input type="text" id="bhUpSearch" placeholder="🔍 Rechercher un nom…" oninput="bhFilterUpsellConvs(this.value)" style="' + inp + 'margin-bottom:7px;">'
+    + '<select id="bhUpConv" size="6" style="' + inp + 'padding:6px;height:auto;"><option value="">— Sélectionner —</option>' + convOptions + '</select></div>'
+    + '<div id="bhUpFlyingBlock" style="display:none;">'
+    + '<label style="' + lbl + '">Logement <span style="color:#EF4444;">*</span></label>'
+    + '<select id="bhUpProp" style="' + inp + 'margin-bottom:10px;"><option value="">— Sélectionner —</option>' + propOptions + '</select>'
+    + '<label style="' + lbl + '">Email client</label><input type="email" id="bhUpEmail" placeholder="client@email.com" style="' + inp + 'margin-bottom:10px;">'
+    + '<label style="' + lbl + '">Téléphone client</label><input type="tel" id="bhUpPhone" placeholder="+33 6 00 00 00 00" style="' + inp + '">'
+    + '<div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Email ou téléphone requis. Le lien volant n\'envoie pas de confirmation auto au paiement.</div>'
+    + '</div>'
+    + '<button onclick="bhCreateUpsell()" id="bhUpBtn" style="width:100%;padding:12px;background:#7C3AED;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;"><i class="fas fa-paper-plane"></i> Générer & envoyer</button>'
+    + '<div id="bhUpMsg" style="display:none;font-size:12px;text-align:center;padding:8px 10px;border-radius:8px;"></div>'
+    + '<div id="bhUpResult" style="display:none;border-top:1.5px dashed #E5E7EB;padding-top:12px;">'
+    + '<div id="bhUpLinkText" style="font-size:11px;color:#374151;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;word-break:break-all;line-height:1.5;margin-bottom:10px;font-family:monospace;"></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="bhUpCopy()" style="flex:1;padding:10px;background:#7C3AED;color:white;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-copy"></i> Copier</button>'
+    + '<button onclick="bhUpShare()" style="padding:10px 14px;background:#F3F4F6;color:#374151;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-share-alt"></i> Partager</button>'
+    + '</div></div>'
+    + '</div></div>';
+
+    bhUpsellMode(_bhUpsellMode);
+  }
+
+  window.bhUpsellMode = function(mode) {
+    _bhUpsellMode = mode;
+    var a = document.getElementById('bhUpAttachedBlock');
+    var f = document.getElementById('bhUpFlyingBlock');
+    if (a) a.style.display = mode === 'attached' ? '' : 'none';
+    if (f) f.style.display = mode === 'flying' ? '' : 'none';
+    var ta = document.getElementById('bhUpMTab_attached');
+    var tf = document.getElementById('bhUpMTab_flying');
+    if (ta && tf) {
+      var on = 'flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:white;color:#7C3AED;box-shadow:0 1px 2px rgba(0,0,0,.08);';
+      var off = 'flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;background:transparent;color:#6B7280;';
+      ta.style.cssText = mode === 'attached' ? on : off;
+      tf.style.cssText = mode === 'flying' ? on : off;
+    }
+  };
+
+  window.bhCreateUpsell = function() {
+    var kind = document.getElementById('bhUpKind').value;
+    var amount = document.getElementById('bhUpAmount').value;
+    var reqLabel = (document.getElementById('bhUpReqLabel').value || '').trim();
+    var msg = document.getElementById('bhUpMsg');
+    var btn = document.getElementById('bhUpBtn');
+    function showMsg(txt, ok){ msg.style.display='block'; msg.textContent=txt; msg.style.background= ok?'#DCFCE7':'#FEE2E2'; msg.style.color= ok?'#166534':'#991B1B'; }
+
+    if (!amount || parseFloat(amount) <= 0) { showMsg('Montant invalide', false); return; }
+    var payload = { kind: kind, amountEuros: amount, reqLabel: reqLabel };
+    if (_bhUpsellMode === 'attached') {
+      var conv = document.getElementById('bhUpConv').value;
+      if (!conv) { showMsg('Sélectionne une réservation', false); return; }
+      payload.conversationId = conv;
+    } else {
+      var prop = document.getElementById('bhUpProp').value;
+      var email = (document.getElementById('bhUpEmail').value || '').trim();
+      var phone = (document.getElementById('bhUpPhone').value || '').trim();
+      if (!prop) { showMsg('Sélectionne un logement', false); return; }
+      if (!email && !phone) { showMsg('Email ou téléphone requis', false); return; }
+      payload.propertyId = prop; payload.email = email; payload.phone = phone;
+    }
+
+    btn.disabled = true; btn.style.opacity = '.6';
+    showMsg('Création du lien…', true);
+    fetch(BH_API + '/api/upsell/manual', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(d){
+      btn.disabled = false; btn.style.opacity = '1';
+      if (!d || !d.success) { showMsg((d && d.error) || 'Erreur lors de la création', false); return; }
+      _bhUpLastUrl = d.url;
+      var parts = [];
+      if (d.sentChat) parts.push('envoyé dans le chat');
+      if (d.sentEmail) parts.push('envoyé par email');
+      showMsg('Lien créé' + (parts.length ? ' (' + parts.join(', ') + ')' : '') + ' ✅', true);
+      document.getElementById('bhUpResult').style.display = 'block';
+      document.getElementById('bhUpLinkText').textContent = d.url;
+    }).catch(function(){
+      btn.disabled = false; btn.style.opacity = '1';
+      showMsg('Erreur réseau', false);
+    });
+  };
+
+  window.bhUpCopy = function(){ if (_bhUpLastUrl && navigator.clipboard) { navigator.clipboard.writeText(_bhUpLastUrl); } };
+  window.bhUpShare = function(){ if (_bhUpLastUrl && navigator.share) { navigator.share({ url: _bhUpLastUrl }).catch(function(){}); } else if (_bhUpLastUrl && navigator.clipboard) { navigator.clipboard.writeText(_bhUpLastUrl); } };
 
   window.bhUpdateLink = function() {
     var propId     = document.getElementById('bhLinkProp')?.value;
@@ -15411,18 +15894,33 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
       if (linkText) linkText.textContent = url;
     }
 
+    var _copied = false;
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(url);
-      else { var ta = document.createElement('textarea'); ta.value = url; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
-    } catch(e) {}
+      if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(url); _copied = true; }
+    } catch(e) { _copied = false; }
+    if (!_copied) {
+      // Repli : clipboard.writeText est souvent refusé APRÈS un await (geste utilisateur expiré).
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = url; ta.style.position='fixed'; ta.style.top='0'; ta.style.left='0'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try { ta.setSelectionRange(0, url.length); } catch(e2){}
+        _copied = document.execCommand('copy'); ta.remove();
+      } catch(e) {}
+    }
+    if (!_copied) {
+      // Dernier recours : sélectionner le lien pour copie manuelle.
+      var lt = document.getElementById('bhLinkText');
+      if (lt) { try { var rng=document.createRange(); rng.selectNodeContents(lt); var seln=window.getSelection(); seln.removeAllRanges(); seln.addRange(rng); } catch(e3){} }
+    }
 
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-    btn.style.background = '#059669';
+    btn.innerHTML = _copied ? '<i class="fas fa-check"></i> Copié !' : '<i class="fas fa-copy"></i> Sélectionné — Cmd/Ctrl+C';
+    btn.style.background = _copied ? '#059669' : '#7C3AED';
     setTimeout(() => {
       btn.innerHTML = '<i class="fas fa-copy"></i> Copier le lien';
-      btn.style.background = '#1A7A5E';
-    }, 2000);
+      btn.style.background = '#7C3AED';
+    }, 2500);
   };
 
   window.bhShareLink = async function() {
@@ -15547,5 +16045,234 @@ function notifSwitchTab(tab) {
   }
 }
 </script>
+<style id="bh-luxe-modals">
+/* ════════════════════════════════════════════════════════════
+   COUCHE LUXE MODALES — surcharge les styles inline (!important)
+   Zéro logique touchée : uniquement fond, rayons, typo, boutons.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Famille A : bottom-sheets (KPI, nouvelle résa, block, détails) ── */
+#todayMovesModal, #cleaning48hModal, #kpiNotesModal, #activePropertiesModal,
+#cleaningTodayModal, #checklistsKpiModal, #caKpiModal, #occupancyDetailsModal,
+#depositsModal, #newReservationModal, #blockModal, #reservationDetailsModal {
+  background: rgba(13,17,23,.5) !important;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+#todayMovesModal > div, #cleaning48hModal > div, #kpiNotesModal > div,
+#activePropertiesModal > div, #cleaningTodayModal > div, #checklistsKpiModal > div,
+#caKpiModal > div, #occupancyDetailsModal > div, #depositsModal > div,
+#newReservationModal > div, #blockModal > div, #reservationDetailsModal > div {
+  background: #FAF7F2 !important;
+  box-shadow: 0 -18px 60px rgba(13,17,23,.25), inset 0 1px 0 rgba(255,255,255,.9) !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  border-bottom: none !important;
+}
+/* Titres de header en serif — la signature du dashboard */
+#todayMovesModal > div > div:first-of-type div[style*="font-weight:700"],
+#cleaning48hModal > div > div:first-of-type div[style*="font-weight:700"],
+#kpiNotesModal > div > div:first-of-type div[style*="font-weight:700"],
+#activePropertiesModal > div > div:first-of-type div[style*="font-weight:700"],
+#cleaningTodayModal > div > div:first-of-type div[style*="font-weight:700"],
+#checklistsKpiModal > div > div:first-of-type div[style*="font-weight:700"],
+#caKpiModal > div > div:first-of-type div[style*="font-weight:700"],
+#occupancyDetailsModal > div > div:first-of-type div[style*="font-weight:700"],
+#depositsModal > div > div:first-of-type div[style*="font-weight:700"],
+#blockModal > div > div:first-of-type div[style*="font-weight:700"],
+#reservationDetailsModal > div div[style*="font-weight:700"][style*="font-size:16px"],
+#newReservationModal div[style*="font-weight:700"][style*="color:#0D1117"] {
+  font-family: Georgia, 'Times New Roman', serif !important;
+  font-weight: 600 !important;
+  font-size: 19px !important;
+  letter-spacing: .01em;
+}
+/* Total CA du modal en serif aussi */
+#caKpiModalTotal { font-family: Georgia, 'Times New Roman', serif !important; font-weight: 600 !important; }
+/* Boutons de fermeture × : pastille blanche bordée, hover vert */
+#todayMovesModalClose, #cleaning48hModalClose, #kpiNotesModalClose,
+#closeActivePropertiesModal, #closeCleaningTodayModal, #checklistsKpiModalClose,
+#caKpiModalClose, #closeOccupancyDetailsModal, #closeDepositsModal,
+#blockModalClose, #closeDetailsModal, #closeNewReservationModal {
+  background: #fff !important;
+  border: 1px solid rgba(200,184,154,.6) !important;
+  color: #4B5563 !important;
+  transition: all .15s !important;
+}
+#todayMovesModalClose:hover, #cleaning48hModalClose:hover, #kpiNotesModalClose:hover,
+#closeActivePropertiesModal:hover, #closeCleaningTodayModal:hover, #checklistsKpiModalClose:hover,
+#caKpiModalClose:hover, #closeOccupancyDetailsModal:hover, #closeDepositsModal:hover,
+#blockModalClose:hover, #closeDetailsModal:hover, #closeNewReservationModal:hover {
+  border-color: #1A7A5E !important;
+  color: #1A7A5E !important;
+}
+
+/* ── Desktop ≥ 720px : les bottom-sheets deviennent des cartes centrées ── */
+@media (min-width: 720px) {
+  #todayMovesModal, #cleaning48hModal, #kpiNotesModal, #activePropertiesModal,
+  #cleaningTodayModal, #checklistsKpiModal, #caKpiModal, #occupancyDetailsModal,
+  #depositsModal, #blockModal, #reservationDetailsModal, #newReservationModal {
+    align-items: center !important;
+    padding: 28px !important;
+  }
+  #todayMovesModal > div, #cleaning48hModal > div, #kpiNotesModal > div,
+  #activePropertiesModal > div, #cleaningTodayModal > div, #checklistsKpiModal > div,
+  #caKpiModal > div, #occupancyDetailsModal > div, #depositsModal > div,
+  #blockModal > div, #reservationDetailsModal > div, #newReservationModal > div {
+    border-radius: 24px !important;
+    border-bottom: 1px solid rgba(200,184,154,.55) !important;
+    max-height: 84vh !important;
+    box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+  }
+}
+
+/* ── Famille B : modales centrées (confirm, cellule, réorganiser, édition groupée) ── */
+#bhConfirmModal, #cellModal, #reorderModal, #batchEditModal {
+  background: rgba(13,17,23,.5) !important;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+#bhConfirmModal > div, #cellModal > div {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 24px 70px rgba(13,17,23,.28) !important;
+}
+#cellModalTitle { font-family: Georgia, 'Times New Roman', serif !important; font-weight: 600 !important; }
+
+/* ── Famille C : modales à classes (booking, checklist, facture, résa) ── */
+.booking-modal .modal-overlay { background: rgba(13,17,23,.5) !important; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+.booking-modal .modal-content, #reservationModal .modal-content {
+  background: #FAF7F2 !important;
+  border: 1px solid rgba(200,184,154,.55) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 70px rgba(13,17,23,.3) !important;
+}
+.booking-modal .modal-header h2, .booking-modal .modal-header h3,
+#reservationModal .modal-header h2, #reservationModal .modal-header h3,
+.checklist-modal-header h2, #invoiceModal .inv-header h2 {
+  font-family: Georgia, 'Times New Roman', serif !important;
+  font-weight: 600 !important;
+  letter-spacing: .01em;
+}
+.checklist-modal { background: #FAF7F2 !important; border: 1px solid rgba(200,184,154,.55) !important; border-radius: 24px !important; }
+#invoiceModal .inv-content { background: #FAF7F2 !important; border: 1px solid rgba(200,184,154,.55) !important; border-radius: 24px !important; }
+
+/* ── Détails communs : séparateurs plus doux dans les listes KPI ── */
+#todayMovesModalContent > div, #cleaning48hModalContent > div {
+  border-bottom-color: rgba(200,184,154,.35) !important;
+}
+</style>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// PONT HOSTERZZ — création de mission ménage depuis la fiche réservation
+// ══════════════════════════════════════════════════════════
+(function () {
+  function hzPropertyId(res) {
+    if (!res) return null;
+    if (res.propertyId != null) return String(res.propertyId);
+    if (res.property && res.property.id != null) return String(res.property.id);
+    if (res.property_id != null) return String(res.property_id);
+    return null;
+  }
+
+  function hzPropertyName(res, propertyId) {
+    if (!res) return 'Logement';
+    if (res.propertyName) return res.propertyName;
+    if (res.property && (res.property.name || res.property.title)) return res.property.name || res.property.title;
+    var list = window.PROPERTIES || window.properties || [];
+    var p = list.find(function (x) {
+      return String(x.id) === String(propertyId) || String(x.propertyId) === String(propertyId);
+    });
+    return p ? (p.name || p.title || p.label || propertyId) : (propertyId || 'Logement');
+  }
+
+  function hzGuestName(res) {
+    if (!res) return '-';
+    return res.guestName || res.guest_name || res.name || '-';
+  }
+
+  window.openHzMissionModalFromDetails = function () {
+    var booking = window.currentBookingData || window.currentBooking || null;
+    if (!booking || booking.id == null) {
+      alert("Impossible d'identifier cette réservation pour créer la mission Hosterzz.");
+      return;
+    }
+    var propertyId = hzPropertyId(booking);
+    var endStr = String(booking.end || booking.endDate || booking.checkOut || '').slice(0, 10);
+
+    document.getElementById('hzModalReservationId').value = booking.id;
+    document.getElementById('hzModalPropertyName').textContent = hzPropertyName(booking, propertyId);
+    document.getElementById('hzModalEndDate').textContent = (typeof formatDateFr === 'function' && endStr) ? formatDateFr(endStr) : (endStr || '-');
+    document.getElementById('hzModalGuest').textContent = hzGuestName(booking);
+    document.getElementById('hzModalPrice').value = '';
+    document.getElementById('hzModalType').value = 'depart';
+    document.getElementById('hzMissionModal').style.display = 'flex';
+  };
+
+  window.closeHzMissionModal = function () {
+    document.getElementById('hzMissionModal').style.display = 'none';
+  };
+
+  window.submitHzMission = async function () {
+    var reservationId = document.getElementById('hzModalReservationId').value;
+    var cleaningType = document.getElementById('hzModalType').value;
+    var priceRaw = document.getElementById('hzModalPrice').value;
+    var btnSubmit = document.getElementById('hzModalSubmitBtn');
+    var errorBox = document.getElementById('hzModalError');
+    errorBox.style.display = 'none';
+
+    if (!reservationId) {
+      errorBox.textContent = "Réservation introuvable.";
+      errorBox.style.display = 'block';
+      return;
+    }
+
+    var token = localStorage.getItem('lcc_token');
+    var apiUrl = window.API_URL || 'https://lcc-booking-manager.onrender.com';
+    var payload = { reservation_id: reservationId, task_type: cleaningType };
+    if (priceRaw) payload.suggested_price = parseFloat(priceRaw);
+
+    btnSubmit.disabled = true;
+    var originalLabel = btnSubmit.innerHTML;
+    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
+
+    try {
+      var resp = await fetch(apiUrl + '/api/hosterzz/missions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify(payload)
+      });
+      var data = await resp.json().catch(function () { return {}; });
+
+      if (!resp.ok) {
+        if (resp.status === 409 || (data && data.code === 'not_linked')) {
+          errorBox.textContent = "Aucun compte Hosterzz lié. Rendez-vous dans Paramètres → Intégrations pour connecter votre compte Hosterzz.";
+        } else {
+          errorBox.textContent = (data && data.error) || "Erreur lors de la création de la mission.";
+        }
+        errorBox.style.display = 'block';
+        return;
+      }
+
+      hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: data.statut || 'creee' };
+      refreshHzBadgeInDetails();
+      window.closeHzMissionModal();
+      if (typeof window.showToast === 'function') {
+        window.showToast('Mission Hosterzz créée ✅');
+      } else {
+        alert('Mission Hosterzz créée avec succès.');
+      }
+    } catch (e) {
+      errorBox.textContent = "Erreur réseau : impossible de contacter Hosterzz.";
+      errorBox.style.display = 'block';
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = originalLabel;
+    }
+  };
+})();
+</script>
+
 </body>
 </html>

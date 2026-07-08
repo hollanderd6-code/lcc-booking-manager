@@ -33820,7 +33820,19 @@ app.post('/api/hosterzz/missions', authenticateToken, async (req, res) => {
     const { reservation_id } = req.body || {};
     if (!reservation_id) return res.status(400).json({ error: 'reservation_id requis.' });
 
-    const rr = await pool.query(`SELECT user_id FROM reservations WHERE id = $1`, [reservation_id]);
+    // reservation_id peut être la PK entière OU un identifiant Channex.
+    // channex_booking_id est stocké SANS le préfixe 'CHX_' ; reservation_uid AVEC.
+    const ridStr = String(reservation_id).trim();
+    const isNumericRid = /^\d+$/.test(ridStr);
+    const bareChx = ridStr.startsWith('CHX_') ? ridStr.slice(4) : ridStr;
+    const rr = isNumericRid
+      ? await pool.query(`SELECT id, user_id FROM reservations WHERE id = $1`, [ridStr])
+      : await pool.query(
+          `SELECT id, user_id FROM reservations
+             WHERE reservation_uid = $1 OR channex_booking_id = $1 OR channex_booking_id = $2
+             ORDER BY id DESC LIMIT 1`,
+          [ridStr, bareChx]
+        );
     const resa = rr.rows[0];
     if (!resa) return res.status(404).json({ error: 'Réservation introuvable.' });
 
@@ -33828,10 +33840,25 @@ app.post('/api/hosterzz/missions', authenticateToken, async (req, res) => {
     const allowedIds = await getAgencyUserIds(req, req.user.id);
     if (!allowedIds.includes(resa.user_id)) return res.status(403).json({ error: 'Non autorisé.' });
 
-    const d = await createHzMissionForReservation(reservation_id, req.user.id, {
+    // Normaliser le type de prestation vers le vocabulaire Hosterzz.
+    // Compat : on accepte task_type OU cleaning_type, et on mappe les anciens libellés.
+    const HZ_TASK_MAP = {
+      depart: 'menage_approfondi', approfondi: 'menage_approfondi',
+      standard: 'menage_standard', menage: 'menage_standard',
+      linge: 'blanchisserie', blanchisserie: 'blanchisserie',
+      check_in: 'check_in', checkin: 'check_in',
+      check_out: 'check_out', checkout: 'check_out',
+      conciergerie: 'conciergerie',
+      menage_standard: 'menage_standard', menage_approfondi: 'menage_approfondi'
+    };
+    const rawType = String(req.body.task_type || req.body.cleaning_type || '').trim();
+    const normalizedType = HZ_TASK_MAP[rawType] || (rawType || undefined);
+
+    // On transmet la PK entière réelle (resa.id), jamais l'identifiant Channex brut.
+    const d = await createHzMissionForReservation(resa.id, req.user.id, {
       date: req.body.date,
       heure: req.body.heure,
-      task_type: req.body.task_type,
+      task_type: normalizedType,
       description: req.body.description,
       prestataire_user_id: req.body.prestataire_user_id
     });
