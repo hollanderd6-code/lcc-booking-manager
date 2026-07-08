@@ -2494,6 +2494,7 @@ function formatDateFr(dateStr) {
 
       // ── Pont Hosterzz : statuts des missions liées, indexés par bh_reservation_id ──
       let hzMissionsMap = {};
+      window.hzMissionsMap = hzMissionsMap;
       async function loadHzMissionsMap() {
         try {
           const token = localStorage.getItem('lcc_token');
@@ -2515,6 +2516,7 @@ function formatDateFr(dateStr) {
             });
           });
           hzMissionsMap = map;
+          window.hzMissionsMap = map; // lisible depuis les autres blocs <script>
         } catch (e) { console.warn('Erreur chargement missions Hosterzz:', e); }
       }
       window.loadHzMissionsMap = loadHzMissionsMap;
@@ -4650,7 +4652,7 @@ function formatDateFr(dateStr) {
     // ══════════════════════════════════════════════════════════
     window.openHzMissionModal = function (btn) {
       const reservationId = btn.getAttribute('data-reservation-id');
-      const dejaCreee = hzMissionsMap[String(reservationId)];
+      const dejaCreee = (window.hzMissionsMap || {})[String(reservationId)];
       if (dejaCreee) {
         alert(`Une mission Hosterzz existe déjà pour cette réservation (statut : ${dejaCreee.statut || 'créée'}).`);
         return;
@@ -4773,7 +4775,7 @@ function formatDateFr(dateStr) {
       }
 
       function hzSuccesUI(statut) {
-        hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: statut || 'creee' };
+        if (window.hzMissionsMap) window.hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: statut || 'creee' };
         if (typeof window.loadHzMissionsMap === 'function') window.loadHzMissionsMap();
         const statusDiv = document.querySelector(`[data-hz-status-for="${reservationId}"]`);
         if (statusDiv) statusDiv.innerHTML = hzMissionBadgeHtml(reservationId);
