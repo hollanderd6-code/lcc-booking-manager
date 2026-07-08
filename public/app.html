@@ -5661,6 +5661,8 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       });
       hzMissionsMap = map;
       window.hzMissionsMap = map; // lisible depuis les autres blocs <script>
+      // La modale peut déjà être ouverte quand la map arrive : on repeint.
+      try { refreshHzBadgeInDetails(); } catch (e) {}
     } catch (e) { console.warn('Erreur chargement missions Hosterzz:', e); }
   }
   window.loadHzMissionsMapGlobal = loadHzMissionsMapGlobal;
@@ -5679,12 +5681,28 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   }
 
   (function watchReservationDetailsModal() {
-    const modal = document.getElementById('reservationDetailsModal');
-    if (!modal || !window.MutationObserver) return;
-    const obs = new MutationObserver(() => {
-      if (modal.style.display === 'flex') setTimeout(refreshHzBadgeInDetails, 150);
-    });
-    obs.observe(modal, { attributes: true, attributeFilter: ['style'] });
+    // Ce script s'exécute AVANT que #reservationDetailsModal existe dans le DOM
+    // (déclaré plus bas dans la page) : sans attente, l'observer n'était jamais posé.
+    function install() {
+      const modal = document.getElementById('reservationDetailsModal');
+      if (!modal || !window.MutationObserver) return false;
+      if (modal.dataset.hzWatched === '1') return true;
+      modal.dataset.hzWatched = '1';
+      const obs = new MutationObserver(() => {
+        // 'flex' était trop strict : la vue mobile peut utiliser 'block'.
+        const visible = modal.style.display && modal.style.display !== 'none';
+        if (visible) setTimeout(refreshHzBadgeInDetails, 150);
+      });
+      obs.observe(modal, { attributes: true, attributeFilter: ['style', 'class'] });
+      return true;
+    }
+    if (install()) return;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', install);
+    }
+    // Filet : la modale peut être injectée après le DOMContentLoaded.
+    let essais = 0;
+    const timer = setInterval(() => { if (install() || ++essais > 40) clearInterval(timer); }, 250);
   })();
   function hzMissionBadgeHtml(reservationId) {
     const m = hzMissionsMap[String(reservationId)];
