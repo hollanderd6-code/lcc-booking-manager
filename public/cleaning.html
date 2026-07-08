@@ -4728,13 +4728,44 @@ function formatDateFr(dateStr) {
       const token = localStorage.getItem('lcc_token');
       const payload = {
         reservation_id: reservationId,
-        cleaning_type: cleaningType
+        task_type: cleaningType
       };
       if (priceRaw) payload.suggested_price = parseFloat(priceRaw);
 
       btnSubmit.disabled = true;
       const originalLabel = btnSubmit.innerHTML;
       btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
+
+      // Vérifie côté serveur si la mission existe vraiment pour cette réservation.
+      // Sert quand la requête POST est coupée (cold start Hosterzz) alors que la
+      // mission a bien été créée : on ne doit pas annoncer un échec à tort.
+      async function hzVerifierMission(resaId) {
+        for (let i = 0; i < 3; i++) {
+          await new Promise(r => setTimeout(r, i === 0 ? 1500 : 3000));
+          try {
+            const vr = await fetch(`${API_URL}/api/hosterzz/missions`, { headers: { Authorization: 'Bearer ' + token } });
+            if (vr.ok) {
+              const vd = await vr.json();
+              const found = (vd.missions || []).find(m => String(m.bh_reservation_id) === String(resaId));
+              if (found) return found;
+            }
+          } catch (e) { /* on retente */ }
+        }
+        return null;
+      }
+
+      function hzSuccesUI(statut) {
+        hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: statut || 'creee' };
+        const statusDiv = document.querySelector(`[data-hz-status-for="${reservationId}"]`);
+        if (statusDiv) statusDiv.innerHTML = hzMissionBadgeHtml(reservationId);
+        const btnEl = document.querySelector(`.hz-mission-btn[data-reservation-id="${reservationId}"]`);
+        if (btnEl) btnEl.style.display = 'none';
+        window.closeHzMissionModal();
+      }
+
+      // Timeout client : évite un spinner infini si la réponse ne revient jamais.
+      const ctrl = new AbortController();
+      const killer = setTimeout(() => ctrl.abort(), 60000);
 
       try {
         const resp = await fetch(`${API_URL}/api/hosterzz/missions`, {
@@ -4743,7 +4774,8 @@ function formatDateFr(dateStr) {
             'Content-Type': 'application/json',
             Authorization: 'Bearer ' + token
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          signal: ctrl.signal
         });
         const data = await resp.json().catch(() => ({}));
 
@@ -4757,16 +4789,19 @@ function formatDateFr(dateStr) {
           return;
         }
 
-        hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: data.statut || 'creee' };
-        const statusDiv = document.querySelector(`[data-hz-status-for="${reservationId}"]`);
-        if (statusDiv) statusDiv.innerHTML = hzMissionBadgeHtml(reservationId);
-        const btnEl = document.querySelector(`.hz-mission-btn[data-reservation-id="${reservationId}"]`);
-        if (btnEl) btnEl.style.display = 'none';
-        window.closeHzMissionModal();
+        hzSuccesUI(data.statut);
       } catch (e) {
-        errorBox.textContent = "Erreur réseau : impossible de contacter Hosterzz.";
-        errorBox.style.display = 'block';
+        // Requête coupée ou réseau : la mission a peut-être été créée quand même.
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
+        const existante = await hzVerifierMission(reservationId);
+        if (existante) {
+          hzSuccesUI(existante.statut);
+        } else {
+          errorBox.textContent = "La mission n'a pas pu être créée. Vérifiez votre connexion et réessayez.";
+          errorBox.style.display = 'block';
+        }
       } finally {
+        clearTimeout(killer);
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = originalLabel;
       }
@@ -5138,11 +5173,14 @@ function formatDateFr(dateStr) {
     </div>
 
     <div class="form-row" style="margin-bottom:12px;">
-      <label for="hzModalType">Type de ménage</label>
+      <label for="hzModalType">Type de prestation</label>
       <select id="hzModalType" style="width:100%;padding:8px 10px;border:1px solid var(--border-color);border-radius:8px;background:#fff;font-size:14px;">
-        <option value="depart">Ménage de départ</option>
-        <option value="approfondi">Ménage approfondi</option>
-        <option value="linge">Ménage + linge</option>
+        <option value="menage_standard">Ménage standard</option>
+        <option value="menage_approfondi" selected>Ménage de départ</option>
+        <option value="blanchisserie">Blanchisserie à domicile</option>
+        <option value="check_in">Entrée des voyageurs (check-in)</option>
+        <option value="check_out">Sortie des voyageurs (check-out)</option>
+        <option value="conciergerie">Conciergerie</option>
       </select>
     </div>
 

@@ -8215,11 +8215,14 @@ try {
     </div>
 
     <div class="form-group" style="margin-bottom:12px;">
-      <label for="hzModalType">Type de ménage</label>
+      <label for="hzModalType">Type de prestation</label>
       <select id="hzModalType" style="width:100%;padding:8px 10px;border:1px solid rgba(200,184,154,.55);border-radius:8px;background:#fff;font-size:14px;">
-        <option value="depart">Ménage de départ</option>
-        <option value="approfondi">Ménage approfondi</option>
-        <option value="linge">Ménage + linge</option>
+        <option value="menage_standard">Ménage standard</option>
+        <option value="menage_approfondi" selected>Ménage de départ</option>
+        <option value="blanchisserie">Blanchisserie à domicile</option>
+        <option value="check_in">Entrée des voyageurs (check-in)</option>
+        <option value="check_out">Sortie des voyageurs (check-out)</option>
+        <option value="conciergerie">Conciergerie</option>
       </select>
     </div>
 
@@ -16227,18 +16230,51 @@ function notifSwitchTab(tab) {
 
     var token = localStorage.getItem('lcc_token');
     var apiUrl = window.API_URL || 'https://lcc-booking-manager.onrender.com';
-    var payload = { reservation_id: reservationId, cleaning_type: cleaningType };
+    var payload = { reservation_id: reservationId, task_type: cleaningType };
     if (priceRaw) payload.suggested_price = parseFloat(priceRaw);
 
     btnSubmit.disabled = true;
     var originalLabel = btnSubmit.innerHTML;
     btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
 
+    // Vérifie côté serveur si la mission existe vraiment pour cette réservation.
+    // Sert quand la requête POST est coupée (cold start Hosterzz) alors que la
+    // mission a bien été créée : on ne doit pas annoncer un échec à tort.
+    async function hzVerifierMission(reservationId) {
+      for (var i = 0; i < 3; i++) {
+        await new Promise(function (r) { setTimeout(r, i === 0 ? 1500 : 3000); });
+        try {
+          var vr = await fetch(apiUrl + '/api/hosterzz/missions', { headers: { Authorization: 'Bearer ' + token } });
+          if (vr.ok) {
+            var vd = await vr.json();
+            var found = (vd.missions || []).filter(function (m) {
+              return String(m.bh_reservation_id) === String(reservationId);
+            })[0];
+            if (found) return found;
+          }
+        } catch (e) { /* on retente */ }
+      }
+      return null;
+    }
+
+    function hzSuccesUI(statut) {
+      hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: statut || 'creee' };
+      refreshHzBadgeInDetails();
+      window.closeHzMissionModal();
+      if (typeof window.showToast === 'function') window.showToast('Mission Hosterzz créée ✅');
+      else alert('Mission Hosterzz créée avec succès.');
+    }
+
+    // Timeout client : évite un spinner infini si la réponse ne revient jamais.
+    var ctrl = new AbortController();
+    var killer = setTimeout(function () { ctrl.abort(); }, 60000);
+
     try {
       var resp = await fetch(apiUrl + '/api/hosterzz/missions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: ctrl.signal
       });
       var data = await resp.json().catch(function () { return {}; });
 
@@ -16252,18 +16288,19 @@ function notifSwitchTab(tab) {
         return;
       }
 
-      hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: data.statut || 'creee' };
-      refreshHzBadgeInDetails();
-      window.closeHzMissionModal();
-      if (typeof window.showToast === 'function') {
-        window.showToast('Mission Hosterzz créée ✅');
-      } else {
-        alert('Mission Hosterzz créée avec succès.');
-      }
+      hzSuccesUI(data.statut);
     } catch (e) {
-      errorBox.textContent = "Erreur réseau : impossible de contacter Hosterzz.";
-      errorBox.style.display = 'block';
+      // Requête coupée ou réseau : la mission a peut-être été créée quand même.
+      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
+      var existante = await hzVerifierMission(reservationId);
+      if (existante) {
+        hzSuccesUI(existante.statut);
+      } else {
+        errorBox.textContent = "La mission n'a pas pu être créée. Vérifiez votre connexion et réessayez.";
+        errorBox.style.display = 'block';
+      }
     } finally {
+      clearTimeout(killer);
       btnSubmit.disabled = false;
       btnSubmit.innerHTML = originalLabel;
     }
