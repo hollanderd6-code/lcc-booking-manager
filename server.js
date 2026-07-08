@@ -33829,7 +33829,7 @@ app.post('/api/hosterzz/missions', authenticateToken, async (req, res) => {
       ? await pool.query(`SELECT id, user_id FROM reservations WHERE id = $1`, [ridStr])
       : await pool.query(
           `SELECT id, user_id FROM reservations
-             WHERE reservation_uid = $1 OR channex_booking_id = $1 OR channex_booking_id = $2
+             WHERE uid = $1 OR channex_booking_id = $1 OR channex_booking_id = $2
              ORDER BY id DESC LIMIT 1`,
           [ridStr, bareChx]
         );
