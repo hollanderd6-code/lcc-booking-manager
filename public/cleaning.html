@@ -4740,7 +4740,7 @@ function formatDateFr(dateStr) {
       // Sert quand la requête POST est coupée (cold start Hosterzz) alors que la
       // mission a bien été créée : on ne doit pas annoncer un échec à tort.
       // Attentes cumulées ~75 s : la réconciliation BH réessaie jusqu'à ~71 s.
-      const HZ_ATTENTES = [1500, 3000, 5000, 8000, 12000, 15000, 15000, 15000];
+      const HZ_ATTENTES = [1200, 1800, 2500, 3500, 5000, 6000, 8000, 8000, 8000];
       async function hzVerifierMission(resaId) {
         for (let i = 0; i < HZ_ATTENTES.length; i++) {
           await new Promise(r => setTimeout(r, HZ_ATTENTES[i]));
@@ -4767,7 +4767,7 @@ function formatDateFr(dateStr) {
 
       // Timeout client : évite un spinner infini si la réponse ne revient jamais.
       const ctrl = new AbortController();
-      const killer = setTimeout(() => ctrl.abort(), 60000);
+      const killer = setTimeout(() => ctrl.abort(), 30000);
 
       try {
         const resp = await fetch(`${API_URL}/api/hosterzz/missions`, {

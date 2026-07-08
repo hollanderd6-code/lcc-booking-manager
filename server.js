@@ -33790,7 +33790,7 @@ async function hzEnregistrerMissionLocale(resaId, missionId, propId, userId, sta
 // { already: true } + le mission_id) jusqu'à pouvoir enregistrer le lien localement.
 function hzReconcileMissionEnFond(payload, resaId, propId, userId) {
   (async () => {
-    const delais = [3000, 8000, 20000, 40000];
+    const delais = [1500, 4000, 8000, 15000, 25000];
     for (const attente of delais) {
       await new Promise(r => setTimeout(r, attente));
       try {
@@ -33851,9 +33851,13 @@ async function createHzMissionForReservation(reservationId, userId, opts = {}) {
 
   let d;
   try {
-    // retries: 1 — sûr car Hosterzz est idempotent sur bh_reservation_id.
-    // Si la 1re tentative a en réalité abouti, la 2e retombe sur { already: true }.
-    d = await hzPartnerCall('/api/partner/missions', payload, { retries: 1 });
+    // Chemin interactif (un humain attend devant son écran) : on échoue vite et on
+    // bascule en arrière-plan, plutôt que de le faire patienter pendant un cold start.
+    // Chemin automatique (fire-and-forget) : on peut être patient.
+    const appel = opts.interactive
+      ? { timeoutMs: 8000, retries: 0 }
+      : { retries: 1 };
+    d = await hzPartnerCall('/api/partner/missions', payload, appel);
   } catch (e) {
     if (e.transient) {
       // Hosterzz n'a pas répondu à temps : la mission est peut-être déjà créée chez lui.
@@ -33955,7 +33959,8 @@ app.post('/api/hosterzz/missions', authenticateToken, async (req, res) => {
       heure: req.body.heure,
       task_type: normalizedType,
       description: req.body.description,
-      prestataire_user_id: req.body.prestataire_user_id
+      prestataire_user_id: req.body.prestataire_user_id,
+      interactive: true
     });
     res.json({ ok: true, mission_id: d.mission_id, already: d.already, statut: d.statut, url: d.url });
   } catch (e) {
