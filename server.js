@@ -33864,7 +33864,9 @@ async function createHzMissionForReservation(reservationId, userId, opts = {}) {
     date: opts.date || resa.date_depart,
     heure: opts.heure || '11:00',
     task_type: opts.task_type || 'menage_approfondi',
-    description: opts.description || ('Mission — ' + prop.name + ' — départ le ' + hzDateFr(resa.date_depart) + (resa.guest_name ? ' (' + resa.guest_name + ')' : '')),
+    // RGPD : ni le nom du voyageur, ni le nom interne du logement ne doivent partir
+    // vers Hosterzz — la mission est visible par tous les prestataires du secteur.
+    description: opts.description || null,
     prestataire_user_id: opts.prestataire_user_id || null
   };
 
