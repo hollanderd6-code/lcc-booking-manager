@@ -33774,6 +33774,42 @@ app.post('/api/hosterzz/unlink', authenticateToken, async (req, res) => {
 // ── 2. Créer une mission Hosterzz depuis un départ BH ──
 // Fonction partagée : réutilisée par la route manuelle ET par le déclencheur automatique (V2).
 // Lève une erreur si non liée (e.code = 'NOT_LINKED'), logement non éligible (e.code = 'NOT_ELIGIBLE'), etc.
+// Enregistre localement le lien résa BH <-> mission Hosterzz.
+async function hzEnregistrerMissionLocale(resaId, missionId, propId, userId, statut) {
+  await pool.query(
+    `INSERT INTO hosterzz_missions (bh_reservation_id, mission_id, property_id, user_id, statut)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (bh_reservation_id) DO UPDATE SET mission_id = $2, statut = $5`,
+    [String(resaId), missionId, String(propId), userId, statut || 'creee']
+  );
+}
+
+// Réconciliation en arrière-plan.
+// Si l'appel initial a expiré, Hosterzz a peut-être quand même créé la mission :
+// BH n'en a alors aucune trace. On rappelle l'endpoint (idempotent : il renvoie
+// { already: true } + le mission_id) jusqu'à pouvoir enregistrer le lien localement.
+function hzReconcileMissionEnFond(payload, resaId, propId, userId) {
+  (async () => {
+    const delais = [3000, 8000, 20000, 40000];
+    for (const attente of delais) {
+      await new Promise(r => setTimeout(r, attente));
+      try {
+        const d = await hzPartnerCall('/api/partner/missions', payload, { timeoutMs: 20000 });
+        await hzEnregistrerMissionLocale(resaId, d.mission_id, propId, userId, d.statut);
+        console.log(`[partner] réconciliation OK — resa ${resaId} → mission ${d.mission_id} (already=${!!d.already})`);
+        return;
+      } catch (e) {
+        if (!e.transient) {
+          console.error(`[partner] réconciliation abandonnée (resa ${resaId}) :`, e.message);
+          return;
+        }
+        console.warn(`[partner] réconciliation : Hosterzz toujours injoignable (resa ${resaId})`);
+      }
+    }
+    console.error(`[partner] réconciliation échouée après tous les essais — resa ${resaId}`);
+  })().catch(() => {});
+}
+
 async function createHzMissionForReservation(reservationId, userId, opts = {}) {
   const rr = await pool.query(
     `SELECT id, property_id, user_id,
@@ -33796,9 +33832,7 @@ async function createHzMissionForReservation(reservationId, userId, opts = {}) {
   // Le code postal n'est pas une colonne de properties : on l'extrait de l'adresse
   const cpMatch = String(prop.address || '').match(/\b(\d{5})\b/);
 
-  // retries: 1 — sûr car Hosterzz est idempotent sur bh_reservation_id.
-  // Si la 1re tentative a en réalité abouti, la 2e retombe sur { already: true }.
-  const d = await hzPartnerCall('/api/partner/missions', {
+  const payload = {
     bh_user_id: userId,
     bh_reservation_id: String(resa.id),
     property: {
@@ -33813,14 +33847,26 @@ async function createHzMissionForReservation(reservationId, userId, opts = {}) {
     task_type: opts.task_type || 'menage_approfondi',
     description: opts.description || ('Mission — ' + prop.name + ' — départ le ' + resa.date_depart + (resa.guest_name ? ' (' + resa.guest_name + ')' : '')),
     prestataire_user_id: opts.prestataire_user_id || null
-  }, { retries: 1 });
+  };
 
-  await pool.query(
-    `INSERT INTO hosterzz_missions (bh_reservation_id, mission_id, property_id, user_id, statut)
-     VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (bh_reservation_id) DO UPDATE SET mission_id = $2, statut = $5`,
-    [String(resa.id), d.mission_id, String(prop.id), userId, d.statut || 'creee']
-  );
+  let d;
+  try {
+    // retries: 1 — sûr car Hosterzz est idempotent sur bh_reservation_id.
+    // Si la 1re tentative a en réalité abouti, la 2e retombe sur { already: true }.
+    d = await hzPartnerCall('/api/partner/missions', payload, { retries: 1 });
+  } catch (e) {
+    if (e.transient) {
+      // Hosterzz n'a pas répondu à temps : la mission est peut-être déjà créée chez lui.
+      // On réconcilie en arrière-plan pour ne pas perdre le lien, et on signale « en cours ».
+      hzReconcileMissionEnFond(payload, resa.id, prop.id, userId);
+      const p = new Error('Hosterzz met du temps à répondre. La mission est en cours de création.');
+      p.code = 'PENDING';
+      throw p;
+    }
+    throw e;
+  }
+
+  await hzEnregistrerMissionLocale(resa.id, d.mission_id, prop.id, userId, d.statut);
 
   return { mission_id: d.mission_id, already: !!d.already, statut: d.statut, url: d.url };
 }
@@ -33916,6 +33962,8 @@ app.post('/api/hosterzz/missions', authenticateToken, async (req, res) => {
     console.error('[hosterzz mission]', e.code || '', e.message);
     if (e.code === 'NOT_LINKED') return res.status(409).json({ error: "Connectez d'abord votre compte Hosterzz dans Paramètres.", code: 'NOT_LINKED' });
     if (e.code === 'NOT_FOUND') return res.status(404).json({ error: e.message });
+    // Hosterzz lent : la mission part quand même, une réconciliation tourne en arrière-plan.
+    if (e.code === 'PENDING') return res.status(202).json({ pending: true, code: 'PENDING', error: e.message });
     // On fait remonter le vrai motif (renvoyé par le pont Hosterzz) au lieu d'un message opaque.
     res.status(500).json({ error: 'Création de la mission impossible.', detail: e.message || null, code: e.code || null });
   }

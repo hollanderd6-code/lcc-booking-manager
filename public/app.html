@@ -16240,9 +16240,11 @@ function notifSwitchTab(tab) {
     // Vérifie côté serveur si la mission existe vraiment pour cette réservation.
     // Sert quand la requête POST est coupée (cold start Hosterzz) alors que la
     // mission a bien été créée : on ne doit pas annoncer un échec à tort.
+    // Attentes cumulées ~75 s : la réconciliation BH réessaie jusqu'à ~71 s.
+    var HZ_ATTENTES = [1500, 3000, 5000, 8000, 12000, 15000, 15000, 15000];
     async function hzVerifierMission(reservationId) {
-      for (var i = 0; i < 3; i++) {
-        await new Promise(function (r) { setTimeout(r, i === 0 ? 1500 : 3000); });
+      for (var i = 0; i < HZ_ATTENTES.length; i++) {
+        await new Promise(function (r) { setTimeout(r, HZ_ATTENTES[i]); });
         try {
           var vr = await fetch(apiUrl + '/api/hosterzz/missions', { headers: { Authorization: 'Bearer ' + token } });
           if (vr.ok) {
@@ -16277,6 +16279,18 @@ function notifSwitchTab(tab) {
         signal: ctrl.signal
       });
       var data = await resp.json().catch(function () { return {}; });
+
+      // 202 : Hosterzz est lent, BH réconcilie en arrière-plan. On attend le lien.
+      if (resp.status === 202 || (data && data.pending)) {
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création en cours...';
+        var enAttente = await hzVerifierMission(reservationId);
+        if (enAttente) { hzSuccesUI(enAttente.statut); }
+        else {
+          errorBox.textContent = "La mission est en cours de création côté Hosterzz. Rafraîchissez dans un instant.";
+          errorBox.style.display = 'block';
+        }
+        return;
+      }
 
       if (!resp.ok) {
         if (resp.status === 409 || (data && data.code === 'not_linked')) {
