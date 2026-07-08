@@ -29119,13 +29119,13 @@ async function runInvoiceQueue(mode) {
 
         // ── Envoyer un message dans la conversation BH ──────────────────
         try {
+          // req.conversation_id (table invoice_requests) EST déjà la clé primaire
+          // de la conversation. La table conversations n'a ni "conversation_id"
+          // ni "reservation_uid" → on cherche par "id".
           const convRow = await pool.query(
-            `SELECT id, channex_booking_id FROM conversations
-             WHERE conversation_id = $1 OR (reservation_uid = $2 AND user_id = $3)
-             ORDER BY created_at DESC LIMIT 1`,
-            [req.conversation_id, req.reservation_uid, userId]
+            `SELECT id, channex_booking_id FROM conversations WHERE id = $1 LIMIT 1`,
+            [req.conversation_id]
           );
-          // Fallback direct sur conversation_id
           const convId = req.conversation_id || convRow.rows[0]?.id;
           const channexBookingId = convRow.rows[0]?.channex_booking_id;
 
