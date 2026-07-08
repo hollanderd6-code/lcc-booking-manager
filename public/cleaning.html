@@ -2504,10 +2504,20 @@ function formatDateFr(dateStr) {
           if (!res.ok) return;
           const data = await res.json();
           const map = {};
-          (data.missions || []).forEach((m) => { map[String(m.bh_reservation_id)] = m; });
+          // Le front manipule tantôt la PK, tantôt l'uid, tantôt l'id Channex :
+          // on indexe la mission sous chaque forme pour que la recherche aboutisse.
+          (data.missions || []).forEach((m) => {
+            [m.bh_reservation_id, m.resa_uid, m.resa_channex_id].forEach((k) => {
+              if (k != null && k !== '') {
+                map[String(k)] = m;
+                if (!String(k).startsWith('CHX_')) map['CHX_' + String(k)] = m;
+              }
+            });
+          });
           hzMissionsMap = map;
         } catch (e) { console.warn('Erreur chargement missions Hosterzz:', e); }
       }
+      window.loadHzMissionsMap = loadHzMissionsMap;
 
       function hzMissionBadgeHtml(reservationId) {
         const m = hzMissionsMap[String(reservationId)];
@@ -4640,6 +4650,11 @@ function formatDateFr(dateStr) {
     // ══════════════════════════════════════════════════════════
     window.openHzMissionModal = function (btn) {
       const reservationId = btn.getAttribute('data-reservation-id');
+      const dejaCreee = hzMissionsMap[String(reservationId)];
+      if (dejaCreee) {
+        alert(`Une mission Hosterzz existe déjà pour cette réservation (statut : ${dejaCreee.statut || 'créée'}).`);
+        return;
+      }
       if (!reservationId) {
         alert("Impossible d'identifier cette réservation (ID manquant).");
         return;
@@ -4745,11 +4760,12 @@ function formatDateFr(dateStr) {
         for (let i = 0; i < HZ_ATTENTES.length; i++) {
           await new Promise(r => setTimeout(r, HZ_ATTENTES[i]));
           try {
-            const vr = await fetch(`${API_URL}/api/hosterzz/missions`, { headers: { Authorization: 'Bearer ' + token } });
+            // Endpoint dédié : le serveur résout l'identifiant (PK / uid / Channex).
+            const vr = await fetch(`${API_URL}/api/hosterzz/mission?reservation_id=${encodeURIComponent(resaId)}`,
+                                   { headers: { Authorization: 'Bearer ' + token } });
             if (vr.ok) {
               const vd = await vr.json();
-              const found = (vd.missions || []).find(m => String(m.bh_reservation_id) === String(resaId));
-              if (found) return found;
+              if (vd && vd.mission) return vd.mission;
             }
           } catch (e) { /* on retente */ }
         }
@@ -4758,6 +4774,7 @@ function formatDateFr(dateStr) {
 
       function hzSuccesUI(statut) {
         hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: statut || 'creee' };
+        if (typeof window.loadHzMissionsMap === 'function') window.loadHzMissionsMap();
         const statusDiv = document.querySelector(`[data-hz-status-for="${reservationId}"]`);
         if (statusDiv) statusDiv.innerHTML = hzMissionBadgeHtml(reservationId);
         const btnEl = document.querySelector(`.hz-mission-btn[data-reservation-id="${reservationId}"]`);

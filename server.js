@@ -33979,14 +33979,56 @@ app.get('/api/hosterzz/missions', authenticateToken, async (req, res) => {
   try {
     if (!req.user.id) return res.json({ missions: [] });
     const allowedIds = await getAgencyUserIds(req, req.user.id);
+    // On expose aussi uid / channex_booking_id : le front peut manipuler l'une ou l'autre
+    // forme d'identifiant, alors que hosterzz_missions ne stocke que la PK.
     const r = await pool.query(
-      `SELECT bh_reservation_id, mission_id, property_id, statut, created_at, terminee_at
-         FROM hosterzz_missions WHERE user_id = ANY($1)`,
+      `SELECT hm.bh_reservation_id, hm.mission_id, hm.property_id, hm.statut,
+              hm.created_at, hm.terminee_at,
+              r.uid AS resa_uid, r.channex_booking_id AS resa_channex_id
+         FROM hosterzz_missions hm
+         LEFT JOIN reservations r ON r.id::text = hm.bh_reservation_id::text
+        WHERE hm.user_id = ANY($1)`,
       [allowedIds]
     );
     res.json({ missions: r.rows });
   } catch (e) {
     res.json({ missions: [] });
+  }
+});
+
+// Mission liée à UNE réservation, quelle que soit la forme de l'identifiant
+// (PK entière, uid, ou identifiant Channex). Sert au sondage après un 202.
+app.get('/api/hosterzz/mission', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user.id) return res.json({ mission: null });
+    const ridStr = String(req.query.reservation_id || '').trim();
+    if (!ridStr) return res.status(400).json({ error: 'reservation_id requis.' });
+
+    const isNumericRid = /^\d+$/.test(ridStr);
+    const bareChx = ridStr.startsWith('CHX_') ? ridStr.slice(4) : ridStr;
+    const rr = isNumericRid
+      ? await pool.query(`SELECT id, user_id FROM reservations WHERE id = $1`, [ridStr])
+      : await pool.query(
+          `SELECT id, user_id FROM reservations
+             WHERE uid = $1 OR channex_booking_id = $1 OR channex_booking_id = $2
+             ORDER BY id DESC LIMIT 1`,
+          [ridStr, bareChx]
+        );
+    const resa = rr.rows[0];
+    if (!resa) return res.json({ mission: null });
+
+    const allowedIds = await getAgencyUserIds(req, req.user.id);
+    if (!allowedIds.includes(resa.user_id)) return res.status(403).json({ error: 'Non autorisé.' });
+
+    const mr = await pool.query(
+      `SELECT bh_reservation_id, mission_id, property_id, statut, created_at, terminee_at
+         FROM hosterzz_missions WHERE bh_reservation_id::text = $1 LIMIT 1`,
+      [String(resa.id)]
+    );
+    res.json({ mission: mr.rows[0] || null });
+  } catch (e) {
+    console.error('[hosterzz mission get]', e.message);
+    res.json({ mission: null });
   }
 });
 

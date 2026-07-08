@@ -5648,10 +5648,20 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       if (!res.ok) return;
       const data = await res.json();
       const map = {};
-      (data.missions || []).forEach((m) => { map[String(m.bh_reservation_id)] = m; });
+      // Le front manipule tantôt la PK, tantôt l'uid, tantôt l'id Channex :
+      // on indexe la mission sous chaque forme pour que la recherche aboutisse.
+      (data.missions || []).forEach((m) => {
+        [m.bh_reservation_id, m.resa_uid, m.resa_channex_id].forEach((k) => {
+          if (k != null && k !== '') {
+            map[String(k)] = m;
+            if (!String(k).startsWith('CHX_')) map['CHX_' + String(k)] = m;
+          }
+        });
+      });
       hzMissionsMap = map;
     } catch (e) { console.warn('Erreur chargement missions Hosterzz:', e); }
   }
+  window.loadHzMissionsMapGlobal = loadHzMissionsMapGlobal;
   loadHzMissionsMapGlobal();
 
   function refreshHzBadgeInDetails() {
@@ -16198,6 +16208,11 @@ function notifSwitchTab(tab) {
       alert("Impossible d'identifier cette réservation pour créer la mission Hosterzz.");
       return;
     }
+    var dejaCreee = hzMissionsMap[String(booking.id)];
+    if (dejaCreee) {
+      alert("Une mission Hosterzz existe déjà pour cette réservation (statut : " + (dejaCreee.statut || 'créée') + ").");
+      return;
+    }
     var propertyId = hzPropertyId(booking);
     var endStr = String(booking.end || booking.endDate || booking.checkOut || '').slice(0, 10);
 
@@ -16246,13 +16261,12 @@ function notifSwitchTab(tab) {
       for (var i = 0; i < HZ_ATTENTES.length; i++) {
         await new Promise(function (r) { setTimeout(r, HZ_ATTENTES[i]); });
         try {
-          var vr = await fetch(apiUrl + '/api/hosterzz/missions', { headers: { Authorization: 'Bearer ' + token } });
+          // Endpoint dédié : le serveur résout l'identifiant (PK / uid / Channex).
+          var vr = await fetch(apiUrl + '/api/hosterzz/mission?reservation_id=' + encodeURIComponent(reservationId),
+                               { headers: { Authorization: 'Bearer ' + token } });
           if (vr.ok) {
             var vd = await vr.json();
-            var found = (vd.missions || []).filter(function (m) {
-              return String(m.bh_reservation_id) === String(reservationId);
-            })[0];
-            if (found) return found;
+            if (vd && vd.mission) return vd.mission;
           }
         } catch (e) { /* on retente */ }
       }
@@ -16261,6 +16275,7 @@ function notifSwitchTab(tab) {
 
     function hzSuccesUI(statut) {
       hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: statut || 'creee' };
+      if (typeof window.loadHzMissionsMapGlobal === 'function') window.loadHzMissionsMapGlobal();
       refreshHzBadgeInDetails();
       window.closeHzMissionModal();
       if (typeof window.showToast === 'function') window.showToast('Mission Hosterzz créée ✅');
