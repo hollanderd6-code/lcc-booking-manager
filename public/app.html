@@ -5666,6 +5666,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   window.loadHzMissionsMapGlobal = loadHzMissionsMapGlobal;
   loadHzMissionsMapGlobal();
 
+  window.refreshHzBadgeInDetails = refreshHzBadgeInDetails; // lisible depuis les autres blocs <script>
   function refreshHzBadgeInDetails() {
     const booking = window.currentBookingData || window.currentBooking || null;
     const badgeEl = document.getElementById('hzMissionBadgeFromDetails');
@@ -16275,10 +16276,13 @@ function notifSwitchTab(tab) {
       return null;
     }
 
-    function hzSuccesUI(statut) {
+    async function hzSuccesUI(statut) {
       if (window.hzMissionsMap) window.hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: statut || 'creee' };
-      if (typeof window.loadHzMissionsMapGlobal === 'function') window.loadHzMissionsMapGlobal();
-      refreshHzBadgeInDetails();
+      // On attend la map à jour avant de peindre le badge, sinon il affiche l'état précédent.
+      if (typeof window.loadHzMissionsMapGlobal === 'function') {
+        try { await window.loadHzMissionsMapGlobal(); } catch (e) {}
+      }
+      if (typeof window.refreshHzBadgeInDetails === 'function') window.refreshHzBadgeInDetails();
       window.closeHzMissionModal();
       if (typeof window.showToast === 'function') window.showToast('Mission Hosterzz créée ✅');
       else alert('Mission Hosterzz créée avec succès.');
@@ -16301,7 +16305,7 @@ function notifSwitchTab(tab) {
       if (resp.status === 202 || (data && data.pending)) {
         btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création en cours...';
         var enAttente = await hzVerifierMission(reservationId);
-        if (enAttente) { hzSuccesUI(enAttente.statut); }
+        if (enAttente) { await hzSuccesUI(enAttente.statut); }
         else {
           errorBox.textContent = "La mission est en cours de création côté Hosterzz. Rafraîchissez dans un instant.";
           errorBox.style.display = 'block';
@@ -16319,13 +16323,13 @@ function notifSwitchTab(tab) {
         return;
       }
 
-      hzSuccesUI(data.statut);
+      await hzSuccesUI(data.statut);
     } catch (e) {
       // Requête coupée ou réseau : la mission a peut-être été créée quand même.
       btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
       var existante = await hzVerifierMission(reservationId);
       if (existante) {
-        hzSuccesUI(existante.statut);
+        await hzSuccesUI(existante.statut);
       } else {
         errorBox.textContent = "La mission n'a pas pu être créée. Vérifiez votre connexion et réessayez.";
         errorBox.style.display = 'block';

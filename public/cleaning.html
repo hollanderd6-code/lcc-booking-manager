@@ -2521,6 +2521,7 @@ function formatDateFr(dateStr) {
       }
       window.loadHzMissionsMap = loadHzMissionsMap;
 
+      window.hzMissionBadgeHtml = hzMissionBadgeHtml; // lisible depuis les autres blocs <script>
       function hzMissionBadgeHtml(reservationId) {
         const m = hzMissionsMap[String(reservationId)];
         if (!m) return '';
@@ -4774,14 +4775,19 @@ function formatDateFr(dateStr) {
         return null;
       }
 
-      function hzSuccesUI(statut) {
+      async function hzSuccesUI(statut) {
         if (window.hzMissionsMap) window.hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: statut || 'creee' };
-        if (typeof window.loadHzMissionsMap === 'function') window.loadHzMissionsMap();
+        // On attend la map à jour avant de peindre le badge, sinon il affiche l'état précédent.
+        if (typeof window.loadHzMissionsMap === 'function') {
+          try { await window.loadHzMissionsMap(); } catch (e) {}
+        }
         const statusDiv = document.querySelector(`[data-hz-status-for="${reservationId}"]`);
-        if (statusDiv) statusDiv.innerHTML = hzMissionBadgeHtml(reservationId);
+        if (statusDiv && typeof window.hzMissionBadgeHtml === 'function') statusDiv.innerHTML = window.hzMissionBadgeHtml(reservationId);
         const btnEl = document.querySelector(`.hz-mission-btn[data-reservation-id="${reservationId}"]`);
         if (btnEl) btnEl.style.display = 'none';
         window.closeHzMissionModal();
+        if (typeof window.showToast === 'function') window.showToast('Mission Hosterzz créée ✅');
+        else alert('Mission Hosterzz créée avec succès.');
       }
 
       // Timeout client : évite un spinner infini si la réponse ne revient jamais.
@@ -4804,7 +4810,7 @@ function formatDateFr(dateStr) {
         if (resp.status === 202 || (data && data.pending)) {
           btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création en cours...';
           const enAttente = await hzVerifierMission(reservationId);
-          if (enAttente) { hzSuccesUI(enAttente.statut); }
+          if (enAttente) { await hzSuccesUI(enAttente.statut); }
           else {
             errorBox.textContent = "La mission est en cours de création côté Hosterzz. Rafraîchissez dans un instant.";
             errorBox.style.display = 'block';
@@ -4822,13 +4828,13 @@ function formatDateFr(dateStr) {
           return;
         }
 
-        hzSuccesUI(data.statut);
+        await hzSuccesUI(data.statut);
       } catch (e) {
         // Requête coupée ou réseau : la mission a peut-être été créée quand même.
         btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
         const existante = await hzVerifierMission(reservationId);
         if (existante) {
-          hzSuccesUI(existante.statut);
+          await hzSuccesUI(existante.statut);
         } else {
           errorBox.textContent = "La mission n'a pas pu être créée. Vérifiez votre connexion et réessayez.";
           errorBox.style.display = 'block';
