@@ -33674,21 +33674,68 @@ function hzPartnerAuth(req, res, next) {
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: 'Signature invalide.' });
   next();
 }
-async function hzPartnerCall(path, body) {
-  if (!HZ_PARTNER_SECRET || !HZ_PARTNER_URL) { const e = new Error('Pont non configuré (env manquantes).'); throw e; }
+// Timeout explicite : sans lui, un cold start Render côté Hosterzz (+ géocodage du
+// logement à la 1re création) laisse le fetch pendu, et BH conclut à tort à un échec
+// alors que la mission a bien été créée.
+const HZ_PARTNER_TIMEOUT_MS = Number(process.env.HZ_PARTNER_TIMEOUT_MS || 25000);
+
+// Un seul essai réseau, avec timeout. La signature est régénérée à chaque tentative
+// (Hosterzz refuse un horodatage vieux de plus de 5 min).
+async function hzPartnerFetchOnce(path, body, timeoutMs) {
   const ts = String(Date.now());
-  const r = await fetch(HZ_PARTNER_URL + path, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-partner-timestamp': ts,
-      'x-partner-signature': hzPartnerSign(ts, body)
-    },
-    body: JSON.stringify(body)
-  });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) { const e = new Error(d.error || ('HTTP ' + r.status)); e.code = d.code; throw e; }
-  return d;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch(HZ_PARTNER_URL + path, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-partner-timestamp': ts,
+        'x-partner-signature': hzPartnerSign(ts, body)
+      },
+      body: JSON.stringify(body),
+      signal: ctrl.signal
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const e = new Error(d.error || ('HTTP ' + r.status));
+      e.code = d.code; e.status = r.status; e.httpError = true; // réponse reçue : ne pas rejouer
+      throw e;
+    }
+    return d;
+  } catch (e) {
+    if (e && e.name === 'AbortError') {
+      const t = new Error('Hosterzz n\'a pas répondu à temps.');
+      t.code = 'TIMEOUT'; t.transient = true;
+      throw t;
+    }
+    if (!e.httpError) e.transient = true; // panne réseau / DNS / socket : rejouable
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// opts.retries : nombre de nouvelles tentatives en cas d'échec *transitoire* (timeout, réseau).
+// À n'activer que sur les endpoints idempotents — /api/partner/missions l'est
+// (Hosterzz déduplique sur bh_reservation_id et renvoie { already: true }).
+async function hzPartnerCall(path, body, opts = {}) {
+  if (!HZ_PARTNER_SECRET || !HZ_PARTNER_URL) { const e = new Error('Pont non configuré (env manquantes).'); throw e; }
+  const timeoutMs = opts.timeoutMs || HZ_PARTNER_TIMEOUT_MS;
+  const retries = Number(opts.retries || 0);
+
+  let lastErr;
+  for (let essai = 0; essai <= retries; essai++) {
+    try {
+      return await hzPartnerFetchOnce(path, body, timeoutMs);
+    } catch (e) {
+      lastErr = e;
+      if (!e.transient || essai === retries) throw e;
+      console.warn(`[partner] ${path} échec transitoire (${e.code || e.message}) — nouvelle tentative ${essai + 1}/${retries}`);
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+  throw lastErr;
 }
 
 // ── 1. Lier son compte : l'hôte colle le code généré dans Hosterzz ──
@@ -33749,6 +33796,8 @@ async function createHzMissionForReservation(reservationId, userId, opts = {}) {
   // Le code postal n'est pas une colonne de properties : on l'extrait de l'adresse
   const cpMatch = String(prop.address || '').match(/\b(\d{5})\b/);
 
+  // retries: 1 — sûr car Hosterzz est idempotent sur bh_reservation_id.
+  // Si la 1re tentative a en réalité abouti, la 2e retombe sur { already: true }.
   const d = await hzPartnerCall('/api/partner/missions', {
     bh_user_id: userId,
     bh_reservation_id: String(resa.id),
@@ -33764,7 +33813,7 @@ async function createHzMissionForReservation(reservationId, userId, opts = {}) {
     task_type: opts.task_type || 'menage_approfondi',
     description: opts.description || ('Mission — ' + prop.name + ' — départ le ' + resa.date_depart + (resa.guest_name ? ' (' + resa.guest_name + ')' : '')),
     prestataire_user_id: opts.prestataire_user_id || null
-  });
+  }, { retries: 1 });
 
   await pool.query(
     `INSERT INTO hosterzz_missions (bh_reservation_id, mission_id, property_id, user_id, statut)
