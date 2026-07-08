@@ -33778,6 +33778,21 @@ app.post('/api/hosterzz/unlink', authenticateToken, async (req, res) => {
 // ── 2. Créer une mission Hosterzz depuis un départ BH ──
 // Fonction partagée : réutilisée par la route manuelle ET par le déclencheur automatique (V2).
 // Lève une erreur si non liée (e.code = 'NOT_LINKED'), logement non éligible (e.code = 'NOT_ELIGIBLE'), etc.
+// Date au format du site : JJ/MM/AAAA (jamais l'ISO brut dans un texte lisible).
+// Attention : le driver pg renvoie un objet Date pour une colonne DATE,
+// et une chaîne pour un TEXT. On gère les deux.
+function hzDateFr(d) {
+  if (!d) return '';
+  if (d instanceof Date) {
+    const jj = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${jj}/${mm}/${d.getFullYear()}`;
+  }
+  const s = String(d).slice(0, 10);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+}
+
 // Enregistre localement le lien résa BH <-> mission Hosterzz.
 async function hzEnregistrerMissionLocale(resaId, missionId, propId, userId, statut) {
   await pool.query(
@@ -33849,7 +33864,7 @@ async function createHzMissionForReservation(reservationId, userId, opts = {}) {
     date: opts.date || resa.date_depart,
     heure: opts.heure || '11:00',
     task_type: opts.task_type || 'menage_approfondi',
-    description: opts.description || ('Mission — ' + prop.name + ' — départ le ' + resa.date_depart + (resa.guest_name ? ' (' + resa.guest_name + ')' : '')),
+    description: opts.description || ('Mission — ' + prop.name + ' — départ le ' + hzDateFr(resa.date_depart) + (resa.guest_name ? ' (' + resa.guest_name + ')' : '')),
     prestataire_user_id: opts.prestataire_user_id || null
   };
 
