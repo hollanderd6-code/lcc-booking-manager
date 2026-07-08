@@ -33654,6 +33654,10 @@ const HZ_PARTNER_URL = (process.env.HZ_PARTNER_URL || '').replace(/\/$/, '');
       terminee_at TIMESTAMPTZ
     )`);
     await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS hz_auto_mission BOOLEAN DEFAULT FALSE`);
+    // Coordonnées du prestataire qui a accepté la mission (poussées par Hosterzz)
+    await pool.query(`ALTER TABLE hosterzz_missions ADD COLUMN IF NOT EXISTS prestataire_id TEXT`);
+    await pool.query(`ALTER TABLE hosterzz_missions ADD COLUMN IF NOT EXISTS prestataire_nom TEXT`);
+    await pool.query(`ALTER TABLE hosterzz_missions ADD COLUMN IF NOT EXISTS prestataire_telephone TEXT`);
     console.log('✅ Tables pont Hosterzz prêtes');
   } catch (e) { console.log('ℹ️ tables hosterzz:', e.message); }
 })();
@@ -33984,6 +33988,7 @@ app.get('/api/hosterzz/missions', authenticateToken, async (req, res) => {
     const r = await pool.query(
       `SELECT hm.bh_reservation_id, hm.mission_id, hm.property_id, hm.statut,
               hm.created_at, hm.terminee_at,
+              hm.prestataire_id, hm.prestataire_nom, hm.prestataire_telephone,
               r.uid AS resa_uid, r.channex_booking_id AS resa_channex_id
          FROM hosterzz_missions hm
          LEFT JOIN reservations r ON r.id::text = hm.bh_reservation_id::text
@@ -34021,7 +34026,8 @@ app.get('/api/hosterzz/mission', authenticateToken, async (req, res) => {
     if (!allowedIds.includes(resa.user_id)) return res.status(403).json({ error: 'Non autorisé.' });
 
     const mr = await pool.query(
-      `SELECT bh_reservation_id, mission_id, property_id, statut, created_at, terminee_at
+      `SELECT bh_reservation_id, mission_id, property_id, statut, created_at, terminee_at,
+              prestataire_id, prestataire_nom, prestataire_telephone
          FROM hosterzz_missions WHERE bh_reservation_id::text = $1 LIMIT 1`,
       [String(resa.id)]
     );
@@ -34070,15 +34076,56 @@ app.put('/api/hosterzz/auto-mission/:property_id', authenticateToken, async (req
 // ── 3. Webhook entrant : Hosterzz signale une mission terminée (signé) ──
 app.post('/api/partner/hosterzz/mission-status', hzPartnerAuth, async (req, res) => {
   try {
-    const { bh_reservation_id, mission_id, statut } = req.body || {};
+    const { bh_reservation_id, mission_id, statut, prestataire } = req.body || {};
     if (!bh_reservation_id || !statut) return res.status(400).json({ error: 'Payload incomplet.' });
-    await pool.query(
-      `UPDATE hosterzz_missions SET statut = $2, terminee_at = CASE WHEN $2 = 'terminee' THEN NOW() ELSE terminee_at END
-        WHERE bh_reservation_id = $1`,
-      [String(bh_reservation_id), statut]
+
+    const p = prestataire || {};
+    const upd = await pool.query(
+      `UPDATE hosterzz_missions
+          SET statut = $2,
+              terminee_at = CASE WHEN $2 = 'terminee' THEN NOW() ELSE terminee_at END,
+              prestataire_id        = COALESCE($3, prestataire_id),
+              prestataire_nom       = COALESCE($4, prestataire_nom),
+              prestataire_telephone = COALESCE($5, prestataire_telephone)
+        WHERE bh_reservation_id = $1
+        RETURNING user_id, property_id`,
+      [String(bh_reservation_id), statut, p.id || null, p.nom || null, p.telephone || null]
     );
-    console.log('[hosterzz webhook] mission ' + mission_id + ' → ' + statut + ' (resa ' + bh_reservation_id + ')');
-    // TODO : cocher automatiquement la tâche de ménage BH correspondante + push à l'hôte.
+    console.log('[hosterzz webhook] mission ' + mission_id + ' → ' + statut + ' (resa ' + bh_reservation_id + ')'
+      + (p.nom ? ' — prestataire ' + p.nom : ''));
+
+    // Notifier l'hôte (non bloquant : le webhook ne doit jamais échouer pour ça)
+    const row = upd.rows[0];
+    if (row && row.user_id) {
+      (async () => {
+        const MSG = {
+          acceptee: { t: 'Mission acceptée ✅', b: (p.nom || 'Un prestataire') + ' a accepté votre mission Hosterzz.' },
+          refusee:  { t: 'Mission refusée',    b: 'Votre demande a été refusée. Vous pouvez chercher un autre prestataire.' },
+          terminee: { t: 'Ménage terminé ✓',   b: (p.nom || 'Le prestataire') + ' a terminé la mission.' },
+          annulee:  { t: 'Mission annulée',    b: 'La mission Hosterzz a été annulée.' }
+        }[statut];
+        if (!MSG) return;
+        try {
+          const tk = await pool.query(
+            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+            [row.user_id]
+          );
+          const tokens = tk.rows.map(r => r.fcm_token).filter(Boolean);
+          if (!tokens.length) return;
+          await sendNotificationToMultipleLogged(tokens, MSG.t, MSG.b, {
+            type: 'hosterzz_mission',
+            userId: row.user_id,
+            bh_reservation_id: String(bh_reservation_id),
+            mission_id: String(mission_id || ''),
+            statut: String(statut)
+          });
+          console.log('✅ Notif Hosterzz envoyée à ' + tokens.length + ' appareil(s)');
+        } catch (err) {
+          console.error('[hosterzz webhook] notif:', err.message);
+        }
+      })();
+    }
+
     res.json({ ok: true });
   } catch (e) {
     console.error('[hosterzz webhook]', e.message);

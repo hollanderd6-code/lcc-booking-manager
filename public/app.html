@@ -5698,7 +5698,16 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       terminee: { txt: 'Mission Hosterzz : terminée ✓', color: '#1A7A5E' }
     };
     const l = labels[m.statut] || { txt: 'Mission Hosterzz : ' + m.statut, color: '#7A8695' };
-    return '<div style="font-size:11px;margin-top:4px;color:' + l.color + ';font-weight:600;"><img src="' + HZ_LOGO_DATAURI + '" alt="" style="width:11px;height:11px;vertical-align:-1px;object-fit:contain;"> ' + l.txt + '</div>';
+    // Prestataire connu : on l'affiche et on permet de le joindre directement.
+    let presta = '';
+    if (m.prestataire_nom) {
+      const tel = m.prestataire_telephone ? String(m.prestataire_telephone).replace(/\s+/g, '') : '';
+      presta = '<div style="font-size:12px;margin-top:5px;color:#1A7A5E;font-weight:600;">👤 ' + m.prestataire_nom
+        + (tel ? ' · <a href="tel:' + tel + '" style="color:#1A7A5E;text-decoration:underline;">Appeler</a>'
+               + ' · <a href="sms:' + tel + '" style="color:#1A7A5E;text-decoration:underline;">SMS</a>' : '')
+        + '</div>';
+    }
+    return '<div style="font-size:11px;margin-top:4px;color:' + l.color + ';font-weight:600;"><img src="' + HZ_LOGO_DATAURI + '" alt="" style="width:11px;height:11px;vertical-align:-1px;object-fit:contain;"> ' + l.txt + '</div>' + presta;
   }
 
   // ---------- helpers ----------
