@@ -33761,8 +33761,8 @@ async function createHzMissionForReservation(reservationId, userId, opts = {}) {
     },
     date: opts.date || resa.date_depart,
     heure: opts.heure || '11:00',
-    task_type: 'menage_approfondi',
-    description: opts.description || ('Ménage de départ — ' + prop.name + ' — départ le ' + resa.date_depart + (resa.guest_name ? ' (' + resa.guest_name + ')' : '')),
+    task_type: opts.task_type || 'menage_approfondi',
+    description: opts.description || ('Mission — ' + prop.name + ' — départ le ' + resa.date_depart + (resa.guest_name ? ' (' + resa.guest_name + ')' : '')),
     prestataire_user_id: opts.prestataire_user_id || null
   });
 
@@ -33831,15 +33831,17 @@ app.post('/api/hosterzz/missions', authenticateToken, async (req, res) => {
     const d = await createHzMissionForReservation(reservation_id, req.user.id, {
       date: req.body.date,
       heure: req.body.heure,
+      task_type: req.body.task_type,
       description: req.body.description,
       prestataire_user_id: req.body.prestataire_user_id
     });
     res.json({ ok: true, mission_id: d.mission_id, already: d.already, statut: d.statut, url: d.url });
   } catch (e) {
-    console.error('[hosterzz mission]', e.message);
+    console.error('[hosterzz mission]', e.code || '', e.message);
     if (e.code === 'NOT_LINKED') return res.status(409).json({ error: "Connectez d'abord votre compte Hosterzz dans Paramètres.", code: 'NOT_LINKED' });
     if (e.code === 'NOT_FOUND') return res.status(404).json({ error: e.message });
-    res.status(500).json({ error: 'Création de la mission impossible.' });
+    // On fait remonter le vrai motif (renvoyé par le pont Hosterzz) au lieu d'un message opaque.
+    res.status(500).json({ error: 'Création de la mission impossible.', detail: e.message || null, code: e.code || null });
   }
 });
 
