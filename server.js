@@ -28992,12 +28992,12 @@ async function runInvoiceQueue(mode) {
       try {
         const userId = req.user_id;
         const clientName = req.client_name || req.guest_name || 'Client';
-        const clientEmail = (req.client_email || req.guest_email || '').trim();
-
-        if (!clientEmail || !clientEmail.includes('@') || clientEmail.length < 5) {
-          console.warn(`⚠️ [INVOICE CRON] Email invalide ou manquant pour demande ${req.id}: "${clientEmail}"`);
-          continue;
-        }
+        // ⚠️ Livraison : email UNIQUEMENT si le voyageur a fourni une adresse explicite.
+        // Les emails plateforme (Airbnb/Booking) sont souvent factices → sinon on livre
+        // la facture directement dans le chat de la conversation (app + Channex).
+        const explicitEmail = (req.client_email || '').trim();
+        const hasEmail = explicitEmail.includes('@') && explicitEmail.length >= 5;
+        const clientEmail = hasEmail ? explicitEmail : '';
 
         // Calculer les nuits
         const checkin = new Date(req.start_date);
@@ -29103,11 +29103,13 @@ async function runInvoiceQueue(mode) {
           `
         });
 
-        await sendEmailViaBrevo({
-          to: clientEmail,
-          subject: `Votre facture ${invoiceNumber} – ${req.property_name || ''}`,
-          html: emailHtml
-        });
+        if (hasEmail) {
+          await sendEmailViaBrevo({
+            to: clientEmail,
+            subject: `Votre facture ${invoiceNumber} – ${req.property_name || ''}`,
+            html: emailHtml
+          });
+        }
 
         // Marquer comme envoyée
         await pool.query(
@@ -29128,16 +29130,25 @@ async function runInvoiceQueue(mode) {
           const channexBookingId = convRow.rows[0]?.channex_booking_id;
 
           if (convId) {
-            const invoiceMsg = `📄 Votre facture a été envoyée par email à ${clientEmail}.
+            const _d1 = new Date(req.start_date).toLocaleDateString('fr-FR');
+            const _d2 = new Date(req.end_date).toLocaleDateString('fr-FR');
+            const invoiceMsg = hasEmail
+              ? `📄 Votre facture a été envoyée par email à ${clientEmail}.
 
 Numéro : ${invoiceNumber}
-Séjour du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date(req.end_date).toLocaleDateString('fr-FR')}`;
+Séjour du ${_d1} au ${_d2}`
+              : `📄 Voici votre facture ${invoiceNumber} pour votre séjour du ${_d1} au ${_d2}.
+
+📥 Télécharger : ${downloadUrl}
+(lien valable 1 an)`;
             await sendAutomatedMessage(convId, invoiceMsg, io);
 
             // Envoyer aussi via Channex si booking_id disponible
             if (channexBookingId) {
               try {
-                const channexMsg = `Votre facture a été envoyée par email. Référence : ${invoiceNumber}`;
+                const channexMsg = hasEmail
+                  ? `Votre facture a été envoyée par email. Référence : ${invoiceNumber}`
+                  : `Voici votre facture ${invoiceNumber} : ${downloadUrl} (lien valable 1 an)`;
                 await channexAPI.post(`/bookings/${channexBookingId}/messages`, {
                   message: { content: channexMsg }
                 });
@@ -29151,7 +29162,7 @@ Séjour du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date
           console.warn('⚠️ [INVOICE CRON] Erreur envoi message conv (non bloquant):', msgErr.message);
         }
 
-        console.log(`✅ [INVOICE CRON] Facture ${invoiceNumber} envoyée à ${clientEmail}`);
+        console.log(`✅ [INVOICE CRON] Facture ${invoiceNumber} ${hasEmail ? 'envoyée par email à ' + clientEmail : 'livrée dans le chat de la conversation'}`);
       } catch(e) {
         console.error(`❌ [INVOICE CRON] Erreur facture req ${req.id}:`, e.message);
       }

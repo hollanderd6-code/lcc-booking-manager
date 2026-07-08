@@ -37,13 +37,13 @@ function isBillingDispute(message) {
 }
 
 const INVOICE_CONFIRM = {
-  fr: `Bien noté, je m'occupe de votre facture 😊 Elle vous sera envoyée par email très prochainement.`,
-  en: `Noted, I'll take care of your invoice 😊 It will be sent to you by email very shortly.`,
-  es: `Anotado, me encargo de su factura 😊 Se la enviaremos por email muy pronto.`,
-  it: `Annotato, mi occupo della sua fattura 😊 Le verrà inviata via email a breve.`,
-  de: `Notiert, ich kümmere mich um Ihre Rechnung 😊 Sie wird Ihnen in Kürze per E-Mail zugesandt.`,
-  pt: `Anotado, vou tratar da sua fatura 😊 Será enviada por email muito em breve.`,
-  nl: `Genoteerd, ik regel uw factuur 😊 Deze wordt u zeer binnenkort per e-mail toegestuurd.`,
+  fr: `Bien noté, je m'occupe de votre facture 😊 Vous la recevrez très prochainement (par email si vous nous en communiquez un, sinon directement ici dans la conversation).`,
+  en: `Noted, I'll take care of your invoice 😊 You'll receive it very shortly (by email if you share one, otherwise right here in the chat).`,
+  es: `Anotado, me encargo de su factura 😊 La recibirá muy pronto (por email si nos facilita uno, o aquí mismo en el chat).`,
+  it: `Annotato, mi occupo della sua fattura 😊 La riceverà a breve (via email se ce ne comunica uno, altrimenti qui nella chat).`,
+  de: `Notiert, ich kümmere mich um Ihre Rechnung 😊 Sie erhalten sie in Kürze (per E-Mail, falls Sie uns eine mitteilen, sonst direkt hier im Chat).`,
+  pt: `Anotado, vou tratar da sua fatura 😊 Vai recebê-la muito em breve (por email se nos indicar um, ou aqui mesmo no chat).`,
+  nl: `Genoteerd, ik regel uw factuur 😊 U ontvangt deze zeer binnenkort (per e-mail als u er een doorgeeft, anders hier in de chat).`,
 };
 
 // ============================================
@@ -1251,7 +1251,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
                 conversation.user_id,
                 conversation.property_id,
                 params.name    || res?.guest_name  || conversation.guest_name  || null,
-                params.email   || res?.guest_email || conversation.guest_email || null,
+                params.email || null, // email UNIQUEMENT si le voyageur l'a explicitement fourni ; sinon livraison via le chat
                 params.siret   || null,
                 params.company || null,
                 params.address || null,
@@ -1361,7 +1361,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
              (conversation_id, reservation_uid, user_id, property_id, client_name, client_email, status, created_at, updated_at)
              VALUES ($1,$2,$3,$4,$5,$6,'pending',NOW(),NOW())`,
             [conversation.id, resRow.rows[0]?.uid || null, conversation.user_id, conversation.property_id,
-             conversation.guest_name || null, conversation.guest_email || null]
+             conversation.guest_name || null, null] // pas d'email explicite -> livraison via le chat
           );
           console.log(`🧾 [FACTURE] Demande créée (fallback) pour conv ${conversation.id}`);
         }
