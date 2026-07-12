@@ -161,15 +161,34 @@ async function translateWithDeepL(text, target) {
   const textStr = typeof text === 'string' ? text : String(text || '');
   if (!textStr.trim()) return text;
 
+  // 🔒 Protection des URLs : DeepL "localise" la ponctuation selon la langue
+  // cible (ex: le "." de checkin.html devient "。" en chinois), ce qui casse
+  // les liens. On isole chaque URL dans une balise <x> et on active le mode
+  // XML avec ignore_tags → DeepL renvoie ce contenu verbatim, sans y toucher.
+  const escapeXml   = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const unescapeXml = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  let hasUrl = false;
+  const xmlText = textStr
+    .split(/(https?:\/\/[^\s]+)/gi)
+    .map(part => {
+      if (/^https?:\/\//i.test(part)) { hasUrl = true; return `<x>${escapeXml(part)}</x>`; }
+      return escapeXml(part);
+    })
+    .join('');
+
   try {
+    const payload = { text: [xmlText], target_lang: target, source_lang: 'FR', preserve_formatting: true };
+    if (hasUrl) { payload.tag_handling = 'xml'; payload.ignore_tags = ['x']; payload.outline_detection = false; }
     const response = await axios.post(
       'https://api-free.deepl.com/v2/translate',
       // DeepL v2 attend text comme un array de strings
-      { text: [textStr], target_lang: target, source_lang: 'FR', preserve_formatting: true },
+      payload,
       { headers: { 'Authorization': `DeepL-Auth-Key ${apiKey}`, 'Content-Type': 'application/json' }, timeout: 8000 }
     );
-    const translated = response.data?.translations?.[0]?.text;
+    let translated = response.data?.translations?.[0]?.text;
     if (translated) {
+      // Retirer les balises <x> et restaurer les caractères XML échappés
+      translated = unescapeXml(translated.replace(/<\/?x>/gi, ''));
       console.log(`🌍 [DEEPL] Traduit vers ${target} (${textStr.length} chars → ${translated.length} chars)`);
       return translated;
     }
