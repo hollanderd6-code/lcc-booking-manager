@@ -264,6 +264,18 @@ function buildSystemPrompt(ctx, temporalCtx, fewShotExamples) {
     sections.push(`CAUTION / DÉPÔT DE GARANTIE :\n${depositLines.join('\n')}`);
   }
 
+  // ── Enregistrement obligatoire (fiche de police) ──
+  if (ctx.registrationBlocksAccess) {
+    const lien = ctx.registrationLink
+      ? `Lien d'enregistrement à communiquer TEL QUEL (ne le réécris pas, ne le traduis pas) : ${ctx.registrationLink}`
+      : `Le lien d'enregistrement sera transmis par l'hôte.`;
+    sections.push(`ENREGISTREMENT OBLIGATOIRE (fiche de police) :
+- ⚠️ ACCÈS BLOQUÉ : l'enregistrement en ligne n'a PAS encore été complété. Les codes d'accès, le mot de passe wifi et les instructions d'entrée ne doivent PAS être communiqués tant qu'il n'est pas fait.
+- ${lien}
+- Si le voyageur dit ne pas avoir reçu ses informations d'arrivée / d'accès, ou les réclame : explique-lui que c'est précisément PARCE QUE son enregistrement en ligne n'a pas encore été complété, et invite-le chaleureusement à le faire via le lien ci-dessus. Précise qu'une fois l'enregistrement complété, toutes les informations d'accès lui seront transmises.
+- Ce blocage concerne UNIQUEMENT codes/wifi/accès. Réponds normalement à toute autre question (équipements, restaurants, horaires, transports…).`);
+  }
+
   const propertyBlock = sections.length > 0 ? sections.join('\n\n') : 'Aucune information disponible sur ce logement.';
 
   // ── Few-shot : exemples réponses manuelles ──
@@ -349,6 +361,7 @@ RÈGLES
 • Petit retard de départ le jour du checkout (≤ 30 min) → « Pas de problème, prenez votre temps », sans tag.
 
 5) CODES D'ACCÈS / WiFi
+• ENREGISTREMENT non complété (quand le bloc « ENREGISTREMENT OBLIGATOIRE » est présent) → PRIORITÉ ABSOLUE : ne donne JAMAIS codes / wifi / instructions d'accès. À la place, explique que l'accès est débloqué dès que l'enregistrement en ligne est complété, et donne le lien fourni dans ce bloc. N'émets PAS [ESCALADE] ni [QUESTION_HOTE] : la marche à suivre est connue, il n'y a rien à faire vérifier à l'hôte.
 • Caution non payée (sauf Airbnb) → refuse codes/accès/wifi UNIQUEMENT ; réponds normalement à tout le reste.
 • Avant le jour d'arrivée, ou le jour même avant 7h → ne donne JAMAIS les codes : « Toutes les informations nécessaires (adresse, codes d'accès, wifi) vous seront envoyées automatiquement le matin de votre arrivée à 7h. À très bientôt ! » (Airbnb : pas de condition de caution, mais l'embargo de 7h s'applique aussi.)
 • Jour d'arrivée à partir de 7h, ou en cours de séjour → donne les codes directement.

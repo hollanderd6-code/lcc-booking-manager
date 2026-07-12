@@ -687,6 +687,37 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     const depositPaid     = depositStatus && ['authorized', 'captured'].includes(depositStatus);
     const depositBlocksAccess = depositRequired && !depositPaid;
 
+    // ─── Enregistrement (fiche de police) : prérequis à la remise des codes ───
+    // Tant que le voyageur n'a pas complété son enregistrement en ligne, l'IA ne
+    // communique ni codes, ni wifi, ni instructions d'accès : elle renvoie le lien.
+    let registrationDone = true;   // fail-open : ne pas bloquer si le statut est indéterminé
+    let registrationLink = null;
+    if (!isAirbnbPlatform) {
+      try {
+        const regRes = await pool.query(
+          `SELECT c.unique_token,
+                  EXISTS (SELECT 1 FROM police_records pr WHERE pr.conversation_id = c.id) AS done
+             FROM conversations c
+            WHERE c.id = $1`,
+          [conversation.id]
+        );
+        if (regRes.rows.length > 0) {
+          registrationDone = regRes.rows[0].done === true;
+          const tok = regRes.rows[0].unique_token;
+          if (tok) {
+            const baseUrl = (process.env.APP_URL || 'https://www.boostinghost.fr').replace(/\/$/, '');
+            registrationLink = `${baseUrl}/checkin.html?token=${tok}`;
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ [HANDLER] Statut enregistrement indéterminé (non bloquant):', e.message);
+        registrationDone = true;
+      }
+    }
+    // Bloque codes/wifi/accès UNIQUEMENT si : non-Airbnb, enregistrement non complété
+    // ET lien disponible (sans lien, on ne piège pas le voyageur → on ne bloque pas).
+    const registrationBlocksAccess = !isAirbnbPlatform && !registrationDone && !!registrationLink;
+
     // ─── Sentiment négatif → notif proprio (sans bloquer la réponse IA) ─
     const negativePatterns = [
       'pas content','pas satisfait','déçu','décevant','inacceptable','honteux',
@@ -743,15 +774,20 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       welcomeBasketDescription: property.welcome_basket_description || null,
       // WiFi
       wifiName:          property.wifi_name     || welcomeBookData?.wifiSSID,
-      wifiPassword:      property.wifi_password || welcomeBookData?.wifiPassword,
+      wifiPassword: (() => {
+        if (registrationBlocksAccess) return null;   // enregistrement requis avant de donner le wifi
+        return property.wifi_password || welcomeBookData?.wifiPassword;
+      })(),
       // Accès (masqué si caution non payée)
       accessCode: (() => {
         if (isAirbnbPlatform) return property.access_code || welcomeBookData?.keyboxCode;
+        if (registrationBlocksAccess) return null;
         if (depositBlocksAccess) return null;
         return property.access_code || welcomeBookData?.keyboxCode;
       })(),
       accessInstructions: (() => {
         if (isAirbnbPlatform) return property.access_instructions || welcomeBookData?.accessInstructions;
+        if (registrationBlocksAccess) return null;
         if (depositBlocksAccess) return null;
         return property.access_instructions || welcomeBookData?.accessInstructions;
       })(),
@@ -789,6 +825,9 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       depositLinkAlreadySent,
       depositUrl,
       isAirbnb:           isAirbnbPlatform,
+      // Enregistrement (fiche de police)
+      registrationBlocksAccess,
+      registrationLink,
     } : { language };
 
     // 🔑 Diagnostic : d'où vient (ou pas) le code d'accès transmis à l'IA.
@@ -798,7 +837,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         `access_code=${property?.access_code ? 'oui' : 'non'} | ` +
         `keyboxCode=${welcomeBookData?.keyboxCode ? 'oui' : 'non'} | ` +
         `→ envoyé IA=${context.accessCode ? 'OUI' : 'NON'} | ` +
-        `airbnb=${isAirbnbPlatform} | blockAccessCaution=${depositBlocksAccess}`);
+        `airbnb=${isAirbnbPlatform} | blockAccessCaution=${depositBlocksAccess} | blockAccessEnreg=${registrationBlocksAccess}`);
     } catch (_) {}
 
     // ─── Historique de la conversation (contexte Groq) ────────────
