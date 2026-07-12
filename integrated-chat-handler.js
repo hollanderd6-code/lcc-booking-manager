@@ -688,21 +688,32 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     const depositBlocksAccess = depositRequired && !depositPaid;
 
     // ─── Enregistrement (fiche de police) : prérequis à la remise des codes ───
-    // Tant que le voyageur n'a pas complété son enregistrement en ligne, l'IA ne
+    // La fiche de police concerne UNIQUEMENT les voyageurs étrangers. Tant qu'un
+    // voyageur étranger n'a pas complété son enregistrement en ligne, l'IA ne
     // communique ni codes, ni wifi, ni instructions d'accès : elle renvoie le lien.
     let registrationDone = true;   // fail-open : ne pas bloquer si le statut est indéterminé
     let registrationLink = null;
+    let isForeignGuest = false;    // fiche de police = étrangers uniquement
     if (!isAirbnbPlatform) {
       try {
         const regRes = await pool.query(
           `SELECT c.unique_token,
+                  r.guest_country,
                   EXISTS (SELECT 1 FROM police_records pr WHERE pr.conversation_id = c.id) AS done
              FROM conversations c
-            WHERE c.id = $1`,
+             LEFT JOIN reservations r ON (
+               (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+               OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
+                   AND DATE(r.start_date) = DATE(c.reservation_start_date))
+             )
+            WHERE c.id = $1
+            LIMIT 1`,
           [conversation.id]
         );
         if (regRes.rows.length > 0) {
           registrationDone = regRes.rows[0].done === true;
+          const gc = (regRes.rows[0].guest_country || '').toUpperCase().trim();
+          isForeignGuest = gc !== '' && gc !== 'FR';
           const tok = regRes.rows[0].unique_token;
           if (tok) {
             const baseUrl = (process.env.APP_URL || 'https://www.boostinghost.fr').replace(/\/$/, '');
@@ -714,9 +725,9 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         registrationDone = true;
       }
     }
-    // Bloque codes/wifi/accès UNIQUEMENT si : non-Airbnb, enregistrement non complété
-    // ET lien disponible (sans lien, on ne piège pas le voyageur → on ne bloque pas).
-    const registrationBlocksAccess = !isAirbnbPlatform && !registrationDone && !!registrationLink;
+    // Bloque codes/wifi/accès UNIQUEMENT si : non-Airbnb, voyageur ÉTRANGER,
+    // enregistrement non complété ET lien disponible (sinon on ne piège personne).
+    const registrationBlocksAccess = !isAirbnbPlatform && isForeignGuest && !registrationDone && !!registrationLink;
 
     // ─── Sentiment négatif → notif proprio (sans bloquer la réponse IA) ─
     const negativePatterns = [

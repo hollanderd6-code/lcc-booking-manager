@@ -28795,6 +28795,33 @@ async function runTemplatesCron(triggerTypes) {
                 console.warn(`  ↳ ⚠️ Erreur vérif caution conv ${conv.id}:`, depErr.message);
               }
             }
+
+            // 🛂 Vérification enregistrement (fiche de police) — voyageurs ÉTRANGERS uniquement
+            // Un voyageur étranger n'ayant pas complété sa fiche de police ne reçoit pas
+            // les infos d'accès à 7h (mêmes infos protégées côté IA). Français / inconnu → pas de blocage.
+            if (!isAirbnb) {
+              try {
+                const regInfo = await pool.query(
+                  `SELECT r.guest_country,
+                          EXISTS (SELECT 1 FROM police_records pr WHERE pr.conversation_id = $1) AS done
+                     FROM reservations r
+                    WHERE ($3::text IS NOT NULL AND r.channex_booking_id = $3)
+                       OR (r.property_id = $2 AND DATE(r.start_date) = DATE($4) AND r.status != 'cancelled')
+                    ORDER BY (r.channex_booking_id = $3) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
+                  [conv.id, conv.property_id, conv.channex_booking_id || null, conv.reservation_start_date]
+                );
+                const gc = (regInfo.rows[0]?.guest_country || '').toUpperCase().trim();
+                const isForeign = gc !== '' && gc !== 'FR';
+                const regDone   = regInfo.rows[0]?.done === true;
+                if (isForeign && !regDone) {
+                  console.log(`  ↳ ⏭️ Enregistrement (fiche de police) non complété — voyageur étranger (${gc}) conv ${conv.id} → on_arrival bloqué`);
+                  continue;
+                }
+              } catch(regErr) {
+                console.warn(`  ↳ ⚠️ Erreur vérif enregistrement conv ${conv.id}:`, regErr.message);
+                // fail-open : ne pas bloquer l'envoi sur erreur
+              }
+            }
           }
 
           // Récupérer les infos du logement
