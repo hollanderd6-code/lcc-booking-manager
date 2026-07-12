@@ -1034,6 +1034,32 @@ function _bhUpdateAiThinking(message) {
   } catch (e) { /* non bloquant */ }
 }
 
+// Rend un texte cliquable : les URLs deviennent des <a>, le reste reste du texte.
+// 100% sûr (createTextNode / textContent, aucun innerHTML) → pas de risque XSS.
+function appendLinkified(container, text) {
+  const str = String(text == null ? '' : text);
+  const urlRe = /(https?:\/\/[^\s<]+)/g;
+  let last = 0, m;
+  while ((m = urlRe.exec(str)) !== null) {
+    if (m.index > last) container.appendChild(document.createTextNode(str.slice(last, m.index)));
+    let url = m[0];
+    // Détacher la ponctuation finale collée à l'URL (« ...9f066. » ou « ...) »)
+    let trail = '';
+    const tm = url.match(/[)\].,;:!?»"'…]+$/);
+    if (tm) { trail = tm[0]; url = url.slice(0, url.length - trail.length); }
+    const a = document.createElement('a');
+    a.href = url;
+    a.textContent = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.style.cssText = 'color:inherit;text-decoration:underline;word-break:break-all;';
+    container.appendChild(a);
+    if (trail) container.appendChild(document.createTextNode(trail));
+    last = m.index + m[0].length;
+  }
+  if (last < str.length) container.appendChild(document.createTextNode(str.slice(last)));
+}
+
 function appendMessage(message) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
@@ -1106,11 +1132,11 @@ function appendMessage(message) {
     _noteHead.innerHTML = '<span class="note-ico">🗒️</span> Note interne';
     const _noteBody = document.createElement('div');
     _noteBody.className = 'note-body';
-    _noteBody.textContent = _noteTxt;
+    appendLinkified(_noteBody, _noteTxt);
     bubble.appendChild(_noteHead);
     bubble.appendChild(_noteBody);
   } else {
-    bubble.textContent = message.message;
+    appendLinkified(bubble, message.message);
   }
   
   // Meta : heure + statut
