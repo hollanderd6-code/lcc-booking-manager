@@ -8540,13 +8540,28 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
   }
 });
 // ── PUT /api/reservations/manual/:uid — Modifier une résa manuelle ──
-app.put('/api/reservations/manual/:uid', async (req, res) => {
+app.put('/api/reservations/manual/:uid', authenticateAny, async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!req.user) return res.status(401).json({ error: 'Non autorisé' });
+
+    // Résoudre le vrai owner ID : si sous-compte/agent → parentUserId, sinon req.user.id
+    const realOwnerId = req.user.isSubAccount
+      ? (req.user.parentUserId || (await getRealUserId(pool, req)))
+      : req.user.id;
+    const user = { id: realOwnerId };
 
     const { uid } = req.params;
-    const agencyIds = await getAgencyUserIds(req, user.id);
+    // Mode agence : toujours inclure les comptes délégués (plus besoin de ?agency=all)
+    let agencyIds;
+    try {
+      const delegations = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [realOwnerId]
+      );
+      agencyIds = [realOwnerId, ...delegations.rows.map(d => d.delegator_user_id)];
+    } catch (e) {
+      agencyIds = [realOwnerId];
+    }
     const { propertyId, start, end, guestName, notes, phone, email, platform, price,
             guest_country, guest_address, guest_zip, occupancy_adults, amount_rooms, amount_cleaning, amount_taxes, ota_commission } = req.body;
 
@@ -26281,7 +26296,7 @@ case 'checkout.session.completed': {
 // FIN DU SCRIPT CRON
 // ============================================
 
-app.post('/api/manual-reservations/delete', async (req, res) => {
+app.post('/api/manual-reservations/delete', authenticateAny, async (req, res) => {
   try {
     // ✅ Utiliser req.user si dispo (authenticateAny), sinon fallback getUserFromRequest
     let user = req.user ? { id: req.user.isSubAccount ? (req.user.parentUserId || req.user.id) : req.user.id } : await getUserFromRequest(req);
