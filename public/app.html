@@ -16,7 +16,6 @@
 <!-- FullCalendar CSS -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet"/>
 <link href="/css/style.css?v=3" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=1">
-<link href="/css/bh-v3-mobile.css" rel="stylesheet"/> 
 <link rel="stylesheet" href="/css/bh-badges.css?v=1">
 <link rel="stylesheet" href="/css/bh-theme-v3.css?v=5">  
 <script>
@@ -2577,7 +2576,6 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 #cleaning48hModal .modal-footer { display: none !important; }
 </style>
     <!-- 📱 Styles Mobile Natifs -->
-<link rel="stylesheet" href="/css/mobile-native-styles.css">
     <style>
 /* Correction scroll horizontal calendrier mobile */
 @media (max-width: 1366px) {
@@ -3555,6 +3553,7 @@ setTimeout(function() {
 }
 </style>
 
+<link rel="stylesheet" href="/css/bh-mobile.css?v=1">
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none; position: sticky; top: 40px; z-index: 9998; width: 100%;">
@@ -12700,7 +12699,7 @@ if (document.readyState === 'loading') {
 </script>
 
 <!-- Capacitor Core -->
-<script src="https://cdn.jsdelivr.net/npm/@capacitor/core@latest/dist/capacitor.js"></script>
+<script src="/js/vendor/capacitor-8.4.0.js"></script>
 
 <!-- Initialisation des notifications -->
 <script>
