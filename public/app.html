@@ -289,6 +289,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   .modal-actions,
   .checklist-modal-footer,
   #invoiceModal .modal-actions,
+  #invoiceModal .inv-actions,
   #batchEditModal .modal-actions {
     padding-bottom: 16px !important;
     flex-shrink: 0 !important;
@@ -317,6 +318,25 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   }
   .batch-modal-footer {
     flex-shrink: 0 !important;            /* footer ancré, jamais poussé hors écran */
+  }
+
+  /* Modale « Générer une facture » : sa carte est bornée à 92vh, mais la bottom-bar
+     recouvre le bas de l'écran → le footer (Annuler / Envoyer par email) passe
+     dessous et devient inatteignable. Même remède que #batchEditModal : on réserve
+     la hauteur de la barre sous l'overlay et on borne la carte en conséquence. */
+  #invoiceModal {
+    align-items: center !important;
+    padding: 12px 12px calc(74px + env(safe-area-inset-bottom, 0px) + 12px) !important;
+    box-sizing: border-box !important;
+  }
+  #invoiceModal .inv-content {
+    max-height: calc(100dvh - 74px - env(safe-area-inset-bottom, 0px) - 24px) !important;
+  }
+  #invoiceModal .inv-body {
+    min-height: 0 !important;             /* sans ça, un flex-child refuse de scroller */
+  }
+  #invoiceModal .inv-form-panel {
+    overscroll-behavior: contain !important;
   }
 
   /* Modal checklist : il est CENTRÉ (pas un bottom-sheet flex-end), donc le patch
