@@ -60,7 +60,11 @@
     '.bhgs-vide{padding:28px 20px;text-align:center;color:#8A8375;font-size:13.5px;}',
     '.bhgs-trigger-mobile{width:38px;height:38px;border-radius:50%;border:1px solid rgba(200,184,154,.5);background:#fff;color:#1A7A5E;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;margin-right:8px;}',
     '.bhgs-trigger-desktop{width:28px;height:24px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.6);font-size:11px;cursor:pointer;flex:none;}',
-    '.bhgs-trigger-desktop:hover{background:rgba(255,255,255,.1);color:#fff;}'
+    '.bhgs-trigger-desktop:hover{background:rgba(255,255,255,.1);color:#fff;}',
+    /* Header mobile charg\u00e9 : d\u00e8s que la loupe est l\u00e0, on all\u00e8ge le logo */
+    '@media (max-width:700px){.mobile-header.bhgs-compact .mobile-logo-subtitle{display:none!important}}',
+    '@media (max-width:560px){.mobile-header.bhgs-compact .mobile-logo-text{display:none!important}',
+    '  .mobile-header.bhgs-compact .mobile-logo{margin:0 4px!important}}'
   ].join('\n');
   document.head.appendChild(st);
 
@@ -220,6 +224,7 @@
       b.addEventListener('click', bhOpenSearch);
       var menu = mh.querySelector('.mobile-menu-btn');
       if (menu) mh.insertBefore(b, menu); else mh.appendChild(b);
+      mh.classList.add('bhgs-compact');
     }
     var right = document.querySelector('.bh-demo-nav .bh-demo-right');
     if (right && !right.querySelector('.bhgs-trigger-desktop')) {
