@@ -29371,13 +29371,29 @@ app.post('/api/translate', authenticateAny, async (req, res) => {
     if (!apiKey) return res.status(503).json({ error: 'DeepL non configuré' });
 
     const axios = require('axios');
+  // 🔒 Protection des URLs (même correctif que translateWithDeepL) : DeepL
+  // localise la ponctuation (« . » → « 。 » en chinois, etc.) et casse les liens.
+  const escapeXml   = (v) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const unescapeXml = (v) => v.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  let hasUrl = false;
+  const xmlText = String(text)
+    .split(/(https?:\/\/[^\s]+)/gi)
+    .map(part => {
+      if (/^https?:\/\//i.test(part)) { hasUrl = true; return `<x>${escapeXml(part)}</x>`; }
+      return escapeXml(part);
+    })
+    .join('');
+
+    const payload = { text: [xmlText], target_lang, preserve_formatting: true };
+    if (hasUrl) { payload.tag_handling = 'xml'; payload.ignore_tags = ['x']; payload.outline_detection = false; }
     const response = await axios.post(
       'https://api-free.deepl.com/v2/translate',
-      { text: [text], target_lang, preserve_formatting: true },
+      payload,
       { headers: { 'Authorization': `DeepL-Auth-Key ${apiKey}`, 'Content-Type': 'application/json' }, timeout: 8000 }
     );
-    const translated = response.data?.translations?.[0]?.text;
+    let translated = response.data?.translations?.[0]?.text;
     if (!translated) return res.status(500).json({ error: 'Pas de traduction retournée' });
+    translated = unescapeXml(translated.replace(/<\/?x>/gi, ''));
     res.json({ translated });
   } catch (err) {
     console.error('❌ [/api/translate]', err.message);
