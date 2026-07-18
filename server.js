@@ -8540,13 +8540,28 @@ if (!reservationsStore.properties[propertyId].find(r => r.uid === uid)) {
   }
 });
 // ── PUT /api/reservations/manual/:uid — Modifier une résa manuelle ──
-app.put('/api/reservations/manual/:uid', async (req, res) => {
+app.put('/api/reservations/manual/:uid', authenticateAny, async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!req.user) return res.status(401).json({ error: 'Non autorisé' });
+
+    // Résoudre le vrai owner ID : si sous-compte/agent → parentUserId, sinon req.user.id
+    const realOwnerId = req.user.isSubAccount
+      ? (req.user.parentUserId || (await getRealUserId(pool, req)))
+      : req.user.id;
+    const user = { id: realOwnerId };
 
     const { uid } = req.params;
-    const agencyIds = await getAgencyUserIds(req, user.id);
+    // Mode agence : toujours inclure les comptes délégués (plus besoin de ?agency=all)
+    let agencyIds;
+    try {
+      const delegations = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [realOwnerId]
+      );
+      agencyIds = [realOwnerId, ...delegations.rows.map(d => d.delegator_user_id)];
+    } catch (e) {
+      agencyIds = [realOwnerId];
+    }
     const { propertyId, start, end, guestName, notes, phone, email, platform, price,
             guest_country, guest_address, guest_zip, occupancy_adults, amount_rooms, amount_cleaning, amount_taxes, ota_commission } = req.body;
 
@@ -15503,6 +15518,16 @@ app.post('/api/checkin/:token', async (req, res) => {
     } catch (notifErr) {
       console.warn('⚠️ [CHECKIN] Notif hôte échouée:', notifErr.message);
     }
+
+    // 🔓 La fiche de police vient d'être signée : les templates on_arrival
+    // éventuellement bloqués par send_condition (police_complete /
+    // checkin_complete) peuvent maintenant partir. On relance l'évaluation
+    // en différé — runTemplatesCron est idempotent (anti-doublon 23h +
+    // conditions re-vérifiées), donc sans risque.
+    setTimeout(() => {
+      runTemplatesCron(['on_arrival'])
+        .catch(e => console.warn('⚠️ [CHECKIN] Relance on_arrival:', e.message));
+    }, 3000);
 
     res.json({ ok: true });
   } catch (err) {
@@ -26281,7 +26306,7 @@ case 'checkout.session.completed': {
 // FIN DU SCRIPT CRON
 // ============================================
 
-app.post('/api/manual-reservations/delete', async (req, res) => {
+app.post('/api/manual-reservations/delete', authenticateAny, async (req, res) => {
   try {
     // ✅ Utiliser req.user si dispo (authenticateAny), sinon fallback getUserFromRequest
     let user = req.user ? { id: req.user.isSubAccount ? (req.user.parentUserId || req.user.id) : req.user.id } : await getUserFromRequest(req);
@@ -28853,6 +28878,15 @@ async function runTemplatesCron(triggerTypes) {
 // 7h00 — avant arrivée + jour J arrivée + avant départ
 cron.schedule('0 7 * * *', () => {
   runTemplatesCron(['before_arrival', 'on_arrival', 'before_departure']);
+}, { timezone: 'Europe/Paris' });
+
+// 9h-21h toutes les 2h — filet de sécurité on_arrival UNIQUEMENT.
+// Couvre : résa last-minute + fiche de police signée après 7h, caution
+// validée en journée, webhook raté. Idempotent (anti-doublon 23h dans
+// runTemplatesCron). Restreint à on_arrival : les before_arrival J-X déjà
+// envoyés il y a plus de 23h seraient re-ciblés, pas les on_arrival.
+cron.schedule('0 9-21/2 * * *', () => {
+  runTemplatesCron(['on_arrival']);
 }, { timezone: 'Europe/Paris' });
 
 // ⚠️ CRON DÉSACTIVÉ — rappel "pas de réponse 2h" supprimé (peu pertinent)
