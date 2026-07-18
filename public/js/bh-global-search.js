@@ -64,7 +64,8 @@
     /* Header mobile charg\u00e9 : d\u00e8s que la loupe est l\u00e0, on all\u00e8ge le logo */
     '@media (max-width:700px){.mobile-header.bhgs-compact .mobile-logo-subtitle{display:none!important}}',
     '@media (max-width:560px){.mobile-header.bhgs-compact .mobile-logo-text{display:none!important}',
-    '  .mobile-header.bhgs-compact .mobile-logo{margin:0 4px!important}}'
+    '  .mobile-header.bhgs-compact{position:relative!important}',
+    '  .mobile-header.bhgs-compact .mobile-logo{position:absolute!important;left:50%!important;top:calc(50% + env(safe-area-inset-top,0px)/2)!important;transform:translate(-50%,-50%)!important;margin:0!important}}'
   ].join('\n');
   document.head.appendChild(st);
 
