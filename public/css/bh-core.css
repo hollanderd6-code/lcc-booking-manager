@@ -27,3 +27,9 @@ button:focus:not(:focus-visible),a:focus:not(:focus-visible){outline:none}
 @media (max-width:768px){
   button,.btn,[role="button"]{min-height:42px}
 }
+
+/* ── Dark mode : masqué tant que la couverture est incomplète ──
+   Le toggle (injecté par bh-layout.js) ne persiste pas le choix ;
+   le cacher suffit à neutraliser la fonctionnalité. */
+.bh-theme-toggle{display:none!important}
+.bh-demo-mode-label{display:none!important}
