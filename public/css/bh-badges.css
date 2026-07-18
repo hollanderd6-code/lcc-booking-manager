@@ -1,0 +1,280 @@
+/* ================================================================
+   BADGES MESSAGES (mobile + desktop)
+   Fusion : messages-badge-fix.css + messages-badge-red.css + messages-badge-desktop.css
+   (contenus concaténés dans l'ordre de chargement historique —
+    cascade identique ; ne plus éditer les fichiers d'origine)
+   ================================================================ */
+
+
+/* ―――――――― ex-messages-badge-fix.css ―――――――― */
+/* ============================================
+   🔔 BADGE MESSAGES - CSS OPTIMISÉ
+   
+   Badge positionné à droite de l'icône
+   (pour ne pas cacher l'icône)
+   ============================================ */
+
+@media (max-width: 768px) {
+  
+  /* ============================================
+     🔴 BADGE SUR MESSAGES - BIEN POSITIONNÉ
+     ============================================ */
+  
+  .mobile-tab[data-tab="messages"] .badge-count,
+  .tab-btn[data-tab="messages"] .badge-count {
+    position: absolute;
+    top: 2px;
+    right: 8px; /* Positionné à droite */
+    min-width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 0 6px;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    border: 2px solid var(--bg-primary, white);
+    animation: badgeBounce 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Animation d'apparition */
+  @keyframes badgeBounce {
+    0% {
+      transform: scale(0);
+    }
+    50% {
+      transform: scale(1.2);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  
+  /* Dark mode */
+  [data-theme="dark"] .mobile-tab[data-tab="messages"] .badge-count,
+  [data-theme="dark"] .tab-btn[data-tab="messages"] .badge-count {
+    border-color: rgba(31, 41, 55, 0.95);
+  }
+  
+  /* Badge toujours rouge (même pour 0) */
+  
+}
+
+/* ============================================
+   FIN DU CSS BADGE
+   ============================================ */
+
+
+/* ―――――――― ex-messages-badge-red.css ―――――――― */
+/* ============================================
+   🔴 BADGE MESSAGES - ROUGE UNIFORME
+   ============================================ */
+
+/* Badge sur desktop (sidebar) */
+.nav-item[data-page="messages"] {
+  position: relative; /* Nécessaire pour le positionnement absolu du badge */
+}
+
+.nav-item[data-page="messages"] .badge-count {
+  position: absolute;
+  top: 50%;
+  right: 16px; /* Distance du bord droit */
+  transform: translateY(-50%); /* Centre verticalement */
+  
+  background: #EF4444; /* Rouge */
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  min-width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+  
+  /* Animation d'apparition */
+  animation: badge-appear 0.2s ease-out;
+}
+
+@keyframes badge-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+/* Badge sur mobile (onglets du bas) */
+.mobile-tab[data-tab="messages"] .badge-count,
+.tab-btn[data-tab="messages"] .badge-count {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  
+  background: #EF4444; /* Rouge */
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+
+/* État actif (page messages) - Garder le badge visible */
+.nav-item[data-page="messages"].active .badge-count {
+  background: #DC2626; /* Rouge plus foncé quand actif */
+}
+
+.mobile-tab[data-tab="messages"].active .badge-count,
+.tab-btn[data-tab="messages"].active .badge-count {
+  background: #DC2626;
+}
+
+/* Animation pulse si nouveaux messages */
+.badge-count.pulse {
+  animation: badge-pulse 1s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    transform: translateY(-50%) scale(1.1);
+  }
+}
+
+/* Mobile : animation pulse différente (pas de translateY) */
+.mobile-tab .badge-count.pulse,
+.tab-btn .badge-count.pulse {
+  animation: badge-pulse-mobile 1s ease-in-out infinite;
+}
+
+@keyframes badge-pulse-mobile {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+
+/* ―――――――― ex-messages-badge-desktop.css ―――――――― */
+/* ============================================
+   📱 BADGE MESSAGES - DESKTOP STYLE
+   Pour afficher le badge rouge sur la navigation desktop
+   ============================================ */
+
+/* Badge sur la navigation desktop */
+.nav-item .badge-count {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  z-index: 10;
+  pointer-events: none; /* Important : empêche le badge d'interférer avec le hover */
+  animation: badge-appear 0.3s ease;
+}
+
+/* Position relative pour le nav-item pour que le badge soit bien positionné */
+.nav-item {
+  position: relative;
+}
+
+/* Animation d'apparition */
+@keyframes badge-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Animation de pulsation pour attirer l'attention */
+@keyframes badge-pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 2px 16px rgba(239, 68, 68, 0.7);
+  }
+}
+
+/* Pulsation quand il y a des messages */
+.nav-item .badge-count:not(:empty) {
+  animation: badge-pulse 2s infinite;
+}
+
+/* Style hover du nav-item avec badge */
+.nav-item:hover .badge-count {
+  /* Ne pas changer la position, juste un léger effet visuel */
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.6);
+}
+
+/* Quand le nav-item est actif */
+.nav-item.active .badge-count {
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.6);
+  /* Garder le même transform */
+  transform: translateY(-50%);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .nav-item .badge-count {
+  background: linear-gradient(135deg, #F87171 0%, #EF4444 100%);
+  box-shadow: 0 2px 8px rgba(248, 113, 113, 0.5);
+}
+
+/* Responsive - S'assurer que ça fonctionne sur tablette aussi */
+@media (max-width: 1024px) {
+  .nav-item .badge-count {
+    top: 6px;
+    right: 6px;
+    min-width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+}
+
+/* Masquer sur mobile (car mobile a son propre système) */
+@media (max-width: 768px) {
+  .nav-item .badge-count {
+    display: none !important;
+  }
+}
+
