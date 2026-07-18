@@ -1034,12 +1034,6 @@ html[data-theme-v3="1"] .status-card p {
   margin-bottom: 12px !important;
 }
 
-html[data-theme-v3="1"] .status-card-header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-}
-
 html[data-theme-v3="1"] .status-label {
   padding: 3px 10px !important;
   border-radius: 999px !important;
@@ -1482,10 +1476,7 @@ html[data-theme-v3="1"] .day-header {
 }
 
 html[data-theme-v3="1"] .day-header .day-name { font-size: 9px !important; font-weight: 700 !important; letter-spacing: .07em !important; text-transform: uppercase !important; color: var(--text-3) !important; }
-html[data-theme-v3="1"] .day-header .day-num { font-size: 15px !important; font-weight: 600 !important; color: var(--text-2) !important; margin-top: 1px !important; }
 html[data-theme-v3="1"] .day-header.today { background: var(--jade-subtle) !important; }
-html[data-theme-v3="1"] .day-header.today .day-num { color: var(--jade) !important; }
-html[data-theme-v3="1"] .day-header.weekend .day-num { color: #EF4444 !important; opacity: .7 !important; }
 html[data-theme-v3="1"] .day-header.today::after { content: '' !important; position: absolute !important; bottom: 0; left: 0; right: 0 !important; height: 2px !important; background: var(--jade) !important; }
 
 html[data-theme-v3="1"] .calendar-grid { background: var(--cream-warm) !important; }
@@ -1592,13 +1583,6 @@ html[data-theme-v3="1"] .checklist-card {
   border: 1px solid var(--border-v3) !important;
   border-radius: 14px !important;
   box-shadow: none !important;
-}
-
-html[data-theme-v3="1"] .widget-header {
-  display: flex !important;
-  align-items: flex-start !important;
-  justify-content: space-between !important;
-  margin-bottom: 16px !important;
 }
 
 /* ─────────────────────────────────────────────────────────────

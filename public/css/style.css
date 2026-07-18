@@ -315,24 +315,6 @@ body {
   text-overflow: ellipsis;
 }
 
-.user-logout {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.user-logout:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
 /* MAIN CONTENT */
 .main-content {
   flex: 1;
@@ -415,118 +397,9 @@ body {
   align-items: center;
   margin-bottom: 16px;
 }
-/* DASHBOARD - PROCHAINES ARRIVÉES & DÉPARTS */
-
-.upcoming-list {
-  margin-top: 10px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color-subtle);
-  overflow: hidden;
-}
-
-.upcoming-row {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr 1.2fr 0.8fr 0.9fr;
-  gap: 8px;
-  padding: 8px 10px;
-  align-items: center;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.upcoming-row:nth-child(odd) {
-  background: var(--bg-secondary);
-}
-
-.upcoming-row:nth-child(even) {
-  background: var(--bg-primary);
-}
-
-.upcoming-row-header {
-  background: var(--bg-tertiary);
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-tertiary);
-}
 
 .upcoming-row-header span {
   white-space: nowrap;
-}
-
-.upcoming-col-date {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.upcoming-col-guest {
-  font-weight: 500;
-}
-
-.upcoming-col-property {
-  color: var(--text-secondary);
-}
-
-.upcoming-col-type,
-.upcoming-col-status {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.upcoming-badge {
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: 999px;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color-subtle);
-}
-
-/* Petites pastilles type Arrivée / Départ */
-.upcoming-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.upcoming-chip-checkin {
-  background: var(--secondary-light);
-  color: var(--secondary-hover);
-}
-
-.upcoming-chip-checkout {
-  background: var(--primary-light);
-  color: var(--primary-dark);
-}
-
-/* Statuts à droite */
-.upcoming-status {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.upcoming-status-ok {
-  background: rgba(16, 185, 129, 0.12);
-  color: var(--success);
-}
-
-.upcoming-status-warning {
-  background: rgba(245, 158, 11, 0.15);
-  color: var(--warning);
-}
-
-.upcoming-status-info {
-  background: rgba(59, 130, 246, 0.15);
-  color: var(--info);
 }
 
 /* Responsive */
@@ -536,17 +409,6 @@ body {
     grid-template-columns: 1.4fr 1.2fr 0.9fr;
   }
   .upcoming-col-property {
-    display: none;
-  }
-}
-
-@media (max-width: 600px) {
-  .upcoming-row,
-  .upcoming-row-header {
-    grid-template-columns: 1.5fr 1fr;
-  }
-  .upcoming-col-property,
-  .upcoming-col-type {
     display: none;
   }
 }
@@ -609,24 +471,6 @@ body {
 
 .kpi-pill i {
   font-size: 11px;
-}
-
-.kpi-pill-success {
-  background: rgba(16, 185, 129, 0.12);
-  color: var(--success);
-  border: 1px solid rgba(16, 185, 129, 0.6);
-}
-
-.kpi-pill-info {
-  background: rgba(59, 130, 246, 0.12);
-  color: var(--info);
-  border: 1px solid rgba(59, 130, 246, 0.6);
-}
-
-.kpi-pill-neutral {
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color-subtle);
 }
 
 .kpi-main {
@@ -904,40 +748,8 @@ body {
   }
 }
 
-/* ============================================
-   UTILITIES
-   ============================================ */
-
-.text-center {
-  text-align: center;
-}
-
-.mb-4 {
-  margin-bottom: 16px;
-}
-
-.mb-6 {
-  margin-bottom: 24px;
-}
-
-.mt-4 {
-  margin-top: 16px;
-}
-
 .flex {
   display: flex;
-}
-
-.gap-4 {
-  gap: 16px;
-}
-
-.items-center {
-  align-items: center;
-}
-
-.justify-between {
-  justify-content: space-between;
 }
 
 
@@ -956,13 +768,6 @@ body {
   padding: 14px 14px 12px;
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-md);
-}
-
-.status-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
 }
 
 .status-card h3 {
@@ -1008,10 +813,6 @@ body {
   background: #635BFF;
 }
 
-.status-icon-whatsapp {
-  background: #25D366;
-}
-
 
 .status-icon-ai {
   background: radial-gradient(circle at 30% 0%, #22C55E, #16A34A);
@@ -1052,14 +853,6 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
-.onboarding-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
 .onboarding-header h2 {
   font-size: 16px;
   margin-bottom: 2px;
@@ -1068,22 +861,6 @@ body {
 .onboarding-header p {
   font-size: 12px;
   margin: 0;
-}
-
-.onboarding-progress-badge {
-  font-size: 12px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: var(--secondary-color);
-  border: 1px solid var(--secondary-hover);
-  color: #ffffff;
-  font-weight: 600;
-}
-
-.onboarding-steps {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
 }
 
 .onboarding-step {
@@ -1182,42 +959,9 @@ body {
   font-size: 12px;
 }
 
-.toast-icon {
-  margin-top: 2px;
-  font-size: 14px;
-}
-
 .toast-message {
   flex: 1;
   color: var(--text-primary);
-}
-
-.toast-close {
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0;
-}
-
-.toast-success .toast-icon {
-  color: #4ade80;
-}
-
-.toast-info .toast-icon {
-  color: #38bdf8;
-}
-
-.toast-error .toast-icon {
-  color: #f97373;
-}
-
-
-/* Sidebar logo image */
-.sidebar-logo-img {
-  height: 32px;
-  width: auto;
-  display: block;
 }
 
 
@@ -1233,37 +977,6 @@ body {
   background: rgba(15,23,42,0.8);
   color: #e5e7eb;
   cursor: pointer;
-}
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: #f97316;
-}
-.status-pending .status-dot {
-  background: #f97316;
-}
-.status-inprogress {
-  border-color: rgba(59,130,246,0.8);
-  background: rgba(37,99,235,0.15);
-  color: #bfdbfe;
-}
-.status-inprogress .status-dot {
-  background: #3b82f6;
-}
-.status-done {
-  border-color: rgba(22,163,74,0.9);
-  background: rgba(22,163,74,0.15);
-  color: #bbf7d0;
-}
-.status-done .status-dot {
-  background: #22c55e;
-}
-
-.planning-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
 }
 /* ===== Correction clics bloqués sur mobile ===== */
 
@@ -1284,28 +997,6 @@ body {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-}
-/* En-tête du calendrier façon "channel manager" */
-.fc .fc-toolbar.fc-header-toolbar {
-  margin-bottom: 12px;
-}
-
-.fc .fc-toolbar-title {
-  font-weight: 700;
-  font-size: 18px;
-  text-transform: uppercase;
-}
-
-/* Jours en haut : jour + date bien visibles */
-.fc .fc-col-header-cell-cushion {
-  padding: 6px 4px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-/* Cells du mois */
-.fc-daygrid-day-frame {
-  padding: 2px;
 }
 
 /* Évènements style barres rouges comme ton screen */
@@ -1373,16 +1064,6 @@ body {
   font-weight: 700;
   background: rgba(0, 0, 0, 0.2);
 }
-
-.bh-source-airbnb {
-  background: #fff;
-  color: #d4202b;
-}
-
-.bh-source-booking {
-  background: #fff;
-  color: #003580;
-}
 /* ===========================
    LOADING OVERLAY GLOBAL
    =========================== */
@@ -1426,11 +1107,6 @@ body {
 /* Masquer l'ancien spinner icon et texte si présents */
 .loading-spinner i,
 .loading-spinner p { display: none; }
-
-
-.bh-source-direct {
-  background: rgba(255, 255, 255, 0.2);
-}
 /* Masquer l’assistant IA libre et la partie e-mail si tu veux alléger */
 .ai-section {
   display: none;
@@ -1741,13 +1417,6 @@ html, body {
   text-decoration: none;
 }
 
-.mobile-logo-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
 .mobile-logo-text {
   display: flex;
   flex-direction: column;
@@ -1767,9 +1436,6 @@ html, body {
   text-transform: uppercase;
   margin-top: 2px;
 }
-
-.logo-green { color: #10B981; font-weight: 800; }
-.logo-dark  { color: #111827; font-weight: 600; }
 
 @media (max-width: 360px) {
   .mobile-logo-subtitle { display: none; }
