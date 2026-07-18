@@ -3727,9 +3727,16 @@ window.closeChecklistsKpiModal = function() {
 .bh2-occ:hover{border-color:rgba(26,122,94,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
 .bh2-occ-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7A8695;display:flex;justify-content:space-between;align-items:center}
 .bh2-occ-lbl i{color:#B7791F;font-size:12px}
-.bh2-occ-num{font-family:'Instrument Serif',serif;font-weight:400;font-size:34px;line-height:1.05;color:#B7791F;margin-top:8px}
+.bh2-occ-ring{position:relative;width:96px;height:96px;margin:10px auto 2px}
+.bh2-occ-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.occ-rbg{fill:none;stroke:rgba(183,121,31,.16);stroke-width:7}
+.occ-rfg{fill:none;stroke:#B7791F;stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.3,.9,.3,1)}
+.bh2-occ-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-weight:400;font-size:24px;line-height:1;color:#B7791F}
 .bh2-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
-.bh2-stat{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:all .18s;min-width:0}
+.bh2-stat{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:16px;padding:14px 16px 13px;display:block;position:relative;cursor:pointer;transition:all .18s;min-width:0}
+.bh2-stat>div{display:flex;flex-direction:column-reverse;gap:5px;min-width:0}
+.bh2-stat-ic{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:9px;background:#F6EFE3;color:#B7791F;display:flex;align-items:center;justify-content:center;font-size:12px}
+.bh2-stat .bh2-lbl{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8A8375;padding-right:36px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bh2-stat:hover{border-color:rgba(26,122,94,.4);box-shadow:0 4px 14px rgba(13,17,23,.06)}
 /* Neutralise tout style hérité (ancien highlight "Logements actifs" dans les CSS externes) */
 html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{background:#fff !important}
@@ -3749,7 +3756,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 <style>
 .bh2-stat-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:rgba(26,122,94,.10);color:#1A7A5E}
 .bh2-stat-ic.n{background:rgba(107,114,128,.10);color:#6B7280}
-.bh2-num{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:21px;line-height:1;color:#0D1117}
+.bh2-num{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:29px;line-height:1;color:#B7791F}
 .bh2-lbl{font-size:10.5px;color:#7A8695;font-weight:500;margin-top:2px;line-height:1.25}
 @media(max-width:920px){
   .bh2-hero{grid-template-columns:1fr;gap:10px;margin-bottom:10px}
@@ -3765,7 +3772,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
   .bh2-ca #kpiCaValue{font-size:26px}
   .bh2-ca-spark{display:none}
   .bh2-occ{padding:14px}
-  .bh2-occ-num{font-size:26px}
+  .bh2-occ-ring{width:82px;height:82px}.bh2-occ-num{font-size:20px}
   .bh2-occ-lbl,.bh2-ca-lbl{font-size:9px;letter-spacing:.05em}
   .bh2-stats{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
 }
@@ -3810,7 +3817,10 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 </section>
 <section class="bh2-occ" id="kpiOccupancyCard">
 <div class="bh2-occ-lbl">Occupation du mois <i class="fas fa-calendar"></i></div>
-<div class="bh2-occ-num" id="kpiOccupancyValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
+<div class="bh2-occ-ring">
+  <svg viewBox="0 0 88 88"><circle class="occ-rbg" cx="44" cy="44" r="37"/><circle class="occ-rfg" id="kpiOccRing" cx="44" cy="44" r="37"/></svg>
+  <div class="bh2-occ-num" id="kpiOccupancyValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
+</div>
 </section>
 </div>
 </div>
@@ -6005,6 +6015,12 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     if (occEl) {
       if (window.bhAnimateValue) window.bhAnimateValue(occEl, occupancy, { suffix: '%' }); else occEl.textContent = occupancy + '%';
       applyKpiColor(occEl, occupancy, 'occupancy');
+      var occRing = document.getElementById('kpiOccRing');
+      if (occRing) {
+        var circ = 2 * Math.PI * 37;
+        occRing.style.strokeDasharray = circ;
+        occRing.style.strokeDashoffset = circ * (1 - Math.max(0, Math.min(100, occupancy)) / 100);
+      }
     }
 
     const movesVal = document.getElementById('kpiTodayMovesValue');
@@ -6105,7 +6121,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       if (window.bhAnimateValue) window.bhAnimateValue(caVal, Math.round(caTotal), { suffix: '€' });
       else caVal.textContent = (caTotal > 0 ? Math.round(caTotal).toLocaleString('fr-FR') : '0') + '€';
     }
-    const monthNames = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    const monthNames = ['Jan','Fév','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
     if (caSub) caSub.textContent = monthNames[m] + ' ' + y;
 
     // ── Dashboard v2 : sparkline CA sur 6 mois + delta vs mois précédent ──
@@ -6134,7 +6150,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         if (prev > 0) {
           const pct = Math.round(((caTotal - prev) / prev) * 100);
           delta.innerHTML = '<i class="fas fa-arrow-trend-' + (pct >= 0 ? 'up' : 'down') + '"></i> ' + (pct >= 0 ? '+' : '') + pct + ' % vs ' + monthNames[(m + 11) % 12].toLowerCase();
-          delta.style.color = pct >= 0 ? '#6ee7b7' : '#fbbf24';
+          delta.style.color = pct >= 0 ? '#6ee7b7' : '#F0B35B';
         } else { delta.textContent = ''; }
       }
       if (spark) {
@@ -6269,18 +6285,18 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       const statusCounts = allWithDeposit.reduce((acc, r) => { acc[r.deposit.status] = (acc[r.deposit.status]||0)+1; return acc; }, {});
       console.log('🛡️ Deposits présents par statut:', statusCounts, '| total avec deposit:', allWithDeposit.length);
 
-      depositsVal.style.color = count >= 1 ? '#10B981' : '#000000';
+      depositsVal.style.color = count >= 1 ? '#1A7A5E' : '#0D1117';
       depositsVal.style.fontWeight = '700';
       if (window.bhAnimateValue) window.bhAnimateValue(depositsVal, count); else depositsVal.textContent = count;
 
       if (depositsSub) {
         if (count === 0) {
-          depositsSub.textContent = 'aucune caution prise';
+          depositsSub.textContent = 'Cautions actives';
         } else {
           const parts = [];
           if (authDeposits.length)     parts.push(authDeposits.length     + ' autorisée'  + (authDeposits.length     > 1 ? 's' : ''));
           if (capturedDeposits.length) parts.push(capturedDeposits.length + ' capturée'   + (capturedDeposits.length > 1 ? 's' : ''));
-          depositsSub.textContent = parts.join(' · ');
+          depositsSub.textContent = 'Cautions · ' + parts.join(' · ');
         }
       }
     } catch (error) {
@@ -6717,13 +6733,13 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
     var subEl = document.getElementById('kpiTopRisksSub');
     if (valEl) {
       valEl.textContent = withNotes.length;
-      valEl.style.color = withNotes.length > 0 ? '#EF4444' : '#10B981';
+      valEl.style.color = withNotes.length > 0 ? '#C2410C' : '#1A7A5E';
       valEl.style.fontWeight = '700';
     }
     if (subEl) {
       subEl.textContent = withNotes.length === 0
-        ? 'Aucune note active'
-        : withNotes.length + ' réservation' + (withNotes.length > 1 ? 's' : '') + ' avec note';
+        ? 'Notes sur réservations'
+        : 'réservation' + (withNotes.length > 1 ? 's' : '') + ' avec note';
     }
     return withNotes;
   };
