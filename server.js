@@ -28157,7 +28157,21 @@ app.get('/api/message-templates', authenticateToken, async (req, res) => {
     const { property_id } = req.query;
     let q = 'SELECT * FROM message_templates WHERE user_id = ANY($1::text[])';
     const params = [agencyIds];
-    if (property_id) { q += ' AND (property_id = $2 OR property_id IS NULL)'; params.push(property_id); }
+    if (property_id) {
+      // Un template s'applique au logement si :
+      //  a) ciblage multi (property_ids) : le logement est dans la liste
+      //  b) ciblage mono legacy (property_id) : correspondance exacte
+      //  c) aucun ciblage (ni liste ni property_id) : template global
+      // NB : property_id peut rester rempli par l'ancien sélecteur alors que
+      // property_ids fait foi — d'où la priorité à la liste quand elle existe.
+      q += ` AND (
+        (COALESCE(NULLIF(property_ids::text, ''), '[]') <> '[]'
+          AND property_ids::jsonb ? $2::text)
+        OR (COALESCE(NULLIF(property_ids::text, ''), '[]') = '[]'
+          AND (property_id = $2 OR property_id IS NULL))
+      )`;
+      params.push(property_id);
+    }
     q += ' ORDER BY created_at DESC';
     const result = await pool.query(q, params);
     res.json({ templates: result.rows });
