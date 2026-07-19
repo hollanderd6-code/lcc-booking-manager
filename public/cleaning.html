@@ -1314,13 +1314,16 @@ html[data-theme-v3="1"] .cleaning-tab:not(.active):hover {
   .cleaning-tabs {
     display: flex !important; gap: 6px !important;
     width: 100% !important; max-width: 100% !important; box-sizing: border-box !important;
-    padding: 5px !important; margin: 0 0 18px !important;
+    /* respiration latérale : la pilule active et son ombre ne sont plus
+       coupées aux bords, et « Stats » ne colle plus le bord droit */
+    padding: 5px 12px !important; margin: 0 0 18px !important;
+    scroll-padding: 0 12px;
     background: #EEE8DD !important; border: 1px solid rgba(200,184,154,.45) !important;
     border-radius: 16px !important;
     overflow-x: auto !important; -webkit-overflow-scrolling: touch !important;
     scroll-snap-type: x proximity; scrollbar-width: none; -ms-overflow-style: none;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
-            mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+            mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
   }
   html[data-theme-v3="1"] .cleaning-tabs::-webkit-scrollbar,
   .cleaning-tabs::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
