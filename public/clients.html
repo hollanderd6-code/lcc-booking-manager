@@ -1069,7 +1069,7 @@ function openAttestationModal() {
 <link rel="stylesheet" href="/css/menu-plus-fixes.css?v=10">
 <link rel="stylesheet" href="/css/menu-active-button.css?v=10">
 <link rel="stylesheet" href="/css/mobile-native-styles.css?v=10">
-<link rel="stylesheet" href="/css/bh-core.css?v=2">
+<link rel="stylesheet" href="/css/bh-core.css?v=3">
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="clients" data-subtitle="Gérez vos propriétaires, leur Stripe et leurs logements." data-title="Mes clients">
 
@@ -5912,7 +5912,8 @@ window.openDeboursPhoto = function(id) {
   const d = deboursData.find(x => x.id === id);
   if (!d?.photoDataUrl) return;
   const w = window.open('', '_blank');
-  w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${d.photoDataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;"></body></html>`);
+  w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${d.photoDataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;"><script src="/js/bh-polish.js?v=1"></script>
+</body></html>`);
 };
 
 // ── Sauvegarder débours ──
@@ -6513,6 +6514,7 @@ html[data-theme-v3="1"] .invoice-item:hover {
 .editor-section { border-color: rgba(200,184,154,.45) !important; border-radius: 16px !important; }
 </style>
 
+<script src="/js/bh-haptics.js?v=1"></script>
 <script src="/js/bh-global-search.js?v=5"></script>
 </body>
 </html>
