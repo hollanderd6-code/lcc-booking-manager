@@ -8,6 +8,7 @@
   /* Jetons canoniques (source de vérité : bh-theme-v3 --jade) */
   --bh-vert:#1A7A5E; --bh-vert-fonce:#125A45; --bh-vert-clair:#2A9474;
   --bh-vert-pale:#EAF3EF; --bh-creme:#F4F1E9; --bh-encre:#0D1117; --bh-or:#B7791F;
+  --bh-violet:#7C3AED; --bh-violet-fonce:#5B21B6;
   --bh-radius:14px; --bh-radius-s:10px;
   --bh-ombre:0 2px 10px rgba(13,17,23,.07);
   --bh-serif:'Instrument Serif',Georgia,serif;
