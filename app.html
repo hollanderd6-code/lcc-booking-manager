@@ -3593,8 +3593,8 @@ window.openChecklistsKpiModal = function() {
     var m = document.createElement('div');
     m.id = modalId;
     m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;';
-    m.innerHTML = '<div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">'
+    m.innerHTML = '<div class="bh-sheet-panel" style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">'
+      + '<div class="bh-sheet-head" style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">'
       + '<div style="font-size:16px;font-weight:700;color:#0D1117;">Checklists ménage en attente</div>'
       + '<button id="checklistsKpiModalClose" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>'
       + '</div>'
@@ -6135,8 +6135,8 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       var m = document.createElement('div');
       m.id = mid;
       m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;';
-      m.innerHTML = '<div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">'
-        + '<div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">'
+      m.innerHTML = '<div class="bh-sheet-panel" style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">'
+        + '<div class="bh-sheet-head" style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">'
         + '<div><div style="font-size:16px;font-weight:700;color:#0D1117;"><i class="fas fa-chart-line" style="color:#1A7A5E;margin-right:8px;"></i>CA mensuel</div><div id="caKpiModalSubtitle" style="font-size:12px;color:#7A8695;margin-top:2px;"></div></div>'
         + '<button id="caKpiModalClose" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>'
         + '</div>'
@@ -6307,8 +6307,8 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   modal.id = modalId;
   modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;';
   modal.innerHTML = `
-    <div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
+    <div class="bh-sheet-panel" style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">
+      <div class="bh-sheet-head" style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
         <div style="font-size:16px;font-weight:700;color:#0D1117;">${titleText}</div>
         <button id="${modalId}Close" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
       </div>
@@ -6551,7 +6551,7 @@ movesCard.addEventListener('touchstart', handler, { passive: true });
       const notesHandler = function() {
         // Recalculer au clic pour être sûr d'avoir les données les plus fraîches
         const notes = window.bhNotesRefresh() || window.BH_NOTES || [];
-        ensureGenericModal('kpiNotesModal', '📝 Notes actives');
+        ensureGenericModal('kpiNotesModal', 'Notes actives');
         const modalContent = document.getElementById('kpiNotesModalContent');
         if (!modalContent) return;
         if (notes.length === 0) {
@@ -6562,13 +6562,13 @@ movesCard.addEventListener('touchstart', handler, { passive: true });
             var guest = r.guestName || r.guest_display_name || 'Voyageur';
             var endRaw = r.endDate || r.end || '';
             var endStr = endRaw ? new Date(endRaw).toLocaleDateString('fr-FR') : '';
-            return '<div style="background:white;border-radius:14px;padding:14px 16px;margin-bottom:10px;border-left:3px solid #EF4444;">'
+            return '<div style="background:white;border-radius:14px;padding:14px 16px;margin-bottom:10px;border-left:3px solid #C2410C;">'
               + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
               + '<span style="font-size:13px;font-weight:700;color:#1A7A5E;">' + propName + '</span>'
               + (endStr ? '<span style="font-size:11px;color:#9CA3AF;">jusqu&#39;au ' + endStr + '</span>' : '')
               + '</div>'
               + '<div style="font-size:13px;font-weight:600;color:#0D1117;margin-bottom:4px;">' + guest + '</div>'
-              + '<div style="font-size:13px;color:#EF4444;line-height:1.4;">' + (r.notes || '') + '</div>'
+              + '<div style="font-size:13px;color:#7C2D12;line-height:1.4;">' + (r.notes || '') + '</div>'
               + '</div>';
           }).join('');
         }
@@ -8081,7 +8081,7 @@ try {
 <!-- Modal blocage calendrier -->
 <div id="blockModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;">
 <div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
+  <div class="bh-sheet-head" style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
     <div style="font-size:16px;font-weight:700;color:#0D1117;display:flex;align-items:center;gap:8px;"><i class="fas fa-calendar-day" style="color:#1A7A5E;"></i> Action sur le calendrier</div>
     <button id="blockModalClose" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
   </div>
@@ -10873,8 +10873,8 @@ if (editBookingForm) {
           modal.id = 'occupancyDetailsModal';
           modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;';
           modal.innerHTML = `
-            <div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
+            <div class="bh-sheet-panel" style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">
+              <div class="bh-sheet-head" style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
                 <div style="font-size:16px;font-weight:700;color:#0D1117;">Taux d'occupation</div>
                 <button id="closeOccupancyDetailsModal" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
               </div>
@@ -11017,8 +11017,8 @@ if (editBookingForm) {
           modal.id = 'activePropertiesModal';
           modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;';
           modal.innerHTML = `
-            <div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
+            <div class="bh-sheet-panel" style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">
+              <div class="bh-sheet-head" style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
                 <div style="font-size:16px;font-weight:700;color:#0D1117;">Logements</div>
                 <button id="closeActivePropertiesModal" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
               </div>
@@ -11080,8 +11080,8 @@ if (editBookingForm) {
           modal.id = 'depositsModal';
           modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;';
           modal.innerHTML = `
-            <div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
+            <div class="bh-sheet-panel" style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">
+              <div class="bh-sheet-head" style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
                 <div style="font-size:16px;font-weight:700;color:#0D1117;">Cautions prises</div>
                 <button id="closeDepositsModal" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
               </div>
@@ -14189,6 +14189,61 @@ function bhConfirm(message) {
 
 <script src="/js/bh-auto-refresh.js?v=1"></script>
 <script src="/js/bh-global-search.js?v=5"></script>
+<style>
+/* ══ BH SHEETS — habillage commun des modales KPI (bottom sheets) ══ */
+.bh-sheet-panel{
+  background:#FAF7F2 !important;
+  border-radius:22px 22px 0 0 !important;
+  box-shadow:0 -18px 60px rgba(13,17,23,.28) !important;
+  animation:bhSheetSlide .34s cubic-bezier(.22,1.1,.36,1);
+  position:relative;
+}
+/* poignée de glissement */
+.bh-sheet-panel::before{
+  content:"";position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  width:38px;height:4px;border-radius:99px;background:rgba(122,134,149,.35);
+}
+.bh-sheet-head{padding-top:22px !important;border-bottom-color:rgba(200,184,154,.5) !important}
+.bh-sheet-head>div:first-child{
+  font-family:'Instrument Serif',Georgia,serif !important;
+  font-size:19px !important;font-weight:400 !important;letter-spacing:.01em;
+}
+.bh-sheet-head button{
+  background:#EEE8DD !important;color:#6B7280 !important;
+  transition:background .15s, transform .12s;
+}
+.bh-sheet-head button:active{transform:scale(.92);background:#E2DACB !important}
+@keyframes bhSheetSlide{from{transform:translateY(46px);opacity:.4}to{transform:translateY(0);opacity:1}}
+@media (prefers-reduced-motion:reduce){.bh-sheet-panel{animation:none}}
+</style>
+<script>
+// ══ Glisser vers le bas pour fermer les bottom sheets KPI ══
+(function () {
+  var y0 = null, panel = null;
+  document.addEventListener('touchstart', function (e) {
+    var p = e.target.closest('.bh-sheet-panel');
+    if (!p) { y0 = null; return; }
+    var contenu = p.querySelector('[id$="Content"]');
+    if (contenu && contenu.scrollTop > 0) { y0 = null; return; }
+    y0 = e.touches[0].clientY; panel = p;
+  }, { passive: true });
+  document.addEventListener('touchmove', function (e) {
+    if (y0 == null || !panel) return;
+    var dy = e.touches[0].clientY - y0;
+    if (dy > 0) panel.style.transform = 'translateY(' + dy + 'px)';
+  }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (y0 == null || !panel) return;
+    var dy = e.changedTouches[0].clientY - y0;
+    panel.style.transform = '';
+    if (dy > 90) {
+      var btn = panel.querySelector('.bh-sheet-head button');
+      if (btn) btn.click();
+    }
+    y0 = null; panel = null;
+  });
+})();
+</script>
 </body>
 <style>
 #invoiceModal {
