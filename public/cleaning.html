@@ -1574,7 +1574,13 @@ html[data-theme-v3="1"] #templatesList > div {
 <link rel="stylesheet" href="/css/menu-plus-fixes.css?v=10">
 <link rel="stylesheet" href="/css/menu-active-button.css?v=10">
 <link rel="stylesheet" href="/css/mobile-native-styles.css?v=10">
-<link rel="stylesheet" href="/css/bh-core.css?v=2">
+<link rel="stylesheet" href="/css/bh-core.css?v=3">
+<style>
+/* card-title serif — grammaire éditoriale unifiée */
+.card-title{ font-family:'Instrument Serif',Georgia,serif !important;
+  font-size:18px !important; font-weight:400 !important; letter-spacing:.01em; }
+.card-title i{ font-size:14px; color:#1A7A5E; }
+</style>
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Gestion" data-page="cleaning" data-subtitle="Assignez-la à vos logements et générez un planning intelligent." data-title="Gestion du ménage">
 
@@ -1737,7 +1743,7 @@ html[data-theme-v3="1"] #templatesList > div {
 </div>
 <div id="assignContainer">
 <p class="text-secondary" style="font-size:13px;">
-                Chargement des réservations…
+                <div class="bh-skel bh-skel-carte"></div><div class="bh-skel bh-skel-carte"></div><div class="bh-skel bh-skel-carte"></div>
               </p>
 </div>
 </section>
@@ -1762,7 +1768,7 @@ html[data-theme-v3="1"] #templatesList > div {
     </div>
   </div>
   <div class="checklists-list" id="checklistsList">
-    <p class="text-secondary" style="font-size:13px;">Chargement…</p>
+    <div class="bh-skel bh-skel-ligne l80"></div><div class="bh-skel bh-skel-ligne l60"></div>
   </div>
 </section>
 </div>
@@ -1783,7 +1789,7 @@ html[data-theme-v3="1"] #templatesList > div {
     Créez des templates personnalisés par logement. Vos équipes de ménage les verront automatiquement dans leur interface.
   </p>
   <div class="templates-list" id="templatesList">
-    <p class="text-secondary" style="font-size:13px;">Chargement…</p>
+    <div class="bh-skel bh-skel-ligne l80"></div><div class="bh-skel bh-skel-ligne l60"></div>
   </div>
 </section>
 
@@ -5381,5 +5387,6 @@ html[data-theme-v3="1"] .btn-primary {
 </style>
 
 <script src="/js/bh-global-search.js?v=5"></script>
+<script src="/js/bh-polish.js?v=1"></script>
 </body>
 </html>

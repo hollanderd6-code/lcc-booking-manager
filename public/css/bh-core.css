@@ -120,3 +120,14 @@ button:active:not(:disabled), .btn:active, [role="button"]:active,
 .bh-badge.info{   background:#EEF1F6; color:#44546A; border-color:#DCE2EC; }
 .bh-badge.ota{    background:#F1EDFB; color:#5B3FA8; border-color:#E2DAF4; }
 .bh-badge.direct{ background:#EAF3EF; color:#1A7A5E; border-color:#D3E6DD; }
+
+/* ══ SKELETONS — chargement des listes (shimmer crème) ══ */
+.bh-skel{ position:relative; overflow:hidden; background:#EDE7DB; border-radius:12px; }
+.bh-skel::after{ content:""; position:absolute; inset:0;
+  background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.6) 50%,transparent 70%);
+  animation:bhSkelSlide 1.15s ease-in-out infinite; }
+@keyframes bhSkelSlide{ from{transform:translateX(-100%)} to{transform:translateX(100%)} }
+.bh-skel-carte{ height:118px; border-radius:16px; margin-bottom:12px; }
+.bh-skel-ligne{ height:14px; margin-bottom:10px; }
+.bh-skel-ligne.l60{ width:60% } .bh-skel-ligne.l80{ width:80% }
+@media (prefers-reduced-motion:reduce){ .bh-skel::after{ animation:none } }
