@@ -3518,7 +3518,7 @@ setTimeout(function() {
 
 <link rel="stylesheet" href="/css/bh-v3-mobile.css?v=10">
 <link rel="stylesheet" href="/css/mobile-native-styles.css?v=10">
-<link rel="stylesheet" href="/css/bh-core.css?v=2">
+<link rel="stylesheet" href="/css/bh-core.css?v=3">
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none; position: sticky; top: 40px; z-index: 9998; width: 100%;">
@@ -13734,12 +13734,8 @@ function savePropertyOrder() {
     reapplyOrderToDOM();
   }
 
-  // Toast de confirmation
-  var toast = document.createElement('div');
-  toast.textContent = '✓ Ordre des logements sauvegardé';
-  toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1A7A5E;color:white;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,.2);transition:opacity .4s;';
-  document.body.appendChild(toast);
-  setTimeout(function(){ toast.style.opacity='0'; setTimeout(function(){ toast.remove(); }, 400); }, 2000);
+  // Toast de confirmation — via le système unifié
+  if (window.showBHToast) showBHToast('Ordre des logements sauvegardé', 'success');
 }
 
 function resetPropertyOrder() {
@@ -14304,6 +14300,7 @@ function bhConfirm(message) {
   });
 })();
 </script>
+<script src="/js/bh-polish.js?v=1"></script>
 </body>
 <style>
 #invoiceModal {

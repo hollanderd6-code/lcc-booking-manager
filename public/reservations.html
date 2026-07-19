@@ -171,17 +171,21 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 .plt-guest   { background: #F3E8FF; color: #7C3AED; font-weight: 700; }
 .plt-other   { background: #f3f4f6; color: #374151; }
 
+/* Badges : alignés sur le système unifié .bh-badge (bh-core.css) */
 .status-badge {
-  display: inline-block; padding: 2px 8px; border-radius: 20px;
-  font-size: 11px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px 3px 8px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; letter-spacing: .015em;
+  border: 1px solid transparent;
 }
-.status-confirmed    { background: #f0fdf4; color: #16a34a; }
-.status-cancelled    { background: #fef2f2; color: #dc2626; }
-.status-modified     { background: #fffbeb; color: #d97706; }
-.status-no_show      { background: #faf5ff; color: #7c3aed; }
-.status-request      { background: #eff6ff; color: #2563eb; }
-.status-non_confirmed{ background: #eff6ff; color: #2563eb; }
-.status-completed    { background: #f3f4f6; color: #374151; }
+.status-badge::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.85; }
+.status-confirmed    { background:#EAF3EF; color:#166B52; border-color:#D3E6DD; }
+.status-cancelled    { background:#FBEDE7; color:#B0431E; border-color:#F2D8CC; }
+.status-modified     { background:#FBF3E2; color:#9A6514; border-color:#F0E2C2; }
+.status-no_show      { background:#F1EDFB; color:#5B3FA8; border-color:#E2DAF4; }
+.status-request      { background:#EEF1F6; color:#44546A; border-color:#DCE2EC; }
+.status-non_confirmed{ background:#EEF1F6; color:#44546A; border-color:#DCE2EC; }
+.status-completed    { background:#EEF1F6; color:#44546A; border-color:#DCE2EC; }
 
 /* ─── PAGINATION ─── */
 .pagination { display: flex; align-items: center; gap: 6px; padding: 16px 0; justify-content: center; }
@@ -507,7 +511,7 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
 <link rel="stylesheet" href="/css/menu-plus-fixes.css?v=10">
 <link rel="stylesheet" href="/css/menu-active-button.css?v=10">
 <link rel="stylesheet" href="/css/mobile-native-styles.css?v=10">
-<link rel="stylesheet" href="/css/bh-core.css?v=2">
+<link rel="stylesheet" href="/css/bh-core.css?v=3">
 </head>
 <body data-page="reservations" data-title="Réservations" data-kicker="Planning" data-back-href="/app.html" data-back-label="Tableau de bord">
 
@@ -1930,5 +1934,6 @@ body.notif-panel-open {
 
 <script src="/js/bh-auto-refresh.js?v=1"></script>
 <script src="/js/bh-global-search.js?v=5"></script>
+<script src="/js/bh-polish.js?v=1"></script>
 </body>
 </html>

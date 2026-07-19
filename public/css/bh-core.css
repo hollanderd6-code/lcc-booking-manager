@@ -34,3 +34,89 @@ button:focus:not(:focus-visible),a:focus:not(:focus-visible){outline:none}
    le cacher suffit à neutraliser la fonctionnalité. */
 .bh-theme-toggle{display:none!important}
 .bh-demo-mode-label{display:none!important}
+
+/* ══ POLISH PACK — micro-interactions & finitions ══ */
+
+/* Feedback tactile universel : léger enfoncement au tap.
+   Propriété `scale` (pas transform) : ne casse aucun positionnement existant. */
+:where(button, .btn, [role="button"], a.bh-demo-btn, .tab-btn):active{ scale: .965; }
+:where(button, .btn, [role="button"]){ transition: scale .12s ease; }
+
+/* Défilement : doux, sans rebond parasite dans les feuilles/modales */
+html{ scroll-behavior: smooth; }
+.bh-sheet-panel [id$="Content"], .modal-content{ overscroll-behavior: contain; }
+
+/* Barres de défilement desktop : fines, discrètes, jade au survol */
+@media (pointer: fine){
+  *::-webkit-scrollbar{ width: 9px; height: 9px; }
+  *::-webkit-scrollbar-track{ background: transparent; }
+  *::-webkit-scrollbar-thumb{ background: rgba(122,134,149,.28); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+  *::-webkit-scrollbar-thumb:hover{ background: rgba(26,122,94,.45); border: 2px solid transparent; background-clip: content-box; }
+}
+
+/* Entrée de page : cascade discrète des blocs principaux (une fois, au chargement) */
+@media (prefers-reduced-motion: no-preference){
+  main.main-content > *{ animation: bhPageIn .32s cubic-bezier(.3,.9,.3,1) both; }
+  main.main-content > *:nth-child(2){ animation-delay: .04s }
+  main.main-content > *:nth-child(3){ animation-delay: .08s }
+  main.main-content > *:nth-child(4){ animation-delay: .11s }
+  main.main-content > *:nth-child(n+5){ animation-delay: .13s }
+}
+@keyframes bhPageIn{ from{ opacity: 0; transform: translateY(7px); } to{ opacity: 1; transform: none; } }
+
+/* ══ TOASTS BH (définis par bh-polish.js) ══ */
+#bh-toast-zone{ position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 100001;
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+  pointer-events: none; width: max-content; max-width: 92vw; }
+.bh-toast{ display: flex; align-items: center; gap: 11px;
+  background: #12211C; color: #F2EEE3; border-radius: 13px;
+  padding: 11px 18px 11px 12px; font: 500 13.5px/1.45 'DM Sans', sans-serif;
+  border-left: 3px solid #B7791F; box-shadow: 0 14px 44px rgba(13,17,23,.35);
+  max-width: 92vw; pointer-events: auto;
+  animation: bhToastIn .3s cubic-bezier(.22,1.1,.36,1); }
+.bh-toast.sortie{ animation: bhToastOut .25s ease forwards; }
+.bh-toast .bt-ic{ flex: none; width: 21px; height: 21px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; background: rgba(255,255,255,.14); }
+.bh-toast.ok{ border-left-color: #3E9C7C; }   .bh-toast.ok .bt-ic{ background: #1F5C49; color: #BFE8D6; }
+.bh-toast.err{ background: #4A1F14; border-left-color: #E07A5F; } .bh-toast.err .bt-ic{ background: #6E2E1E; color: #F6D5CB; }
+.bh-toast.info{ border-left-color: #7C8FB0; } .bh-toast.info .bt-ic{ background: #2E3D52; color: #C9D6EA; }
+@keyframes bhToastIn{ from{ transform: translateY(12px); opacity: 0 } to{ transform: none; opacity: 1 } }
+@keyframes bhToastOut{ to{ transform: translateY(8px); opacity: 0 } }
+
+/* ══ MICRO-INTERACTIONS — retour tactile unifié ══
+   La propriété `scale` n'écrase pas les `transform` existants
+   (logo centré, éléments translatés) : aucun conflit possible. */
+button, .btn, [role="button"], [onclick],
+.bh2-op, .bh2-stat, .kpi, .bh2-ca, .bh2-occ,
+.status-badge, .page-btn, .mobile-tabs a, .cleaning-tabs .tab {
+  transition-property: scale, box-shadow, background-color, border-color, color, opacity;
+  transition-duration: .16s;
+  transition-timing-function: cubic-bezier(.3,.9,.4,1);
+}
+button:active:not(:disabled), .btn:active, [role="button"]:active,
+[onclick]:active, .bh2-op:active, .bh2-stat:active, .kpi:active,
+.bh2-ca:active, .bh2-occ:active, .page-btn:active { scale: .975; }
+/* lift discret au survol, uniquement à la souris */
+@media (hover:hover) and (pointer:fine){
+  .bh2-op:hover, .bh2-stat:hover, .kpi:hover { translate: 0 -1px; }
+}
+@media (prefers-reduced-motion:reduce){
+  button:active, .btn:active, [onclick]:active { scale: none; }
+}
+
+/* ══ BADGES DE STATUT — système unifié ══
+   Pilule + point coloré. Variantes : ok (jade), warn (ambre),
+   err (terracotta), info (ardoise), ota (lavande), direct (jade pâle). */
+.bh-badge{ display:inline-flex; align-items:center; gap:6px;
+  padding:3px 10px 3px 8px; border-radius:99px;
+  font:600 11px/1.4 'DM Sans',sans-serif; letter-spacing:.015em;
+  border:1px solid transparent; white-space:nowrap; }
+.bh-badge::before{ content:""; width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.85; }
+.bh-badge.ok{     background:#EAF3EF; color:#166B52; border-color:#D3E6DD; }
+.bh-badge.warn{   background:#FBF3E2; color:#9A6514; border-color:#F0E2C2; }
+.bh-badge.err{    background:#FBEDE7; color:#B0431E; border-color:#F2D8CC; }
+.bh-badge.info{   background:#EEF1F6; color:#44546A; border-color:#DCE2EC; }
+.bh-badge.ota{    background:#F1EDFB; color:#5B3FA8; border-color:#E2DAF4; }
+.bh-badge.direct{ background:#EAF3EF; color:#1A7A5E; border-color:#D3E6DD; }
