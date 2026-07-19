@@ -61,11 +61,18 @@
     '.bhgs-trigger-mobile{width:38px;height:38px;border-radius:50%;border:1px solid rgba(200,184,154,.5);background:#fff;color:#1A7A5E;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;margin-right:8px;}',
     '.bhgs-trigger-desktop{width:28px;height:24px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.6);font-size:11px;cursor:pointer;flex:none;}',
     '.bhgs-trigger-desktop:hover{background:rgba(255,255,255,.1);color:#fff;}',
-    /* Header mobile charg\u00e9 : d\u00e8s que la loupe est l\u00e0, on all\u00e8ge le logo */
-    '@media (max-width:700px){.mobile-header.bhgs-compact .mobile-logo-subtitle{display:none!important}}',
-    '@media (max-width:560px){.mobile-header.bhgs-compact .mobile-logo-text{display:none!important}',
-    '  .mobile-header.bhgs-compact{position:relative!important}',
-    '  .mobile-header.bhgs-compact .mobile-logo{position:absolute!important;left:50%!important;top:calc(50% + env(safe-area-inset-top,0px)/2)!important;transform:translate(-50%,-50%)!important;margin:0!important}}'
+    /* Pages au logo centr\u00e9 : loupe \u00e9pingl\u00e9e \u00e0 droite, le logo ne bouge pas */
+    '.mobile-header.bhgs-host{position:relative!important}',
+    '.mobile-header .bhgs-trigger-mobile.bhgs-abs{position:absolute;right:12px;top:calc(50% + env(safe-area-inset-top,0px)/2);transform:translateY(-50%);margin:0;z-index:5}',
+    /* app.html : bloc statuts compact\u00e9 (points seuls) pour laisser la place au logo complet */
+    '@media (max-width:700px){',
+    '  #bh-mobile-svc i{display:none!important}',
+    '  #bh-mobile-svc>div:nth-child(2){display:none!important}',
+    '  #bh-mobile-svc{padding:4px 5px!important}',
+    '  .mobile-header .mobile-logo{min-width:0}',
+    '  .mobile-header .mobile-logo-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}',
+    '  .mobile-header .mobile-logo-subtitle{display:none!important}',
+    '}'
   ].join('\n');
   document.head.appendChild(st);
 
@@ -223,9 +230,16 @@
       b.setAttribute('aria-label', 'Rechercher');
       b.innerHTML = '<i class="fas fa-search"></i>';
       b.addEventListener('click', bhOpenSearch);
-      var menu = mh.querySelector('.mobile-menu-btn');
-      if (menu) mh.insertBefore(b, menu); else mh.appendChild(b);
-      mh.classList.add('bhgs-compact');
+      if (mh.querySelector('#bh-mobile-svc')) {
+        // app.html : header 3 zones -> la loupe rejoint le groupe d'actions (flux)
+        var menu = mh.querySelector('.mobile-menu-btn');
+        if (menu) mh.insertBefore(b, menu); else mh.appendChild(b);
+      } else {
+        // logo centr\u00e9 seul -> loupe \u00e9pingl\u00e9e \u00e0 droite en absolu
+        b.classList.add('bhgs-abs');
+        mh.classList.add('bhgs-host');
+        mh.appendChild(b);
+      }
     }
     var right = document.querySelector('.bh-demo-nav .bh-demo-right');
     if (right && !right.querySelector('.bhgs-trigger-desktop')) {
@@ -239,5 +253,5 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injecter);
   else injecter();
-  setTimeout(injecter, 800); setTimeout(injecter, 2500); // barres injectées par bh-layout.js
+  setTimeout(injecter, 800); setTimeout(injecter, 2500); setTimeout(injecter, 5000); setTimeout(injecter, 9000); // headers reconstruits par bh-layout.js
 })();
