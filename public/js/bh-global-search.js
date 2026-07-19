@@ -62,12 +62,12 @@
     '.bhgs-trigger-desktop{width:28px;height:24px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.6);font-size:11px;cursor:pointer;flex:none;}',
     '.bhgs-trigger-desktop:hover{background:rgba(255,255,255,.1);color:#fff;}',
     /* Pages au logo centr\u00e9 : loupe \u00e9pingl\u00e9e \u00e0 droite, le logo ne bouge pas */
-    '.mobile-header.bhgs-host{position:relative!important}',
+
     '.mobile-header .bhgs-trigger-mobile.bhgs-abs{position:absolute;right:12px;top:calc(50% + env(safe-area-inset-top,0px)/2);transform:translateY(-50%);margin:0;z-index:5}',
     /* app.html : logo ABSOLUMENT centr\u00e9, c\u00f4t\u00e9s compact\u00e9s */
     '@media (max-width:700px){',
     '  .mobile-header.bhgs-app{position:relative!important}',
-    '  .mobile-header.bhgs-app>a.mobile-logo{position:absolute!important;left:50%!important;top:calc(50% + env(safe-area-inset-top,0px)/2)!important;transform:translate(-50%,-50%)!important;z-index:1;max-width:44vw}',
+    '  .mobile-header.bhgs-app>a.mobile-logo{position:absolute!important;left:50%!important;top:calc(50% + env(safe-area-inset-top,0px)/2)!important;transform:translate(-50%,-50%)!important;z-index:1;max-width:42vw}',
     '  .mobile-header.bhgs-app>div{position:relative;z-index:2}',
     '  #bh-mobile-svc i{display:none!important}',
     '  #bh-mobile-svc>div:nth-child(2){display:none!important}',
@@ -234,11 +234,22 @@
     document.querySelectorAll('.mobile-header').forEach(function (h) {
       if (!mh && window.getComputedStyle(h).display !== 'none') mh = h;
     });
+    // Rééquilibrage du header app à CHAQUE passe (le bouton agence
+    // peut être injecté après la loupe par un autre script)
+    if (mh && mh.querySelector('#bh-mobile-svc')) {
+      var dr = mh.querySelector('div[style*="flex-end"]');
+      var ga = mh.querySelector('div[style*="flex-start"]');
+      if (dr && ga) Array.prototype.slice.call(dr.children).forEach(function (el) {
+        if (el.id === 'syncBtnMobile' || el.id === 'bh-mobile-notif-btn'
+            || el.classList.contains('bhgs-trigger-mobile')) return;
+        ga.appendChild(el);
+      });
+    }
     if (mh && !mh.querySelector('.bhgs-trigger-mobile')) {
       var b = document.createElement('button');
       b.className = 'bhgs-trigger-mobile'; b.type = 'button';
       b.setAttribute('aria-label', 'Rechercher');
-      b.innerHTML = '<i class="fas fa-search"></i>';
+      b.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></svg>';
       b.addEventListener('click', bhOpenSearch);
       if (mh.querySelector('#bh-mobile-svc')) {
         // app.html : header 3 zones -> loupe dans le groupe d'actions,
@@ -249,7 +260,7 @@
       } else {
         // logo centr\u00e9 seul -> loupe \u00e9pingl\u00e9e \u00e0 droite en absolu
         b.classList.add('bhgs-abs');
-        mh.classList.add('bhgs-host');
+        if (window.getComputedStyle(mh).position === 'static') mh.style.position = 'relative';
         mh.appendChild(b);
       }
     }

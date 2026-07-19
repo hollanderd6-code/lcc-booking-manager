@@ -5912,8 +5912,7 @@ window.openDeboursPhoto = function(id) {
   const d = deboursData.find(x => x.id === id);
   if (!d?.photoDataUrl) return;
   const w = window.open('', '_blank');
-  w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${d.photoDataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;"><script src="/js/bh-global-search.js?v=4"></script>
-</body></html>`);
+  w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${d.photoDataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;"></body></html>`);
 };
 
 // ── Sauvegarder débours ──
@@ -6514,5 +6513,6 @@ html[data-theme-v3="1"] .invoice-item:hover {
 .editor-section { border-color: rgba(200,184,154,.45) !important; border-radius: 16px !important; }
 </style>
 
+<script src="/js/bh-global-search.js?v=5"></script>
 </body>
 </html>
