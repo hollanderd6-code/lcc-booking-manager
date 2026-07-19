@@ -1425,11 +1425,12 @@ var _bhNativeConfirm = window.confirm;
 
   var MORE = { 'settings-account': 1, help: 1, support: 1, factures: 1, clients: 1, deposits: 1, cautions: 1,
     cleaning: 1, menages: 1, welcome: 1, livrets: 1, contrat: 1, contrats: 1, reporting: 1, revenus: 1,
-    pricing: 1, finances: 1, notifications: 1, avis: 1 };
+    pricing: 1, finances: 1, notifications: 1, avis: 1,
+    'smart-locks': 1, smart_locks: 1, serrures: 1 };
   var TOLABEL = { app: 'accueil', dashboard: 'accueil', accueil: 'accueil', index: 'accueil',
     reservations: 'reservations', messages: 'messages',
     logements: 'logements', properties: 'logements', biens: 'logements',
-    settings: 'logements', 'smart-locks': 'logements', smart_locks: 'logements', serrures: 'logements' };
+    settings: 'logements' };
 
   function keyForPage(page) { page = deburr(page); if (TOLABEL[page]) return TOLABEL[page]; if (MORE[page]) return 'plus'; return ''; }
   function findByLabel(tabs, key) { if (!key) return -1; for (var i = 0; i < tabs.length; i++) if (labelOf(tabs[i]).indexOf(key) !== -1) return i; return -1; }

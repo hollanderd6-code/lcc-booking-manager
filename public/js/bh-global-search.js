@@ -64,11 +64,16 @@
     /* Pages au logo centr\u00e9 : loupe \u00e9pingl\u00e9e \u00e0 droite, le logo ne bouge pas */
     '.mobile-header.bhgs-host{position:relative!important}',
     '.mobile-header .bhgs-trigger-mobile.bhgs-abs{position:absolute;right:12px;top:calc(50% + env(safe-area-inset-top,0px)/2);transform:translateY(-50%);margin:0;z-index:5}',
-    /* app.html : bloc statuts compact\u00e9 (points seuls) pour laisser la place au logo complet */
+    /* app.html : logo ABSOLUMENT centr\u00e9, c\u00f4t\u00e9s compact\u00e9s */
     '@media (max-width:700px){',
+    '  .mobile-header.bhgs-app{position:relative!important}',
+    '  .mobile-header.bhgs-app>a.mobile-logo{position:absolute!important;left:50%!important;top:calc(50% + env(safe-area-inset-top,0px)/2)!important;transform:translate(-50%,-50%)!important;z-index:1;max-width:44vw}',
+    '  .mobile-header.bhgs-app>div{position:relative;z-index:2}',
     '  #bh-mobile-svc i{display:none!important}',
     '  #bh-mobile-svc>div:nth-child(2){display:none!important}',
-    '  #bh-mobile-svc{padding:4px 5px!important}',
+    '  #bh-mobile-svc{padding:2px 5px!important;gap:2px!important}',
+    '  .mobile-header.bhgs-app>div[style*="flex-end"]{gap:0!important}',
+    '  .mobile-header.bhgs-app>div[style*="flex-end"]>*{width:30px!important;height:30px!important;min-width:30px!important}',
     '  .mobile-header .mobile-logo{min-width:0}',
     '  .mobile-header .mobile-logo-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}',
     '  .mobile-header .mobile-logo-subtitle{display:none!important}',
@@ -223,7 +228,12 @@
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); bhOpenSearch(); }
   });
   function injecter() {
-    var mh = document.querySelector('.mobile-header');
+    // Cibler le header VISIBLE (certaines pages en ont un statique caché
+    // + un reconstruit par bh-layout ; injecter dans le caché ne sert à rien)
+    var mh = null;
+    document.querySelectorAll('.mobile-header').forEach(function (h) {
+      if (!mh && window.getComputedStyle(h).display !== 'none') mh = h;
+    });
     if (mh && !mh.querySelector('.bhgs-trigger-mobile')) {
       var b = document.createElement('button');
       b.className = 'bhgs-trigger-mobile'; b.type = 'button';
@@ -231,9 +241,11 @@
       b.innerHTML = '<i class="fas fa-search"></i>';
       b.addEventListener('click', bhOpenSearch);
       if (mh.querySelector('#bh-mobile-svc')) {
-        // app.html : header 3 zones -> la loupe rejoint le groupe d'actions (flux)
-        var menu = mh.querySelector('.mobile-menu-btn');
-        if (menu) mh.insertBefore(b, menu); else mh.appendChild(b);
+        // app.html : header 3 zones -> loupe dans le groupe d'actions,
+        // et classe pour le centrage absolu du logo
+        mh.classList.add('bhgs-app');
+        var droite = mh.querySelector('div[style*="flex-end"]');
+        if (droite) droite.appendChild(b); else mh.appendChild(b);
       } else {
         // logo centr\u00e9 seul -> loupe \u00e9pingl\u00e9e \u00e0 droite en absolu
         b.classList.add('bhgs-abs');
