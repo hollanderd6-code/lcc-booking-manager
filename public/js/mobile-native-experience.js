@@ -182,10 +182,32 @@
       document.body.appendChild(tabsContainer);
 
       // Event listeners
+      var self = this;
+      // Raccourcis par appui long (500ms) sur certains onglets
+      var RACCOURCIS = {
+        calendar: [{ label: 'Nouvelle réservation', icon: 'fa-plus', go: function(){ location.href='/reservations.html?nouvelle=1'; } }],
+        messages: [{ label: 'Message à tous', icon: 'fa-bullhorn', go: function(){ location.href='/messages.html?broadcast=1'; } }],
+        properties: [{ label: 'Ajouter un logement', icon: 'fa-plus', go: function(){ location.href='/settings.html?ajouter=1'; } }]
+      };
       document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const tabId = btn.dataset.tab;
-          await this.switchTab(tabId);
+        var tabId = btn.dataset.tab;
+        var timer = null, longPress = false;
+        var demarrer = function () {
+          longPress = false;
+          if (!RACCOURCIS[tabId]) return;
+          timer = setTimeout(function () {
+            longPress = true;
+            self.vibrate('medium');
+            self.ouvrirRaccourcis(btn, RACCOURCIS[tabId]);
+          }, 500);
+        };
+        var arreter = function () { if (timer) { clearTimeout(timer); timer = null; } };
+        btn.addEventListener('touchstart', demarrer, { passive: true });
+        btn.addEventListener('touchend', arreter);
+        btn.addEventListener('touchmove', arreter, { passive: true });
+        btn.addEventListener('click', async (e) => {
+          if (longPress) { e.preventDefault(); longPress = false; return; }
+          await self.switchTab(tabId);
         });
       });
 
@@ -196,6 +218,35 @@
       }
 
       console.log('✅ Navigation à onglets créée');
+    }
+
+    ouvrirRaccourcis(btn, items) {
+      var existant = document.getElementById('bh-tab-shortcuts');
+      if (existant) existant.remove();
+      var r = btn.getBoundingClientRect();
+      var menu = document.createElement('div');
+      menu.id = 'bh-tab-shortcuts';
+      menu.style.cssText = 'position:fixed;z-index:100002;left:' + Math.round(r.left + r.width/2) + 'px;'
+        + 'bottom:' + Math.round(window.innerHeight - r.top + 8) + 'px;transform:translateX(-50%) translateY(6px);'
+        + 'background:#FAF7F2;border:1px solid rgba(200,184,154,.5);border-radius:16px;'
+        + 'box-shadow:0 14px 44px rgba(13,17,23,.28);padding:6px;opacity:0;transition:opacity .16s,transform .16s;'
+        + 'min-width:210px;';
+      menu.innerHTML = items.map(function (it, i) {
+        return '<button data-i="' + i + '" style="display:flex;align-items:center;gap:11px;width:100%;'
+          + 'padding:12px 14px;border:none;background:transparent;border-radius:11px;cursor:pointer;'
+          + 'font:600 14px \'DM Sans\',sans-serif;color:#0D1117;text-align:left;">'
+          + '<span style="width:30px;height:30px;border-radius:9px;background:rgba(26,122,94,.1);color:#1A7A5E;'
+          + 'display:flex;align-items:center;justify-content:center;"><i class="fas ' + it.icon + '"></i></span>'
+          + it.label + '</button>';
+      }).join('');
+      document.body.appendChild(menu);
+      requestAnimationFrame(function () { menu.style.opacity = '1'; menu.style.transform = 'translateX(-50%) translateY(0)'; });
+      var fermer = function () { menu.remove(); document.removeEventListener('click', horsClic, true); };
+      var horsClic = function (e) { if (!menu.contains(e.target)) fermer(); };
+      menu.querySelectorAll('button').forEach(function (b) {
+        b.addEventListener('click', function () { var it = items[Number(b.dataset.i)]; fermer(); it.go(); });
+      });
+      setTimeout(function () { document.addEventListener('click', horsClic, true); }, 50);
     }
 
     async switchTab(tabId) {
