@@ -3512,6 +3512,7 @@ setTimeout(function() {
 .bh-mrow-dot.warn{ background:#FBF3E2; color:#9A6514; }
 .bh-mrow-dot.err{ background:#FBEDE7; color:#B0431E; }
 .bh-mrow-dot.info{ background:#EEF1F6; color:#44546A; }
+.bh-mrow-dot{ font-size:11px; font-weight:700; }
 .bh-mrow-body{ flex:1; min-width:0; }
 .bh-mrow-t{ font:600 14.5px 'DM Sans',sans-serif; color:#0D1117;
   display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
@@ -10985,26 +10986,19 @@ if (editBookingForm) {
           } else {
             const monthLabel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 
-            var html = ''
-              + '<div class="detail-group">'
-              + '<label>Occupation par logement – ' + monthLabel + '</label>'
-              + '<div class="detail-value">';
-
+            var html = '<div style="font:700 12px \'DM Sans\',sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#7A8695;margin-bottom:12px;">Occupation par logement – ' + monthLabel + '</div><div class="bh-mlist">';
             detailed.forEach(function (item) {
-  // On arrondit le nombre de nuits pour l\'affichage
-  var nights = Math.round(item.nightsBooked);
-  if (!isFinite(nights) || nights < 0) nights = 0;
-
-  html += ''
-    + '<div style="margin-bottom:6px;">'
-    +   '<strong>' + item.name + '</strong>'
-    +   ' – ' + item.occupancy + '%'
-    +   ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ' réservée' + (nights > 1 ? 's' : '') + ')'
-    + '</div>';
-});
-
-
-            html += '</div></div>';
+              var nights = Math.round(item.nightsBooked);
+              if (!isFinite(nights) || nights < 0) nights = 0;
+              var col = item.occupancy >= 50 ? '' : (item.occupancy >= 30 ? 'warn' : 'err');
+              html += ''
+                + '<div class="bh-mrow">'
+                +   '<div class="bh-mrow-dot ' + col + '">' + item.occupancy + '%</div>'
+                +   '<div class="bh-mrow-body"><div class="bh-mrow-t"><span>' + item.name + '</span></div>'
+                +   '<div class="bh-mrow-meta">' + nights + ' nuit' + (nights > 1 ? 's' : '') + ' réservée' + (nights > 1 ? 's' : '') + ' ce mois</div></div>'
+                + '</div>';
+            });
+            html += '</div>';
             contentEl.innerHTML = html;
           }
 
@@ -11056,18 +11050,19 @@ if (editBookingForm) {
           if (!props.length) {
             contentEl.innerHTML = bhEmptyState('inbox', 'Aucun logement actif', 'Vos logements configurés apparaîtront ici.');
           } else {
+            contentEl.innerHTML = '<div class="bh-mlist" id="_propMlist"></div>';
+            const _propWrap = document.getElementById('_propMlist');
             props.forEach(function (p, idx) {
               const name = p.name || p.title || ('Logement ' + (idx + 1));
               const city = (p.city || p.town || p.locality || '').trim();
-
               const row = document.createElement('div');
-              row.className = 'detail-group';
+              row.className = 'bh-mrow';
               row.innerHTML = ''
-                + '<label><i class="fas fa-home"></i> Logement ' + (idx + 1) + '</label>'
-                + '<div class="detail-value">'
-                +   name + (city ? ' – ' + city : '')
+                + '<div class="bh-mrow-dot"><i class="fas fa-home"></i></div>'
+                + '<div class="bh-mrow-body"><div class="bh-mrow-t"><span>' + name + '</span></div>'
+                + (city ? '<div class="bh-mrow-meta"><i class="fas fa-location-dot" style="opacity:.6;margin-right:5px;"></i>' + city + '</div>' : '')
                 + '</div>';
-              contentEl.appendChild(row);
+              _propWrap.appendChild(row);
             });
           }
 
@@ -11143,8 +11138,8 @@ if (editBookingForm) {
             if (!activeDeposits.length) {
               contentEl.innerHTML = bhEmptyState('check', 'Aucune caution active', 'Aucune caution autorisée ou capturée pour le moment.');
             } else {
-              contentEl.innerHTML = '';
-              
+              contentEl.innerHTML = '<div class="bh-mlist" id="_depMlist"></div>';
+              const _depWrap = document.getElementById('_depMlist');
               activeDeposits.forEach((r, idx) => {
                 const deposit = r.deposit;
                 const amount = (deposit.amountCents / 100).toFixed(2);
@@ -11174,34 +11169,16 @@ if (editBookingForm) {
                 });
 
                 const row = document.createElement('div');
-                row.className = 'detail-group';
-                row.style.borderBottom = '1px solid rgba(0,0,0,0.08)';
-                row.style.paddingBottom = '12px';
-                row.style.marginBottom = '12px';
-                
+                row.className = 'bh-mrow';
                 row.innerHTML = `
-                  <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                    <i class="fas fa-shield-halved"></i> 
-                    <strong>${r.propertyName || 'Logement'}</strong>
-                    ${r.guestName ? `<span style="font-weight:400;color:#6B7280;">· ${r.guestName}</span>` : ''}
-                  </label>
-                  <div class="detail-value" style="padding-left: 24px;">
-                    <div style="margin-bottom: 4px;">
-                      <i class="fas fa-calendar" style="width: 16px; opacity: 0.6;"></i>
-                      <strong>Séjour:</strong> ${startDate} → ${endDate}
-                    </div>
-                    <div style="margin-bottom: 4px;">
-                      <i class="fas fa-euro-sign" style="width: 16px; opacity: 0.6;"></i>
-                      <strong>Montant:</strong> ${amount} €
-                    </div>
-                    <div style="margin-bottom: 4px;">
-                      <i class="fas fa-clock" style="width: 16px; opacity: 0.6;"></i>
-                      <strong>Expire le:</strong> ${expirationText}
-                    </div>
-                  </div>
-                `;
-                
-                contentEl.appendChild(row);
+                  <div class="bh-mrow-dot"><i class="fas fa-shield-halved"></i></div>
+                  <div class="bh-mrow-body">
+                    <div class="bh-mrow-t"><span>${r.propertyName || 'Logement'}</span><span class="bh-mrow-score">${amount} €</span></div>
+                    ${r.guestName ? `<div class="bh-mrow-guest">${r.guestName}</div>` : ''}
+                    <div class="bh-mrow-meta"><i class="fas fa-calendar" style="opacity:.6;margin-right:5px;"></i>${startDate} → ${endDate}</div>
+                    <div class="bh-mrow-meta"><i class="fas fa-clock" style="opacity:.6;margin-right:5px;"></i>Expire le ${expirationText}</div>
+                  </div>`;
+                _depWrap.appendChild(row);
               });
             }
           } catch (error) {
