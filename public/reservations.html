@@ -222,7 +222,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 /* ══ Swipe actions (mobile) ══ */
 .resa-swipe{position:relative;overflow:hidden;border-radius:16px;margin-bottom:10px;background:#EAF0EA;}
 .resa-swipe .resa-card{margin-bottom:0!important;position:relative;z-index:2;
-  transition:transform .22s cubic-bezier(.3,.9,.4,1);will-change:transform;touch-action:pan-y;user-select:none;-webkit-user-select:none;}
+  transition:transform .22s cubic-bezier(.3,.9,.4,1);will-change:transform;user-select:none;-webkit-user-select:none;}
 .resa-swipe.dragging .resa-card{transition:none;}
 .resa-swipe-actions{position:absolute;top:0;right:0;bottom:0;z-index:1;display:flex;align-items:stretch;}
 .resa-swipe-actions button{border:none;width:76px;display:flex;flex-direction:column;align-items:center;
@@ -993,12 +993,13 @@ function initResaSwipe() {
       if (dir===null) {
         if (Math.abs(mx)>6 || Math.abs(my)>6) dir = Math.abs(mx)>Math.abs(my) ? 'h' : 'v';
       }
-      if (dir!=='h') return;                    // vertical → scroll normal
-      bougé=true;                               // on a bien un swipe horizontal
+      if (dir!=='h') return;                    // vertical → scroll normal (on ne bloque pas)
+      e.preventDefault();                       // horizontal → on empêche le scroll page
+      bougé=true;
       dx = mx + (ouvert ? -OPEN : 0);
       if (dx>0) dx=0; if (dx<-OPEN-40) dx=-OPEN-40;
       card.style.transform = `translateX(${dx}px)`;
-    }, {passive:true});
+    }, {passive:false});
 
     card.addEventListener('touchend', () => {
       wrap.classList.remove('dragging');
