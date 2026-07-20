@@ -3732,7 +3732,9 @@ window.closeChecklistsKpiModal = function() {
 .bh2-occ:hover{border-color:rgba(26,122,94,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
 .bh2-occ-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7A8695;display:flex;justify-content:space-between;align-items:center}
 .bh2-occ-lbl i{color:#B7791F;font-size:12px}
-.bh2-occ-ring{position:relative;width:96px;height:96px;margin:10px auto 2px}
+.bh2-occ-ring{position:relative;width:96px;height:96px;margin:8px auto 0}
+.bh2-occ-legend{text-align:center;font:500 12px 'DM Sans',sans-serif;color:#8A8375;margin-top:8px;min-height:1.2em}
+.bh2-occ-legend b{color:#1A7A5E;font-weight:700}
 .bh2-occ-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .occ-rbg{fill:none;stroke:rgba(183,121,31,.16);stroke-width:7}
 .occ-rfg{fill:none;stroke:#B7791F;stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.3,.9,.3,1)}
@@ -3824,6 +3826,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
   <svg viewBox="0 0 88 88"><circle class="occ-rbg" cx="44" cy="44" r="37"/><circle class="occ-rfg" id="kpiOccRing" cx="44" cy="44" r="37"/></svg>
   <div class="bh2-occ-num" id="kpiOccupancyValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
 </div>
+<div class="bh2-occ-legend" id="kpiOccLegend"></div>
 </section>
 </div>
 </div>
@@ -6063,6 +6066,11 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         var circ = 2 * Math.PI * 37;
         occRing.style.strokeDasharray = circ;
         occRing.style.strokeDashoffset = circ * (1 - Math.max(0, Math.min(100, occupancy)) / 100);
+      }
+      var occLeg = document.getElementById('kpiOccLegend');
+      if (occLeg) {
+        var nb = Math.round(nightsBooked), tp = Math.round(totalNightsPossible);
+        occLeg.innerHTML = '<b>' + nb + '</b> nuit' + (nb>1?'s':'') + ' réservée' + (nb>1?'s':'') + ' / ' + tp;
       }
     }
 
