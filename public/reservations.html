@@ -222,7 +222,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 /* ══ Swipe actions (mobile) ══ */
 .resa-swipe{position:relative;overflow:hidden;border-radius:16px;margin-bottom:10px;background:#EAF0EA;}
 .resa-swipe .resa-card{margin-bottom:0!important;position:relative;z-index:2;
-  transition:transform .22s cubic-bezier(.3,.9,.4,1);will-change:transform;touch-action:pan-y;}
+  transition:transform .22s cubic-bezier(.3,.9,.4,1);will-change:transform;touch-action:pan-y;user-select:none;-webkit-user-select:none;}
 .resa-swipe.dragging .resa-card{transition:none;}
 .resa-swipe-actions{position:absolute;top:0;right:0;bottom:0;z-index:1;display:flex;align-items:stretch;}
 .resa-swipe-actions button{border:none;width:76px;display:flex;flex-direction:column;align-items:center;
@@ -930,7 +930,7 @@ function renderMobile() {
     const nights = nightsCount(s,e);
     const guests = r.occupancyAdults||r.occupancy_adults||1;
     const status = (r.status||'confirmed').toLowerCase();
-    return `<div class="resa-swipe" data-ri="${_i}"><div class="resa-swipe-actions"><button class="sw-msg" data-act="msg"><i class="fas fa-comment"></i>Message</button><button class="sw-fac" data-act="fac"><i class="fas fa-file-invoice"></i>Facture</button></div><div class="resa-card" onclick='openDetail(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
+    return `<div class="resa-swipe" data-ri="${_i}"><div class="resa-swipe-actions"><button class="sw-msg" data-act="msg"><i class="fas fa-comment"></i>Message</button><button class="sw-fac" data-act="fac"><i class="fas fa-file-invoice"></i>Facture</button></div><div class="resa-card">
       <div class="resa-card-top">
         <div class="resa-card-left">
           <div class="resa-guest">${guestFullName(r)}${hasRealNote(r)?'<span class="note-dot"></span>':''}</div>
@@ -960,29 +960,41 @@ function renderMobile() {
 
 // ─── SWIPE ACTIONS (mobile) ───────────────
 function initResaSwipe() {
-  if (!('ontouchstart' in window)) return;
   const OPEN = 152;             // largeur des 2 boutons (76*2)
   let cur = null;               // .resa-swipe actuellement ouvert
+  const tactile = ('ontouchstart' in window);
   const cartes = document.querySelectorAll('#mobileCards .resa-swipe');
   cartes.forEach(wrap => {
     const card = wrap.querySelector('.resa-card');
-    let x0=0, y0=0, dx=0, dir=null, ouvert=false;
+    const r = filtered[Number(wrap.dataset.ri)];
+    let x0=0, y0=0, dx=0, dir=null, ouvert=false, bougé=false;
 
     const fermer = () => { card.style.transform=''; ouvert=false; if (cur===wrap) cur=null; };
     wrap.__fermer = fermer;
+    const ouvrir = () => { card.style.transform=`translateX(-${OPEN}px)`; ouvert=true; cur=wrap; };
+
+    // Tap → détail (desktop + mobile sans swipe). Bloqué si un swipe vient d'avoir lieu.
+    card.addEventListener('click', () => {
+      if (bougé) { bougé=false; return; }     // c'était un swipe, pas un tap
+      if (ouvert) { fermer(); return; }        // carte ouverte → le tap referme
+      if (r) openDetail(r);
+    });
+
+    if (!tactile) return;
 
     card.addEventListener('touchstart', e => {
-      if (cur && cur!==wrap) cur.__fermer();          // un seul ouvert à la fois
-      x0=e.touches[0].clientX; y0=e.touches[0].clientY; dx=0; dir=null;
+      if (cur && cur!==wrap) cur.__fermer();
+      x0=e.touches[0].clientX; y0=e.touches[0].clientY; dx=0; dir=null; bougé=false;
       wrap.classList.add('dragging');
     }, {passive:true});
 
     card.addEventListener('touchmove', e => {
       const mx=e.touches[0].clientX-x0, my=e.touches[0].clientY-y0;
-      if (dir===null) {                                // verrou de direction au 1er mouvement franc
-        if (Math.abs(mx)>8 || Math.abs(my)>8) dir = Math.abs(mx)>Math.abs(my) ? 'h' : 'v';
+      if (dir===null) {
+        if (Math.abs(mx)>6 || Math.abs(my)>6) dir = Math.abs(mx)>Math.abs(my) ? 'h' : 'v';
       }
-      if (dir!=='h') return;                            // scroll vertical → on ne touche à rien
+      if (dir!=='h') return;                    // vertical → scroll normal
+      bougé=true;                               // on a bien un swipe horizontal
       dx = mx + (ouvert ? -OPEN : 0);
       if (dx>0) dx=0; if (dx<-OPEN-40) dx=-OPEN-40;
       card.style.transform = `translateX(${dx}px)`;
@@ -991,8 +1003,9 @@ function initResaSwipe() {
     card.addEventListener('touchend', () => {
       wrap.classList.remove('dragging');
       if (dir!=='h') return;
-      if (dx < -OPEN/2) { card.style.transform=`translateX(-${OPEN}px)`; ouvert=true; cur=wrap; }
-      else fermer();
+      if (dx < -OPEN/2) ouvrir(); else fermer();
+      // garder bougé=true un court instant pour que le click qui suit soit ignoré
+      setTimeout(()=>{ bougé=false; }, 50);
     });
   });
 
