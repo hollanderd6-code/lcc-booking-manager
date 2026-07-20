@@ -3657,20 +3657,19 @@ window.closeChecklistsKpiModal = function() {
 <style>
 /* ══ Dashboard v2 : héros "Votre journée" + CA + bandeau compact ══ */
 .bh2-hero{display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:14px}
-.bh2-today{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:20px 22px;box-shadow:0 1px 3px rgba(13,17,23,.04)}
+.bh2-today{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:20px 22px;box-shadow:0 1px 3px rgba(13,17,23,.04);align-self:start}
 .bh2-today-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
 .bh2-today-head h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:20px;color:#0D1117;margin:0}
 .bh2-today-head h2 em{font-style:italic;color:#1A7A5E}
 .bh2-today-date{font-size:12px;color:#7A8695;font-weight:500}
 .bh2-ops{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:stretch}
-.bh2-op{position:relative;border:1px solid rgba(200,184,154,.45);border-radius:14px;padding:14px 14px 12px;cursor:pointer;transition:all .18s;background:#FBF8F3}
+.bh2-op{position:relative;border:1px solid rgba(200,184,154,.4);border-radius:14px;padding:15px 15px 13px;cursor:pointer;transition:all .2s cubic-bezier(.3,.9,.4,1);background:linear-gradient(160deg,#FFFDF9,#FAF6EE)}
 .bh2-op:hover{border-color:rgba(26,122,94,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
 .bh2-op-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .bh2-op-lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#7A8695}
-.bh2-op-ic{width:26px;height:26px;border-radius:8px;background:rgba(183,121,31,.12);color:#B7791F;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
-.bh2-op-num{font-family:'Instrument Serif',serif;font-weight:400;font-size:36px;line-height:1;color:#B7791F;margin-bottom:3px}
-.bh2-op-sub{font-size:11.5px;color:#7A8695;min-height:1.8em}
-.bh2-quick{margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 10px;border:1px solid rgba(26,122,94,.28);border-radius:11px;background:rgba(26,122,94,.07);color:#166B52;font:600 12px 'DM Sans',sans-serif;cursor:pointer;transition:background .14s,scale .14s}.bh2-quick:hover{background:rgba(26,122,94,.13)}.bh2-quick:active{scale:.97}.bh2-quick i{font-size:11px}
+.bh2-op-ic{width:30px;height:30px;border-radius:9px;background:rgba(183,121,31,.13);color:#B7791F;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;box-shadow:0 1px 2px rgba(183,121,31,.12)}
+.bh2-op-num{font-family:'Instrument Serif',serif;font-weight:400;font-size:38px;line-height:1;color:#B7791F;margin-bottom:4px}
+.bh2-op-sub{font-size:11.5px;color:#7A8695}
 .bh2-op-go{position:absolute;right:12px;bottom:12px;font-size:10px;color:#1A7A5E;opacity:0;transition:opacity .18s}
 .bh2-op:hover .bh2-op-go{opacity:1}
 .bh2-feat{display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -3696,7 +3695,8 @@ window.closeChecklistsKpiModal = function() {
 .occ-rfg{fill:none;stroke:#B7791F;stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.3,.9,.3,1)}
 .bh2-occ-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-weight:400;font-size:24px;line-height:1;color:#B7791F}
 .bh2-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
-.bh2-stat{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:16px;padding:14px 16px 13px;display:block;position:relative;cursor:pointer;transition:all .18s;min-width:0}
+.bh2-stat{background:#fff;border:1px solid rgba(200,184,154,.42);border-radius:16px;padding:15px 16px 14px;display:block;position:relative;cursor:pointer;transition:all .2s cubic-bezier(.3,.9,.4,1);min-width:0}
+.bh2-stat:hover{border-color:rgba(26,122,94,.35);box-shadow:0 10px 26px rgba(13,17,23,.08);transform:translateY(-2px)}
 .bh2-stat>div{display:flex;flex-direction:column-reverse;gap:5px;min-width:0}
 .bh2-stat-ic{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:9px;background:#F6EFE3;color:#B7791F;display:flex;align-items:center;justify-content:center;font-size:12px}
 .bh2-stat .bh2-lbl{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8A8375;padding-right:36px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -3725,7 +3725,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
   .bh2-hero{grid-template-columns:1fr;gap:10px;margin-bottom:10px}
   .bh2-today{padding:14px}
   .bh2-ops{gap:8px}
-  .bh2-op{padding:11px 9px}.bh2-quick{padding:8px 6px;font-size:11px}
+  .bh2-op{padding:11px 9px}
   .bh2-op-lbl{font-size:9px;letter-spacing:.04em}
   .bh2-op-num{font-size:28px}
   .bh2-op-sub{font-size:10px}
@@ -3754,20 +3754,17 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 <div class="bh2-op-top"><span class="bh2-op-lbl">Arrivées</span><span class="bh2-op-ic"><i class="fas fa-arrow-right-to-bracket"></i></span></div>
 <div class="bh2-op-num" id="kpiArrivalsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
 <div class="bh2-op-sub">voyageurs attendus</div>
-<button class="bh2-quick" onclick="event.stopPropagation();bhQuick('arrivees')"><i class="fas fa-paper-plane"></i> Infos d'arrivée</button>
 </div>
 <div class="bh2-op">
 <div class="bh2-op-top"><span class="bh2-op-lbl">Départs</span><span class="bh2-op-ic"><i class="fas fa-arrow-right-from-bracket"></i></span></div>
 <div class="bh2-op-num" id="kpiDeparturesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
 <div class="bh2-op-sub">check-outs ce jour</div>
-<button class="bh2-quick" onclick="event.stopPropagation();bhQuick('departs')"><i class="fas fa-broom"></i> Planifier le ménage</button>
 </div>
 </div>
 <div class="bh2-op" id="kpiCleaning48hCard">
 <div class="bh2-op-top"><span class="bh2-op-lbl">Ménages 48h</span><span class="bh2-op-ic"><i class="fas fa-broom"></i></span></div>
 <div class="bh2-op-num" id="kpiCleaning48hValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
 <div class="bh2-op-sub" id="kpiCleaning48hSub">départs à nettoyer</div>
-<button class="bh2-quick" onclick="event.stopPropagation();bhQuick('menage')"><i class="fas fa-users"></i> Prévenir l'équipe</button>
 </div>
 </div>
 </section>
@@ -14243,14 +14240,6 @@ function bhConfirm(message) {
 })();
 </script>
 <script src="/js/bh-polish.js?v=1"></script>
-<script>
-// Quick actions du dashboard : navigation ciblée + haptique légère
-function bhQuick(type){
-  try{ if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.Haptics) Capacitor.Plugins.Haptics.impact({style:'MEDIUM'}); }catch(e){}
-  var url = { arrivees:'/messages.html?filtre=arrivees', departs:'/cleaning.html?jour=today', menage:'/cleaning.html?section=equipe' }[type];
-  if(url) window.location.href = url;
-}
-</script>
 <script src="/js/bh-today.js?v=1"></script>
 </body>
 <style>
