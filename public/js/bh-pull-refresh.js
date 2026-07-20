@@ -42,7 +42,7 @@
   }
   function bloque() {
     return refreshing
-      || document.querySelector('.bh-sheet-panel, .modal.active, .modal-overlay.active, #bh-tab-shortcuts')
+      || document.querySelector('.bh-sheet-panel, .modal.active, .modal-overlay.active, .checklist-modal-overlay.active, #checklistModal.active, #bhLightbox, #bh-tab-shortcuts')
       || document.querySelector('.mobile-tabs.lg-dragging');
   }
 
