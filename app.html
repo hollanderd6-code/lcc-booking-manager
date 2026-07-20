@@ -3499,6 +3499,29 @@ setTimeout(function() {
 <link rel="stylesheet" href="/css/bh-v3-mobile.css?v=10">
 <link rel="stylesheet" href="/css/mobile-native-styles.css?v=10">
 <link rel="stylesheet" href="/css/bh-core.css?v=3">
+<style>
+/* ══ BH MLIST — listes raffinées pour les modales KPI ══ */
+.bh-mlist{ display:flex; flex-direction:column; gap:9px; }
+.bh-mrow{ display:flex; align-items:flex-start; gap:13px; background:#fff;
+  border:1px solid rgba(200,184,154,.38); border-radius:15px; padding:14px 15px;
+  transition:border-color .15s, box-shadow .15s; }
+.bh-mrow:hover{ border-color:rgba(26,122,94,.3); box-shadow:0 6px 18px rgba(13,17,23,.06); }
+.bh-mrow-dot{ flex:none; width:34px; height:34px; border-radius:11px;
+  display:flex; align-items:center; justify-content:center; font-size:13px;
+  background:rgba(26,122,94,.1); color:#166B52; }
+.bh-mrow-dot.warn{ background:#FBF3E2; color:#9A6514; }
+.bh-mrow-dot.err{ background:#FBEDE7; color:#B0431E; }
+.bh-mrow-dot.info{ background:#EEF1F6; color:#44546A; }
+.bh-mrow-body{ flex:1; min-width:0; }
+.bh-mrow-t{ font:600 14.5px 'DM Sans',sans-serif; color:#0D1117;
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.bh-mrow-t .bh-mrow-when{ font:500 12px 'DM Sans',sans-serif; color:#9a958a; flex:none; }
+.bh-mrow-guest{ font:600 13px 'DM Sans',sans-serif; color:#1A7A5E; margin:3px 0 2px; }
+.bh-mrow-meta{ font:400 12.5px 'DM Sans',sans-serif; color:#8A8375; line-height:1.45;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bh-mrow-note{ font:400 12.5px 'DM Sans',sans-serif; color:#7C2D12; line-height:1.45; margin-top:6px; }
+.bh-mrow-score{ font:700 12px 'DM Sans',sans-serif; color:#B7791F; flex:none; }
+</style>
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none; position: sticky; top: 40px; z-index: 9998; width: 100%;">
@@ -3681,8 +3704,8 @@ window.closeChecklistsKpiModal = function() {
 .bh2-ca #kpiCaValue{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:36px;line-height:1.05;margin:8px 0 1px;position:relative;color:#fff !important;display:block}
 .bh2-ca #kpiCaSub{font-size:12px;color:rgba(255,255,255,.55);position:relative}
 .bh2-ca-subrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;position:relative}
-.bh2-ca-spark{margin-top:auto;position:relative;padding-top:10px}
-.bh2-ca-spark svg{display:block;width:100%;height:30px}
+.bh2-ca-spark{margin-top:auto;position:relative;padding-top:14px}
+.bh2-ca-spark svg{display:block;width:100%;height:46px}
 .bh2-ca-delta{font-size:11px;font-weight:700;color:#6ee7b7;white-space:nowrap}
 /* Occupation — carte vedette claire, même rang que le CA */
 .bh2-occ{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:16px 20px;cursor:pointer;transition:all .18s;box-shadow:0 1px 3px rgba(13,17,23,.04)}
@@ -3773,7 +3796,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 <div class="bh2-ca-lbl">CA mensuel <i class="fas fa-chart-line"></i></div>
 <span class="kpi-value" id="kpiCaValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
 <div class="bh2-ca-subrow"><span id="kpiCaSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span><span class="bh2-ca-delta" id="kpiCaDelta"></span></div>
-<div class="bh2-ca-spark"><svg id="kpiCaSpark" viewBox="0 0 300 38" preserveAspectRatio="none"></svg></div>
+<div class="bh2-ca-spark"><svg id="kpiCaSpark" viewBox="0 0 300 46" preserveAspectRatio="none"></svg></div>
 </section>
 <section class="bh2-occ" id="kpiOccupancyCard">
 <div class="bh2-occ-lbl">Occupation du mois <i class="fas fa-calendar"></i></div>
@@ -6387,41 +6410,36 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       const inRows = rows.filter(x => x.type === 'in' || x.type === 'inout');
       const outRows = rows.filter(x => x.type === 'out' || x.type === 'inout');
 
-      const renderList = (list, label, icon) => {
+      const renderList = (list, label, icon, variant) => {
         if (!list.length) return '';
         return `
-          <div style="margin-bottom:14px;">
-            <div style="font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:8px; color:#1A7A5E;">
-              <i class="fas ${icon}"></i> ${label} (${list.length})
+          <div style="margin-bottom:18px;">
+            <div style="font:700 12px 'DM Sans',sans-serif;letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;color:#7A8695;">
+              <i class="fas ${icon}" style="color:#1A7A5E;"></i> ${label}
+              <span style="margin-left:auto;background:#EAF3EF;color:#166B52;border-radius:99px;padding:2px 9px;font-size:12px;">${list.length}</span>
             </div>
-            ${list.map(r => {
+            <div class="bh-mlist">${list.map(r => {
               const platformLabel = window.getPlatformLabel ? window.getPlatformLabel(r.src, r.otaName) : (r.src || 'Direct');
-              const dotColor = window.getPlatformDotColor ? window.getPlatformDotColor(r.src, r.otaName) : '#F97316';
-              const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
-              const score = r.riskScore != null ? `${r.riskScore}/100` : '';
+              const score = r.riskScore != null ? `<span class="bh-mrow-score">${r.riskScore}/100</span>` : '';
+              const meta = `${r.prop ? r.prop + ' • ' : ''}${platformLabel} • ${r.startStr} → ${r.endStr}`;
               return `
-                <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
-                  <div style="margin-top:4px;">${dot}</div>
-                  <div style="flex:1;">
-                    <div style="display:flex; justify-content:space-between; gap:12px;">
-                      <div style="font-weight:800;">${r.who}</div>
-                      <div style="font-weight:900;">${score}</div>
-                    </div>
-                    <div style="opacity:.8; margin-top:2px;">
-                      ${r.prop ? r.prop + ' • ' : ''}${platformLabel} • ${r.startStr} → ${r.endStr}
-                    </div>
-                    ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
+                <div class="bh-mrow">
+                  <div class="bh-mrow-dot ${variant}"><i class="fas ${icon}"></i></div>
+                  <div class="bh-mrow-body">
+                    <div class="bh-mrow-t"><span>${r.who}</span></div>
+                    <div class="bh-mrow-meta">${meta}</div>
+                    ${r.riskSummary ? `<div class="bh-mrow-note">${r.riskSummary}</div>` : ''}
                   </div>
-                </div>
-              `;
-            }).join('')}
+                  ${score}
+                </div>`;
+            }).join('')}</div>
           </div>
         `;
       };
 
       content.innerHTML =
-        renderList(inRows, "Arrivées", "fa-right-to-bracket") +
-        renderList(outRows, "Départs", "fa-right-from-bracket");
+        renderList(inRows, "Arrivées", "fa-right-to-bracket", "") +
+        renderList(outRows, "Départs", "fa-right-from-bracket", "warn");
     }
 
     window.hideFab();
@@ -6478,27 +6496,21 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     if (!rows.length) {
       content.innerHTML = bhEmptyState('check', 'Aucun ménage à prévoir', 'Rien à nettoyer dans les prochaines 48h.');
     } else {
-      content.innerHTML = rows.map(r => {
+      content.innerHTML = '<div class="bh-mlist">' + rows.map(r => {
         const _platLabelM = window.getPlatformLabel ? window.getPlatformLabel(r.src, r.otaName) : (r.src || 'Direct');
-        const dotColor = window.getPlatformDotColor ? window.getPlatformDotColor(r.src, r.otaName) : '#F97316';
-        const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:${dotColor};margin-right:10px;flex-shrink:0;"></span>`;
-        const score = r.riskScore != null ? `${r.riskScore}/100` : '';
+        const score = r.riskScore != null ? `<span class="bh-mrow-score">${r.riskScore}/100</span>` : '';
+        const meta = `${r.who}${_platLabelM !== 'Direct' ? ' • ' + _platLabelM : ''} • ${r.startStr} → ${r.endStr}`;
         return `
-          <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,.08); display:flex; gap:12px;">
-            <div style="margin-top:4px;">${dot}</div>
-            <div style="flex:1;">
-              <div style="display:flex; justify-content:space-between; gap:12px;">
-                <div style="font-weight:800;">${r.prop || 'Logement'} — départ ${r.endStr}</div>
-                <div style="font-weight:900;">${score}</div>
-              </div>
-              <div style="opacity:.8; margin-top:2px;">
-                ${r.who}${_platLabelM !== 'Direct' ? ' • ' + _platLabelM : ''} • ${r.startStr} → ${r.endStr}
-              </div>
-              ${r.riskSummary ? `<div style="opacity:.85; margin-top:6px;">${r.riskSummary}</div>` : ''}
+          <div class="bh-mrow">
+            <div class="bh-mrow-dot warn"><i class="fas fa-broom"></i></div>
+            <div class="bh-mrow-body">
+              <div class="bh-mrow-t"><span>${r.prop || 'Logement'}</span><span class="bh-mrow-when">départ ${r.endStr}</span></div>
+              <div class="bh-mrow-meta">${meta}</div>
+              ${r.riskSummary ? `<div class="bh-mrow-note">${r.riskSummary}</div>` : ''}
             </div>
-          </div>
-        `;
-      }).join('');
+            ${score}
+          </div>`;
+      }).join('') + '</div>';
     }
 
     window.hideFab();
@@ -6555,20 +6567,19 @@ movesCard.addEventListener('touchstart', handler, { passive: true });
         if (notes.length === 0) {
           modalContent.innerHTML = bhEmptyState('note', 'Aucune note active', 'Vos notes liées aux réservations apparaîtront ici.');
         } else {
-          modalContent.innerHTML = notes.map(function(r) {
+          modalContent.innerHTML = '<div class="bh-mlist">' + notes.map(function(r) {
             var propName = (r.property && (r.property.internalName || r.property.internal_name || r.property.name)) || r.propertyName || r.propertyId || '';
             var guest = r.guestName || r.guest_display_name || 'Voyageur';
             var endRaw = r.endDate || r.end || '';
             var endStr = endRaw ? new Date(endRaw).toLocaleDateString('fr-FR') : '';
-            return '<div style="background:white;border-radius:14px;padding:14px 16px;margin-bottom:10px;border-left:3px solid #C2410C;">'
-              + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
-              + '<span style="font-size:13px;font-weight:700;color:#1A7A5E;">' + propName + '</span>'
-              + (endStr ? '<span style="font-size:11px;color:#9CA3AF;">jusqu&#39;au ' + endStr + '</span>' : '')
-              + '</div>'
-              + '<div style="font-size:13px;font-weight:600;color:#0D1117;margin-bottom:4px;">' + guest + '</div>'
-              + '<div style="font-size:13px;color:#7C2D12;line-height:1.4;">' + (r.notes || '') + '</div>'
-              + '</div>';
-          }).join('');
+            return '<div class="bh-mrow">'
+              + '<div class="bh-mrow-dot err"><i class="fas fa-sticky-note"></i></div>'
+              + '<div class="bh-mrow-body">'
+              + '<div class="bh-mrow-t"><span>' + propName + '</span>' + (endStr ? '<span class="bh-mrow-when">jusqu&#39;au ' + endStr + '</span>' : '') + '</div>'
+              + '<div class="bh-mrow-guest">' + guest + '</div>'
+              + '<div class="bh-mrow-note">' + (r.notes || '') + '</div>'
+              + '</div></div>';
+          }).join('') + '</div>';
         }
         const modal = document.getElementById('kpiNotesModal');
         if (modal) { modal.style.display = 'flex'; window.hideFab(); }
