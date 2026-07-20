@@ -982,31 +982,33 @@ function initResaSwipe() {
 
     if (!tactile) return;
 
+    let base=0;                               // position du transform au début du geste
     card.addEventListener('touchstart', e => {
       if (cur && cur!==wrap) cur.__fermer();
-      x0=e.touches[0].clientX; y0=e.touches[0].clientY; dx=0; dir=null; bougé=false;
+      x0=e.touches[0].clientX; y0=e.touches[0].clientY; dx=base=(ouvert?-OPEN:0); dir=null; bougé=false;
       wrap.classList.add('dragging');
     }, {passive:true});
 
     card.addEventListener('touchmove', e => {
       const mx=e.touches[0].clientX-x0, my=e.touches[0].clientY-y0;
       if (dir===null) {
-        if (Math.abs(mx)>6 || Math.abs(my)>6) dir = Math.abs(mx)>Math.abs(my) ? 'h' : 'v';
+        if (Math.abs(mx)>5 || Math.abs(my)>5) dir = Math.abs(mx)>Math.abs(my) ? 'h' : 'v';
+        else return;
       }
-      if (dir!=='h') return;                    // vertical → scroll normal (on ne bloque pas)
-      e.preventDefault();                       // horizontal → on empêche le scroll page
+      if (dir!=='h') return;                    // vertical → scroll normal
+      e.preventDefault();                       // horizontal → on bloque le scroll page
       bougé=true;
-      dx = mx + (ouvert ? -OPEN : 0);
-      if (dx>0) dx=0; if (dx<-OPEN-40) dx=-OPEN-40;
+      dx = base + mx;                           // suivi 1:1 du doigt
+      if (dx>0) dx=0;                           // pas de sur-glissement à droite
+      if (dx<-OPEN-50) dx=-OPEN-50 + (dx+OPEN+50)*0.3;   // résistance élastique au-delà
       card.style.transform = `translateX(${dx}px)`;
     }, {passive:false});
 
     card.addEventListener('touchend', () => {
       wrap.classList.remove('dragging');
       if (dir!=='h') return;
-      if (dx < -OPEN/2) ouvrir(); else fermer();
-      // garder bougé=true un court instant pour que le click qui suit soit ignoré
-      setTimeout(()=>{ bougé=false; }, 50);
+      if (dx < -OPEN*0.4) ouvrir(); else fermer();   // seuil : 40% de l'ouverture
+      setTimeout(()=>{ bougé=false; }, 60);
     });
   });
 
