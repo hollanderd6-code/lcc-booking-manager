@@ -630,6 +630,7 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
     </select>
   </div><!-- /mobile-filters-scroll -->
   </div><!-- /mobile-sticky-search -->
+  <div id="bh-swipe-debug" style="position:fixed;top:calc(env(safe-area-inset-top,0px) + 4px);left:4px;right:4px;z-index:200000;background:rgba(0,0,0,.85);color:#0f0;font:11px/1.35 monospace;padding:8px 10px;border-radius:8px;max-height:38vh;overflow:auto;white-space:pre-wrap;"></div>
   <div class="mobile-cards-list">
   <div id="mobileCards"></div>
   </div>
@@ -959,7 +960,9 @@ function renderMobile() {
 }
 
 // ─── SWIPE ACTIONS (mobile) ───────────────
+function _dbg(m){var d=document.getElementById('bh-swipe-debug');if(d){d.textContent=(m+'\n'+d.textContent).slice(0,1400);}}
 function initResaSwipe() {
+  _dbg('=== init: '+document.querySelectorAll('#mobileCards .resa-swipe').length+' cartes détectées ===');
   const OPEN = 152;
   let cur = null;
   document.querySelectorAll('#mobileCards .resa-swipe').forEach(wrap => {
@@ -984,6 +987,7 @@ function initResaSwipe() {
       curX = ouvert ? -OPEN : 0;
       locked=null; moved=false;
       card.style.transition='none';
+      _dbg('touchstart x='+Math.round(startX));
     }, {passive:true});
 
     card.addEventListener('touchmove', function(e){
@@ -992,16 +996,18 @@ function initResaSwipe() {
         if (Math.abs(dX)<4 && Math.abs(dY)<4) return;
         locked = Math.abs(dX)>Math.abs(dY) ? 'x' : 'y';
       }
-      if (locked==='y') return;
+      if (locked==='y'){ _dbg('locked=Y (scroll)'); return; }
       e.preventDefault();
       moved=true;
       let x = (ouvert ? -OPEN : 0) + dX;
       if (x>0) x=0;
       if (x<-OPEN) x=-OPEN-(-(x+OPEN))*0.4;
       curX=x; setX(x);
+      _dbg('move dX='+Math.round(dX)+' dY='+Math.round(dY)+' lock='+locked+' x='+Math.round(x));
     }, {passive:false});
 
     card.addEventListener('touchend', function(){
+      _dbg('touchend lock='+locked+' curX='+Math.round(curX));
       if (locked!=='x') return;
       if (curX < -OPEN*0.35) open(); else close();
       setTimeout(function(){ moved=false; }, 80);
