@@ -960,61 +960,56 @@ function renderMobile() {
 
 // ─── SWIPE ACTIONS (mobile) ───────────────
 function initResaSwipe() {
-  const OPEN = 152;             // largeur des 2 boutons (76*2)
-  let cur = null;               // .resa-swipe actuellement ouvert
-  const tactile = ('ontouchstart' in window);
-  const cartes = document.querySelectorAll('#mobileCards .resa-swipe');
-  cartes.forEach(wrap => {
+  const OPEN = 152;
+  let cur = null;
+  document.querySelectorAll('#mobileCards .resa-swipe').forEach(wrap => {
     const card = wrap.querySelector('.resa-card');
     const r = filtered[Number(wrap.dataset.ri)];
-    let x0=0, y0=0, dx=0, dir=null, ouvert=false, bougé=false;
+    let startX=0, startY=0, curX=0, locked=null, ouvert=false, moved=false;
 
-    const fermer = () => { card.style.transform=''; ouvert=false; if (cur===wrap) cur=null; };
-    wrap.__fermer = fermer;
-    const ouvrir = () => { card.style.transform=`translateX(-${OPEN}px)`; ouvert=true; cur=wrap; };
+    function setX(x){ card.style.transform = 'translateX(' + x + 'px)'; }
+    function close(){ card.style.transition='transform .2s ease'; setX(0); ouvert=false; if(cur===wrap)cur=null; }
+    function open(){ card.style.transition='transform .2s ease'; setX(-OPEN); ouvert=true; cur=wrap; }
+    wrap.__fermer = close;
 
-    // Tap → détail (desktop + mobile sans swipe). Bloqué si un swipe vient d'avoir lieu.
-    card.addEventListener('click', () => {
-      if (bougé) { bougé=false; return; }     // c'était un swipe, pas un tap
-      if (ouvert) { fermer(); return; }        // carte ouverte → le tap referme
+    card.addEventListener('click', function(e){
+      if (moved) { e.preventDefault(); e.stopPropagation(); moved=false; return; }
+      if (ouvert) { close(); return; }
       if (r) openDetail(r);
     });
 
-    if (!tactile) return;
-
-    let base=0;                               // position du transform au début du geste
-    card.addEventListener('touchstart', e => {
+    card.addEventListener('touchstart', function(e){
       if (cur && cur!==wrap) cur.__fermer();
-      x0=e.touches[0].clientX; y0=e.touches[0].clientY; dx=base=(ouvert?-OPEN:0); dir=null; bougé=false;
-      wrap.classList.add('dragging');
+      startX=e.touches[0].clientX; startY=e.touches[0].clientY;
+      curX = ouvert ? -OPEN : 0;
+      locked=null; moved=false;
+      card.style.transition='none';
     }, {passive:true});
 
-    card.addEventListener('touchmove', e => {
-      const mx=e.touches[0].clientX-x0, my=e.touches[0].clientY-y0;
-      if (dir===null) {
-        if (Math.abs(mx)>5 || Math.abs(my)>5) dir = Math.abs(mx)>Math.abs(my) ? 'h' : 'v';
-        else return;
+    card.addEventListener('touchmove', function(e){
+      const dX=e.touches[0].clientX-startX, dY=e.touches[0].clientY-startY;
+      if (locked===null){
+        if (Math.abs(dX)<4 && Math.abs(dY)<4) return;
+        locked = Math.abs(dX)>Math.abs(dY) ? 'x' : 'y';
       }
-      if (dir!=='h') return;                    // vertical → scroll normal
-      e.preventDefault();                       // horizontal → on bloque le scroll page
-      bougé=true;
-      dx = base + mx;                           // suivi 1:1 du doigt
-      if (dx>0) dx=0;                           // pas de sur-glissement à droite
-      if (dx<-OPEN-50) dx=-OPEN-50 + (dx+OPEN+50)*0.3;   // résistance élastique au-delà
-      card.style.transform = `translateX(${dx}px)`;
+      if (locked==='y') return;
+      e.preventDefault();
+      moved=true;
+      let x = (ouvert ? -OPEN : 0) + dX;
+      if (x>0) x=0;
+      if (x<-OPEN) x=-OPEN-(-(x+OPEN))*0.4;
+      curX=x; setX(x);
     }, {passive:false});
 
-    card.addEventListener('touchend', () => {
-      wrap.classList.remove('dragging');
-      if (dir!=='h') return;
-      if (dx < -OPEN*0.4) ouvrir(); else fermer();   // seuil : 40% de l'ouverture
-      setTimeout(()=>{ bougé=false; }, 60);
+    card.addEventListener('touchend', function(){
+      if (locked!=='x') return;
+      if (curX < -OPEN*0.35) open(); else close();
+      setTimeout(function(){ moved=false; }, 80);
     });
   });
 
-  // Clic sur les boutons révélés → actions existantes
   document.querySelectorAll('#mobileCards .resa-swipe-actions button').forEach(btn => {
-    btn.addEventListener('click', e => {
+    btn.addEventListener('click', function(e){
       e.stopPropagation();
       const wrap = btn.closest('.resa-swipe');
       const r = filtered[Number(wrap.dataset.ri)];
@@ -1025,8 +1020,7 @@ function initResaSwipe() {
     });
   });
 
-  // Tap ailleurs referme
-  document.addEventListener('touchstart', e => {
+  document.addEventListener('touchstart', function(e){
     if (cur && !e.target.closest('.resa-swipe')) cur.__fermer();
   }, {passive:true});
 }
