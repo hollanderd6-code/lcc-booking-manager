@@ -286,6 +286,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   .modal-actions,
   .checklist-modal-footer,
   #invoiceModal .modal-actions,
+  #invoiceModal .inv-actions,
   #batchEditModal .modal-actions {
     padding-bottom: 16px !important;
     flex-shrink: 0 !important;
@@ -316,6 +317,25 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     flex-shrink: 0 !important;            /* footer ancré, jamais poussé hors écran */
   }
 
+  /* Modale « Générer une facture » : sa carte est bornée à 92vh, mais la bottom-bar
+     recouvre le bas de l'écran → le footer (Annuler / Envoyer par email) passe
+     dessous et devient inatteignable. Même remède que #batchEditModal : on réserve
+     la hauteur de la barre sous l'overlay et on borne la carte en conséquence. */
+  #invoiceModal {
+    align-items: center !important;
+    padding: 12px 12px calc(74px + env(safe-area-inset-bottom, 0px) + 12px) !important;
+    box-sizing: border-box !important;
+  }
+  #invoiceModal .inv-content {
+    max-height: calc(100dvh - 74px - env(safe-area-inset-bottom, 0px) - 24px) !important;
+  }
+  #invoiceModal .inv-body {
+    min-height: 0 !important;             /* sans ça, un flex-child refuse de scroller */
+  }
+  #invoiceModal .inv-form-panel {
+    overscroll-behavior: contain !important;
+  }
+
   /* Modal checklist : il est CENTRÉ (pas un bottom-sheet flex-end), donc le patch
      global ne l'attrape pas et son bas (bouton "Valider le ménage") passe derrière
      la bottom-bar. On réserve la hauteur de la barre sous l'overlay pour le remonter. */
@@ -326,7 +346,19 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     box-sizing: border-box !important;
   }
   .checklist-modal {
-    max-height: calc(100dvh - 74px - env(safe-area-inset-bottom, 0px) - 24px) !important;
+    height: calc(100dvh - 74px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px) !important;
+    max-height: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .checklist-modal-overlay {
+    align-items: flex-start !important;
+  }
+  .checklist-modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 
   /* Zones scrollables des modaux génériques. */
@@ -5644,6 +5676,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   const API_URL = 'https://lcc-booking-manager.onrender.com';
   const HZ_LOGO_DATAURI = 'data:image/png;base64,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';
   let hzMissionsMap = {};
+  window.hzMissionsMap = hzMissionsMap;
   async function loadHzMissionsMapGlobal() {
     try {
       const token = localStorage.getItem('lcc_token');
@@ -5652,12 +5685,26 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       if (!res.ok) return;
       const data = await res.json();
       const map = {};
-      (data.missions || []).forEach((m) => { map[String(m.bh_reservation_id)] = m; });
+      // Le front manipule tantôt la PK, tantôt l'uid, tantôt l'id Channex :
+      // on indexe la mission sous chaque forme pour que la recherche aboutisse.
+      (data.missions || []).forEach((m) => {
+        [m.bh_reservation_id, m.resa_uid, m.resa_channex_id].forEach((k) => {
+          if (k != null && k !== '') {
+            map[String(k)] = m;
+            if (!String(k).startsWith('CHX_')) map['CHX_' + String(k)] = m;
+          }
+        });
+      });
       hzMissionsMap = map;
+      window.hzMissionsMap = map; // lisible depuis les autres blocs <script>
+      // La modale peut déjà être ouverte quand la map arrive : on repeint.
+      try { refreshHzBadgeInDetails(); } catch (e) {}
     } catch (e) { console.warn('Erreur chargement missions Hosterzz:', e); }
   }
+  window.loadHzMissionsMapGlobal = loadHzMissionsMapGlobal;
   loadHzMissionsMapGlobal();
 
+  window.refreshHzBadgeInDetails = refreshHzBadgeInDetails; // lisible depuis les autres blocs <script>
   function refreshHzBadgeInDetails() {
     const booking = window.currentBookingData || window.currentBooking || null;
     const badgeEl = document.getElementById('hzMissionBadgeFromDetails');
@@ -5670,12 +5717,28 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
   }
 
   (function watchReservationDetailsModal() {
-    const modal = document.getElementById('reservationDetailsModal');
-    if (!modal || !window.MutationObserver) return;
-    const obs = new MutationObserver(() => {
-      if (modal.style.display === 'flex') setTimeout(refreshHzBadgeInDetails, 150);
-    });
-    obs.observe(modal, { attributes: true, attributeFilter: ['style'] });
+    // Ce script s'exécute AVANT que #reservationDetailsModal existe dans le DOM
+    // (déclaré plus bas dans la page) : sans attente, l'observer n'était jamais posé.
+    function install() {
+      const modal = document.getElementById('reservationDetailsModal');
+      if (!modal || !window.MutationObserver) return false;
+      if (modal.dataset.hzWatched === '1') return true;
+      modal.dataset.hzWatched = '1';
+      const obs = new MutationObserver(() => {
+        // 'flex' était trop strict : la vue mobile peut utiliser 'block'.
+        const visible = modal.style.display && modal.style.display !== 'none';
+        if (visible) setTimeout(refreshHzBadgeInDetails, 150);
+      });
+      obs.observe(modal, { attributes: true, attributeFilter: ['style', 'class'] });
+      return true;
+    }
+    if (install()) return;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', install);
+    }
+    // Filet : la modale peut être injectée après le DOMContentLoaded.
+    let essais = 0;
+    const timer = setInterval(() => { if (install() || ++essais > 40) clearInterval(timer); }, 250);
   })();
   function hzMissionBadgeHtml(reservationId) {
     const m = hzMissionsMap[String(reservationId)];
@@ -5689,7 +5752,16 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       terminee: { txt: 'Mission Hosterzz : terminée ✓', color: '#1A7A5E' }
     };
     const l = labels[m.statut] || { txt: 'Mission Hosterzz : ' + m.statut, color: '#7A8695' };
-    return '<div style="font-size:11px;margin-top:4px;color:' + l.color + ';font-weight:600;"><img src="' + HZ_LOGO_DATAURI + '" alt="" style="width:11px;height:11px;vertical-align:-1px;object-fit:contain;"> ' + l.txt + '</div>';
+    // Prestataire connu : on l'affiche et on permet de le joindre directement.
+    let presta = '';
+    if (m.prestataire_nom) {
+      const tel = m.prestataire_telephone ? String(m.prestataire_telephone).replace(/\s+/g, '') : '';
+      presta = '<div style="font-size:12px;margin-top:5px;color:#1A7A5E;font-weight:600;">👤 ' + m.prestataire_nom
+        + (tel ? ' · <a href="tel:' + tel + '" style="color:#1A7A5E;text-decoration:underline;">Appeler</a>'
+               + ' · <a href="sms:' + tel + '" style="color:#1A7A5E;text-decoration:underline;">SMS</a>' : '')
+        + '</div>';
+    }
+    return '<div style="font-size:11px;margin-top:4px;color:' + l.color + ';font-weight:600;"><img src="' + HZ_LOGO_DATAURI + '" alt="" style="width:11px;height:11px;vertical-align:-1px;object-fit:contain;"> ' + l.txt + '</div>' + presta;
   }
 
   // ---------- helpers ----------
@@ -14187,6 +14259,7 @@ function bhConfirm(message) {
 
 <script src="/js/bh-auto-refresh.js?v=1"></script>
 <script src="/js/bh-haptics.js?v=1"></script>
+<script src="/js/bh-page-transitions.js?v=1"></script>
 <script src="/js/bh-global-search.js?v=5"></script>
 <style>
 /* ══ BH SHEETS — habillage commun des modales KPI (bottom sheets) ══ */
@@ -14244,28 +14317,9 @@ function bhConfirm(message) {
 })();
 </script>
 <script src="/js/bh-polish.js?v=1"></script>
+<script src="/js/bh-pull-refresh.js?v=1"></script>
 <script src="/js/bh-today.js?v=1"></script>
 
-<script>
-(function(){
-  function log(m){
-    var d=document.getElementById('bh-cl-debug');
-    if(!d){d=document.createElement('div');d.id='bh-cl-debug';
-      d.style.cssText='position:fixed;top:2px;left:2px;right:2px;z-index:999999;background:rgba(0,0,0,.9);color:#0f0;font:10px/1.3 monospace;padding:6px;border-radius:6px;max-height:30vh;overflow:auto;white-space:pre-wrap;pointer-events:none;';
-      document.body.appendChild(d);}
-    d.textContent=(m+'\n'+d.textContent).slice(0,1200);
-  }
-  document.addEventListener('touchstart',function(e){
-    var t=e.target;
-    log('TOUCH sur: '+t.tagName+'.'+(t.className||'').toString().slice(0,30)+' | closest modal-body='+!!t.closest('.checklist-modal-body')+' | closest overlay='+!!t.closest('.checklist-modal-overlay'));
-  },{passive:true,capture:true});
-  var mb=null;
-  setInterval(function(){
-    var b=document.querySelector('#checklistModal.active .checklist-modal-body');
-    if(b&&b!==mb){mb=b;log('=== modal ouverte: body h='+b.clientHeight+' scrollH='+b.scrollHeight+' ===');}
-  },500);
-})();
-</script>
 </body>
 <style>
 #invoiceModal {
@@ -16254,6 +16308,11 @@ function notifSwitchTab(tab) {
       alert("Impossible d'identifier cette réservation pour créer la mission Hosterzz.");
       return;
     }
+    var dejaCreee = (window.hzMissionsMap || {})[String(booking.id)];
+    if (dejaCreee) {
+      alert("Une mission Hosterzz existe déjà pour cette réservation (statut : " + (dejaCreee.statut || 'créée') + ").");
+      return;
+    }
     var propertyId = hzPropertyId(booking);
     var endStr = String(booking.end || booking.endDate || booking.checkOut || '').slice(0, 10);
 
@@ -16293,13 +16352,63 @@ function notifSwitchTab(tab) {
     var originalLabel = btnSubmit.innerHTML;
     btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
 
+    // Vérifie côté serveur si la mission existe vraiment pour cette réservation.
+    // Sert quand la requête POST est coupée (cold start Hosterzz) alors que la
+    // mission a bien été créée : on ne doit pas annoncer un échec à tort.
+    // Attentes cumulées ~75 s : la réconciliation BH réessaie jusqu'à ~71 s.
+    var HZ_ATTENTES = [1200, 1800, 2500, 3500, 5000, 6000, 8000, 8000, 8000];
+    async function hzVerifierMission(reservationId) {
+      for (var i = 0; i < HZ_ATTENTES.length; i++) {
+        await new Promise(function (r) { setTimeout(r, HZ_ATTENTES[i]); });
+        try {
+          // Endpoint dédié : le serveur résout l'identifiant (PK / uid / Channex).
+          var vr = await fetch(apiUrl + '/api/hosterzz/mission?reservation_id=' + encodeURIComponent(reservationId),
+                               { headers: { Authorization: 'Bearer ' + token } });
+          if (vr.ok) {
+            var vd = await vr.json();
+            if (vd && vd.mission) return vd.mission;
+          }
+        } catch (e) { /* on retente */ }
+      }
+      return null;
+    }
+
+    async function hzSuccesUI(statut) {
+      if (window.hzMissionsMap) window.hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: statut || 'creee' };
+      // On attend la map à jour avant de peindre le badge, sinon il affiche l'état précédent.
+      if (typeof window.loadHzMissionsMapGlobal === 'function') {
+        try { await window.loadHzMissionsMapGlobal(); } catch (e) {}
+      }
+      if (typeof window.refreshHzBadgeInDetails === 'function') window.refreshHzBadgeInDetails();
+      window.closeHzMissionModal();
+      if (typeof window.showToast === 'function') window.showToast('Mission Hosterzz créée ✅');
+      else alert('Mission Hosterzz créée avec succès.');
+    }
+
+    // Timeout client : évite un spinner infini si la réponse ne revient jamais.
+    var ctrl = new AbortController();
+    var killer = setTimeout(function () { ctrl.abort(); }, 30000);
+
     try {
       var resp = await fetch(apiUrl + '/api/hosterzz/missions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: ctrl.signal
       });
       var data = await resp.json().catch(function () { return {}; });
+
+      // 202 : Hosterzz est lent, BH réconcilie en arrière-plan. On attend le lien.
+      if (resp.status === 202 || (data && data.pending)) {
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création en cours...';
+        var enAttente = await hzVerifierMission(reservationId);
+        if (enAttente) { await hzSuccesUI(enAttente.statut); }
+        else {
+          errorBox.textContent = "La mission est en cours de création côté Hosterzz. Rafraîchissez dans un instant.";
+          errorBox.style.display = 'block';
+        }
+        return;
+      }
 
       if (!resp.ok) {
         if (resp.status === 409 || (data && data.code === 'not_linked')) {
@@ -16311,18 +16420,19 @@ function notifSwitchTab(tab) {
         return;
       }
 
-      hzMissionsMap[String(reservationId)] = { bh_reservation_id: reservationId, statut: data.statut || 'creee' };
-      refreshHzBadgeInDetails();
-      window.closeHzMissionModal();
-      if (typeof window.showToast === 'function') {
-        window.showToast('Mission Hosterzz créée ✅');
-      } else {
-        alert('Mission Hosterzz créée avec succès.');
-      }
+      await hzSuccesUI(data.statut);
     } catch (e) {
-      errorBox.textContent = "Erreur réseau : impossible de contacter Hosterzz.";
-      errorBox.style.display = 'block';
+      // Requête coupée ou réseau : la mission a peut-être été créée quand même.
+      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
+      var existante = await hzVerifierMission(reservationId);
+      if (existante) {
+        await hzSuccesUI(existante.statut);
+      } else {
+        errorBox.textContent = "La mission n'a pas pu être créée. Vérifiez votre connexion et réessayez.";
+        errorBox.style.display = 'block';
+      }
     } finally {
+      clearTimeout(killer);
       btnSubmit.disabled = false;
       btnSubmit.innerHTML = originalLabel;
     }
