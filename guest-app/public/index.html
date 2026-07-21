@@ -429,6 +429,13 @@ body {
 .home-feature-desc { font-size: 11px; color: var(--text2); line-height: 1.4; }
 
 /* CTA inscription */
+.become-host{display:flex;align-items:center;gap:14px;margin:14px 16px 24px;padding:16px 18px;background:var(--white);border:1px solid var(--line);border-radius:16px;text-decoration:none;color:inherit;transition:transform .15s}
+.become-host:active{transform:scale(.985)}
+.become-host .bh-ic{width:44px;height:44px;border-radius:12px;background:var(--primary-tint);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:18px;flex-shrink:0}
+.become-host .bh-txt{flex:1;min-width:0}
+.become-host .bh-txt b{display:block;font-size:14.5px;font-weight:600;margin-bottom:2px}
+.become-host .bh-txt span{font-size:12.5px;color:var(--text2);line-height:1.4}
+.become-host .bh-arr{color:var(--stone-light);font-size:14px}
 .home-cta {
   margin: 0 16px 24px;
   background: var(--primary);
@@ -1154,6 +1161,16 @@ body.screen-detail #bottomNav { display: none !important; }
           <i class="fas fa-user-plus" style="margin-right:6px;"></i>S'inscrire
         </button>
       </div>
+
+      <!-- Devenir hôte -->
+      <a href="host.html" class="become-host">
+        <div class="bh-ic"><i class="fas fa-house-chimney-window"></i></div>
+        <div class="bh-txt">
+          <b>Vous avez un logement ?</b>
+          <span>Devenez hôte et recevez des réservations en direct.</span>
+        </div>
+        <i class="fas fa-arrow-right bh-arr"></i>
+      </a>
     </div>
 
     <!-- ═══ ÉCRAN LISTE LOGEMENTS ═══ -->

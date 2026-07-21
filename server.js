@@ -5931,7 +5931,8 @@ async function getUserFromRequest(req) {
       passwordHash: row.password_hash,
       createdAt: row.created_at,
        stripeAccountId: row.stripe_account_id,
-       logoUrl: row.logo_url || null
+       logoUrl: row.logo_url || null,
+       isExternalHost: row.is_external_host === true
     };
 
     return user;
@@ -19595,6 +19596,103 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// ============================================
+// 🏠 MARKETPLACE — Inscription hôte externe
+// Crée un user is_external_host=true, SANS abonnement (paie via commission 7%).
+// Réutilise la vérification email + le login existants.
+// ============================================
+app.post('/api/host/register', async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, phone, company } = req.body;
+
+    if (!firstName || !lastName || !email || !password || !phone) {
+      return res.status(400).json({ error: 'Champs obligatoires manquants' });
+    }
+    if (String(password).length < 8) {
+      return res.status(400).json({ error: 'Le mot de passe doit faire au moins 8 caractères' });
+    }
+
+    // Email déjà utilisé ?
+    const existing = await pool.query(
+      'SELECT id, is_external_host FROM users WHERE LOWER(email) = LOWER($1)',
+      [email]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: 'Un compte existe déjà avec cet e-mail' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const id = `u_${Date.now().toString(36)}`;
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const myReferralCode = (firstName || 'HOST').toUpperCase().slice(0,6).replace(/[^A-Z]/g,'') + Math.random().toString(36).slice(2,6).toUpperCase();
+
+    // Créer l'utilisateur hôte externe (is_external_host = TRUE, pas d'abonnement trial)
+    await pool.query(
+      `INSERT INTO users (
+        id, company, first_name, last_name, email, password_hash,
+        created_at, stripe_account_id,
+        email_verified, verification_token, verification_token_expires,
+        referral_code, phone, is_external_host
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NULL, $7, $8, $9, $10, $11, TRUE)`,
+      [id, company || null, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires, myReferralCode, String(phone).trim()]
+    );
+
+    // Email de vérification (même mécanisme que Boostinghost)
+    const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
+    const verificationUrl = `${appUrl}/verify-email.html?token=${verificationToken}`;
+    try {
+      await transporter.sendMail({
+        from: EMAIL_FROM,
+        to: email,
+        subject: 'Vérifiez votre adresse email — BHGuest Hôte',
+        html: bhEmailTemplate({
+          icon: '✉️',
+          title: 'Confirmez votre email',
+          subtitle: 'Une dernière étape pour devenir hôte',
+          footerNote: 'Si vous n\'avez pas créé de compte, ignorez cet email.',
+          bodyHtml: `
+            <p>Bonjour <strong>${firstName}</strong>,</p>
+            <p>Merci de rejoindre BHGuest en tant qu'hôte. Pour activer votre compte et commencer à publier vos logements, cliquez ci-dessous :</p>
+            <div class="cta-block">
+              <p>Lien valide pendant <strong>24 heures</strong></p>
+              <a href="${verificationUrl}" class="btn">Vérifier mon adresse email →</a>
+            </div>
+            <p class="link-fallback">Le bouton ne fonctionne pas ? Copiez ce lien :<br><a href="${verificationUrl}">${verificationUrl}</a></p>
+          `
+        })
+      });
+      console.log('✅ [HOST] Email de vérification envoyé à:', email);
+    } catch (emailErr) {
+      console.error('⚠️ [HOST] Erreur envoi email vérification:', emailErr.message);
+    }
+
+    // Notification interne
+    try {
+      await sendEmailViaBrevo({
+        to: ['contact@boostinghost.fr', 'charles.induni@gmail.com'],
+        subject: `🏠 Nouvel hôte externe — ${firstName} ${lastName}`,
+        html: bhEmailTemplate({
+          icon: '🏠',
+          title: 'Nouvel hôte marketplace',
+          bodyHtml: `<p><strong>${firstName} ${lastName}</strong> (${email}, ${phone}) s'est inscrit comme hôte externe.</p>`
+        })
+      });
+    } catch (nErr) { console.warn('⚠️ [HOST] Notif interne:', nErr.message); }
+
+    res.json({
+      success: true,
+      message: 'Compte hôte créé. Vérifiez votre email pour l\'activer.',
+      email
+    });
+
+  } catch (e) {
+    console.error('❌ [HOST] register:', e.message);
+    res.status(500).json({ error: 'Erreur serveur lors de l\'inscription' });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -19604,7 +19702,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id, email_verified, logo_url
+      `SELECT id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id, email_verified, logo_url, is_external_host
        FROM users
        WHERE LOWER(email) = LOWER($1)`,
       [email]
@@ -19636,7 +19734,8 @@ if (!row.email_verified) {
       passwordHash: row.password_hash,
       createdAt: row.created_at,
        stripeAccountId: row.stripe_account_id,
-       logoUrl: row.logo_url || null
+       logoUrl: row.logo_url || null,
+       isExternalHost: row.is_external_host === true
     };
 
     const token = generateToken(user);

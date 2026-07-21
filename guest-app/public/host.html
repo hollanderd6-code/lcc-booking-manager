@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Devenir hôte — BHGuest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --primary:#C2410C; --primary-dark:#9A3412; --primary-tint:#FBEDE7; --primary-light:#F0997B;
+  --ink:#1C1917; --bg:#FAF8F5; --white:#FFF; --text2:#78716C; --stone-light:#A8A29E; --line:#EDE8E1;
+  --error:#DC2626; --success:#16A34A;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--ink);min-height:100dvh}
+.wrap{max-width:440px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
+
+/* HERO */
+.host-hero{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),52px) 24px 30px;position:relative;overflow:hidden}
+.host-hero::after{content:"";position:absolute;top:-50px;right:-50px;width:190px;height:190px;border-radius:50%;background:rgba(194,65,12,.2)}
+.brand{display:flex;align-items:center;gap:11px;margin-bottom:26px;position:relative}
+.brand-mark{width:38px;height:38px;background:var(--primary);border-radius:50% 50% 50% 8px;transform:rotate(45deg);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.brand-mark b{transform:rotate(-45deg);font-family:'Instrument Serif',serif;font-size:22px;font-weight:400;color:#fff;line-height:1}
+.brand-name{font-weight:700;font-size:19px;letter-spacing:-.4px;display:flex;align-items:baseline}
+.brand-name .g{color:var(--primary-light)}
+.brand-name .dot{width:5px;height:5px;border-radius:50%;background:#fff;margin-left:3px}
+.host-hero h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:33px;line-height:1.1;letter-spacing:-.4px;margin-bottom:12px;position:relative}
+.host-hero h1 em{font-style:italic;color:var(--primary-light)}
+.host-hero p{font-size:14.5px;line-height:1.55;color:rgba(255,255,255,.72);position:relative;max-width:340px}
+
+/* ARGUMENTS */
+.perks{display:flex;gap:8px;padding:20px 24px 0;flex-wrap:wrap}
+.perk{flex:1;min-width:130px;background:var(--white);border:1px solid var(--line);border-radius:14px;padding:14px}
+.perk i{color:var(--primary);font-size:18px;margin-bottom:8px;display:block}
+.perk b{font-size:14px;font-weight:600;display:block;margin-bottom:2px}
+.perk span{font-size:12px;color:var(--text2);line-height:1.4}
+
+/* FORM CARD */
+.card{background:var(--white);border:1px solid var(--line);border-radius:20px;margin:20px 20px 0;padding:24px 20px}
+.tabs{display:flex;gap:6px;background:var(--bg);border-radius:12px;padding:4px;margin-bottom:22px}
+.tab{flex:1;text-align:center;padding:11px;border-radius:9px;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s;border:none;background:none;font-family:inherit}
+.tab.active{background:var(--white);color:var(--ink);box-shadow:0 1px 3px rgba(28,25,23,.08)}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:12.5px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.field input{width:100%;padding:14px 15px;background:var(--white);border:1px solid var(--line);border-radius:12px;font-size:16px;font-family:inherit;outline:none;color:var(--ink);transition:border-color .2s,box-shadow .2s}
+.field input::placeholder{color:var(--stone-light)}
+.field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint)}
+.row2{display:flex;gap:12px}
+.row2 .field{flex:1}
+.btn-primary{width:100%;padding:16px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:15.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:transform .15s,background .15s;margin-top:6px}
+.btn-primary:active{transform:scale(.98);background:var(--primary-dark)}
+.btn-primary:disabled{opacity:.6;cursor:default}
+.msg{font-size:13.5px;padding:12px 14px;border-radius:10px;margin-bottom:16px;display:none;line-height:1.45}
+.msg.err{background:#FEF2F2;color:var(--error);display:block}
+.msg.ok{background:#F0FDF4;color:var(--success);display:block}
+.hint{font-size:12px;color:var(--stone-light);margin-top:5px}
+.foot{text-align:center;padding:22px;font-size:13px;color:var(--text2)}
+.foot a{color:var(--primary);text-decoration:none;font-weight:500}
+.back{position:absolute;top:max(env(safe-area-inset-top),52px);left:20px;z-index:5;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.14);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.spin{display:inline-block;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="host-hero">
+    <div class="brand">
+      <span class="brand-mark"><b>b</b></span>
+      <span class="brand-name">BH<span class="g">Guest</span><span class="dot"></span></span>
+    </div>
+    <h1>Devenez hôte,<br><em>gardez le contrôle</em>.</h1>
+    <p>Publiez vos logements et recevez des réservations en direct. Sans intermédiaire coûteux.</p>
+  </div>
+
+  <div class="perks">
+    <div class="perk"><i class="fas fa-percent"></i><b>7 % seulement</b><span>De commission, tout compris. Rien de caché.</span></div>
+    <div class="perk"><i class="fas fa-calendar-check"></i><b>Votre calendrier</b><span>Synchronisé via lien iCal, toujours à jour.</span></div>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" id="tabRegister" onclick="switchTab('register')">Inscription</button>
+      <button class="tab" id="tabLogin" onclick="switchTab('login')">Connexion</button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+
+    <!-- INSCRIPTION -->
+    <form id="formRegister" onsubmit="return doRegister(event)">
+      <div class="row2">
+        <div class="field"><label>Prénom</label><input type="text" id="firstName" placeholder="Marie" autocomplete="given-name"></div>
+        <div class="field"><label>Nom</label><input type="text" id="lastName" placeholder="Dupont" autocomplete="family-name"></div>
+      </div>
+      <div class="field"><label>Structure <span style="color:var(--stone-light)">(optionnel)</span></label><input type="text" id="company" placeholder="Nom de votre société"></div>
+      <div class="field"><label>Email</label><input type="email" id="email" placeholder="marie@email.com" autocomplete="email"></div>
+      <div class="field"><label>Téléphone</label><input type="tel" id="phone" placeholder="+33 6 12 34 56 78" autocomplete="tel"></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="password" placeholder="8 caractères minimum" autocomplete="new-password"><div class="hint">Au moins 8 caractères.</div></div>
+      <button type="submit" class="btn-primary" id="btnRegister">Créer mon compte hôte</button>
+    </form>
+
+    <!-- CONNEXION -->
+    <form id="formLogin" onsubmit="return doLogin(event)" style="display:none;">
+      <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="marie@email.com" autocomplete="email"></div>
+      <div class="field"><label>Mot de passe</label><input type="password" id="loginPassword" placeholder="Votre mot de passe" autocomplete="current-password"></div>
+      <button type="submit" class="btn-primary" id="btnLogin">Se connecter</button>
+    </form>
+  </div>
+
+  <div class="foot">
+    Vous cherchez à réserver un séjour ? <a href="index.html">Voir les logements</a>
+  </div>
+</div>
+
+<script>
+const API_URL = window.Capacitor?.isNativePlatform?.() ? 'https://www.boostinghost.fr' : window.location.origin;
+
+function switchTab(which){
+  const isReg = which === 'register';
+  document.getElementById('tabRegister').classList.toggle('active', isReg);
+  document.getElementById('tabLogin').classList.toggle('active', !isReg);
+  document.getElementById('formRegister').style.display = isReg ? 'block' : 'none';
+  document.getElementById('formLogin').style.display = isReg ? 'none' : 'block';
+  hideMsg();
+}
+function showMsg(text, type){ const m=document.getElementById('msg'); m.textContent=text; m.className='msg '+type; }
+function hideMsg(){ document.getElementById('msg').className='msg'; }
+
+async function doRegister(e){
+  e.preventDefault();
+  hideMsg();
+  const btn = document.getElementById('btnRegister');
+  const payload = {
+    firstName: val('firstName'), lastName: val('lastName'),
+    company: val('company'), email: val('email'),
+    phone: val('phone'), password: val('password')
+  };
+  if(!payload.firstName||!payload.lastName||!payload.email||!payload.phone||!payload.password){
+    showMsg('Merci de remplir tous les champs obligatoires.','err'); return false;
+  }
+  if(payload.password.length < 8){ showMsg('Le mot de passe doit faire au moins 8 caractères.','err'); return false; }
+
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner spin"></i> Création...';
+  try{
+    const res = await fetch(`${API_URL}/api/host/register`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Erreur lors de l\'inscription');
+    showMsg('✓ Compte créé ! Vérifiez votre boîte mail pour activer votre compte, puis connectez-vous.','ok');
+    document.getElementById('formRegister').reset?.();
+    setTimeout(()=>switchTab('login'), 2500);
+  }catch(err){ showMsg(err.message,'err'); }
+  finally{ btn.disabled=false; btn.textContent='Créer mon compte hôte'; }
+  return false;
+}
+
+async function doLogin(e){
+  e.preventDefault();
+  hideMsg();
+  const btn = document.getElementById('btnLogin');
+  const email = val('loginEmail'), password = val('loginPassword');
+  if(!email||!password){ showMsg('Email et mot de passe requis.','err'); return false; }
+
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner spin"></i> Connexion...';
+  try{
+    const res = await fetch(`${API_URL}/api/auth/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if(!res.ok){
+      if(data.emailNotVerified){ showMsg('Votre email n\'est pas encore vérifié. Consultez votre boîte mail.','err'); }
+      else showMsg(data.error || 'Identifiants invalides','err');
+      return false;
+    }
+    // Vérifier que c'est bien un hôte externe
+    if(!data.user?.isExternalHost){
+      showMsg('Ce compte n\'est pas un compte hôte marketplace.','err');
+      return false;
+    }
+    // Stocker la session hôte
+    localStorage.setItem('bhguest_host_token', data.token);
+    localStorage.setItem('bhguest_host_user', JSON.stringify(data.user));
+    showMsg('✓ Connexion réussie ! Redirection...','ok');
+    // Phase 5 : redirection vers le dashboard hôte (à venir)
+    setTimeout(()=>{ window.location.href = 'host-dashboard.html'; }, 900);
+  }catch(err){ showMsg(err.message || 'Erreur de connexion','err'); }
+  finally{ btn.disabled=false; btn.textContent='Se connecter'; }
+  return false;
+}
+
+function val(id){ return (document.getElementById(id)?.value || '').trim(); }
+</script>
+</body>
+</html>
