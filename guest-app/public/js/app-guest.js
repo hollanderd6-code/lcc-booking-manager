@@ -986,7 +986,7 @@ async function fetchPropertyRating(propertyId) {
 
 // Génère le HTML des étoiles depuis une note /10 (Channex)
 function renderStars(rating) {
-  if (!rating) return '<span style="color:#9ca3af;font-size:12px;">Pas encore d\'avis</span>';
+  if (!rating) return '';
   const on5 = Math.round((rating / 2) * 2) / 2; // note /10 → /5, demi-étoiles
   const full = Math.floor(on5);
   const half = on5 % 1 >= 0.5 ? 1 : 0;
@@ -1163,7 +1163,7 @@ async function loadFeaturedProperties() {
           ${p.photoUrl ? `<img src="${p.photoUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;">` : '🏠'}
         </div>
         <div class="home-card-body">
-          <div class="home-card-stars" id="stars-home-${p.id}" style="color:#d1d5db;font-size:12px;">…</div>
+          <div class="home-card-stars" id="stars-home-${p.id}"></div>
           <div class="home-card-name">${p.name}</div>
           <div class="home-card-loc">${icon('location')}${p.city || 'France'}</div>
           <div class="home-card-price">${p.basePrice || '—'}€ <span>/ nuit</span></div>
@@ -1216,10 +1216,9 @@ async function loadProperties() {
           ${p.photoUrl
             ? `<img src="${p.photoUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`
             : icon('home')}
-          ${p.basePrice ? `<div class="prop-card-badge">${p.basePrice}€ / nuit</div>` : ''}
+          <span class="prop-card-badge">Réservation directe</span>
         </div>
         <div class="prop-card-body">
-          <div class="prop-card-stars" id="stars-list-${p.id}" style="color:#d1d5db;font-size:12px;">…</div>
           <div class="prop-card-name">${p.name}</div>
           <div class="prop-card-loc">${icon('location')}${p.city || p.address || 'France'}</div>
           <div class="prop-card-features">
@@ -1229,8 +1228,7 @@ async function loadProperties() {
           </div>
           <div class="prop-card-footer">
             <div>
-              <div class="prop-card-price-main">${p.basePrice || '—'}€</div>
-              <div class="prop-card-price-night">/ nuit</div>
+              <span class="prop-card-price-main">${p.basePrice || '—'}€</span><span class="prop-card-price-night">/ nuit</span>
             </div>
             <button class="prop-card-btn">Réserver</button>
           </div>

@@ -451,12 +451,12 @@ body {
 #screen-home-list { background: var(--bg); }
 
 .listings-header {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  padding: max(env(safe-area-inset-top),16px) 16px 16px;
+  background: var(--ink);
+  padding: max(env(safe-area-inset-top),50px) 16px 16px;
 }
 .listings-search {
-  background: white; border-radius: var(--radius-sm);
-  display: flex; align-items: center; gap: 8px; padding: 4px 12px;
+  background: #fff; border-radius: 14px;
+  display: flex; align-items: center; gap: 10px; padding: 4px 6px 4px 14px;
 }
 .listings-search i { color: var(--text2); font-size: 16px; }
 .listings-search input {
@@ -484,111 +484,73 @@ body {
   transition: all .2s;
 }
 .city-chip.active, .city-chip:hover {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
 }
 .filter-chip {
-  flex: 0 0 auto; padding: 6px 14px;
-  border-radius: 999px; font-size: 12px; font-weight: 600;
-  border: 1.5px solid var(--border); background: white;
-  color: var(--text2); cursor: pointer; white-space: nowrap;
+  flex: 0 0 auto; padding: 8px 15px;
+  border-radius: 999px; font-size: 13px; font-weight: 500;
+  border: 1px solid var(--line); background: #fff;
+  color: var(--text2); cursor: pointer; white-space: nowrap; transition: all .15s;
 }
-.filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
-
+.filter-chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
 #propertiesList { padding: 0 16px 80px; }
 
 /* Property card — Liquid glass épuré */
 .prop-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.66);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 20px;
+  background: var(--white);
+  border-radius: 18px;
   margin-bottom: 16px;
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid rgba(194,65,12,0.12);
-  box-shadow: 0 4px 20px rgba(194,65,12,.08),
-              inset 0 1px 0 rgba(255,255,255,.6);
-  transition: transform .25s cubic-bezier(.34,1.4,.5,1),
-              box-shadow .25s ease,
-              border-color .25s ease;
-  /* Apparition en cascade */
+  border: 1px solid var(--line);
+  transition: transform .2s ease, box-shadow .2s ease;
   opacity: 0;
   transform: translateY(14px);
 }
-.prop-card.card-in {
-  opacity: 1;
-  transform: translateY(0);
-}
-.prop-card:hover {
-  box-shadow: 0 10px 32px rgba(194,65,12,.16),
-              inset 0 1px 0 rgba(255,255,255,.7);
-  border-color: rgba(194,65,12,.22);
-}
-.prop-card:active { transform: scale(.985) translateY(0); }
+.prop-card.card-in { opacity: 1; transform: translateY(0); }
+.prop-card:active { transform: scale(.985); }
 .prop-card-img {
-  width: 100%; height: 200px; object-fit: cover;
+  width: 100%; height: 210px; object-fit: cover;
   background: var(--primary);
   display: flex; align-items: center; justify-content: center;
-  color: white; font-size: 48px; position: relative;
+  color: #fff; font-size: 46px; position: relative;
 }
-/* Dégradé bas pour lisibilité de la pastille prix */
-.prop-card-img::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(to top, rgba(30,27,75,.28), transparent 38%);
-  pointer-events: none;
-}
-/* Prix en pastille glass posée sur la photo */
+.prop-card-img .bhi { width: 46px; height: 46px; }
 .prop-card-badge {
-  position: absolute; bottom: 12px; left: 12px; top: auto;
-  z-index: 1;
-  background: rgba(194,65,12,0.55);
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
-  backdrop-filter: blur(12px) saturate(160%);
-  color: white;
-  font-size: 12px; font-weight: 700;
-  padding: 5px 12px; border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.28);
-  box-shadow: 0 2px 10px rgba(194,65,12,.3),
-              inset 0 1px 0 rgba(255,255,255,.4);
+  position: absolute; top: 12px; left: 12px; bottom: auto; z-index: 1;
+  background: rgba(28,25,23,.82);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  color: #fff; font-size: 11.5px; font-weight: 500;
+  padding: 5px 11px; border-radius: 8px;
 }
 .prop-card-wishlist {
-  position: absolute; top: 10px; right: 10px; z-index: 1;
-  width: 34px; height: 34px; border-radius: 50%;
-  background: rgba(255,255,255,.65);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,.4);
-  color: #9ca3af; font-size: 16px; cursor: pointer;
+  position: absolute; top: 12px; right: 12px; z-index: 1;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,.92);
+  border: none; color: var(--ink); font-size: 13px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
-.prop-card-body { padding: 16px; }
-.prop-card-stars { color: #f59e0b; font-size: 12px; margin-bottom: 2px; display: flex; align-items: center; gap: 4px; }
-.prop-card-stars span { color: var(--text2); font-size: 11px; }
-.prop-card-name { font-weight: 700; font-size: 16px; color: var(--text); margin-bottom: 4px; line-height: 1.3; }
-.prop-card-loc { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
-.prop-card-features { display: flex; gap: 12px; margin-bottom: 12px; }
-.prop-card-feat { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 4px; }
-.prop-card-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(194,65,12,.10); padding-top: 12px; }
-.prop-card-price-main { font-size: 20px; font-weight: 800; color: var(--primary); }
-.prop-card-price-night { font-size: 12px; color: var(--text2); }
+.prop-card-body { padding: 14px 15px 16px; }
+.prop-card-stars { color: var(--primary); font-size: 12.5px; font-weight: 500; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
+.prop-card-stars span { color: var(--text2); font-size: 11.5px; font-weight: 400; }
+.prop-card-name { font-family: 'Instrument Serif', serif; font-weight: 400; font-size: 20px; letter-spacing: -.2px; color: var(--ink); margin-bottom: 4px; line-height: 1.15; }
+.prop-card-loc { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 5px; margin-bottom: 12px; }
+.prop-card-loc .bhi { width: 13px; height: 13px; color: var(--stone-light); }
+.prop-card-features { display: flex; gap: 14px; margin-bottom: 14px; }
+.prop-card-feat { font-size: 12.5px; color: var(--text2); display: flex; align-items: center; gap: 5px; }
+.prop-card-feat .bhi { width: 14px; height: 14px; color: var(--stone-light); }
+.prop-card-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 13px; }
+.prop-card-price-main { font-size: 20px; font-weight: 700; letter-spacing: -.3px; color: var(--ink); display: inline; }
+.prop-card-price-night { font-size: 12.5px; color: var(--text2); display: inline; margin-left: 2px; }
 .prop-card-btn {
-  background: rgba(194,65,12,0.92);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  color: white;
-  border: 1px solid rgba(255,255,255,.2);
-  border-radius: 12px;
-  padding: 11px 20px; font-size: 13px; font-weight: 700;
-  cursor: pointer; font-family: inherit;
-  box-shadow: 0 4px 14px rgba(194,65,12,.28),
-              inset 0 1px 0 rgba(255,255,255,.3);
-  transition: transform .15s ease, box-shadow .2s ease;
+  background: var(--primary); color: #fff; border: none;
+  border-radius: 12px; padding: 12px 22px; font-size: 13.5px; font-weight: 600;
+  cursor: pointer; font-family: inherit; transition: transform .15s, background .15s;
 }
-.prop-card-btn:active { transform: scale(.95); }
+.prop-card-btn:active { transform: scale(.95); background: var(--primary-dark); }
 
 @media (prefers-reduced-motion: reduce) {
   .prop-card { opacity: 1; transform: none; transition: box-shadow .2s ease; }
