@@ -1586,7 +1586,7 @@ function goToCheckout() {
 
   document.getElementById('checkoutContent').innerHTML = `
     <div class="checkout-summary" id="priceSummary">
-      <div style="font-size:15px;font-weight:700;margin-bottom:12px;">${p.name}</div>
+      <div class="checkout-summary-title">${p.name}</div>
       <div class="checkout-row"><span>Dates</span><span>${fmtDate(state.selectedCheckin)} → ${fmtDate(state.selectedCheckout)}</span></div>
       ${fixedPriceOverride !== null
         ? `<div class="checkout-row" id="baseRow"><span>Prix négocié</span><span>${displayBase}€</span></div>
@@ -1622,17 +1622,17 @@ function goToCheckout() {
       <label>Code promo <span style="font-size:12px;color:var(--text-light);font-weight:400;">(optionnel)</span></label>
       <div style="display:flex;gap:8px;">
         <input type="text" id="promoInput" placeholder="Ex: BEEN10" style="text-transform:uppercase;flex:1;">
-        <button onclick="applyPromo()" id="btnApplyPromo" style="padding:13px 16px;background:var(--primary-light);color:var(--primary);border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+        <button onclick="applyPromo()" id="btnApplyPromo" style="padding:13px 18px;background:var(--primary-tint);color:var(--primary-dark);border:none;border-radius:12px;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;">
           Appliquer
         </button>
       </div>
       <div id="promoMsg" style="font-size:12px;margin-top:6px;display:none;"></div>
     </div>
-    <div style="background:var(--bg);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text-light);margin-top:8px;margin-bottom:16px;">
-      <span style="color:var(--primary);margin-right:6px;">${icon('lock')}</span>
-      Paiement sécurisé. Votre réservation sera confirmée immédiatement.
+    <div style="display:flex;align-items:center;gap:10px;background:var(--primary-tint);border-radius:12px;padding:13px 15px;font-size:13px;color:#8A4A2E;margin-top:8px;margin-bottom:18px;">
+      <span style="color:var(--primary);display:flex;">${icon('lock')}</span>
+      Paiement sécurisé. Votre réservation est confirmée immédiatement.
     </div>
-    <button id="btnPay" onclick="submitBooking()" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">
+    <button id="btnPay" onclick="submitBooking()" style="width:100%;padding:17px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;">
       Payer ${ttc}€
     </button>
   `;
