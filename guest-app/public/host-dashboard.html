@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Tableau de bord — BHGuest Hôte</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{--primary:#C2410C;--primary-dark:#9A3412;--primary-tint:#FBEDE7;--primary-light:#F0997B;--ink:#1C1917;--bg:#FAF8F5;--white:#FFF;--text2:#78716C;--stone-light:#A8A29E;--line:#EDE8E1;--success:#16A34A;--warn:#B45309}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--ink);min-height:100dvh;padding-bottom:40px}
+.wrap{max-width:520px;margin:0 auto}
+
+/* HEADER */
+.hero{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),50px) 20px 26px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;top:-50px;right:-40px;width:170px;height:170px;border-radius:50%;background:rgba(194,65,12,.2)}
+.hero-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;position:relative}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:34px;height:34px;background:var(--primary);border-radius:50% 50% 50% 7px;transform:rotate(45deg);display:flex;align-items:center;justify-content:center}
+.brand-mark b{transform:rotate(-45deg);font-family:'Instrument Serif',serif;font-size:19px;color:#fff}
+.brand-name{font-weight:700;font-size:16px;display:flex;align-items:baseline}
+.brand-name .g{color:var(--primary-light)}
+.brand-name .dot{width:4px;height:4px;border-radius:50%;background:#fff;margin-left:3px}
+.logout{background:rgba(255,255,255,.14);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:14px;cursor:pointer}
+.hero h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:28px;letter-spacing:-.3px;position:relative}
+.hero .sub{font-size:14px;color:rgba(255,255,255,.68);margin-top:3px;position:relative}
+
+/* Alerte Stripe */
+.alert{display:flex;align-items:center;gap:13px;margin:16px;padding:15px 16px;background:#FEF6EC;border:1px solid #F5D9A8;border-radius:14px}
+.alert i{color:var(--warn);font-size:19px}
+.alert .a-txt{flex:1}
+.alert .a-txt b{font-size:13.5px;font-weight:600;color:var(--warn);display:block}
+.alert .a-txt span{font-size:12.5px;color:#9A6514;line-height:1.4}
+.alert a{background:var(--warn);color:#fff;text-decoration:none;font-size:12.5px;font-weight:600;padding:9px 14px;border-radius:10px;white-space:nowrap}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 16px 0}
+.stat{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.stat .s-val{font-size:26px;font-weight:700;letter-spacing:-.5px;font-family:'DM Sans'}
+.stat .s-lab{font-size:12.5px;color:var(--text2);margin-top:2px}
+.stat.big{grid-column:1 / -1;background:var(--primary-tint);border-color:transparent}
+.stat.big .s-val{color:var(--primary-dark)}
+.stat.big .s-lab{color:#9A5A3E}
+
+/* SECTIONS */
+.sec{padding:24px 16px 0}
+.sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.sec-t{font-family:'Instrument Serif',serif;font-size:21px;font-weight:400;letter-spacing:-.2px}
+.sec-add{background:var(--primary);color:#fff;border:none;text-decoration:none;font-size:13px;font-weight:600;padding:9px 15px;border-radius:11px;display:inline-flex;align-items:center;gap:6px}
+
+/* Liste logements */
+.prop{display:flex;gap:13px;align-items:center;background:var(--white);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:11px;text-decoration:none;color:inherit}
+.prop-img{width:66px;height:66px;border-radius:12px;object-fit:cover;background:var(--primary-tint);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:22px}
+.prop-info{flex:1;min-width:0}
+.prop-name{font-weight:600;font-size:15px;margin-bottom:3px}
+.prop-meta{font-size:12.5px;color:var(--text2);display:flex;align-items:center;gap:8px}
+.prop-price{text-align:right;flex-shrink:0}
+.prop-price b{font-size:16px;font-weight:700}
+.prop-price span{font-size:11.5px;color:var(--text2);display:block}
+.prop-badge{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--primary-tint);color:var(--primary-dark);margin-top:4px}
+
+/* Réservations */
+.resa{display:flex;align-items:center;gap:12px;background:var(--white);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:10px}
+.resa-date{text-align:center;background:var(--bg);border-radius:10px;padding:7px 11px;flex-shrink:0}
+.resa-date .d{font-size:17px;font-weight:700;line-height:1}
+.resa-date .m{font-size:10.5px;color:var(--text2);text-transform:uppercase;margin-top:2px}
+.resa-info{flex:1;min-width:0}
+.resa-info b{font-size:14.5px;font-weight:600;display:block}
+.resa-info span{font-size:12.5px;color:var(--text2)}
+.resa-amt{font-size:15px;font-weight:700;flex-shrink:0}
+
+/* Empty / Loading */
+.empty{text-align:center;padding:40px 24px;background:var(--white);border:1px solid var(--line);border-radius:16px}
+.empty i{font-size:32px;color:var(--stone-light);margin-bottom:12px}
+.empty p{font-size:14px;color:var(--text2);line-height:1.5;margin-bottom:16px}
+.empty a{background:var(--primary);color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 22px;border-radius:12px;display:inline-block}
+.loading{text-align:center;padding:80px;color:var(--stone-light)}
+.spin{display:inline-block;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+
+/* Quick actions */
+.quick{display:flex;gap:12px;padding:20px 16px 0}
+.qa{flex:1;background:var(--white);border:1px solid var(--line);border-radius:14px;padding:16px 12px;text-align:center;text-decoration:none;color:inherit}
+.qa i{font-size:19px;color:var(--primary);margin-bottom:8px;display:block}
+.qa span{font-size:12.5px;font-weight:500}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="root"><div class="loading"><i class="fas fa-spinner spin" style="font-size:26px"></i></div></div>
+</div>
+
+<script>
+const API_URL = window.Capacitor?.isNativePlatform?.() ? 'https://www.boostinghost.fr' : window.location.origin;
+const token = localStorage.getItem('bhguest_host_token');
+if(!token){ location.href='host.html'; }
+
+const MONTHS = ['janv','févr','mars','avr','mai','juin','juil','août','sept','oct','nov','déc'];
+
+async function load(){
+  try{
+    const res = await fetch(`${API_URL}/api/host/dashboard`, { headers:{ 'Authorization':'Bearer '+token } });
+    if(res.status === 403 || res.status === 401){ localStorage.clear(); location.href='host.html'; return; }
+    const d = await res.json();
+    render(d);
+  }catch(e){
+    document.getElementById('root').innerHTML = '<div class="loading">Erreur de chargement.<br><br><a href="host.html" style="color:var(--primary)">Se reconnecter</a></div>';
+  }
+}
+
+function render(d){
+  const s = d.stats;
+  const stripeAlert = !d.stripeConnected ? `
+    <div class="alert">
+      <i class="fas fa-triangle-exclamation"></i>
+      <div class="a-txt"><b>Connectez votre compte bancaire</b><span>Pour recevoir vos paiements.</span></div>
+      <a href="host-stripe.html">Connecter</a>
+    </div>` : '';
+
+  const propsHtml = d.properties.length ? d.properties.map(p => `
+    <a class="prop" href="host-add-property.html">
+      ${p.photo_url ? `<img class="prop-img" src="${p.photo_url}" alt="">` : `<div class="prop-img"><i class="fas fa-house"></i></div>`}
+      <div class="prop-info">
+        <div class="prop-name">${esc(p.name)}</div>
+        <div class="prop-meta">${esc(p.city||'')}${p.bedrooms?' · '+p.bedrooms+' ch.':''}${p.max_guests?' · '+p.max_guests+' pers.':''}</div>
+        <span class="prop-badge">En ligne</span>
+      </div>
+      <div class="prop-price"><b>${p.base_price||'—'}€</b><span>/ nuit</span></div>
+    </a>`).join('') : `
+    <div class="empty">
+      <i class="fas fa-house-circle-check"></i>
+      <p>Vous n'avez pas encore de logement en ligne.<br>Publiez votre première annonce !</p>
+      <a href="host-add-property.html">+ Ajouter un logement</a>
+    </div>`;
+
+  const resaHtml = d.upcomingReservations.length ? d.upcomingReservations.map(r => {
+    const dt = new Date(r.start_date);
+    return `<div class="resa">
+      <div class="resa-date"><div class="d">${dt.getDate()}</div><div class="m">${MONTHS[dt.getMonth()]}</div></div>
+      <div class="resa-info"><b>${esc(r.guest_name||'Voyageur')}</b><span>${esc(r.property_name||'')} · jusqu'au ${fmtD(r.end_date)}</span></div>
+      <div class="resa-amt">${r.amount_total?Math.round(r.amount_total*0.93)+'€':''}</div>
+    </div>`;
+  }).join('') : `<div class="empty"><i class="fas fa-calendar-day"></i><p>Aucune réservation à venir pour le moment.</p></div>`;
+
+  document.getElementById('root').innerHTML = `
+    <div class="hero">
+      <div class="hero-top">
+        <div class="brand"><span class="brand-mark"><b>b</b></span><span class="brand-name">BH<span class="g">Guest</span><span class="dot"></span></span></div>
+        <button class="logout" onclick="logout()" title="Déconnexion"><i class="fas fa-arrow-right-from-bracket"></i></button>
+      </div>
+      <h1>Bonjour ${esc(d.firstName||'')} 👋</h1>
+      <div class="sub">Voici l'activité de vos logements.</div>
+    </div>
+
+    ${stripeAlert}
+
+    <div class="stats">
+      <div class="stat big"><div class="s-val">${s.netRevenue.toLocaleString('fr-FR')}€</div><div class="s-lab">Revenus nets (après commission)</div></div>
+      <div class="stat"><div class="s-val">${s.propertiesCount}</div><div class="s-lab">Logement${s.propertiesCount>1?'s':''}</div></div>
+      <div class="stat"><div class="s-val">${s.upcomingCount}</div><div class="s-lab">Séjour${s.upcomingCount>1?'s':''} à venir</div></div>
+    </div>
+
+    <div class="quick">
+      <a class="qa" href="host-add-property.html"><i class="fas fa-plus"></i><span>Ajouter</span></a>
+      <a class="qa" href="host-stripe.html"><i class="fas fa-building-columns"></i><span>Paiements</span></a>
+      <a class="qa" href="index.html"><i class="fas fa-eye"></i><span>Voir le site</span></a>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head"><div class="sec-t">Mes logements</div><a class="sec-add" href="host-add-property.html"><i class="fas fa-plus"></i>Ajouter</a></div>
+      ${propsHtml}
+    </div>
+
+    <div class="sec">
+      <div class="sec-head"><div class="sec-t">Séjours à venir</div></div>
+      ${resaHtml}
+    </div>
+  `;
+}
+
+function logout(){ localStorage.removeItem('bhguest_host_token'); localStorage.removeItem('bhguest_host_user'); location.href='host.html'; }
+function esc(s){ return String(s||'').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+function fmtD(d){ const x=new Date(d); return x.getDate()+' '+MONTHS[x.getMonth()]; }
+
+load();
+</script>
+</body>
+</html>
