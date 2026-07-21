@@ -14,19 +14,22 @@
 /* ─── RESET & TOKENS ─── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --primary: #7c3aed;
-  --primary-dark: #6d28d9;
-  --primary-light: #ede9fe;
-  --bg: #f8f7ff;
-  --bg2: #f1f0f8;
-  --white: #ffffff;
-  --text: #1e1b4b;
-  --text2: #6b7280;
-  --border: #e5e7eb;
+  --primary: #C2410C;
+  --primary-dark: #9A3412;
+  --primary-tint: #FBEDE7;
+  --primary-light: #F0997B;
+  --ink: #1C1917;
+  --bg: #FAF8F5;
+  --bg2: #F1EFEA;
+  --white: #FFFFFF;
+  --text: #1C1917;
+  --text2: #78716C;
+  --stone-light: #A8A29E;
+  --border: #EDE8E1;
   --radius: 16px;
   --radius-sm: 10px;
-  --shadow: 0 2px 12px rgba(124,58,237,.10);
-  --shadow-lg: 0 8px 32px rgba(124,58,237,.14);
+  --shadow: 0 2px 12px rgba(28,25,23,.06);
+  --shadow-lg: 0 12px 40px rgba(28,25,23,.12);
 }
 
 html { height: 100%; overflow: hidden; }
@@ -242,7 +245,7 @@ body {
 .home-hero {
   background:
     radial-gradient(420px 220px at 85% -10%, rgba(255,255,255,.22), transparent 60%),
-    linear-gradient(135deg, #4c1d95 0%, #7c3aed 52%, #a855f7 100%);
+    var(--ink);
   padding: max(env(safe-area-inset-top),24px) 20px 38px;
   position: relative;
   overflow: hidden;
@@ -257,22 +260,32 @@ body {
   pointer-events: none;
 }
 .home-hero-logo {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 24px;
+  display: flex; align-items: center; gap: 13px; margin-bottom: 26px;
   position: relative;
 }
 .home-hero-logo-icon {
-  width: 40px; height: 40px; border-radius: 12px;
-  background: rgba(255,255,255,.18);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,.25);
-  display: flex; align-items: center;
-  justify-content: center; color: white; font-size: 18px; font-weight: 800;
+  width: 40px; height: 40px;
+  background: var(--primary);
+  border-radius: 50% 50% 50% 8px;
+  transform: rotate(45deg);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.home-hero-logo-icon b {
+  transform: rotate(-45deg);
   font-family: 'Instrument Serif', serif;
+  font-size: 24px; font-weight: 400; color: #fff; line-height: 1;
 }
 .home-hero-logo-text {
-  font-size: 17px; font-weight: 700; color: white;
-  font-family: 'Instrument Serif', serif;
+  font-size: 20px; font-weight: 700; letter-spacing: -.4px;
+  font-family: 'DM Sans', sans-serif;
+  display: flex; align-items: baseline;
+}
+.home-hero-logo-text .bh { color: #fff; }
+.home-hero-logo-text .g { color: var(--primary-light); }
+.home-hero-logo-text .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #fff; margin-left: 4px;
 }
 .home-hero h1 {
   font-family: 'Instrument Serif', serif;
@@ -326,7 +339,7 @@ body {
   display: flex; align-items: center; gap: 5px;
   font-size: 11px; color: rgba(255,255,255,.85); font-weight: 500;
 }
-.home-trust-badge i { font-size: 12px; color: #d8b4fe; }
+.home-trust-badge i { font-size: 12px; color: var(--primary-light); }
 
 /* Sections */
 .home-section { padding: 20px 16px 0; }
@@ -366,7 +379,7 @@ body {
 .home-card:active { transform: scale(.97); }
 .home-card-img {
   width: 100%; height: 140px; object-fit: cover;
-  background: linear-gradient(135deg, #c4b5fd, #7c3aed);
+  background: var(--primary);
   display: flex; align-items: center; justify-content: center;
   color: white; font-size: 36px;
 }
@@ -377,6 +390,16 @@ body {
 .home-card-price span { font-weight: 400; font-size: 12px; color: var(--text2); }
 .home-card-stars { font-size: 11px; color: #f59e0b; margin-bottom: 2px; }
 
+
+/* Bandeau frais réduits — signature */
+.home-feebar {
+  display: flex; align-items: center; gap: 12px;
+  margin: 16px 16px 0; padding: 14px 16px;
+  background: var(--primary-tint); border-radius: 14px;
+}
+.home-feebar i { font-size: 20px; color: var(--primary); }
+.home-feebar .fb-title { font-weight: 600; font-size: 13.5px; color: var(--primary-dark); }
+.home-feebar .fb-sub { font-size: 12px; color: #B4562F; line-height: 1.35; margin-top: 1px; }
 /* Catégories */
 .home-cats { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 8px; scrollbar-width: none; }
 .home-cats::-webkit-scrollbar { display: none; }
@@ -507,7 +530,7 @@ body {
 .prop-card:active { transform: scale(.985) translateY(0); }
 .prop-card-img {
   width: 100%; height: 200px; object-fit: cover;
-  background: linear-gradient(135deg, #c4b5fd 0%, #7c3aed 100%);
+  background: var(--primary);
   display: flex; align-items: center; justify-content: center;
   color: white; font-size: 48px; position: relative;
 }
@@ -750,7 +773,7 @@ body {
 .detail-photos img { width: 100%; height: 260px; object-fit: cover; }
 .no-photo {
   width: 100%; height: 260px;
-  background: linear-gradient(135deg, #c4b5fd, #7c3aed);
+  background: var(--primary);
   display: flex; align-items: center; justify-content: center;
   color: white; font-size: 64px;
 }
@@ -771,7 +794,7 @@ body {
 .detail-wrap { padding-bottom: 100px; }
 .detail-img {
   width: 100%; height: 260px; object-fit: cover;
-  background: linear-gradient(135deg, #c4b5fd, #7c3aed);
+  background: var(--primary);
   display: flex; align-items: center; justify-content: center;
   color: white; font-size: 64px;
 }
@@ -875,7 +898,7 @@ body.screen-detail #bottomNav { display: none !important; }
 }
 .cal-day.empty { cursor: default; pointer-events: none; }
 .cal-day.disabled { color: #d1d5db !important; cursor: not-allowed; text-decoration: line-through; }
-.cal-day:not(.disabled):not(.empty):hover { background: var(--primary-light, #ede9fe); color: var(--primary); }
+.cal-day:not(.disabled):not(.empty):hover { background: var(--primary-tint); color: var(--primary); }
 .cal-day.today { font-weight: 700; color: var(--primary); }
 .cal-day.selected, .cal-day.range-start, .cal-day.range-end {
   background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
@@ -884,7 +907,7 @@ body.screen-detail #bottomNav { display: none !important; }
 }
 .cal-day.range-start { border-radius: 10px 0 0 10px; }
 .cal-day.range-end { border-radius: 0 10px 10px 0; }
-.cal-day.in-range { background: var(--primary-light, #ede9fe) !important; color: var(--primary) !important; border-radius: 0; }
+.cal-day.in-range { background: var(--primary-tint) !important; color: var(--primary) !important; border-radius: 0; }
 
 /* ─── DETAIL LOGEMENT ─── */
 .detail-photos {
@@ -902,7 +925,7 @@ body.screen-detail #bottomNav { display: none !important; }
 }
 .no-photo {
   width: 100%; height: 260px;
-  background: linear-gradient(135deg, #c4b5fd, #7c3aed);
+  background: var(--primary);
   display: flex; align-items: center; justify-content: center;
   color: white; font-size: 64px;
 }
@@ -1037,11 +1060,11 @@ body.screen-detail #bottomNav { display: none !important; }
     <div id="screen-home" class="screen-content active">
       <div class="home-hero">
         <div class="home-hero-logo">
-          <div class="home-hero-logo-icon">B</div>
-          <span class="home-hero-logo-text">Boostinghost Guest</span>
+          <div class="home-hero-logo-icon"><b>b</b></div>
+          <span class="home-hero-logo-text"><span class="bh">BH</span><span class="g">Guest</span><span class="dot"></span></span>
         </div>
-        <h1>Séjournez <em>différemment</em>,<br>avec des frais réduits</h1>
-        <p>Réservez, payez, communiquez avec votre hôte — tout depuis une seule app.</p>
+        <h1>Séjournez <em>autrement</em>,<br>sans les frais.</h1>
+        <p>Réservez en direct avec votre hôte. Moins d'intermédiaires, plus de transparence.</p>
         <div class="home-search">
           <i class="fas fa-search" style="color:#9ca3af;margin-left:8px;"></i>
           <input type="text" id="homeSearchInput" placeholder="Destination, dates..." readonly onclick="navTo('home-list')">
@@ -1051,6 +1074,15 @@ body.screen-detail #bottomNav { display: none !important; }
           <div class="home-trust-badge"><i class="fas fa-shield-halved"></i> Paiement sécurisé</div>
           <div class="home-trust-badge"><i class="fas fa-headset"></i> Support 24/7</div>
           <div class="home-trust-badge"><i class="fas fa-star"></i> Logements vérifiés</div>
+        </div>
+      </div>
+
+      <!-- Bandeau frais réduits (signature) -->
+      <div class="home-feebar">
+        <i class="fas fa-tag"></i>
+        <div>
+          <div class="fb-title">Jusqu'à 15 % moins cher qu'ailleurs</div>
+          <div class="fb-sub">Aucun frais de service caché à la réservation.</div>
         </div>
       </div>
 
@@ -1372,7 +1404,7 @@ body.screen-detail #bottomNav { display: none !important; }
           '<h2 style="font-family:DM Sans,sans-serif;font-size:22px;font-weight:700;color:#1e1b4b;margin-bottom:8px;">Lien expiré</h2>' +
           '<p style="font-family:DM Sans,sans-serif;font-size:15px;color:#6b7280;max-width:340px;line-height:1.6;">' +
           'Ce lien de réservation a expiré (délai de 4 heures dépassé).<br>Veuillez demander un nouveau lien à votre hôte.</p>' +
-          '<div style="margin-top:24px;padding:14px 20px;background:#ede9fe;border-radius:12px;font-family:DM Sans,sans-serif;font-size:13px;color:#7c3aed;font-weight:600;">' +
+          '<div style="margin-top:24px;padding:14px 20px;background:var(--primary-tint);border-radius:12px;font-family:DM Sans,sans-serif;font-size:13px;color:var(--primary-dark);font-weight:600;">' +
           '<i class="fas fa-info-circle" style="margin-right:6px;"></i> Contactez votre hôte pour recevoir un nouveau lien</div>';
         document.body.appendChild(overlay);
       }

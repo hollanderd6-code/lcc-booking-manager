@@ -3,17 +3,22 @@
    ============================================ */
 
 :root {
-  --primary: #7c3aed;
-  --primary-dark: #6d28d9;
-  --bg: #f8f9fb;
-  --card-bg: #ffffff;
-  --text: #1e293b;
-  --text-light: #64748b;
-  --border: #e2e8f0;
-  --error: #ef4444;
-  --success: #10b981;
-  --message-owner: #e0e7ff;
-  --message-guest: #f1f5f9;
+  --primary: #C2410C;
+  --primary-dark: #9A3412;
+  --primary-tint: #FBEDE7;
+  --primary-light: #F0997B;
+  --bg: #FAF8F5;
+  --card-bg: #FFFFFF;
+  --ink: #1C1917;
+  --text: #1C1917;
+  --text-light: #78716C;
+  --text2: #78716C;
+  --stone-light: #A8A29E;
+  --border: #EDE8E1;
+  --error: #DC2626;
+  --success: #16A34A;
+  --message-owner: #FBEDE7;
+  --message-guest: #F1EFEA;
 }
 
 * {
@@ -154,14 +159,14 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: var(--ink);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24px;
   font-weight: 800;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 12px rgba(194, 65, 12, 0.28);
 }
 
 .logo-text {
@@ -186,14 +191,14 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   width: 64px;
   height: 64px;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: var(--ink);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 28px;
   margin: 0 auto 20px;
-  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 16px rgba(194, 65, 12, 0.28);
 }
 
 .card h1 {
@@ -263,7 +268,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .form-group select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+  box-shadow: 0 0 0 4px rgba(194, 65, 12, 0.12);
   transform: none !important; /* Empêcher le zoom sur iOS */
 }
 
@@ -307,7 +312,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 
 .pin-digit:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+  box-shadow: 0 0 0 4px rgba(194, 65, 12, 0.12);
 }
 
 /* Error */
@@ -333,7 +338,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .btn-verify {
   width: 100%;
   padding: 16px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: var(--ink);
   color: white;
   border: none;
   border-radius: 12px;
@@ -345,7 +350,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   gap: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 12px rgba(194, 65, 12, 0.28);
 }
 
 .btn-verify:active {
@@ -385,7 +390,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 }
 
 .chat-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: var(--ink);
   color: white;
   padding: env(safe-area-inset-top) 16px 16px 16px;
   display: flex;
