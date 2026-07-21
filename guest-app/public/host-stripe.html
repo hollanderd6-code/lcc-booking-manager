@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Paiements — BHGuest Hôte</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{--primary:#C2410C;--primary-dark:#9A3412;--primary-tint:#FBEDE7;--ink:#1C1917;--bg:#FAF8F5;--white:#FFF;--text2:#78716C;--stone-light:#A8A29E;--line:#EDE8E1;--success:#16A34A}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--ink);min-height:100dvh}
+.wrap{max-width:480px;margin:0 auto}
+.top{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),50px) 20px 18px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
+.top .back{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.14);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.top h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:22px}
+.sec{background:var(--white);border:1px solid var(--line);border-radius:18px;margin:16px;padding:24px 20px}
+.status-ic{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px}
+.status-ic.pending{background:var(--primary-tint);color:var(--primary)}
+.status-ic.ok{background:#F0FDF4;color:var(--success)}
+.sec h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:23px;text-align:center;margin-bottom:8px}
+.sec p{font-size:14px;color:var(--text2);text-align:center;line-height:1.55;margin-bottom:20px}
+.btn{width:100%;padding:16px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:15.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:transform .15s,background .15s}
+.btn:active{transform:scale(.98);background:var(--primary-dark)}
+.btn:disabled{opacity:.6}
+.points{margin-top:22px;border-top:1px solid var(--line);padding-top:18px}
+.point{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+.point i{color:var(--primary);font-size:15px;margin-top:2px;width:18px;text-align:center}
+.point div{flex:1}
+.point b{font-size:14px;font-weight:600;display:block;margin-bottom:1px}
+.point span{font-size:12.5px;color:var(--text2);line-height:1.4}
+.spin{display:inline-block;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.loading{text-align:center;padding:60px;color:var(--stone-light)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <button class="back" onclick="location.href='host-dashboard.html'"><i class="fas fa-arrow-left"></i></button>
+    <h1>Paiements</h1>
+  </div>
+
+  <div id="content"><div class="loading"><i class="fas fa-spinner spin" style="font-size:24px"></i></div></div>
+</div>
+
+<script>
+const API_URL = window.Capacitor?.isNativePlatform?.() ? 'https://www.boostinghost.fr' : window.location.origin;
+const token = localStorage.getItem('bhguest_host_token');
+if(!token){ location.href='host.html'; }
+
+async function loadStatus(){
+  try{
+    const res = await fetch(`${API_URL}/api/host/stripe/status`, { headers:{ 'Authorization':'Bearer '+token } });
+    const data = await res.json();
+    render(data);
+  }catch(e){
+    render({ connected:false, error:'Erreur de connexion' });
+  }
+}
+
+function render(data){
+  const c = document.getElementById('content');
+  if(data.connected){
+    c.innerHTML = `
+      <div class="sec">
+        <div class="status-ic ok"><i class="fas fa-check"></i></div>
+        <h2>Compte connecté</h2>
+        <p>Votre compte bancaire est bien relié. Vous recevez automatiquement vos paiements après chaque séjour, moins la commission de 7 %.</p>
+        <button class="btn" onclick="location.href='host-dashboard.html'">Retour au tableau de bord</button>
+        <div class="points">
+          <div class="point"><i class="fas fa-bolt"></i><div><b>Virements automatiques</b><span>Stripe reverse vos gains directement sur votre compte.</span></div></div>
+          <div class="point"><i class="fas fa-shield-halved"></i><div><b>Sécurisé</b><span>Vos coordonnées bancaires sont gérées par Stripe, jamais stockées par nous.</span></div></div>
+        </div>
+      </div>`;
+  } else {
+    c.innerHTML = `
+      <div class="sec">
+        <div class="status-ic pending"><i class="fas fa-building-columns"></i></div>
+        <h2>Recevez vos paiements</h2>
+        <p>Connectez votre compte bancaire via Stripe pour recevoir l'argent de vos réservations. Cela prend 2 minutes.</p>
+        <button class="btn" id="btnConnect" onclick="connect()">Connecter mon compte</button>
+        <div class="points">
+          <div class="point"><i class="fas fa-percent"></i><div><b>7 % de commission</b><span>Prélevée automatiquement. Le reste vous revient, tout compris.</span></div></div>
+          <div class="point"><i class="fas fa-calendar-check"></i><div><b>Après chaque séjour</b><span>Le versement est déclenché une fois le voyageur arrivé.</span></div></div>
+          <div class="point"><i class="fas fa-lock"></i><div><b>100 % sécurisé</b><span>Géré par Stripe, leader mondial du paiement en ligne.</span></div></div>
+        </div>
+      </div>`;
+  }
+}
+
+async function connect(){
+  const btn = document.getElementById('btnConnect');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner spin"></i> Redirection vers Stripe...';
+  try{
+    const res = await fetch(`${API_URL}/api/host/stripe/connect`, {
+      method:'POST', headers:{ 'Authorization':'Bearer '+token }
+    });
+    const data = await res.json();
+    if(!res.ok || !data.url) throw new Error(data.error || 'Erreur Stripe');
+    window.location.href = data.url; // redirige vers l'onboarding Stripe
+  }catch(err){
+    btn.disabled = false; btn.textContent = 'Connecter mon compte';
+    alert(err.message);
+  }
+}
+
+// Au retour de Stripe (?stripe=return), on recharge le statut
+loadStatus();
+</script>
+</body>
+</html>
