@@ -1561,19 +1561,11 @@ function goToCheckout() {
     ? state._pendingFixedPrice
     : null;
   const displayBase = fixedPriceOverride !== null ? fixedPriceOverride : total;
-  // Prix négocié = TOUT COMPRIS (ménage, taxes, frais BHGuest déjà inclus).
-  // On n'ajoute donc PAS la commission par-dessus : elle est déjà dans le prix.
+  // 💰 MODÈLE MARKETPLACE (Option 1) — le voyageur paie TOUJOURS le prix affiché, tout compris.
+  // Aucun frais ajouté : ni ménage, ni taxe, ni frais de service. La commission plateforme
+  // (3%/7%) est prélevée côté hôte au reversement, invisible ici.
   const isFixed = fixedPriceOverride !== null;
-  const commission = isFixed ? 0 : Math.round(displayBase * 0.03 * 100) / 100;
-  // Frais BHGuest déjà contenus dans le prix négocié (3% inclus) — affichage info
-  const includedFee = isFixed ? Math.round(displayBase * 3 / 103 * 100) / 100 : 0;
-  // Prix fixe = tout inclus : ménage et taxe de séjour non ajoutés
-  const cleaningFee = isFixed ? 0 : (p.cleaningFee || 0);
-  const guestCount = parseInt(document.getElementById('guestCount')?.value) || 2;
-  const touristTax = isFixed ? 0 : (p.touristTaxPerNight
-    ? Math.round(p.touristTaxPerNight * nights * guestCount * 100) / 100
-    : 0);
-  const ttc = Math.round((displayBase + cleaningFee + touristTax + commission) * 100) / 100;
+  const ttc = Math.round(displayBase * 100) / 100;
   const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
   // Reset promo state (pas de promo si prix fixe)
@@ -1589,18 +1581,11 @@ function goToCheckout() {
       <div class="checkout-summary-title">${p.name}</div>
       <div class="checkout-row"><span>Dates</span><span>${fmtDate(state.selectedCheckin)} → ${fmtDate(state.selectedCheckout)}</span></div>
       ${fixedPriceOverride !== null
-        ? `<div class="checkout-row" id="baseRow"><span>Prix négocié</span><span>${displayBase}€</span></div>
-           <div class="checkout-row" style="font-size:11px;color:#9CA3AF;"><span><em>Prix spécial convenu avec l'hôte · tout compris</em></span></div>`
-        : `<div class="checkout-row" id="baseRow"><span>Hébergement · ${nights} nuit${nights > 1 ? 's' : ''}</span><span>${total}€</span></div>`
+        ? `<div class="checkout-row" id="baseRow"><span>Prix convenu avec l'hôte</span><span>${displayBase}€</span></div>`
+        : `<div class="checkout-row" id="baseRow"><span>Séjour · ${nights} nuit${nights > 1 ? 's' : ''}</span><span>${displayBase}€</span></div>`
       }
-      <div class="checkout-row" id="promoRow" style="display:${fixedPriceOverride !== null ? 'none' : 'none'};color:#10b981;"><span>Code promo</span><span id="promoAmount">-0€</span></div>
-      ${cleaningFee > 0 ? `<div class="checkout-row" id="cleaningRow"><span>Frais de ménage</span><span>${cleaningFee}€</span></div>` : ''}
-      ${touristTax > 0 ? `<div class="checkout-row" id="touristTaxRow"><span>Taxe de séjour</span><span id="touristTaxAmount">${touristTax}€</span></div>` : ''}
-      ${isFixed
-        ? `<div class="checkout-row" id="commissionRow" style="font-size:12px;color:#9CA3AF;"><span>Dont frais BHGuest</span><span id="commissionAmount">${includedFee}€</span></div>`
-        : `<div class="checkout-row" id="commissionRow"><span>Frais de service (3%)</span><span id="commissionAmount">${commission}€</span></div>`
-      }
-      <div class="checkout-row total"><span>Total</span><span id="totalAmount">${ttc}€</span></div>
+      <div class="checkout-row total"><span>Total à payer</span><span id="totalAmount">${ttc}€</span></div>
+      <div class="checkout-row" style="border:none;padding-top:4px;"><span style="font-size:12px;color:var(--stone-light);">Tout compris · aucun frais de service</span><span></span></div>
     </div>
     <div class="form-section">
       <label>Prénom et nom *</label>
@@ -1642,41 +1627,22 @@ function goToCheckout() {
 
 // Recalcule la taxe de séjour quand le nb de voyageurs change
 function onGuestCountChange() {
-  const p = state.currentProperty;
-  if (!p || !p.touristTaxPerNight) return;
-  const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
-  const guestCount = parseInt(document.getElementById('guestCount')?.value) || 1;
-  const touristTax = Math.round(p.touristTaxPerNight * nights * guestCount * 100) / 100;
-
-  const el = document.getElementById('touristTaxAmount');
-  if (el) el.textContent = `${touristTax}€`;
-
-  // Recalcule le total
-  _recalcTotal();
+  // Option 1 (prix tout inclus) : le nombre de voyageurs n'affecte pas le prix.
+  // Rien à recalculer côté total.
 }
 
 function _recalcTotal() {
   const p = state.currentProperty;
   if (!p) return;
-  const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
+  // Option 1 : prix affiché, tout inclus. On soustrait seulement une éventuelle promo.
   const totalBase = sumNights(p, state.selectedCheckin, state.selectedCheckout);
   const discount = state.appliedPromo?.discount_amount || 0;
-  const discounted = Math.max(0, totalBase - discount);
-  const cleaningFee = p.cleaningFee || 0;
-  const guestCount = parseInt(document.getElementById('guestCount')?.value) || 1;
-  const touristTax = p.touristTaxPerNight
-    ? Math.round(p.touristTaxPerNight * nights * guestCount * 100) / 100
-    : 0;
-  const commission = Math.round(discounted * 0.03 * 100) / 100;
-  const ttc = Math.round((discounted + cleaningFee + touristTax + commission) * 100) / 100;
+  const ttc = Math.max(0, Math.round((totalBase - discount) * 100) / 100);
 
-  const elComm = document.getElementById('commissionAmount');
   const elTotal = document.getElementById('totalAmount');
-  const elTax = document.getElementById('touristTaxAmount');
-  if (elComm) elComm.textContent = `${commission}€`;
   if (elTotal) elTotal.textContent = `${ttc}€`;
-  if (elTax) elTax.textContent = `${touristTax}€`;
-  document.getElementById('btnPay').textContent = `Payer ${ttc}€`;
+  const btnPay = document.getElementById('btnPay');
+  if (btnPay) btnPay.textContent = `Payer ${ttc}€`;
 }
 
 async function applyPromo() {
@@ -1700,26 +1666,22 @@ async function applyPromo() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
-    // Appliquer la réduction
+    // Appliquer la réduction (Option 1 : prix tout inclus - promo)
     state.appliedPromo = data;
     const discount = data.discount_amount;
-    const discounted = Math.max(0, total - discount);
-    const cleaningFee = p.cleaningFee || 0;
-    const guestCount = parseInt(document.getElementById('guestCount')?.value) || 1;
-    const touristTax = p.touristTaxPerNight
-      ? Math.round(p.touristTaxPerNight * nights * guestCount * 100) / 100
-      : 0;
-    const commission = Math.round(discounted * 0.03 * 100) / 100;
-    const ttc = Math.round((discounted + cleaningFee + touristTax + commission) * 100) / 100;
+    const ttc = Math.max(0, Math.round((total - discount) * 100) / 100);
 
-    document.getElementById('promoRow').style.display = 'flex';
-    document.getElementById('promoAmount').textContent = `-${discount}€`;
-    document.getElementById('commissionAmount').textContent = `${commission}€`;
-    document.getElementById('totalAmount').textContent = `${ttc}€`;
-    document.getElementById('btnPay').textContent = `Payer ${ttc}€`;
+    const promoRow = document.getElementById('promoRow');
+    if (promoRow) { promoRow.style.display = 'flex'; }
+    const promoAmt = document.getElementById('promoAmount');
+    if (promoAmt) promoAmt.textContent = `-${discount}€`;
+    const totalAmt = document.getElementById('totalAmount');
+    if (totalAmt) totalAmt.textContent = `${ttc}€`;
+    const btnPay = document.getElementById('btnPay');
+    if (btnPay) btnPay.textContent = `Payer ${ttc}€`;
 
     msg.style.display = 'block';
-    msg.style.color = '#10b981';
+    msg.style.color = 'var(--primary)';
     msg.textContent = `✓ ${data.description} appliqué`;
 
   } catch (e) {

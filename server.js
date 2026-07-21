@@ -38118,7 +38118,7 @@ app.post('/api/guest/book', async (req, res) => {
 
     // Récupérer le logement et l'hôte
     const propResult = await pool.query(`
-      SELECT p.*, u.id as owner_user_id
+      SELECT p.*, u.id as owner_user_id, u.is_external_host
       FROM properties p
       JOIN users u ON u.id = p.user_id
       WHERE p.id = $1
@@ -38172,9 +38172,13 @@ app.post('/api/guest/book', async (req, res) => {
       }
     }
 
-    // Si prix fixe : commission incluse (pas ajoutée en plus)
-    const commission = isFixedPrice ? 0 : Math.round(totalBase * 0.03 * 100) / 100;
-    const totalTTC = Math.round((totalBase + commission) * 100); // en centimes
+    // 💰 MODÈLE MARKETPLACE — frais TOUJOURS inclus dans le prix (jamais ajoutés au voyageur)
+    // Le voyageur paie exactement le prix affiché/négocié (tout compris : ménage, taxe, marge).
+    // La commission plateforme (3% BH / 7% hôte externe) est prélevée au REVERSEMENT (Stripe Connect),
+    // invisible pour le voyageur.
+    const feePct = prop.is_external_host ? 7 : 3;
+    const commission = Math.round(totalBase * feePct / 100 * 100) / 100; // pour reversement (Phase 4)
+    const totalTTC = Math.round(totalBase * 100); // le voyageur paie totalBase, POINT — en centimes
 
     // Créer le PaymentIntent Stripe
     let paymentIntent = null;
@@ -38340,12 +38344,8 @@ app.post('/api/guest/book', async (req, res) => {
               <p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9CA3AF;font-family:Arial,sans-serif;">RÉCAPITULATIF DU PAIEMENT</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="font-size:14px;color:#6B7280;font-family:Arial,sans-serif;padding-bottom:8px;">${prop.base_price}€ × ${nights} nuit${nights > 1 ? 's' : ''}</td>
-                  <td align="right" style="font-size:14px;color:#374151;font-weight:600;font-family:Arial,sans-serif;padding-bottom:8px;">${totalBase}€</td>
-                </tr>
-                <tr>
-                  <td style="font-size:14px;color:#6B7280;font-family:Arial,sans-serif;padding-bottom:14px;">Frais de service (3%)</td>
-                  <td align="right" style="font-size:14px;color:#374151;font-weight:600;font-family:Arial,sans-serif;padding-bottom:14px;">${commission}€</td>
+                  <td style="font-size:14px;color:#6B7280;font-family:Arial,sans-serif;padding-bottom:14px;">Séjour · ${nights} nuit${nights > 1 ? 's' : ''} <span style="color:#9CA3AF;">(tout compris)</span></td>
+                  <td align="right" style="font-size:14px;color:#374151;font-weight:600;font-family:Arial,sans-serif;padding-bottom:14px;">${totalBase}€</td>
                 </tr>
                 <tr>
                   <td colspan="2" style="border-top:1.5px solid #EDE9FF;padding-top:14px;">
@@ -38420,7 +38420,7 @@ app.post('/api/guest/book', async (req, res) => {
               </div>
               <div class="feat-row">
                 <div class="feat-icon">💶</div>
-                <div class="feat-text"><strong>Montant reversé</strong><br>${totalBase}€ (après commission 3%)</div>
+                <div class="feat-text"><strong>Montant reversé</strong><br>${(totalBase - commission).toFixed(2)}€ (après commission ${feePct}%)</div>
               </div>
 
               <p class="signoff">Référence : ${uid}</p>
@@ -40208,7 +40208,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     }
 
     const propResult = await pool.query(
-      'SELECT base_price, weekend_price, name, address, cleaning_fee, tourist_tax_per_night, user_id FROM properties WHERE id = $1',
+      `SELECT p.base_price, p.weekend_price, p.name, p.address, p.cleaning_fee, p.tourist_tax_per_night, p.user_id, u.is_external_host FROM properties p JOIN users u ON u.id = p.user_id WHERE p.id = $1`,
       [property_id]
     );
     if (!propResult.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
@@ -40336,16 +40336,15 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       }
       discountedBase = Math.max(0, totalBase - discount);
     }
-    // Prix fixe = tout inclus (ménage + taxes + frais BHGuest 3% compris)
+    // 💰 MODÈLE MARKETPLACE (Option 1) — le voyageur paie TOUJOURS le prix affiché, tout compris.
+    // Ni ménage, ni taxe, ni frais de service ne sont ajoutés. La commission plateforme
+    // (3% BH / 7% hôte externe) est prélevée au reversement via application_fee (invisible voyageur).
     const isFixedPrice = validatedFixedPrice != null;
-    const cleaningFee = (!isFixedPrice && prop.cleaning_fee != null) ? parseFloat(prop.cleaning_fee) : 0;
-    const nbGuests = parseInt(guests) || 1;
-    const touristTax = (!isFixedPrice && prop.tourist_tax_per_night != null)
-      ? Math.round(parseFloat(prop.tourist_tax_per_night) * nights * nbGuests * 100) / 100
-      : 0;
-    // Si prix fixe : commission incluse dans le montant (pas ajoutée en plus)
-    const commission = isFixedPrice ? 0 : Math.round(discountedBase * 0.03 * 100) / 100;
-    const totalTTC = Math.round((discountedBase + cleaningFee + touristTax + commission) * 100); // centimes
+    const feePct = prop.is_external_host ? 7 : 3;
+    const cleaningFee = 0; // inclus dans le prix affiché
+    const touristTax = 0;  // inclus dans le prix affiché
+    const commission = Math.round(discountedBase * feePct / 100 * 100) / 100; // pour info/reporting
+    const totalTTC = Math.round(discountedBase * 100); // le voyageur paie discountedBase, POINT — centimes
 
     const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
     const successUrl = `${appUrl}/guest-app/public/index.html?payment=success&session_id={CHECKOUT_SESSION_ID}&property_id=${property_id}&checkin=${checkin}&checkout=${checkout}&guests=${guests || 1}&guest_name=${encodeURIComponent(guest_name || '')}&guest_email=${encodeURIComponent(guest_email)}&guest_phone=${encodeURIComponent(guest_phone || '')}&promo_code=${encodeURIComponent(promo_code || '')}&amount=${totalTTC}&fixed_price=${encodeURIComponent(validatedFixedPrice != null ? String(validatedFixedPrice) : '')}`;
@@ -40353,11 +40352,9 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
 
     // Recuperer le compte Stripe Connect du proprietaire du logement
     const { stripeAccountId, applyFee } = await getStripeForProperty(pool, property_id, propUserId);
-    const feeAmount = applyFee
-      ? (isFixedPrice
-          ? Math.round(totalTTC * 3 / 103) // 3% inclus dans le prix fixe
-          : Math.round(discountedBase * 0.03 * 100)) // 3% ajouté sur prix calculé
-      : 0;
+    // Commission prélevée sur le montant payé (frais toujours inclus dans le prix) :
+    // application_fee = feePct % du total encaissé.
+    const feeAmount = applyFee ? Math.round(totalTTC * feePct / 100) : 0;
 
     const sessionParams = {
       payment_method_types: ['card'],
