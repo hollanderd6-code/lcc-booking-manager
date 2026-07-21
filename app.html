@@ -346,19 +346,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     box-sizing: border-box !important;
   }
   .checklist-modal {
-    height: calc(100dvh - 74px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px) !important;
-    max-height: none !important;
-    display: flex !important;
-    flex-direction: column !important;
-  }
-  .checklist-modal-overlay {
-    align-items: flex-start !important;
-  }
-  .checklist-modal-body {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
+    max-height: calc(100dvh - 74px - env(safe-area-inset-bottom, 0px) - 24px) !important;
   }
 
   /* Zones scrollables des modaux génériques. */
@@ -2194,21 +2182,10 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   
   .checklist-modal-footer {
     flex-direction: column-reverse;
-    gap: 8px !important;
-    padding: 12px 16px !important;
   }
   
   .checklist-modal-footer .btn {
     width: 100%;
-    padding: 12px !important;
-    min-height: 0 !important;
-  }
-  /* Garantir que le corps prend TOUTE la hauteur restante et scrolle */
-  .checklist-modal-body {
-    flex: 1 1 auto !important;
-    min-height: 120px !important;
-    overflow-y: scroll !important;
-    -webkit-overflow-scrolling: touch !important;
   }
 }
   </style>
@@ -14332,6 +14309,26 @@ function bhConfirm(message) {
 <script src="/js/bh-today.js?v=1"></script>
 
 
+
+<script>
+// Scroll JS forcé pour la modale checklist (contourne blocage natif iOS)
+(function(){
+  var sy=0, st=0, active=false, body=null;
+  function getBody(){ return document.querySelector('#checklistModal.active .checklist-modal-body'); }
+  document.addEventListener('touchstart', function(e){
+    body=getBody();
+    if(!body || !body.contains(e.target)){ active=false; return; }
+    active=true; sy=e.touches[0].clientY; st=body.scrollTop;
+  }, {passive:true});
+  document.addEventListener('touchmove', function(e){
+    if(!active || !body) return;
+    var dy=e.touches[0].clientY - sy;
+    body.scrollTop = st - dy;
+    if(e.cancelable) e.preventDefault();   // on gère nous-mêmes → bloque le reste
+  }, {passive:false});
+  document.addEventListener('touchend', function(){ active=false; }, {passive:true});
+})();
+</script>
 </body>
 <style>
 #invoiceModal {
