@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Boostinghost Guest — Réservez et séjournez</title>
+  <meta name="description" content="Réservez des logements de qualité. Gérez vos séjours, communiquez avec vos hôtes, accédez à toutes les infos en un clic.">
+  <link rel="icon" type="image/png" href="/images/logo.png">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/app.css">
+
+<style>
+/* ─── RESET & TOKENS ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #C2410C;
+  --primary-dark: #9A3412;
+  --primary-tint: #FBEDE7;
+  --primary-light: #F0997B;
+  --ink: #1C1917;
+  --bg: #FAF8F5;
+  --bg2: #F1EFEA;
+  --white: #FFFFFF;
+  --text: #1C1917;
+  --text2: #78716C;
+  --stone-light: #A8A29E;
+  --border: #EDE8E1;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 2px 12px rgba(28,25,23,.06);
+  --shadow-lg: 0 12px 40px rgba(28,25,23,.12);
+}
+
+html { height: 100%; overflow: hidden; }
+body {
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100%;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── APP SHELL ─── */
+#appShell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ─── SCROLL CONTAINER ─── */
+#mainScroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+/* ─── SCREENS ─── */
+.screen-content { display: none; min-height: 100%; }
+.screen-content.active { display: block; }
+
+/* ─── BOTTOM NAV ─── */
+/* ─── BOTTOM NAV · LIQUID GLASS ─── */
+#bottomNav {
+  display: flex;
+  position: relative;
+  /* Verre dépoli translucide */
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  border-top: 1px solid rgba(124, 58, 237, 0.08);
+  box-shadow: 0 -1px 0 rgba(255,255,255,0.6) inset, 0 -8px 24px rgba(124,58,237,.06);
+  padding: 6px 8px max(env(safe-area-inset-bottom), 6px);
+  flex-shrink: 0;
+  z-index: 100;
+  touch-action: none; /* drag fluide de la capsule */
+}
+
+/* La capsule glass qui glisse — centrée verticalement comme sur BH */
+#navPill {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  width: 0;
+  height: calc(100% - 12px - env(safe-area-inset-bottom, 0px));
+  border-radius: 16px;
+  box-sizing: border-box;
+  background: rgba(124, 58, 237, 0.13);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(124, 58, 237, 0.22);
+  box-shadow: 0 4px 16px rgba(124,58,237,.16),
+              inset 0 1px 0 rgba(255,255,255,.65),
+              inset 0 -1px 2px rgba(124,58,237,.10);
+  transform: translateX(0) scaleX(1) translateZ(0);
+  transform-origin: center center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  opacity: 0;
+  z-index: 0;
+  pointer-events: none;
+  will-change: transform, width;
+}
+#navPill.lg-visible { opacity: 1; }
+#navPill.lg-animate {
+  transition: transform .5s cubic-bezier(.34,1.4,.5,1),
+              width .4s cubic-bezier(.34,1.2,.64,1),
+              opacity .25s ease;
+}
+/* Pendant le drag : pas de blur (perf) + transition coupée pour suivre le doigt */
+#navPill.lg-dragging {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: rgba(124,58,237,.20) !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  transition: none !important;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: color .25s ease;
+  position: relative;
+  z-index: 1;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-item .nav-ico {
+  width: 25px;
+  height: 25px;
+  display: block;
+  pointer-events: none; /* le drag cible la barre, pas l'icône */
+  transition: transform .35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.nav-item span { pointer-events: none; }
+.nav-item .nav-ico path,
+.nav-item .nav-ico circle,
+.nav-item .nav-ico line,
+.nav-item .nav-ico rect {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  transition: stroke-width .25s ease;
+}
+/* Onglet actif OU survolé pendant le drag → violet */
+.nav-item.lg-active,
+.nav-item.lg-hover { color: var(--primary); }
+.nav-item.lg-active span,
+.nav-item.lg-hover span { font-weight: 700; }
+.nav-item.lg-active .nav-ico path,
+.nav-item.lg-active .nav-ico circle,
+.nav-item.lg-active .nav-ico line,
+.nav-item.lg-active .nav-ico rect,
+.nav-item.lg-hover .nav-ico path,
+.nav-item.lg-hover .nav-ico circle,
+.nav-item.lg-hover .nav-ico line,
+.nav-item.lg-hover .nav-ico rect {
+  stroke-width: 1.9;
+}
+.nav-item span { transition: opacity .25s ease; }
+
+.nav-badge {
+  position: absolute;
+  top: 2px;
+  right: calc(50% - 22px);
+  background: #ef4444;
+  color: white;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  min-width: 14px;
+  text-align: center;
+  display: block;
+  z-index: 2;
+  box-shadow: 0 1px 4px rgba(239,68,68,.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #navPill.lg-animate { transition: opacity .2s ease !important; }
+  .nav-item .nav-ico { transition: none; }
+}
+
+/* ─── PAGE HEADER ─── */
+.page-header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  padding: max(env(safe-area-inset-top),16px) 16px 14px;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.page-header .btn-back {
+  width: 36px; height: 36px;
+  background: rgba(255,255,255,.2);
+  border: none; border-radius: 10px;
+  color: white; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+}
+
+/* ─── TOAST ─── */
+#toastMsg {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: #1e1b4b; color: white;
+  padding: 10px 20px; border-radius: 999px;
+  font-size: 14px; font-weight: 500;
+  z-index: 9999; display: none;
+  white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,.2);
+}
+
+/* ═══════════════════════════════════════
+   ÉCRAN HOME — LANDING
+   ═══════════════════════════════════════ */
+#screen-home {
+  background:
+    radial-gradient(900px 480px at -5% -8%, rgba(124,58,237,.12), transparent 55%),
+    radial-gradient(760px 420px at 108% 4%, rgba(167,139,250,.14), transparent 52%),
+    radial-gradient(680px 600px at 50% 118%, rgba(196,181,253,.10), transparent 55%),
+    var(--bg);
+}
+
+.home-hero {
+  background:
+    radial-gradient(420px 220px at 85% -10%, rgba(255,255,255,.22), transparent 60%),
+    var(--ink);
+  padding: max(env(safe-area-inset-top),24px) 20px 38px;
+  position: relative;
+  overflow: hidden;
+  border-bottom-left-radius: 28px;
+  border-bottom-right-radius: 28px;
+  box-shadow: 0 18px 40px -16px rgba(124,58,237,.5);
+}
+.home-hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+}
+.home-hero-logo {
+  display: flex; align-items: center; gap: 13px; margin-bottom: 26px;
+  position: relative;
+}
+.home-hero-logo-icon {
+  width: 40px; height: 40px;
+  background: var(--primary);
+  border-radius: 50% 50% 50% 8px;
+  transform: rotate(45deg);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.home-hero-logo-icon b {
+  transform: rotate(-45deg);
+  font-family: 'Instrument Serif', serif;
+  font-size: 24px; font-weight: 400; color: #fff; line-height: 1;
+}
+.home-hero-logo-text {
+  font-size: 20px; font-weight: 700; letter-spacing: -.4px;
+  font-family: 'DM Sans', sans-serif;
+  display: flex; align-items: baseline;
+}
+.home-hero-logo-text .bh { color: #fff; }
+.home-hero-logo-text .g { color: var(--primary-light); }
+.home-hero-logo-text .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #fff; margin-left: 4px;
+}
+.home-hero h1 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px; font-weight: 400;
+  color: white; line-height: 1.25;
+  margin-bottom: 10px;
+  position: relative;
+}
+.home-hero h1 em { font-style: italic; color: #e9d5ff; }
+.home-hero p { color: rgba(255,255,255,.8); font-size: 14px; line-height: 1.5; margin-bottom: 20px; position: relative; }
+
+/* Search bar — glass */
+.home-search {
+  position: relative;
+  background: rgba(255,255,255,.92);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.5);
+  border-radius: 16px;
+  padding: 4px; display: flex; align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 28px rgba(76,29,149,.28),
+              inset 0 1px 0 rgba(255,255,255,.6);
+}
+.home-search input {
+  flex: 1; border: none; outline: none;
+  font-size: 14px; color: var(--text);
+  padding: 12px 8px; background: transparent;
+  font-family: inherit;
+}
+.home-search input::placeholder { color: var(--text2); }
+.home-search-btn {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 12px;
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(124,58,237,.35), inset 0 1px 0 rgba(255,255,255,.3);
+  transition: transform .15s ease;
+}
+.home-search-btn:active { transform: scale(.92); }
+
+/* Trust badges */
+.home-trust {
+  display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap;
+  position: relative;
+}
+.home-trust-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: rgba(255,255,255,.85); font-weight: 500;
+}
+.home-trust-badge i { font-size: 12px; color: var(--primary-light); }
+
+/* Sections */
+.home-section { padding: 20px 16px 0; }
+.home-section-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 20px; font-weight: 400;
+  color: var(--text); margin-bottom: 4px;
+}
+.home-section-sub { font-size: 13px; color: var(--text2); margin-bottom: 14px; }
+
+/* Featured cards horizontal scroll */
+.home-cards-row {
+  display: flex; gap: 12px;
+  overflow-x: auto; padding: 0 16px 16px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.home-cards-row::-webkit-scrollbar { display: none; }
+
+.home-card {
+  flex: 0 0 240px; border-radius: 20px;
+  background: rgba(255, 255, 255, 0.66);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  overflow: hidden;
+  border: 1px solid rgba(124, 58, 237, 0.12);
+  box-shadow: 0 4px 20px rgba(124,58,237,.08),
+              inset 0 1px 0 rgba(255,255,255,.6);
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: transform .25s cubic-bezier(.34,1.4,.5,1), box-shadow .25s ease;
+}
+.home-card:hover {
+  box-shadow: 0 10px 32px rgba(124,58,237,.16), inset 0 1px 0 rgba(255,255,255,.7);
+}
+.home-card:active { transform: scale(.97); }
+.home-card-img {
+  width: 100%; height: 140px; object-fit: cover;
+  background: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 36px;
+}
+.home-card-body { padding: 12px; }
+.home-card-name { font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 3px; }
+.home-card-loc { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.home-card-price { font-weight: 700; font-size: 15px; color: var(--primary); }
+.home-card-price span { font-weight: 400; font-size: 12px; color: var(--text2); }
+.home-card-stars { font-size: 11px; color: #f59e0b; margin-bottom: 2px; }
+
+
+/* Bandeau frais réduits — signature */
+.home-feebar {
+  display: flex; align-items: center; gap: 12px;
+  margin: 16px 16px 0; padding: 14px 16px;
+  background: var(--primary-tint); border-radius: 14px;
+}
+.home-feebar i { font-size: 20px; color: var(--primary); }
+.home-feebar .fb-title { font-weight: 600; font-size: 13.5px; color: var(--primary-dark); }
+.home-feebar .fb-sub { font-size: 12px; color: #B4562F; line-height: 1.35; margin-top: 1px; }
+/* Catégories */
+.home-cats { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 8px; scrollbar-width: none; }
+.home-cats::-webkit-scrollbar { display: none; }
+.home-cat {
+  flex: 0 0 auto; padding: 8px 16px;
+  border-radius: 999px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: 1.5px solid var(--border);
+  background: white; color: var(--text2);
+  transition: all .2s; white-space: nowrap;
+}
+.home-cat.active, .home-cat:active { background: var(--primary); color: white; border-color: var(--primary); }
+
+/* Avantages */
+.home-features { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 20px; }
+.home-feature {
+  background: white; border-radius: var(--radius-sm);
+  padding: 14px; display: flex; flex-direction: column; gap: 6px;
+  box-shadow: var(--shadow);
+}
+.home-feature-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--primary-light); display: flex;
+  align-items: center; justify-content: center;
+  color: var(--primary); font-size: 16px;
+}
+.home-feature-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.home-feature-desc { font-size: 11px; color: var(--text2); line-height: 1.4; }
+
+/* CTA inscription */
+.home-cta {
+  margin: 0 16px 24px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-radius: var(--radius); padding: 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.home-cta h3 { font-family: 'Instrument Serif', serif; font-size: 18px; color: white; font-weight: 400; }
+.home-cta p { font-size: 13px; color: rgba(255,255,255,.8); }
+.home-cta-btn {
+  background: white; color: var(--primary);
+  border: none; border-radius: 10px;
+  padding: 12px 20px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  align-self: flex-start;
+}
+
+/* ═══════════════════════════════════════
+   ÉCRAN LOGEMENTS (style Booking)
+   ═══════════════════════════════════════ */
+#screen-home-list { background: var(--bg); }
+
+.listings-header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  padding: max(env(safe-area-inset-top),16px) 16px 16px;
+}
+.listings-search {
+  background: white; border-radius: var(--radius-sm);
+  display: flex; align-items: center; gap: 8px; padding: 4px 12px;
+}
+.listings-search i { color: var(--text2); font-size: 16px; }
+.listings-search input {
+  flex: 1; border: none; outline: none;
+  font-size: 14px; padding: 10px 0;
+  background: transparent; font-family: inherit;
+}
+
+.listings-filters {
+  display: flex; gap: 8px; padding: 12px 16px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.listings-filters::-webkit-scrollbar { display: none; }
+.city-chip {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: white;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .2s;
+}
+.city-chip.active, .city-chip:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+.filter-chip {
+  flex: 0 0 auto; padding: 6px 14px;
+  border-radius: 999px; font-size: 12px; font-weight: 600;
+  border: 1.5px solid var(--border); background: white;
+  color: var(--text2); cursor: pointer; white-space: nowrap;
+}
+.filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+#propertiesList { padding: 0 16px 80px; }
+
+/* Property card — Liquid glass épuré */
+.prop-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.66);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 20px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid rgba(124, 58, 237, 0.12);
+  box-shadow: 0 4px 20px rgba(124,58,237,.08),
+              inset 0 1px 0 rgba(255,255,255,.6);
+  transition: transform .25s cubic-bezier(.34,1.4,.5,1),
+              box-shadow .25s ease,
+              border-color .25s ease;
+  /* Apparition en cascade */
+  opacity: 0;
+  transform: translateY(14px);
+}
+.prop-card.card-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+.prop-card:hover {
+  box-shadow: 0 10px 32px rgba(124,58,237,.16),
+              inset 0 1px 0 rgba(255,255,255,.7);
+  border-color: rgba(124,58,237,.22);
+}
+.prop-card:active { transform: scale(.985) translateY(0); }
+.prop-card-img {
+  width: 100%; height: 200px; object-fit: cover;
+  background: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 48px; position: relative;
+}
+/* Dégradé bas pour lisibilité de la pastille prix */
+.prop-card-img::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(30,27,75,.28), transparent 38%);
+  pointer-events: none;
+}
+/* Prix en pastille glass posée sur la photo */
+.prop-card-badge {
+  position: absolute; bottom: 12px; left: 12px; top: auto;
+  z-index: 1;
+  background: rgba(124, 58, 237, 0.55);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+  color: white;
+  font-size: 12px; font-weight: 700;
+  padding: 5px 12px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.28);
+  box-shadow: 0 2px 10px rgba(124,58,237,.3),
+              inset 0 1px 0 rgba(255,255,255,.4);
+}
+.prop-card-wishlist {
+  position: absolute; top: 10px; right: 10px; z-index: 1;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,.65);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.4);
+  color: #9ca3af; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.prop-card-body { padding: 16px; }
+.prop-card-stars { color: #f59e0b; font-size: 12px; margin-bottom: 2px; display: flex; align-items: center; gap: 4px; }
+.prop-card-stars span { color: var(--text2); font-size: 11px; }
+.prop-card-name { font-weight: 700; font-size: 16px; color: var(--text); margin-bottom: 4px; line-height: 1.3; }
+.prop-card-loc { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
+.prop-card-features { display: flex; gap: 12px; margin-bottom: 12px; }
+.prop-card-feat { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 4px; }
+.prop-card-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(124,58,237,.10); padding-top: 12px; }
+.prop-card-price-main { font-size: 20px; font-weight: 800; color: var(--primary); }
+.prop-card-price-night { font-size: 12px; color: var(--text2); }
+.prop-card-btn {
+  background: rgba(124, 58, 237, 0.92);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: white;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 12px;
+  padding: 11px 20px; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 14px rgba(124,58,237,.28),
+              inset 0 1px 0 rgba(255,255,255,.3);
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+.prop-card-btn:active { transform: scale(.95); }
+
+@media (prefers-reduced-motion: reduce) {
+  .prop-card { opacity: 1; transform: none; transition: box-shadow .2s ease; }
+}
+
+/* ═══════════════════════════════════════
+   ÉCRAN AUTH (Login / Register)
+   ═══════════════════════════════════════ */
+#screen-login { background: var(--bg); }
+
+.auth-header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  padding: max(env(safe-area-inset-top),40px) 24px 40px;
+  text-align: center;
+}
+.auth-header-logo {
+  width: 56px; height: 56px; border-radius: 16px;
+  background: rgba(255,255,255,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Instrument Serif', serif;
+  font-size: 24px; font-weight: 400; color: white;
+  margin: 0 auto 12px;
+}
+.auth-header h2 { font-family: 'Instrument Serif', serif; font-size: 24px; font-weight: 400; color: white; }
+.auth-header p { font-size: 13px; color: rgba(255,255,255,.8); margin-top: 4px; }
+
+.auth-card {
+  background: white; border-radius: 24px 24px 0 0;
+  padding: 24px 20px 32px; margin-top: -20px;
+  min-height: calc(100dvh - 180px);
+}
+
+.auth-tabs {
+  display: flex; gap: 4px; background: var(--bg2);
+  border-radius: 12px; padding: 4px; margin-bottom: 24px;
+}
+.auth-tab {
+  flex: 1; padding: 10px; border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: all .2s;
+  background: transparent; color: var(--text2);
+}
+.auth-tab.active { background: white; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+
+.auth-field { margin-bottom: 16px; }
+.auth-field label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.auth-field input {
+  width: 100%; padding: 13px 14px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  font-size: 16px; font-family: inherit; outline: none;
+  background: white; color: var(--text);
+  transition: border-color .2s;
+}
+.auth-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,.1); }
+
+.auth-hint { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+.auth-err {
+  background: #fef2f2; border: 1px solid #fecaca;
+  border-radius: 10px; padding: 10px 14px;
+  font-size: 13px; color: #ef4444;
+  margin-bottom: 14px; display: none;
+}
+
+.auth-btn {
+  width: 100%; padding: 15px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white; border: none; border-radius: 14px;
+  font-size: 16px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: opacity .2s;
+}
+.auth-btn:disabled { opacity: .6; }
+
+.auth-forgot {
+  background: none; border: none; color: var(--primary);
+  font-size: 13px; cursor: pointer; font-family: inherit;
+  text-decoration: underline; display: block;
+  margin: 8px 0 16px; padding: 0;
+}
+
+.auth-security {
+  text-align: center; font-size: 12px; color: var(--text2);
+  margin-top: 20px; display: flex; align-items: center;
+  justify-content: center; gap: 5px;
+}
+.auth-security i { color: #10b981; }
+
+/* ═══════════════════════════════════════
+   AUTRES ÉCRANS (Réservations, Messages, Compte, Chat, Détail)
+   ═══════════════════════════════════════ */
+
+/* Réservations */
+#screen-bookings { background: var(--bg); }
+#myBookingsList { padding: 12px 16px 80px; }
+
+.loading-center {
+  text-align: center; padding: 60px 20px;
+  color: var(--text2); font-size: 14px;
+}
+.loading-center i { font-size: 28px; display: block; margin-bottom: 8px; }
+
+/* Messages */
+#screen-messages { background: var(--bg); }
+#guestConvList { padding: 12px 16px 80px; }
+
+/* Chat */
+#screen-chat {
+  display: none; flex-direction: column;
+  height: 100dvh; background: var(--bg);
+}
+#screen-chat.active { display: flex; }
+#guestChatMessages {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 12px 16px; display: flex; flex-direction: column; gap: 10px;
+}
+.chat-input-wrap {
+  padding: 10px 12px max(env(safe-area-inset-bottom),10px);
+  background: white; border-top: 1px solid var(--border);
+  display: flex; gap: 8px; align-items: flex-end;
+}
+.chat-input-wrap textarea {
+  flex: 1; border: 1.5px solid var(--border); border-radius: 16px;
+  padding: 10px 14px; font-size: 15px; font-family: inherit;
+  resize: none; max-height: 100px; min-height: 42px;
+  outline: none; background: white;
+}
+.chat-input-wrap textarea:focus { border-color: var(--primary); }
+.chat-send-btn {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: #10b981; border: none; color: white;
+  font-size: 18px; display: flex; align-items: center;
+  justify-content: center; cursor: pointer; flex-shrink: 0;
+}
+
+/* Compte */
+#screen-account {
+  background:
+    radial-gradient(700px 380px at -5% -5%, rgba(124,58,237,.08), transparent 55%),
+    radial-gradient(600px 420px at 108% 10%, rgba(167,139,250,.10), transparent 52%),
+    var(--bg);
+}
+.account-wrap { padding: 16px 16px 80px; }
+.account-card {
+  background: rgba(255,255,255,.6);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(124,58,237,.12);
+  border-radius: 18px;
+  padding: 18px; margin-bottom: 12px;
+  box-shadow: 0 4px 20px rgba(124,58,237,.08), inset 0 1px 0 rgba(255,255,255,.55);
+}
+.account-card-title {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.account-card-title i { color: var(--primary); }
+.account-field { margin-bottom: 14px; }
+.account-field label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px; }
+.account-field input {
+  width: 100%; padding: 11px 13px;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  font-size: 15px; font-family: inherit; outline: none;
+}
+.account-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,.1); }
+.btn-save-account {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white; border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
+}
+
+/* Détail logement */
+#screen-detail {
+  background:
+    radial-gradient(700px 360px at -5% 30%, rgba(124,58,237,.08), transparent 55%),
+    radial-gradient(620px 420px at 108% 70%, rgba(167,139,250,.10), transparent 52%),
+    var(--bg);
+}
+
+/* ─── DETAIL LOGEMENT ─── */
+.detail-photos { width: 100%; height: 260px; overflow: hidden; }
+.detail-photos img { width: 100%; height: 260px; object-fit: cover; }
+.no-photo {
+  width: 100%; height: 260px;
+  background: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 64px;
+}
+.detail-feats {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
+}
+.detail-feat {
+  background: var(--bg2, #f1f0f8); border-radius: 999px;
+  padding: 6px 12px; font-size: 12px; color: var(--text2);
+  display: flex; align-items: center; gap: 5px;
+}
+.detail-feat i { color: var(--primary); }
+.detail-feat strong { color: var(--text); margin-right: 2px; }
+.detail-location {
+  font-size: 13px; color: var(--text2);
+  display: flex; align-items: center; gap: 5px; margin-bottom: 12px;
+}
+.detail-wrap { padding-bottom: 100px; }
+.detail-img {
+  width: 100%; height: 260px; object-fit: cover;
+  background: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 64px;
+}
+.detail-body { padding: 20px 16px; }
+.detail-name { font-family: 'Instrument Serif', serif; font-size: 24px; color: var(--text); margin-bottom: 4px; }
+.detail-loc { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 5px; margin-bottom: 12px; }
+.detail-stars { color: #f59e0b; margin-bottom: 16px; font-size: 13px; display: flex; align-items: center; gap: 5px; }
+.detail-features { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.detail-feat { background: var(--bg2); border-radius: 999px; padding: 6px 12px; font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 5px; }
+.detail-desc { font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 20px; }
+.detail-section-title { font-weight: 700; font-size: 15px; color: var(--text); margin-bottom: 10px; }
+.detail-amenities { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+.detail-amenity { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 6px; }
+.detail-amenity i { color: var(--primary); font-size: 14px; }
+
+/* Booking bar */
+#bookingBar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(255,255,255,.72);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  border-top: 1px solid rgba(124,58,237,.10);
+  box-shadow: 0 -1px 0 rgba(255,255,255,.6) inset, 0 -8px 28px rgba(124,58,237,.08);
+  padding: 12px 16px max(env(safe-area-inset-bottom),12px);
+  display: none; align-items: center; gap: 12px;
+  z-index: 200;
+}
+/* Sur detail, bookingBar remplace le bottomNav */
+body.screen-detail #bottomNav { display: none !important; }
+.booking-bar-price { font-size: 20px; font-weight: 800; color: var(--primary); }
+.booking-bar-night { font-size: 12px; color: var(--text2); }
+.booking-bar-btn {
+  flex: 1; padding: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white; border: 1px solid rgba(255,255,255,.2); border-radius: 14px;
+  font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(124,58,237,.32), inset 0 1px 0 rgba(255,255,255,.3);
+  transition: transform .15s ease;
+}
+.booking-bar-btn:active { transform: scale(.97); }
+
+/* ─── Checkout / Confirm ─── */
+#screen-checkout, #screen-confirm {
+  background:
+    radial-gradient(700px 380px at -5% -5%, rgba(124,58,237,.10), transparent 55%),
+    radial-gradient(620px 420px at 108% 8%, rgba(167,139,250,.12), transparent 52%),
+    var(--bg);
+}
+.checkout-wrap, .confirm-wrap { padding: 16px 16px 80px; }
+
+/* ─── Responsive ─── */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
+/* ─── CALENDRIER ─── */
+#calendarContainer {
+  max-width: 420px; margin: 0 auto;
+  background: rgba(255,255,255,.58);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(124,58,237,.12);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 4px 20px rgba(124,58,237,.08), inset 0 1px 0 rgba(255,255,255,.55);
+  margin-bottom: 16px;
+}
+.calendar-nav {
+  display: flex !important; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.calendar-nav button {
+  background: rgba(124,58,237,.08);
+  border: 1px solid rgba(124,58,237,.14);
+  border-radius: 10px;
+  width: 36px; height: 36px; cursor: pointer; font-size: 16px;
+  color: var(--primary); display: flex; align-items: center; justify-content: center;
+  transition: transform .15s ease, background .2s ease;
+}
+.calendar-nav button:active { transform: scale(.9); background: rgba(124,58,237,.16); }
+.cal-month { font-size: 15px; font-weight: 700; color: var(--text); }
+.calendar-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 4px !important;
+}
+.cal-day-header {
+  text-align: center !important; font-size: 11px; font-weight: 600;
+  color: var(--text2, #6b7280); padding: 6px 0;
+  display: block !important;
+}
+.cal-day {
+  display: flex !important; align-items: center !important;
+  justify-content: center !important;
+  border-radius: 10px; height: 40px;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: all .15s; color: var(--text);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(124,58,237,.2);
+  user-select: none;
+  position: relative; z-index: 1;
+}
+.cal-day.empty { cursor: default; pointer-events: none; }
+.cal-day.disabled { color: #d1d5db !important; cursor: not-allowed; text-decoration: line-through; }
+.cal-day:not(.disabled):not(.empty):hover { background: var(--primary-tint); color: var(--primary); }
+.cal-day.today { font-weight: 700; color: var(--primary); }
+.cal-day.selected, .cal-day.range-start, .cal-day.range-end {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+  color: white !important;
+  box-shadow: 0 3px 10px rgba(124,58,237,.35);
+}
+.cal-day.range-start { border-radius: 10px 0 0 10px; }
+.cal-day.range-end { border-radius: 0 10px 10px 0; }
+.cal-day.in-range { background: var(--primary-tint) !important; color: var(--primary) !important; border-radius: 0; }
+
+/* ─── DETAIL LOGEMENT ─── */
+.detail-photos {
+  width: 100%; height: 260px; overflow: hidden;
+  position: relative;
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
+}
+.detail-photos img { width: 100%; height: 260px; object-fit: cover; }
+.detail-photos::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0; height: 70px;
+  background: linear-gradient(to top, var(--bg), transparent);
+  pointer-events: none;
+}
+.no-photo {
+  width: 100%; height: 260px;
+  background: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 64px;
+}
+.detail-feats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.detail-feat {
+  background: rgba(255,255,255,.6);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid rgba(124,58,237,.12);
+  border-radius: 14px;
+  padding: 8px 13px; font-size: 12px; color: var(--text2);
+  display: flex; align-items: center; gap: 6px;
+  box-shadow: 0 2px 10px rgba(124,58,237,.06), inset 0 1px 0 rgba(255,255,255,.5);
+}
+.detail-feat i { color: var(--primary); }
+.detail-feat strong { color: var(--text); }
+.detail-location { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 5px; margin-bottom: 12px; }
+.section-title { font-size: 15px; font-weight: 700; color: var(--text); margin: 20px 0 12px; }
+
+/* ─── CHECKOUT ─── */
+.checkout-summary {
+  background: rgba(255,255,255,.6);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(124,58,237,.12);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(124,58,237,.08), inset 0 1px 0 rgba(255,255,255,.55);
+}
+.checkout-row { display: flex; justify-content: space-between; padding: 9px 0; font-size: 14px; border-bottom: 1px solid rgba(124,58,237,.08); color: var(--text); }
+.checkout-row:last-child { border-bottom: none; }
+.checkout-row.total {
+  font-weight: 800; font-size: 17px; color: var(--primary);
+  border-top: 1.5px solid rgba(124,58,237,.16);
+  margin-top: 6px; padding-top: 12px; border-bottom: none;
+}
+.form-section { margin-bottom: 16px; }
+.form-section label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.form-section input {
+  width: 100%; padding: 13px 14px;
+  background: rgba(255,255,255,.7);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(124,58,237,.14);
+  border-radius: 12px; font-size: 16px; font-family: inherit; outline: none;
+  color: var(--text);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.form-section input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(124,58,237,.12);
+}
+
+/* ─── CONFIRMATION ─── */
+.confirm-icon {
+  width: 76px; height: 76px; margin: 8px auto 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 32px;
+  box-shadow: 0 8px 24px rgba(124,58,237,.4),
+              inset 0 1px 0 rgba(255,255,255,.4);
+  animation: confirmPop .45s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes confirmPop {
+  0% { transform: scale(.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.confirm-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 26px; color: var(--text); text-align: center; margin-bottom: 6px;
+}
+.confirm-sub { font-size: 14px; color: var(--text2); text-align: center; margin-bottom: 22px; line-height: 1.5; }
+.confirm-card {
+  background: rgba(255,255,255,.6);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(124,58,237,.12);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 20px rgba(124,58,237,.08), inset 0 1px 0 rgba(255,255,255,.55);
+}
+.confirm-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; border-bottom: 1px solid rgba(124,58,237,.08); color: var(--text); }
+.confirm-row:last-child { border-bottom: none; }
+.confirm-row span:first-child { color: var(--text2); }
+.confirm-row span:last-child { font-weight: 600; }
+.btn-confirm-home {
+  width: 100%; padding: 15px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white; border: 1px solid rgba(255,255,255,.2); border-radius: 14px;
+  font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(124,58,237,.32), inset 0 1px 0 rgba(255,255,255,.3);
+  transition: transform .15s ease;
+}
+.btn-confirm-home:active { transform: scale(.97); }
+
+/* ─── SYSTÈME D'ICÔNES SF (traits fins) ─── */
+.bhi {
+  display: inline-block;
+  width: 1em; height: 1em;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+.bhi svg { width: 100%; height: 100%; display: block; }
+.bhi svg path,
+.bhi svg circle,
+.bhi svg line,
+.bhi svg rect,
+.bhi svg polyline,
+.bhi svg polygon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Étoiles : remplies pour les notes */
+.bhi.bhi-star-fill svg path,
+.bhi.bhi-star-fill svg polygon { fill: currentColor; stroke: currentColor; stroke-width: 1; }
+
+</style>
+</head>
+<body>
+
+<div id="appShell">
+  <!-- SCROLL ZONE -->
+  <div id="mainScroll">
+
+    <!-- ═══ ÉCRAN ACCUEIL (landing) ═══ -->
+    <div id="screen-home" class="screen-content active">
+      <div class="home-hero">
+        <div class="home-hero-logo">
+          <div class="home-hero-logo-icon"><b>b</b></div>
+          <span class="home-hero-logo-text"><span class="bh">BH</span><span class="g">Guest</span><span class="dot"></span></span>
+        </div>
+        <h1>Séjournez <em>autrement</em>,<br>sans les frais.</h1>
+        <p>Réservez en direct avec votre hôte. Moins d'intermédiaires, plus de transparence.</p>
+        <div class="home-search">
+          <i class="fas fa-search" style="color:#9ca3af;margin-left:8px;"></i>
+          <input type="text" id="homeSearchInput" placeholder="Destination, dates..." readonly onclick="navTo('home-list')">
+          <button class="home-search-btn" onclick="navTo('home-list')"><i class="fas fa-arrow-right"></i></button>
+        </div>
+        <div class="home-trust">
+          <div class="home-trust-badge"><i class="fas fa-shield-halved"></i> Paiement sécurisé</div>
+          <div class="home-trust-badge"><i class="fas fa-headset"></i> Support 24/7</div>
+          <div class="home-trust-badge"><i class="fas fa-star"></i> Logements vérifiés</div>
+        </div>
+      </div>
+
+      <!-- Bandeau frais réduits (signature) -->
+      <div class="home-feebar">
+        <i class="fas fa-tag"></i>
+        <div>
+          <div class="fb-title">Jusqu'à 15 % moins cher qu'ailleurs</div>
+          <div class="fb-sub">Aucun frais de service caché à la réservation.</div>
+        </div>
+      </div>
+
+      <!-- Catégories -->
+      <div style="padding:16px 0 0;">
+        <div class="home-cats" id="homeCats">
+          <div class="home-cat active" onclick="filterCat(this,'')">Tous</div>
+          <div class="home-cat" onclick="filterCat(this,'appartement')">🏠 Appartements</div>
+          <div class="home-cat" onclick="filterCat(this,'studio')">🛏️ Studios</div>
+          <div class="home-cat" onclick="filterCat(this,'maison')">🏡 Maisons</div>
+        </div>
+        <div class="home-city-row" id="homeCityChips" style="display:flex;gap:8px;overflow-x:auto;padding:8px 16px 0;scrollbar-width:none;">
+          <!-- Chips de villes chargées dynamiquement -->
+        </div>
+      </div>
+
+      <!-- Logements en vedette -->
+      <div class="home-section">
+        <div class="home-section-title">À la une</div>
+        <div class="home-section-sub">Logements disponibles près de vous</div>
+      </div>
+      <div class="home-cards-row" id="homeFeatured">
+        <div class="home-card" style="display:flex;align-items:center;justify-content:center;height:200px;color:#9ca3af;font-size:13px;">
+          <i class="fas fa-spinner fa-spin" style="font-size:24px;"></i>
+        </div>
+      </div>
+
+      <!-- Avantages -->
+      <div class="home-section">
+        <div class="home-section-title">Pourquoi BHGuest ?</div>
+        <div class="home-section-sub">Une expérience pensée pour les voyageurs</div>
+      </div>
+      <div class="home-features">
+        <div class="home-feature">
+          <div class="home-feature-icon"><i class="fas fa-bolt"></i></div>
+          <div class="home-feature-title">Réservation express</div>
+          <div class="home-feature-desc">Confirmez en quelques secondes, sans attente.</div>
+        </div>
+        <div class="home-feature">
+          <div class="home-feature-icon"><i class="fas fa-comment-dots"></i></div>
+          <div class="home-feature-title">Chat en direct</div>
+          <div class="home-feature-desc">Communiquez avec votre hôte à tout moment.</div>
+        </div>
+        <div class="home-feature">
+          <div class="home-feature-icon"><i class="fas fa-book-open"></i></div>
+          <div class="home-feature-title">Livret d'accueil</div>
+          <div class="home-feature-desc">Codes, WiFi, adresse — tout en un clic.</div>
+        </div>
+        <div class="home-feature">
+          <div class="home-feature-icon"><i class="fas fa-shield-halved"></i></div>
+          <div class="home-feature-title">Paiement sécurisé</div>
+          <div class="home-feature-desc">Stripe, caution digitale, aucun stress.</div>
+        </div>
+      </div>
+
+      <!-- CTA inscription -->
+      <div class="home-cta" id="homeCta">
+        <h3>Créez votre compte gratuitement</h3>
+        <p>Gérez tous vos séjours depuis un seul endroit.</p>
+        <button class="home-cta-btn" onclick="navTo('login')">
+          <i class="fas fa-user-plus" style="margin-right:6px;"></i>S'inscrire
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══ ÉCRAN LISTE LOGEMENTS ═══ -->
+    <div id="screen-home-list" class="screen-content">
+      <div class="listings-header">
+        <div class="listings-search">
+          <i class="fas fa-search"></i>
+          <input type="text" id="listSearchInput" placeholder="Dates, logement..." oninput="filterProperties()">
+        </div>
+      </div>
+      <div class="listings-filters">
+        <div class="filter-chip active" onclick="setFilter(this,'')">Tous</div>
+        <div class="filter-chip" onclick="setFilter(this,'appartement')">Appartements</div>
+        <div class="filter-chip" onclick="setFilter(this,'studio')">Studios</div>
+        <div class="filter-chip" onclick="setFilter(this,'maison')">Maisons</div>
+        <div class="filter-chip" onclick="setFilter(this,'prix-asc')">Prix ↑</div>
+        <div class="filter-chip" onclick="setFilter(this,'prix-desc')">Prix ↓</div>
+      </div>
+      <div id="listCityChips" style="display:flex;gap:8px;overflow-x:auto;padding:0 16px 8px;scrollbar-width:none;">
+        <!-- Chips de villes chargées dynamiquement -->
+      </div>
+      <div id="propertiesList">
+        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i>Chargement...</div>
+      </div>
+    </div>
+
+    <!-- ═══ ÉCRAN DÉTAIL LOGEMENT ═══ -->
+    <div id="screen-detail" class="screen-content">
+      <div class="page-header" id="detailHeader">
+        <button class="btn-back" onclick="navTo('home-list')"><i class="fas fa-arrow-left"></i></button>
+        <span id="detailHeaderName">Logement</span>
+      </div>
+      <div class="detail-wrap" id="detailContent"></div>
+    </div>
+
+    <!-- ═══ ÉCRAN CHECKOUT ═══ -->
+    <div id="screen-checkout" class="screen-content">
+      <div class="page-header">
+        <button class="btn-back" onclick="navTo('detail')"><i class="fas fa-arrow-left"></i></button>
+        <span>Réserver</span>
+      </div>
+      <div class="checkout-wrap" id="checkoutContent"></div>
+    </div>
+
+    <!-- ═══ ÉCRAN CONFIRMATION ═══ -->
+    <div id="screen-confirm" class="screen-content">
+      <div class="confirm-wrap" id="confirmContent"></div>
+    </div>
+
+    <!-- ═══ ÉCRAN AUTH ═══ -->
+    <div id="screen-login" class="screen-content">
+      <div class="auth-header">
+        <div class="auth-header-logo">B</div>
+        <h2>Bienvenue</h2>
+        <p>Connectez-vous ou créez votre compte</p>
+      </div>
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="subToggleLogin" onclick="switchSubMode('login')">Se connecter</button>
+          <button class="auth-tab" id="subToggleRegister" onclick="switchSubMode('register')">Créer un compte</button>
+        </div>
+
+        <!-- Login -->
+        <div id="pwdLoginForm">
+          <div class="auth-field">
+            <label>Email</label>
+            <input type="email" id="pwdEmail" placeholder="votre@email.com">
+          </div>
+          <div class="auth-field">
+            <label>Mot de passe</label>
+            <input type="password" id="pwdPassword" placeholder="••••••••"
+              onkeydown="if(event.key==='Enter')loginWithPassword()">
+          </div>
+          <button class="auth-forgot" onclick="forgotPassword()">Mot de passe oublié ?</button>
+          <div class="auth-err" id="pwdLoginError"></div>
+          <button class="auth-btn" id="btnPwdLogin" onclick="loginWithPassword()">
+            <i class="fas fa-sign-in-alt" style="margin-right:6px;"></i>Se connecter
+          </button>
+        </div>
+
+        <!-- Register -->
+        <div id="pwdRegisterForm" style="display:none;">
+          <div class="auth-field">
+            <label>Prénom et nom</label>
+            <input type="text" id="regName" placeholder="Jean Dupont">
+          </div>
+          <div class="auth-field">
+            <label>Email</label>
+            <input type="email" id="regEmail" placeholder="votre@email.com">
+          </div>
+          <div class="auth-field">
+            <label>Mot de passe</label>
+            <input type="password" id="regPassword" placeholder="8 caractères min. + 1 spécial">
+            <div class="auth-hint">Ex : MonPass@2024 — min. 8 caractères, 1 caractère spécial (!@#$...)</div>
+          </div>
+          <div class="auth-field">
+            <label>Confirmer le mot de passe</label>
+            <input type="password" id="regPasswordConfirm" placeholder="••••••••">
+          </div>
+          <div class="auth-field">
+            <label>Téléphone <span style="color:var(--primary)">*</span></label>
+            <input type="tel" id="regPhone" placeholder="+33 6 00 00 00 00"
+              onkeydown="if(event.key==='Enter')registerWithPassword()">
+          </div>
+          <div class="auth-err" id="pwdRegisterError"></div>
+          <button class="auth-btn" id="btnPwdRegister" onclick="registerWithPassword()">
+            <i class="fas fa-user-plus" style="margin-right:6px;"></i>Créer mon compte
+          </button>
+        </div>
+
+        <div class="auth-security">
+          <i class="fas fa-lock"></i>
+          Connexion chiffrée — vos données sont protégées
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ÉCRAN RÉSERVATIONS ═══ -->
+    <div id="screen-bookings" class="screen-content">
+      <div class="page-header" style="position:sticky;top:0;z-index:10;">
+        <i class="fas fa-calendar-check" style="font-size:18px;opacity:.8;"></i>
+        Mes réservations
+      </div>
+      <div id="myBookingsList">
+        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i>Chargement...</div>
+      </div>
+    </div>
+
+    <!-- ═══ ÉCRAN MESSAGES ═══ -->
+    <div id="screen-messages" class="screen-content">
+      <div class="page-header" style="position:sticky;top:0;z-index:10;">
+        <i class="fas fa-comment-dots" style="font-size:18px;opacity:.8;"></i>
+        Messages
+      </div>
+      <div id="guestConvList">
+        <div class="loading-center"><i class="fas fa-spinner fa-spin"></i>Chargement...</div>
+      </div>
+    </div>
+
+    <!-- ═══ ÉCRAN CHAT ═══ -->
+    <div id="screen-chat" class="screen-content">
+      <div class="page-header">
+        <button class="btn-back" onclick="navTo('messages')"><i class="fas fa-arrow-left"></i></button>
+        <div style="flex:1;min-width:0;">
+          <div id="chatGuestPropName" style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Logement</div>
+          <div id="chatGuestDates" style="font-size:11px;opacity:.85;"></div>
+        </div>
+      </div>
+      <div id="guestChatMessages" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px;background:var(--bg);"></div>
+      <div class="chat-input-wrap">
+        <textarea id="guestChatInput" placeholder="Votre message..." rows="1"
+          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGuestMessage();}"></textarea>
+        <button class="chat-send-btn" onclick="sendGuestMessage()"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+
+    <!-- ═══ ÉCRAN COMPTE ═══ -->
+    <div id="screen-account" class="screen-content">
+      <div class="page-header" style="position:sticky;top:0;z-index:10;">
+        <i class="fas fa-user" style="font-size:18px;opacity:.8;"></i>
+        Mon compte
+      </div>
+      <div class="account-wrap">
+        <div class="account-card">
+          <div class="account-card-title"><i class="fas fa-user-circle"></i> Profil</div>
+          <div class="account-field"><label>Nom complet</label><input type="text" id="accountName" placeholder="Votre nom"></div>
+          <div class="account-field"><label>Email</label><input type="email" id="accountEmail" placeholder="votre@email.com" readonly style="opacity:.6;"></div>
+          <div class="account-field"><label>Téléphone</label><input type="tel" id="accountPhone" placeholder="+33 6 00 00 00 00"></div>
+          <button class="btn-save-account" onclick="saveAccount()">Sauvegarder</button>
+        </div>
+
+        <div class="account-card" id="pwdSection" style="display:none;">
+          <div class="account-card-title"><i class="fas fa-lock"></i> Changer le mot de passe</div>
+          <div class="account-field"><label>Nouveau mot de passe</label><input type="password" id="newPassword" placeholder="8 car. min. + 1 spécial"></div>
+          <div class="account-field"><label>Confirmer</label><input type="password" id="newPasswordConfirm" placeholder="••••••••"></div>
+          <div id="pwdChangeError" class="auth-err"></div>
+          <button onclick="changePassword()" id="btnChangePwd"
+            style="width:100%;padding:12px;background:var(--primary-light);color:var(--primary);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+            <i class="fas fa-key" style="margin-right:6px;"></i>Mettre à jour
+          </button>
+        </div>
+
+        <div id="logoutSection"></div>
+      </div>
+    </div>
+
+  </div><!-- /mainScroll -->
+
+  <!-- BOTTOM NAV -->
+  <nav id="bottomNav">
+    <span id="navPill"></span>
+    <button class="nav-item active" id="nav-home" onclick="navTo('home')">
+      <svg class="nav-ico" viewBox="0 0 28 28" aria-hidden="true">
+        <path d="M5 12.5 14 5l9 7.5"/>
+        <path d="M7 11.5V22a1 1 0 0 0 1 1h3.5v-5.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V23H20a1 1 0 0 0 1-1V11.5"/>
+      </svg>
+      <span>Accueil</span>
+    </button>
+    <button class="nav-item" id="nav-bookings" onclick="navTo('bookings')">
+      <svg class="nav-ico" viewBox="0 0 28 28" aria-hidden="true">
+        <rect x="4.5" y="6" width="19" height="17" rx="3.5"/>
+        <line x1="4.5" y1="11" x2="23.5" y2="11"/>
+        <line x1="9" y1="4" x2="9" y2="7.5"/>
+        <line x1="19" y1="4" x2="19" y2="7.5"/>
+        <path d="M10 16.5l2.5 2.5 5-5"/>
+      </svg>
+      <span>Réservations</span>
+    </button>
+    <button class="nav-item" id="nav-messages" onclick="navTo('messages')" style="position:relative;">
+      <svg class="nav-ico" viewBox="0 0 28 28" aria-hidden="true">
+        <path d="M5 7.5A2.5 2.5 0 0 1 7.5 5h13A2.5 2.5 0 0 1 23 7.5v9a2.5 2.5 0 0 1-2.5 2.5H12l-5 4v-4H7.5A2.5 2.5 0 0 1 5 16.5z"/>
+      </svg>
+      <span>Messages</span>
+      <span class="nav-badge" id="navMsgsBadge" style="display:none;"></span>
+    </button>
+    <button class="nav-item" id="nav-account" onclick="navTo('account')">
+      <svg class="nav-ico" viewBox="0 0 28 28" aria-hidden="true">
+        <circle cx="14" cy="10" r="4.5"/>
+        <path d="M5.5 23c.8-4.2 4.3-6.5 8.5-6.5s7.7 2.3 8.5 6.5"/>
+      </svg>
+      <span>Compte</span>
+    </button>
+  </nav>
+</div>
+
+<!-- BOOKING BAR (detail) -->
+<div id="bookingBar">
+  <div>
+    <div class="booking-bar-price" id="bookingBarPrice">—</div>
+    <div class="booking-bar-night">/ nuit</div>
+  </div>
+  <button class="booking-bar-btn" onclick="goToCheckout()">Réserver</button>
+</div>
+
+<!-- TOAST -->
+<div id="toastMsg"></div>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="js/push-notifications-guest.js"></script>
+<script>
+// Vérifier si le hold est expiré AVANT que app-guest.js efface les URL params
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var holdToken = params.get('hold_token');
+  if (!holdToken) return;
+
+  fetch('/api/guest/hold-status?token=' + encodeURIComponent(holdToken))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.expired) {
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(248,247,255,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;';
+        overlay.innerHTML =
+          '<div style="font-size:56px;margin-bottom:16px;">⏰</div>' +
+          '<h2 style="font-family:DM Sans,sans-serif;font-size:22px;font-weight:700;color:#1e1b4b;margin-bottom:8px;">Lien expiré</h2>' +
+          '<p style="font-family:DM Sans,sans-serif;font-size:15px;color:#6b7280;max-width:340px;line-height:1.6;">' +
+          'Ce lien de réservation a expiré (délai de 4 heures dépassé).<br>Veuillez demander un nouveau lien à votre hôte.</p>' +
+          '<div style="margin-top:24px;padding:14px 20px;background:var(--primary-tint);border-radius:12px;font-family:DM Sans,sans-serif;font-size:13px;color:var(--primary-dark);font-weight:600;">' +
+          '<i class="fas fa-info-circle" style="margin-right:6px;"></i> Contactez votre hôte pour recevoir un nouveau lien</div>';
+        document.body.appendChild(overlay);
+      }
+    })
+    .catch(function() {});
+})();
+</script>
+<script src="js/app-guest.js"></script>
+</body>
+</html>
