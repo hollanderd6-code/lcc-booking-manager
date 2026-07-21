@@ -668,22 +668,26 @@ body {
 }
 .chat-input-wrap {
   padding: 10px 12px max(env(safe-area-inset-bottom),10px);
-  background: white; border-top: 1px solid var(--border);
+  background: #fff; border-top: 1px solid var(--line);
   display: flex; gap: 8px; align-items: flex-end;
 }
 .chat-input-wrap textarea {
-  flex: 1; border: 1.5px solid var(--border); border-radius: 16px;
-  padding: 10px 14px; font-size: 15px; font-family: inherit;
-  resize: none; max-height: 100px; min-height: 42px;
-  outline: none; background: white;
+  flex: 1; border: 1px solid var(--line); border-radius: 16px;
+  padding: 11px 15px; font-size: 15px; font-family: inherit;
+  resize: none; max-height: 100px; min-height: 44px;
+  outline: none; background: #fff; color: var(--ink);
+  transition: border-color .2s, box-shadow .2s;
 }
-.chat-input-wrap textarea:focus { border-color: var(--primary); }
+.chat-input-wrap textarea::placeholder { color: var(--stone-light); }
+.chat-input-wrap textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-tint); }
 .chat-send-btn {
   width: 44px; height: 44px; border-radius: 12px;
-  background: #10b981; border: none; color: white;
-  font-size: 18px; display: flex; align-items: center;
+  background: var(--primary); border: none; color: #fff;
+  font-size: 16px; display: flex; align-items: center;
   justify-content: center; cursor: pointer; flex-shrink: 0;
+  transition: transform .15s, background .15s;
 }
+.chat-send-btn:active { transform: scale(.92); background: var(--primary-dark); }
 
 /* Compte */
 #screen-account {

@@ -803,11 +803,11 @@ async function loadGuestConversations() {
   const session = getSession();
   if (!session) {
     document.getElementById('guestConvList').innerHTML = `
-      <div style="text-align:center;padding:40px 20px;">
-        <div style="font-size:40px;margin-bottom:12px;">💬</div>
-        <div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:8px;">Connectez-vous</div>
-        <div style="font-size:14px;color:#64748b;margin-bottom:20px;">Pour accéder à vos messages</div>
-        <button onclick="navTo('login')" style="padding:12px 24px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">Se connecter</button>
+      <div style="text-align:center;padding:60px 24px;">
+        <div style="width:60px;height:60px;border-radius:50%;background:var(--primary-tint);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--primary);">${icon('message')}</div>
+        <div style="font-family:'Instrument Serif',serif;font-size:22px;color:var(--ink);margin-bottom:6px;">Vos messages</div>
+        <div style="font-size:14px;color:var(--text2);margin-bottom:22px;">Connectez-vous pour retrouver vos echanges avec vos hotes.</div>
+        <button onclick="navTo('login')" style="padding:14px 28px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;">Se connecter</button>
       </div>`;
     return;
   }
@@ -825,10 +825,10 @@ async function loadGuestConversations() {
     const convs = data.conversations || [];
 
     if (!convs.length) {
-      list.innerHTML = `<div style="text-align:center;padding:40px 20px;">
-        <div style="font-size:40px;margin-bottom:12px;">💬</div>
-        <div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:8px;">Aucun message</div>
-        <div style="font-size:14px;color:#64748b;">Vos échanges avec les hôtes apparaîtront ici.</div>
+      list.innerHTML = `<div style="text-align:center;padding:60px 24px;">
+        <div style="width:60px;height:60px;border-radius:50%;background:var(--primary-tint);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--primary);">${icon('message')}</div>
+        <div style="font-family:'Instrument Serif',serif;font-size:22px;color:var(--ink);margin-bottom:6px;">Aucun message</div>
+        <div style="font-size:14px;color:var(--text2);">Vos échanges avec vos hôtes apparaîtront ici.</div>
       </div>`;
       return;
     }
@@ -843,17 +843,17 @@ async function loadGuestConversations() {
       const checkin = c.reservation_start_date ? new Date(c.reservation_start_date).toLocaleDateString('fr-FR', {day:'numeric',month:'short'}) : '';
       const checkout = c.reservation_end_date ? new Date(c.reservation_end_date).toLocaleDateString('fr-FR', {day:'numeric',month:'short'}) : '';
       return `<div onclick="openGuestChat(${c.id},'${propName.replace(/'/g,"\'")}','${checkin}','${checkout}')"
-        style="background:white;border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.06);border-left:3px solid ${unread ? 'var(--primary)' : 'transparent'};display:flex;align-items:center;gap:12px;">
-        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:white;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;">
+        style="background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:10px;cursor:pointer;border:1px solid var(--line);${unread ? 'border-left:3px solid var(--primary);' : ''}display:flex;align-items:center;gap:13px;">
+        <div style="width:46px;height:46px;border-radius:50%;background:var(--primary-tint);color:var(--primary-dark);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:600;font-family:'Instrument Serif',serif;flex-shrink:0;">
           ${propName.charAt(0).toUpperCase()}
         </div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-            <span style="font-size:15px;font-weight:${unread?'700':'600'};color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${propName}</span>
-            <span style="font-size:11px;color:#94a3b8;flex-shrink:0;">${dateStr}</span>
+            <span style="font-size:15px;font-weight:${unread?'700':'600'};color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${propName}</span>
+            <span style="font-size:11px;color:var(--stone-light);flex-shrink:0;">${dateStr}</span>
           </div>
           ${checkin ? `<div style="font-size:11px;color:var(--primary);font-weight:600;margin-bottom:3px;">${checkin} → ${checkout}</div>` : ''}
-          <div style="font-size:13px;color:${unread?'#1e293b':'#64748b'};font-weight:${unread?'600':'400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${lastMsg}</div>
+          <div style="font-size:13.5px;color:${unread?'var(--ink)':'var(--text2)'};font-weight:${unread?'500':'400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${lastMsg}</div>
         </div>
         ${unread ? `<span style="background:var(--primary);color:white;border-radius:999px;font-size:11px;font-weight:700;padding:2px 7px;min-width:20px;text-align:center;flex-shrink:0;">${unread}</span>` : ''}
       </div>`;
@@ -918,10 +918,10 @@ function appendGuestMessage(msg) {
   const div = document.createElement('div');
   div.style.cssText = `display:flex;flex-direction:column;align-items:${isGuest?'flex-end':'flex-start'};max-width:80%;${isGuest?'align-self:flex-end':'align-self:flex-start'}`;
   div.innerHTML = `
-    <div style="background:${isGuest?'var(--primary)':'white'};color:${isGuest?'white':'#1e293b'};padding:10px 14px;border-radius:${isGuest?'16px 16px 4px 16px':'16px 16px 16px 4px'};font-size:14px;line-height:1.5;box-shadow:0 1px 3px rgba(0,0,0,0.08);word-wrap:break-word;">
+    <div style="background:${isGuest?'var(--primary)':'#fff'};color:${isGuest?'#fff':'var(--ink)'};padding:11px 15px;border-radius:${isGuest?'18px 18px 5px 18px':'18px 18px 18px 5px'};font-size:14.5px;line-height:1.5;border:${isGuest?'none':'1px solid var(--line)'};word-wrap:break-word;">
       ${msg.message.replace(/\n/g,'<br>')}
     </div>
-    <div style="font-size:11px;color:#94a3b8;margin-top:3px;${isGuest?'text-align:right':''}">${time}</div>`;
+    <div style="font-size:11px;color:var(--stone-light);margin-top:4px;${isGuest?'text-align:right':''}">${time}</div>`;
   container.appendChild(div);
 }
 
