@@ -19810,6 +19810,145 @@ app.get('/api/host/properties', authenticateToken, async (req, res) => {
   }
 });
 
+// ============================================
+// 🏠 MARKETPLACE — Stripe Connect pour hôtes externes
+// L'hôte connecte son compte bancaire pour recevoir ses paiements (moins 7%).
+// ============================================
+
+// POST /api/host/stripe/connect — génère le lien d'onboarding Stripe Express
+app.post('/api/host/stripe/connect', authenticateToken, async (req, res) => {
+  try {
+    if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
+
+    const userRes = await pool.query(
+      'SELECT id, email, company, is_external_host, stripe_account_id FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    if (userRes.rows.length === 0) return res.status(401).json({ error: 'Utilisateur introuvable' });
+    const user = userRes.rows[0];
+    if (user.is_external_host !== true) return res.status(403).json({ error: 'Réservé aux hôtes marketplace' });
+
+    let accountId = user.stripe_account_id;
+
+    // Créer le compte Express s'il n'existe pas
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: 'express',
+        email: user.email,
+        metadata: { userId: user.id, role: 'external_host', company: user.company || '' }
+      });
+      accountId = account.id;
+      await pool.query('UPDATE users SET stripe_account_id = $1 WHERE id = $2', [accountId, user.id]);
+    }
+
+    // Lien d'onboarding
+    const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
+    const accountLink = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${appUrl}/guest-app/public/host-dashboard.html?stripe=refresh`,
+      return_url: `${appUrl}/guest-app/public/host-dashboard.html?stripe=return`,
+      type: 'account_onboarding'
+    });
+
+    res.json({ url: accountLink.url });
+  } catch (err) {
+    console.error('❌ [HOST] stripe/connect:', err.message);
+    res.status(500).json({ error: 'Impossible de générer le lien Stripe : ' + (err.message || 'erreur') });
+  }
+});
+
+// GET /api/host/stripe/status — état de la connexion Stripe de l'hôte
+app.get('/api/host/stripe/status', authenticateToken, async (req, res) => {
+  try {
+    if (!stripe) return res.json({ connected: false, error: 'Stripe non configuré' });
+
+    const userRes = await pool.query(
+      'SELECT is_external_host, stripe_account_id FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    if (userRes.rows[0]?.is_external_host !== true) return res.status(403).json({ error: 'Réservé aux hôtes marketplace' });
+    const acct = userRes.rows[0].stripe_account_id;
+    if (!acct) return res.json({ connected: false });
+
+    try {
+      const account = await stripe.accounts.retrieve(acct);
+      res.json({
+        connected: !!(account.charges_enabled && account.details_submitted),
+        chargesEnabled: account.charges_enabled,
+        payoutsEnabled: account.payouts_enabled,
+        detailsSubmitted: account.details_submitted
+      });
+    } catch (e) {
+      res.json({ connected: false, error: 'Compte Stripe introuvable' });
+    }
+  } catch (err) {
+    console.error('❌ [HOST] stripe/status:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 📊 Dashboard hôte externe — logements, réservations à venir, revenus
+app.get('/api/host/dashboard', authenticateToken, async (req, res) => {
+  try {
+    const userRes = await pool.query('SELECT id, first_name, is_external_host, stripe_account_id FROM users WHERE id = $1', [req.user.id]);
+    const u = userRes.rows[0];
+    if (!u || u.is_external_host !== true) return res.status(403).json({ error: 'Réservé aux hôtes marketplace' });
+    const userId = req.user.id;
+
+    // Logements
+    const props = await pool.query(
+      `SELECT id, name, city, base_price, photo_url, is_marketplace, marketplace_fee_pct, max_guests, bedrooms
+       FROM properties WHERE user_id = $1 ORDER BY display_order ASC, created_at DESC`,
+      [userId]
+    );
+
+    // Réservations (confirmées, hors blocages)
+    const resas = await pool.query(
+      `SELECT r.uid, r.property_id, r.guest_name, r.start_date, r.end_date, r.amount_total, r.status,
+              p.name AS property_name
+       FROM reservations r
+       LEFT JOIN properties p ON p.id = r.property_id
+       WHERE r.user_id = $1
+         AND r.status = 'confirmed'
+         AND COALESCE(r.source,'') <> 'BLOCK'
+       ORDER BY r.start_date DESC
+       LIMIT 50`,
+      [userId]
+    );
+
+    const today = new Date().toISOString().slice(0,10);
+    const upcoming = resas.rows.filter(r => r.end_date >= today);
+
+    // Revenus : total encaissé (net après commission) sur réservations confirmées
+    let grossTotal = 0, netTotal = 0;
+    resas.rows.forEach(r => {
+      const amt = parseFloat(r.amount_total) || 0;
+      grossTotal += amt;
+    });
+    // net = ce que l'hôte touche = brut - 7%
+    netTotal = Math.round(grossTotal * 0.93 * 100) / 100;
+
+    // Statut Stripe (simplifié : a-t-il un compte ?)
+    const stripeConnected = !!u.stripe_account_id;
+
+    res.json({
+      firstName: u.first_name,
+      stripeConnected,
+      stats: {
+        propertiesCount: props.rows.length,
+        upcomingCount: upcoming.length,
+        totalBookings: resas.rows.length,
+        netRevenue: netTotal
+      },
+      properties: props.rows,
+      upcomingReservations: upcoming.slice(0, 10)
+    });
+  } catch (e) {
+    console.error('❌ [HOST] dashboard:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -38131,21 +38270,31 @@ app.get('/api/guest/properties', async (req, res) => {
   try {
     const { checkin, checkout, guests } = req.query;
 
-    // Récupérer tous les logements actifs avec subscription valide
+    // Récupérer les logements visibles sur la marketplace :
+    //  - logements Boostinghost dont le proprio a un abonnement actif/trial, OU
+    //  - logements d'hôtes externes publiés (is_marketplace = true), sans condition d'abonnement.
     const result = await pool.query(`
       SELECT 
         p.id, p.name, p.address, p.city, p.photo_url,
         p.base_price, p.weekend_price, p.max_guests,
         p.bedrooms, p.beds, p.bathrooms,
         p.channex_property_id, p.channex_room_type_id, p.channex_enabled,
-        u.id as owner_id
+        p.is_marketplace, p.marketplace_fee_pct,
+        u.id as owner_id, u.is_external_host
       FROM properties p
       JOIN users u ON u.id = p.user_id
-      JOIN subscriptions s ON s.user_id = u.id
-      WHERE s.status IN ('active', 'trial')
-        AND p.base_price IS NOT NULL
+      LEFT JOIN subscriptions s ON s.user_id = u.id
+      WHERE p.base_price IS NOT NULL
+        AND (
+          p.is_marketplace = true
+          OR s.status IN ('active', 'trial')
+        )
       ORDER BY p.created_at DESC
     `);
+
+    // Dédoublonner (le LEFT JOIN subscriptions peut multiplier les lignes)
+    const seen = new Set();
+    result.rows = result.rows.filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true; });
 
     let properties = result.rows;
 
@@ -38211,13 +38360,17 @@ app.get('/api/guest/properties/:id', async (req, res) => {
         p.bedrooms, p.beds, p.bathrooms,
         p.arrival_time, p.departure_time,
         p.cleaning_fee, p.tourist_tax_per_night,
+        p.description, p.amenities, p.house_rules,
+        p.welcome_basket_enabled, p.welcome_basket_price, p.welcome_basket_description,
+        p.deposit_amount, p.is_marketplace,
         p.channex_property_id, p.channex_room_type_id, p.channex_enabled,
-        p.user_id as owner_id
+        p.user_id as owner_id, u.is_external_host
       FROM properties p
       JOIN users u ON u.id = p.user_id
-      JOIN subscriptions s ON s.user_id = u.id
+      LEFT JOIN subscriptions s ON s.user_id = u.id
       WHERE p.id = $1
-        AND s.status IN ('active', 'trial')
+        AND (p.is_marketplace = true OR s.status IN ('active', 'trial'))
+      LIMIT 1
     `, [id]);
 
     if (!result.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
@@ -38256,6 +38409,15 @@ app.get('/api/guest/properties/:id', async (req, res) => {
       departureTime: p.departure_time,
       cleaningFee: p.cleaning_fee != null ? parseFloat(p.cleaning_fee) : null,
       touristTaxPerNight: p.tourist_tax_per_night != null ? parseFloat(p.tourist_tax_per_night) : null,
+      description: p.description || null,
+      amenities: p.amenities || {},
+      houseRules: p.house_rules || {},
+      welcomeBasketEnabled: p.welcome_basket_enabled === true,
+      welcomeBasketPrice: p.welcome_basket_price != null ? parseFloat(p.welcome_basket_price) : null,
+      welcomeBasketDescription: p.welcome_basket_description || null,
+      depositAmount: p.deposit_amount != null ? parseFloat(p.deposit_amount) : null,
+      isMarketplace: p.is_marketplace === true,
+      isExternalHost: p.is_external_host === true,
       channexEnabled: p.channex_enabled,
       bookedDates: resas.rows.map(r => ({
         start: r.start_date,
