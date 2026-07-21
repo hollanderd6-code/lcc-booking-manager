@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Ajouter un logement — BHGuest Hôte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --primary:#C2410C;--primary-dark:#9A3412;--primary-tint:#FBEDE7;--primary-light:#F0997B;
+  --ink:#1C1917;--bg:#FAF8F5;--white:#FFF;--text2:#78716C;--stone-light:#A8A29E;--line:#EDE8E1;
+  --error:#DC2626;--success:#16A34A;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--ink);min-height:100dvh}
+.wrap{max-width:480px;margin:0 auto;padding-bottom:40px}
+
+/* HEADER */
+.top{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),50px) 20px 18px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
+.top .back{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.14);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.top h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:22px;letter-spacing:-.2px}
+
+/* SECTIONS */
+.sec{background:var(--white);border:1px solid var(--line);border-radius:18px;margin:16px 16px 0;padding:20px 18px}
+.sec-t{font-family:'Instrument Serif',serif;font-size:19px;font-weight:400;margin-bottom:4px;letter-spacing:-.2px}
+.sec-d{font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.4}
+.field{margin-bottom:15px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:12.5px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.field label .opt{color:var(--stone-light);font-weight:400}
+.field input,.field textarea{width:100%;padding:14px 15px;background:var(--white);border:1px solid var(--line);border-radius:12px;font-size:16px;font-family:inherit;outline:none;color:var(--ink);transition:border-color .2s,box-shadow .2s}
+.field textarea{resize:vertical;min-height:90px;line-height:1.5}
+.field input::placeholder,.field textarea::placeholder{color:var(--stone-light)}
+.field input:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint)}
+.field .hint{font-size:12px;color:var(--stone-light);margin-top:5px;line-height:1.4}
+.row2{display:flex;gap:12px}
+.row2 .field{flex:1}
+.prefix{position:relative}
+.prefix input{padding-right:36px}
+.prefix .u{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:14px;font-weight:500}
+
+/* PHOTO */
+.photo-drop{border:2px dashed var(--line);border-radius:14px;padding:26px;text-align:center;cursor:pointer;transition:border-color .2s;position:relative;overflow:hidden}
+.photo-drop:active{border-color:var(--primary)}
+.photo-drop i{font-size:28px;color:var(--stone-light);margin-bottom:10px}
+.photo-drop .pt{font-size:14px;font-weight:500;color:var(--ink)}
+.photo-drop .ps{font-size:12px;color:var(--text2);margin-top:3px}
+.photo-drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.photo-drop.has-img{border:none;padding:0;height:180px}
+.photo-drop input[type=file]{display:none}
+
+/* CHIPS équipements */
+.chips{display:flex;flex-wrap:wrap;gap:9px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:10px 14px;border-radius:11px;border:1px solid var(--line);background:var(--white);font-size:13.5px;cursor:pointer;transition:all .15s;user-select:none}
+.chip i{font-size:13px;color:var(--stone-light);transition:color .15s}
+.chip.on{background:var(--primary-tint);border-color:var(--primary);color:var(--primary-dark);font-weight:500}
+.chip.on i{color:var(--primary)}
+
+/* Toggles règles */
+.rule{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line)}
+.rule:last-child{border:none}
+.rule span{font-size:14px}
+.tog{width:46px;height:27px;border-radius:99px;background:var(--line);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.tog::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:transform .2s}
+.tog.on{background:var(--primary)}
+.tog.on::after{transform:translateX(19px)}
+
+/* SUBMIT */
+.submit-bar{margin:20px 16px 0}
+.btn-submit{width:100%;padding:17px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;transition:transform .15s,background .15s}
+.btn-submit:active{transform:scale(.98);background:var(--primary-dark)}
+.btn-submit:disabled{opacity:.6}
+.msg{font-size:13.5px;padding:13px 15px;border-radius:11px;margin:16px 16px 0;display:none;line-height:1.45}
+.msg.err{background:#FEF2F2;color:var(--error);display:block}
+.msg.ok{background:#F0FDF4;color:var(--success);display:block}
+.spin{display:inline-block;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <button class="back" onclick="location.href='host-dashboard.html'"><i class="fas fa-arrow-left"></i></button>
+    <h1>Nouveau logement</h1>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <!-- PHOTO -->
+  <div class="sec">
+    <div class="sec-t">Photo</div>
+    <div class="sec-d">Une belle photo augmente vos réservations.</div>
+    <label class="photo-drop" id="photoDrop">
+      <i class="fas fa-camera"></i>
+      <div class="pt">Ajouter une photo</div>
+      <div class="ps">JPG ou PNG</div>
+      <input type="file" id="photo" accept="image/*">
+    </label>
+  </div>
+
+  <!-- INFOS -->
+  <div class="sec">
+    <div class="sec-t">Informations</div>
+    <div class="field"><label>Nom du logement</label><input type="text" id="name" placeholder="Ex. Studio cosy vue mer"></div>
+    <div class="field"><label>Ville</label><input type="text" id="city" placeholder="Ex. Nice"></div>
+    <div class="field"><label>Adresse <span class="opt">(non affichée publiquement)</span></label><input type="text" id="address" placeholder="12 rue des Fleurs"></div>
+    <div class="field"><label>Description <span class="opt">(optionnel)</span></label><textarea id="description" placeholder="Décrivez votre logement, l'ambiance, les atouts..."></textarea></div>
+  </div>
+
+  <!-- CAPACITÉ -->
+  <div class="sec">
+    <div class="sec-t">Capacité</div>
+    <div class="row2">
+      <div class="field"><label>Voyageurs</label><input type="number" id="maxGuests" min="1" placeholder="4"></div>
+      <div class="field"><label>Chambres</label><input type="number" id="bedrooms" min="0" placeholder="2"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Lits</label><input type="number" id="beds" min="0" placeholder="2"></div>
+      <div class="field"><label>Salles de bain</label><input type="number" id="bathrooms" min="0" step="1" placeholder="1"></div>
+    </div>
+  </div>
+
+  <!-- PRIX -->
+  <div class="sec">
+    <div class="sec-t">Prix & caution</div>
+    <div class="sec-d">Le prix affiché est tout compris pour le voyageur. Notre commission de 7 % est déduite de ce montant.</div>
+    <div class="row2">
+      <div class="field"><label>Prix par nuit</label><div class="prefix"><input type="number" id="basePrice" min="0" placeholder="85"><span class="u">€</span></div></div>
+      <div class="field"><label>Caution <span class="opt">(optionnel)</span></label><div class="prefix"><input type="number" id="depositAmount" min="0" placeholder="300"><span class="u">€</span></div></div>
+    </div>
+    <div class="field" style="margin-top:4px;">
+      <div style="background:var(--primary-tint);border-radius:10px;padding:11px 13px;font-size:12.5px;color:var(--primary-dark);line-height:1.45;">
+        <i class="fas fa-circle-info" style="margin-right:5px;"></i>Sur un prix de <b id="feeExample">85</b> €, vous recevez <b id="feeNet">79,05</b> € par nuit (après 7 % de commission).
+      </div>
+    </div>
+  </div>
+
+  <!-- ÉQUIPEMENTS -->
+  <div class="sec">
+    <div class="sec-t">Équipements</div>
+    <div class="sec-d">Sélectionnez ce que propose votre logement.</div>
+    <div class="chips" id="amenChips">
+      <span class="chip" data-k="cuisine_equipee"><i class="fas fa-kitchen-set"></i>Cuisine équipée</span>
+      <span class="chip" data-k="parking"><i class="fas fa-car"></i>Parking</span>
+      <span class="chip" data-k="television"><i class="fas fa-tv"></i>Télévision</span>
+      <span class="chip" data-k="climatisation"><i class="fas fa-snowflake"></i>Climatisation</span>
+      <span class="chip" data-k="lave_linge"><i class="fas fa-jug-detergent"></i>Lave-linge</span>
+      <span class="chip" data-k="lave_vaisselle"><i class="fas fa-sink"></i>Lave-vaisselle</span>
+      <span class="chip" data-k="draps"><i class="fas fa-bed"></i>Draps fournis</span>
+      <span class="chip" data-k="serviettes"><i class="fas fa-bath"></i>Serviettes</span>
+    </div>
+  </div>
+
+  <!-- RÈGLES -->
+  <div class="sec">
+    <div class="sec-t">Règlement intérieur</div>
+    <div class="rule"><span>Animaux acceptés</span><div class="tog" data-k="animaux"></div></div>
+    <div class="rule"><span>Enfants bienvenus</span><div class="tog on" data-k="enfants"></div></div>
+    <div class="rule"><span>Fêtes autorisées</span><div class="tog" data-k="fetes"></div></div>
+    <div class="rule"><span>Fumeurs autorisés</span><div class="tog" data-k="fumeurs"></div></div>
+  </div>
+
+  <!-- CALENDRIER -->
+  <div class="sec">
+    <div class="sec-t">Calendrier</div>
+    <div class="sec-d">Collez le lien iCal de votre calendrier (Airbnb, Booking, Google...) pour synchroniser vos disponibilités.</div>
+    <div class="field"><label>Lien iCal <span class="opt">(optionnel)</span></label><input type="url" id="icalUrl" placeholder="https://..."><div class="hint">Vous pourrez l'ajouter ou le modifier plus tard.</div></div>
+  </div>
+
+  <!-- HORAIRES -->
+  <div class="sec">
+    <div class="sec-t">Horaires</div>
+    <div class="row2">
+      <div class="field"><label>Arrivée</label><input type="text" id="arrivalTime" placeholder="15:00"></div>
+      <div class="field"><label>Départ</label><input type="text" id="departureTime" placeholder="11:00"></div>
+    </div>
+  </div>
+
+  <div class="submit-bar">
+    <button class="btn-submit" id="btnSubmit" onclick="submitProperty()">Publier le logement</button>
+  </div>
+</div>
+
+<script>
+const API_URL = window.Capacitor?.isNativePlatform?.() ? 'https://www.boostinghost.fr' : window.location.origin;
+const token = localStorage.getItem('bhguest_host_token');
+if(!token){ location.href='host.html'; }
+
+let photoFile = null;
+
+// Photo preview (délégation : le label reste, seul l'aperçu change)
+function handlePhotoChange(e){
+  const f = e.target.files[0]; if(!f) return;
+  photoFile = f;
+  const drop = document.getElementById('photoDrop');
+  const url = URL.createObjectURL(f);
+  // garder l'input, ajouter/mettre à jour l'aperçu
+  let img = drop.querySelector('img');
+  if(!img){ img = document.createElement('img'); drop.appendChild(img); drop.classList.add('has-img'); }
+  img.src = url;
+}
+document.getElementById('photo').addEventListener('change', handlePhotoChange);
+
+// Chips équipements
+document.querySelectorAll('#amenChips .chip').forEach(c=>{
+  c.addEventListener('click', ()=> c.classList.toggle('on'));
+});
+// Toggles règles
+document.querySelectorAll('.tog').forEach(t=>{
+  t.addEventListener('click', ()=> t.classList.toggle('on'));
+});
+
+// Exemple de commission dynamique
+const priceInput = document.getElementById('basePrice');
+priceInput.addEventListener('input', ()=>{
+  const p = parseFloat(priceInput.value) || 0;
+  document.getElementById('feeExample').textContent = p || 85;
+  document.getElementById('feeNet').textContent = p ? (p*0.93).toFixed(2).replace('.',',') : '79,05';
+});
+
+function showMsg(t,type){ const m=document.getElementById('msg'); m.textContent=t; m.className='msg '+type; window.scrollTo({top:0,behavior:'smooth'}); }
+
+async function submitProperty(){
+  const btn = document.getElementById('btnSubmit');
+  const name = val('name'), city = val('city'), basePrice = val('basePrice');
+  if(!name){ showMsg('Le nom du logement est requis.','err'); return; }
+  if(!city){ showMsg('La ville est requise.','err'); return; }
+  if(!basePrice || parseFloat(basePrice)<=0){ showMsg('Indiquez un prix par nuit valide.','err'); return; }
+
+  // Équipements
+  const amenities = {};
+  document.querySelectorAll('#amenChips .chip').forEach(c=>{ amenities[c.dataset.k] = c.classList.contains('on'); });
+  // Règles
+  const house_rules = {};
+  document.querySelectorAll('.tog').forEach(t=>{ house_rules[t.dataset.k] = t.classList.contains('on'); });
+
+  const fd = new FormData();
+  fd.append('name', name); fd.append('city', city);
+  fd.append('address', val('address')); fd.append('description', val('description'));
+  fd.append('basePrice', basePrice); fd.append('depositAmount', val('depositAmount'));
+  fd.append('maxGuests', val('maxGuests')); fd.append('bedrooms', val('bedrooms'));
+  fd.append('beds', val('beds')); fd.append('bathrooms', val('bathrooms'));
+  fd.append('arrivalTime', val('arrivalTime')); fd.append('departureTime', val('departureTime'));
+  fd.append('icalUrl', val('icalUrl'));
+  fd.append('amenities', JSON.stringify(amenities));
+  fd.append('house_rules', JSON.stringify(house_rules));
+  if(photoFile) fd.append('photo', photoFile);
+
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner spin"></i> Publication...';
+  try{
+    const res = await fetch(`${API_URL}/api/host/properties`, {
+      method:'POST', headers:{ 'Authorization': 'Bearer '+token }, body: fd
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Erreur lors de la publication');
+    showMsg('✓ Logement publié ! Redirection...','ok');
+    setTimeout(()=>{ location.href='host-dashboard.html'; }, 1200);
+  }catch(err){ showMsg(err.message,'err'); btn.disabled=false; btn.textContent='Publier le logement'; }
+}
+
+function val(id){ return (document.getElementById(id)?.value || '').trim(); }
+</script>
+</body>
+</html>

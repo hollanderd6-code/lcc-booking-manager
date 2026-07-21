@@ -19693,6 +19693,123 @@ app.post('/api/host/register', async (req, res) => {
   }
 });
 
+// ============================================
+// 🏠 MARKETPLACE — Création de logement par un hôte externe
+// Route allégée : is_marketplace=true, fee=7%, sans quotas/plans/Channex.
+// ============================================
+app.post('/api/host/properties', authenticateToken, upload.single('photo'), async (req, res) => {
+  try {
+    // Vérifier que c'est bien un hôte externe
+    const userRes = await pool.query('SELECT id, is_external_host FROM users WHERE id = $1', [req.user.id]);
+    if (userRes.rows.length === 0) return res.status(401).json({ error: 'Utilisateur introuvable' });
+    if (userRes.rows[0].is_external_host !== true) {
+      return res.status(403).json({ error: 'Réservé aux hôtes marketplace' });
+    }
+    const userId = req.user.id;
+
+    // Champs (form-data car photo)
+    const b = req.body || {};
+    const name = (b.name || '').trim();
+    const city = (b.city || '').trim();
+    const address = (b.address || '').trim();
+    const basePrice = b.basePrice ? parseFloat(b.basePrice) : null;
+    const depositAmount = b.depositAmount ? parseFloat(b.depositAmount) : null;
+    const description = (b.description || '').trim() || null;
+    const maxGuests = b.maxGuests ? parseInt(b.maxGuests) : null;
+    const bedrooms = b.bedrooms ? parseInt(b.bedrooms) : null;
+    const beds = b.beds ? parseInt(b.beds) : null;
+    const bathrooms = b.bathrooms ? parseFloat(b.bathrooms) : null;
+    const arrivalTime = (b.arrivalTime || '').trim() || null;
+    const departureTime = (b.departureTime || '').trim() || null;
+
+    // Validation minimale
+    if (!name) return res.status(400).json({ error: 'Le nom du logement est requis' });
+    if (!city) return res.status(400).json({ error: 'La ville est requise' });
+    if (!basePrice || basePrice <= 0) return res.status(400).json({ error: 'Un prix par nuit valide est requis' });
+
+    // amenities / house_rules (JSON envoyés en string dans le form-data)
+    let amenities = {};
+    let houseRules = {};
+    try { if (b.amenities) amenities = JSON.parse(b.amenities); } catch(e){}
+    try { if (b.house_rules) houseRules = JSON.parse(b.house_rules); } catch(e){}
+
+    // iCal (une seule URL au départ, on stocke en tableau)
+    let icalUrls = [];
+    const icalRaw = (b.icalUrl || '').trim();
+    if (icalRaw) icalUrls = [{ url: icalRaw, name: 'Calendrier', color: '#C2410C' }];
+
+    // Photo → Cloudinary
+    let photoUrl = null;
+    if (req.file) {
+      try { photoUrl = await uploadPhotoToCloudinary(req.file); }
+      catch (upErr) { console.error('❌ [HOST] upload photo:', upErr.message); }
+    }
+
+    // Générer l'ID (userId-slug), garantir unicité
+    const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    let id = `${userId}-${slug}`;
+    const exists = await pool.query('SELECT id FROM properties WHERE id = $1', [id]);
+    if (exists.rows.length > 0) id = `${id}-${Date.now().toString(36).slice(-4)}`;
+
+    const chatPin = Math.floor(1000 + Math.random() * 9000).toString();
+
+    await pool.query(
+      `INSERT INTO properties (
+        id, user_id, owner_id, name, color, city, address, description,
+        base_price, deposit_amount, photo_url,
+        max_guests, bedrooms, beds, bathrooms, arrival_time, departure_time,
+        amenities, house_rules, ical_urls,
+        chat_pin, display_order, created_at, updated_at,
+        is_marketplace, marketplace_fee_pct
+      ) VALUES (
+        $1, $2, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10,
+        $11, $12, $13, $14, $15, $16,
+        $17, $18, $19,
+        $20,
+        (SELECT COALESCE(MAX(display_order),0)+1 FROM properties WHERE user_id = $2),
+        NOW(), NOW(),
+        TRUE, 7
+      )`,
+      [
+        id, userId, name, '#C2410C', city, address || null, description,
+        basePrice, depositAmount, photoUrl,
+        maxGuests, bedrooms, beds, bathrooms, arrivalTime, departureTime,
+        JSON.stringify(amenities), JSON.stringify(houseRules), JSON.stringify(icalUrls),
+        chatPin
+      ]
+    );
+
+    console.log(`✅ [HOST] Logement créé: ${id} (${name}) par ${userId}`);
+    res.json({ success: true, id, name, photoUrl, message: 'Logement publié sur la marketplace.' });
+
+  } catch (e) {
+    console.error('❌ [HOST] create property:', e.message);
+    res.status(500).json({ error: 'Erreur serveur lors de la création du logement' });
+  }
+});
+
+// 📋 Liste des logements de l'hôte externe connecté
+app.get('/api/host/properties', authenticateToken, async (req, res) => {
+  try {
+    const userRes = await pool.query('SELECT is_external_host FROM users WHERE id = $1', [req.user.id]);
+    if (userRes.rows[0]?.is_external_host !== true) {
+      return res.status(403).json({ error: 'Réservé aux hôtes marketplace' });
+    }
+    const props = await pool.query(
+      `SELECT id, name, city, base_price, deposit_amount, photo_url, is_marketplace,
+              marketplace_fee_pct, max_guests, bedrooms, created_at
+       FROM properties WHERE user_id = $1 ORDER BY display_order ASC, created_at DESC`,
+      [req.user.id]
+    );
+    res.json({ properties: props.rows });
+  } catch (e) {
+    console.error('❌ [HOST] list properties:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
