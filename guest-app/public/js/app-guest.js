@@ -1304,33 +1304,93 @@ async function openProperty(id) {
 
 function renderDetail() {
   const p = state.currentProperty;
+
+  // Helpers tolérants camelCase / snake_case
+  const g = (obj, ...keys) => { for (const k of keys) { if (obj && obj[k] != null) return obj[k]; } return null; };
+  const photo = g(p, 'photoUrl', 'photo_url');
+  const desc = g(p, 'description');
+  const amen = g(p, 'amenities') || {};
+  const rules = g(p, 'houseRules', 'house_rules') || {};
+  const basketOn = g(p, 'welcomeBasketEnabled', 'welcome_basket_enabled');
+  const basketPrice = g(p, 'welcomeBasketPrice', 'welcome_basket_price');
+  const basketDesc = g(p, 'welcomeBasketDescription', 'welcome_basket_description');
+  const city = g(p, 'city') || g(p, 'address') || 'France';
+
+  // ── Équipements (uniquement ceux à true) + custom ──
+  const AMEN_MAP = {
+    cuisine_equipee: { label: 'Cuisine équipée', fa: 'fa-kitchen-set' },
+    parking:         { label: 'Parking',          fa: 'fa-car' },
+    television:      { label: 'Télévision',        fa: 'fa-tv' },
+    climatisation:   { label: 'Climatisation',     fa: 'fa-snowflake' },
+    lave_linge:      { label: 'Lave-linge',        fa: 'fa-jug-detergent' },
+    lave_vaisselle:  { label: 'Lave-vaisselle',    fa: 'fa-sink' },
+    draps:           { label: 'Draps fournis',     fa: 'fa-bed' },
+    serviettes:      { label: 'Serviettes',        fa: 'fa-bath' },
+  };
+  let amenItems = [];
+  Object.keys(AMEN_MAP).forEach(k => { if (amen[k] === true) amenItems.push(`<div class="detail-amen-i"><i class="fas ${AMEN_MAP[k].fa}"></i>${AMEN_MAP[k].label}</div>`); });
+  if (Array.isArray(amen.custom)) amen.custom.forEach(c => { const t = (typeof c === 'string' ? c : (c && c.label)); if (t) amenItems.push(`<div class="detail-amen-i"><i class="fas fa-check"></i>${t}</div>`); });
+
+  // ── Règles ──
+  const RULE_MAP = {
+    animaux: 'Animaux acceptés',
+    enfants: 'Enfants bienvenus',
+    fetes:   'Fêtes autorisées',
+    fumeurs: 'Fumeurs autorisés',
+  };
+  let ruleItems = Object.keys(RULE_MAP).map(k => {
+    const yes = rules[k] === true;
+    return `<div class="detail-rule ${yes ? 'yes' : 'no'}"><span class="ricon"><i class="fas ${yes ? 'fa-check' : 'fa-xmark'}"></i></span>${RULE_MAP[k]}</div>`;
+  }).join('');
+
   document.getElementById('detailContent').innerHTML = `
-    <div class="detail-photos">
-      ${p.photoUrl
-        ? `<img src="${p.photoUrl}" alt="${p.name}">`
-        : '<div class="no-photo">' + icon('home') + '</div>'}
+    <div class="detail-gallery">
+      ${photo ? `<img src="${photo}" alt="${p.name}">` : `<div class="no-photo">${icon('home')}</div>`}
+      <div class="detail-gtop">
+        <button class="detail-gbtn" onclick="navTo('home-list')">${icon('arrow-left')}</button>
+      </div>
     </div>
+
     <div class="detail-body">
+      <span class="detail-tag">Réservation directe</span>
       <div class="detail-name">${p.name}</div>
-      <div class="detail-location">${icon('location')} ${p.city || p.address || 'France'}</div>
+      <div class="detail-loc">${icon('location')} ${city}</div>
+
       <div class="detail-feats">
-        ${p.bedrooms ? `<div class="detail-feat">${icon('bed')}<strong>${p.bedrooms}</strong><span>chambres</span></div>` : ''}
-        ${p.maxGuests ? `<div class="detail-feat">${icon('users')}<strong>${p.maxGuests}</strong><span>personnes</span></div>` : ''}
-        ${p.bathrooms ? `<div class="detail-feat">${icon('bath')}<strong>${p.bathrooms}</strong><span>sdb</span></div>` : ''}
-        ${p.beds ? `<div class="detail-feat">${icon('moon')}<strong>${p.beds}</strong><span>lits</span></div>` : ''}
+        ${p.bedrooms ? `<div class="detail-feat">${icon('bed')}<b>${p.bedrooms}</b><span>chambre${p.bedrooms>1?'s':''}</span></div>` : ''}
+        ${p.maxGuests ? `<div class="detail-feat">${icon('users')}<b>${p.maxGuests}</b><span>voyageurs</span></div>` : ''}
+        ${p.beds ? `<div class="detail-feat">${icon('moon')}<b>${p.beds}</b><span>lit${p.beds>1?'s':''}</span></div>` : ''}
+        ${p.bathrooms ? `<div class="detail-feat">${icon('bath')}<b>${p.bathrooms}</b><span>sdb</span></div>` : ''}
       </div>
 
-      <div class="section-title">Sélectionner vos dates</div>
+      ${desc ? `<div class="detail-sec-t">Le logement</div><div class="detail-desc">${desc}</div>` : ''}
+
+      ${amenItems.length ? `<div class="detail-sec-t">Équipements</div><div class="detail-amen">${amenItems.join('')}</div>` : ''}
+
+      ${basketOn ? `
+        <div class="detail-basket">
+          <div class="bicon"><i class="fas fa-basket-shopping"></i></div>
+          <div style="flex:1">
+            <div class="bt">Panier d'accueil</div>
+            <div class="bd">${basketDesc || 'Un petit plus à votre arrivée pour bien démarrer le séjour.'}</div>
+          </div>
+          ${basketPrice ? `<div class="bp">+${basketPrice}€</div>` : ''}
+        </div>` : ''}
+
+      <div class="detail-sec-t">Règlement intérieur</div>
+      <div class="detail-rules">${ruleItems}</div>
+
+      <div class="detail-sec-t">Vos dates</div>
       <div id="calendarContainer"></div>
 
       ${p.arrivalTime || p.departureTime ? `
-      <div class="section-title">Horaires</div>
-      <div style="display:flex; gap:20px; background:var(--bg); border-radius:14px; padding:14px 16px; margin-bottom:16px;">
-        ${p.arrivalTime ? `<div><div style="font-size:12px;color:var(--text-light);">Arrivée</div><div style="font-size:15px;font-weight:700;">${p.arrivalTime}</div></div>` : ''}
-        ${p.departureTime ? `<div><div style="font-size:12px;color:var(--text-light);">Départ</div><div style="font-size:15px;font-weight:700;">${p.departureTime}</div></div>` : ''}
+      <div class="detail-sec-t">Horaires</div>
+      <div style="display:flex; gap:24px; background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:16px;">
+        ${p.arrivalTime ? `<div><div style="font-size:12px;color:var(--text2);">Arrivée</div><div style="font-size:15px;font-weight:600;">${p.arrivalTime}</div></div>` : ''}
+        ${p.departureTime ? `<div><div style="font-size:12px;color:var(--text2);">Départ</div><div style="font-size:15px;font-weight:600;">${p.departureTime}</div></div>` : ''}
       </div>` : ''}
 
-      <div style="height:90px;"></div>
+      <div style="height:20px;"></div>
     </div>
   `;
   renderCalendar();
@@ -1363,7 +1423,7 @@ function renderCalendar() {
   const monthName = firstDay.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 
   let html = `
-    <div style="background:white; border-radius:16px; padding:16px; margin-bottom:16px;">
+    <div class="detail-cal-card">
       <div class="calendar-nav">
         <button onclick="calNav(-1)">${icon('chevron-left')}</button>
         <h4>${monthName}</h4>
@@ -1477,13 +1537,16 @@ function updateBookingBar() {
   const p = state.currentProperty;
   if (!p) return;
   const bar = document.getElementById('bookingBarPrice');
+  const night = document.querySelector('.booking-bar-night');
 
   if (state.selectedCheckin && state.selectedCheckout) {
     const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
     const total = sumNights(p, state.selectedCheckin, state.selectedCheckout);
-    if (bar) bar.innerHTML = `${total}€ <span style="font-size:12px;font-weight:400;color:var(--text2);">· ${nights} nuit${nights > 1 ? 's' : ''}</span>`;
+    if (bar) bar.textContent = `${total}€`;
+    if (night) night.textContent = `· ${nights} nuit${nights > 1 ? 's' : ''}`;
   } else {
-    if (bar) bar.innerHTML = `${p.basePrice}€`;
+    if (bar) bar.textContent = `${p.basePrice}€`;
+    if (night) night.textContent = '/ nuit';
   }
 }
 
