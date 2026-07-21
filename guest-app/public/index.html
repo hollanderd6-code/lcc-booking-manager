@@ -318,7 +318,7 @@ body {
 }
 .home-search input::placeholder { color: var(--text2); }
 .home-search-btn {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  background: var(--primary);
   color: white;
   border: 1px solid rgba(255,255,255,.2);
   border-radius: 12px;
@@ -431,7 +431,7 @@ body {
 /* CTA inscription */
 .home-cta {
   margin: 0 16px 24px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  background: var(--primary);
   border-radius: var(--radius); padding: 20px;
   display: flex; flex-direction: column; gap: 12px;
 }
@@ -562,7 +562,7 @@ body {
 #screen-login { background: var(--bg); }
 
 .auth-header {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  background: var(--primary);
   padding: max(env(safe-area-inset-top),40px) 24px 40px;
   text-align: center;
 }
@@ -617,7 +617,7 @@ body {
 
 .auth-btn {
   width: 100%; padding: 15px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  background: var(--primary);
   color: white; border: none; border-radius: 14px;
   font-size: 16px; font-weight: 700; font-family: inherit;
   cursor: pointer; transition: opacity .2s;
@@ -636,7 +636,7 @@ body {
   margin-top: 20px; display: flex; align-items: center;
   justify-content: center; gap: 5px;
 }
-.auth-security i { color: #10b981; }
+.auth-security i { color: var(--primary); }
 
 /* ═══════════════════════════════════════
    AUTRES ÉCRANS (Réservations, Messages, Compte, Chat, Détail)
@@ -690,41 +690,37 @@ body {
 .chat-send-btn:active { transform: scale(.92); background: var(--primary-dark); }
 
 /* Compte */
-#screen-account {
-  background:
-    radial-gradient(700px 380px at -5% -5%, rgba(194,65,12,.08), transparent 55%),
-    radial-gradient(600px 420px at 108% 10%, rgba(194,65,12,.05), transparent 52%),
-    var(--bg);
-}
+#screen-account { background: var(--bg); }
 .account-wrap { padding: 16px 16px 80px; }
 .account-card {
-  background: rgba(255,255,255,.6);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  backdrop-filter: blur(18px) saturate(180%);
-  border: 1px solid rgba(194,65,12,.12);
+  background: #fff;
+  border: 1px solid var(--line);
   border-radius: 18px;
-  padding: 18px; margin-bottom: 12px;
-  box-shadow: 0 4px 20px rgba(194,65,12,.08), inset 0 1px 0 rgba(255,255,255,.55);
+  padding: 18px; margin-bottom: 14px;
 }
 .account-card-title {
-  font-size: 13px; font-weight: 700; color: var(--text);
-  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+  font-family: 'Instrument Serif', serif; font-size: 19px; font-weight: 400; color: var(--ink);
+  margin-bottom: 16px; display: flex; align-items: center; gap: 9px; letter-spacing: -.2px;
 }
-.account-card-title i { color: var(--primary); }
+.account-card-title i, .account-card-title .bhi { color: var(--primary); }
 .account-field { margin-bottom: 14px; }
-.account-field label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px; }
+.account-field label { display: block; font-size: 12.5px; font-weight: 500; color: var(--text2); margin-bottom: 6px; text-transform: none; letter-spacing: 0; }
 .account-field input {
-  width: 100%; padding: 11px 13px;
-  border: 1.5px solid var(--border); border-radius: 10px;
-  font-size: 15px; font-family: inherit; outline: none;
+  width: 100%; padding: 13px 14px;
+  border: 1px solid var(--line); border-radius: 12px;
+  font-size: 16px; font-family: inherit; outline: none; color: var(--ink);
+  transition: border-color .2s, box-shadow .2s;
 }
-.account-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(194,65,12,.1); }
+.account-field input::placeholder { color: var(--stone-light); }
+.account-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-tint); }
 .btn-save-account {
-  width: 100%; padding: 13px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white; border: none; border-radius: 12px;
-  font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
+  width: 100%; padding: 15px;
+  background: var(--primary);
+  color: #fff; border: none; border-radius: 14px;
+  font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
+  transition: transform .15s, background .15s;
 }
+.btn-save-account:active { transform: scale(.98); background: var(--primary-dark); }
 
 /* Détail logement */
 #screen-detail { background: var(--bg); }
@@ -843,7 +839,7 @@ body.screen-detail #bottomNav { display: none !important; }
 .booking-bar-price { font-size: 20px; font-weight: 800; color: var(--primary); }
 .booking-bar-night { font-size: 12px; color: var(--text2); }
 .booking-bar-btn {
-  flex: 1; padding: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  flex: 1; padding: 14px; background: var(--primary);
   color: white; border: 1px solid rgba(255,255,255,.2); border-radius: 14px;
   font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
   box-shadow: 0 4px 16px rgba(194,65,12,.32), inset 0 1px 0 rgba(255,255,255,.3);
@@ -914,7 +910,7 @@ body.screen-detail #bottomNav { display: none !important; }
 .cal-day:not(.disabled):not(.empty):hover { background: var(--primary-tint); color: var(--primary); }
 .cal-day.today { font-weight: 700; color: var(--primary); }
 .cal-day.selected, .cal-day.range-start, .cal-day.range-end {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+  background: var(--primary) !important;
   color: white !important;
   box-shadow: 0 3px 10px rgba(194,65,12,.35);
 }
@@ -997,15 +993,14 @@ body.screen-detail #bottomNav { display: none !important; }
 
 /* ─── CONFIRMATION ─── */
 .confirm-icon {
-  width: 76px; height: 76px; margin: 8px auto 18px;
+  width: 76px; height: 76px; margin: 20px auto 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  background: var(--primary);
   display: flex; align-items: center; justify-content: center;
-  color: white; font-size: 32px;
-  box-shadow: 0 8px 24px rgba(194,65,12,.4),
-              inset 0 1px 0 rgba(255,255,255,.4);
+  color: #fff; font-size: 30px;
   animation: confirmPop .45s cubic-bezier(.34,1.56,.64,1);
 }
+.confirm-icon .bhi { width: 34px; height: 34px; }
 @keyframes confirmPop {
   0% { transform: scale(.4); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
@@ -1016,27 +1011,25 @@ body.screen-detail #bottomNav { display: none !important; }
 }
 .confirm-sub { font-size: 14px; color: var(--text2); text-align: center; margin-bottom: 22px; line-height: 1.5; }
 .confirm-card {
-  background: rgba(255,255,255,.6);
-  -webkit-backdrop-filter: blur(18px) saturate(180%);
-  backdrop-filter: blur(18px) saturate(180%);
-  border: 1px solid rgba(194,65,12,.12);
+  background: #fff;
+  border: 1px solid var(--line);
   border-radius: 18px;
   padding: 18px;
   margin-bottom: 22px;
-  box-shadow: 0 4px 20px rgba(194,65,12,.08), inset 0 1px 0 rgba(255,255,255,.55);
 }
-.confirm-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; border-bottom: 1px solid rgba(194,65,12,.08); color: var(--text); }
+.confirm-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: 14px; border-bottom: 1px solid var(--line); color: #4A4542; }
+.confirm-row span:last-child { color: var(--ink); font-weight: 500; }
 .confirm-row:last-child { border-bottom: none; }
 .confirm-row span:first-child { color: var(--text2); }
 .confirm-row span:last-child { font-weight: 600; }
 .btn-confirm-home {
-  width: 100%; padding: 15px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white; border: 1px solid rgba(255,255,255,.2); border-radius: 14px;
-  font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
-  box-shadow: 0 4px 16px rgba(194,65,12,.32), inset 0 1px 0 rgba(255,255,255,.3);
-  transition: transform .15s ease;
+  width: 100%; padding: 16px;
+  background: var(--primary);
+  color: #fff; border: none; border-radius: 14px;
+  font-size: 16px; font-weight: 600; font-family: inherit; cursor: pointer;
+  transition: transform .15s, background .15s;
 }
+.btn-confirm-home:active { background: var(--primary-dark); }
 .btn-confirm-home:active { transform: scale(.97); }
 
 /* ─── SYSTÈME D'ICÔNES SF (traits fins) ─── */
@@ -1339,7 +1332,7 @@ body.screen-detail #bottomNav { display: none !important; }
           <div class="account-field"><label>Confirmer</label><input type="password" id="newPasswordConfirm" placeholder="••••••••"></div>
           <div id="pwdChangeError" class="auth-err"></div>
           <button onclick="changePassword()" id="btnChangePwd"
-            style="width:100%;padding:12px;background:var(--primary-light);color:var(--primary);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+            style="width:100%;padding:12px;background:var(--primary-tint);color:var(--primary-dark);border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">
             <i class="fas fa-key" style="margin-right:6px;"></i>Mettre à jour
           </button>
         </div>
