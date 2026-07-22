@@ -41256,6 +41256,32 @@ app.post('/api/host/conversations/:id/send', authenticateToken, async (req, res)
     // Temps réel côté voyageur s'il a l'app ouverte
     try { io.to('conversation_' + convId).emit('new_message', msgResult.rows[0]); } catch(e) {}
 
+    // 🔔 Push natif voyageur (même mécanique que /api/chat/send de l'app BH)
+    try {
+      const gt = await pool.query(
+        'SELECT DISTINCT fcm_token FROM guest_fcm_tokens WHERE conversation_id = $1 AND fcm_token IS NOT NULL',
+        [convId]
+      );
+      if (gt.rows.length) {
+        const admin = require('firebase-admin');
+        const preview = message.trim().length > 100 ? message.trim().slice(0, 97) + '...' : message.trim();
+        for (const row of gt.rows) {
+          try {
+            await admin.messaging().send({
+              notification: { title: senderName, body: preview },
+              data: { conversation_id: String(convId), type: 'new_message', click_action: 'FLUTTER_NOTIFICATION_CLICK' },
+              token: row.fcm_token
+            });
+          } catch (tErr) {
+            if (tErr.code === 'messaging/invalid-registration-token' || tErr.code === 'messaging/registration-token-not-registered') {
+              await pool.query('DELETE FROM guest_fcm_tokens WHERE fcm_token = $1', [row.fcm_token]).catch(() => {});
+            }
+          }
+        }
+        console.log(`🔔 [HOST CHAT] Push voyageur envoyé (${gt.rows.length} appareil(s))`);
+      }
+    } catch(pErr) { console.warn('⚠️ [HOST CHAT] Push voyageur:', pErr.message); }
+
     // ✉️ Prévenir le voyageur par email — au plus 1 email par heure par conversation
     try {
       if (conv.guest_email) {
