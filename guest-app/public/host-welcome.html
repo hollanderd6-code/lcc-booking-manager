@@ -42,6 +42,13 @@ section{padding:0 20px;}
 .fig b{display:block;font-size:24px;font-weight:800;color:var(--primary);line-height:1.1;}
 .fig span{font-size:11.5px;color:var(--text2);display:block;margin-top:4px;line-height:1.35;}
 
+.founder{background:var(--ink);color:#fff;border-radius:18px;padding:22px 20px;position:relative;overflow:hidden;}
+.founder::before{content:'';position:absolute;inset:0;opacity:.5;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:40px 40px;}
+.founder>*{position:relative;z-index:1;}
+.founder-tag{display:inline-block;background:var(--primary);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:5px 12px;margin-bottom:12px;}
+.founder b{display:block;font-family:'Instrument Serif',serif;font-size:29px;font-weight:400;margin-bottom:8px;}
+.founder p{font-size:13.5px;line-height:1.6;color:rgba(255,255,255,.78);}
+
 h2{font-family:'Instrument Serif',serif;font-size:27px;font-weight:400;margin-bottom:8px;}
 .lead{font-size:14.5px;color:var(--text2);margin-bottom:22px;max-width:520px;}
 .block{padding-top:46px;}
@@ -107,17 +114,25 @@ h2{font-family:'Instrument Serif',serif;font-size:27px;font-weight:400;margin-bo
     <h1>Vos logements.<br><em>Vos règles.</em></h1>
     <p>La plateforme <strong style="color:#fff;">française</strong> de réservation directe, pensée avec ceux qui reçoivent. Vous fixez vos prix, vos conditions, et vous êtes payé sur votre compte.</p>
     <a class="hero-cta" href="host.html">Créer mon compte hôte <i class="fas fa-arrow-right"></i></a>
-    <div class="hero-note">Gratuit. Aucun abonnement, aucun engagement.</div>
+    <div class="hero-note">Gratuit, sans abonnement ni engagement. 5 % de commission à vie pour toute inscription en 2026.</div>
   </div>
 </div>
 
 <div class="figures">
-  <div class="fig"><b>7 %</b><span>de commission, tout compris</span></div>
+  <div class="fig"><b>5 %</b><span>de commission, garantis à vie</span></div>
   <div class="fig"><b>🇫🇷</b><span>entreprise et support français</span></div>
   <div class="fig"><b>Direct</b><span>versé sur votre compte</span></div>
 </div>
 
 <div class="wrap">
+
+  <section style="padding-top:26px;">
+    <div class="founder">
+      <div class="founder-tag">Offre fondateur</div>
+      <b>5 % de commission, à vie</b>
+      <p>Tout logement mis en ligne d'ici le 31 décembre 2026 conserve définitivement le taux de 5 %, sans limite de durée. Les logements créés à partir de 2027 seront à 7 %. Le taux est figé le jour de la publication : il ne bougera plus, quoi qu'il arrive ensuite.</p>
+    </div>
+  </section>
 
   <section class="block">
     <h2>Ce que vous gardez</h2>
@@ -216,8 +231,11 @@ h2{font-family:'Instrument Serif',serif;font-size:27px;font-weight:400;margin-bo
     <details class="faq"><summary>Puis-je rester sur Airbnb et Booking en parallèle ?</summary>
       <p>Oui, et c'est ce que font la plupart de nos hôtes. La synchronisation iCal tient vos calendriers alignés pour éviter les doubles réservations. BHGuest est un canal de plus, pas un remplacement — c'est à vous de voir la place que vous lui donnez.</p></details>
 
-    <details class="faq"><summary>La commission de 7 %, elle couvre quoi exactement ?</summary>
+    <details class="faq"><summary>La commission, elle couvre quoi exactement ?</summary>
       <p>Tout : l'hébergement de vos annonces, le calendrier, la messagerie, les notifications, le traitement du paiement et les frais bancaires. Il n'y a ni abonnement mensuel, ni frais de publication, ni option payante. Le voyageur, lui, paie le prix que vous affichez — sans frais de service ajoutés au moment de payer.</p></details>
+
+    <details class="faq"><summary>Le taux de 5 % peut-il augmenter plus tard ?</summary>
+      <p>Non, pas pour les logements publiés en 2026. Le taux est enregistré sur chaque logement au moment de sa mise en ligne et n'est jamais recalculé. Si vous publiez un logement cette année, il restera à 5 % même en 2028. En revanche, un logement que vous ajouteriez en 2027 se verra appliquer le taux en vigueur à ce moment-là, soit 7 %.</p></details>
 
     <details class="faq"><summary>Que se passe-t-il si un voyageur dégrade mon logement ?</summary>
       <p>Vous disposez de ses coordonnées complètes — nom, email, téléphone — dès la réservation, et de la conversation qui fait trace. BHGuest n'est pas un assureur : nous vous recommandons de conserver votre assurance propriétaire non occupant ou votre garantie loueur, comme pour n'importe quel autre canal de réservation.</p></details>

@@ -19907,7 +19907,7 @@ app.post('/api/host/properties', authenticateToken, upload.array('photos', 15), 
         $26,
         (SELECT COALESCE(MAX(display_order),0)+1 FROM properties WHERE user_id = $2),
         NOW(), NOW(),
-        TRUE, 7
+        TRUE, ${currentSignupFeePct()}
       )`,
       [
         id, userId, name, '#C2410C', city, postalCode, address || null, description,
@@ -20093,13 +20093,37 @@ async function getGuestCancellationRate(guestEmail) {
 // ══════════════════════════════════════════════════════════════
 const DEFERRED_CAPTURE_DAYS = 2; // = fenêtre d'annulation gratuite
 
-// 💰 Commission marketplace — UN SEUL ENDROIT À MODIFIER.
-// Hôtes externes BHGuest / propriétaires Boostinghost historiques.
-const MARKETPLACE_FEE_PCT_EXTERNAL = parseFloat(process.env.MARKETPLACE_FEE_PCT || '7');
-const MARKETPLACE_FEE_PCT_INTERNAL = 3;
-function marketplaceFeePct(isExternalHost) {
-  return isExternalHost ? MARKETPLACE_FEE_PCT_EXTERNAL : MARKETPLACE_FEE_PCT_INTERNAL;
+// 💰 Commission marketplace
+// Tarif fondateur : tout logement mis en ligne en 2026 conserve 5% À VIE.
+// À partir de 2027, les nouveaux logements sont à 7%. Le taux est figé dans
+// properties.marketplace_fee_pct au moment de la création — il ne bouge plus.
+const MARKETPLACE_FEE_PCT_INTERNAL = 3;              // propriétaires Boostinghost
+const FOUNDER_FEE_PCT = parseFloat(process.env.FOUNDER_FEE_PCT || '5');
+const STANDARD_FEE_PCT = parseFloat(process.env.MARKETPLACE_FEE_PCT || '7');
+const FOUNDER_LAST_YEAR = parseInt(process.env.FOUNDER_LAST_YEAR || '2026', 10);
+
+// Taux appliqué à un logement créé maintenant
+function currentSignupFeePct() {
+  return new Date().getFullYear() <= FOUNDER_LAST_YEAR ? FOUNDER_FEE_PCT : STANDARD_FEE_PCT;
 }
+
+// Taux effectif d'un logement : celui figé à sa création, sinon repli
+function marketplaceFeePct(isExternalHost, lockedPct) {
+  if (!isExternalHost) return MARKETPLACE_FEE_PCT_INTERNAL;
+  const locked = parseFloat(lockedPct);
+  if (!isNaN(locked) && locked > 0) return locked;
+  return currentSignupFeePct();
+}
+
+// Rattrapage unique : les logements marketplace déjà en ligne sont de 2026,
+// ils passent donc au tarif fondateur.
+pool.query(`
+  UPDATE properties SET marketplace_fee_pct = $1
+  WHERE is_marketplace = TRUE AND (marketplace_fee_pct IS NULL OR marketplace_fee_pct = 7)
+    AND created_at < $2
+`, [FOUNDER_FEE_PCT, `${FOUNDER_LAST_YEAR + 1}-01-01`])
+  .then(r => { if (r.rowCount) console.log(`💰 [FONDATEUR] ${r.rowCount} logement(s) passés à ${FOUNDER_FEE_PCT}%`); })
+  .catch(e => console.error('❌ Backfill fee_pct:', e.message));
 
 pool.query(`
   CREATE TABLE IF NOT EXISTS bhguest_deferred_payments (
@@ -40390,7 +40414,7 @@ app.post('/api/guest/book', async (req, res) => {
     // Le voyageur paie exactement le prix affiché/négocié (tout compris : ménage, taxe, marge).
     // La commission plateforme (3% BH / 7% hôte externe) est prélevée au REVERSEMENT (Stripe Connect),
     // invisible pour le voyageur.
-    const feePct = marketplaceFeePct(prop.is_external_host);
+    const feePct = marketplaceFeePct(prop.is_external_host, prop.marketplace_fee_pct);
     const commission = Math.round(totalBase * feePct / 100 * 100) / 100; // pour reversement (Phase 4)
     const totalTTC = Math.round(totalBase * 100); // le voyageur paie totalBase, POINT — en centimes
 
@@ -43086,7 +43110,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     }
 
     const propResult = await pool.query(
-      `SELECT p.base_price, p.weekend_price, p.name, p.address, p.cleaning_fee, p.tourist_tax_per_night, p.user_id, u.is_external_host FROM properties p JOIN users u ON u.id = p.user_id WHERE p.id = $1`,
+      `SELECT p.base_price, p.weekend_price, p.name, p.address, p.cleaning_fee, p.tourist_tax_per_night, p.user_id, p.marketplace_fee_pct, u.is_external_host FROM properties p JOIN users u ON u.id = p.user_id WHERE p.id = $1`,
       [property_id]
     );
     if (!propResult.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
@@ -43218,7 +43242,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     // Ni ménage, ni taxe, ni frais de service ne sont ajoutés. La commission plateforme
     // (3% BH / 7% hôte externe) est prélevée au reversement via application_fee (invisible voyageur).
     const isFixedPrice = validatedFixedPrice != null;
-    const feePct = marketplaceFeePct(prop.is_external_host);
+    const feePct = marketplaceFeePct(prop.is_external_host, prop.marketplace_fee_pct);
     const cleaningFee = 0; // inclus dans le prix affiché
     const touristTax = 0;  // inclus dans le prix affiché
     const commission = Math.round(discountedBase * feePct / 100 * 100) / 100; // pour info/reporting
