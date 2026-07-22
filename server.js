@@ -38830,10 +38830,15 @@ app.get('/api/guest/properties', async (req, res) => {
         p.base_price, p.weekend_price, p.max_guests,
         p.bedrooms, p.beds, p.bathrooms,
         p.property_type, p.description, p.postal_code,
+        rv.avg_rating, rv.reviews_count,
         p.channex_property_id, p.channex_room_type_id, p.channex_enabled,
         p.is_marketplace, p.marketplace_fee_pct,
         u.id as owner_id, u.is_external_host
       FROM properties p
+      LEFT JOIN (
+        SELECT property_id, ROUND(AVG(rating)::numeric, 1) AS avg_rating, COUNT(*)::int AS reviews_count
+        FROM bhguest_reviews WHERE submitted_at IS NOT NULL GROUP BY property_id
+      ) rv ON rv.property_id = p.id
       JOIN users u ON u.id = p.user_id
       LEFT JOIN subscriptions s ON s.user_id = u.id
       WHERE p.base_price IS NOT NULL
@@ -38888,6 +38893,8 @@ app.get('/api/guest/properties', async (req, res) => {
       postalCode: p.postal_code || null,
       propertyType: p.property_type || null,
       description: p.description || null,
+      reviewsAvg: p.avg_rating != null ? parseFloat(p.avg_rating) : null,
+      reviewsCount: p.reviews_count || 0,
       photoUrl: p.photo_url,
       basePrice: displayPrices[idx] != null ? displayPrices[idx] : (parseFloat(p.base_price) || null),
       weekendPrice: parseFloat(p.weekend_price) || null,

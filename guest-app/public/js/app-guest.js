@@ -1559,9 +1559,24 @@ async function loadFeaturedProperties() {
   }
 }
 
+// Libellé lisible d'un type de logement
+function typeLabel(t) {
+  const M = { appartement: 'Appartement', maison: 'Maison', studio: 'Studio', villa: 'Villa', autre: null };
+  return t ? (M[String(t).toLowerCase()] !== undefined ? M[String(t).toLowerCase()] : t) : null;
+}
+
 async function loadProperties() {
   const grid = document.getElementById('propertiesList');
-  grid.innerHTML = '<div class="loading-center"><i class="fas fa-spinner fa-spin"></i></div>';
+  // Squelettes : la page garde sa structure pendant le chargement
+  grid.innerHTML = Array.from({length: 4}, () => `
+    <div class="prop-skel">
+      <div class="prop-skel-img"></div>
+      <div class="prop-skel-body">
+        <div class="prop-skel-line" style="width:70%"></div>
+        <div class="prop-skel-line" style="width:45%"></div>
+        <div class="prop-skel-line" style="width:55%;margin-top:10px;"></div>
+      </div>
+    </div>`).join('');
 
   try {
     const params = new URLSearchParams();
@@ -1603,8 +1618,11 @@ async function loadProperties() {
           <span class="prop-card-badge">Réservation directe</span>
         </div>
         <div class="prop-card-body">
-          <div class="prop-card-name">${p.name}</div>
-          <div class="prop-card-loc">${icon('location')}${p.city || p.address || 'France'}</div>
+          <div class="prop-card-head">
+            <div class="prop-card-name">${esc(p.name)}</div>
+            ${p.reviewsAvg ? `<div class="prop-card-rating"><i class="fas fa-star"></i>${p.reviewsAvg}${p.reviewsCount > 1 ? ` <span>(${p.reviewsCount})</span>` : ''}</div>` : ''}
+          </div>
+          <div class="prop-card-loc">${icon('location')}${esc([typeLabel(p.propertyType), p.city || p.address || 'France'].filter(Boolean).join(' · '))}</div>
           <div class="prop-card-features">
             ${p.bedrooms ? `<div class="prop-card-feat">${icon('bed')}${p.bedrooms} ch.</div>` : ''}
             ${p.maxGuests ? `<div class="prop-card-feat">${icon('user')}${p.maxGuests} pers.</div>` : ''}
@@ -1612,7 +1630,7 @@ async function loadProperties() {
           </div>
           <div class="prop-card-footer">
             <div>
-              <span class="prop-card-price-main">${p.basePrice || '—'}€</span><span class="prop-card-price-night">/ nuit</span>
+              ${p.basePrice ? `<span class="prop-card-price-des">dès</span> <span class="prop-card-price-main">${p.basePrice}€</span><span class="prop-card-price-night">/ nuit</span>` : `<span class="prop-card-price-main">—</span>`}
             </div>
             <button class="prop-card-btn">Réserver</button>
           </div>
@@ -1787,6 +1805,54 @@ function renderReviewsSection(p) {
     ${p.reviews.length > 6 ? `<div class="reviews-more">${p.reviews.length - 6} autres avis non affichés</div>` : ''}`;
 }
 
+// ══ 🖼️ Galerie plein écran ═══════════════════════════════════
+let _lbPhotos = [], _lbIdx = 0;
+
+function openLightbox(startIdx) {
+  const p = state.currentProperty;
+  _lbPhotos = (Array.isArray(p?.photos) && p.photos.length) ? p.photos : (p?.photoUrl ? [p.photoUrl] : []);
+  if (!_lbPhotos.length) return;
+  _lbIdx = Math.max(0, Math.min(startIdx || 0, _lbPhotos.length - 1));
+
+  const lb = document.createElement('div');
+  lb.id = 'lightbox';
+  lb.innerHTML = `
+    <div class="lb-top">
+      <div class="lb-count"><span id="lbIdx">${_lbIdx + 1}</span> / ${_lbPhotos.length}</div>
+      <button class="lb-close" onclick="closeLightbox()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="lb-scroll" id="lbScroll" onscroll="lbOnScroll(this)">
+      ${_lbPhotos.map(ph => `<div class="lb-slide"><img src="${ph}" alt="" draggable="false"></div>`).join('')}
+    </div>`;
+  document.body.appendChild(lb);
+  document.body.style.overflow = 'hidden';
+  // Positionner sur la photo tapée, sans animation
+  const sc = document.getElementById('lbScroll');
+  sc.scrollLeft = _lbIdx * sc.clientWidth;
+  // Fermer d'un geste vers le bas ou par Échap
+  lb.addEventListener('click', e => { if (e.target === lb) closeLightbox(); });
+  document.addEventListener('keydown', lbOnKey);
+}
+
+function lbOnScroll(el) {
+  const i = Math.round(el.scrollLeft / el.clientWidth);
+  if (i !== _lbIdx) { _lbIdx = i; const c = document.getElementById('lbIdx'); if (c) c.textContent = i + 1; }
+}
+
+function lbOnKey(e) {
+  if (e.key === 'Escape') closeLightbox();
+  const sc = document.getElementById('lbScroll');
+  if (!sc) return;
+  if (e.key === 'ArrowRight') sc.scrollBy({ left: sc.clientWidth, behavior: 'smooth' });
+  if (e.key === 'ArrowLeft') sc.scrollBy({ left: -sc.clientWidth, behavior: 'smooth' });
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox')?.remove();
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', lbOnKey);
+}
+
 // ── Carte "Votre hôte" sur la fiche logement ─────────────────
 function renderHostCard(p) {
   const h = p.host;
@@ -1891,7 +1957,7 @@ function renderDetail() {
   document.getElementById('detailContent').innerHTML = `
     <div class="detail-gallery">
       ${photos.length
-        ? `<div class="detail-gallery-scroll" id="galleryScroll" onscroll="updateGalleryDot(this)">${photos.map(ph=>`<img src="${ph}" alt="${p.name}" loading="lazy">`).join('')}</div>
+        ? `<div class="detail-gallery-scroll" id="galleryScroll" onscroll="updateGalleryDot(this)">${photos.map((ph,i)=>`<img src="${ph}" alt="${esc(p.name)}" loading="lazy" onclick="openLightbox(${i})">`).join('')}</div>
            ${photos.length>1 ? `<div class="detail-gallery-count"><span id="galleryIdx">1</span>/${photos.length}</div>` : ''}`
         : `<div class="no-photo">${icon('home')}</div>`}
       <div class="detail-gtop">
