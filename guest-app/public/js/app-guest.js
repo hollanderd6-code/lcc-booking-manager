@@ -617,13 +617,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadProperties();
   loadFeaturedProperties();
 
-  // 👤 Profil : charger et inviter à le compléter après connexion
+  // 👤 Profil : charger et inviter à le compléter après connexion.
+  // On ne détourne PAS l'utilisateur s'il arrive par un lien personnalisé.
   renderAuthBar();
-  if (isLoggedIn()) {
-    const p = await fetchProfile();
-    if (p && !p.profileComplete) {
-      showToast('Complétez votre profil pour réserver');
-      navTo('profile');
+  {
+    const dl = new URLSearchParams(window.location.search);
+    const viaLink = dl.has('property') || dl.has('hold_token') || dl.has('fixed_price');
+    if (isLoggedIn()) {
+      const p = await fetchProfile();
+      if (p && !p.profileComplete && !viaLink) {
+        showToast('Complétez votre profil pour réserver');
+        navTo('profile');
+      }
     }
   }
 
@@ -1865,8 +1870,11 @@ function updateBookingBar() {
 // ── Checkout ─────────────────────────────────────────────────
 function goToCheckout() {
   if (!state.selectedCheckin || !state.selectedCheckout) return;
-  // 👤 Réserver exige un compte connecté avec profil complet
-  if (!isLoggedIn() || state.profile?.profileComplete !== true) {
+  // 👤 Réserver exige un compte connecté avec profil complet — SAUF en parcours
+  // personnalisé (lien hold / prix négocié envoyé par l'hôte), qui doit rester
+  // accessible sans inscription.
+  const personalizedLink = !!(state._holdToken || state._lockedPropertyId || state._fixedPriceActive != null);
+  if (!personalizedLink && (!isLoggedIn() || state.profile?.profileComplete !== true)) {
     requireProfile(() => goToCheckout(), 'Connectez-vous pour réserver');
     return;
   }

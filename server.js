@@ -41194,20 +41194,52 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       return res.status(400).json({ error: 'Champs requis manquants' });
     }
 
-    // 👤 Réservation réservée aux comptes connectés avec profil complet
+    // 👤 Réservation réservée aux comptes connectés avec profil complet.
+    // EXCEPTION : les liens personnalisés envoyés par l'hôte (hold / prix négocié)
+    // doivent fonctionner sans inscription — le hold fait office d'autorisation.
     {
-      const sessionEmail = verifyGuestSession(req);
-      if (!sessionEmail) {
-        return res.status(401).json({ error: 'Connectez-vous pour réserver.', needsLogin: true });
-      }
-      if (sessionEmail.toLowerCase() !== String(guest_email).toLowerCase()) {
-        return res.status(403).json({ error: 'Email de réservation différent du compte connecté.' });
-      }
+      let holdExempt = false;
       try {
-        await requireCompleteGuestProfile(sessionEmail);
-      } catch (gErr) {
-        if (gErr.statusCode) return res.status(403).json(gErr.payload);
-        throw gErr;
+        if (hold_token) {
+          const hr = await pool.query(
+            `SELECT 1 FROM bhguest_holds
+             WHERE link_token = $1 AND status = 'active' AND expires_at > NOW() LIMIT 1`,
+            [hold_token]
+          );
+          holdExempt = hr.rows.length > 0;
+        }
+        if (!holdExempt) {
+          // Lien à prix négocié sans token explicite : hold actif sur ce logement + ces dates
+          const hr2 = await pool.query(
+            `SELECT 1 FROM bhguest_holds
+             WHERE property_id = $1 AND checkin = $2 AND checkout = $3
+               AND status = 'active' AND expires_at > NOW()
+               AND fixed_price IS NOT NULL
+             LIMIT 1`,
+            [property_id, checkin, checkout]
+          );
+          holdExempt = hr2.rows.length > 0;
+        }
+      } catch (hErr) {
+        console.warn('⚠️ [GUEST] Vérification exemption hold:', hErr.message);
+      }
+
+      if (holdExempt) {
+        console.log('🔓 [GUEST] Checkout via lien personnalisé — connexion non requise');
+      } else {
+        const sessionEmail = verifyGuestSession(req);
+        if (!sessionEmail) {
+          return res.status(401).json({ error: 'Connectez-vous pour réserver.', needsLogin: true });
+        }
+        if (sessionEmail.toLowerCase() !== String(guest_email).toLowerCase()) {
+          return res.status(403).json({ error: 'Email de réservation différent du compte connecté.' });
+        }
+        try {
+          await requireCompleteGuestProfile(sessionEmail);
+        } catch (gErr) {
+          if (gErr.statusCode) return res.status(403).json(gErr.payload);
+          throw gErr;
+        }
       }
     }
 
