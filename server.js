@@ -19807,6 +19807,182 @@ app.post('/api/host/register', async (req, res) => {
 // 🏠 MARKETPLACE — Création de logement par un hôte externe
 // Route allégée : is_marketplace=true, fee=7%, sans quotas/plans/Channex.
 // ============================================
+// ══════════════════════════════════════════════════════════════
+// 📥 IMPORT D'ANNONCE — Airbnb / Booking / Abritel
+// L'hôte colle l'URL de SA propre annonce ; on récupère titre,
+// description, photos, capacité et équipements pour pré-remplir
+// le formulaire. Les plateformes protègent leurs pages : en cas
+// de blocage, on renvoie un repli explicite plutôt qu'une erreur.
+// ══════════════════════════════════════════════════════════════
+
+// Identifie la plateforme et l'identifiant depuis une URL (annonce ou iCal)
+function parseListingUrl(raw) {
+  const url = String(raw || '').trim();
+  let m;
+  if ((m = url.match(/airbnb\.[a-z.]+\/(?:rooms|h)\/(?:plus\/)?(\d+)/i)))
+    return { platform: 'airbnb', id: m[1], pageUrl: `https://www.airbnb.fr/rooms/${m[1]}` };
+  if ((m = url.match(/airbnb\.[a-z.]+\/calendar\/ical\/(\d+)\.ics/i)))
+    return { platform: 'airbnb', id: m[1], pageUrl: `https://www.airbnb.fr/rooms/${m[1]}`, fromIcal: true, icalUrl: url };
+  if ((m = url.match(/booking\.com\/hotel\/[a-z]{2}\/([a-z0-9\-_.]+)(?:\.[a-z]{2})?\.html/i)))
+    return { platform: 'booking', id: m[1], pageUrl: url.split('?')[0] };
+  if ((m = url.match(/(?:abritel|vrbo|homeaway)\.[a-z.]+\/[^?]*?(\d{5,})/i)))
+    return { platform: 'abritel', id: m[1], pageUrl: url.split('?')[0] };
+  return null;
+}
+
+const IMPORT_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8'
+};
+
+// Balises Open Graph — repli universel
+function extractOpenGraph(html) {
+  const pick = prop => {
+    const re = new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]+content=["']([^"']+)["']`, 'i');
+    const re2 = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${prop}["']`, 'i');
+    const m = html.match(re) || html.match(re2);
+    return m ? m[1] : null;
+  };
+  const dec = t => t ? t.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ') : null;
+  return { title: dec(pick('og:title')), description: dec(pick('og:description')), image: pick('og:image') };
+}
+
+// Extraction riche depuis les blocs JSON embarqués (Airbnb)
+function extractAirbnbData(html) {
+  const out = { photos: [], amenities: [] };
+  try {
+    // Photos : URLs du CDN Airbnb, dédoublonnées, en grande taille
+    const photoSet = new Set();
+    const re = /https:\/\/a0\.muscache\.com\/im\/pictures\/[^"'\\ )]+?\.(?:jpe?g|png|webp)/gi;
+    let m;
+    while ((m = re.exec(html)) !== null && photoSet.size < 40) {
+      let u = m[0].replace(/\?.*$/, '');
+      if (/profile|user|avatar|icon|logo/i.test(u)) continue;
+      photoSet.add(u);
+    }
+    out.photos = [...photoSet].slice(0, 20);
+
+    // Capacité : « 4 voyageurs · 2 chambres · 2 lits · 1 salle de bain »
+    const cap = html.match(/(\d+)\s*voyageurs?/i);            if (cap) out.maxGuests = parseInt(cap[1]);
+    const bed = html.match(/(\d+)\s*chambres?/i);             if (bed) out.bedrooms = parseInt(bed[1]);
+    const bds = html.match(/(\d+)\s*lits?\b/i);               if (bds) out.beds = parseInt(bds[1]);
+    const bth = html.match(/(\d+(?:[.,]5)?)\s*salles?\s*de\s*bain/i); if (bth) out.bathrooms = Math.ceil(parseFloat(String(bth[1]).replace(',', '.')));
+
+    // Équipements courants
+    const AMEN = {
+      wifi: /\bwi-?fi\b/i, kitchen: /cuisine/i, washer: /lave-linge/i, dryer: /s[ée]che-linge/i,
+      tv: /\btélévision\b|\btv\b/i, parking: /parking|stationnement/i, ac: /climatisation/i,
+      heating: /chauffage/i, pool: /piscine/i, elevator: /ascenseur/i, balcony: /balcon|terrasse/i,
+      dishwasher: /lave-vaisselle/i, workspace: /espace de travail/i, pets: /animaux accept/i
+    };
+    for (const [k, rx] of Object.entries(AMEN)) if (rx.test(html)) out.amenities.push(k);
+  } catch(e) {}
+  return out;
+}
+
+app.post('/api/host/import/listing', authenticateToken, async (req, res) => {
+  try {
+    const parsed = parseListingUrl(req.body?.url);
+    if (!parsed) {
+      return res.status(400).json({
+        error: "Lien non reconnu. Collez l'adresse d'une annonce Airbnb (airbnb.fr/rooms/…), Booking ou Abritel."
+      });
+    }
+
+    // Le HTML peut être fourni par l'hôte (repli quand la plateforme bloque)
+    let html = req.body?.html ? String(req.body.html) : null;
+    let blocked = false;
+
+    if (!html) {
+      try {
+        const r = await fetch(parsed.pageUrl, { headers: IMPORT_HEADERS, redirect: 'follow' });
+        if (r.ok) {
+          html = await r.text();
+          // Page de challenge anti-robot : contenu inexploitable
+          if (html.length < 5000 || /captcha|are you a human|access denied/i.test(html.slice(0, 3000))) {
+            blocked = true; html = null;
+          }
+        } else { blocked = true; }
+      } catch(e) { blocked = true; }
+    }
+
+    if (!html) {
+      return res.json({
+        success: false, blocked: true, platform: parsed.platform,
+        icalUrl: parsed.icalUrl || null,
+        pageUrl: parsed.pageUrl,
+        message: "La plateforme a refusé la récupération automatique. Vous pouvez remplir le formulaire manuellement — le lien de calendrier, lui, a bien été pris en compte."
+      });
+    }
+
+    const og = extractOpenGraph(html);
+    const rich = parsed.platform === 'airbnb' ? extractAirbnbData(html) : { photos: [], amenities: [] };
+    if (og.image && !rich.photos.includes(og.image)) rich.photos.unshift(og.image);
+
+    // Description : og:description est court, on tente le champ long d'Airbnb
+    let description = og.description || null;
+    const dm = html.match(/"htmlDescription"\s*:\s*\{[^}]*?"htmlText"\s*:\s*"([^"]{80,4000})"/);
+    if (dm) {
+      description = dm[1]
+        .replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\u([0-9a-f]{4})/gi, (_, c) => String.fromCharCode(parseInt(c, 16)))
+        .replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
+    }
+
+    // Titre : retirer le suffixe plateforme
+    let name = og.title || null;
+    if (name) name = name.replace(/\s*[-–|]\s*(Airbnb|Booking\.com|Abritel|Vrbo).*$/i, '').trim().slice(0, 120);
+
+    console.log(`📥 [IMPORT] ${parsed.platform} ${parsed.id} — ${rich.photos.length} photo(s)`);
+
+    res.json({
+      success: true,
+      platform: parsed.platform,
+      pageUrl: parsed.pageUrl,
+      icalUrl: parsed.icalUrl || null,
+      data: {
+        name,
+        description: description ? description.slice(0, 4000) : null,
+        photos: rich.photos,
+        maxGuests: rich.maxGuests || null,
+        bedrooms: rich.bedrooms || null,
+        beds: rich.beds || null,
+        bathrooms: rich.bathrooms || null,
+        amenities: rich.amenities || []
+      }
+    });
+  } catch(e) {
+    console.error('❌ [IMPORT] listing:', e.message);
+    res.status(500).json({ error: "Import impossible : " + e.message });
+  }
+});
+
+// Rapatrier les photos choisies vers Cloudinary
+app.post('/api/host/import/photos', authenticateToken, async (req, res) => {
+  try {
+    const urls = Array.isArray(req.body?.urls) ? req.body.urls.slice(0, 15) : [];
+    if (!urls.length) return res.status(400).json({ error: 'Aucune photo' });
+    const out = [];
+    for (const u of urls) {
+      try {
+        if (!/^https:\/\//.test(u)) continue;
+        const r = await fetch(u, { headers: { 'User-Agent': IMPORT_HEADERS['User-Agent'] } });
+        if (!r.ok) continue;
+        const buf = Buffer.from(await r.arrayBuffer());
+        if (buf.length < 4000) continue; // vignette ou pixel de suivi
+        const up = await uploadToCloudinary(buf, `import_${Date.now()}_${out.length}`);
+        if (up) out.push(up);
+      } catch(e) { console.warn('⚠️ [IMPORT] photo:', e.message); }
+    }
+    if (!out.length) return res.status(502).json({ error: "Aucune photo n'a pu être récupérée." });
+    console.log(`📥 [IMPORT] ${out.length}/${urls.length} photo(s) importée(s)`);
+    res.json({ success: true, photos: out });
+  } catch(e) {
+    console.error('❌ [IMPORT] photos:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/host/properties', authenticateToken, upload.array('photos', 15), async (req, res) => {
   try {
     // Vérifier que c'est bien un hôte externe
@@ -19860,7 +20036,15 @@ app.post('/api/host/properties', authenticateToken, upload.array('photos', 15), 
     if (!basePrice || basePrice <= 0) return res.status(400).json({ error: 'Un prix par nuit valide est requis' });
 
     const photos = req.files || [];
-    if (photos.length < 5) return res.status(400).json({ error: 'Ajoutez au moins 5 photos' });
+    // Photos déjà hébergées (import d'annonce) : elles comptent dans le minimum
+    let importedPhotos = [];
+    try {
+      if (req.body.importedPhotos) {
+        const arr = JSON.parse(req.body.importedPhotos);
+        if (Array.isArray(arr)) importedPhotos = arr.filter(u => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 15);
+      }
+    } catch(e) {}
+    if (photos.length + importedPhotos.length < 5) return res.status(400).json({ error: 'Ajoutez au moins 5 photos' });
 
     let amenities = {};
     let houseRules = {};
@@ -19872,7 +20056,7 @@ app.post('/api/host/properties', authenticateToken, upload.array('photos', 15), 
     if (icalRaw) icalUrls = [{ url: icalRaw, name: 'Calendrier', color: '#C2410C' }];
 
     // Upload de toutes les photos vers Cloudinary
-    const photoUrls = [];
+    const photoUrls = [...importedPhotos];
     for (const file of photos) {
       try { const u = await uploadPhotoToCloudinary(file); if (u) photoUrls.push(u); }
       catch (upErr) { console.error('❌ [HOST] upload photo:', upErr.message); }

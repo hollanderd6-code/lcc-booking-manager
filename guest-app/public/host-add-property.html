@@ -42,6 +42,23 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
 .ac-item:last-child{border:none}
 .ac-item:active,.ac-item.hl{background:var(--primary-tint)}
 .ac-item .dept{font-size:12.5px;color:var(--text2)}
+.import-sec{border:1px solid var(--primary);background:var(--primary-tint,#FBEDE7)}
+.import-sec .sec-t i{color:var(--primary);margin-right:5px}
+.import-row{display:flex;gap:9px;margin-top:12px}
+.import-row input{flex:1;min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:11px;font-size:15px;font-family:inherit;outline:none;background:#fff}
+.import-row input:focus{border-color:var(--primary)}
+.import-row button{background:var(--primary);color:#fff;border:none;border-radius:11px;padding:12px 20px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
+.import-row button:disabled{opacity:.6}
+.import-status{font-size:12.5px;line-height:1.5;margin-top:10px}
+.import-status.ok{color:#166534}
+.import-status.warn{color:#92400E}
+.import-status.err{color:#B91C1C}
+.import-photos{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:12px}
+.import-photos .ip{position:relative;aspect-ratio:1;border-radius:9px;overflow:hidden;cursor:pointer;border:2px solid transparent}
+.import-photos .ip img{width:100%;height:100%;object-fit:cover;display:block}
+.import-photos .ip.on{border-color:var(--primary)}
+.import-photos .ip .chk{position:absolute;top:4px;right:4px;width:19px;height:19px;border-radius:50%;background:rgba(255,255,255,.9);color:var(--primary);font-size:10px;display:flex;align-items:center;justify-content:center}
+.import-photos .ip:not(.on) .chk{color:transparent}
 .photos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
 .photo-slot{aspect-ratio:1;border-radius:12px;position:relative;overflow:hidden;background:var(--bg);border:1px solid var(--line)}
 .photo-slot img{width:100%;height:100%;object-fit:cover}
@@ -87,6 +104,18 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
     <h1>Nouveau logement</h1>
   </div>
   <div class="msg" id="msg"></div>
+
+  <div class="sec import-sec">
+    <div class="sec-t"><i class="fas fa-wand-magic-sparkles"></i> Importer une annonce existante</div>
+    <div class="sec-d">Collez l'adresse de votre annonce Airbnb, Booking ou Abritel : nous récupérons le titre, la description, les photos et la capacité.</div>
+    <div class="import-row">
+      <input type="url" id="importUrl" placeholder="https://www.airbnb.fr/rooms/12345678">
+      <button type="button" id="importBtn" onclick="doImport()">Importer</button>
+    </div>
+    <div class="import-status" id="importStatus"></div>
+    <div class="import-photos" id="importPhotos"></div>
+  </div>
+
   <div class="sec">
     <div class="sec-t">Photos</div>
     <div class="sec-d">Ajoutez entre 5 et 15 photos. La première sera la photo principale.</div>
@@ -215,6 +244,119 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
 const API_URL = window.Capacitor?.isNativePlatform?.() ? 'https://www.boostinghost.fr' : window.location.origin;
 const token = localStorage.getItem('bhguest_host_token');
 if(!token){ location.href='host.html'; }
+
+// ══ 📥 Import d'une annonce existante ══════════════════════════
+let importedPhotoUrls = [];   // URLs distantes proposées
+let selectedImports = new Set();
+let finalImportedPhotos = []; // URLs Cloudinary après rapatriement
+
+function impStatus(txt, cls){
+  const el = document.getElementById('importStatus');
+  el.className = 'import-status ' + (cls || '');
+  el.innerHTML = txt;
+}
+
+async function doImport(){
+  const url = document.getElementById('importUrl').value.trim();
+  if(!url){ impStatus("Collez d'abord l'adresse de votre annonce.", 'err'); return; }
+  const btn = document.getElementById('importBtn');
+  btn.disabled = true; btn.textContent = 'Import...';
+  impStatus('Récupération en cours, cela peut prendre quelques secondes...');
+  try{
+    const res = await fetch(`${API_URL}/api/host/import/listing`, {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const d = await res.json();
+    if(!res.ok) throw new Error(d.error || 'Import impossible');
+
+    // Le lien iCal est exploitable même si la page est bloquée
+    if(d.icalUrl){ document.getElementById('icalUrl').value = d.icalUrl; }
+
+    if(!d.success){
+      impStatus(`⚠️ ${d.message} <a href="${d.pageUrl}" target="_blank" style="color:inherit;text-decoration:underline;">Ouvrir mon annonce</a>`, 'warn');
+      return;
+    }
+
+    const v = d.data;
+    let filled = [];
+    const set = (id, val) => { if(val){ const e = document.getElementById(id); if(e && !e.value){ e.value = val; return true; } } return false; };
+    if(set('name', v.name)) filled.push('titre');
+    if(set('description', v.description)) filled.push('description');
+    if(set('maxGuests', v.maxGuests)) filled.push('capacité');
+    if(set('bedrooms', v.bedrooms)) filled.push('chambres');
+    if(set('beds', v.beds)) filled.push('lits');
+    if(set('bathrooms', v.bathrooms)) filled.push('salles de bain');
+
+    // Équipements : cocher ce qui correspond
+    (v.amenities || []).forEach(a => {
+      const el = document.querySelector(`[data-amenity="${a}"], #amenity_${a}`);
+      if(el){ el.classList.add('on'); if(el.type === 'checkbox') el.checked = true; }
+    });
+
+    importedPhotoUrls = v.photos || [];
+    selectedImports = new Set(importedPhotoUrls.slice(0, 12).map((_, i) => i));
+    renderImportPhotos();
+
+    if(!filled.length && !importedPhotoUrls.length){
+      impStatus("Rien n'a pu être récupéré sur cette annonce. Remplissez le formulaire manuellement.", 'warn');
+    } else {
+      impStatus(`✅ Récupéré : ${filled.join(', ') || 'aucun champ'}${importedPhotoUrls.length ? ` et ${importedPhotoUrls.length} photo(s)` : ''}. Vérifiez et corrigez avant de publier.`, 'ok');
+    }
+  }catch(e){
+    impStatus('❌ ' + e.message, 'err');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Importer';
+  }
+}
+
+function renderImportPhotos(){
+  const el = document.getElementById('importPhotos');
+  if(!importedPhotoUrls.length){ el.innerHTML = ''; return; }
+  el.innerHTML = importedPhotoUrls.map((u,i)=>`
+    <div class="ip ${selectedImports.has(i)?'on':''}" onclick="toggleImportPhoto(${i})">
+      <img src="${u}" alt="" loading="lazy">
+      <span class="chk"><i class="fas fa-check"></i></span>
+    </div>`).join('')
+    + `<div style="grid-column:1/-1;margin-top:8px;">
+        <button type="button" onclick="confirmImportPhotos()" style="width:100%;background:var(--ink,#1C1917);color:#fff;border:none;border-radius:11px;padding:12px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;" id="impPhotoBtn">
+          Récupérer les <span id="impCount">${selectedImports.size}</span> photos sélectionnées
+        </button></div>`;
+}
+
+function toggleImportPhoto(i){
+  if(selectedImports.has(i)) selectedImports.delete(i);
+  else if(selectedImports.size < 15) selectedImports.add(i);
+  renderImportPhotos();
+}
+
+async function confirmImportPhotos(){
+  const urls = [...selectedImports].sort((a,b)=>a-b).map(i => importedPhotoUrls[i]);
+  if(!urls.length){ impStatus('Sélectionnez au moins une photo.', 'err'); return; }
+  const btn = document.getElementById('impPhotoBtn');
+  btn.disabled = true; btn.textContent = 'Récupération des photos...';
+  try{
+    const res = await fetch(`${API_URL}/api/host/import/photos`, {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+      body: JSON.stringify({ urls })
+    });
+    const d = await res.json();
+    if(!res.ok) throw new Error(d.error || 'Erreur');
+    finalImportedPhotos = d.photos;
+    // Afficher dans la grille principale
+    d.photos.forEach(u => { if(photoFiles.length < MAX_PHOTOS) photoFiles.push({ url:u, imported:true }); });
+    renderPhotos();
+    document.getElementById('importPhotos').innerHTML = '';
+    importedPhotoUrls = [];
+    impStatus(`✅ ${d.photos.length} photo(s) ajoutée(s). Vous pouvez en ajouter d'autres ou réordonner.`, 'ok');
+  }catch(e){
+    impStatus('❌ ' + e.message, 'err');
+    btn.disabled = false; btn.textContent = 'Réessayer';
+  }
+}
+
 let photoFiles = [];
 const MAX_PHOTOS = 15;
 function renderPhotos(){
@@ -242,7 +384,11 @@ function onPhotoPick(e){
   files.forEach(f=>{ if(photoFiles.length<MAX_PHOTOS) photoFiles.push({file:f,url:URL.createObjectURL(f)}); });
   e.target.value=''; renderPhotos();
 }
-function removePhoto(i){ photoFiles.splice(i,1); renderPhotos(); }
+function removePhoto(i){
+  const p = photoFiles[i];
+  if(p && p.url && !p.imported) URL.revokeObjectURL(p.url);
+  photoFiles.splice(i,1); renderPhotos();
+}
 let cityTimer = null;
 const cityInput = document.getElementById('city');
 cityInput.addEventListener('input', ()=>{
@@ -347,7 +493,9 @@ async function submitProperty(){
   fd.append('icalUrl', val('icalUrl'));
   fd.append('amenities', JSON.stringify(amenities));
   fd.append('house_rules', JSON.stringify(house_rules));
-  photoFiles.forEach(p=> fd.append('photos', p.file));
+  photoFiles.forEach(p=>{ if(p.file) fd.append('photos', p.file); });
+  const imported = photoFiles.filter(p=>p.imported).map(p=>p.url);
+  if(imported.length) fd.append('importedPhotos', JSON.stringify(imported));
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner spin"></i> Publication...';
   try{
     const res = await fetch(`${API_URL}/api/host/properties`, {
