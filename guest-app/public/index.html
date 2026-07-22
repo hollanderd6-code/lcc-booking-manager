@@ -566,6 +566,52 @@ body {
 /* ═══════════════════════════════════════
    ÉCRAN AUTH (Login / Register)
    ═══════════════════════════════════════ */
+/* ── Barre d'authentification (accueil) ── */
+.home-hero-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;}
+.authbar{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.authbar-btn{border-radius:999px;padding:9px 15px;font-size:13.5px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;transition:transform .12s,opacity .15s;}
+.authbar-btn:active{transform:scale(.95);}
+.authbar-btn.ghost{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;}
+.authbar-btn.solid{background:var(--primary,#C2410C);border:1px solid var(--primary,#C2410C);color:#fff;}
+.authbar-user{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:5px 14px 5px 5px;cursor:pointer;font-family:inherit;}
+.authbar-user:active{transform:scale(.96);}
+.authbar-avatar{position:relative;width:32px;height:32px;border-radius:50%;overflow:visible;flex-shrink:0;}
+.authbar-avatar-img{width:32px;height:32px;border-radius:50%;object-fit:cover;display:block;}
+.authbar-avatar-txt{width:32px;height:32px;border-radius:50%;background:var(--primary,#C2410C);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;}
+.authbar-dot{position:absolute;top:-1px;right:-1px;width:11px;height:11px;border-radius:50%;background:#F59E0B;border:2px solid #1C1917;}
+.authbar-name{color:#fff;font-size:13.5px;font-weight:600;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ── Écran profil ── */
+#screen-profile{background:var(--bg);}
+.prof-wrap{max-width:520px;margin:0 auto;padding:0 16px 40px;}
+.prof-head{background:var(--ink,#1C1917);color:#fff;padding:max(env(safe-area-inset-top),44px) 20px 22px;text-align:center;}
+.prof-head h2{font-size:21px;font-weight:700;margin:0 0 4px;}
+.prof-head p{font-size:13px;opacity:.7;margin:0;}
+.prof-banner{display:flex;align-items:center;gap:9px;border-radius:13px;padding:13px 15px;font-size:13.5px;line-height:1.4;margin:16px 0 0;}
+.prof-banner.warn{background:#FEF3C7;color:#92400E;}
+.prof-banner.ok{background:#DCFCE7;color:#166534;}
+.prof-card{background:#fff;border:1px solid var(--line,#EDE8E1);border-radius:18px;padding:20px 18px;margin-top:14px;}
+.prof-avatar-row{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.prof-avatar{position:relative;width:104px;height:104px;border-radius:50%;overflow:hidden;background:#F5F2EC;border:2px solid var(--line,#EDE8E1);}
+.prof-avatar img{width:100%;height:100%;object-fit:cover;}
+.prof-avatar-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#A8A29E;font-size:34px;}
+.prof-avatar-btn{background:none;border:1.5px solid var(--primary,#C2410C);color:var(--primary,#C2410C);border-radius:10px;padding:8px 18px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+.prof-avatar-btn input{display:none;}
+.prof-req{color:var(--primary,#C2410C);}
+.prof-field{margin-top:15px;}
+.prof-field label{display:block;font-size:12.5px;font-weight:500;color:#78716C;margin-bottom:6px;}
+.prof-field input,.prof-field textarea{width:100%;padding:13px 15px;border:1px solid var(--line,#EDE8E1);border-radius:12px;font-size:16px;font-family:inherit;outline:none;background:#fff;color:var(--ink,#1C1917);}
+.prof-field textarea{min-height:110px;resize:vertical;line-height:1.5;}
+.prof-field input:focus,.prof-field textarea:focus{border-color:var(--primary,#C2410C);}
+.prof-counter{font-size:12px;color:#A8A29E;margin-top:5px;text-align:right;}
+.prof-readonly{font-size:14px;color:#78716C;background:#F5F2EC;border-radius:10px;padding:11px 14px;}
+.prof-err{color:#DC2626;font-size:13.5px;margin-top:12px;min-height:18px;}
+.prof-save{width:100%;margin-top:14px;background:var(--primary,#C2410C);color:#fff;border:none;border-radius:13px;padding:15px;font-size:15.5px;font-weight:700;font-family:inherit;cursor:pointer;}
+.prof-save:disabled{opacity:.6;}
+.prof-host-btn{width:100%;background:var(--ink,#1C1917);color:#fff;border:none;border-radius:13px;padding:14px;font-size:14.5px;font-weight:600;font-family:inherit;cursor:pointer;}
+.prof-host-hint{font-size:12.5px;color:#78716C;margin-top:8px;text-align:center;line-height:1.4;}
+.prof-logout{width:100%;margin-top:14px;background:none;border:1px solid var(--line,#EDE8E1);color:#78716C;border-radius:13px;padding:13px;font-size:14px;font-family:inherit;cursor:pointer;}
+
 #screen-login { background: var(--bg); }
 
 .auth-header {
@@ -1078,9 +1124,12 @@ body.screen-detail #bottomNav { display: none !important; }
     <!-- ═══ ÉCRAN ACCUEIL (landing) ═══ -->
     <div id="screen-home" class="screen-content active">
       <div class="home-hero">
-        <div class="home-hero-logo">
-          <div class="home-hero-logo-icon"><b>b</b></div>
-          <span class="home-hero-logo-text"><span class="bh">BH</span><span class="g">Guest</span><span class="dot"></span></span>
+        <div class="home-hero-top">
+          <div class="home-hero-logo">
+            <div class="home-hero-logo-icon"><b>b</b></div>
+            <span class="home-hero-logo-text"><span class="bh">BH</span><span class="g">Guest</span><span class="dot"></span></span>
+          </div>
+          <div id="authBar" class="authbar"></div>
         </div>
         <h1>Séjournez <em>autrement</em>,<br>sans les frais.</h1>
         <p>Réservez en direct avec votre hôte. Moins d'intermédiaires, plus de transparence.</p>
@@ -1167,14 +1216,14 @@ body.screen-detail #bottomNav { display: none !important; }
       </div>
 
       <!-- Devenir hôte -->
-      <a href="host.html" class="become-host">
+      <div class="become-host" onclick="hostEntry()" style="cursor:pointer;">
         <div class="bh-ic"><i class="fas fa-house-chimney-window"></i></div>
         <div class="bh-txt">
           <b>Vous avez un logement ?</b>
           <span>Devenez hôte et recevez des réservations en direct.</span>
         </div>
         <i class="fas fa-arrow-right bh-arr"></i>
-      </a>
+      </div>
     </div>
 
     <!-- ═══ ÉCRAN LISTE LOGEMENTS ═══ -->
@@ -1289,6 +1338,63 @@ body.screen-detail #bottomNav { display: none !important; }
           <i class="fas fa-lock"></i>
           Connexion chiffrée — vos données sont protégées
         </div>
+      </div>
+    </div>
+
+    <!-- ═══ ÉCRAN PROFIL ═══ -->
+    <div id="screen-profile" class="screen-content">
+      <div class="prof-head">
+        <h2>Mon profil</h2>
+        <p>Photo, âge et description sont nécessaires pour réserver ou publier.</p>
+      </div>
+      <div class="prof-wrap">
+        <div class="prof-banner warn" id="profBanner"></div>
+
+        <div class="prof-card">
+          <div class="prof-avatar-row">
+            <div class="prof-avatar">
+              <img id="profAvatarImg" alt="Photo de profil" style="display:none;">
+              <div class="prof-avatar-ph" id="profAvatarPlaceholder"><i class="fas fa-user"></i></div>
+            </div>
+            <label class="prof-avatar-btn">
+              Choisir une photo <span class="prof-req">*</span>
+              <input type="file" accept="image/*" onchange="onAvatarPick(event)">
+            </label>
+          </div>
+
+          <div class="prof-field">
+            <label>Nom complet <span class="prof-req">*</span></label>
+            <input type="text" id="profName" placeholder="Jean Dupont" maxlength="80">
+          </div>
+
+          <div class="prof-field">
+            <label>Date de naissance <span class="prof-req">*</span> <span style="color:#A8A29E;font-weight:400;">— 18 ans minimum</span></label>
+            <input type="date" id="profBirth" max="2010-01-01">
+          </div>
+
+          <div class="prof-field">
+            <label>Téléphone</label>
+            <input type="tel" id="profPhone" placeholder="+33 6 00 00 00 00">
+          </div>
+
+          <div class="prof-field">
+            <label>À propos de vous <span class="prof-req">*</span></label>
+            <textarea id="profBio" maxlength="800" placeholder="Présentez-vous en quelques lignes : ce que vous aimez, votre façon de voyager ou de recevoir..." oninput="updateBioCounter()"></textarea>
+            <div class="prof-counter" id="profBioCounter">0 / 800</div>
+          </div>
+
+          <div class="prof-field">
+            <label>Email</label>
+            <div class="prof-readonly" id="profEmail">—</div>
+          </div>
+
+          <div class="prof-err" id="profError"></div>
+          <button class="prof-save" id="btnSaveProfile" onclick="saveProfile()">Enregistrer mon profil</button>
+        </div>
+
+        <div class="prof-card" id="profHostBox"></div>
+
+        <button class="prof-logout" onclick="logout()">Se déconnecter</button>
       </div>
     </div>
 

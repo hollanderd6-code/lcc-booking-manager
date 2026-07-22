@@ -128,6 +128,7 @@ let state = {
   selectingEnd: null,
   account: JSON.parse(localStorage.getItem('guest_account') || '{}'),
   session: null, // { email, token, name }
+  profile: null, // { avatarUrl, birthDate, bio, profileComplete, isHost, ... }
   appliedPromo: null, // { code, discount_type, discount_value, discount_amount }
   _lockedPropertyId: null, // logement verrouillé par un lien personnalisé (prix négocié / hold)
   _pendingFixedPrice: null,
@@ -159,6 +160,224 @@ function clearSession() {
 
 function isLoggedIn() {
   return !!getSession()?.token;
+}
+
+// En-têtes autorisés pour les appels protégés
+function authHeaders(extra) {
+  const h = Object.assign({}, extra || {});
+  const t = getSession()?.token;
+  if (t) h['Authorization'] = 'Bearer ' + t;
+  return h;
+}
+
+// ══════════════════════════════════════════════════════════════
+// 👤 PROFIL — photo, date de naissance (18 ans), description
+// Obligatoire avant de réserver ou de publier un logement.
+// ══════════════════════════════════════════════════════════════
+let _pendingAvatarFile = null;
+let _afterProfileAction = null; // callback à rejouer une fois le profil complet
+
+async function fetchProfile() {
+  if (!isLoggedIn()) return null;
+  try {
+    const res = await fetch(`${API_URL}/api/guest/profile`, { headers: authHeaders() });
+    if (!res.ok) return null;
+    state.profile = await res.json();
+    renderAuthBar();
+    return state.profile;
+  } catch { return null; }
+}
+
+// Barre du haut : Se connecter / S'inscrire, ou avatar + prénom
+function renderAuthBar() {
+  const bar = document.getElementById('authBar');
+  if (!bar) return;
+  const session = getSession();
+  if (!session) {
+    bar.innerHTML = `
+      <button class="authbar-btn ghost" onclick="openAuth('login')">Se connecter</button>
+      <button class="authbar-btn solid" onclick="openAuth('register')">S'inscrire</button>`;
+    return;
+  }
+  const p = state.profile || {};
+  const initial = (p.name || session.name || session.email || '?').trim().charAt(0).toUpperCase();
+  const avatar = p.avatarUrl
+    ? `<img src="${p.avatarUrl}" alt="" class="authbar-avatar-img">`
+    : `<span class="authbar-avatar-txt">${initial}</span>`;
+  const warn = (p.profileComplete === false)
+    ? `<span class="authbar-dot" title="Profil incomplet"></span>` : '';
+  bar.innerHTML = `
+    <button class="authbar-user" onclick="navTo('profile')">
+      <span class="authbar-avatar">${avatar}${warn}</span>
+      <span class="authbar-name">${(p.name || session.name || 'Mon compte').split(' ')[0]}</span>
+    </button>`;
+}
+
+// Ouvre l'écran d'authentification sur le bon onglet
+function openAuth(mode) {
+  navTo('login');
+  if (typeof switchSubMode === 'function') switchSubMode(mode === 'register' ? 'register' : 'login');
+}
+
+// Garde : exécute `action` seulement si connecté ET profil complet
+async function requireProfile(action, reason) {
+  if (!isLoggedIn()) {
+    _afterProfileAction = action;
+    showToast(reason || 'Connectez-vous pour continuer');
+    openAuth('login');
+    return false;
+  }
+  const p = state.profile || await fetchProfile();
+  if (!p) { openAuth('login'); return false; }
+  if (!p.profileComplete) {
+    _afterProfileAction = action;
+    showToast('Complétez votre profil pour continuer');
+    navTo('profile');
+    return false;
+  }
+  if (typeof action === 'function') action();
+  return true;
+}
+
+// Remplit l'écran profil
+async function loadProfileScreen() {
+  const p = await fetchProfile();
+  if (!p) { openAuth('login'); return; }
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  set('profName', p.name);
+  set('profPhone', p.phone);
+  set('profBirth', p.birthDate);
+  set('profBio', p.bio);
+
+  const img = document.getElementById('profAvatarImg');
+  const ph = document.getElementById('profAvatarPlaceholder');
+  if (p.avatarUrl) { img.src = p.avatarUrl; img.style.display = 'block'; ph.style.display = 'none'; }
+  else { img.style.display = 'none'; ph.style.display = 'flex'; }
+
+  updateBioCounter();
+  document.getElementById('profEmail').textContent = p.email;
+
+  // Bandeau : ce qu'il manque
+  const labels = { name: 'votre nom', avatar: 'une photo de profil', birthDate: 'votre date de naissance', age18: 'avoir 18 ans minimum', bio: `une description d'au moins ${p.minBioLength} caractères` };
+  const banner = document.getElementById('profBanner');
+  if (p.profileComplete) {
+    banner.className = 'prof-banner ok';
+    banner.innerHTML = `<i class="fas fa-circle-check"></i> Profil complet — vous pouvez réserver et publier.`;
+  } else {
+    banner.className = 'prof-banner warn';
+    banner.innerHTML = `<i class="fas fa-triangle-exclamation"></i> Il manque : ${p.missing.map(m => labels[m] || m).join(', ')}.`;
+  }
+
+  // Bouton "devenir hôte"
+  const hostBox = document.getElementById('profHostBox');
+  if (hostBox) {
+    hostBox.innerHTML = p.isHost
+      ? `<button class="prof-host-btn" onclick="goHostDashboard()"><i class="fas fa-gauge-high"></i> Mon espace hôte</button>`
+      : `<button class="prof-host-btn" onclick="becomeHost()"><i class="fas fa-house-chimney-window"></i> Devenir hôte</button>
+         <div class="prof-host-hint">Publiez vos logements et recevez des réservations en direct.</div>`;
+  }
+}
+
+function onAvatarPick(e) {
+  const f = e.target.files?.[0];
+  if (!f) return;
+  if (f.size > 8 * 1024 * 1024) { showToast('Photo trop lourde (8 Mo max)'); e.target.value = ''; return; }
+  _pendingAvatarFile = f;
+  const img = document.getElementById('profAvatarImg');
+  img.src = URL.createObjectURL(f);
+  img.style.display = 'block';
+  document.getElementById('profAvatarPlaceholder').style.display = 'none';
+  e.target.value = '';
+}
+
+function updateBioCounter() {
+  const ta = document.getElementById('profBio');
+  const c = document.getElementById('profBioCounter');
+  if (!ta || !c) return;
+  const n = ta.value.trim().length;
+  const min = state.profile?.minBioLength || 40;
+  c.textContent = `${n} / 800 · minimum ${min}`;
+  c.style.color = (n > 0 && n < min) ? 'var(--error, #DC2626)' : '';
+}
+
+async function saveProfile() {
+  const btn = document.getElementById('btnSaveProfile');
+  const err = document.getElementById('profError');
+  const v = id => (document.getElementById(id)?.value || '').trim();
+  err.textContent = '';
+
+  const name = v('profName'), birth = v('profBirth'), bio = v('profBio');
+  const min = state.profile?.minBioLength || 40;
+
+  if (!name) { err.textContent = 'Votre nom est requis.'; return; }
+  if (!birth) { err.textContent = 'Votre date de naissance est requise.'; return; }
+  const age = Math.floor((Date.now() - new Date(birth)) / 31557600000);
+  if (isNaN(age) || age < 18) { err.textContent = 'Vous devez avoir au moins 18 ans.'; return; }
+  if (bio.length < min) { err.textContent = `La description doit faire au moins ${min} caractères.`; return; }
+  if (!_pendingAvatarFile && !state.profile?.avatarUrl) { err.textContent = 'Une photo de profil est obligatoire.'; return; }
+
+  const fd = new FormData();
+  fd.append('name', name);
+  fd.append('phone', v('profPhone'));
+  fd.append('birthDate', birth);
+  fd.append('bio', bio);
+  if (_pendingAvatarFile) fd.append('avatar', _pendingAvatarFile);
+
+  btn.disabled = true;
+  const old = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+  try {
+    const res = await fetch(`${API_URL}/api/guest/profile`, {
+      method: 'PUT', headers: authHeaders(), body: fd
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    _pendingAvatarFile = null;
+    state.profile = data.profile;
+    renderAuthBar();
+    await loadProfileScreen();
+    showToast('Profil enregistré');
+    if (state.profile.profileComplete && _afterProfileAction) {
+      const act = _afterProfileAction; _afterProfileAction = null;
+      setTimeout(act, 400);
+    }
+  } catch (e) {
+    err.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.innerHTML = old;
+  }
+}
+
+async function becomeHost() {
+  const p = state.profile || await fetchProfile();
+  if (!p) { openAuth('login'); return; }
+  if (!p.profileComplete) { showToast('Complétez votre profil d\'abord'); return; }
+  if (!p.emailVerified) { showToast('Vérifiez votre email avant de devenir hôte'); return; }
+  try {
+    const res = await fetch(`${API_URL}/api/guest/become-host`, { method: 'POST', headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    localStorage.setItem('bh_host_token', data.token);
+    localStorage.setItem('token', data.token); // compat pages hôte
+    showToast('Espace hôte activé !');
+    setTimeout(() => { location.href = 'host-dashboard.html'; }, 700);
+  } catch (e) {
+    showToast(e.message);
+  }
+}
+
+function goHostDashboard() {
+  becomeHost(); // idempotent : relie/rafraîchit le token puis redirige
+}
+
+// Point d'entrée "Devenir hôte" depuis l'accueil
+function hostEntry() {
+  if (!isLoggedIn()) {
+    showToast('Créez votre compte pour devenir hôte');
+    openAuth('register');
+    return;
+  }
+  navTo('profile');
 }
 
 function updateNavAccount() {
@@ -398,6 +617,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadProperties();
   loadFeaturedProperties();
 
+  // 👤 Profil : charger et inviter à le compléter après connexion
+  renderAuthBar();
+  if (isLoggedIn()) {
+    const p = await fetchProfile();
+    if (p && !p.profileComplete) {
+      showToast('Complétez votre profil pour réserver');
+      navTo('profile');
+    }
+  }
+
   // ── Deep link : ?property=ID&checkin=DATE&checkout=DATE&promo=CODE&guests=N&fixed_price=N ──
   await handleDeepLink();
 
@@ -580,6 +809,9 @@ function navTo(name) {
   if (name === 'messages') loadGuestConversations();
   // Charger les city chips sur home et home-list
   if (name === 'home' || name === 'home-list') loadCityChips();
+  // Barre d'authentification (accueil)
+  renderAuthBar();
+  if (name === 'profile') loadProfileScreen();
   // 🔧 Arrivée sur la liste : recharger les logements puis appliquer les filtres
   // (catégorie, ville, recherche texte) sélectionnés depuis l'accueil.
   if (name === 'home-list') {
@@ -1633,6 +1865,11 @@ function updateBookingBar() {
 // ── Checkout ─────────────────────────────────────────────────
 function goToCheckout() {
   if (!state.selectedCheckin || !state.selectedCheckout) return;
+  // 👤 Réserver exige un compte connecté avec profil complet
+  if (!isLoggedIn() || state.profile?.profileComplete !== true) {
+    requireProfile(() => goToCheckout(), 'Connectez-vous pour réserver');
+    return;
+  }
   const p = state.currentProperty;
   const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
   const total = sumNights(p, state.selectedCheckin, state.selectedCheckout);
@@ -1802,7 +2039,7 @@ async function submitBooking() {
     // Créer la session Stripe Checkout
     const res = await fetch(`${API_URL}/api/guest/create-checkout-session`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         property_id: state.currentProperty.id,
         checkin: state.selectedCheckin,
@@ -2066,7 +2303,10 @@ function renderLogoutSection() {
 function logout() {
   clearSession();
   state.account = {};
+  state.profile = null;
   localStorage.removeItem('guest_account');
+  localStorage.removeItem('bh_host_token');
+  renderAuthBar();
   loadAccountFields();
   updateNavAccount();
   renderLogoutSection();

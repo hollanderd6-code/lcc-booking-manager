@@ -19700,10 +19700,25 @@ app.post('/api/host/register', async (req, res) => {
 app.post('/api/host/properties', authenticateToken, upload.array('photos', 15), async (req, res) => {
   try {
     // Vérifier que c'est bien un hôte externe
-    const userRes = await pool.query('SELECT id, is_external_host FROM users WHERE id = $1', [req.user.id]);
+    const userRes = await pool.query('SELECT id, is_external_host, avatar_url, birth_date, bio FROM users WHERE id = $1', [req.user.id]);
     if (userRes.rows.length === 0) return res.status(401).json({ error: 'Utilisateur introuvable' });
     if (userRes.rows[0].is_external_host !== true) {
       return res.status(403).json({ error: 'Réservé aux hôtes marketplace' });
+    }
+    // 👤 Profil obligatoire : photo + date de naissance (18 ans) + description
+    {
+      const u = userRes.rows[0];
+      const missing = [];
+      if (!u.avatar_url) missing.push('avatar');
+      if (!u.birth_date) missing.push('birthDate');
+      else if ((computeAge(u.birth_date) ?? 0) < 18) missing.push('age18');
+      if (!u.bio || String(u.bio).trim().length < MIN_BIO_LENGTH) missing.push('bio');
+      if (missing.length) {
+        return res.status(403).json({
+          error: 'Complétez votre profil (photo, date de naissance, description) avant de publier un logement.',
+          profileIncomplete: true, missing
+        });
+      }
     }
     const userId = req.user.id;
 
@@ -39586,6 +39601,25 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMPTZ
 `).catch(() => {});
 
+// ── Profil unifié (voyageur → peut devenir hôte) ─────────────
+// avatar_url + birth_date + bio sont requis avant de réserver OU de publier.
+// host_user_id relie le compte voyageur à sa fiche hôte dans `users`.
+pool.query(`
+  ALTER TABLE guest_users
+    ADD COLUMN IF NOT EXISTS avatar_url TEXT,
+    ADD COLUMN IF NOT EXISTS birth_date DATE,
+    ADD COLUMN IF NOT EXISTS bio TEXT,
+    ADD COLUMN IF NOT EXISTS profile_completed_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS host_user_id TEXT
+`).catch(e => console.error('guest_users profil:', e.message));
+
+pool.query(`
+  ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS avatar_url TEXT,
+    ADD COLUMN IF NOT EXISTS birth_date DATE,
+    ADD COLUMN IF NOT EXISTS bio TEXT
+`).catch(e => console.error('users profil:', e.message));
+
 // ══════════════════════════════════════════════════════════════
 // 🏢 SYSTÈME DE DÉLÉGATION INTER-COMPTES (COMPTE AGENCE)
 // ══════════════════════════════════════════════════════════════
@@ -40414,27 +40448,228 @@ app.post('/api/guest/auth/forgot-password', async (req, res) => {
   }
 });
 
-// ── Route : mettre à jour le profil guest ────────────────────
-app.put('/api/guest/profile', async (req, res) => {
+// ══════════════════════════════════════════════════════════════
+// 👤 PROFIL UNIFIÉ — voyageur, pouvant devenir hôte
+// Photo + date de naissance (18 ans min.) + description sont
+// obligatoires avant de réserver ou de publier un logement.
+// ══════════════════════════════════════════════════════════════
+
+const MIN_BIO_LENGTH = 40;
+
+function computeAge(birthDate) {
+  if (!birthDate) return null;
+  const d = new Date(birthDate);
+  if (isNaN(d)) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+}
+
+// Renvoie { complete, missing[] } pour une ligne guest_users
+function profileStatus(row) {
+  const missing = [];
+  if (!row) return { complete: false, missing: ['compte'] };
+  if (!row.name || !String(row.name).trim()) missing.push('name');
+  if (!row.avatar_url) missing.push('avatar');
+  if (!row.birth_date) missing.push('birthDate');
+  else if ((computeAge(row.birth_date) ?? 0) < 18) missing.push('age18');
+  if (!row.bio || String(row.bio).trim().length < MIN_BIO_LENGTH) missing.push('bio');
+  return { complete: missing.length === 0, missing };
+}
+
+// Garde réutilisable : charge le profil et refuse si incomplet
+async function requireCompleteGuestProfile(email) {
+  const r = await pool.query('SELECT * FROM guest_users WHERE email = $1', [String(email).toLowerCase()]);
+  const row = r.rows[0];
+  const st = profileStatus(row);
+  if (!st.complete) {
+    const err = new Error('Profil incomplet');
+    err.statusCode = 403;
+    err.payload = { error: 'Complétez votre profil (photo, date de naissance, description) avant de continuer.', profileIncomplete: true, missing: st.missing };
+    throw err;
+  }
+  return row;
+}
+
+function publicProfile(row) {
+  const st = profileStatus(row);
+  return {
+    email: row.email,
+    name: row.name || null,
+    phone: row.phone || null,
+    avatarUrl: row.avatar_url || null,
+    birthDate: row.birth_date ? new Date(row.birth_date).toISOString().slice(0, 10) : null,
+    age: computeAge(row.birth_date),
+    bio: row.bio || null,
+    emailVerified: row.email_verified === true,
+    isHost: !!row.host_user_id,
+    profileComplete: st.complete,
+    missing: st.missing,
+    minBioLength: MIN_BIO_LENGTH
+  };
+}
+
+// ── Lire son profil ──────────────────────────────────────────
+app.get('/api/guest/profile', async (req, res) => {
   const email = verifyGuestSession(req);
   if (!email) return res.status(401).json({ error: 'Non connecté' });
   try {
-    const { name, phone, password } = req.body;
+    const r = await pool.query('SELECT * FROM guest_users WHERE email = $1', [email.toLowerCase()]);
+    if (!r.rows[0]) return res.status(404).json({ error: 'Compte introuvable' });
+    res.json(publicProfile(r.rows[0]));
+  } catch (e) {
+    console.error('❌ [GUEST] GET /profile:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── Mettre à jour son profil (photo en multipart, champ "avatar") ──
+app.put('/api/guest/profile', upload.single('avatar'), async (req, res) => {
+  const email = verifyGuestSession(req);
+  if (!email) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const { name, phone, password, bio, birthDate } = req.body || {};
+
+    // Date de naissance : format + contrôle 18 ans
+    let birth = null;
+    if (birthDate) {
+      birth = String(birthDate).slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(birth)) {
+        return res.status(400).json({ error: 'Date de naissance invalide' });
+      }
+      const age = computeAge(birth);
+      if (age == null || age < 18) {
+        return res.status(400).json({ error: 'Vous devez avoir au moins 18 ans pour utiliser BHGuest.' });
+      }
+      if (age > 120) return res.status(400).json({ error: 'Date de naissance invalide' });
+    }
+
+    // Description
+    let bioClean = null;
+    if (bio != null) {
+      bioClean = String(bio).trim().slice(0, 800);
+      if (bioClean && bioClean.length < MIN_BIO_LENGTH) {
+        return res.status(400).json({ error: `La description doit faire au moins ${MIN_BIO_LENGTH} caractères.` });
+      }
+    }
+
+    // Photo de profil → Cloudinary
+    let avatarUrl = null;
+    if (req.file && req.file.buffer) {
+      try {
+        avatarUrl = await uploadToCloudinary(req.file.buffer, `avatar_${Date.now()}_${email.replace(/[^a-z0-9]/gi, '')}`);
+      } catch (upErr) {
+        console.error('❌ [GUEST] upload avatar:', upErr.message);
+        return res.status(500).json({ error: "Impossible d'enregistrer la photo. Réessayez." });
+      }
+    }
+
     let passwordHash = null;
-    if (password && password.length >= 6) passwordHash = await bcrypt.hash(password, 10);
+    if (password && String(password).length >= 6) passwordHash = await bcrypt.hash(password, 10);
+
     await pool.query(`
-      INSERT INTO guest_users (email, name, phone${passwordHash ? ', password_hash' : ''})
-      VALUES ($1, $2, $3${passwordHash ? ', $4' : ''})
+      INSERT INTO guest_users (email, name, phone, bio, birth_date, avatar_url, password_hash)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (email) DO UPDATE SET
-        name = COALESCE($2, guest_users.name),
-        phone = COALESCE($3, guest_users.phone)
-        ${passwordHash ? ', password_hash = $4' : ''},
-        updated_at = NOW()
-    `, passwordHash ? [email, name || null, phone || null, passwordHash] : [email, name || null, phone || null]);
-    res.json({ success: true });
-  } catch(e) {
+        name        = COALESCE($2, guest_users.name),
+        phone       = COALESCE($3, guest_users.phone),
+        bio         = COALESCE($4, guest_users.bio),
+        birth_date  = COALESCE($5, guest_users.birth_date),
+        avatar_url  = COALESCE($6, guest_users.avatar_url),
+        password_hash = COALESCE($7, guest_users.password_hash),
+        updated_at  = NOW()
+    `, [email.toLowerCase(), name || null, phone || null, bioClean, birth, avatarUrl, passwordHash]);
+
+    const r = await pool.query('SELECT * FROM guest_users WHERE email = $1', [email.toLowerCase()]);
+    const row = r.rows[0];
+    const st = profileStatus(row);
+
+    // Marquer la date de complétion la première fois
+    if (st.complete && !row.profile_completed_at) {
+      await pool.query('UPDATE guest_users SET profile_completed_at = NOW() WHERE email = $1', [email.toLowerCase()]);
+    }
+
+    // Répercuter sur la fiche hôte si le compte est aussi hôte
+    if (row.host_user_id) {
+      await pool.query(
+        'UPDATE users SET avatar_url = COALESCE($1, avatar_url), birth_date = COALESCE($2, birth_date), bio = COALESCE($3, bio) WHERE id = $4',
+        [avatarUrl, birth, bioClean, row.host_user_id]
+      ).catch(() => {});
+    }
+
+    res.json({ success: true, profile: publicProfile(row) });
+  } catch (e) {
     console.error('❌ [GUEST] PUT /profile:', e.message);
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Devenir hôte : crée la fiche `users` depuis le compte voyageur ──
+app.post('/api/guest/become-host', async (req, res) => {
+  const email = verifyGuestSession(req);
+  if (!email) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const normalizedEmail = email.toLowerCase();
+    let row;
+    try {
+      row = await requireCompleteGuestProfile(normalizedEmail);
+    } catch (gErr) {
+      if (gErr.statusCode) return res.status(403).json(gErr.payload);
+      throw gErr;
+    }
+    if (!row.email_verified) {
+      return res.status(403).json({ error: 'Vérifiez votre adresse email avant de devenir hôte.', needsVerification: true });
+    }
+    if (!row.password_hash) {
+      return res.status(400).json({ error: 'Définissez un mot de passe sur votre compte avant de devenir hôte.' });
+    }
+
+    // Déjà hôte, ou une fiche users existe déjà avec cet email → on la relie
+    let hostRow = (await pool.query(
+      'SELECT id, first_name, last_name, company, email FROM users WHERE LOWER(email) = $1',
+      [normalizedEmail]
+    )).rows[0];
+
+    if (!hostRow) {
+      const parts = String(row.name || '').trim().split(/\s+/);
+      const firstName = parts[0] || 'Hôte';
+      const lastName = parts.slice(1).join(' ') || '-';
+      const id = `u_${Date.now().toString(36)}`;
+      const referralCode = firstName.toUpperCase().slice(0, 6).replace(/[^A-Z]/g, '') + Math.random().toString(36).slice(2, 6).toUpperCase();
+
+      await pool.query(`
+        INSERT INTO users (
+          id, company, first_name, last_name, email, password_hash,
+          created_at, email_verified, referral_code, phone, is_external_host,
+          avatar_url, birth_date, bio
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), TRUE, $7, $8, TRUE, $9, $10, $11)
+      `, [id, `${firstName} ${lastName}`.trim(), firstName, lastName, normalizedEmail,
+          row.password_hash, referralCode, row.phone || null,
+          row.avatar_url, row.birth_date, row.bio]);
+
+      hostRow = { id, first_name: firstName, last_name: lastName, company: `${firstName} ${lastName}`.trim(), email: normalizedEmail };
+      console.log(`🏠 [PROFIL] ${normalizedEmail} est devenu hôte (${id})`);
+    }
+
+    await pool.query('UPDATE guest_users SET host_user_id = $1, updated_at = NOW() WHERE email = $2', [hostRow.id, normalizedEmail]);
+
+    // Token hôte pour accéder directement au dashboard
+    const token = generateToken({
+      id: hostRow.id,
+      company: hostRow.company,
+      firstName: hostRow.first_name,
+      lastName: hostRow.last_name,
+      email: hostRow.email,
+      isExternalHost: true
+    });
+
+    res.json({ success: true, hostUserId: hostRow.id, token });
+  } catch (e) {
+    console.error('❌ [GUEST] become-host:', e.message);
+    res.status(500).json({ error: 'Erreur lors de la création du compte hôte' });
   }
 });
 
@@ -40957,6 +41192,23 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
 
     if (!property_id || !checkin || !checkout || !guest_email) {
       return res.status(400).json({ error: 'Champs requis manquants' });
+    }
+
+    // 👤 Réservation réservée aux comptes connectés avec profil complet
+    {
+      const sessionEmail = verifyGuestSession(req);
+      if (!sessionEmail) {
+        return res.status(401).json({ error: 'Connectez-vous pour réserver.', needsLogin: true });
+      }
+      if (sessionEmail.toLowerCase() !== String(guest_email).toLowerCase()) {
+        return res.status(403).json({ error: 'Email de réservation différent du compte connecté.' });
+      }
+      try {
+        await requireCompleteGuestProfile(sessionEmail);
+      } catch (gErr) {
+        if (gErr.statusCode) return res.status(403).json(gErr.payload);
+        throw gErr;
+      }
     }
 
     const propResult = await pool.query(
