@@ -40530,6 +40530,17 @@ app.post('/api/guest/auth/forgot-password', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email requis' });
     const normalizedEmail = email.toLowerCase().trim();
+
+    // 🔗 Compte voyageur OU hôte : les deux passent par ce reset unifié.
+    // On répond toujours success (pas d'énumération d'emails), mais on
+    // n'envoie le mail que si un compte existe quelque part.
+    const gRes = await pool.query('SELECT 1 FROM guest_users WHERE email = $1', [normalizedEmail]);
+    const hRes = await pool.query('SELECT 1 FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
+    if (!gRes.rows.length && !hRes.rows.length) {
+      console.log(`🔒 [GUEST AUTH] forgot-password: aucun compte pour ${normalizedEmail} — pas d'envoi`);
+      return res.json({ success: true });
+    }
+
     const token = require('crypto').randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
     await pool.query('DELETE FROM guest_magic_tokens WHERE email = $1', [normalizedEmail]);
@@ -40538,16 +40549,50 @@ app.post('/api/guest/auth/forgot-password', async (req, res) => {
     const resetLink = `${appUrl}/guest-app/public/index.html?magic_token=${token}&reset=1`;
     await sendEmailViaBrevo({
       to: normalizedEmail,
-      subject: 'Réinitialisation de votre mot de passe — Boostinghost Guest',
-      html: bhEmailTemplate({ icon: '🔑', title: 'Réinitialiser votre mot de passe', subtitle: 'Boostinghost Guest',
-        bodyHtml: `<p>Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe. Valable <strong>15 minutes</strong>.</p>
-          <div style="text-align:center;margin:24px 0;"><a href="${resetLink}" style="display:inline-block;padding:14px 32px;background:#7c3aed;color:white;border-radius:10px;font-weight:700;text-decoration:none;">Réinitialiser mon mot de passe</a></div>`
+      subject: 'Réinitialisation de votre mot de passe — BHGuest',
+      html: bhEmailTemplate({ icon: '🔑', title: 'Réinitialiser votre mot de passe', subtitle: 'BHGuest',
+        bodyHtml: `<p>Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe. Valable <strong>15 minutes</strong>.</p>
+          <div style="text-align:center;margin:24px 0;"><a href="${resetLink}" style="display:inline-block;padding:14px 32px;background:#C2410C;color:white;border-radius:10px;font-weight:700;text-decoration:none;">Réinitialiser mon mot de passe</a></div>`
       })
     });
     res.json({ success: true });
   } catch(e) {
     console.error('❌ [GUEST AUTH] forgot-password:', e.message);
     res.status(500).json({ error: 'Erreur' });
+  }
+});
+
+// ── Définir un nouveau mot de passe (après lien de reset) ────
+// Met à jour guest_users ET la fiche hôte liée : un seul mot de
+// passe pour les deux parcours, comme promis par le compte unifié.
+app.post('/api/guest/auth/reset-password', async (req, res) => {
+  const email = verifyGuestSession(req);
+  if (!email) return res.status(401).json({ error: 'Lien expiré. Redemandez un email de réinitialisation.' });
+  try {
+    const { password } = req.body || {};
+    if (!password || String(password).length < 6) {
+      return res.status(400).json({ error: 'Le mot de passe doit faire au moins 6 caractères.' });
+    }
+    const normalizedEmail = email.toLowerCase();
+    const hash = await bcrypt.hash(String(password), 10);
+
+    // guest_users : créer la ligne si le compte n'existe que côté hôte
+    await pool.query(`
+      INSERT INTO guest_users (email, password_hash, email_verified)
+      VALUES ($1, $2, TRUE)
+      ON CONFLICT (email) DO UPDATE SET password_hash = $2, updated_at = NOW()
+    `, [normalizedEmail, hash]);
+
+    // fiche hôte liée (ou au même email) : synchroniser
+    const upd = await pool.query(
+      'UPDATE users SET password_hash = $1 WHERE LOWER(email) = $2',
+      [hash, normalizedEmail]
+    );
+    console.log(`🔑 [GUEST AUTH] Mot de passe réinitialisé pour ${normalizedEmail} (fiche hôte synchronisée: ${upd.rowCount > 0 ? 'oui' : 'non'})`);
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ [GUEST AUTH] reset-password:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -40697,8 +40742,8 @@ app.put('/api/guest/profile', upload.single('avatar'), async (req, res) => {
     // Répercuter sur la fiche hôte si le compte est aussi hôte
     if (row.host_user_id) {
       await pool.query(
-        'UPDATE users SET avatar_url = COALESCE($1, avatar_url), birth_date = COALESCE($2, birth_date), bio = COALESCE($3, bio) WHERE id = $4',
-        [avatarUrl, birth, bioClean, row.host_user_id]
+        'UPDATE users SET avatar_url = COALESCE($1, avatar_url), birth_date = COALESCE($2, birth_date), bio = COALESCE($3, bio), password_hash = COALESCE($4, password_hash) WHERE id = $5',
+        [avatarUrl, birth, bioClean, passwordHash, row.host_user_id]
       ).catch(() => {});
     }
 

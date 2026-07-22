@@ -555,7 +555,55 @@ async function forgotPassword() {
   } catch(e) { showToast('Erreur d\'envoi'); }
 }
 
-async function verifyMagicToken(token) {
+// ── Formulaire "nouveau mot de passe" (après lien de reset) ──
+function showResetForm() {
+  const card = document.querySelector('#screen-login .auth-card');
+  if (!card) return;
+  // Masquer les onglets et formulaires habituels
+  card.querySelectorAll(':scope > *').forEach(el => { el.style.display = 'none'; });
+  let f = document.getElementById('resetForm');
+  if (!f) {
+    f = document.createElement('div');
+    f.id = 'resetForm';
+    f.innerHTML = `
+      <div style="font-size:17px;font-weight:700;color:var(--ink);margin-bottom:4px;">Nouveau mot de passe</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Choisissez un nouveau mot de passe pour votre compte.</div>
+      <div class="auth-field"><input type="password" id="resetPwd1" placeholder="Nouveau mot de passe (6 caractères min.)" autocomplete="new-password"></div>
+      <div class="auth-field"><input type="password" id="resetPwd2" placeholder="Confirmez le mot de passe" autocomplete="new-password"></div>
+      <div id="resetErr" style="color:#DC2626;font-size:13px;min-height:18px;margin-top:6px;"></div>
+      <button class="auth-btn" id="resetBtn" onclick="submitNewPassword()">Enregistrer</button>`;
+    card.appendChild(f);
+  }
+  f.style.display = 'block';
+}
+
+async function submitNewPassword() {
+  const p1 = document.getElementById('resetPwd1')?.value || '';
+  const p2 = document.getElementById('resetPwd2')?.value || '';
+  const err = document.getElementById('resetErr');
+  err.textContent = '';
+  if (p1.length < 6) { err.textContent = 'Au moins 6 caractères.'; return; }
+  if (p1 !== p2) { err.textContent = 'Les deux mots de passe ne correspondent pas.'; return; }
+  const btn = document.getElementById('resetBtn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API_URL}/api/guest/auth/reset-password`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ password: p1 })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    showToast('Mot de passe enregistré !');
+    setTimeout(() => { window.location.replace(window.location.pathname); }, 800);
+  } catch (e) {
+    err.textContent = e.message;
+    btn.disabled = false;
+  }
+}
+
+async function verifyMagicToken(token, opts) {
+  const noReload = opts && opts.noReload;
   try {
     const res = await fetch(`${API_URL}/api/guest/auth/verify`, {
       method: 'POST',
@@ -565,12 +613,15 @@ async function verifyMagicToken(token) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
     saveSession({ token: data.session_token, email: data.email, name: data.name });
+    state.session = getSession();
     updateNavAccount();
-    showToast('Connexion réussie !');
-    // Nettoyer l'URL et recharger pour appliquer la session
-    setTimeout(() => {
-      window.location.replace(window.location.pathname);
-    }, 1000);
+    if (!noReload) {
+      showToast('Connexion réussie !');
+      // Nettoyer l'URL et recharger pour appliquer la session
+      setTimeout(() => {
+        window.location.replace(window.location.pathname);
+      }, 1000);
+    }
     return true;
   } catch (e) {
     showToast(e.message || 'Lien invalide ou expiré');
@@ -606,6 +657,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch(e) {
       showToast('Erreur lors de la vérification.');
+    }
+  }
+
+  // 🔑 Lien magique / réinitialisation de mot de passe (magic_token dans URL)
+  const magicToken = urlParamsInit.get('magic_token');
+  const isReset = urlParamsInit.get('reset') === '1';
+  if (magicToken) {
+    const ok = await verifyMagicToken(magicToken, { noReload: isReset });
+    window.history.replaceState({}, '', window.location.pathname);
+    if (ok && isReset) {
+      openAuth('login');
+      showResetForm();
+    } else if (ok) {
+      showToast('Connexion réussie !');
     }
   }
 
