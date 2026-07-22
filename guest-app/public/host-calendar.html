@@ -109,6 +109,13 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
 .sf-field .prefix .u{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text2);font-weight:500}
 .sf-row{display:flex;gap:10px}
 .sf-row .sf-field{flex:1}
+.ls-row{display:flex;gap:10px;margin-bottom:4px}
+.ls-field{flex:1}
+.ls-field label{display:block;font-size:12.5px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.ls-field .prefix{position:relative}
+.ls-field .prefix input{width:100%;padding:13px 48px 13px 14px;border:1px solid var(--line);border-radius:12px;font-size:16px;font-family:inherit;outline:none}
+.ls-field .prefix input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint)}
+.ls-field .prefix .u{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--text2);font-weight:500;font-size:13px}
 .btn-save-season{width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-weight:600;font-size:14.5px;cursor:pointer;font-family:inherit;margin-top:4px}
 </style>
 </head>
@@ -163,6 +170,25 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
         </div>
         <div class="sf-field"><label>Prix par nuit</label><div class="prefix"><input type="number" id="seasonPrice" min="0" placeholder="120"><span class="u">€</span></div></div>
         <button class="btn-save-season" onclick="addSeason()">Ajouter cette période</button>
+      </div>
+    </div>
+
+    <div class="rules-card">
+      <div class="rc-t">Réduction longs séjours</div>
+      <div class="rc-d">Offrez une remise automatique à partir d'un certain nombre de nuits.</div>
+      <div class="ls-row">
+        <div class="ls-field"><label>Réduction</label><div class="prefix"><input type="number" id="lsDiscount" min="0" max="90" placeholder="10"><span class="u">%</span></div></div>
+        <div class="ls-field"><label>À partir de</label><div class="prefix"><input type="number" id="lsAfter" min="2" placeholder="7"><span class="u">nuits</span></div></div>
+      </div>
+      <button class="btn-save" style="width:100%;padding:14px;margin-top:4px;" onclick="saveLongStay()">Enregistrer la réduction</button>
+    </div>
+
+    <div class="rules-card">
+      <div class="rc-t">Durée minimale de séjour</div>
+      <div class="rc-d">Nombre de nuits minimum pour réserver. Laissez vide ou 1 pour aucune contrainte.</div>
+      <div class="weekend-row">
+        <div class="prefix"><input type="number" id="minNights" min="1" placeholder="1"><span class="u">nuits</span></div>
+        <button class="btn-save" onclick="saveMinStay()">Enregistrer</button>
       </div>
     </div>
   </div>
@@ -365,7 +391,43 @@ async function loadRules(){
     document.getElementById('weekendPrice').value = d.weekendPrice != null ? d.weekendPrice : '';
     document.getElementById('weekendPrice').placeholder = d.basePrice != null ? `Base : ${d.basePrice}€` : 'Prix de base';
     renderSeasons(d.seasonRules || []);
+    loadDiscounts();
   }catch(e){ toast('Erreur chargement règles'); }
+}
+
+async function loadDiscounts(){
+  try{
+    const res = await fetch(`${API_URL}/api/host/pricing/discounts/${currentProp}`, { headers:{'Authorization':'Bearer '+token} });
+    const d = await res.json();
+    document.getElementById('lsDiscount').value = d.longStay?.discountPct || '';
+    document.getElementById('lsAfter').value = d.longStay?.afterNights || '';
+    document.getElementById('minNights').value = d.minNights || '';
+  }catch(e){}
+}
+
+async function saveLongStay(){
+  const discountPct = document.getElementById('lsDiscount').value || 0;
+  const afterNights = document.getElementById('lsAfter').value || 0;
+  try{
+    const res = await fetch(`${API_URL}/api/host/pricing/long-stay`, {
+      method:'PUT', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ propertyId: currentProp, discountPct, afterNights })
+    });
+    if(!res.ok){ const e=await res.json(); throw new Error(e.error); }
+    toast('✓ Réduction enregistrée');
+  }catch(err){ toast(err.message||'Erreur'); }
+}
+
+async function saveMinStay(){
+  const minNights = document.getElementById('minNights').value || 1;
+  try{
+    const res = await fetch(`${API_URL}/api/host/pricing/min-stay`, {
+      method:'PUT', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ propertyId: currentProp, minNights })
+    });
+    if(!res.ok) throw new Error();
+    toast('✓ Durée minimale enregistrée');
+  }catch(e){ toast('Erreur'); }
 }
 
 function renderSeasons(rules){
