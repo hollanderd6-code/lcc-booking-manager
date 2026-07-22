@@ -659,6 +659,9 @@
     <button class="nav-tab" onclick="showSection('bugs', this)">
       <i class="fas fa-bug"></i> Bugs <span id="bugsUnresolvedBadge" style="display:none;background:#EF4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:4px;">0</span>
     </button>
+    <button class="nav-tab" id="navBhguest" onclick="showSection('bhguest', this)">
+      <i class="fas fa-shield-halved"></i> BHGuest <span id="bhgPendingDot" style="display:none;background:#DC2626;color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;"></span>
+    </button>
     <button class="nav-tab" id="navSupport" onclick="showSection('support', this)">
       <i class="fas fa-headset"></i> Support <span id="supportUnreadBadge" style="display:none;background:#EF4444;color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:4px;">0</span>
     </button>
@@ -1097,6 +1100,22 @@
     </div>
 
     <!-- ── SUPPORT ── -->
+    <div class="section-panel" id="panel-bhguest">
+      <div class="section-header">
+        <h1 class="section-title">Modération <em>BHGuest</em></h1>
+        <p class="section-subtitle">Avis signalés, hôtes suspendus, annulations et paiements en échec</p>
+      </div>
+      <div id="bhgStats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;"></div>
+      <h3 style="font-size:15px;font-weight:700;margin:0 0 12px;">Avis signalés</h3>
+      <div id="bhgReported"></div>
+      <h3 style="font-size:15px;font-weight:700;margin:28px 0 12px;">Hôtes suspendus</h3>
+      <div id="bhgSuspended"></div>
+      <h3 style="font-size:15px;font-weight:700;margin:28px 0 12px;">Annulations récentes</h3>
+      <div id="bhgCancels"></div>
+      <h3 style="font-size:15px;font-weight:700;margin:28px 0 12px;">Paiements différés en difficulté</h3>
+      <div id="bhgFailed"></div>
+    </div>
+
     <div class="section-panel" id="panel-support">
       <div class="section-header" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
         <div>
@@ -1262,6 +1281,135 @@ function showApp() {
 // Au chargement : si token en session, aller direct à l'app
 if (adminToken) showApp();
 
+
+// ══════════════════════════════════════
+// 🛡️ MODÉRATION BHGUEST
+// ══════════════════════════════════════
+const bhgEsc = t => String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const bhgDate = d => d ? new Date(d).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' }) : '—';
+const bhgCard = inner => `<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;">${inner}</div>`;
+
+async function loadBhguest() {
+  try {
+    const res = await fetch(`${API}/api/admin/bhguest/overview`, { headers: { 'Authorization': 'Bearer ' + adminToken } });
+    if (!res.ok) throw new Error('Accès refusé');
+    const d = await res.json();
+
+    // Compteurs
+    const st = d.stats || {};
+    document.getElementById('bhgStats').innerHTML = [
+      ['Annonces en ligne', st.listings], ['Réservations', st.bookings],
+      ['Avis publiés', st.reviews], ['Signalements en attente', st.pending]
+    ].map(([lab, val], i) => `
+      <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <div style="font-size:26px;font-weight:800;color:${i === 3 && val > 0 ? '#DC2626' : 'var(--ink,#1C1917)'};">${val ?? 0}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">${lab}</div>
+      </div>`).join('');
+
+    // Pastille sur l'onglet
+    const dot = document.getElementById('bhgPendingDot');
+    if (dot) { dot.style.display = st.pending > 0 ? 'inline-block' : 'none'; dot.textContent = st.pending; }
+
+    // Avis signalés
+    document.getElementById('bhgReported').innerHTML = d.reported.length
+      ? d.reported.map(r => {
+          const removed = r.moderation_status === 'removed';
+          return bhgCard(`
+            <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+              <div><b>${bhgEsc(r.guest_name || 'Voyageur')}</b> · ${r.rating}/5 · <span style="color:var(--muted);">${bhgEsc(r.property_name)}</span>
+                <div style="font-size:12px;color:var(--muted);">Hôte : ${bhgEsc(r.host_email)} · signalé le ${bhgDate(r.reported_at)}</div></div>
+              <span style="font-size:11px;font-weight:700;border-radius:999px;padding:4px 10px;background:${removed ? '#FEE2E2' : '#FEF3C7'};color:${removed ? '#B91C1C' : '#92400E'};height:fit-content;">
+                ${removed ? 'RETIRÉ' : 'À ARBITRER'}</span>
+            </div>
+            <div style="background:#F5F2EC;border-radius:9px;padding:10px 12px;margin-top:10px;font-size:13px;">
+              <b style="font-size:11px;color:var(--muted);">AVIS</b><br>${bhgEsc(r.comment) || '<i>(sans commentaire)</i>'}
+            </div>
+            <div style="background:#FEF3C7;border-radius:9px;padding:10px 12px;margin-top:8px;font-size:13px;color:#92400E;">
+              <b style="font-size:11px;">MOTIF DU SIGNALEMENT</b><br>${bhgEsc(r.report_reason)}
+            </div>
+            ${r.host_reply ? `<div style="font-size:12px;color:var(--muted);margin-top:8px;">Réponse hôte : « ${bhgEsc(r.host_reply)} »</div>` : ''}
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              ${removed
+                ? `<button onclick="bhgModerate(${r.id},'restore')" style="background:#166534;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;">Rétablir l'avis</button>`
+                : `<button onclick="bhgModerate(${r.id},'remove')" style="background:#B91C1C;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;">Retirer l'avis</button>
+                   <button onclick="bhgModerate(${r.id},'restore')" style="background:none;border:1px solid var(--border);border-radius:9px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;">Rejeter le signalement</button>`}
+            </div>`);
+        }).join('')
+      : '<div style="color:var(--muted);font-size:13px;padding:12px 0;">Aucun avis signalé.</div>';
+
+    // Hôtes suspendus
+    document.getElementById('bhgSuspended').innerHTML = d.suspended.length
+      ? d.suspended.map(h => bhgCard(`
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div><b>${bhgEsc([h.first_name, h.last_name].filter(Boolean).join(' '))}</b>
+              <div style="font-size:12px;color:var(--muted);">${bhgEsc(h.email)} · ${h.cancellations} annulations sur 12 mois · dernière le ${bhgDate(h.last_cancellation)}</div></div>
+            <button onclick="bhgReinstate('${h.id}')" style="background:#166534;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;">Réactiver</button>
+          </div>`)).join('')
+      : '<div style="color:var(--muted);font-size:13px;padding:12px 0;">Aucun hôte suspendu.</div>';
+
+    // Annulations
+    const byLabel = { host:'Hôte', host_refusal:'Refus 48h', guest:'Voyageur', system:'Système' };
+    document.getElementById('bhgCancels').innerHTML = d.cancellations.length
+      ? `<div class="data-table"><table><thead><tr><th>Logement</th><th>Voyageur</th><th>Dates</th><th>Par</th><th>Motif</th></tr></thead><tbody>
+          ${d.cancellations.map(c => `<tr>
+            <td>${bhgEsc(c.property_name || '—')}</td>
+            <td>${bhgEsc(c.guest_name || '—')}</td>
+            <td>${bhgDate(c.start_date)} → ${bhgDate(c.end_date)}</td>
+            <td>${byLabel[c.cancelled_by] || c.cancelled_by || '—'}</td>
+            <td style="font-size:12px;color:var(--muted);">${bhgEsc(c.cancellation_reason || '')}</td>
+          </tr>`).join('')}</tbody></table></div>`
+      : '<div style="color:var(--muted);font-size:13px;padding:12px 0;">Aucune annulation.</div>';
+
+    // Paiements en échec
+    document.getElementById('bhgFailed').innerHTML = d.failedPayments.length
+      ? `<div class="data-table"><table><thead><tr><th>Réservation</th><th>Voyageur</th><th>Montant</th><th>Prévu le</th><th>Tentatives</th><th>Erreur</th></tr></thead><tbody>
+          ${d.failedPayments.map(f => `<tr>
+            <td style="font-size:12px;">${bhgEsc(f.reservation_uid)}</td>
+            <td>${bhgEsc(f.guest_email)}</td>
+            <td>${(f.amount_cents/100).toFixed(2)}€</td>
+            <td>${bhgDate(f.capture_at)}</td>
+            <td>${f.attempts}/3</td>
+            <td style="font-size:12px;color:#B91C1C;">${bhgEsc(f.last_error || '')}</td>
+          </tr>`).join('')}</tbody></table></div>`
+      : '<div style="color:var(--muted);font-size:13px;padding:12px 0;">Aucun paiement en difficulté.</div>';
+
+  } catch(e) {
+    document.getElementById('bhgReported').innerHTML = `<div style="color:#B91C1C;">${e.message}</div>`;
+  }
+}
+
+async function bhgModerate(id, action) {
+  const msg = action === 'remove'
+    ? "Retirer cet avis ? Il disparaîtra de la fiche du logement."
+    : "Rétablir cet avis ? Il redeviendra visible publiquement.";
+  if (!confirm(msg)) return;
+  try {
+    const res = await fetch(`${API}/api/admin/bhguest/reviews/${id}/moderate`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Erreur');
+    loadBhguest();
+  } catch(e) { alert(e.message); }
+}
+
+async function bhgReinstate(userId) {
+  if (!confirm("Réactiver cet hôte ? Ses logements repasseront en ligne.")) return;
+  const reset = confirm("Remettre aussi son compteur d'annulations à zéro ?\n\nOK = repartir de zéro · Annuler = garder l'historique");
+  try {
+    const res = await fetch(`${API}/api/admin/bhguest/hosts/${userId}/reinstate`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resetCounter: reset })
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Erreur');
+    const d = await res.json();
+    alert(`Hôte réactivé — ${d.listings} logement(s) remis en ligne.`);
+    loadBhguest();
+  } catch(e) { alert(e.message); }
+}
+
 // ══════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════
@@ -1278,6 +1426,7 @@ function showSection(name, btn) {
   if (name === 'promo') adminLoadPromoCodes();
   if (name === 'logs') loadActionsLog();
   if (name === 'bugs') loadErrorLogs();
+  if (name === 'bhguest') loadBhguest();
 }
 
 // ══════════════════════════════════════

@@ -34409,6 +34409,126 @@ app.post('/api/admin/sync-all-channex', authenticateToken, async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════
+// 🛡️ ADMIN BHGUEST — modération marketplace
+// Avis signalés, hôtes suspendus, annulations récentes.
+// ══════════════════════════════════════════════════════════════
+async function requireBhAdmin(req, res) {
+  const user = await getUserFromRequest(req);
+  const ADMIN_EMAILS = ['charles.induni@gmail.com', 'arnaud.gestionpro@gmail.com'];
+  if (!user || !ADMIN_EMAILS.includes(user.email)) {
+    res.status(403).json({ error: 'Accès refusé' });
+    return null;
+  }
+  return user;
+}
+
+app.get('/api/admin/bhguest/overview', authenticateToken, async (req, res) => {
+  if (!await requireBhAdmin(req, res)) return;
+  try {
+    // Avis signalés en attente d'arbitrage
+    const reported = await pool.query(`
+      SELECT br.id, br.rating, br.comment, br.guest_name, br.guest_email,
+             br.reported_at, br.report_reason, br.moderation_status, br.host_reply,
+             p.name AS property_name,
+             u.email AS host_email, u.first_name AS host_first_name
+      FROM bhguest_reviews br
+      JOIN properties p ON p.id = br.property_id
+      JOIN users u ON u.id = br.user_id
+      WHERE br.reported_at IS NOT NULL
+      ORDER BY (br.moderation_status = 'reported') DESC, br.reported_at DESC
+      LIMIT 60
+    `);
+
+    // Hôtes suspendus (tous logements retirés + au moins 3 annulations)
+    const suspended = await pool.query(`
+      SELECT u.id, u.email, u.first_name, u.last_name,
+             COUNT(c.id)::int AS cancellations,
+             MAX(c.created_at) AS last_cancellation
+      FROM users u
+      JOIN bhguest_host_cancellations c ON c.user_id = u.id
+      WHERE u.is_external_host = TRUE
+        AND c.created_at > NOW() - INTERVAL '12 months'
+      GROUP BY u.id, u.email, u.first_name, u.last_name
+      HAVING COUNT(c.id) >= 3
+      ORDER BY MAX(c.created_at) DESC
+      LIMIT 40
+    `);
+
+    // Annulations récentes, tous camps confondus
+    const cancels = await pool.query(`
+      SELECT r.uid, r.guest_name, r.start_date, r.end_date, r.amount_total,
+             r.cancelled_by, r.cancellation_reason, r.updated_at,
+             p.name AS property_name
+      FROM reservations r
+      LEFT JOIN properties p ON p.id = r.property_id
+      WHERE r.status = 'cancelled' AND r.source = 'guest_app'
+      ORDER BY r.updated_at DESC LIMIT 40
+    `);
+
+    // Paiements différés en échec
+    const failed = await pool.query(`
+      SELECT reservation_uid, guest_email, amount_cents, capture_at, attempts, last_error, status
+      FROM bhguest_deferred_payments
+      WHERE status IN ('failed') OR (status = 'scheduled' AND attempts > 0)
+      ORDER BY updated_at DESC LIMIT 30
+    `);
+
+    const stats = await pool.query(`
+      SELECT
+        (SELECT COUNT(*)::int FROM properties WHERE is_marketplace = TRUE) AS listings,
+        (SELECT COUNT(*)::int FROM reservations WHERE source = 'guest_app' AND status = 'confirmed') AS bookings,
+        (SELECT COUNT(*)::int FROM bhguest_reviews WHERE submitted_at IS NOT NULL) AS reviews,
+        (SELECT COUNT(*)::int FROM bhguest_reviews WHERE moderation_status = 'reported') AS pending
+    `);
+
+    res.json({
+      stats: stats.rows[0],
+      reported: reported.rows,
+      suspended: suspended.rows,
+      cancellations: cancels.rows,
+      failedPayments: failed.rows
+    });
+  } catch(e) {
+    console.error('❌ [ADMIN BHGUEST] overview:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Retirer / rétablir un avis
+app.post('/api/admin/bhguest/reviews/:id/moderate', authenticateToken, async (req, res) => {
+  const admin = await requireBhAdmin(req, res);
+  if (!admin) return;
+  try {
+    const action = String(req.body?.action || '');
+    if (!['remove', 'restore'].includes(action)) return res.status(400).json({ error: 'Action invalide' });
+    const status = action === 'remove' ? 'removed' : 'published';
+    const upd = await pool.query(
+      'UPDATE bhguest_reviews SET moderation_status = $1 WHERE id = $2 RETURNING id, user_id',
+      [status, parseInt(req.params.id)]
+    );
+    if (!upd.rows[0]) return res.status(404).json({ error: 'Avis introuvable' });
+    console.log(`🛡️ [ADMIN BHGUEST] Avis ${req.params.id} → ${status} par ${admin.email}`);
+    res.json({ success: true, status });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Réactiver un hôte suspendu (remet ses logements en ligne)
+app.post('/api/admin/bhguest/hosts/:userId/reinstate', authenticateToken, async (req, res) => {
+  const admin = await requireBhAdmin(req, res);
+  if (!admin) return;
+  try {
+    const uid = req.params.userId;
+    const r = await pool.query('UPDATE properties SET is_marketplace = TRUE WHERE user_id = $1 RETURNING id', [uid]);
+    // Purger le compteur pour repartir sur une base saine
+    if (req.body?.resetCounter) {
+      await pool.query('DELETE FROM bhguest_host_cancellations WHERE user_id = $1', [uid]);
+    }
+    console.log(`🛡️ [ADMIN BHGUEST] Hôte ${uid} réactivé par ${admin.email} (${r.rowCount} logements)`);
+    res.json({ success: true, listings: r.rowCount });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/admin/clients', authenticateToken, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
