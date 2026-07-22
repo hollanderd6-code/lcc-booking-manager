@@ -923,6 +923,12 @@ body {
 .detail-rule.no .ricon { background: #F1EFEA; color: var(--stone-light); }
 
 /* Panier d'accueil */
+/* ── Favoris ── */
+.prop-card-fav{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.92);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:#B7B0A6;transition:transform .15s,color .15s;z-index:2;box-shadow:0 1px 6px rgba(0,0,0,.14);}
+.prop-card-fav.on{color:var(--primary);}
+.prop-card-fav:active{transform:scale(1.25);}
+.filter-chip i.fa-heart{color:var(--primary);}
+
 /* ── Recherche dates + voyageurs ── */
 .listings-dates-btn{display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:#fff;border:none;border-radius:10px;padding:9px 13px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;flex-shrink:0;}
 .listings-dates-btn.on{background:var(--primary);}
@@ -1417,6 +1423,7 @@ body.screen-detail #bottomNav { display: none !important; }
       </div>
       <div class="listings-filters">
         <div class="filter-chip active" onclick="setFilter(this,'')">Tous</div>
+        <div class="filter-chip" onclick="setFilter(this,'__favs')"><i class="fas fa-heart" style="font-size:11px;"></i> Favoris</div>
         <div class="filter-chip" onclick="setFilter(this,'appartement')">Appartements</div>
         <div class="filter-chip" onclick="setFilter(this,'studio')">Studios</div>
         <div class="filter-chip" onclick="setFilter(this,'maison')">Maisons</div>

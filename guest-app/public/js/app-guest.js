@@ -698,6 +698,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.history.replaceState({}, '', window.location.pathname);
   }
 
+  await loadFavorites();
   await loadProperties();
   loadFeaturedProperties();
 
@@ -906,7 +907,7 @@ function navTo(name) {
   if (name === 'home-list') {
     syncFilterChips();
     renderSearchActive();
-    loadProperties().then(() => filterProperties());
+    loadFavorites().then(() => loadProperties()).then(() => filterProperties());
   }
 }
 
@@ -1454,7 +1455,9 @@ function filterProperties() {
     const type = (card.dataset.type || '').toLowerCase();
     const cardCity = (card.dataset.city || '').toLowerCase();
     const matchSearch = !search || search.split(/\s+/).every(w => hay.includes(w));
-    const matchFilter = !_activeFilter || _activeFilter.startsWith('prix') || type.includes(_activeFilter);
+    const matchFilter = !_activeFilter
+      || _activeFilter.startsWith('prix')
+      || (_activeFilter === '__favs' ? state.favorites.has(card.dataset.id) : type.includes(_activeFilter));
     const matchCity = !cityFilter || cardCity.includes(cityFilter);
     const ok = matchSearch && matchFilter && matchCity;
     card.style.display = ok ? 'block' : 'none';
@@ -1478,7 +1481,9 @@ function filterProperties() {
       empty.className = 'empty-state';
       grid.appendChild(empty);
     }
-    empty.innerHTML = `${icon('home')}<p>Aucun logement ne correspond à cette recherche</p>`;
+    empty.innerHTML = _activeFilter === '__favs'
+      ? `${icon('home')}<p>Aucun favori pour l'instant.<br>Touchez le ❤ d'un logement pour le retrouver ici.</p>`
+      : `${icon('home')}<p>Aucun logement ne correspond à cette recherche</p>`;
     empty.style.display = 'block';
   } else if (empty) {
     empty.style.display = 'none';
@@ -1639,6 +1644,48 @@ function renderSearchActive() {
   if (lbl) lbl.textContent = hasDates ? fmt(checkin) : 'Dates';
 }
 
+// ══ ❤️ Favoris ═══════════════════════════════════════════════
+state.favorites = new Set();
+
+async function loadFavorites() {
+  if (!isLoggedIn()) { state.favorites = new Set(); return; }
+  try {
+    const res = await fetch(`${API_URL}/api/guest/favorites`, { headers: authHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+    state.favorites = new Set(data.ids || []);
+  } catch {}
+}
+
+async function toggleFavorite(ev, propertyId) {
+  ev.stopPropagation(); // ne pas ouvrir la fiche
+  if (!isLoggedIn()) {
+    showToast('Connectez-vous pour enregistrer vos favoris');
+    openAuth('login');
+    return;
+  }
+  // Optimiste : on bascule tout de suite, on annule si le serveur refuse
+  const btn = ev.currentTarget;
+  const was = state.favorites.has(propertyId);
+  if (was) state.favorites.delete(propertyId); else state.favorites.add(propertyId);
+  btn.classList.toggle('on', !was);
+  try {
+    const res = await fetch(`${API_URL}/api/guest/favorites/${propertyId}`, {
+      method: 'POST', headers: authHeaders()
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    btn.classList.toggle('on', data.favorited);
+    if (data.favorited) state.favorites.add(propertyId); else state.favorites.delete(propertyId);
+    // Si le filtre Favoris est actif, retirer la carte décochée
+    if (_activeFilter === '__favs') filterProperties();
+  } catch {
+    if (was) state.favorites.add(propertyId); else state.favorites.delete(propertyId);
+    btn.classList.toggle('on', was);
+    showToast('Erreur, réessayez');
+  }
+}
+
 // Libellé lisible d'un type de logement
 function typeLabel(t) {
   const M = { appartement: 'Appartement', maison: 'Maison', studio: 'Studio', villa: 'Villa', autre: null };
@@ -1689,6 +1736,7 @@ async function loadProperties() {
            data-type="${esc(((p.propertyType||'') + ' ' + (p.description||'')).toLowerCase())}"
            data-city="${esc(((p.city||'') + ' ' + (p.address||'') + ' ' + (p.postalCode||'')).toLowerCase())}"
            data-price="${parseFloat(p.basePrice) || 0}"
+           data-id="${p.id}"
            data-search="${esc([p.name, p.city, p.address, p.postalCode, p.propertyType].filter(Boolean).join(' ').toLowerCase())}"
            onclick="openProperty('${p.id}')">
         <div class="prop-card-img" style="${p.photoUrl ? 'padding:0;background:none;' : ''}">
@@ -1696,6 +1744,7 @@ async function loadProperties() {
             ? `<img src="${p.photoUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`
             : icon('home')}
           <span class="prop-card-badge">Réservation directe</span>
+          <button class="prop-card-fav ${state.favorites.has(p.id) ? 'on' : ''}" onclick="toggleFavorite(event, '${p.id}')" title="Favori"><i class="fas fa-heart"></i></button>
         </div>
         <div class="prop-card-body">
           <div class="prop-card-head">
@@ -1753,10 +1802,11 @@ async function openProperty(id) {
     if (!res.ok) throw new Error('Logement introuvable');
     state.currentProperty = await res.json();
 
-    // Reset sélection dates
+    // Reset sélection dates (préremplie depuis la recherche si présente)
     state.selectedCheckin = state.search.checkin || null;
     state.selectedCheckout = state.search.checkout || null;
-    state.selectingEnd = state.selectedCheckin ? true : null;
+    // Les deux dates préremplies → un tap recommence une sélection propre
+    state.selectingEnd = (state.selectedCheckin && !state.selectedCheckout) ? true : null;
 
     document.getElementById('detailHeaderName').textContent = state.currentProperty.name;
   // Bouton retour dans le header

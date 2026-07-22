@@ -40871,6 +40871,51 @@ function publicProfile(row) {
   };
 }
 
+// ══════════════════════════════════════════════════════════════
+// ❤️ FAVORIS — liés au compte voyageur
+// ══════════════════════════════════════════════════════════════
+pool.query(`
+  CREATE TABLE IF NOT EXISTS bhguest_favorites (
+    id SERIAL PRIMARY KEY,
+    guest_email TEXT NOT NULL,
+    property_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (guest_email, property_id)
+  )
+`).catch(e => console.error('❌ bhguest_favorites table:', e.message));
+
+// Liste des ids favoris du compte connecté
+app.get('/api/guest/favorites', async (req, res) => {
+  const email = verifyGuestSession(req);
+  if (!email) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const r = await pool.query(
+      'SELECT property_id FROM bhguest_favorites WHERE guest_email = $1 ORDER BY created_at DESC',
+      [email.toLowerCase()]
+    );
+    res.json({ ids: r.rows.map(x => x.property_id) });
+  } catch(e) { res.status(500).json({ error: 'Erreur serveur' }); }
+});
+
+// Basculer un favori
+app.post('/api/guest/favorites/:propertyId', async (req, res) => {
+  const email = verifyGuestSession(req);
+  if (!email) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const pid = req.params.propertyId;
+    const del = await pool.query(
+      'DELETE FROM bhguest_favorites WHERE guest_email = $1 AND property_id = $2',
+      [email.toLowerCase(), pid]
+    );
+    if (del.rowCount > 0) return res.json({ favorited: false });
+    await pool.query(
+      'INSERT INTO bhguest_favorites (guest_email, property_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [email.toLowerCase(), pid]
+    );
+    res.json({ favorited: true });
+  } catch(e) { res.status(500).json({ error: 'Erreur serveur' }); }
+});
+
 // ── Lire son profil ──────────────────────────────────────────
 app.get('/api/guest/profile', async (req, res) => {
   const email = verifyGuestSession(req);
