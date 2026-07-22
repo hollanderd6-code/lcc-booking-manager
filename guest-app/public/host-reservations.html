@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Réservations — BHGuest</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --primary:#C2410C; --primary-dark:#9A3412; --primary-tint:#FBEDE7; --primary-light:#F0997B;
+  --ink:#1C1917; --bg:#FAF8F5; --line:#EDE8E1; --text2:#78716C;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+.topbar{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),44px) 16px 16px;display:flex;align-items:center;gap:12px;}
+.topbar .back{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.12);border:none;color:#fff;font-size:14px;cursor:pointer;flex-shrink:0;}
+.topbar h1{font-family:'Instrument Serif',serif;font-size:20px;font-weight:400;flex:1;}
+.wrap{max-width:640px;margin:0 auto;padding:14px 14px 20px;}
+
+.tabs{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;}
+.tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 15px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;white-space:nowrap;font-family:inherit;}
+.tab.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+
+.resa{background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:11px;}
+.resa-top{display:flex;align-items:center;gap:12px;}
+.resa-avatar{width:44px;height:44px;border-radius:50%;background:var(--primary-tint);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;flex-shrink:0;}
+.resa-id{flex:1;min-width:0;}
+.resa-name{font-size:14.5px;font-weight:700;}
+.resa-prop{font-size:12px;color:var(--primary);font-weight:600;margin-top:1px;}
+.resa-amt{text-align:right;flex-shrink:0;}
+.resa-amt b{display:block;font-size:15.5px;}
+.resa-amt span{font-size:10.5px;color:var(--text2);}
+.resa-dates{display:flex;align-items:center;gap:8px;margin-top:11px;padding-top:11px;border-top:1px solid var(--line);font-size:13px;color:var(--text2);}
+.resa-dates b{color:var(--ink);font-weight:600;}
+.resa-phase{margin-left:auto;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:4px 9px;}
+.resa-phase.upcoming{background:var(--primary-tint);color:var(--primary);}
+.resa-phase.current{background:#DCFCE7;color:#166534;}
+.resa-phase.past{background:#F1EFEA;color:var(--text2);}
+.resa-phase.cancelled{background:#FEE2E2;color:#B91C1C;}
+.resa-actions{display:flex;gap:8px;margin-top:11px;}
+.resa-act{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 6px;font-size:12.5px;font-weight:600;color:var(--ink);text-decoration:none;font-family:inherit;cursor:pointer;}
+.resa-act i{color:var(--primary);font-size:13px;}
+.resa-act:active{border-color:var(--primary);}
+
+.empty{padding:60px 20px;text-align:center;color:var(--text2);}
+.empty i{font-size:38px;color:var(--line);margin-bottom:12px;display:block;}
+.loading{padding:60px;text-align:center;color:var(--text2);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back" onclick="location.href='host-dashboard.html'"><i class="fas fa-arrow-left"></i></button>
+  <h1>Réservations</h1>
+</div>
+
+<div class="wrap">
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-phase="">Toutes</button>
+    <button class="tab" data-phase="upcoming">À venir</button>
+    <button class="tab" data-phase="current">En cours</button>
+    <button class="tab" data-phase="past">Passées</button>
+    <button class="tab" data-phase="cancelled">Annulées</button>
+  </div>
+  <div id="list"><div class="loading"><i class="fas fa-spinner fa-spin"></i></div></div>
+</div>
+
+<script>
+const API_URL = location.origin;
+const token = localStorage.getItem('bhguest_host_token');
+if(!token){ location.href='host.html'; }
+
+let ALL = [];
+let PHASE = '';
+
+const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmtD = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+const PHASE_LABEL = { upcoming:'À venir', current:'En cours', past:'Terminé', cancelled:'Annulée' };
+
+async function load(){
+  try{
+    const res = await fetch(`${API_URL}/api/host/reservations`, { headers:{ 'Authorization':'Bearer '+token } });
+    if(res.status === 401 || res.status === 403){ localStorage.clear(); location.href='host.html'; return; }
+    const data = await res.json();
+    ALL = data.reservations || [];
+    render();
+  }catch(e){
+    document.getElementById('list').innerHTML = `<div class="empty">Erreur de chargement.</div>`;
+  }
+}
+
+function render(){
+  const rows = PHASE ? ALL.filter(r => r.phase === PHASE) : ALL;
+  const el = document.getElementById('list');
+  if(!rows.length){
+    el.innerHTML = `<div class="empty"><i class="fas fa-calendar-day"></i>
+      ${PHASE ? 'Aucune réservation dans cette catégorie.' : 'Aucune réservation pour le moment.'}</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(r => {
+    const initial = (r.guestName || '?').trim().charAt(0).toUpperCase();
+    const tel = r.guestPhone ? String(r.guestPhone).replace(/[^+0-9]/g,'') : null;
+    return `<div class="resa">
+      <div class="resa-top">
+        <div class="resa-avatar">${initial}</div>
+        <div class="resa-id">
+          <div class="resa-name">${esc(r.guestName)}</div>
+          <div class="resa-prop">${esc(r.propertyName || '')}</div>
+        </div>
+        ${r.amountNet ? `<div class="resa-amt"><b>${r.amountNet.toLocaleString('fr-FR')}€</b><span>net (${r.amountTotal.toLocaleString('fr-FR')}€ payé)</span></div>` : ''}
+      </div>
+      <div class="resa-dates">
+        <i class="fas fa-calendar-days" style="color:var(--primary);"></i>
+        <span><b>${fmtD(r.startDate)}</b> → <b>${fmtD(r.endDate)}</b> · ${r.nights} nuit${r.nights>1?'s':''}</span>
+        <span class="resa-phase ${r.phase}">${PHASE_LABEL[r.phase] || r.phase}</span>
+      </div>
+      <div class="resa-actions">
+        ${r.conversationId ? `<a class="resa-act" href="host-messages.html"><i class="fas fa-comments"></i>Message</a>` : ''}
+        ${tel ? `<a class="resa-act" href="tel:${tel}"><i class="fas fa-phone"></i>Appeler</a>` : ''}
+        ${r.guestEmail ? `<a class="resa-act" href="mailto:${esc(r.guestEmail)}"><i class="fas fa-envelope"></i>Email</a>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab');
+  if(!t) return;
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+  t.classList.add('on');
+  PHASE = t.dataset.phase;
+  render();
+});
+
+load();
+</script>
+<script src="host-nav.js"></script>
+</body>
+</html>

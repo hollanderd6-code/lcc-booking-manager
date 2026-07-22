@@ -163,7 +163,7 @@ function render(d){
     <div class="stats">
       <div class="stat big"><div class="s-val">${s.netRevenue.toLocaleString('fr-FR')}€</div><div class="s-lab">Revenus nets (après commission)</div></div>
       <div class="stat"><div class="s-val">${s.propertiesCount}</div><div class="s-lab">Logement${s.propertiesCount>1?'s':''}</div></div>
-      <div class="stat"><div class="s-val">${s.upcomingCount}</div><div class="s-lab">Séjour${s.upcomingCount>1?'s':''} à venir</div></div>
+      <div class="stat" onclick="location.href='host-reservations.html'" style="cursor:pointer;"><div class="s-val">${s.upcomingCount}</div><div class="s-lab">Séjour${s.upcomingCount>1?'s':''} à venir <i class="fas fa-chevron-right" style="font-size:9px;color:var(--primary);"></i></div></div>
     </div>
 
     <div class="quick">
@@ -178,7 +178,7 @@ function render(d){
     </div>
 
     <div class="sec">
-      <div class="sec-head"><div class="sec-t">Séjours à venir</div></div>
+      <div class="sec-head"><div class="sec-t">Séjours à venir</div><a class="sec-add" href="host-reservations.html"><i class="fas fa-list"></i>Voir tout</a></div>
       ${resaHtml}
     </div>
   `;

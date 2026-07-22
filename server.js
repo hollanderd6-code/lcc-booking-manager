@@ -19953,6 +19953,54 @@ app.get('/api/host/stripe/status', authenticateToken, async (req, res) => {
 });
 
 // 📊 Dashboard hôte externe — logements, réservations à venir, revenus
+// ── Liste complète des réservations de l'hôte externe ────────
+app.get('/api/host/reservations', authenticateToken, async (req, res) => {
+  try {
+    const rows = await pool.query(`
+      SELECT r.uid, r.property_id, r.guest_name, r.guest_email, r.guest_phone,
+             r.start_date, r.end_date, r.amount_total, r.status, r.source, r.created_at,
+             p.name AS property_name, p.photo_url AS property_photo,
+             c.id AS conversation_id
+      FROM reservations r
+      JOIN properties p ON p.id = r.property_id
+      LEFT JOIN conversations c ON c.reservation_uid = r.uid
+      WHERE r.user_id = $1
+        AND COALESCE(r.source,'') <> 'BLOCK'
+        AND COALESCE(r.reservation_type,'') <> 'block'
+      ORDER BY r.start_date DESC
+      LIMIT 200
+    `, [req.user.id]);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const out = rows.rows.map(r => {
+      const gross = parseFloat(r.amount_total) || 0;
+      return {
+        uid: r.uid,
+        propertyId: r.property_id,
+        propertyName: r.property_name,
+        propertyPhoto: r.property_photo || null,
+        guestName: r.guest_name || 'Voyageur',
+        guestEmail: r.guest_email || null,
+        guestPhone: r.guest_phone || null,
+        startDate: String(r.start_date).slice(0, 10),
+        endDate: String(r.end_date).slice(0, 10),
+        nights: Math.max(1, Math.round((new Date(r.end_date) - new Date(r.start_date)) / 86400000)),
+        amountTotal: gross || null,
+        amountNet: gross ? Math.round(gross * 0.93 * 100) / 100 : null,
+        status: r.status,
+        conversationId: r.conversation_id || null,
+        phase: r.status === 'cancelled' ? 'cancelled'
+             : (String(r.end_date).slice(0,10) < today ? 'past'
+             : (String(r.start_date).slice(0,10) <= today ? 'current' : 'upcoming'))
+      };
+    });
+    res.json({ reservations: out });
+  } catch(e) {
+    console.error('❌ [HOST] GET /reservations:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/host/dashboard', authenticateToken, async (req, res) => {
   try {
     const userRes = await pool.query('SELECT id, first_name, is_external_host, stripe_account_id FROM users WHERE id = $1', [req.user.id]);
