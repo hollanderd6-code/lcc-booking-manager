@@ -38738,7 +38738,9 @@ app.get('/api/guest/properties/:id', async (req, res) => {
         p.welcome_basket_enabled, p.welcome_basket_price, p.welcome_basket_description,
         p.deposit_amount, p.is_marketplace,
         p.channex_property_id, p.channex_room_type_id, p.channex_enabled,
-        p.user_id as owner_id, u.is_external_host
+        p.user_id as owner_id, u.is_external_host,
+        u.first_name AS host_first_name, u.avatar_url AS host_avatar_url,
+        u.bio AS host_bio, u.created_at AS host_since
       FROM properties p
       JOIN users u ON u.id = p.user_id
       LEFT JOIN subscriptions s ON s.user_id = u.id
@@ -38774,6 +38776,16 @@ app.get('/api/guest/properties/:id', async (req, res) => {
     } catch(e) {}
     if (photosRows.length === 0 && p.photo_url) photosRows = [p.photo_url];
 
+    // 👤 Profil hôte public : prénom, photo, bio, ancienneté, nb de logements
+    let hostListingsCount = 1;
+    try {
+      const hc = await pool.query(
+        'SELECT COUNT(*)::int AS n FROM properties WHERE user_id = $1 AND is_marketplace = true',
+        [p.owner_id]
+      );
+      hostListingsCount = hc.rows[0]?.n || 1;
+    } catch(e) {}
+
     res.json({
       id: p.id,
       name: p.name,
@@ -38807,6 +38819,13 @@ app.get('/api/guest/properties/:id', async (req, res) => {
       photos: photosRows,
       isMarketplace: p.is_marketplace === true,
       isExternalHost: p.is_external_host === true,
+      host: {
+        firstName: p.host_first_name || 'Votre hôte',
+        avatarUrl: p.host_avatar_url || null,
+        bio: p.host_bio || null,
+        since: p.host_since ? new Date(p.host_since).toISOString().slice(0, 10) : null,
+        listingsCount: hostListingsCount
+      },
       channexEnabled: p.channex_enabled,
       bookedDates: resas.rows.map(r => ({
         start: r.start_date,

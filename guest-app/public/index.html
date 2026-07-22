@@ -923,6 +923,22 @@ body {
 .detail-rule.no .ricon { background: #F1EFEA; color: var(--stone-light); }
 
 /* Panier d'accueil */
+/* ── Carte "Votre hôte" ── */
+.host-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px;}
+.host-card-top{display:flex;align-items:center;gap:13px;}
+.host-avatar{width:56px;height:56px;flex-shrink:0;}
+.host-avatar-img,.host-avatar-txt{width:56px;height:56px;border-radius:50%;display:block;}
+.host-avatar-img{object-fit:cover;}
+.host-avatar-txt{background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;font-family:'Instrument Serif',serif;}
+.host-id{flex:1;min-width:0;}
+.host-name{font-size:16.5px;font-weight:700;color:var(--ink);}
+.host-meta{font-size:12.5px;color:var(--text2);margin-top:2px;}
+.host-badge{display:inline-flex;align-items:center;gap:5px;background:var(--primary-tint,#FBEDE7);color:var(--primary);font-size:11.5px;font-weight:600;border-radius:999px;padding:5px 10px;white-space:nowrap;flex-shrink:0;}
+.host-bio{font-size:13.5px;line-height:1.55;color:var(--text1,#44403C);margin-top:12px;}
+.host-bio-more{background:none;border:none;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;padding:0;font-family:inherit;}
+.host-note{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text2);margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
+.host-note i{color:var(--primary);flex-shrink:0;}
+
 .detail-basket {
   display: flex; gap: 13px; align-items: flex-start;
   background: var(--primary-tint); border-radius: 15px; padding: 16px; margin-bottom: 26px;

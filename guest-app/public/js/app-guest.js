@@ -1619,6 +1619,61 @@ function updateGalleryDot(el) {
   if (dot) dot.textContent = idx;
 }
 
+// ── Carte "Votre hôte" sur la fiche logement ─────────────────
+function renderHostCard(p) {
+  const h = p.host;
+  if (!h) return '';
+  const first = esc(h.firstName || 'Votre hôte');
+  const initial = first.trim().charAt(0).toUpperCase() || 'H';
+
+  // Ancienneté : "Hôte depuis 2024" (l'année suffit, un mois précis fait fiche administrative)
+  let sinceTxt = '';
+  if (h.since) {
+    const y = new Date(h.since).getFullYear();
+    if (y && !isNaN(y)) sinceTxt = `Hôte depuis ${y}`;
+  }
+
+  const meta = [sinceTxt, h.listingsCount > 1 ? `${h.listingsCount} logements` : null]
+    .filter(Boolean).join(' · ');
+
+  // Bio tronquée à ~150 caractères, dépliable
+  let bioHtml = '';
+  if (h.bio) {
+    const bio = esc(h.bio);
+    if (bio.length > 150) {
+      bioHtml = `<div class="host-bio" id="hostBio" data-full="${bio}">${bio.slice(0, 150)}…
+        <button class="host-bio-more" onclick="expandHostBio(event)">Lire plus</button></div>`;
+    } else {
+      bioHtml = `<div class="host-bio">${bio}</div>`;
+    }
+  }
+
+  const avatar = h.avatarUrl
+    ? `<img src="${esc(h.avatarUrl)}" alt="${first}" class="host-avatar-img" loading="lazy">`
+    : `<div class="host-avatar-txt">${initial}</div>`;
+
+  return `
+    <div class="detail-sec-t">Votre hôte</div>
+    <div class="host-card">
+      <div class="host-card-top">
+        <div class="host-avatar">${avatar}</div>
+        <div class="host-id">
+          <div class="host-name">${first}</div>
+          ${meta ? `<div class="host-meta">${meta}</div>` : ''}
+        </div>
+        <div class="host-badge"><i class="fas fa-circle-check"></i> Profil vérifié</div>
+      </div>
+      ${bioHtml}
+      <div class="host-note"><i class="fas fa-comments"></i> Vous échangerez directement avec ${first}, sans intermédiaire.</div>
+    </div>`;
+}
+
+function expandHostBio(e) {
+  e.stopPropagation();
+  const el = document.getElementById('hostBio');
+  if (el) el.innerHTML = el.dataset.full;
+}
+
 function renderDetail() {
   const p = state.currentProperty;
 
@@ -1689,6 +1744,8 @@ function renderDetail() {
       </div>
 
       ${desc ? `<div class="detail-sec-t">Le logement</div><div class="detail-desc">${desc}</div>` : ''}
+
+      ${renderHostCard(p)}
 
       ${highlights ? `<div class="detail-sec-t">Les plus</div><div class="detail-desc">${highlights}</div>` : ''}
 
