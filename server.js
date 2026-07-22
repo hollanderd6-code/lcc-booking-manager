@@ -20093,6 +20093,14 @@ async function getGuestCancellationRate(guestEmail) {
 // ══════════════════════════════════════════════════════════════
 const DEFERRED_CAPTURE_DAYS = 2; // = fenêtre d'annulation gratuite
 
+// 💰 Commission marketplace — UN SEUL ENDROIT À MODIFIER.
+// Hôtes externes BHGuest / propriétaires Boostinghost historiques.
+const MARKETPLACE_FEE_PCT_EXTERNAL = parseFloat(process.env.MARKETPLACE_FEE_PCT || '7');
+const MARKETPLACE_FEE_PCT_INTERNAL = 3;
+function marketplaceFeePct(isExternalHost) {
+  return isExternalHost ? MARKETPLACE_FEE_PCT_EXTERNAL : MARKETPLACE_FEE_PCT_INTERNAL;
+}
+
 pool.query(`
   CREATE TABLE IF NOT EXISTS bhguest_deferred_payments (
     id SERIAL PRIMARY KEY,
@@ -40382,7 +40390,7 @@ app.post('/api/guest/book', async (req, res) => {
     // Le voyageur paie exactement le prix affiché/négocié (tout compris : ménage, taxe, marge).
     // La commission plateforme (3% BH / 7% hôte externe) est prélevée au REVERSEMENT (Stripe Connect),
     // invisible pour le voyageur.
-    const feePct = prop.is_external_host ? 7 : 3;
+    const feePct = marketplaceFeePct(prop.is_external_host);
     const commission = Math.round(totalBase * feePct / 100 * 100) / 100; // pour reversement (Phase 4)
     const totalTTC = Math.round(totalBase * 100); // le voyageur paie totalBase, POINT — en centimes
 
@@ -43210,7 +43218,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     // Ni ménage, ni taxe, ni frais de service ne sont ajoutés. La commission plateforme
     // (3% BH / 7% hôte externe) est prélevée au reversement via application_fee (invisible voyageur).
     const isFixedPrice = validatedFixedPrice != null;
-    const feePct = prop.is_external_host ? 7 : 3;
+    const feePct = marketplaceFeePct(prop.is_external_host);
     const cleaningFee = 0; // inclus dans le prix affiché
     const touristTax = 0;  // inclus dans le prix affiché
     const commission = Math.round(discountedBase * feePct / 100 * 100) / 100; // pour info/reporting

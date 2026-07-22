@@ -429,6 +429,8 @@ body {
 .home-feature-desc { font-size: 11px; color: var(--text2); line-height: 1.4; }
 
 /* CTA inscription */
+.made-in-fr{display:flex;align-items:flex-start;gap:11px;margin:14px 16px;padding:14px 16px;background:var(--primary-tint,#FBEDE7);border-radius:14px;font-size:12.5px;line-height:1.5;color:var(--ink);}
+.made-in-fr i{color:var(--primary);margin-top:2px;flex-shrink:0;}
 .become-host{display:flex;align-items:center;gap:14px;margin:14px 16px 24px;padding:16px 18px;background:var(--white);border:1px solid var(--line);border-radius:16px;text-decoration:none;color:inherit;transition:transform .15s}
 .become-host:active{transform:scale(.985)}
 .become-host .bh-ic{width:44px;height:44px;border-radius:12px;background:var(--primary-tint);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:18px;flex-shrink:0}
@@ -1329,7 +1331,7 @@ body.screen-detail #bottomNav { display: none !important; }
           <div id="authBar" class="authbar"></div>
         </div>
         <h1>Séjournez <em>autrement</em>,<br>sans les frais.</h1>
-        <p>Réservez en direct avec votre hôte. Moins d'intermédiaires, plus de transparence.</p>
+        <p>La plateforme française de réservation en direct. Moins d'intermédiaires, plus de transparence.</p>
         <div class="home-search">
           <i class="fas fa-search" style="color:#9ca3af;margin-left:8px;"></i>
           <input type="text" id="homeSearchInput" placeholder="Ville, logement..." autocomplete="off" enterkeyhint="search" onkeydown="if(event.key==='Enter'){event.preventDefault();homeSearch();}">
@@ -1339,6 +1341,7 @@ body.screen-detail #bottomNav { display: none !important; }
           <div class="home-trust-badge"><i class="fas fa-shield-halved"></i> Paiement sécurisé</div>
           <div class="home-trust-badge"><i class="fas fa-headset"></i> Support 24/7</div>
           <div class="home-trust-badge"><i class="fas fa-star"></i> Logements vérifiés</div>
+          <div class="home-trust-badge"><i class="fas fa-location-dot"></i> Entreprise française</div>
         </div>
       </div>
 
@@ -1413,11 +1416,16 @@ body.screen-detail #bottomNav { display: none !important; }
       </div>
 
       <!-- Devenir hôte -->
+      <div class="made-in-fr">
+        <i class="fas fa-location-dot"></i>
+        <span><b>Plateforme française</b> — conçue, hébergée et exploitée en France. Vos données et vos paiements ne quittent pas l'Union européenne.</span>
+      </div>
+
       <div class="become-host" onclick="hostEntry()" style="cursor:pointer;">
         <div class="bh-ic"><i class="fas fa-house-chimney-window"></i></div>
         <div class="bh-txt">
           <b>Vous avez un logement ?</b>
-          <span>Devenez hôte et recevez des réservations en direct.</span>
+          <span>Rejoignez la plateforme française de réservation directe.</span>
         </div>
         <i class="fas fa-arrow-right bh-arr"></i>
       </div>
