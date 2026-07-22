@@ -259,10 +259,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             }
             UIView.animate(withDuration: 0.2, delay: 0.15) { brandLabel.alpha = 1 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                let brandText = "BOOSTINGHOST"
+                let brandText = "BHGuest"
                 var charIndex = 0
                 var timer: Timer?
-                timer = Timer.scheduledTimer(withTimeInterval: 0.07, repeats: true) { t in
+                timer = Timer.scheduledTimer(withTimeInterval: 0.11, repeats: true) { t in
                     charIndex += 1
                     brandLabel.text = String(brandText.prefix(charIndex))
                     if charIndex >= brandText.count {
