@@ -77,6 +77,39 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
 
 .toast{position:fixed;bottom:140px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;font-size:13.5px;z-index:50;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
+
+/* Onglets */
+.tabs{display:flex;gap:6px;background:var(--white);border:1px solid var(--line);border-radius:12px;padding:4px;margin:0 16px 14px}
+.tab{flex:1;text-align:center;padding:11px;border-radius:9px;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .15s;border:none;background:none;font-family:inherit}
+.tab.active{background:var(--primary);color:#fff}
+/* Cartes règles */
+.rules-card{background:var(--white);border:1px solid var(--line);border-radius:18px;margin:0 16px 14px;padding:20px 18px}
+.rc-t{font-family:'Instrument Serif',serif;font-size:19px;font-weight:400;margin-bottom:4px}
+.rc-d{font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.4}
+.weekend-row{display:flex;gap:10px}
+.weekend-row .prefix{flex:1;position:relative}
+.weekend-row input{width:100%;padding:13px 34px 13px 14px;border:1px solid var(--line);border-radius:12px;font-size:16px;font-family:inherit;outline:none}
+.weekend-row input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint)}
+.weekend-row .u{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text2);font-weight:500}
+.btn-save{background:var(--primary);color:#fff;border:none;border-radius:12px;padding:0 20px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit}
+.season-item{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line)}
+.season-item:last-of-type{border-bottom:none}
+.season-item .si-info b{font-size:14.5px;font-weight:600;display:block}
+.season-item .si-info span{font-size:12.5px;color:var(--text2)}
+.season-item .si-price{font-weight:700;font-size:15px;margin-right:12px}
+.season-item .si-del{width:30px;height:30px;border-radius:8px;background:var(--bg);border:none;color:var(--error);cursor:pointer;font-size:12px}
+.btn-add-season{width:100%;padding:13px;background:var(--primary-tint);color:var(--primary-dark);border:none;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:7px}
+.season-form{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.sf-field{margin-bottom:12px}
+.sf-field label{display:block;font-size:12.5px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.sf-field input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;font-size:16px;font-family:inherit;outline:none}
+.sf-field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint)}
+.sf-field .prefix{position:relative}
+.sf-field .prefix input{padding-right:34px}
+.sf-field .prefix .u{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text2);font-weight:500}
+.sf-row{display:flex;gap:10px}
+.sf-row .sf-field{flex:1}
+.btn-save-season{width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-weight:600;font-size:14.5px;cursor:pointer;font-family:inherit;margin-top:4px}
 </style>
 </head>
 <body>
@@ -90,14 +123,49 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
     <select id="propSelect" onchange="onPropChange()"></select>
   </div>
 
-  <div class="legend">
-    <div class="leg"><span class="leg-dot avail"></span>Prix de base</div>
-    <div class="leg"><span class="leg-dot custom"></span>Prix modifié</div>
-    <div class="leg"><span class="leg-dot blocked"></span>Bloqué</div>
-    <div class="leg"><span class="leg-dot booked"></span>Réservé</div>
+  <div class="tabs">
+    <button class="tab active" id="tabCal" onclick="switchTab('cal')">Calendrier</button>
+    <button class="tab" id="tabRules" onclick="switchTab('rules')">Règles de prix</button>
   </div>
 
-  <div id="calendars"><div class="loading"><i class="fas fa-spinner spin" style="font-size:24px"></i></div></div>
+  <!-- ONGLET CALENDRIER -->
+  <div id="paneCal">
+    <div class="legend">
+      <div class="leg"><span class="leg-dot avail"></span>Prix de base</div>
+      <div class="leg"><span class="leg-dot custom"></span>Prix modifié</div>
+      <div class="leg"><span class="leg-dot blocked"></span>Bloqué</div>
+      <div class="leg"><span class="leg-dot booked"></span>Réservé</div>
+    </div>
+    <div id="calendars"><div class="loading"><i class="fas fa-spinner spin" style="font-size:24px"></i></div></div>
+  </div>
+
+  <!-- ONGLET RÈGLES -->
+  <div id="paneRules" style="display:none">
+    <div class="rules-card">
+      <div class="rc-t">Prix du week-end</div>
+      <div class="rc-d">Appliqué automatiquement chaque vendredi et samedi. Laissez vide pour utiliser le prix de base.</div>
+      <div class="weekend-row">
+        <div class="prefix"><input type="number" id="weekendPrice" min="0" placeholder="Prix de base"><span class="u">€</span></div>
+        <button class="btn-save" onclick="saveWeekend()">Enregistrer</button>
+      </div>
+    </div>
+
+    <div class="rules-card">
+      <div class="rc-t">Tarifs saisonniers</div>
+      <div class="rc-d">Définissez un prix pour une période (vacances, haute saison, événement...).</div>
+      <div id="seasonList"></div>
+      <button class="btn-add-season" onclick="toggleSeasonForm()"><i class="fas fa-plus"></i> Ajouter une période</button>
+      <div class="season-form" id="seasonForm" style="display:none">
+        <div class="sf-field"><label>Nom</label><input type="text" id="seasonName" placeholder="Ex. Vacances d'été"></div>
+        <div class="sf-row">
+          <div class="sf-field"><label>Du</label><input type="date" id="seasonStart"></div>
+          <div class="sf-field"><label>Au</label><input type="date" id="seasonEnd"></div>
+        </div>
+        <div class="sf-field"><label>Prix par nuit</label><div class="prefix"><input type="number" id="seasonPrice" min="0" placeholder="120"><span class="u">€</span></div></div>
+        <button class="btn-save-season" onclick="addSeason()">Ajouter cette période</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Barre d'action -->
@@ -153,7 +221,7 @@ async function init(){
   }
 }
 
-async function onPropChange(){ currentProp = document.getElementById('propSelect').value; clearSel(); await loadCalendar(); }
+async function onPropChange(){ currentProp = document.getElementById('propSelect').value; clearSel(); await loadCalendar(); if(document.getElementById('paneRules').style.display!=='none') loadRules(); }
 
 async function loadCalendar(){
   document.getElementById('calendars').innerHTML = '<div class="loading"><i class="fas fa-spinner spin" style="font-size:24px"></i></div>';
@@ -276,6 +344,95 @@ async function doBlock(action){
     await loadCalendar();
   }catch(e){ toast('Erreur'); }
 }
+
+
+// ---------- ONGLETS ----------
+function switchTab(which){
+  const isCal = which === 'cal';
+  document.getElementById('tabCal').classList.toggle('active', isCal);
+  document.getElementById('tabRules').classList.toggle('active', !isCal);
+  document.getElementById('paneCal').style.display = isCal ? 'block' : 'none';
+  document.getElementById('paneRules').style.display = isCal ? 'none' : 'block';
+  if(!isCal) loadRules();
+}
+
+// ---------- RÈGLES DE PRIX ----------
+async function loadRules(){
+  if(!currentProp) return;
+  try{
+    const res = await fetch(`${API_URL}/api/host/pricing/rules/${currentProp}`, { headers:{'Authorization':'Bearer '+token} });
+    const d = await res.json();
+    document.getElementById('weekendPrice').value = d.weekendPrice != null ? d.weekendPrice : '';
+    document.getElementById('weekendPrice').placeholder = d.basePrice != null ? `Base : ${d.basePrice}€` : 'Prix de base';
+    renderSeasons(d.seasonRules || []);
+  }catch(e){ toast('Erreur chargement règles'); }
+}
+
+function renderSeasons(rules){
+  const list = document.getElementById('seasonList');
+  if(!rules.length){ list.innerHTML = '<div style="font-size:13px;color:var(--stone-light);padding:8px 0;">Aucune période définie.</div>'; return; }
+  list.innerHTML = rules.map(r=>`
+    <div class="season-item">
+      <div class="si-info"><b>${esc(r.name)}</b><span>${fmtDateFr(r.start_date)} → ${fmtDateFr(r.end_date)}</span></div>
+      <div style="display:flex;align-items:center;">
+        <span class="si-price">${Math.round(r.price)}€</span>
+        <button class="si-del" onclick="delSeason(${r.id})"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`).join('');
+}
+
+async function saveWeekend(){
+  const price = document.getElementById('weekendPrice').value;
+  try{
+    const res = await fetch(`${API_URL}/api/host/pricing/weekend`, {
+      method:'PUT', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ propertyId: currentProp, price: price===''?null:price })
+    });
+    if(!res.ok) throw new Error();
+    toast('✓ Prix week-end enregistré');
+  }catch(e){ toast('Erreur'); }
+}
+
+function toggleSeasonForm(){
+  const f = document.getElementById('seasonForm');
+  f.style.display = f.style.display==='none' ? 'block' : 'none';
+}
+
+async function addSeason(){
+  const name = document.getElementById('seasonName').value.trim();
+  const start_date = document.getElementById('seasonStart').value;
+  const end_date = document.getElementById('seasonEnd').value;
+  const price = document.getElementById('seasonPrice').value;
+  if(!name || !start_date || !end_date || !price){ toast('Remplissez tous les champs'); return; }
+  try{
+    const res = await fetch(`${API_URL}/api/host/pricing/season`, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ propertyId: currentProp, name, start_date, end_date, price })
+    });
+    if(!res.ok){ const e=await res.json(); throw new Error(e.error); }
+    toast('✓ Période ajoutée');
+    document.getElementById('seasonName').value='';
+    document.getElementById('seasonStart').value='';
+    document.getElementById('seasonEnd').value='';
+    document.getElementById('seasonPrice').value='';
+    document.getElementById('seasonForm').style.display='none';
+    loadRules();
+  }catch(err){ toast(err.message||'Erreur'); }
+}
+
+async function delSeason(id){
+  try{
+    const res = await fetch(`${API_URL}/api/host/pricing/season/${id}`, {
+      method:'DELETE', headers:{'Authorization':'Bearer '+token}
+    });
+    if(!res.ok) throw new Error();
+    toast('✓ Période supprimée');
+    loadRules();
+  }catch(e){ toast('Erreur'); }
+}
+
+function esc(s){ return String(s||'').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+function fmtDateFr(d){ const x=new Date(d); return x.getDate()+' '+MONTHS[x.getMonth()].slice(0,4)+'.'; }
 
 init();
 </script>

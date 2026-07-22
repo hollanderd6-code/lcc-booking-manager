@@ -20111,6 +20111,100 @@ app.post('/api/host/pricing/block', authenticateToken, async (req, res) => {
   }
 });
 
+// ============================================
+// 🏠 MARKETPLACE — Règles de prix (hôtes externes)
+// Prix week-end + règles saisonnières. Écrit dans properties.weekend_price et pricing_rules.
+// ============================================
+
+// GET /api/host/pricing/rules/:propertyId — prix week-end + règles saisonnières
+app.get('/api/host/pricing/rules/:propertyId', authenticateToken, async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const chk = await assertHostOwnsProperty(req, propertyId);
+    if (!chk.ok) return res.status(chk.code).json({ error: chk.error });
+
+    const propRes = await pool.query('SELECT base_price, weekend_price FROM properties WHERE id = $1', [propertyId]);
+    const rules = await pool.query(
+      `SELECT id, name, rule_type, TO_CHAR(start_date,'YYYY-MM-DD') AS start_date,
+              TO_CHAR(end_date,'YYYY-MM-DD') AS end_date, price, active
+       FROM pricing_rules
+       WHERE property_id = $1 AND user_id = $2 AND rule_type = 'period'
+       ORDER BY start_date ASC`,
+      [propertyId, req.user.id]
+    );
+    res.json({
+      basePrice: propRes.rows[0]?.base_price != null ? parseFloat(propRes.rows[0].base_price) : null,
+      weekendPrice: propRes.rows[0]?.weekend_price != null ? parseFloat(propRes.rows[0].weekend_price) : null,
+      seasonRules: rules.rows
+    });
+  } catch (e) {
+    console.error('❌ [HOST] get rules:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/host/pricing/weekend — définir/retirer le prix week-end
+// body: { propertyId, price: 120 | null }
+app.put('/api/host/pricing/weekend', authenticateToken, async (req, res) => {
+  try {
+    const { propertyId, price } = req.body;
+    const chk = await assertHostOwnsProperty(req, propertyId);
+    if (!chk.ok) return res.status(chk.code).json({ error: chk.error });
+
+    const wp = (price == null || price === '') ? null : parseFloat(price);
+    if (wp != null && wp < 0) return res.status(400).json({ error: 'Prix invalide' });
+
+    await pool.query('UPDATE properties SET weekend_price = $1, updated_at = NOW() WHERE id = $2', [wp, propertyId]);
+    try { triggerChannexRatesSync(propertyId, req.user.id); } catch(e){}
+    res.json({ success: true, weekendPrice: wp });
+  } catch (e) {
+    console.error('❌ [HOST] weekend price:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/host/pricing/season — ajouter une règle saisonnière (période)
+// body: { propertyId, name, start_date, end_date, price }
+app.post('/api/host/pricing/season', authenticateToken, async (req, res) => {
+  try {
+    const { propertyId, name, start_date, end_date, price } = req.body;
+    const chk = await assertHostOwnsProperty(req, propertyId);
+    if (!chk.ok) return res.status(chk.code).json({ error: chk.error });
+    if (!name || !start_date || !end_date || price == null) {
+      return res.status(400).json({ error: 'Nom, dates et prix requis' });
+    }
+    if (end_date < start_date) return res.status(400).json({ error: 'La date de fin doit suivre la date de début' });
+
+    const result = await pool.query(
+      `INSERT INTO pricing_rules (user_id, property_id, name, rule_type, start_date, end_date, price, priority, active)
+       VALUES ($1, $2, $3, 'period', $4, $5, $6, 10, true) RETURNING id`,
+      [req.user.id, propertyId, name.trim(), start_date, end_date, parseFloat(price)]
+    );
+    try { triggerChannexRatesSync(propertyId, req.user.id); } catch(e){}
+    res.json({ success: true, id: result.rows[0].id });
+  } catch (e) {
+    console.error('❌ [HOST] add season:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE /api/host/pricing/season/:ruleId — supprimer une règle saisonnière
+app.delete('/api/host/pricing/season/:ruleId', authenticateToken, async (req, res) => {
+  try {
+    const { ruleId } = req.params;
+    // Vérifier que la règle appartient à l'hôte
+    const r = await pool.query('SELECT property_id FROM pricing_rules WHERE id = $1 AND user_id = $2', [ruleId, req.user.id]);
+    if (r.rows.length === 0) return res.status(404).json({ error: 'Règle introuvable' });
+
+    await pool.query('DELETE FROM pricing_rules WHERE id = $1 AND user_id = $2', [ruleId, req.user.id]);
+    try { triggerChannexRatesSync(r.rows[0].property_id, req.user.id); } catch(e){}
+    res.json({ success: true });
+  } catch (e) {
+    console.error('❌ [HOST] delete season:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
