@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vérification — BHGuest Hôte</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{--primary:#C2410C;--primary-dark:#9A3412;--primary-tint:#FBEDE7;--ink:#1C1917;--bg:#FAF8F5;--white:#FFF;--text2:#78716C;--line:#EDE8E1;--success:#16A34A;--error:#DC2626}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--ink);min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{max-width:400px;width:100%;background:var(--white);border:1px solid var(--line);border-radius:22px;padding:40px 28px;text-align:center}
+.brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px}
+.brand-mark{width:34px;height:34px;background:var(--primary);border-radius:50% 50% 50% 7px;transform:rotate(45deg);display:flex;align-items:center;justify-content:center}
+.brand-mark b{transform:rotate(-45deg);font-family:'Instrument Serif',serif;font-size:19px;color:#fff}
+.brand-name{font-weight:700;font-size:17px;display:flex;align-items:baseline}
+.brand-name .g{color:var(--primary)}
+.brand-name .dot{width:4px;height:4px;border-radius:50%;background:var(--ink);margin-left:3px}
+.ic{width:70px;height:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 20px}
+.ic.ok{background:#F0FDF4;color:var(--success)}
+.ic.err{background:#FEF2F2;color:var(--error)}
+.ic.load{background:var(--primary-tint);color:var(--primary)}
+h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:26px;margin-bottom:10px}
+p{font-size:14.5px;color:var(--text2);line-height:1.55;margin-bottom:24px}
+.btn{display:inline-block;width:100%;padding:15px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:15.5px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;transition:background .15s}
+.btn:active{background:var(--primary-dark)}
+.spin{display:inline-block;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="brand"><span class="brand-mark"><b>b</b></span><span class="brand-name">BH<span class="g">Guest</span><span class="dot"></span></span></div>
+  <div class="ic load"><i class="fas fa-spinner spin"></i></div>
+  <h1>Vérification…</h1>
+  <p>Un instant, nous activons votre compte hôte.</p>
+</div>
+
+<script>
+const API_URL = window.Capacitor?.isNativePlatform?.() ? 'https://www.boostinghost.fr' : window.location.origin;
+const token = new URLSearchParams(location.search).get('token');
+
+async function verify(){
+  const card = document.getElementById('card');
+  if(!token){ showErr('Lien invalide.'); return; }
+  try{
+    const res = await fetch(`${API_URL}/api/verify-email?token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    if(res.ok && data.success){
+      card.innerHTML = `
+        <div class="brand"><span class="brand-mark"><b>b</b></span><span class="brand-name">BH<span class="g">Guest</span><span class="dot"></span></span></div>
+        <div class="ic ok"><i class="fas fa-check"></i></div>
+        <h1>Compte activé !</h1>
+        <p>Votre adresse est vérifiée. Vous pouvez maintenant vous connecter à votre espace hôte.</p>
+        <a class="btn" href="host.html">Se connecter</a>`;
+    } else {
+      showErr(data.error === 'Token expiré' ? 'Ce lien a expiré. Refaites une inscription.' : 'Lien invalide ou déjà utilisé.');
+    }
+  }catch(e){ showErr('Une erreur est survenue. Réessayez.'); }
+}
+function showErr(msg){
+  document.getElementById('card').innerHTML = `
+    <div class="brand"><span class="brand-mark"><b>b</b></span><span class="brand-name">BH<span class="g">Guest</span><span class="dot"></span></span></div>
+    <div class="ic err"><i class="fas fa-xmark"></i></div>
+    <h1>Oups</h1>
+    <p>${msg}</p>
+    <a class="btn" href="host.html">Retour à l'inscription</a>`;
+}
+verify();
+</script>
+</body>
+</html>

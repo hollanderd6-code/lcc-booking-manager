@@ -19641,7 +19641,7 @@ app.post('/api/host/register', async (req, res) => {
 
     // Email de vérification (même mécanisme que Boostinghost)
     const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
-    const verificationUrl = `${appUrl}/verify-email.html?token=${verificationToken}`;
+    const verificationUrl = `${appUrl}/guest-app/public/host-verify.html?token=${verificationToken}`;
     try {
       await transporter.sendMail({
         from: EMAIL_FROM,
