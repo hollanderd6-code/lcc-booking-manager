@@ -45,6 +45,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .rev-send:disabled{opacity:.6;}
 .rev-open{background:none;border:1px solid var(--line);color:var(--text2);border-radius:10px;padding:9px 13px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:10px;}
 .rev-hint{font-size:11px;color:var(--text2);margin-top:6px;}
+.rev-report{background:none;border:none;color:var(--text2);font-size:11.5px;text-decoration:underline;cursor:pointer;font-family:inherit;padding:0;margin-top:11px;}
+.rev-reported{margin-top:11px;font-size:11.5px;color:#92400E;background:#FEF3C7;border-radius:9px;padding:8px 11px;display:flex;align-items:center;gap:7px;}
 
 .empty{padding:60px 20px;text-align:center;color:var(--text2);}
 .empty i{font-size:38px;color:var(--line);margin-bottom:12px;display:block;}
@@ -124,7 +126,25 @@ function renderReview(r){
     ${r.criteria ? `<div class="rev-crits">${[['cleanliness','Propreté'],['communication','Communication'],['location','Emplacement'],['accuracy','Exactitude'],['value','Qualité-prix']].map(([k,l]) => `<span class="rev-crit-chip">${l} <b>${r.criteria[k]}</b></span>`).join('')}</div>` : ''}
     ${r.comment ? `<div class="rev-text">${esc(r.comment)}</div>` : ''}
     ${bottom}
+    ${r.reported
+      ? `<div class="rev-reported"><i class="fas fa-flag"></i> Signalé — en cours d'examen par notre équipe</div>`
+      : `<button class="rev-report" onclick="openReport(${r.id})">Signaler cet avis</button>`}
   </div>`;
+}
+
+function openReport(id){
+  const reason = prompt(
+    "Signaler cet avis à notre équipe.\n\nNous retirons les avis qui contiennent des insultes, des propos discriminatoires, des données personnelles, qui ne portent pas sur le séjour, ou qui résultent d'une tentative de chantage (« un remboursement contre un bon avis »).\n\nDécrivez précisément ce qui pose problème :"
+  );
+  if(reason === null) return;
+  if(reason.trim().length < 15){ alert('Merci de décrire le problème (15 caractères minimum).'); return; }
+  fetch(`${API_URL}/api/host/reviews/${id}/report`, {
+    method:'POST', headers:H, body: JSON.stringify({ reason: reason.trim() })
+  }).then(r => r.json().then(d => {
+    if(!r.ok) throw new Error(d.error || 'Erreur');
+    alert("Signalement transmis. Notre équipe examine l'avis et vous répond sous 48h.");
+    load();
+  })).catch(e => alert(e.message));
 }
 
 function openAnswer(id, editing){

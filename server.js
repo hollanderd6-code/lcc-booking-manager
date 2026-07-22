@@ -20495,7 +20495,8 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS cancellation_reason TEXT
 `).catch(() => {});
 
-const HOST_CANCEL_LIMIT = 3; // annulations sur 12 mois avant suspension
+const HOST_CANCEL_LIMIT = 3;    // annulations sur 12 mois avant suspension
+const HOST_REFUSAL_HOURS = 48;  // droit de refus sans pénalité après la réservation
 
 app.post('/api/host/reservations/:uid/cancel', authenticateToken, async (req, res) => {
   try {
@@ -20512,6 +20513,13 @@ app.post('/api/host/reservations/:uid/cancel', authenticateToken, async (req, re
     `, [req.params.uid, req.user.id]);
     const resa = rRes.rows[0];
     if (!resa) return res.status(404).json({ error: 'Réservation introuvable' });
+
+    // 🕊️ Droit de refus : dans les 48h suivant la réservation, l'hôte peut
+    // décliner sans que cela compte dans son quota ni dans son taux public.
+    const hoursSinceBooking = resa.created_at
+      ? (Date.now() - new Date(resa.created_at).getTime()) / 3600000
+      : 9999;
+    const isGraceRefusal = hoursSinceBooking <= HOST_REFUSAL_HOURS;
     if (resa.status === 'cancelled') return res.status(409).json({ error: 'Déjà annulée' });
     const today = new Date().toISOString().slice(0, 10);
     if (String(resa.start_date).slice(0, 10) <= today) {
@@ -20559,29 +20567,38 @@ app.post('/api/host/reservations/:uid/cancel', authenticateToken, async (req, re
 
     // ── Annuler + rebloquer les dates (anti "annuler pour relouer plus cher") ──
     await pool.query(
-      `UPDATE reservations SET status = 'cancelled', cancelled_by = 'host', cancellation_reason = $1, updated_at = NOW() WHERE uid = $2`,
-      [reasonTxt, resa.uid]
+      `UPDATE reservations SET status = 'cancelled', cancelled_by = $1, cancellation_reason = $2, updated_at = NOW() WHERE uid = $3`,
+      [isGraceRefusal ? 'host_refusal' : 'host', reasonTxt, resa.uid]
     );
-    try {
-      await pool.query(`
-        INSERT INTO reservations (uid, user_id, property_id, source, guest_name, start_date, end_date, status, created_at, updated_at)
-        VALUES ($1, $2, $3, 'BLOCK', 'Dates bloquées (annulation hôte)', $4, $5, 'confirmed', NOW(), NOW())
-        ON CONFLICT (uid) DO NOTHING
-      `, [`HOSTCANCEL_${resa.uid}`, req.user.id, resa.property_id, resa.start_date, resa.end_date]);
-    } catch(bErr) { console.warn('⚠️ [HOST CANCEL] Block dates:', bErr.message); }
+    // Le blocage des dates ne s'applique PAS au refus sous 48h : l'hôte n'a pas
+    // « annulé pour relouer plus cher », il a simplement décliné un voyageur.
+    if (!isGraceRefusal) {
+      try {
+        await pool.query(`
+          INSERT INTO reservations (uid, user_id, property_id, source, guest_name, start_date, end_date, status, created_at, updated_at)
+          VALUES ($1, $2, $3, 'BLOCK', 'Dates bloquées (annulation hôte)', $4, $5, 'confirmed', NOW(), NOW())
+          ON CONFLICT (uid) DO NOTHING
+        `, [`HOSTCANCEL_${resa.uid}`, req.user.id, resa.property_id, resa.start_date, resa.end_date]);
+      } catch(bErr) { console.warn('⚠️ [HOST CANCEL] Block dates:', bErr.message); }
+    }
 
-    // ── Compteur anti-abus ──
-    await pool.query(
-      'INSERT INTO bhguest_host_cancellations (user_id, reservation_uid, reason) VALUES ($1, $2, $3)',
-      [req.user.id, resa.uid, reasonTxt]
-    );
-    const cnt = await pool.query(
-      `SELECT COUNT(*)::int AS n FROM bhguest_host_cancellations WHERE user_id = $1 AND created_at > NOW() - INTERVAL '12 months'`,
-      [req.user.id]
-    );
-    const cancelCount = cnt.rows[0]?.n || 1;
+    // ── Compteur anti-abus (le refus sous 48h n'est pas comptabilisé) ──
+    let cancelCount = 0;
+    if (!isGraceRefusal) {
+      await pool.query(
+        'INSERT INTO bhguest_host_cancellations (user_id, reservation_uid, reason) VALUES ($1, $2, $3)',
+        [req.user.id, resa.uid, reasonTxt]
+      );
+      const cnt = await pool.query(
+        `SELECT COUNT(*)::int AS n FROM bhguest_host_cancellations WHERE user_id = $1 AND created_at > NOW() - INTERVAL '12 months'`,
+        [req.user.id]
+      );
+      cancelCount = cnt.rows[0]?.n || 1;
+    } else {
+      console.log(`🕊️ [HOST CANCEL] Refus sous ${HOST_REFUSAL_HOURS}h — non comptabilisé (${resa.uid})`);
+    }
     let suspended = false;
-    if (cancelCount >= HOST_CANCEL_LIMIT) {
+    if (!isGraceRefusal && cancelCount >= HOST_CANCEL_LIMIT) {
       await pool.query('UPDATE properties SET is_marketplace = false WHERE user_id = $1', [req.user.id]);
       suspended = true;
       console.warn(`🚫 [HOST CANCEL] Hôte ${req.user.id} suspendu (${cancelCount} annulations / 12 mois)`);
@@ -20623,16 +20640,20 @@ app.post('/api/host/reservations/:uid/cancel', authenticateToken, async (req, re
               ? `<p>Bonjour ${host.first_name || ''},</p>
                  <p>Vous avez annulé <strong>${cancelCount} réservations en 12 mois</strong>. Conformément à nos règles, vos logements sont retirés de la marketplace.</p>
                  <p>Contactez-nous pour réactiver votre compte.</p>`
-              : `<p>Bonjour ${host.first_name || ''},</p>
-                 <p>L'annulation du séjour de <strong>${resa.guest_name || 'votre voyageur'}</strong> (${fmtD(resa.start_date)} → ${fmtD(resa.end_date)}) est confirmée. Le voyageur est intégralement remboursé et les dates restent bloquées sur votre calendrier.</p>
-                 <p style="color:#92400E;background:#FEF3C7;border-radius:10px;padding:12px 14px;">⚠️ Annulation ${cancelCount} sur ${HOST_CANCEL_LIMIT} autorisées par période de 12 mois. Au-delà, vos logements seront suspendus.</p>`,
+              : isGraceRefusal
+                ? `<p>Bonjour ${host.first_name || ''},</p>
+                   <p>Vous avez décliné la réservation de <strong>${resa.guest_name || 'ce voyageur'}</strong> (${fmtD(resa.start_date)} → ${fmtD(resa.end_date)}). Le voyageur est intégralement remboursé.</p>
+                   <p style="color:#166534;background:#DCFCE7;border-radius:10px;padding:12px 14px;">✅ Vous étiez dans le délai de ${HOST_REFUSAL_HOURS}h : ce refus <strong>ne compte pas</strong> dans votre quota d'annulations et n'apparaîtra pas dans votre taux public.</p>`
+                : `<p>Bonjour ${host.first_name || ''},</p>
+                   <p>L'annulation du séjour de <strong>${resa.guest_name || 'votre voyageur'}</strong> (${fmtD(resa.start_date)} → ${fmtD(resa.end_date)}) est confirmée. Le voyageur est intégralement remboursé et les dates restent bloquées sur votre calendrier.</p>
+                   <p style="color:#92400E;background:#FEF3C7;border-radius:10px;padding:12px 14px;">⚠️ Annulation ${cancelCount} sur ${HOST_CANCEL_LIMIT} autorisées par période de 12 mois. Au-delà, vos logements seront suspendus.</p>`,
             footerNote: 'BHGuest'
           })
         });
       }
     } catch(e2) { console.warn('⚠️ [HOST CANCEL] Email hôte:', e2.message); }
 
-    res.json({ success: true, refunded, refundId, cancelCount, limit: HOST_CANCEL_LIMIT, suspended });
+    res.json({ success: true, refunded, refundId, cancelCount, limit: HOST_CANCEL_LIMIT, suspended, graceRefusal: isGraceRefusal });
   } catch(e) {
     console.error('❌ [HOST CANCEL]:', e.message);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -27715,6 +27736,9 @@ pool.query(`
 `).catch(e => console.error('❌ bhguest_reviews table:', e.message));
 pool.query(`
   ALTER TABLE bhguest_reviews
+    ADD COLUMN IF NOT EXISTS reported_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS report_reason TEXT,
+    ADD COLUMN IF NOT EXISTS moderation_status TEXT DEFAULT 'published',
     ADD COLUMN IF NOT EXISTS host_reply TEXT,
     ADD COLUMN IF NOT EXISTS host_reply_at TIMESTAMPTZ,
     ADD COLUMN IF NOT EXISTS rating_cleanliness INT CHECK (rating_cleanliness BETWEEN 1 AND 5),
@@ -27776,7 +27800,7 @@ app.get('/api/host/reviews', authenticateToken, async (req, res) => {
   try {
     const rows = await pool.query(`
       SELECT br.id, br.guest_name, br.rating, br.comment, br.submitted_at,
-             br.host_reply, br.host_reply_at,
+             br.host_reply, br.host_reply_at, br.reported_at,
              br.rating_cleanliness, br.rating_communication, br.rating_location,
              br.rating_accuracy, br.rating_value,
              p.id AS property_id, p.name AS property_name
@@ -27797,6 +27821,7 @@ app.get('/api/host/reviews', authenticateToken, async (req, res) => {
       comment: r.comment || null,
       date: r.submitted_at ? new Date(r.submitted_at).toISOString().slice(0, 10) : null,
       hostReply: r.host_reply || null,
+      reported: !!r.reported_at,
       propertyId: r.property_id,
       propertyName: r.property_name
     }));
@@ -27806,6 +27831,46 @@ app.get('/api/host/reviews', authenticateToken, async (req, res) => {
   } catch(e) {
     console.error('❌ [HOST] GET /reviews:', e.message);
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Signaler un avis (chantage, insultes, hors-sujet, faux) ──
+app.post('/api/host/reviews/:id/report', authenticateToken, async (req, res) => {
+  try {
+    const { reason } = req.body || {};
+    const txt = reason ? String(reason).trim().slice(0, 800) : '';
+    if (txt.length < 15) return res.status(400).json({ error: 'Décrivez le problème (15 caractères minimum).' });
+
+    const upd = await pool.query(
+      `UPDATE bhguest_reviews SET reported_at = NOW(), report_reason = $1, moderation_status = 'reported'
+       WHERE id = $2 AND user_id = $3 AND submitted_at IS NOT NULL
+       RETURNING id, rating, comment, guest_name, property_id`,
+      [txt, parseInt(req.params.id), req.user.id]
+    );
+    if (!upd.rows[0]) return res.status(403).json({ error: 'Avis introuvable' });
+
+    // Alerte à l'équipe pour arbitrage humain
+    try {
+      const modEmail = process.env.MODERATION_EMAIL || process.env.ADMIN_EMAIL;
+      if (modEmail) {
+        const rv = upd.rows[0];
+        await sendEmailViaBrevo({
+          to: modEmail,
+          subject: `🚩 Avis signalé (#${rv.id}) — modération BHGuest`,
+          text: `Avis #${rv.id} signalé. Motif : ${txt}`,
+          html: `<p><b>Avis #${rv.id}</b> — ${rv.rating}/5 par ${rv.guest_name || 'voyageur'} (logement ${rv.property_id})</p>
+                 <p><b>Contenu :</b> ${rv.comment || '(sans commentaire)'}</p>
+                 <p><b>Motif du signalement :</b> ${txt}</p>
+                 <p>Hôte : ${req.user.email || req.user.id}</p>`
+        });
+      }
+    } catch(e) { console.warn('⚠️ [MODERATION] Alerte:', e.message); }
+
+    console.log(`🚩 [MODERATION] Avis ${req.params.id} signalé par ${req.user.id}`);
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ [MODERATION] report:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -39992,6 +40057,7 @@ app.get('/api/guest/properties/:id', async (req, res) => {
                rating_cleanliness, rating_communication, rating_location, rating_accuracy, rating_value
         FROM bhguest_reviews
         WHERE property_id = $1 AND submitted_at IS NOT NULL
+          AND COALESCE(moderation_status, 'published') <> 'removed'
         ORDER BY submitted_at DESC LIMIT 30
       `, [id]);
       reviewRows = rv.rows;
