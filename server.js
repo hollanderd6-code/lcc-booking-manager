@@ -19697,7 +19697,7 @@ app.post('/api/host/register', async (req, res) => {
 // 🏠 MARKETPLACE — Création de logement par un hôte externe
 // Route allégée : is_marketplace=true, fee=7%, sans quotas/plans/Channex.
 // ============================================
-app.post('/api/host/properties', authenticateToken, upload.single('photo'), async (req, res) => {
+app.post('/api/host/properties', authenticateToken, upload.array('photos', 15), async (req, res) => {
   try {
     // Vérifier que c'est bien un hôte externe
     const userRes = await pool.query('SELECT id, is_external_host FROM users WHERE id = $1', [req.user.id]);
@@ -19707,14 +19707,19 @@ app.post('/api/host/properties', authenticateToken, upload.single('photo'), asyn
     }
     const userId = req.user.id;
 
-    // Champs (form-data car photo)
     const b = req.body || {};
     const name = (b.name || '').trim();
     const city = (b.city || '').trim();
+    const postalCode = (b.postalCode || '').trim() || null;
     const address = (b.address || '').trim();
+    const description = (b.description || '').trim();
+    const propertyType = (b.propertyType || '').trim() || null;
+    const stayType = (b.stayType || '').trim() || null;
+    const surface = b.surface ? parseInt(b.surface) : null;
+    const highlights = (b.highlights || '').trim() || null;
+    const goodToKnow = (b.goodToKnow || '').trim() || null;
     const basePrice = b.basePrice ? parseFloat(b.basePrice) : null;
     const depositAmount = b.depositAmount ? parseFloat(b.depositAmount) : null;
-    const description = (b.description || '').trim() || null;
     const maxGuests = b.maxGuests ? parseInt(b.maxGuests) : null;
     const bedrooms = b.bedrooms ? parseInt(b.bedrooms) : null;
     const beds = b.beds ? parseInt(b.beds) : null;
@@ -19722,30 +19727,35 @@ app.post('/api/host/properties', authenticateToken, upload.single('photo'), asyn
     const arrivalTime = (b.arrivalTime || '').trim() || null;
     const departureTime = (b.departureTime || '').trim() || null;
 
-    // Validation minimale
+    // Validation
     if (!name) return res.status(400).json({ error: 'Le nom du logement est requis' });
     if (!city) return res.status(400).json({ error: 'La ville est requise' });
+    if (!description || description.length < 30) return res.status(400).json({ error: 'Une description d\'au moins 30 caractères est requise' });
+    if (description.length > 1500) return res.status(400).json({ error: 'La description ne peut pas dépasser 1500 caractères' });
     if (!basePrice || basePrice <= 0) return res.status(400).json({ error: 'Un prix par nuit valide est requis' });
 
-    // amenities / house_rules (JSON envoyés en string dans le form-data)
+    const photos = req.files || [];
+    if (photos.length < 5) return res.status(400).json({ error: 'Ajoutez au moins 5 photos' });
+
     let amenities = {};
     let houseRules = {};
     try { if (b.amenities) amenities = JSON.parse(b.amenities); } catch(e){}
     try { if (b.house_rules) houseRules = JSON.parse(b.house_rules); } catch(e){}
 
-    // iCal (une seule URL au départ, on stocke en tableau)
     let icalUrls = [];
     const icalRaw = (b.icalUrl || '').trim();
     if (icalRaw) icalUrls = [{ url: icalRaw, name: 'Calendrier', color: '#C2410C' }];
 
-    // Photo → Cloudinary
-    let photoUrl = null;
-    if (req.file) {
-      try { photoUrl = await uploadPhotoToCloudinary(req.file); }
+    // Upload de toutes les photos vers Cloudinary
+    const photoUrls = [];
+    for (const file of photos) {
+      try { const u = await uploadPhotoToCloudinary(file); if (u) photoUrls.push(u); }
       catch (upErr) { console.error('❌ [HOST] upload photo:', upErr.message); }
     }
+    if (photoUrls.length < 5) return res.status(400).json({ error: 'Erreur lors de l\'envoi des photos. Réessayez.' });
+    const mainPhoto = photoUrls[0];
 
-    // Générer l'ID (userId-slug), garantir unicité
+    // ID unique
     const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
       .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
     let id = `${userId}-${slug}`;
@@ -19756,33 +19766,44 @@ app.post('/api/host/properties', authenticateToken, upload.single('photo'), asyn
 
     await pool.query(
       `INSERT INTO properties (
-        id, user_id, owner_id, name, color, city, address, description,
+        id, user_id, owner_id, name, color, city, postal_code, address, description,
+        property_type, stay_type, surface, highlights, good_to_know,
         base_price, deposit_amount, photo_url,
         max_guests, bedrooms, beds, bathrooms, arrival_time, departure_time,
         amenities, house_rules, ical_urls,
         chat_pin, display_order, created_at, updated_at,
         is_marketplace, marketplace_fee_pct
       ) VALUES (
-        $1, $2, $2, $3, $4, $5, $6, $7,
-        $8, $9, $10,
-        $11, $12, $13, $14, $15, $16,
-        $17, $18, $19,
-        $20,
+        $1, $2, $2, $3, $4, $5, $6, $7, $8,
+        $9, $10, $11, $12, $13,
+        $14, $15, $16,
+        $17, $18, $19, $20, $21, $22,
+        $23, $24, $25,
+        $26,
         (SELECT COALESCE(MAX(display_order),0)+1 FROM properties WHERE user_id = $2),
         NOW(), NOW(),
         TRUE, 7
       )`,
       [
-        id, userId, name, '#C2410C', city, address || null, description,
-        basePrice, depositAmount, photoUrl,
+        id, userId, name, '#C2410C', city, postalCode, address || null, description,
+        propertyType, stayType, surface, highlights, goodToKnow,
+        basePrice, depositAmount, mainPhoto,
         maxGuests, bedrooms, beds, bathrooms, arrivalTime, departureTime,
         JSON.stringify(amenities), JSON.stringify(houseRules), JSON.stringify(icalUrls),
         chatPin
       ]
     );
 
-    console.log(`✅ [HOST] Logement créé: ${id} (${name}) par ${userId}`);
-    res.json({ success: true, id, name, photoUrl, message: 'Logement publié sur la marketplace.' });
+    // Insérer toutes les photos dans property_photos
+    for (let i = 0; i < photoUrls.length; i++) {
+      await pool.query(
+        'INSERT INTO property_photos (property_id, url, position) VALUES ($1, $2, $3)',
+        [id, photoUrls[i], i]
+      );
+    }
+
+    console.log(`✅ [HOST] Logement créé: ${id} (${name}) — ${photoUrls.length} photos, par ${userId}`);
+    res.json({ success: true, id, name, photoCount: photoUrls.length, message: 'Logement publié sur la marketplace.' });
 
   } catch (e) {
     console.error('❌ [HOST] create property:', e.message);
@@ -38502,6 +38523,7 @@ app.get('/api/guest/properties/:id', async (req, res) => {
         p.arrival_time, p.departure_time,
         p.cleaning_fee, p.tourist_tax_per_night,
         p.description, p.amenities, p.house_rules,
+        p.property_type, p.stay_type, p.surface, p.highlights, p.good_to_know, p.postal_code,
         p.welcome_basket_enabled, p.welcome_basket_price, p.welcome_basket_description,
         p.deposit_amount, p.is_marketplace,
         p.channex_property_id, p.channex_room_type_id, p.channex_enabled,
@@ -38533,6 +38555,14 @@ app.get('/api/guest/properties/:id', async (req, res) => {
       console.warn('⚠️ [GUEST] calendarPrices non chargés:', priceErr.message);
     }
 
+    // Galerie photos (property_photos), fallback sur photo_url
+    let photosRows = [];
+    try {
+      const ph = await pool.query('SELECT url FROM property_photos WHERE property_id = $1 ORDER BY position ASC', [id]);
+      photosRows = ph.rows.map(r => r.url);
+    } catch(e) {}
+    if (photosRows.length === 0 && p.photo_url) photosRows = [p.photo_url];
+
     res.json({
       id: p.id,
       name: p.name,
@@ -38557,6 +38587,13 @@ app.get('/api/guest/properties/:id', async (req, res) => {
       welcomeBasketPrice: p.welcome_basket_price != null ? parseFloat(p.welcome_basket_price) : null,
       welcomeBasketDescription: p.welcome_basket_description || null,
       depositAmount: p.deposit_amount != null ? parseFloat(p.deposit_amount) : null,
+      propertyType: p.property_type || null,
+      stayType: p.stay_type || null,
+      surface: p.surface || null,
+      highlights: p.highlights || null,
+      goodToKnow: p.good_to_know || null,
+      postalCode: p.postal_code || null,
+      photos: photosRows,
       isMarketplace: p.is_marketplace === true,
       isExternalHost: p.is_external_host === true,
       channexEnabled: p.channex_enabled,

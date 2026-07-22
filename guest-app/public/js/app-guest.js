@@ -1300,6 +1300,13 @@ async function openProperty(id) {
   }
 }
 
+function updateGalleryDot(el) {
+  const w = el.clientWidth;
+  const idx = Math.round(el.scrollLeft / w) + 1;
+  const dot = document.getElementById('galleryIdx');
+  if (dot) dot.textContent = idx;
+}
+
 function renderDetail() {
   const p = state.currentProperty;
 
@@ -1313,6 +1320,11 @@ function renderDetail() {
   const basketPrice = g(p, 'welcomeBasketPrice', 'welcome_basket_price');
   const basketDesc = g(p, 'welcomeBasketDescription', 'welcome_basket_description');
   const city = g(p, 'city') || g(p, 'address') || 'France';
+  const photos = (Array.isArray(p.photos) && p.photos.length) ? p.photos : (photo ? [photo] : []);
+  const highlights = g(p, 'highlights');
+  const goodToKnow = g(p, 'goodToKnow', 'good_to_know');
+  const surface = g(p, 'surface');
+  const propertyType = g(p, 'propertyType', 'property_type');
 
   // ── Équipements (uniquement ceux à true) + custom ──
   const AMEN_MAP = {
@@ -1343,7 +1355,10 @@ function renderDetail() {
 
   document.getElementById('detailContent').innerHTML = `
     <div class="detail-gallery">
-      ${photo ? `<img src="${photo}" alt="${p.name}">` : `<div class="no-photo">${icon('home')}</div>`}
+      ${photos.length
+        ? `<div class="detail-gallery-scroll" id="galleryScroll" onscroll="updateGalleryDot(this)">${photos.map(ph=>`<img src="${ph}" alt="${p.name}" loading="lazy">`).join('')}</div>
+           ${photos.length>1 ? `<div class="detail-gallery-count"><span id="galleryIdx">1</span>/${photos.length}</div>` : ''}`
+        : `<div class="no-photo">${icon('home')}</div>`}
       <div class="detail-gtop">
         <button class="detail-gbtn" onclick="navTo('home-list')">${icon('arrow-left')}</button>
       </div>
@@ -1362,6 +1377,10 @@ function renderDetail() {
       </div>
 
       ${desc ? `<div class="detail-sec-t">Le logement</div><div class="detail-desc">${desc}</div>` : ''}
+
+      ${highlights ? `<div class="detail-sec-t">Les plus</div><div class="detail-desc">${highlights}</div>` : ''}
+
+      ${goodToKnow ? `<div class="detail-sec-t">À savoir</div><div class="detail-desc">${goodToKnow}</div>` : ''}
 
       ${amenItems.length ? `<div class="detail-sec-t">Équipements</div><div class="detail-amen">${amenItems.join('')}</div>` : ''}
 

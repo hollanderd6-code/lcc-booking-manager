@@ -737,7 +737,11 @@ body {
 
 /* Galerie */
 .detail-gallery { position: relative; width: 100%; height: 300px; overflow: hidden; }
-.detail-gallery img { width: 100%; height: 100%; object-fit: cover; }
+.detail-gallery-scroll { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.detail-gallery-scroll::-webkit-scrollbar { display: none; }
+.detail-gallery-scroll img { width: 100%; height: 100%; object-fit: cover; flex: 0 0 100%; scroll-snap-align: start; }
+.detail-gallery > img { width: 100%; height: 100%; object-fit: cover; }
+.detail-gallery-count { position: absolute; bottom: 14px; right: 14px; background: rgba(28,25,23,.78); color: #fff; font-size: 12px; font-weight: 500; padding: 5px 11px; border-radius: 8px; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 2; }
 .detail-gallery .no-photo {
   width: 100%; height: 100%; background: var(--primary);
   display: flex; align-items: center; justify-content: center; color: #fff; font-size: 60px;

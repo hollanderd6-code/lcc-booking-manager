@@ -4,62 +4,62 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>Ajouter un logement — BHGuest Hôte</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
-:root{
-  --primary:#C2410C;--primary-dark:#9A3412;--primary-tint:#FBEDE7;--primary-light:#F0997B;
-  --ink:#1C1917;--bg:#FAF8F5;--white:#FFF;--text2:#78716C;--stone-light:#A8A29E;--line:#EDE8E1;
-  --error:#DC2626;--success:#16A34A;
-}
+:root{--primary:#C2410C;--primary-dark:#9A3412;--primary-tint:#FBEDE7;--ink:#1C1917;--bg:#FAF8F5;--white:#FFF;--text2:#78716C;--stone-light:#A8A29E;--line:#EDE8E1;--error:#DC2626;--success:#16A34A}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--ink);min-height:100dvh}
 .wrap{max-width:480px;margin:0 auto;padding-bottom:40px}
-
-/* HEADER */
-.top{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),50px) 20px 18px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
+.top{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),50px) 20px 18px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:20}
 .top .back{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.14);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.top h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:22px;letter-spacing:-.2px}
-
-/* SECTIONS */
+.top h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:22px}
 .sec{background:var(--white);border:1px solid var(--line);border-radius:18px;margin:16px 16px 0;padding:20px 18px}
-.sec-t{font-family:'Instrument Serif',serif;font-size:19px;font-weight:400;margin-bottom:4px;letter-spacing:-.2px}
+.sec-t{font-family:'Instrument Serif',serif;font-size:19px;font-weight:400;margin-bottom:4px}
 .sec-d{font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.4}
 .field{margin-bottom:15px}
 .field:last-child{margin-bottom:0}
 .field label{display:block;font-size:12.5px;font-weight:500;color:var(--text2);margin-bottom:6px}
 .field label .opt{color:var(--stone-light);font-weight:400}
-.field input,.field textarea{width:100%;padding:14px 15px;background:var(--white);border:1px solid var(--line);border-radius:12px;font-size:16px;font-family:inherit;outline:none;color:var(--ink);transition:border-color .2s,box-shadow .2s}
-.field textarea{resize:vertical;min-height:90px;line-height:1.5}
+.field label .req{color:var(--primary)}
+.field input,.field textarea,.field select{width:100%;padding:14px 15px;background:var(--white);border:1px solid var(--line);border-radius:12px;font-size:16px;font-family:inherit;outline:none;color:var(--ink);transition:border-color .2s,box-shadow .2s}
+.field select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C2410C' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 15px center;padding-right:38px}
+.field textarea{resize:vertical;min-height:110px;line-height:1.5}
 .field input::placeholder,.field textarea::placeholder{color:var(--stone-light)}
-.field input:focus,.field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint)}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint)}
 .field .hint{font-size:12px;color:var(--stone-light);margin-top:5px;line-height:1.4}
+.field .counter{font-size:12px;color:var(--stone-light);margin-top:5px;text-align:right}
+.field .counter.warn{color:var(--error)}
 .row2{display:flex;gap:12px}
 .row2 .field{flex:1}
 .prefix{position:relative}
 .prefix input{padding-right:36px}
 .prefix .u{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:14px;font-weight:500}
-
-/* PHOTO */
-.photo-drop{border:2px dashed var(--line);border-radius:14px;padding:26px;text-align:center;cursor:pointer;transition:border-color .2s;position:relative;overflow:hidden}
-.photo-drop:active{border-color:var(--primary)}
-.photo-drop i{font-size:28px;color:var(--stone-light);margin-bottom:10px}
-.photo-drop .pt{font-size:14px;font-weight:500;color:var(--ink)}
-.photo-drop .ps{font-size:12px;color:var(--text2);margin-top:3px}
-.photo-drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.photo-drop.has-img{border:none;padding:0;height:180px}
-.photo-drop input[type=file]{display:none}
-
-/* CHIPS équipements */
+.ac-wrap{position:relative}
+.ac-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--white);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(28,25,23,.12);z-index:30;overflow:hidden;display:none;max-height:240px;overflow-y:auto}
+.ac-list.show{display:block}
+.ac-item{padding:12px 15px;font-size:14.5px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}
+.ac-item:last-child{border:none}
+.ac-item:active,.ac-item.hl{background:var(--primary-tint)}
+.ac-item .dept{font-size:12.5px;color:var(--text2)}
+.photos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.photo-slot{aspect-ratio:1;border-radius:12px;position:relative;overflow:hidden;background:var(--bg);border:1px solid var(--line)}
+.photo-slot img{width:100%;height:100%;object-fit:cover}
+.photo-slot .del{position:absolute;top:5px;right:5px;width:24px;height:24px;border-radius:50%;background:rgba(28,25,23,.7);color:#fff;border:none;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.photo-slot .main-badge{position:absolute;bottom:5px;left:5px;font-size:9.5px;font-weight:600;background:var(--primary);color:#fff;padding:2px 7px;border-radius:6px}
+.photo-add{aspect-ratio:1;border:2px dashed var(--line);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--stone-light);transition:border-color .2s}
+.photo-add:active{border-color:var(--primary)}
+.photo-add i{font-size:22px;margin-bottom:4px}
+.photo-add span{font-size:10.5px}
+.photo-add input{display:none}
+.photos-count{font-size:12.5px;margin-top:10px;color:var(--text2)}
+.photos-count b{color:var(--ink)}
+.photos-count.ok b{color:var(--success)}
 .chips{display:flex;flex-wrap:wrap;gap:9px}
 .chip{display:inline-flex;align-items:center;gap:7px;padding:10px 14px;border-radius:11px;border:1px solid var(--line);background:var(--white);font-size:13.5px;cursor:pointer;transition:all .15s;user-select:none}
 .chip i{font-size:13px;color:var(--stone-light);transition:color .15s}
 .chip.on{background:var(--primary-tint);border-color:var(--primary);color:var(--primary-dark);font-weight:500}
 .chip.on i{color:var(--primary)}
-
-/* Toggles règles */
 .rule{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line)}
 .rule:last-child{border:none}
 .rule span{font-size:14px}
@@ -67,8 +67,9 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
 .tog::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:transform .2s}
 .tog.on{background:var(--primary)}
 .tog.on::after{transform:translateX(19px)}
-
-/* SUBMIT */
+.seg{display:flex;gap:8px}
+.seg-opt{flex:1;text-align:center;padding:12px;border:1px solid var(--line);border-radius:11px;font-size:13.5px;cursor:pointer;transition:all .15s;background:var(--white)}
+.seg-opt.on{background:var(--primary-tint);border-color:var(--primary);color:var(--primary-dark);font-weight:600}
 .submit-bar{margin:20px 16px 0}
 .btn-submit{width:100%;padding:17px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;transition:transform .15s,background .15s}
 .btn-submit:active{transform:scale(.98);background:var(--primary-dark)}
@@ -85,31 +86,52 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
     <button class="back" onclick="location.href='host-dashboard.html'"><i class="fas fa-arrow-left"></i></button>
     <h1>Nouveau logement</h1>
   </div>
-
   <div class="msg" id="msg"></div>
-
-  <!-- PHOTO -->
   <div class="sec">
-    <div class="sec-t">Photo</div>
-    <div class="sec-d">Une belle photo augmente vos réservations.</div>
-    <label class="photo-drop" id="photoDrop">
-      <i class="fas fa-camera"></i>
-      <div class="pt">Ajouter une photo</div>
-      <div class="ps">JPG ou PNG</div>
-      <input type="file" id="photo" accept="image/*">
-    </label>
+    <div class="sec-t">Photos</div>
+    <div class="sec-d">Ajoutez entre 5 et 15 photos. La première sera la photo principale.</div>
+    <div class="photos-grid" id="photosGrid"></div>
+    <div class="photos-count" id="photosCount"><b>0</b> / 15 photos (minimum 5)</div>
   </div>
-
-  <!-- INFOS -->
   <div class="sec">
     <div class="sec-t">Informations</div>
-    <div class="field"><label>Nom du logement</label><input type="text" id="name" placeholder="Ex. Studio cosy vue mer"></div>
-    <div class="field"><label>Ville</label><input type="text" id="city" placeholder="Ex. Nice"></div>
+    <div class="field"><label>Nom du logement <span class="req">*</span></label><input type="text" id="name" placeholder="Ex. Studio cosy vue mer" maxlength="80"></div>
+    <div class="field ac-wrap">
+      <label>Ville <span class="req">*</span></label>
+      <input type="text" id="city" placeholder="Commencez à taper..." autocomplete="off">
+      <input type="hidden" id="postalCode">
+      <div class="ac-list" id="cityList"></div>
+      <div class="hint" id="cityConfirm" style="display:none;color:var(--success)"></div>
+    </div>
     <div class="field"><label>Adresse <span class="opt">(non affichée publiquement)</span></label><input type="text" id="address" placeholder="12 rue des Fleurs"></div>
-    <div class="field"><label>Description <span class="opt">(optionnel)</span></label><textarea id="description" placeholder="Décrivez votre logement, l'ambiance, les atouts..."></textarea></div>
+    <div class="field">
+      <label>Description <span class="req">*</span></label>
+      <textarea id="description" placeholder="Décrivez votre logement, l'ambiance, les atouts, le quartier..." maxlength="1500"></textarea>
+      <div class="counter" id="descCounter">0 / 1500 · minimum 30</div>
+    </div>
   </div>
-
-  <!-- CAPACITÉ -->
+  <div class="sec">
+    <div class="sec-t">Type de logement</div>
+    <div class="field">
+      <label>Catégorie</label>
+      <select id="propertyType">
+        <option value="">Choisir...</option>
+        <option value="appartement">Appartement</option>
+        <option value="maison">Maison</option>
+        <option value="studio">Studio</option>
+        <option value="villa">Villa</option>
+        <option value="autre">Autre</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Type de séjour</label>
+      <div class="seg" id="stayType">
+        <div class="seg-opt on" data-v="entier">Logement entier</div>
+        <div class="seg-opt" data-v="chambre">Chambre privée</div>
+      </div>
+    </div>
+    <div class="field"><label>Surface <span class="opt">(optionnel)</span></label><div class="prefix"><input type="number" id="surface" min="1" placeholder="45"><span class="u">m²</span></div></div>
+  </div>
   <div class="sec">
     <div class="sec-t">Capacité</div>
     <div class="row2">
@@ -118,16 +140,14 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
     </div>
     <div class="row2">
       <div class="field"><label>Lits</label><input type="number" id="beds" min="0" placeholder="2"></div>
-      <div class="field"><label>Salles de bain</label><input type="number" id="bathrooms" min="0" step="1" placeholder="1"></div>
+      <div class="field"><label>Salles de bain</label><input type="number" id="bathrooms" min="0" placeholder="1"></div>
     </div>
   </div>
-
-  <!-- PRIX -->
   <div class="sec">
     <div class="sec-t">Prix & caution</div>
     <div class="sec-d">Le prix affiché est tout compris pour le voyageur. Notre commission de 7 % est déduite de ce montant.</div>
     <div class="row2">
-      <div class="field"><label>Prix par nuit</label><div class="prefix"><input type="number" id="basePrice" min="0" placeholder="85"><span class="u">€</span></div></div>
+      <div class="field"><label>Prix par nuit <span class="req">*</span></label><div class="prefix"><input type="number" id="basePrice" min="0" placeholder="85"><span class="u">€</span></div></div>
       <div class="field"><label>Caution <span class="opt">(optionnel)</span></label><div class="prefix"><input type="number" id="depositAmount" min="0" placeholder="300"><span class="u">€</span></div></div>
     </div>
     <div class="field" style="margin-top:4px;">
@@ -136,8 +156,6 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
       </div>
     </div>
   </div>
-
-  <!-- ÉQUIPEMENTS -->
   <div class="sec">
     <div class="sec-t">Équipements</div>
     <div class="sec-d">Sélectionnez ce que propose votre logement.</div>
@@ -150,10 +168,26 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
       <span class="chip" data-k="lave_vaisselle"><i class="fas fa-sink"></i>Lave-vaisselle</span>
       <span class="chip" data-k="draps"><i class="fas fa-bed"></i>Draps fournis</span>
       <span class="chip" data-k="serviettes"><i class="fas fa-bath"></i>Serviettes</span>
+      <span class="chip" data-k="balcon"><i class="fas fa-door-open"></i>Balcon</span>
+      <span class="chip" data-k="terrasse"><i class="fas fa-umbrella-beach"></i>Terrasse</span>
+      <span class="chip" data-k="piscine"><i class="fas fa-person-swimming"></i>Piscine</span>
+      <span class="chip" data-k="jardin"><i class="fas fa-tree"></i>Jardin</span>
+      <span class="chip" data-k="ascenseur"><i class="fas fa-elevator"></i>Ascenseur</span>
+      <span class="chip" data-k="cheminee"><i class="fas fa-fire"></i>Cheminée</span>
     </div>
   </div>
-
-  <!-- RÈGLES -->
+  <div class="sec">
+    <div class="sec-t">En savoir plus</div>
+    <div class="sec-d">Ces informations aident les voyageurs à se projeter.</div>
+    <div class="field">
+      <label>Les plus du logement <span class="opt">(optionnel)</span></label>
+      <textarea id="highlights" placeholder="Ex. Vue mer, proche plage, calme, parking privé..." maxlength="500"></textarea>
+    </div>
+    <div class="field">
+      <label>À savoir avant de réserver <span class="opt">(optionnel)</span></label>
+      <textarea id="goodToKnow" placeholder="Ex. Pas d'ascenseur, animaux non acceptés, arrivée autonome..." maxlength="500"></textarea>
+    </div>
+  </div>
   <div class="sec">
     <div class="sec-t">Règlement intérieur</div>
     <div class="rule"><span>Animaux acceptés</span><div class="tog" data-k="animaux"></div></div>
@@ -161,15 +195,11 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
     <div class="rule"><span>Fêtes autorisées</span><div class="tog" data-k="fetes"></div></div>
     <div class="rule"><span>Fumeurs autorisés</span><div class="tog" data-k="fumeurs"></div></div>
   </div>
-
-  <!-- CALENDRIER -->
   <div class="sec">
     <div class="sec-t">Calendrier</div>
     <div class="sec-d">Collez le lien iCal de votre calendrier (Airbnb, Booking, Google...) pour synchroniser vos disponibilités.</div>
     <div class="field"><label>Lien iCal <span class="opt">(optionnel)</span></label><input type="url" id="icalUrl" placeholder="https://..."><div class="hint">Vous pourrez l'ajouter ou le modifier plus tard.</div></div>
   </div>
-
-  <!-- HORAIRES -->
   <div class="sec">
     <div class="sec-t">Horaires</div>
     <div class="row2">
@@ -177,68 +207,119 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
       <div class="field"><label>Départ</label><input type="text" id="departureTime" placeholder="11:00"></div>
     </div>
   </div>
-
   <div class="submit-bar">
     <button class="btn-submit" id="btnSubmit" onclick="submitProperty()">Publier le logement</button>
   </div>
 </div>
-
 <script>
 const API_URL = window.Capacitor?.isNativePlatform?.() ? 'https://www.boostinghost.fr' : window.location.origin;
 const token = localStorage.getItem('bhguest_host_token');
 if(!token){ location.href='host.html'; }
-
-let photoFile = null;
-
-// Photo preview (délégation : le label reste, seul l'aperçu change)
-function handlePhotoChange(e){
-  const f = e.target.files[0]; if(!f) return;
-  photoFile = f;
-  const drop = document.getElementById('photoDrop');
-  const url = URL.createObjectURL(f);
-  // garder l'input, ajouter/mettre à jour l'aperçu
-  let img = drop.querySelector('img');
-  if(!img){ img = document.createElement('img'); drop.appendChild(img); drop.classList.add('has-img'); }
-  img.src = url;
+let photoFiles = [];
+const MAX_PHOTOS = 15;
+function renderPhotos(){
+  const grid = document.getElementById('photosGrid');
+  const slots = photoFiles.map((p,i)=>`
+    <div class="photo-slot">
+      <img src="${p.url}" alt="">
+      ${i===0?'<span class="main-badge">Principale</span>':''}
+      <button class="del" onclick="removePhoto(${i})"><i class="fas fa-xmark"></i></button>
+    </div>`).join('');
+  const addBtn = photoFiles.length < MAX_PHOTOS ? `
+    <label class="photo-add">
+      <i class="fas fa-camera"></i><span>Ajouter</span>
+      <input type="file" id="photoInput" accept="image/*" multiple>
+    </label>` : '';
+  grid.innerHTML = slots + addBtn;
+  const inp = document.getElementById('photoInput');
+  if(inp) inp.addEventListener('change', onPhotoPick);
+  const c = document.getElementById('photosCount');
+  c.innerHTML = `<b>${photoFiles.length}</b> / 15 photos (minimum 5)`;
+  c.className = 'photos-count' + (photoFiles.length>=5?' ok':'');
 }
-document.getElementById('photo').addEventListener('change', handlePhotoChange);
-
-// Chips équipements
-document.querySelectorAll('#amenChips .chip').forEach(c=>{
-  c.addEventListener('click', ()=> c.classList.toggle('on'));
+function onPhotoPick(e){
+  const files=[...e.target.files];
+  files.forEach(f=>{ if(photoFiles.length<MAX_PHOTOS) photoFiles.push({file:f,url:URL.createObjectURL(f)}); });
+  e.target.value=''; renderPhotos();
+}
+function removePhoto(i){ photoFiles.splice(i,1); renderPhotos(); }
+let cityTimer = null;
+const cityInput = document.getElementById('city');
+cityInput.addEventListener('input', ()=>{
+  document.getElementById('cityConfirm').style.display='none';
+  document.getElementById('postalCode').value='';
+  const q = cityInput.value.trim();
+  clearTimeout(cityTimer);
+  if(q.length<2){ hideCityList(); return; }
+  cityTimer = setTimeout(()=>searchCity(q), 250);
 });
-// Toggles règles
-document.querySelectorAll('.tog').forEach(t=>{
-  t.addEventListener('click', ()=> t.classList.toggle('on'));
+async function searchCity(q){
+  try{
+    const res = await fetch(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}&fields=nom,codesPostaux,codeDepartement,departement&boost=population&limit=6`);
+    const data = await res.json();
+    showCityList(data);
+  }catch(e){ hideCityList(); }
+}
+function showCityList(items){
+  const list = document.getElementById('cityList');
+  if(!items || !items.length){ hideCityList(); return; }
+  list.innerHTML = items.map(c=>{
+    const cp = (c.codesPostaux && c.codesPostaux[0]) || '';
+    const dept = c.departement?.nom ? `${c.departement.nom} (${c.codeDepartement})` : c.codeDepartement||'';
+    return `<div class="ac-item" onclick='selectCity(${JSON.stringify(c.nom)}, ${JSON.stringify(cp)}, ${JSON.stringify(dept)})'>
+      <span>${c.nom}</span><span class="dept">${dept}</span></div>`;
+  }).join('');
+  list.classList.add('show');
+}
+function hideCityList(){ document.getElementById('cityList').classList.remove('show'); }
+function selectCity(nom, cp, dept){
+  cityInput.value = nom;
+  document.getElementById('postalCode').value = cp;
+  hideCityList();
+  const cf = document.getElementById('cityConfirm');
+  cf.textContent = `✓ ${nom}${dept?' · '+dept:''}`;
+  cf.style.display = 'block';
+}
+document.addEventListener('click', e=>{ if(!e.target.closest('.ac-wrap')) hideCityList(); });
+const desc = document.getElementById('description');
+desc.addEventListener('input', ()=>{
+  const n = desc.value.length;
+  const c = document.getElementById('descCounter');
+  c.textContent = `${n} / 1500 · minimum 30`;
+  c.className = 'counter' + ((n>0 && n<30)?' warn':'');
 });
-
-// Exemple de commission dynamique
+document.querySelectorAll('#stayType .seg-opt').forEach(o=>{
+  o.addEventListener('click', ()=>{ document.querySelectorAll('#stayType .seg-opt').forEach(x=>x.classList.remove('on')); o.classList.add('on'); });
+});
+document.querySelectorAll('#amenChips .chip').forEach(c=> c.addEventListener('click', ()=> c.classList.toggle('on')));
+document.querySelectorAll('.tog').forEach(t=> t.addEventListener('click', ()=> t.classList.toggle('on')));
 const priceInput = document.getElementById('basePrice');
 priceInput.addEventListener('input', ()=>{
-  const p = parseFloat(priceInput.value) || 0;
-  document.getElementById('feeExample').textContent = p || 85;
+  const p = parseFloat(priceInput.value)||0;
+  document.getElementById('feeExample').textContent = p||85;
   document.getElementById('feeNet').textContent = p ? (p*0.93).toFixed(2).replace('.',',') : '79,05';
 });
-
 function showMsg(t,type){ const m=document.getElementById('msg'); m.textContent=t; m.className='msg '+type; window.scrollTo({top:0,behavior:'smooth'}); }
-
 async function submitProperty(){
   const btn = document.getElementById('btnSubmit');
-  const name = val('name'), city = val('city'), basePrice = val('basePrice');
+  const name = val('name'), city = val('city'), description = val('description'), basePrice = val('basePrice');
   if(!name){ showMsg('Le nom du logement est requis.','err'); return; }
   if(!city){ showMsg('La ville est requise.','err'); return; }
+  if(description.length < 30){ showMsg('La description doit faire au moins 30 caractères.','err'); return; }
   if(!basePrice || parseFloat(basePrice)<=0){ showMsg('Indiquez un prix par nuit valide.','err'); return; }
-
-  // Équipements
+  if(photoFiles.length < 5){ showMsg('Ajoutez au moins 5 photos.','err'); return; }
   const amenities = {};
   document.querySelectorAll('#amenChips .chip').forEach(c=>{ amenities[c.dataset.k] = c.classList.contains('on'); });
-  // Règles
   const house_rules = {};
   document.querySelectorAll('.tog').forEach(t=>{ house_rules[t.dataset.k] = t.classList.contains('on'); });
-
+  const stayType = document.querySelector('#stayType .seg-opt.on')?.dataset.v || 'entier';
   const fd = new FormData();
   fd.append('name', name); fd.append('city', city);
-  fd.append('address', val('address')); fd.append('description', val('description'));
+  fd.append('postalCode', val('postalCode'));
+  fd.append('address', val('address')); fd.append('description', description);
+  fd.append('propertyType', val('propertyType')); fd.append('stayType', stayType);
+  fd.append('surface', val('surface'));
+  fd.append('highlights', val('highlights')); fd.append('goodToKnow', val('goodToKnow'));
   fd.append('basePrice', basePrice); fd.append('depositAmount', val('depositAmount'));
   fd.append('maxGuests', val('maxGuests')); fd.append('bedrooms', val('bedrooms'));
   fd.append('beds', val('beds')); fd.append('bathrooms', val('bathrooms'));
@@ -246,12 +327,11 @@ async function submitProperty(){
   fd.append('icalUrl', val('icalUrl'));
   fd.append('amenities', JSON.stringify(amenities));
   fd.append('house_rules', JSON.stringify(house_rules));
-  if(photoFile) fd.append('photo', photoFile);
-
+  photoFiles.forEach(p=> fd.append('photos', p.file));
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner spin"></i> Publication...';
   try{
     const res = await fetch(`${API_URL}/api/host/properties`, {
-      method:'POST', headers:{ 'Authorization': 'Bearer '+token }, body: fd
+      method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd
     });
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || 'Erreur lors de la publication');
@@ -259,8 +339,8 @@ async function submitProperty(){
     setTimeout(()=>{ location.href='host-dashboard.html'; }, 1200);
   }catch(err){ showMsg(err.message,'err'); btn.disabled=false; btn.textContent='Publier le logement'; }
 }
-
 function val(id){ return (document.getElementById(id)?.value || '').trim(); }
+renderPhotos();
 </script>
 </body>
 </html>
