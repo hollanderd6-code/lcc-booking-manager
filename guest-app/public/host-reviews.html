@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Avis — BHGuest</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --primary:#C2410C; --primary-dark:#9A3412; --primary-tint:#FBEDE7; --primary-light:#F0997B;
+  --ink:#1C1917; --bg:#FAF8F5; --line:#EDE8E1; --text2:#78716C;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+.topbar{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),44px) 16px 16px;display:flex;align-items:center;gap:12px;}
+.topbar .back{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.12);border:none;color:#fff;font-size:14px;cursor:pointer;flex-shrink:0;}
+.topbar h1{font-family:'Instrument Serif',serif;font-size:20px;font-weight:400;flex:1;}
+.wrap{max-width:640px;margin:0 auto;padding:14px 14px 20px;}
+
+.summary{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;}
+.summary-avg{font-size:34px;font-weight:800;color:var(--ink);line-height:1;}
+.summary-avg i{font-size:20px;color:var(--primary);margin-right:4px;}
+.summary-sub{font-size:12.5px;color:var(--text2);}
+
+.rev{background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:11px;}
+.rev-head{display:flex;align-items:center;gap:11px;}
+.rev-avatar{width:38px;height:38px;border-radius:50%;background:var(--primary-tint);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;}
+.rev-name{font-size:14px;font-weight:700;}
+.rev-meta{font-size:11.5px;color:var(--text2);text-transform:capitalize;}
+.rev-prop{font-size:11.5px;color:var(--primary);font-weight:600;}
+.rev-stars{margin-left:auto;display:flex;gap:2px;}
+.rev-text{font-size:13.5px;line-height:1.55;color:#44403C;margin-top:10px;}
+.rev-reply{margin-top:10px;padding:10px 13px;background:var(--primary-tint);border-radius:11px;font-size:13px;line-height:1.5;}
+.rev-reply-t{font-size:11.5px;font-weight:700;color:var(--primary);margin-bottom:4px;}
+.rev-reply-edit{background:none;border:none;color:var(--primary);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;padding:0;margin-top:6px;}
+.rev-answer{margin-top:10px;}
+.rev-answer textarea{width:100%;min-height:76px;padding:11px 13px;border:1px solid var(--line);border-radius:11px;font-size:14px;font-family:inherit;line-height:1.5;resize:vertical;outline:none;background:var(--bg);}
+.rev-answer textarea:focus{border-color:var(--primary);}
+.rev-answer-actions{display:flex;gap:8px;margin-top:8px;}
+.rev-send{flex:1;background:var(--primary);color:#fff;border:none;border-radius:10px;padding:11px;font-size:13.5px;font-weight:700;font-family:inherit;cursor:pointer;}
+.rev-send:disabled{opacity:.6;}
+.rev-open{background:none;border:1px solid var(--line);color:var(--text2);border-radius:10px;padding:9px 13px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;margin-top:10px;}
+.rev-hint{font-size:11px;color:var(--text2);margin-top:6px;}
+
+.empty{padding:60px 20px;text-align:center;color:var(--text2);}
+.empty i{font-size:38px;color:var(--line);margin-bottom:12px;display:block;}
+.loading{padding:60px;text-align:center;color:var(--text2);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back" onclick="location.href='host-dashboard.html'"><i class="fas fa-arrow-left"></i></button>
+  <h1>Mes avis</h1>
+</div>
+
+<div class="wrap" id="content"><div class="loading"><i class="fas fa-spinner fa-spin"></i></div></div>
+
+<script>
+const API_URL = location.origin;
+const token = localStorage.getItem('bhguest_host_token');
+if(!token){ location.href='host.html'; }
+const H = { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' };
+
+const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const stars = n => Array.from({length:5},(_,i)=>`<i class="fas fa-star" style="color:${i<n?'var(--primary)':'#E7E1D8'};font-size:12px;"></i>`).join('');
+const fmtM = d => d ? new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{month:'long',year:'numeric'}) : '';
+
+let REVIEWS = [];
+
+async function load(){
+  try{
+    const res = await fetch(`${API_URL}/api/host/reviews`, { headers:H });
+    if(res.status===401||res.status===403){ localStorage.clear(); location.href='host.html'; return; }
+    const data = await res.json();
+    REVIEWS = data.reviews || [];
+    const el = document.getElementById('content');
+    if(!REVIEWS.length){
+      el.innerHTML = `<div class="empty"><i class="fas fa-star"></i>
+        Aucun avis pour l'instant.<br>Vos voyageurs reçoivent une invitation le lendemain de leur départ.</div>`;
+      return;
+    }
+    el.innerHTML = `
+      <div class="summary">
+        <div class="summary-avg"><i class="fas fa-star"></i>${data.avg}</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;">${data.count} avis reçu${data.count>1?'s':''}</div>
+          <div class="summary-sub">Les réponses sont publiques sur vos fiches.</div>
+        </div>
+      </div>
+      ${REVIEWS.map(renderReview).join('')}`;
+  }catch(e){
+    document.getElementById('content').innerHTML = `<div class="empty">Erreur de chargement.</div>`;
+  }
+}
+
+function renderReview(r){
+  const initial = (r.guestName||'V').charAt(0).toUpperCase();
+  let bottom;
+  if(r.hostReply){
+    bottom = `<div class="rev-reply">
+        <div class="rev-reply-t"><i class="fas fa-reply"></i> Votre réponse</div>
+        <span id="replyTxt-${r.id}">${esc(r.hostReply)}</span>
+        <br><button class="rev-reply-edit" onclick="openAnswer(${r.id}, true)">Modifier</button>
+      </div>
+      <div class="rev-answer" id="answer-${r.id}" style="display:none;"></div>`;
+  } else {
+    bottom = `<button class="rev-open" id="open-${r.id}" onclick="openAnswer(${r.id}, false)"><i class="fas fa-reply"></i> Répondre publiquement</button>
+      <div class="rev-answer" id="answer-${r.id}" style="display:none;"></div>`;
+  }
+  return `<div class="rev" id="rev-${r.id}">
+    <div class="rev-head">
+      <div class="rev-avatar">${initial}</div>
+      <div>
+        <div class="rev-name">${esc(r.guestName)}</div>
+        <div class="rev-meta">${fmtM(r.date)} · <span class="rev-prop">${esc(r.propertyName)}</span></div>
+      </div>
+      <div class="rev-stars">${stars(r.rating)}</div>
+    </div>
+    ${r.comment ? `<div class="rev-text">${esc(r.comment)}</div>` : ''}
+    ${bottom}
+  </div>`;
+}
+
+function openAnswer(id, editing){
+  const box = document.getElementById('answer-'+id);
+  const r = REVIEWS.find(x => x.id === id);
+  box.style.display = 'block';
+  const openBtn = document.getElementById('open-'+id);
+  if(openBtn) openBtn.style.display = 'none';
+  box.innerHTML = `
+    <textarea id="ta-${id}" maxlength="600" placeholder="Remerciez le voyageur ou apportez votre point de vue...">${editing && r.hostReply ? esc(r.hostReply) : ''}</textarea>
+    <div class="rev-answer-actions">
+      <button class="rev-send" id="send-${id}" onclick="sendReply(${id})">${editing ? 'Mettre à jour' : 'Publier la réponse'}</button>
+    </div>
+    <div class="rev-hint">Visible par tous les voyageurs sous cet avis. Restez courtois même face à une critique — les futurs voyageurs lisent surtout vos réponses.</div>`;
+  document.getElementById('ta-'+id).focus();
+}
+
+async function sendReply(id){
+  const ta = document.getElementById('ta-'+id);
+  const txt = ta.value.trim();
+  if(!txt){ ta.focus(); return; }
+  const btn = document.getElementById('send-'+id);
+  btn.disabled = true;
+  try{
+    const res = await fetch(`${API_URL}/api/host/reviews/${id}/reply`, {
+      method:'POST', headers:H, body: JSON.stringify({ reply: txt })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Erreur');
+    const r = REVIEWS.find(x => x.id === id);
+    if(r) r.hostReply = txt;
+    document.getElementById('rev-'+id).outerHTML = renderReview(r);
+  }catch(e){
+    alert(e.message);
+    btn.disabled = false;
+  }
+}
+
+load();
+</script>
+<script src="host-nav.js"></script>
+</body>
+</html>

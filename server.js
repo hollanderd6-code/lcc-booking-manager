@@ -27018,6 +27018,11 @@ pool.query(`
     created_at TIMESTAMPTZ DEFAULT NOW()
   )
 `).catch(e => console.error('❌ bhguest_reviews table:', e.message));
+pool.query(`
+  ALTER TABLE bhguest_reviews
+    ADD COLUMN IF NOT EXISTS host_reply TEXT,
+    ADD COLUMN IF NOT EXISTS host_reply_at TIMESTAMPTZ
+`).catch(() => {});
 
 // ⏰ Demande d'avis le lendemain du départ (11h)
 cron.schedule('0 11 * * *', async () => {
@@ -27062,6 +27067,58 @@ cron.schedule('0 11 * * *', async () => {
       } catch(e1) { console.warn('⚠️ [BHGUEST] Demande avis:', e1.message); }
     }
   } catch(e) { console.warn('⚠️ [BHGUEST] Cron avis:', e.message); }
+});
+
+// ── Avis reçus par l'hôte (tous ses logements) ───────────────
+app.get('/api/host/reviews', authenticateToken, async (req, res) => {
+  try {
+    const rows = await pool.query(`
+      SELECT br.id, br.guest_name, br.rating, br.comment, br.submitted_at,
+             br.host_reply, br.host_reply_at,
+             p.id AS property_id, p.name AS property_name
+      FROM bhguest_reviews br
+      JOIN properties p ON p.id = br.property_id
+      WHERE br.user_id = $1 AND br.submitted_at IS NOT NULL
+      ORDER BY br.submitted_at DESC
+      LIMIT 100
+    `, [req.user.id]);
+    const reviews = rows.rows.map(r => ({
+      id: r.id,
+      guestName: (r.guest_name || 'Voyageur').split(/\s+/)[0],
+      rating: r.rating,
+      comment: r.comment || null,
+      date: r.submitted_at ? new Date(r.submitted_at).toISOString().slice(0, 10) : null,
+      hostReply: r.host_reply || null,
+      propertyId: r.property_id,
+      propertyName: r.property_name
+    }));
+    const avg = reviews.length
+      ? Math.round(reviews.reduce((a, r) => a + r.rating, 0) / reviews.length * 10) / 10 : null;
+    res.json({ reviews, avg, count: reviews.length });
+  } catch(e) {
+    console.error('❌ [HOST] GET /reviews:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Répondre publiquement à un avis (créer ou modifier) ──────
+app.post('/api/host/reviews/:id/reply', authenticateToken, async (req, res) => {
+  try {
+    const { reply } = req.body || {};
+    const txt = reply ? String(reply).trim().slice(0, 600) : '';
+    if (!txt) return res.status(400).json({ error: 'Réponse vide' });
+    const upd = await pool.query(
+      `UPDATE bhguest_reviews SET host_reply = $1, host_reply_at = NOW()
+       WHERE id = $2 AND user_id = $3 AND submitted_at IS NOT NULL
+       RETURNING id`,
+      [txt, parseInt(req.params.id), req.user.id]
+    );
+    if (!upd.rows[0]) return res.status(403).json({ error: 'Avis introuvable' });
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ [HOST] reply review:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ── Charger le contexte d'un avis par token (pré-remplir le formulaire)
@@ -39086,7 +39143,7 @@ app.get('/api/guest/properties/:id', async (req, res) => {
     let reviews = [], reviewsAvg = null;
     try {
       const rv = await pool.query(`
-        SELECT guest_name, rating, comment, submitted_at
+        SELECT guest_name, rating, comment, submitted_at, host_reply
         FROM bhguest_reviews
         WHERE property_id = $1 AND submitted_at IS NOT NULL
         ORDER BY submitted_at DESC LIMIT 30
@@ -39095,6 +39152,7 @@ app.get('/api/guest/properties/:id', async (req, res) => {
         guestName: (r.guest_name || 'Voyageur').split(/\s+/)[0],
         rating: r.rating,
         comment: r.comment || null,
+        hostReply: r.host_reply || null,
         date: r.submitted_at ? new Date(r.submitted_at).toISOString().slice(0, 10) : null
       }));
       if (reviews.length) {

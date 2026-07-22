@@ -1925,6 +1925,7 @@ function renderReviewsSection(p) {
         <div class="review-item-stars">${stars(r.rating)}</div>
       </div>
       ${r.comment ? `<div class="review-item-text">${esc(r.comment)}</div>` : ''}
+      ${r.hostReply ? `<div class="review-reply"><div class="review-reply-t"><i class="fas fa-reply"></i> Réponse de l'hôte</div>${esc(r.hostReply)}</div>` : ''}
     </div>`).join('');
   return `
     <div class="detail-sec-t">
