@@ -2178,6 +2178,8 @@ function renderDetail() {
           ${basketPrice ? `<div class="bp">+${basketPrice}€</div>` : ''}
         </div>` : ''}
 
+      <div class="cancel-policy"><i class="fas fa-shield-halved"></i> Annulation gratuite jusqu'à 2 jours avant l'arrivée <span>(frais de traitement 3%)</span></div>
+
       ${renderReviewsSection(p)}
 
       <div class="detail-sec-t">Règlement intérieur</div>
@@ -2658,6 +2660,64 @@ function showConfirmation(data, guestName, guestEmail) {
 }
 
 // ── Mes réservations ─────────────────────────────────────────
+// ══ ❌ Annulation voyageur (politique J-2, 3% de frais) ═══════
+async function openGuestCancel(uid) {
+  let pol = null;
+  try {
+    const res = await fetch(`${API_URL}/api/guest/reservations/${encodeURIComponent(uid)}/cancel-preview`, { headers: authHeaders() });
+    pol = await res.json();
+    if (!res.ok) throw new Error(pol.error || 'Erreur');
+  } catch(e) { showToast(e.message); return; }
+
+  const body = pol.refundable
+    ? `<p style="font-size:14px;line-height:1.55;">Annulation <b>gratuite</b> (vous êtes à ${pol.daysUntil} jours de l'arrivée).</p>
+       <div style="background:#DCFCE7;color:#166534;border-radius:11px;padding:12px 14px;font-size:13.5px;margin:12px 0;">
+         Remboursement : <b>${pol.refundAmount.toFixed(2)}€</b> sur ${pol.amountTotal.toFixed(2)}€
+         <br><span style="font-size:12px;">(${pol.feeAmount.toFixed(2)}€ de frais de traitement bancaire non remboursables)</span>
+       </div>`
+    : `<p style="font-size:14px;line-height:1.55;">Votre arrivée est dans ${Math.max(pol.daysUntil,0)} jour${pol.daysUntil>1?'s':''} — la fenêtre d'annulation gratuite (jusqu'à ${pol.freeDays} jours avant) est dépassée.</p>
+       <div style="background:#FEE2E2;color:#B91C1C;border-radius:11px;padding:12px 14px;font-size:13.5px;margin:12px 0;">
+         <b>Aucun remboursement</b> ne sera effectué si vous annulez maintenant.
+       </div>`;
+
+  const ov = document.createElement('div');
+  ov.id = 'guestCancelOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(28,25,23,.55);z-index:1000;display:flex;align-items:flex-end;justify-content:center;';
+  ov.innerHTML = `
+    <div style="background:var(--bg);border-radius:22px 22px 0 0;width:100%;max-width:520px;padding:22px 20px calc(env(safe-area-inset-bottom) + 22px);">
+      <h3 style="font-size:17px;margin-bottom:10px;">Annuler ce séjour ?</h3>
+      ${body}
+      <div style="display:flex;gap:10px;margin-top:6px;">
+        <button onclick="closeGuestCancel()" style="flex:1;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:13px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">Garder mon séjour</button>
+        <button id="guestCancelGo" onclick="confirmGuestCancel('${uid}')" style="flex:1;background:#B91C1C;color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;">Confirmer l'annulation</button>
+      </div>
+    </div>`;
+  ov.addEventListener('click', e => { if (e.target === ov) closeGuestCancel(); });
+  document.body.appendChild(ov);
+}
+
+function closeGuestCancel() {
+  document.getElementById('guestCancelOverlay')?.remove();
+}
+
+async function confirmGuestCancel(uid) {
+  const btn = document.getElementById('guestCancelGo');
+  btn.disabled = true; btn.textContent = 'Annulation...';
+  try {
+    const res = await fetch(`${API_URL}/api/guest/reservations/${encodeURIComponent(uid)}/cancel`, {
+      method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: '{}'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    closeGuestCancel();
+    showToast(data.refundable ? `Annulé — ${data.refundAmount.toFixed(2)}€ remboursés` : 'Séjour annulé');
+    loadMyBookings();
+  } catch(e) {
+    showToast(e.message);
+    btn.disabled = false; btn.textContent = "Confirmer l'annulation";
+  }
+}
+
 async function loadMyBookings() {
   const list = document.getElementById('myBookingsList');
   const session = getSession();
@@ -2752,7 +2812,13 @@ async function loadMyBookings() {
             ${icon('book')} Livret
           </button>` : '';
 
-      const hasButtons = btnContact || btnLivret;
+      const btnCancel = (b.status === 'confirmed' && isFuture)
+        ? `<button onclick="openGuestCancel('${b.uid}')"
+            style="flex:1;padding:10px;background:none;color:#B91C1C;border:1px dashed #FCA5A5;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <i class="fas fa-ban"></i> Annuler
+          </button>` : '';
+
+      const hasButtons = btnContact || btnLivret || btnCancel;
 
       return `<div style="background:white;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border-left:3px solid ${statusColor};">
         <!-- Header -->
@@ -2787,7 +2853,7 @@ async function loadMyBookings() {
         <!-- Boutons d'action -->
         ${hasButtons ? `
         <div style="display:flex;gap:8px;">
-          ${btnContact}${btnLivret}
+          ${btnContact}${btnLivret}${btnCancel}
         </div>` : ''}
       </div>`;
     }).join('');

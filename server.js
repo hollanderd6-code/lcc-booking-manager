@@ -19953,6 +19953,323 @@ app.get('/api/host/stripe/status', authenticateToken, async (req, res) => {
 });
 
 // 📊 Dashboard hôte externe — logements, réservations à venir, revenus
+// ══════════════════════════════════════════════════════════════
+// ❌ ANNULATION CÔTÉ VOYAGEUR
+// Politique unique BHGuest : remboursement intégral jusqu'à J-2
+// (moins 3% de frais de traitement — « celui qui annule paie »),
+// aucun remboursement à moins de 2 jours de l'arrivée.
+// Les dates sont LIBÉRÉES (l'hôte peut relouer).
+// ══════════════════════════════════════════════════════════════
+const GUEST_CANCEL_FREE_DAYS = 2;     // jours avant l'arrivée
+const GUEST_CANCEL_FEE_PCT = 3;       // frais de traitement retenus
+
+function guestCancelPolicy(startDate, amountTotal) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const start = new Date(String(startDate).slice(0, 10) + 'T00:00:00');
+  const daysUntil = Math.round((start - today) / 86400000);
+  const gross = parseFloat(amountTotal) || 0;
+  if (daysUntil >= GUEST_CANCEL_FREE_DAYS) {
+    const refund = Math.round(gross * (100 - GUEST_CANCEL_FEE_PCT)) / 100;
+    return { refundable: true, daysUntil, refundAmount: refund, feeAmount: Math.round((gross - refund) * 100) / 100 };
+  }
+  return { refundable: false, daysUntil, refundAmount: 0, feeAmount: 0 };
+}
+
+// Aperçu de la politique pour une résa (affiché avant confirmation)
+app.get('/api/guest/reservations/:uid/cancel-preview', async (req, res) => {
+  const email = verifyGuestSession(req);
+  if (!email) return res.status(401).json({ error: 'Non connecté' });
+  try {
+    const r = await pool.query(
+      'SELECT uid, guest_email, start_date, amount_total, status FROM reservations WHERE uid = $1',
+      [req.params.uid]
+    );
+    const resa = r.rows[0];
+    if (!resa || String(resa.guest_email || '').toLowerCase() !== email.toLowerCase()) {
+      return res.status(404).json({ error: 'Réservation introuvable' });
+    }
+    if (resa.status === 'cancelled') return res.status(409).json({ error: 'Déjà annulée' });
+    const pol = guestCancelPolicy(resa.start_date, resa.amount_total);
+    res.json({ ...pol, amountTotal: parseFloat(resa.amount_total) || 0, freeDays: GUEST_CANCEL_FREE_DAYS, feePct: GUEST_CANCEL_FEE_PCT });
+  } catch(e) { res.status(500).json({ error: 'Erreur serveur' }); }
+});
+
+app.post('/api/guest/reservations/:uid/cancel', async (req, res) => {
+  const email = verifyGuestSession(req);
+  if (!email) return res.status(401).json({ error: 'Connectez-vous pour annuler.' });
+  try {
+    const rRes = await pool.query(`
+      SELECT r.*, p.name AS property_name FROM reservations r
+      JOIN properties p ON p.id = r.property_id
+      WHERE r.uid = $1
+    `, [req.params.uid]);
+    const resa = rRes.rows[0];
+    if (!resa || String(resa.guest_email || '').toLowerCase() !== email.toLowerCase()) {
+      return res.status(404).json({ error: 'Réservation introuvable' });
+    }
+    if (resa.status === 'cancelled') return res.status(409).json({ error: 'Déjà annulée' });
+    const today = new Date().toISOString().slice(0, 10);
+    if (String(resa.start_date).slice(0, 10) <= today) {
+      return res.status(400).json({ error: 'Le séjour a commencé — contactez votre hôte ou le support.' });
+    }
+
+    const pol = guestCancelPolicy(resa.start_date, resa.amount_total);
+
+    // ── Remboursement partiel Stripe (97%) si dans la fenêtre ──
+    let refunded = false;
+    if (pol.refundable && pol.refundAmount > 0) {
+      try {
+        const payRes = await pool.query(
+          `SELECT stripe_payment_intent_id, stripe_session_id FROM payments
+           WHERE reservation_uid = $1 AND status = 'paid'
+           ORDER BY updated_at DESC LIMIT 1`, [resa.uid]
+        );
+        let pi = payRes.rows[0]?.stripe_payment_intent_id || null;
+        const acctRes = await pool.query('SELECT stripe_account_id, use_bh_stripe FROM users WHERE id = $1', [resa.user_id]);
+        const acct = acctRes.rows[0];
+        const stripeOpts = (acct?.stripe_account_id && !acct?.use_bh_stripe) ? { stripeAccount: acct.stripe_account_id } : {};
+        if (!pi && payRes.rows[0]?.stripe_session_id) {
+          const sess = await stripe.checkout.sessions.retrieve(payRes.rows[0].stripe_session_id, stripeOpts);
+          pi = sess?.payment_intent || null;
+        }
+        if (!pi && String(resa.uid).startsWith('BHGUEST_cs_')) {
+          const sess = await stripe.checkout.sessions.retrieve(String(resa.uid).replace('BHGUEST_', ''), stripeOpts);
+          pi = sess?.payment_intent || null;
+        }
+        if (!pi) {
+          return res.status(502).json({ error: 'Paiement introuvable — contactez le support pour votre remboursement.' });
+        }
+        await stripe.refunds.create(
+          { payment_intent: pi, amount: Math.round(pol.refundAmount * 100), refund_application_fee: true, reason: 'requested_by_customer' },
+          stripeOpts
+        );
+        refunded = true;
+        console.log(`💸 [GUEST CANCEL] Remboursement ${pol.refundAmount}€ / ${resa.amount_total}€ (${resa.uid})`);
+      } catch(stripeErr) {
+        console.error('❌ [GUEST CANCEL] Stripe:', stripeErr.message);
+        return res.status(502).json({ error: 'Le remboursement a échoué : ' + stripeErr.message + '. La réservation n\'a pas été annulée.' });
+      }
+    }
+
+    // ── Annuler — les dates sont LIBÉRÉES, pas de block ──
+    await pool.query(
+      `UPDATE reservations SET status = 'cancelled', cancelled_by = 'guest', updated_at = NOW() WHERE uid = $1`,
+      [resa.uid]
+    );
+
+    // ── Emails ──
+    const fmtD = iso => new Date(String(iso).slice(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+    try {
+      await sendEmailViaBrevo({
+        to: resa.guest_email,
+        subject: `Annulation confirmée — ${resa.property_name}`,
+        text: `Votre annulation est confirmée.`,
+        html: bhEmailTemplate({
+          icon: '✅', title: 'Annulation confirmée', subtitle: resa.property_name,
+          bodyHtml: `<p>Bonjour ${resa.guest_name || ''},</p>
+            <p>Votre séjour du <strong>${fmtD(resa.start_date)}</strong> au <strong>${fmtD(resa.end_date)}</strong> est annulé.</p>
+            ${pol.refundable
+              ? `<p><strong>Remboursement : ${pol.refundAmount.toFixed(2)}€</strong> (${pol.feeAmount.toFixed(2)}€ de frais de traitement retenus) — sur votre compte sous 5 à 10 jours ouvrés.</p>`
+              : `<p>Votre annulation intervient à moins de ${GUEST_CANCEL_FREE_DAYS} jours de l'arrivée : conformément à la politique d'annulation, ce séjour n'est pas remboursable.</p>`}`,
+          footerNote: 'BHGuest'
+        })
+      });
+    } catch(e1) { console.warn('⚠️ [GUEST CANCEL] Email voyageur:', e1.message); }
+    try {
+      const hostRes = await pool.query('SELECT email, first_name FROM users WHERE id = $1', [resa.user_id]);
+      const host = hostRes.rows[0];
+      if (host?.email) {
+        await sendEmailViaBrevo({
+          to: host.email,
+          subject: `Annulation voyageur — ${resa.property_name}`,
+          text: `${resa.guest_name || 'Un voyageur'} a annulé son séjour. Les dates sont à nouveau disponibles.`,
+          html: bhEmailTemplate({
+            icon: '📅', title: 'Annulation voyageur', subtitle: resa.property_name,
+            bodyHtml: `<p>Bonjour ${host.first_name || ''},</p>
+              <p><strong>${resa.guest_name || 'Un voyageur'}</strong> a annulé son séjour du ${fmtD(resa.start_date)} au ${fmtD(resa.end_date)}.</p>
+              <p>Les dates sont <strong>à nouveau disponibles à la réservation</strong> sur votre calendrier.</p>
+              ${pol.refundable
+                ? `<p>Le voyageur est remboursé à 97% ; les 3% retenus restent sur votre compte et couvrent les frais bancaires du paiement initial.</p>`
+                : `<p>Annulation hors délai : <strong>le montant du séjour vous reste intégralement acquis</strong>.</p>`}`,
+            footerNote: 'BHGuest'
+          })
+        });
+      }
+    } catch(e2) { console.warn('⚠️ [GUEST CANCEL] Email hôte:', e2.message); }
+
+    res.json({ success: true, refunded, refundAmount: pol.refundAmount, feeAmount: pol.feeAmount, refundable: pol.refundable });
+  } catch(e) {
+    console.error('❌ [GUEST CANCEL]:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// ❌ ANNULATION CÔTÉ HÔTE
+// Remboursement 100% voyageur (commission BH rendue à l'hôte, les
+// frais Stripe restent à sa charge par construction — direct charge).
+// Motif obligatoire, dates re-bloquées, compteur anti-abus :
+// 3 annulations sur 12 mois glissants → logements masqués.
+// ══════════════════════════════════════════════════════════════
+pool.query(`
+  CREATE TABLE IF NOT EXISTS bhguest_host_cancellations (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    reservation_uid TEXT NOT NULL,
+    reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`).catch(e => console.error('❌ bhguest_host_cancellations table:', e.message));
+pool.query(`
+  ALTER TABLE reservations
+    ADD COLUMN IF NOT EXISTS cancelled_by TEXT,
+    ADD COLUMN IF NOT EXISTS cancellation_reason TEXT
+`).catch(() => {});
+
+const HOST_CANCEL_LIMIT = 3; // annulations sur 12 mois avant suspension
+
+app.post('/api/host/reservations/:uid/cancel', authenticateToken, async (req, res) => {
+  try {
+    const { reason } = req.body || {};
+    const reasonTxt = reason ? String(reason).trim().slice(0, 500) : '';
+    if (reasonTxt.length < 10) {
+      return res.status(400).json({ error: 'Expliquez le motif de l\'annulation (10 caractères minimum) — il sera transmis au voyageur.' });
+    }
+
+    const rRes = await pool.query(`
+      SELECT r.*, p.name AS property_name FROM reservations r
+      JOIN properties p ON p.id = r.property_id
+      WHERE r.uid = $1 AND r.user_id = $2
+    `, [req.params.uid, req.user.id]);
+    const resa = rRes.rows[0];
+    if (!resa) return res.status(404).json({ error: 'Réservation introuvable' });
+    if (resa.status === 'cancelled') return res.status(409).json({ error: 'Déjà annulée' });
+    const today = new Date().toISOString().slice(0, 10);
+    if (String(resa.start_date).slice(0, 10) <= today) {
+      return res.status(400).json({ error: 'Impossible d\'annuler un séjour commencé ou passé. Contactez le support.' });
+    }
+
+    // ── Remboursement Stripe (100%, commission BH rendue) ──
+    let refunded = false, refundId = null;
+    try {
+      const payRes = await pool.query(
+        `SELECT stripe_payment_intent_id, stripe_session_id FROM payments
+         WHERE reservation_uid = $1 AND status = 'paid'
+         ORDER BY updated_at DESC LIMIT 1`, [resa.uid]
+      );
+      let pi = payRes.rows[0]?.stripe_payment_intent_id || null;
+
+      const acctRes = await pool.query('SELECT stripe_account_id, use_bh_stripe FROM users WHERE id = $1', [req.user.id]);
+      const acct = acctRes.rows[0];
+      const stripeOpts = (acct?.stripe_account_id && !acct?.use_bh_stripe) ? { stripeAccount: acct.stripe_account_id } : {};
+
+      // Repli : retrouver le payment_intent via la session Checkout
+      if (!pi && payRes.rows[0]?.stripe_session_id) {
+        const sess = await stripe.checkout.sessions.retrieve(payRes.rows[0].stripe_session_id, stripeOpts);
+        pi = sess?.payment_intent || null;
+      }
+      if (!pi && String(resa.uid).startsWith('BHGUEST_cs_')) {
+        const sess = await stripe.checkout.sessions.retrieve(String(resa.uid).replace('BHGUEST_', ''), stripeOpts);
+        pi = sess?.payment_intent || null;
+      }
+
+      if (pi) {
+        const refund = await stripe.refunds.create(
+          { payment_intent: pi, refund_application_fee: true, reason: 'requested_by_customer' },
+          stripeOpts
+        );
+        refunded = true; refundId = refund.id;
+        console.log(`💸 [HOST CANCEL] Remboursement ${refund.id} (${resa.uid})`);
+      } else {
+        console.warn(`⚠️ [HOST CANCEL] Aucun payment_intent trouvé pour ${resa.uid} — annulation sans remboursement auto`);
+      }
+    } catch(stripeErr) {
+      console.error('❌ [HOST CANCEL] Stripe:', stripeErr.message);
+      return res.status(502).json({ error: 'Le remboursement Stripe a échoué : ' + stripeErr.message + '. La réservation n\'a PAS été annulée.' });
+    }
+
+    // ── Annuler + rebloquer les dates (anti "annuler pour relouer plus cher") ──
+    await pool.query(
+      `UPDATE reservations SET status = 'cancelled', cancelled_by = 'host', cancellation_reason = $1, updated_at = NOW() WHERE uid = $2`,
+      [reasonTxt, resa.uid]
+    );
+    try {
+      await pool.query(`
+        INSERT INTO reservations (uid, user_id, property_id, source, guest_name, start_date, end_date, status, created_at, updated_at)
+        VALUES ($1, $2, $3, 'BLOCK', 'Dates bloquées (annulation hôte)', $4, $5, 'confirmed', NOW(), NOW())
+        ON CONFLICT (uid) DO NOTHING
+      `, [`HOSTCANCEL_${resa.uid}`, req.user.id, resa.property_id, resa.start_date, resa.end_date]);
+    } catch(bErr) { console.warn('⚠️ [HOST CANCEL] Block dates:', bErr.message); }
+
+    // ── Compteur anti-abus ──
+    await pool.query(
+      'INSERT INTO bhguest_host_cancellations (user_id, reservation_uid, reason) VALUES ($1, $2, $3)',
+      [req.user.id, resa.uid, reasonTxt]
+    );
+    const cnt = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM bhguest_host_cancellations WHERE user_id = $1 AND created_at > NOW() - INTERVAL '12 months'`,
+      [req.user.id]
+    );
+    const cancelCount = cnt.rows[0]?.n || 1;
+    let suspended = false;
+    if (cancelCount >= HOST_CANCEL_LIMIT) {
+      await pool.query('UPDATE properties SET is_marketplace = false WHERE user_id = $1', [req.user.id]);
+      suspended = true;
+      console.warn(`🚫 [HOST CANCEL] Hôte ${req.user.id} suspendu (${cancelCount} annulations / 12 mois)`);
+    }
+
+    // ── Emails ──
+    const fmtD = iso => new Date(String(iso).slice(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+    if (resa.guest_email) {
+      try {
+        await sendEmailViaBrevo({
+          to: resa.guest_email,
+          subject: `Votre réservation à ${resa.property_name} a été annulée`,
+          text: `Votre hôte a annulé votre séjour du ${fmtD(resa.start_date)}. Vous êtes intégralement remboursé.`,
+          html: bhEmailTemplate({
+            icon: '❌', title: 'Réservation annulée par l\'hôte', subtitle: resa.property_name,
+            bodyHtml: `<p>Bonjour ${resa.guest_name || ''},</p>
+              <p>Votre hôte a dû annuler votre séjour du <strong>${fmtD(resa.start_date)}</strong> au <strong>${fmtD(resa.end_date)}</strong>.</p>
+              <p style="background:#FBEDE7;border-radius:10px;padding:12px 14px;">Motif : « ${reasonTxt} »</p>
+              <p>${refunded
+                ? '<strong>Vous êtes intégralement remboursé</strong> — le montant réapparaîtra sur votre compte sous 5 à 10 jours ouvrés.'
+                : 'Le remboursement est en cours de traitement — notre équipe vous confirme sous 24h.'}</p>
+              <p>Nous sommes désolés pour ce contretemps. D'autres logements sont disponibles sur BHGuest pour ces dates.</p>`,
+            footerNote: 'BHGuest'
+          })
+        });
+      } catch(e1) { console.warn('⚠️ [HOST CANCEL] Email voyageur:', e1.message); }
+    }
+    try {
+      const hostRes = await pool.query('SELECT email, first_name FROM users WHERE id = $1', [req.user.id]);
+      const host = hostRes.rows[0];
+      if (host?.email) {
+        await sendEmailViaBrevo({
+          to: host.email,
+          subject: suspended ? '🚫 Vos logements ont été suspendus' : `Annulation confirmée — ${resa.property_name}`,
+          text: suspended ? 'Trop d\'annulations : vos logements sont masqués de la marketplace.' : 'Votre annulation est confirmée.',
+          html: bhEmailTemplate({
+            icon: suspended ? '🚫' : '✅', title: suspended ? 'Logements suspendus' : 'Annulation confirmée', subtitle: resa.property_name,
+            bodyHtml: suspended
+              ? `<p>Bonjour ${host.first_name || ''},</p>
+                 <p>Vous avez annulé <strong>${cancelCount} réservations en 12 mois</strong>. Conformément à nos règles, vos logements sont retirés de la marketplace.</p>
+                 <p>Contactez-nous pour réactiver votre compte.</p>`
+              : `<p>Bonjour ${host.first_name || ''},</p>
+                 <p>L'annulation du séjour de <strong>${resa.guest_name || 'votre voyageur'}</strong> (${fmtD(resa.start_date)} → ${fmtD(resa.end_date)}) est confirmée. Le voyageur est intégralement remboursé et les dates restent bloquées sur votre calendrier.</p>
+                 <p style="color:#92400E;background:#FEF3C7;border-radius:10px;padding:12px 14px;">⚠️ Annulation ${cancelCount} sur ${HOST_CANCEL_LIMIT} autorisées par période de 12 mois. Au-delà, vos logements seront suspendus.</p>`,
+            footerNote: 'BHGuest'
+          })
+        });
+      }
+    } catch(e2) { console.warn('⚠️ [HOST CANCEL] Email hôte:', e2.message); }
+
+    res.json({ success: true, refunded, refundId, cancelCount, limit: HOST_CANCEL_LIMIT, suspended });
+  } catch(e) {
+    console.error('❌ [HOST CANCEL]:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ── Liste complète des réservations de l'hôte externe ────────
 app.get('/api/host/reservations', authenticateToken, async (req, res) => {
   try {
@@ -41429,6 +41746,37 @@ function verifyGuestSession(req) {
 pool.query("ALTER TABLE messages ADD COLUMN IF NOT EXISTS host_email_notified BOOLEAN DEFAULT FALSE").catch(() => {});
 pool.query("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS last_guest_email_notif_at TIMESTAMPTZ").catch(() => {});
 
+// ── Push natif hôte : table + enregistrement du token ────────
+pool.query(`
+  CREATE TABLE IF NOT EXISTS host_fcm_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    fcm_token TEXT NOT NULL,
+    device_type TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (user_id, fcm_token)
+  )
+`).catch(e => console.error('❌ host_fcm_tokens table:', e.message));
+
+app.post('/api/host/push/register', authenticateToken, async (req, res) => {
+  try {
+    const { fcm_token, device_type } = req.body || {};
+    if (!fcm_token || String(fcm_token).length < 20) return res.status(400).json({ error: 'Token invalide' });
+    // Un token appartient à UN utilisateur : si le même appareil se reconnecte
+    // avec un autre compte hôte, on retire l'ancienne association.
+    await pool.query('DELETE FROM host_fcm_tokens WHERE fcm_token = $1 AND user_id <> $2', [fcm_token, req.user.id]);
+    await pool.query(`
+      INSERT INTO host_fcm_tokens (user_id, fcm_token, device_type)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (user_id, fcm_token) DO UPDATE SET updated_at = NOW(), device_type = $3
+    `, [req.user.id, fcm_token, device_type || null]);
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ [HOST PUSH] register:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // Liste des conversations de l'hôte
 app.get('/api/host/conversations', authenticateToken, async (req, res) => {
   try {
@@ -41676,6 +42024,36 @@ app.post('/api/guest/conversations/:id/send', async (req, res) => {
 
     // Émettre via Socket.IO (le handler IA va prendre le relais)
     io.to(`conversation_${convId}`).emit('new_message', newMsg);
+
+    // 🔔 Push natif à l'hôte (si son appareil est enregistré)
+    try {
+      const convH = await pool.query(
+        'SELECT c.user_id, c.guest_name, p.name AS property_name FROM conversations c LEFT JOIN properties p ON p.id = c.property_id WHERE c.id = $1',
+        [convId]
+      );
+      const ch = convH.rows[0];
+      if (ch) {
+        const toks = await pool.query('SELECT DISTINCT fcm_token FROM host_fcm_tokens WHERE user_id = $1', [ch.user_id]);
+        if (toks.rows.length) {
+          const admin = require('firebase-admin');
+          const preview = String(message).trim().length > 100 ? String(message).trim().slice(0, 97) + '...' : String(message).trim();
+          for (const row of toks.rows) {
+            try {
+              await admin.messaging().send({
+                notification: { title: `${ch.guest_name || 'Voyageur'} · ${ch.property_name || 'BHGuest'}`, body: preview },
+                data: { conversation_id: String(convId), type: 'host_new_message', click_action: 'FLUTTER_NOTIFICATION_CLICK' },
+                token: row.fcm_token
+              });
+            } catch (tErr) {
+              if (tErr.code === 'messaging/invalid-registration-token' || tErr.code === 'messaging/registration-token-not-registered') {
+                await pool.query('DELETE FROM host_fcm_tokens WHERE fcm_token = $1', [row.fcm_token]).catch(() => {});
+              }
+            }
+          }
+          console.log(`🔔 [HOST PUSH] Push envoyé à l'hôte ${ch.user_id} (${toks.rows.length} appareil(s))`);
+        }
+      }
+    } catch(hpErr) { console.warn('⚠️ [HOST PUSH] envoi:', hpErr.message); }
 
     // Déclencher le handler IA
     const { handleIncomingMessageDebounced } = require('./integrated-chat-handler');
