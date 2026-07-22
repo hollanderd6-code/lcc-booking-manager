@@ -905,6 +905,7 @@ function navTo(name) {
   // (catégorie, ville, recherche texte) sélectionnés depuis l'accueil.
   if (name === 'home-list') {
     syncFilterChips();
+    renderSearchActive();
     loadProperties().then(() => filterProperties());
   }
 }
@@ -1557,6 +1558,85 @@ async function loadFeaturedProperties() {
   } catch(e) {
     el.innerHTML = '<div style="padding:20px;color:#9ca3af;font-size:13px;">Chargement impossible</div>';
   }
+}
+
+// ══ 🗓️ Recherche par dates + voyageurs ═══════════════════════
+let _spGuests = 2;
+
+function toggleSearchPanel() {
+  const p = document.getElementById('searchPanel');
+  const open = p.style.display !== 'none';
+  p.style.display = open ? 'none' : 'block';
+  if (!open) {
+    // Pré-remplir avec la recherche active + bornes de dates cohérentes
+    const today = new Date().toISOString().slice(0, 10);
+    const ci = document.getElementById('spCheckin'), co = document.getElementById('spCheckout');
+    ci.min = today;
+    ci.value = state.search.checkin || '';
+    co.value = state.search.checkout || '';
+    co.min = ci.value || today;
+    ci.onchange = () => { co.min = ci.value; if (co.value && co.value <= ci.value) co.value = ''; };
+    _spGuests = state.search.guests || 2;
+    document.getElementById('spGuestsN').textContent = _spGuests;
+  }
+}
+
+function spGuests(d) {
+  _spGuests = Math.max(1, Math.min(16, _spGuests + d));
+  document.getElementById('spGuestsN').textContent = _spGuests;
+}
+
+async function applySearchPanel() {
+  const ci = document.getElementById('spCheckin').value;
+  const co = document.getElementById('spCheckout').value;
+  if ((ci && !co) || (!ci && co)) { showToast('Choisissez arrivée ET départ'); return; }
+  if (ci && co && co <= ci) { showToast('Le départ doit suivre l\'arrivée'); return; }
+  state.search.checkin = ci || null;
+  state.search.checkout = co || null;
+  state.search.guests = _spGuests;
+  document.getElementById('searchPanel').style.display = 'none';
+  renderSearchActive();
+  await loadProperties();
+  filterProperties();
+}
+
+async function clearSearchPanel() {
+  state.search.checkin = null;
+  state.search.checkout = null;
+  state.search.guests = null;
+  document.getElementById('spCheckin').value = '';
+  document.getElementById('spCheckout').value = '';
+  _spGuests = 2;
+  document.getElementById('spGuestsN').textContent = 2;
+  document.getElementById('searchPanel').style.display = 'none';
+  renderSearchActive();
+  await loadProperties();
+  filterProperties();
+}
+
+// Bandeau "12 août → 15 août · 4 voyageurs ✕" + état du bouton Dates
+function renderSearchActive() {
+  const el = document.getElementById('searchActive');
+  const btn = document.getElementById('datesBtn');
+  const lbl = document.getElementById('datesBtnLabel');
+  if (!el) return;
+  const { checkin, checkout, guests } = state.search;
+  const hasDates = checkin && checkout;
+  if (!hasDates && !guests) {
+    el.style.display = 'none';
+    if (btn) btn.classList.remove('on');
+    if (lbl) lbl.textContent = 'Dates';
+    return;
+  }
+  const fmt = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  const parts = [];
+  if (hasDates) parts.push(`${fmt(checkin)} → ${fmt(checkout)}`);
+  if (guests) parts.push(`${guests} voyageur${guests > 1 ? 's' : ''}`);
+  el.innerHTML = `<i class="fas fa-calendar-check"></i> ${parts.join(' · ')}
+    <button onclick="clearSearchPanel()" title="Effacer"><i class="fas fa-xmark"></i></button>`;
+  el.style.display = 'flex';
+  if (btn) btn.classList.add('on');
+  if (lbl) lbl.textContent = hasDates ? fmt(checkin) : 'Dates';
 }
 
 // Libellé lisible d'un type de logement

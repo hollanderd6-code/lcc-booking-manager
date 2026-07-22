@@ -923,6 +923,27 @@ body {
 .detail-rule.no .ricon { background: #F1EFEA; color: var(--stone-light); }
 
 /* Panier d'accueil */
+/* ── Recherche dates + voyageurs ── */
+.listings-dates-btn{display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:#fff;border:none;border-radius:10px;padding:9px 13px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.listings-dates-btn.on{background:var(--primary);}
+.search-panel{background:#fff;border-bottom:1px solid var(--line);padding:16px;}
+.sp-row{display:flex;gap:12px;}
+.sp-field{flex:1;}
+.sp-field label{display:block;font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+.sp-field input{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:11px;font-size:15px;font-family:inherit;outline:none;background:var(--bg);color:var(--ink);}
+.sp-field input:focus{border-color:var(--primary);}
+.sp-guests{align-items:center;justify-content:space-between;margin-top:14px;}
+.sp-guests > label{font-size:13.5px;font-weight:600;color:var(--ink);}
+.sp-stepper{display:flex;align-items:center;gap:14px;}
+.sp-stepper button{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.sp-stepper button:active{border-color:var(--primary);color:var(--primary);}
+.sp-stepper span{font-size:16px;font-weight:700;min-width:22px;text-align:center;}
+.sp-actions{display:flex;gap:10px;margin-top:16px;}
+.sp-clear{flex:0 0 auto;background:none;border:1px solid var(--line);color:var(--text2);border-radius:11px;padding:12px 18px;font-size:14px;font-family:inherit;cursor:pointer;}
+.sp-apply{flex:1;background:var(--primary);color:#fff;border:none;border-radius:11px;padding:12px;font-size:14.5px;font-weight:700;font-family:inherit;cursor:pointer;}
+.search-active{display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--primary-tint,#FBEDE7);color:var(--primary);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:600;}
+.search-active button{margin-left:auto;background:none;border:none;color:var(--primary);font-size:14px;cursor:pointer;padding:2px 4px;}
+
 /* ── Squelettes de chargement ── */
 @keyframes skel-pulse { 0%,100%{opacity:1;} 50%{opacity:.45;} }
 .prop-skel{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-bottom:16px;animation:skel-pulse 1.5s ease-in-out infinite;}
@@ -1362,7 +1383,36 @@ body.screen-detail #bottomNav { display: none !important; }
       <div class="listings-header">
         <div class="listings-search">
           <i class="fas fa-search"></i>
-          <input type="text" id="listSearchInput" placeholder="Dates, logement..." oninput="filterProperties()">
+          <input type="text" id="listSearchInput" placeholder="Ville, logement..." oninput="filterProperties()">
+          <button class="listings-dates-btn" id="datesBtn" onclick="toggleSearchPanel()">
+            <i class="fas fa-calendar-days"></i><span id="datesBtnLabel">Dates</span>
+          </button>
+        </div>
+        <div class="search-active" id="searchActive" style="display:none;"></div>
+      </div>
+      <!-- Panneau dates + voyageurs -->
+      <div class="search-panel" id="searchPanel" style="display:none;">
+        <div class="sp-row">
+          <div class="sp-field">
+            <label>Arrivée</label>
+            <input type="date" id="spCheckin">
+          </div>
+          <div class="sp-field">
+            <label>Départ</label>
+            <input type="date" id="spCheckout">
+          </div>
+        </div>
+        <div class="sp-row sp-guests">
+          <label>Voyageurs</label>
+          <div class="sp-stepper">
+            <button onclick="spGuests(-1)"><i class="fas fa-minus"></i></button>
+            <span id="spGuestsN">2</span>
+            <button onclick="spGuests(1)"><i class="fas fa-plus"></i></button>
+          </div>
+        </div>
+        <div class="sp-actions">
+          <button class="sp-clear" onclick="clearSearchPanel()">Effacer</button>
+          <button class="sp-apply" onclick="applySearchPanel()">Voir les logements</button>
         </div>
       </div>
       <div class="listings-filters">
