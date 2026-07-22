@@ -22,6 +22,9 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
 .brand-name{font-weight:700;font-size:16px;display:flex;align-items:baseline}
 .brand-name .g{color:var(--primary-light)}
 .brand-name .dot{width:4px;height:4px;border-radius:50%;background:#fff;margin-left:3px}
+.brand-mode{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#F0997B;background:rgba(240,153,123,.13);border:1px solid rgba(240,153,123,.3);border-radius:999px;padding:4px 10px;margin-left:10px;}
+.to-guest{display:inline-flex;align-items:center;gap:6px;color:#fff;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:8px 13px;font-size:12.5px;font-weight:600;text-decoration:none;}
+.to-guest i{font-size:11px;}
 .logout{background:rgba(255,255,255,.14);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:14px;cursor:pointer}
 .hero h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:28px;letter-spacing:-.3px;position:relative}
 .hero .sub{font-size:14px;color:rgba(255,255,255,.68);margin-top:3px;position:relative}
@@ -145,8 +148,11 @@ function render(d){
   document.getElementById('root').innerHTML = `
     <div class="hero">
       <div class="hero-top">
-        <div class="brand"><span class="brand-mark"><b>b</b></span><span class="brand-name">BH<span class="g">Guest</span><span class="dot"></span></span></div>
-        <button class="logout" onclick="logout()" title="Déconnexion"><i class="fas fa-arrow-right-from-bracket"></i></button>
+        <div class="brand"><span class="brand-mark"><b>b</b></span><span class="brand-name">BH<span class="g">Guest</span><span class="dot"></span></span><span class="brand-mode">Espace hôte</span></div>
+        <div style="display:flex;align-items:center;gap:9px;">
+          <a class="to-guest" href="index.html" title="Passer côté voyageur"><i class="fas fa-arrow-right-arrow-left"></i><span>Voyageur</span></a>
+          <button class="logout" onclick="logout()" title="Déconnexion"><i class="fas fa-arrow-right-from-bracket"></i></button>
+        </div>
       </div>
       <h1>Bonjour ${esc(d.firstName||'')} 👋</h1>
       <div class="sub">Voici l'activité de vos logements.</div>
@@ -178,11 +184,15 @@ function render(d){
   `;
 }
 
-function logout(){ localStorage.removeItem('bhguest_host_token'); localStorage.removeItem('bhguest_host_user'); location.href='host.html'; }
+function logout(){
+  if(!confirm('Se déconnecter de votre espace hôte ?')) return;
+  localStorage.removeItem('bhguest_host_token'); localStorage.removeItem('bhguest_host_user'); location.href='host.html';
+}
 function esc(s){ return String(s||'').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
 function fmtD(d){ const x=new Date(d); return x.getDate()+' '+MONTHS[x.getMonth()]; }
 
 load();
 </script>
+<script src="host-nav.js"></script>
 </body>
 </html>
