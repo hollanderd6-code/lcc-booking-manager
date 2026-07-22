@@ -372,11 +372,8 @@ function goHostDashboard() {
 
 // Point d'entrée "Devenir hôte" depuis l'accueil
 function hostEntry() {
-  if (!isLoggedIn()) {
-    showToast('Créez votre compte pour devenir hôte');
-    openAuth('register');
-    return;
-  }
+  // Non connecté → page de présentation (l'inscription vient après l'argumentaire)
+  if (!isLoggedIn()) { location.href = 'host-welcome.html'; return; }
   navTo('profile');
 }
 

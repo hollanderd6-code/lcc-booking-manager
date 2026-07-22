@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Devenir hôte — BHGuest</title>
+<meta name="description" content="Publiez vos logements, fixez vos règles, recevez vos paiements en direct. 7% de commission, tout compris.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --primary:#C2410C; --primary-dark:#9A3412; --primary-tint:#FBEDE7; --primary-light:#F0997B;
+  --ink:#1C1917; --bg:#FAF8F5; --line:#EDE8E1; --text2:#78716C; --text1:#44403C;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;}
+.wrap{max-width:760px;margin:0 auto;}
+section{padding:0 20px;}
+
+/* Hero */
+.hero{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),52px) 20px 46px;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;inset:0;opacity:.5;
+  background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:46px 46px;pointer-events:none;}
+.hero>*{position:relative;z-index:1;}
+.hero-in{max-width:760px;margin:0 auto;}
+.brand{display:flex;align-items:center;gap:11px;margin-bottom:34px;}
+.brand-mark{width:40px;height:40px;background:var(--primary);border-radius:50% 50% 50% 8px;transform:rotate(45deg);display:flex;align-items:center;justify-content:center;}
+.brand-mark b{transform:rotate(-45deg);font-family:'Instrument Serif',serif;font-size:24px;font-weight:400;color:#fff;}
+.brand-name{font-size:21px;font-weight:700;letter-spacing:-.4px;}
+.brand-name .g{color:var(--primary-light);}
+.brand-name .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#fff;margin-left:4px;vertical-align:middle;}
+.hero h1{font-family:'Instrument Serif',serif;font-size:40px;font-weight:400;line-height:1.12;margin-bottom:14px;}
+.hero h1 em{color:var(--primary-light);font-style:italic;}
+.hero p{font-size:16px;color:rgba(255,255,255,.78);max-width:460px;}
+.hero-cta{display:inline-flex;align-items:center;gap:9px;background:var(--primary);color:#fff;text-decoration:none;border-radius:13px;padding:15px 28px;font-size:15.5px;font-weight:700;margin-top:26px;}
+.hero-note{font-size:12.5px;color:rgba(255,255,255,.55);margin-top:12px;}
+
+/* Chiffres */
+.figures{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin:-28px auto 0;max-width:720px;padding:0 20px;position:relative;z-index:2;}
+.fig{background:#fff;border:1px solid var(--line);border-radius:15px;padding:16px 12px;text-align:center;box-shadow:0 4px 16px rgba(28,25,23,.07);}
+.fig b{display:block;font-size:24px;font-weight:800;color:var(--primary);line-height:1.1;}
+.fig span{font-size:11.5px;color:var(--text2);display:block;margin-top:4px;line-height:1.35;}
+
+h2{font-family:'Instrument Serif',serif;font-size:27px;font-weight:400;margin-bottom:8px;}
+.lead{font-size:14.5px;color:var(--text2);margin-bottom:22px;max-width:520px;}
+.block{padding-top:46px;}
+
+/* Piliers */
+.pillar{display:flex;gap:15px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:12px;}
+.pillar-ic{width:42px;height:42px;border-radius:12px;background:var(--primary-tint);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.pillar b{display:block;font-size:15.5px;margin-bottom:4px;}
+.pillar p{font-size:13.5px;color:var(--text1);}
+
+/* Engagements */
+.commit{background:#fff;border:1px solid var(--line);border-left:3px solid var(--primary);border-radius:14px;padding:16px 18px;margin-bottom:11px;}
+.commit b{display:block;font-size:15px;margin-bottom:5px;}
+.commit p{font-size:13.5px;color:var(--text1);}
+
+/* Étapes */
+.step{display:flex;gap:15px;margin-bottom:20px;}
+.step-n{width:32px;height:32px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+.step b{display:block;font-size:15px;margin-bottom:3px;}
+.step p{font-size:13.5px;color:var(--text2);}
+
+/* Paiement */
+.pay{background:var(--ink);color:#fff;border-radius:18px;padding:24px 20px;}
+.pay h3{font-family:'Instrument Serif',serif;font-size:22px;font-weight:400;margin-bottom:16px;}
+.pay-line{display:flex;gap:13px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.1);}
+.pay-line:last-child{border:none;}
+.pay-line i{color:var(--primary-light);font-size:15px;margin-top:2px;flex-shrink:0;width:18px;text-align:center;}
+.pay-line b{display:block;font-size:14px;margin-bottom:2px;}
+.pay-line span{font-size:13px;color:rgba(255,255,255,.7);}
+
+/* FAQ */
+.faq{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden;}
+.faq summary{padding:15px 18px;font-size:14.5px;font-weight:600;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.faq summary::-webkit-details-marker{display:none;}
+.faq summary::after{content:'+';color:var(--primary);font-size:19px;font-weight:400;flex-shrink:0;}
+.faq[open] summary::after{content:'−';}
+.faq p{padding:0 18px 16px;font-size:13.5px;color:var(--text1);}
+
+/* CTA final */
+.final{text-align:center;padding:46px 20px 20px;}
+.final h2{margin-bottom:10px;}
+.final p{font-size:14.5px;color:var(--text2);margin-bottom:22px;}
+.btn{display:inline-flex;align-items:center;gap:9px;background:var(--primary);color:#fff;text-decoration:none;border-radius:13px;padding:16px 32px;font-size:15.5px;font-weight:700;}
+.btn.ghost{background:none;color:var(--text2);border:1px solid var(--line);font-weight:600;font-size:14px;padding:13px 24px;}
+.foot{text-align:center;padding:26px 20px calc(env(safe-area-inset-bottom) + 30px);font-size:12.5px;color:var(--text2);}
+.foot a{color:var(--primary);text-decoration:none;}
+
+@media(max-width:420px){
+  .hero h1{font-size:32px;}
+  .figures{grid-template-columns:1fr 1fr;}
+  .fig:last-child{grid-column:1/-1;}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-in">
+    <div class="brand">
+      <span class="brand-mark"><b>b</b></span>
+      <span class="brand-name">BH<span class="g">Guest</span><span class="dot"></span></span>
+    </div>
+    <h1>Vos logements.<br><em>Vos règles.</em></h1>
+    <p>Une plateforme de réservation directe, pensée avec ceux qui reçoivent. Vous fixez vos prix, vos conditions, et vous êtes payé sur votre compte.</p>
+    <a class="hero-cta" href="host.html">Créer mon compte hôte <i class="fas fa-arrow-right"></i></a>
+    <div class="hero-note">Gratuit. Aucun abonnement, aucun engagement.</div>
+  </div>
+</div>
+
+<div class="figures">
+  <div class="fig"><b>7 %</b><span>de commission, tout compris</span></div>
+  <div class="fig"><b>0 €</b><span>d'abonnement mensuel</span></div>
+  <div class="fig"><b>Direct</b><span>versé sur votre compte</span></div>
+</div>
+
+<div class="wrap">
+
+  <section class="block">
+    <h2>Ce que vous gardez</h2>
+    <p class="lead">Sur BHGuest, les décisions qui concernent votre logement vous appartiennent. Nous fournissons l'outil et le trafic, pas les consignes.</p>
+
+    <div class="pillar">
+      <div class="pillar-ic"><i class="fas fa-euro-sign"></i></div>
+      <div><b>Vos prix, jusqu'au dernier détail</b>
+        <p>Tarif par date, prix week-end automatique, saisons, réductions longs séjours, durée minimale de séjour. Aucune tarification imposée, aucune incitation à baisser vos prix.</p></div>
+    </div>
+
+    <div class="pillar">
+      <div class="pillar-ic"><i class="fas fa-shield-halved"></i></div>
+      <div><b>Vos conditions</b>
+        <p>Vous définissez votre règlement intérieur, vos horaires d'arrivée et de départ, votre capacité. Ce que vous écrivez sur votre annonce fait foi.</p></div>
+    </div>
+
+    <div class="pillar">
+      <div class="pillar-ic"><i class="fas fa-comments"></i></div>
+      <div><b>Votre relation avec le voyageur</b>
+        <p>Vous échangez directement avec lui, avant, pendant et après le séjour. Pas de messagerie filtrée, pas d'intermédiaire qui s'interpose dans votre conversation.</p></div>
+    </div>
+
+    <div class="pillar">
+      <div class="pillar-ic"><i class="fas fa-calendar-days"></i></div>
+      <div><b>Votre calendrier</b>
+        <p>Synchronisation iCal avec Airbnb, Booking et vos autres canaux. BHGuest s'ajoute à votre organisation, il ne la remplace pas.</p></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Nos engagements</h2>
+    <p class="lead">Voici, noir sur blanc, comment nous tranchons les situations qui font mal — parce que c'est là qu'une plateforme se juge.</p>
+
+    <div class="commit">
+      <b>Une annulation voyageur ne vous laisse pas les mains vides</b>
+      <p>Dès qu'un voyageur annule, vos dates redeviennent disponibles immédiatement — vous pouvez relouer sans attendre. Et si l'annulation intervient à moins de deux jours de l'arrivée, le montant du séjour vous reste intégralement acquis.</p>
+    </div>
+
+    <div class="commit">
+      <b>Vous savez qui vous recevez</b>
+      <p>Photo, date de naissance et présentation sont obligatoires pour réserver — pas de profil vide. Et vous voyez le taux d'annulation de chaque voyageur avant son arrivée.</p>
+    </div>
+
+    <div class="commit">
+      <b>Vos paiements arrivent sur votre compte</b>
+      <p>Les fonds sont versés sur votre propre compte Stripe. Nous prélevons notre commission au passage, sans jamais conserver votre argent en attente.</p>
+    </div>
+
+    <div class="commit">
+      <b>Vous pouvez annuler si la vie s'en mêle</b>
+      <p>Dégât des eaux, imprévu personnel : vous gardez le droit d'annuler en expliquant pourquoi. Nous demandons simplement que cela reste exceptionnel — la contrepartie de la confiance que les voyageurs accordent à la plateforme.</p>
+    </div>
+
+    <div class="commit">
+      <b>Un avis se discute</b>
+      <p>Chaque avis est noté sur cinq critères, et vous pouvez y répondre publiquement. Votre version apparaît sous celle du voyageur, lue par tous les suivants.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Comment on est payé</h2>
+    <p class="lead">Le point que tout le monde veut comprendre avant de s'inscrire.</p>
+    <div class="pay">
+      <h3>Le voyageur réserve, vous êtes réglé.</h3>
+      <div class="pay-line"><i class="fas fa-credit-card"></i><div><b>À la réservation</b><span>La carte du voyageur est enregistrée et validée. Rien n'est encore débité.</span></div></div>
+      <div class="pay-line"><i class="fas fa-hourglass-half"></i><div><b>Deux jours avant l'arrivée</b><span>Le paiement est prélevé automatiquement. Passé ce moment, le séjour n'est plus annulable.</span></div></div>
+      <div class="pay-line"><i class="fas fa-building-columns"></i><div><b>Sur votre compte</b><span>Les fonds arrivent sur votre compte Stripe, commission de 7 % déduite. Aucun frais d'abonnement, aucune retenue supplémentaire.</span></div></div>
+      <div class="pay-line"><i class="fas fa-rotate-left"></i><div><b>Si le voyageur annule avant</b><span>Aucun mouvement d'argent : rien n'a été encaissé, donc aucun frais bancaire pour vous. Vos dates repartent à la réservation.</span></div></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>En pratique</h2>
+    <p class="lead">Comptez une vingtaine de minutes pour être en ligne.</p>
+    <div class="step"><div class="step-n">1</div><div><b>Créez votre compte</b><p>Email, mot de passe, et une présentation de vous. Les voyageurs réservent chez quelqu'un, pas chez un numéro d'annonce.</p></div></div>
+    <div class="step"><div class="step-n">2</div><div><b>Publiez votre logement</b><p>Photos, description, équipements, règlement. La ville se complète toute seule.</p></div></div>
+    <div class="step"><div class="step-n">3</div><div><b>Réglez vos tarifs</b><p>Prix de base, week-end, saisons, réductions. Bloquez les dates que vous gardez pour vous.</p></div></div>
+    <div class="step"><div class="step-n">4</div><div><b>Connectez Stripe</b><p>Pour recevoir vos paiements. Cinq minutes, une pièce d'identité et un IBAN.</p></div></div>
+  </section>
+
+  <section class="block">
+    <h2>Questions fréquentes</h2>
+
+    <details class="faq"><summary>Puis-je rester sur Airbnb et Booking en parallèle ?</summary>
+      <p>Oui, et c'est ce que font la plupart de nos hôtes. La synchronisation iCal tient vos calendriers alignés pour éviter les doubles réservations. BHGuest est un canal de plus, pas un remplacement — c'est à vous de voir la place que vous lui donnez.</p></details>
+
+    <details class="faq"><summary>La commission de 7 %, elle couvre quoi exactement ?</summary>
+      <p>Tout : l'hébergement de vos annonces, le calendrier, la messagerie, les notifications, le traitement du paiement et les frais bancaires. Il n'y a ni abonnement mensuel, ni frais de publication, ni option payante. Le voyageur, lui, paie le prix que vous affichez — sans frais de service ajoutés au moment de payer.</p></details>
+
+    <details class="faq"><summary>Que se passe-t-il si un voyageur dégrade mon logement ?</summary>
+      <p>Vous disposez de ses coordonnées complètes — nom, email, téléphone — dès la réservation, et de la conversation qui fait trace. BHGuest n'est pas un assureur : nous vous recommandons de conserver votre assurance propriétaire non occupant ou votre garantie loueur, comme pour n'importe quel autre canal de réservation.</p></details>
+
+    <details class="faq"><summary>Pourquoi ne suis-je payé que deux jours avant l'arrivée ?</summary>
+      <p>Parce que c'est la seule façon qu'une annulation gratuite ne coûte de frais bancaires à personne. Encaisser puis rembourser vous ferait perdre les frais de transaction à chaque désistement. Ici, tant que l'annulation est possible, rien n'est prélevé ; dès qu'elle ne l'est plus, vous êtes payé.</p></details>
+
+    <details class="faq"><summary>Mes données et mes voyageurs m'appartiennent-ils ?</summary>
+      <p>Oui. Vous exportez vos réservations quand vous voulez, vous gardez le contact de vos voyageurs, et vous pouvez fermer votre compte sans perdre votre activité. Nous ne vous empêchons pas de travailler en direct avec un client qui revient.</p></details>
+
+    <details class="faq"><summary>Combien de temps avant ma première réservation ?</summary>
+      <p>Nous ne promettons pas de volume. BHGuest est une plateforme jeune, en croissance, avec un trafic encore modeste comparé aux grands acteurs. Ce que nous garantissons, ce sont les conditions : la commission, les règles et les paiements décrits sur cette page.</p></details>
+  </section>
+
+  <section class="final">
+    <h2>On commence ?</h2>
+    <p>Créer un compte est gratuit et ne vous engage à rien. Vous pourrez publier votre premier logement dans la foulée.</p>
+    <a class="btn" href="host.html">Créer mon compte hôte <i class="fas fa-arrow-right"></i></a>
+    <div style="margin-top:14px;"><a class="btn ghost" href="host.html">J'ai déjà un compte</a></div>
+  </section>
+
+  <div class="foot">
+    BHGuest — réservation directe entre voyageurs et hôtes.<br>
+    <a href="index.html">Découvrir le site voyageur</a>
+  </div>
+
+</div>
+</body>
+</html>
