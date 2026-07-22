@@ -1967,6 +1967,24 @@ function renderReviewsSection(p) {
     ${p.reviews.length > 6 ? `<div class="reviews-more">${p.reviews.length - 6} autres avis non affichés</div>` : ''}`;
 }
 
+// 🔗 Partager la fiche (aperçu riche via /logement/:id)
+async function shareProperty() {
+  const p = state.currentProperty;
+  if (!p) return;
+  const url = `${API_URL}/logement/${p.id}`;
+  const text = `${p.name}${p.city ? ' à ' + p.city : ''} — réservation directe sur BHGuest`;
+  if (navigator.share) {
+    try { await navigator.share({ title: p.name, text, url }); } catch(e) { /* annulé */ }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('Lien copié !');
+  } catch(e) {
+    prompt('Copiez le lien :', url);
+  }
+}
+
 // ══ 🖼️ Galerie plein écran ═══════════════════════════════════
 let _lbPhotos = [], _lbIdx = 0;
 
@@ -2124,6 +2142,7 @@ function renderDetail() {
         : `<div class="no-photo">${icon('home')}</div>`}
       <div class="detail-gtop">
         <button class="detail-gbtn" onclick="navTo('home-list')">${icon('arrow-left')}</button>
+        <button class="detail-gbtn" onclick="shareProperty()" title="Partager"><i class="fas fa-arrow-up-from-bracket"></i></button>
       </div>
     </div>
 

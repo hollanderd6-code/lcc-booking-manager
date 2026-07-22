@@ -39069,6 +39069,68 @@ app.post('/api/attestation/send', authenticateToken, requireFeature('attestation
 // ============================================================
 
 // ── Liste tous les logements publics (sans auth) ─────────────
+// ══════════════════════════════════════════════════════════════
+// 🔗 PARTAGE — page publique par logement avec balises Open Graph.
+// Les aperçus WhatsApp/iMessage/Facebook lisent ce HTML statique ;
+// les humains sont redirigés vers l'app sur la fiche.
+// ══════════════════════════════════════════════════════════════
+app.get('/logement/:id', async (req, res) => {
+  try {
+    const r = await pool.query(`
+      SELECT p.id, p.name, p.city, p.photo_url, p.base_price, p.description,
+             p.property_type,
+             (SELECT ROUND(AVG(rating)::numeric, 1) FROM bhguest_reviews br
+              WHERE br.property_id = p.id AND br.submitted_at IS NOT NULL) AS avg_rating,
+             (SELECT COUNT(*)::int FROM bhguest_reviews br
+              WHERE br.property_id = p.id AND br.submitted_at IS NOT NULL) AS reviews_count
+      FROM properties p
+      WHERE p.id = $1 AND p.is_marketplace = true
+    `, [req.params.id]);
+    const p = r.rows[0];
+    const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+    const target = `${appUrl}/guest-app/public/index.html?property=${encodeURIComponent(req.params.id)}`;
+    if (!p) return res.redirect(302, `${appUrl}/guest-app/public/index.html`);
+
+    const escH = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const title = `${p.name}${p.city ? ' · ' + p.city : ''} — BHGuest`;
+    const bits = [];
+    if (p.base_price) bits.push(`dès ${Math.round(parseFloat(p.base_price))}€/nuit`);
+    if (p.avg_rating) bits.push(`⭐ ${p.avg_rating} (${p.reviews_count} avis)`);
+    bits.push('Réservation directe, sans frais cachés');
+    const desc = bits.join(' · ');
+    const img = p.photo_url || `${appUrl}/guest-app/public/icon.png`;
+
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>${escH(title)}</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BHGuest">
+<meta property="og:title" content="${escH(title)}">
+<meta property="og:description" content="${escH(desc)}">
+<meta property="og:image" content="${escH(img)}">
+<meta property="og:url" content="${escH(appUrl + '/logement/' + p.id)}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escH(title)}">
+<meta name="twitter:description" content="${escH(desc)}">
+<meta name="twitter:image" content="${escH(img)}">
+<meta name="description" content="${escH(desc)}">
+<meta http-equiv="refresh" content="0;url=${escH(target)}">
+<style>body{font-family:sans-serif;background:#FAF8F5;color:#1C1917;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}a{color:#C2410C;}</style>
+</head>
+<body>
+<p>Redirection vers <a href="${escH(target)}">${escH(p.name)}</a>…</p>
+<script>location.replace(${JSON.stringify(target)});</script>
+</body>
+</html>`);
+  } catch(e) {
+    console.error('❌ [SHARE] /logement/:id:', e.message);
+    res.redirect(302, (process.env.APP_URL || 'https://www.boostinghost.fr') + '/guest-app/public/index.html');
+  }
+});
+
 app.get('/api/guest/properties', async (req, res) => {
   try {
     const { checkin, checkout, guests } = req.query;
