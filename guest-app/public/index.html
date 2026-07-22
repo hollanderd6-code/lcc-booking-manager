@@ -615,17 +615,48 @@ body {
 #screen-login { background: var(--bg); }
 
 .auth-header {
-  background: var(--primary);
+  background: var(--ink);
   padding: max(env(safe-area-inset-top),40px) 24px 40px;
   text-align: center;
+  position: relative; overflow: hidden;
 }
-.auth-header-logo {
-  width: 56px; height: 56px; border-radius: 16px;
-  background: rgba(255,255,255,.2);
+/* Motif de croix discret, comme le hero d'accueil */
+.auth-header::before {
+  content: ''; position: absolute; inset: 0; opacity: .5;
+  background-image:
+    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+  background-size: 46px 46px;
+  pointer-events: none;
+}
+.auth-header > * { position: relative; z-index: 1; }
+.auth-brand {
   display: flex; align-items: center; justify-content: center;
+  gap: 11px; margin-bottom: 20px;
+}
+.auth-brand-icon {
+  width: 46px; height: 46px;
+  background: var(--primary);
+  border-radius: 50% 50% 50% 8px;
+  transform: rotate(45deg);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.auth-brand-icon b {
+  transform: rotate(-45deg);
   font-family: 'Instrument Serif', serif;
-  font-size: 24px; font-weight: 400; color: white;
-  margin: 0 auto 12px;
+  font-size: 27px; font-weight: 400; color: #fff; line-height: 1;
+}
+.auth-brand-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 23px; font-weight: 700; letter-spacing: -.4px;
+  display: flex; align-items: baseline;
+}
+.auth-brand-text .bh { color: #fff; }
+.auth-brand-text .g { color: var(--primary-light); }
+.auth-brand-text .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #fff; margin-left: 5px;
 }
 .auth-header h2 { font-family: 'Instrument Serif', serif; font-size: 24px; font-weight: 400; color: white; }
 .auth-header p { font-size: 13px; color: rgba(255,255,255,.8); margin-top: 4px; }
@@ -1276,7 +1307,10 @@ body.screen-detail #bottomNav { display: none !important; }
     <!-- ═══ ÉCRAN AUTH ═══ -->
     <div id="screen-login" class="screen-content">
       <div class="auth-header">
-        <div class="auth-header-logo">B</div>
+        <div class="auth-brand">
+          <div class="auth-brand-icon"><b>b</b></div>
+          <span class="auth-brand-text"><span class="bh">BH</span><span class="g">Guest</span><span class="dot"></span></span>
+        </div>
         <h2>Bienvenue</h2>
         <p>Connectez-vous ou créez votre compte</p>
       </div>
