@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Calendrier & prix — BHGuest Hôte</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{--primary:#C2410C;--primary-dark:#9A3412;--primary-tint:#FBEDE7;--primary-light:#F0997B;--ink:#1C1917;--bg:#FAF8F5;--white:#FFF;--text2:#78716C;--stone-light:#A8A29E;--line:#EDE8E1;--blocked:#E7E2DA;--booked:#DDD3C7}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--ink);min-height:100dvh;padding-bottom:120px}
+.wrap{max-width:520px;margin:0 auto}
+
+.top{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),50px) 20px 18px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:20}
+.top .back{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.14);border:none;color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.top h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:21px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Sélecteur de logement */
+.prop-select{margin:16px;position:relative}
+.prop-select select{width:100%;padding:14px 44px 14px 15px;background:var(--white);border:1px solid var(--line);border-radius:14px;font-size:15px;font-family:inherit;color:var(--ink);appearance:none;-webkit-appearance:none;cursor:pointer;font-weight:500}
+.prop-select::after{content:"\f107";font-family:"Font Awesome 6 Free";font-weight:900;position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--primary);pointer-events:none}
+
+/* Légende */
+.legend{display:flex;gap:16px;padding:0 16px 12px;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
+.leg-dot{width:12px;height:12px;border-radius:4px}
+.leg-dot.avail{background:var(--white);border:1px solid var(--line)}
+.leg-dot.custom{background:var(--primary-tint);border:1px solid var(--primary-light)}
+.leg-dot.blocked{background:var(--blocked)}
+.leg-dot.booked{background:var(--booked)}
+
+/* Calendrier */
+.cal-month{background:var(--white);border:1px solid var(--line);border-radius:18px;margin:0 16px 14px;padding:16px}
+.cal-mh{text-align:center;font-family:'Instrument Serif',serif;font-size:19px;margin-bottom:14px;text-transform:capitalize}
+.cal-dows{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px}
+.cal-dow{text-align:center;font-size:11px;color:var(--stone-light);font-weight:500;padding:2px 0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-cell{aspect-ratio:1/1.15;border-radius:9px;border:1px solid var(--line);background:var(--white);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:all .12s;padding:2px}
+.cal-cell.empty{border:none;background:none;cursor:default}
+.cal-cell .cd{font-size:13px;font-weight:600;line-height:1}
+.cal-cell .cp{font-size:9.5px;color:var(--text2);margin-top:2px;font-weight:500}
+.cal-cell.past{opacity:.35;cursor:default;pointer-events:none}
+.cal-cell.custom{background:var(--primary-tint);border-color:var(--primary-light)}
+.cal-cell.custom .cp{color:var(--primary-dark);font-weight:600}
+.cal-cell.blocked{background:var(--blocked);border-color:transparent}
+.cal-cell.blocked .cd{color:var(--stone-light);text-decoration:line-through}
+.cal-cell.blocked .cp{display:none}
+.cal-cell.booked{background:var(--booked);border-color:transparent;cursor:not-allowed;pointer-events:none}
+.cal-cell.booked .cd{color:var(--text2)}
+.cal-cell.booked .cp{display:none}
+.cal-cell.booked::after{content:"\f111";font-family:"Font Awesome 6 Free";font-weight:900;font-size:6px;color:var(--primary);position:absolute;top:4px;right:5px}
+.cal-cell.sel{border-color:var(--primary);border-width:2px;background:var(--primary);}
+.cal-cell.sel .cd{color:#fff}
+.cal-cell.sel .cp{color:rgba(255,255,255,.85)}
+
+.loading{text-align:center;padding:70px;color:var(--stone-light)}
+.spin{display:inline-block;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+
+/* Barre d'action (quand dates sélectionnées) */
+.action-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;background:var(--white);border-top:1px solid var(--line);padding:14px 16px max(env(safe-area-inset-bottom),16px);z-index:30;box-shadow:0 -4px 20px rgba(28,25,23,.06);display:none}
+.action-bar.show{display:block}
+.ab-count{font-size:13px;color:var(--text2);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.ab-count b{color:var(--ink);font-weight:600}
+.ab-clear{color:var(--primary);font-size:12.5px;cursor:pointer;font-weight:500;background:none;border:none}
+.ab-price{display:flex;gap:10px;margin-bottom:10px}
+.ab-price .prefix{position:relative;flex:1}
+.ab-price input{width:100%;padding:13px 34px 13px 14px;border:1px solid var(--line);border-radius:12px;font-size:16px;font-family:inherit;outline:none}
+.ab-price input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint)}
+.ab-price .u{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text2);font-weight:500}
+.ab-price .btn-apply{background:var(--primary);color:#fff;border:none;border-radius:12px;padding:0 22px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit}
+.ab-actions{display:flex;gap:8px}
+.ab-btn{flex:1;padding:12px;border-radius:11px;border:1px solid var(--line);background:var(--white);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:6px}
+.ab-btn i{font-size:12px}
+.ab-btn.block{color:var(--primary-dark)}
+.ab-btn.reset{color:var(--text2)}
+
+.toast{position:fixed;bottom:140px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;font-size:13.5px;z-index:50;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <button class="back" onclick="location.href='host-dashboard.html'"><i class="fas fa-arrow-left"></i></button>
+    <h1>Calendrier & prix</h1>
+  </div>
+
+  <div class="prop-select" id="propSelectWrap" style="display:none">
+    <select id="propSelect" onchange="onPropChange()"></select>
+  </div>
+
+  <div class="legend">
+    <div class="leg"><span class="leg-dot avail"></span>Prix de base</div>
+    <div class="leg"><span class="leg-dot custom"></span>Prix modifié</div>
+    <div class="leg"><span class="leg-dot blocked"></span>Bloqué</div>
+    <div class="leg"><span class="leg-dot booked"></span>Réservé</div>
+  </div>
+
+  <div id="calendars"><div class="loading"><i class="fas fa-spinner spin" style="font-size:24px"></i></div></div>
+</div>
+
+<!-- Barre d'action -->
+<div class="action-bar" id="actionBar">
+  <div class="ab-count"><span><b id="selCount">0</b> date(s) sélectionnée(s)</span><button class="ab-clear" onclick="clearSel()">Tout désélectionner</button></div>
+  <div class="ab-price">
+    <div class="prefix"><input type="number" id="priceInput" placeholder="Prix par nuit" min="0"><span class="u">€</span></div>
+    <button class="btn-apply" onclick="applyPrice()">Appliquer</button>
+  </div>
+  <div class="ab-actions">
+    <button class="ab-btn block" onclick="doBlock('block')"><i class="fas fa-ban"></i>Bloquer</button>
+    <button class="ab-btn" onclick="doBlock('unblock')"><i class="fas fa-lock-open"></i>Débloquer</button>
+    <button class="ab-btn reset" onclick="resetPrice()"><i class="fas fa-rotate-left"></i>Prix de base</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_URL = window.Capacitor?.isNativePlatform?.() ? 'https://www.boostinghost.fr' : window.location.origin;
+const token = localStorage.getItem('bhguest_host_token');
+if(!token){ location.href='host.html'; }
+
+const MONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const DOWS = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
+const MONTHS_TO_SHOW = 6;
+
+let currentProp = null;
+let calData = { prices:{}, booked:[], blocked:[], basePrice:null };
+let selected = new Set();
+
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+function fmt(d){ return d.toISOString().slice(0,10); }
+
+async function init(){
+  // Charger les logements de l'hôte
+  try{
+    const res = await fetch(`${API_URL}/api/host/properties`, { headers:{'Authorization':'Bearer '+token} });
+    if(res.status===401||res.status===403){ localStorage.clear(); location.href='host.html'; return; }
+    const data = await res.json();
+    const props = data.properties || [];
+    if(!props.length){
+      document.getElementById('calendars').innerHTML = '<div class="loading">Aucun logement.<br><br><a href="host-add-property.html" style="color:var(--primary)">Ajouter un logement</a></div>';
+      return;
+    }
+    const sel = document.getElementById('propSelect');
+    sel.innerHTML = props.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+    if(props.length>1) document.getElementById('propSelectWrap').style.display='block';
+    currentProp = props[0].id;
+    await loadCalendar();
+  }catch(e){
+    document.getElementById('calendars').innerHTML = '<div class="loading">Erreur de chargement.</div>';
+  }
+}
+
+async function onPropChange(){ currentProp = document.getElementById('propSelect').value; clearSel(); await loadCalendar(); }
+
+async function loadCalendar(){
+  document.getElementById('calendars').innerHTML = '<div class="loading"><i class="fas fa-spinner spin" style="font-size:24px"></i></div>';
+  try{
+    const res = await fetch(`${API_URL}/api/host/pricing/calendar/${currentProp}?months=${MONTHS_TO_SHOW}`, { headers:{'Authorization':'Bearer '+token} });
+    calData = await res.json();
+    renderCalendars();
+  }catch(e){
+    document.getElementById('calendars').innerHTML = '<div class="loading">Erreur.</div>';
+  }
+}
+
+function isInRanges(dateStr, ranges){
+  return ranges.some(r => dateStr >= r.start && dateStr < r.end);
+}
+
+function renderCalendars(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = fmt(today);
+  let html = '';
+
+  for(let m=0; m<MONTHS_TO_SHOW; m++){
+    const base = new Date(today.getFullYear(), today.getMonth()+m, 1);
+    const year = base.getFullYear(), month = base.getMonth();
+    const firstDow = (base.getDay()+6)%7; // Lundi=0
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+
+    let cells = '';
+    for(let i=0;i<firstDow;i++) cells += '<div class="cal-cell empty"></div>';
+
+    for(let d=1; d<=daysInMonth; d++){
+      const dt = new Date(year, month, d);
+      const ds = fmt(dt);
+      const isPast = ds < todayStr;
+      const price = calData.prices[ds];
+      const hasCustom = price != null && calData.basePrice != null && price != calData.basePrice;
+      const isBlocked = isInRanges(ds, calData.blocked||[]);
+      const isBooked = isInRanges(ds, calData.booked||[]);
+      const isSel = selected.has(ds);
+
+      let cls = 'cal-cell';
+      if(isPast) cls+=' past';
+      else if(isBooked) cls+=' booked';
+      else if(isBlocked) cls+=' blocked';
+      else if(isSel) cls+=' sel';
+      else if(hasCustom) cls+=' custom';
+
+      const priceLabel = (price!=null && !isBlocked && !isBooked) ? `<div class="cp">${price}€</div>` : '';
+      const onclick = (!isPast && !isBooked) ? `onclick="toggleDate('${ds}')"` : '';
+      cells += `<div class="${cls}" ${onclick}><div class="cd">${d}</div>${priceLabel}</div>`;
+    }
+
+    html += `<div class="cal-month">
+      <div class="cal-mh">${MONTHS[month]} ${year}</div>
+      <div class="cal-dows">${DOWS.map(x=>`<div class="cal-dow">${x}</div>`).join('')}</div>
+      <div class="cal-grid">${cells}</div>
+    </div>`;
+  }
+  document.getElementById('calendars').innerHTML = html;
+}
+
+function toggleDate(ds){
+  if(selected.has(ds)) selected.delete(ds); else selected.add(ds);
+  updateActionBar();
+  renderCalendars();
+}
+function clearSel(){ selected.clear(); updateActionBar(); renderCalendars(); }
+function updateActionBar(){
+  const bar = document.getElementById('actionBar');
+  document.getElementById('selCount').textContent = selected.size;
+  bar.classList.toggle('show', selected.size>0);
+}
+
+async function applyPrice(){
+  const price = parseFloat(document.getElementById('priceInput').value);
+  if(!price || price<=0){ toast('Entrez un prix valide'); return; }
+  const dates = [...selected];
+  try{
+    const res = await fetch(`${API_URL}/api/host/pricing/override`, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ propertyId: currentProp, dates, price })
+    });
+    if(!res.ok) throw new Error();
+    dates.forEach(d=> calData.prices[d]=price);
+    toast(`✓ Prix appliqué à ${dates.length} date(s)`);
+    document.getElementById('priceInput').value='';
+    clearSel();
+  }catch(e){ toast('Erreur'); }
+}
+
+async function resetPrice(){
+  const dates = [...selected];
+  try{
+    const res = await fetch(`${API_URL}/api/host/pricing/override`, {
+      method:'DELETE', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ propertyId: currentProp, dates })
+    });
+    if(!res.ok) throw new Error();
+    toast('✓ Retour au prix de base');
+    clearSel();
+    await loadCalendar();
+  }catch(e){ toast('Erreur'); }
+}
+
+async function doBlock(action){
+  const dates = [...selected].sort();
+  if(!dates.length) return;
+  // Bloquer par plages contiguës
+  const start = dates[0];
+  const endD = new Date(dates[dates.length-1]); endD.setDate(endD.getDate()+1);
+  const end = fmt(endD);
+  try{
+    const res = await fetch(`${API_URL}/api/host/pricing/block`, {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({ propertyId: currentProp, start, end, action })
+    });
+    if(!res.ok) throw new Error();
+    toast(action==='block' ? '✓ Dates bloquées' : '✓ Dates débloquées');
+    clearSel();
+    await loadCalendar();
+  }catch(e){ toast('Erreur'); }
+}
+
+init();
+</script>
+</body>
+</html>

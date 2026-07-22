@@ -19949,6 +19949,147 @@ app.get('/api/host/dashboard', authenticateToken, async (req, res) => {
   }
 });
 
+// ============================================
+// 🏠 MARKETPLACE — Calendrier & prix (hôtes externes)
+// Écrit dans les tables existantes : pricing_overrides, reservations (BLOCK).
+// ============================================
+
+// Helper : vérifie que le logement appartient bien à l'hôte externe connecté
+async function assertHostOwnsProperty(req, propertyId) {
+  const u = await pool.query('SELECT is_external_host FROM users WHERE id = $1', [req.user.id]);
+  if (u.rows[0]?.is_external_host !== true) return { ok: false, code: 403, error: 'Réservé aux hôtes marketplace' };
+  const p = await pool.query('SELECT id FROM properties WHERE id = $1 AND user_id = $2', [propertyId, req.user.id]);
+  if (p.rows.length === 0) return { ok: false, code: 404, error: 'Logement introuvable' };
+  return { ok: true };
+}
+
+// GET /api/host/pricing/calendar/:propertyId?months=6
+// Renvoie prix par date + dates bloquées + dates réservées
+app.get('/api/host/pricing/calendar/:propertyId', authenticateToken, async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const chk = await assertHostOwnsProperty(req, propertyId);
+    if (!chk.ok) return res.status(chk.code).json({ error: chk.error });
+
+    const months = Math.min(parseInt(req.query.months) || 6, 18);
+    const days = months * 31;
+
+    // Prix calculés (base + overrides + règles)
+    const prices = await getCalendarPricesForRange(propertyId, req.user.id, days);
+
+    // Réservations & blocages
+    const today = new Date().toISOString().slice(0,10);
+    const resas = await pool.query(
+      `SELECT TO_CHAR(start_date,'YYYY-MM-DD') AS start_date,
+              TO_CHAR(end_date,'YYYY-MM-DD') AS end_date,
+              source, guest_name, status
+       FROM reservations
+       WHERE property_id = $1 AND status <> 'cancelled' AND end_date >= $2`,
+      [propertyId, today]
+    );
+
+    const booked = [], blocked = [];
+    resas.rows.forEach(r => {
+      const isBlock = (r.source === 'BLOCK');
+      (isBlock ? blocked : booked).push({ start: r.start_date, end: r.end_date, guest: isBlock ? null : r.guest_name });
+    });
+
+    // Prix de base pour référence
+    const propRes = await pool.query('SELECT base_price, weekend_price FROM properties WHERE id = $1', [propertyId]);
+
+    res.json({
+      basePrice: propRes.rows[0]?.base_price != null ? parseFloat(propRes.rows[0].base_price) : null,
+      weekendPrice: propRes.rows[0]?.weekend_price != null ? parseFloat(propRes.rows[0].weekend_price) : null,
+      prices, booked, blocked
+    });
+  } catch (e) {
+    console.error('❌ [HOST] pricing/calendar:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/host/pricing/override — définir un prix pour une ou plusieurs dates
+// body: { propertyId, dates: ['2026-08-01', ...], price: 120 }
+app.post('/api/host/pricing/override', authenticateToken, async (req, res) => {
+  try {
+    const { propertyId, dates, price } = req.body;
+    const chk = await assertHostOwnsProperty(req, propertyId);
+    if (!chk.ok) return res.status(chk.code).json({ error: chk.error });
+    if (!Array.isArray(dates) || dates.length === 0) return res.status(400).json({ error: 'Aucune date fournie' });
+    if (price == null || parseFloat(price) < 0) return res.status(400).json({ error: 'Prix invalide' });
+
+    const p = parseFloat(price);
+    for (const date of dates) {
+      await pool.query(
+        `INSERT INTO pricing_overrides (user_id, property_id, date, price, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, NOW(), NOW())
+         ON CONFLICT (user_id, property_id, date) DO UPDATE SET price = $4, updated_at = NOW()`,
+        [req.user.id, propertyId, date, p]
+      );
+    }
+
+    // Sync Channex si applicable (non bloquant)
+    try { triggerChannexRatesSync(propertyId, req.user.id); } catch(e){}
+
+    res.json({ success: true, count: dates.length, price: p });
+  } catch (e) {
+    console.error('❌ [HOST] pricing/override:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE /api/host/pricing/override — retirer le prix spécifique de dates (retour au prix de base)
+// body: { propertyId, dates: [...] }
+app.delete('/api/host/pricing/override', authenticateToken, async (req, res) => {
+  try {
+    const { propertyId, dates } = req.body;
+    const chk = await assertHostOwnsProperty(req, propertyId);
+    if (!chk.ok) return res.status(chk.code).json({ error: chk.error });
+    if (!Array.isArray(dates) || dates.length === 0) return res.status(400).json({ error: 'Aucune date fournie' });
+
+    await pool.query(
+      `DELETE FROM pricing_overrides WHERE user_id = $1 AND property_id = $2 AND date = ANY($3::date[])`,
+      [req.user.id, propertyId, dates]
+    );
+    try { triggerChannexRatesSync(propertyId, req.user.id); } catch(e){}
+    res.json({ success: true, count: dates.length });
+  } catch (e) {
+    console.error('❌ [HOST] delete override:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/host/pricing/block — bloquer/débloquer des dates
+// body: { propertyId, start: '2026-08-01', end: '2026-08-05', action: 'block'|'unblock', reason }
+app.post('/api/host/pricing/block', authenticateToken, async (req, res) => {
+  try {
+    const { propertyId, start, end, action, reason } = req.body;
+    const chk = await assertHostOwnsProperty(req, propertyId);
+    if (!chk.ok) return res.status(chk.code).json({ error: chk.error });
+    if (!start || !end) return res.status(400).json({ error: 'Dates de début et fin requises' });
+
+    if (action === 'unblock') {
+      await pool.query(
+        `DELETE FROM reservations WHERE property_id = $1 AND source = 'BLOCK'
+         AND start_date < $3 AND end_date > $2`,
+        [propertyId, start, end]
+      );
+    } else {
+      const uid = `block_${Date.now()}_${propertyId}`;
+      await pool.query(
+        `INSERT INTO reservations (uid, property_id, user_id, start_date, end_date, guest_name, source, platform, reservation_type, status, notes)
+         VALUES ($1,$2,$3,$4,$5,$6,'BLOCK','BLOCK','block','confirmed',$7)
+         ON CONFLICT (uid) DO NOTHING`,
+        [uid, propertyId, req.user.id, start, end, reason || 'Indisponible', reason || '']
+      );
+    }
+    res.json({ success: true, action: action || 'block' });
+  } catch (e) {
+    console.error('❌ [HOST] pricing/block:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
