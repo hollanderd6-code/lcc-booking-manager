@@ -27059,6 +27059,65 @@ app.post('/api/guest/reviews/submit/:token', async (req, res) => {
   }
 });
 
+// ⏰ Messages voyageurs non lus → email à l'hôte (toutes les 15 min,
+// regroupé par hôte, uniquement les messages restés non lus 10 min+)
+cron.schedule('*/15 * * * *', async () => {
+  try {
+    const rows = await pool.query(`
+      SELECT m.id AS msg_id, m.message, m.created_at,
+             c.id AS conv_id, c.guest_name, c.user_id,
+             p.name AS property_name, u.email AS host_email, u.first_name AS host_first_name
+      FROM messages m
+      JOIN conversations c ON c.id = m.conversation_id
+      JOIN users u ON u.id = c.user_id
+      LEFT JOIN properties p ON p.id = c.property_id
+      WHERE m.sender_type = 'guest' AND m.is_read = FALSE
+        AND COALESCE(m.host_email_notified, FALSE) = FALSE
+        AND m.created_at < NOW() - INTERVAL '10 minutes'
+        AND u.is_external_host = TRUE
+      ORDER BY c.user_id, m.created_at ASC
+      LIMIT 200
+    `);
+    if (!rows.rows.length) return;
+
+    // Regrouper par hôte
+    const byHost = {};
+    for (const r of rows.rows) {
+      (byHost[r.user_id] = byHost[r.user_id] || { email: r.host_email, first: r.host_first_name, convs: {}, msgIds: [] });
+      const h = byHost[r.user_id];
+      (h.convs[r.conv_id] = h.convs[r.conv_id] || { guest: r.guest_name, prop: r.property_name, count: 0, last: '' });
+      h.convs[r.conv_id].count++;
+      h.convs[r.conv_id].last = r.message;
+      h.msgIds.push(r.msg_id);
+    }
+
+    const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+    for (const uid of Object.keys(byHost)) {
+      const h = byHost[uid];
+      if (!h.email) continue;
+      const convList = Object.values(h.convs);
+      const total = convList.reduce((a, c) => a + c.count, 0);
+      try {
+        await sendEmailViaBrevo({
+          to: h.email,
+          subject: `💬 ${total} nouveau${total > 1 ? 'x' : ''} message${total > 1 ? 's' : ''} voyageur — BHGuest`,
+          text: `Vous avez ${total} message(s) non lu(s) sur BHGuest.`,
+          html: bhEmailTemplate({
+            icon: '💬', title: `${total} nouveau${total > 1 ? 'x' : ''} message${total > 1 ? 's' : ''}`, subtitle: 'Vos voyageurs vous attendent',
+            bodyHtml: `<p>Bonjour ${h.first || ''},</p>` + convList.map(c =>
+              `<div class="feat-row"><div class="feat-icon">👤</div><div class="feat-text"><strong>${c.guest || 'Voyageur'}</strong> · ${c.prop || ''}<br>« ${String(c.last).slice(0, 120)}${String(c.last).length > 120 ? '…' : ''} »</div></div>`
+            ).join('') +
+              `<div style="text-align:center;margin:24px 0;"><a href="${appUrl}/guest-app/public/host-messages.html" style="display:inline-block;padding:14px 32px;background:#C2410C;color:white;border-radius:10px;font-weight:700;text-decoration:none;">Répondre</a></div>`,
+            footerNote: 'BHGuest'
+          })
+        });
+        await pool.query('UPDATE messages SET host_email_notified = TRUE WHERE id = ANY($1::int[])', [h.msgIds]);
+        console.log(`💬 [BHGUEST] Email "messages non lus" envoyé à ${h.email} (${total} msg)`);
+      } catch(e1) { console.warn('⚠️ [BHGUEST] Notif hôte:', e1.message); }
+    }
+  } catch(e) { console.warn('⚠️ [BHGUEST] Cron notif messages:', e.message); }
+});
+
 // ⏰ Rappel voyageur J-1 pour les réservations BHGuest (10h)
 pool.query("ALTER TABLE reservations ADD COLUMN IF NOT EXISTS bhguest_reminder_sent BOOLEAN DEFAULT FALSE").catch(() => {});
 cron.schedule('0 10 * * *', async () => {
@@ -41100,6 +41159,9 @@ function verifyGuestSession(req) {
 // Miroir des routes voyageur : mêmes tables, rôle inversé.
 // ══════════════════════════════════════════════════════════════
 
+pool.query("ALTER TABLE messages ADD COLUMN IF NOT EXISTS host_email_notified BOOLEAN DEFAULT FALSE").catch(() => {});
+pool.query("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS last_guest_email_notif_at TIMESTAMPTZ").catch(() => {});
+
 // Liste des conversations de l'hôte
 app.get('/api/host/conversations', authenticateToken, async (req, res) => {
   try {
@@ -41193,6 +41255,31 @@ app.post('/api/host/conversations/:id/send', authenticateToken, async (req, res)
 
     // Temps réel côté voyageur s'il a l'app ouverte
     try { io.to('conversation_' + convId).emit('new_message', msgResult.rows[0]); } catch(e) {}
+
+    // ✉️ Prévenir le voyageur par email — au plus 1 email par heure par conversation
+    try {
+      if (conv.guest_email) {
+        const th = await pool.query(
+          `UPDATE conversations SET last_guest_email_notif_at = NOW()
+           WHERE id = $1 AND (last_guest_email_notif_at IS NULL OR last_guest_email_notif_at < NOW() - INTERVAL '1 hour')
+           RETURNING id`, [convId]
+        );
+        if (th.rowCount > 0) {
+          const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+          await sendEmailViaBrevo({
+            to: conv.guest_email,
+            subject: `💬 ${senderName} vous a répondu — ${conv.property_name || 'BHGuest'}`,
+            text: `${senderName} vous a envoyé un message. Consultez votre conversation sur BHGuest.`,
+            html: bhEmailTemplate({
+              icon: '💬', title: `${senderName} vous a répondu`, subtitle: conv.property_name || 'BHGuest',
+              bodyHtml: `<p>« ${String(message).trim().slice(0, 180)}${String(message).trim().length > 180 ? '…' : ''} »</p>
+                <div style="text-align:center;margin:24px 0;"><a href="${appUrl}/guest-app/public/index.html" style="display:inline-block;padding:14px 32px;background:#C2410C;color:white;border-radius:10px;font-weight:700;text-decoration:none;">Ouvrir la conversation</a></div>`,
+              footerNote: 'BHGuest'
+            })
+          });
+        }
+      }
+    } catch(nErr) { console.warn('⚠️ [HOST CHAT] Notif voyageur:', nErr.message); }
 
     res.json({ success: true, message: msgResult.rows[0] });
   } catch(e) {
