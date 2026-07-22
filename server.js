@@ -41095,6 +41095,112 @@ function verifyGuestSession(req) {
 
 // ── Route protégée : mes réservations avec session ───────────
 // ── Route : conversations du voyageur (pour BHGuest messagerie) ─
+// ══════════════════════════════════════════════════════════════
+// 💬 MESSAGERIE HÔTE (espace hôte externe BHGuest)
+// Miroir des routes voyageur : mêmes tables, rôle inversé.
+// ══════════════════════════════════════════════════════════════
+
+// Liste des conversations de l'hôte
+app.get('/api/host/conversations', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT c.id, c.guest_name, c.guest_email, c.guest_phone, c.platform,
+             c.last_message_at, c.status,
+             c.reservation_start_date, c.reservation_end_date,
+             p.name as property_name, p.photo_url as property_photo,
+             (SELECT m.message FROM messages m WHERE m.conversation_id = c.id
+              ORDER BY m.created_at DESC LIMIT 1) as last_message,
+             (SELECT COUNT(*)::int FROM messages m WHERE m.conversation_id = c.id
+              AND m.sender_type = 'guest' AND m.is_read = FALSE) as unread_count
+      FROM conversations c
+      LEFT JOIN properties p ON p.id = c.property_id
+      WHERE c.user_id = $1
+      ORDER BY COALESCE(c.last_message_at, c.created_at) DESC
+      LIMIT 50
+    `, [req.user.id]);
+    res.json({ conversations: result.rows });
+  } catch(e) {
+    console.error('❌ [HOST CHAT] GET /conversations:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Total de messages voyageurs non lus (badge de la nav)
+app.get('/api/host/conversations/unread-count', authenticateToken, async (req, res) => {
+  try {
+    const r = await pool.query(`
+      SELECT COUNT(*)::int AS n FROM messages m
+      JOIN conversations c ON c.id = m.conversation_id
+      WHERE c.user_id = $1 AND m.sender_type = 'guest' AND m.is_read = FALSE
+    `, [req.user.id]);
+    res.json({ unread: r.rows[0]?.n || 0 });
+  } catch(e) { res.status(500).json({ error: 'Erreur' }); }
+});
+
+// Messages d'une conversation (et marquage lu des messages voyageur)
+app.get('/api/host/conversations/:id/messages', authenticateToken, async (req, res) => {
+  try {
+    const convId = parseInt(req.params.id);
+    const convCheck = await pool.query(
+      'SELECT id, guest_name FROM conversations WHERE id = $1 AND user_id = $2',
+      [convId, req.user.id]
+    );
+    if (!convCheck.rows[0]) return res.status(403).json({ error: 'Accès refusé' });
+
+    const msgs = await pool.query(`
+      SELECT id, sender_type, sender_name, message, created_at
+      FROM messages WHERE conversation_id = $1
+      ORDER BY created_at ASC LIMIT 200
+    `, [convId]);
+
+    await pool.query(
+      "UPDATE messages SET is_read = TRUE WHERE conversation_id = $1 AND sender_type = 'guest' AND is_read = FALSE",
+      [convId]
+    );
+
+    res.json({ guestName: convCheck.rows[0].guest_name, messages: msgs.rows });
+  } catch(e) {
+    console.error('❌ [HOST CHAT] GET /messages:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Envoyer une réponse
+app.post('/api/host/conversations/:id/send', authenticateToken, async (req, res) => {
+  try {
+    const convId = parseInt(req.params.id);
+    const { message } = req.body;
+    if (!message?.trim()) return res.status(400).json({ error: 'Message vide' });
+
+    const convCheck = await pool.query(
+      'SELECT c.*, p.name AS property_name FROM conversations c LEFT JOIN properties p ON p.id = c.property_id WHERE c.id = $1 AND c.user_id = $2',
+      [convId, req.user.id]
+    );
+    if (!convCheck.rows[0]) return res.status(403).json({ error: 'Accès refusé' });
+    const conv = convCheck.rows[0];
+
+    const senderName = [req.user.firstName, req.user.lastName].filter(Boolean).join(' ') || conv.property_name || 'Votre hôte';
+    const msgResult = await pool.query(`
+      INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+      VALUES ($1, 'property', $2, $3, FALSE, NOW())
+      RETURNING id, sender_type, sender_name, message, created_at
+    `, [convId, senderName, message.trim()]);
+
+    await pool.query(
+      'UPDATE conversations SET last_message_at = NOW(), updated_at = NOW() WHERE id = $1',
+      [convId]
+    );
+
+    // Temps réel côté voyageur s'il a l'app ouverte
+    try { io.to('conversation_' + convId).emit('new_message', msgResult.rows[0]); } catch(e) {}
+
+    res.json({ success: true, message: msgResult.rows[0] });
+  } catch(e) {
+    console.error('❌ [HOST CHAT] send:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/guest/conversations', async (req, res) => {
   const email = verifyGuestSession(req);
   if (!email) return res.status(401).json({ error: 'Non connecté' });

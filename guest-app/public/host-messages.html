@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Messages — BHGuest</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --primary:#C2410C; --primary-dark:#9A3412; --primary-tint:#FBEDE7; --primary-light:#F0997B;
+  --ink:#1C1917; --bg:#FAF8F5; --line:#EDE8E1; --text2:#78716C;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+.topbar{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),44px) 16px 16px;display:flex;align-items:center;gap:12px;}
+.topbar .back{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.12);border:none;color:#fff;font-size:14px;cursor:pointer;flex-shrink:0;}
+.topbar h1{font-family:'Instrument Serif',serif;font-size:20px;font-weight:400;flex:1;}
+.wrap{max-width:640px;margin:0 auto;padding:14px 14px 20px;}
+
+/* Liste */
+.conv{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:15px;padding:13px 14px;margin-bottom:10px;cursor:pointer;}
+.conv:active{background:var(--primary-tint);}
+.conv-avatar{width:46px;height:46px;border-radius:50%;background:var(--primary-tint);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex-shrink:0;position:relative;}
+.conv-unread{position:absolute;top:-2px;right:-2px;min-width:18px;height:18px;border-radius:9px;background:var(--primary);color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px;border:2px solid #fff;}
+.conv-body{flex:1;min-width:0;}
+.conv-name{font-size:14.5px;font-weight:700;display:flex;align-items:baseline;gap:8px;}
+.conv-name .when{margin-left:auto;font-size:11px;font-weight:500;color:var(--text2);white-space:nowrap;}
+.conv-prop{font-size:12px;color:var(--primary);font-weight:600;margin-top:1px;}
+.conv-last{font-size:12.5px;color:var(--text2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.conv.has-unread .conv-last{color:var(--ink);font-weight:600;}
+.empty{padding:60px 20px;text-align:center;color:var(--text2);}
+.empty i{font-size:38px;color:var(--line);margin-bottom:12px;display:block;}
+.loading{padding:60px;text-align:center;color:var(--text2);}
+
+/* Fil */
+#threadView{display:none;flex-direction:column;height:100dvh;}
+.thread-top{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),44px) 14px 13px;display:flex;align-items:center;gap:11px;flex-shrink:0;}
+.thread-top .back{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);border:none;color:#fff;font-size:13px;cursor:pointer;flex-shrink:0;}
+.thread-who{flex:1;min-width:0;}
+.thread-who b{display:block;font-size:15px;}
+.thread-who span{font-size:11.5px;color:var(--primary-light);}
+.thread-msgs{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:9px;}
+.msg{max-width:78%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.45;word-wrap:break-word;}
+.msg.guest{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:5px;}
+.msg.property,.msg.system{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:5px;}
+.msg.system{background:var(--primary-dark);opacity:.92;}
+.msg .mt{display:block;font-size:10px;opacity:.65;margin-top:4px;}
+.thread-input{flex-shrink:0;display:flex;gap:9px;padding:10px 14px calc(env(safe-area-inset-bottom) + 12px);background:#fff;border-top:1px solid var(--line);}
+.thread-input textarea{flex:1;border:1px solid var(--line);border-radius:14px;padding:11px 14px;font-size:15px;font-family:inherit;resize:none;outline:none;max-height:110px;background:var(--bg);}
+.thread-input textarea:focus{border-color:var(--primary);}
+.thread-input button{width:44px;height:44px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:16px;cursor:pointer;flex-shrink:0;align-self:flex-end;}
+.thread-input button:disabled{opacity:.5;}
+</style>
+</head>
+<body>
+
+<div id="listView">
+  <div class="topbar">
+    <button class="back" onclick="location.href='host-dashboard.html'"><i class="fas fa-arrow-left"></i></button>
+    <h1>Messages</h1>
+  </div>
+  <div class="wrap" id="convList"><div class="loading"><i class="fas fa-spinner fa-spin"></i></div></div>
+</div>
+
+<div id="threadView">
+  <div class="thread-top">
+    <button class="back" onclick="closeThread()"><i class="fas fa-arrow-left"></i></button>
+    <div class="thread-who"><b id="threadName">—</b><span id="threadProp"></span></div>
+  </div>
+  <div class="thread-msgs" id="threadMsgs"></div>
+  <div class="thread-input">
+    <textarea id="msgInput" rows="1" placeholder="Répondre au voyageur..."
+      oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';"></textarea>
+    <button id="sendBtn" onclick="sendMsg()"><i class="fas fa-paper-plane"></i></button>
+  </div>
+</div>
+
+<script>
+const API_URL = location.origin;
+const token = localStorage.getItem('bhguest_host_token');
+if(!token){ location.href='host.html'; }
+const H = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+let currentConvId = null;
+let pollTimer = null;
+
+const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function fmtWhen(iso){
+  if(!iso) return '';
+  const d = new Date(iso), now = new Date();
+  const days = Math.floor((now - d) / 86400000);
+  if(days === 0) return d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  if(days === 1) return 'hier';
+  if(days < 7)  return d.toLocaleDateString('fr-FR',{weekday:'short'});
+  return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+}
+
+async function loadConvs(){
+  try{
+    const res = await fetch(`${API_URL}/api/host/conversations`, { headers: H });
+    if(res.status === 401 || res.status === 403){ localStorage.clear(); location.href='host.html'; return; }
+    const data = await res.json();
+    const list = data.conversations || [];
+    const el = document.getElementById('convList');
+    if(!list.length){
+      el.innerHTML = `<div class="empty"><i class="fas fa-comments"></i>
+        Aucune conversation pour l'instant.<br>Une conversation s'ouvre automatiquement à chaque réservation.</div>`;
+      return;
+    }
+    el.innerHTML = list.map(c => {
+      const initial = (c.guest_name || '?').trim().charAt(0).toUpperCase();
+      const unread = c.unread_count > 0;
+      return `<div class="conv ${unread ? 'has-unread' : ''}" onclick="openThread(${c.id}, '${esc(c.guest_name).replace(/'/g,"\\'")}', '${esc(c.property_name||'').replace(/'/g,"\\'")}')">
+        <div class="conv-avatar">${initial}${unread ? `<span class="conv-unread">${c.unread_count}</span>` : ''}</div>
+        <div class="conv-body">
+          <div class="conv-name">${esc(c.guest_name || 'Voyageur')}<span class="when">${fmtWhen(c.last_message_at)}</span></div>
+          <div class="conv-prop">${esc(c.property_name || '')}</div>
+          <div class="conv-last">${esc(c.last_message || 'Nouvelle réservation')}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    document.getElementById('convList').innerHTML = `<div class="empty">Erreur de chargement.</div>`;
+  }
+}
+
+async function openThread(id, name, prop){
+  currentConvId = id;
+  document.getElementById('listView').style.display = 'none';
+  document.getElementById('threadView').style.display = 'flex';
+  document.getElementById('threadName').textContent = name || 'Voyageur';
+  document.getElementById('threadProp').textContent = prop || '';
+  document.getElementById('threadMsgs').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i></div>';
+  await refreshThread(true);
+  // Poll léger : nouveaux messages toutes les 6 s tant que le fil est ouvert
+  pollTimer = setInterval(() => refreshThread(false), 6000);
+}
+
+async function refreshThread(scroll){
+  if(!currentConvId) return;
+  try{
+    const res = await fetch(`${API_URL}/api/host/conversations/${currentConvId}/messages`, { headers: H });
+    if(!res.ok) return;
+    const data = await res.json();
+    const box = document.getElementById('threadMsgs');
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    box.innerHTML = (data.messages || []).map(m => `
+      <div class="msg ${esc(m.sender_type)}">${esc(m.message)}
+        <span class="mt">${fmtWhen(m.created_at)}</span>
+      </div>`).join('');
+    if(scroll || atBottom) box.scrollTop = box.scrollHeight;
+  }catch(e){}
+}
+
+function closeThread(){
+  currentConvId = null;
+  if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+  document.getElementById('threadView').style.display = 'none';
+  document.getElementById('listView').style.display = 'block';
+  loadConvs(); // rafraîchir les compteurs non-lus
+}
+
+async function sendMsg(){
+  const ta = document.getElementById('msgInput');
+  const txt = ta.value.trim();
+  if(!txt || !currentConvId) return;
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  try{
+    const res = await fetch(`${API_URL}/api/host/conversations/${currentConvId}/send`, {
+      method: 'POST', headers: H, body: JSON.stringify({ message: txt })
+    });
+    if(!res.ok){ const d = await res.json().catch(()=>({})); throw new Error(d.error || 'Erreur'); }
+    ta.value = ''; ta.style.height = 'auto';
+    await refreshThread(true);
+  }catch(e){ alert(e.message); }
+  finally{ btn.disabled = false; }
+}
+
+loadConvs();
+</script>
+<script src="host-nav.js"></script>
+</body>
+</html>
