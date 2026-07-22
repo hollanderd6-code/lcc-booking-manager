@@ -923,6 +923,14 @@ body {
 .detail-rule.no .ricon { background: #F1EFEA; color: var(--stone-light); }
 
 /* Panier d'accueil */
+/* ── Confirmation : actions + note hôte ── */
+.confirm-actions{display:flex;gap:10px;margin:14px 0;}
+.confirm-action{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid var(--line);border-radius:13px;padding:13px 10px;font-size:13.5px;font-weight:600;color:var(--ink);font-family:inherit;cursor:pointer;}
+.confirm-action i{color:var(--primary);font-size:15px;}
+.confirm-action:active{border-color:var(--primary);}
+.confirm-host-note{display:flex;align-items:flex-start;gap:10px;background:var(--primary-tint,#FBEDE7);border-radius:13px;padding:13px 15px;font-size:13px;line-height:1.5;color:var(--ink);margin-bottom:14px;text-align:left;}
+.confirm-host-note i{color:var(--primary);margin-top:2px;flex-shrink:0;}
+
 /* ── Favoris ── */
 .prop-card-fav{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.92);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:#B7B0A6;transition:transform .15s,color .15s;z-index:2;box-shadow:0 1px 6px rgba(0,0,0,.14);}
 .prop-card-fav.on{color:var(--primary);}

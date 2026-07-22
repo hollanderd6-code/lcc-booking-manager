@@ -2527,6 +2527,34 @@ async function submitBooking() {
   }
 }
 
+// 📅 Ajouter la réservation confirmée au calendrier (.ics)
+function addBookingToCalendar() {
+  const p = state.currentProperty;
+  if (!p || !state.selectedCheckin || !state.selectedCheckout) { showToast('Réservation introuvable'); return; }
+  const d = s => String(s).slice(0, 10).replace(/-/g, '');
+  // Événement "journée entière" : DTEND exclusif = lendemain du départ… non, départ = fin.
+  const addr = [p.address, p.postalCode, p.city].filter(Boolean).join(', ');
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//BHGuest//FR',
+    'BEGIN:VEVENT',
+    `UID:bhguest-${p.id}-${d(state.selectedCheckin)}@boostinghost.fr`,
+    `DTSTART;VALUE=DATE:${d(state.selectedCheckin)}`,
+    `DTEND;VALUE=DATE:${d(state.selectedCheckout)}`,
+    `SUMMARY:Séjour — ${(p.name || '').replace(/[,;]/g, ' ')}`,
+    addr ? `LOCATION:${addr.replace(/[,;]/g, ' ')}` : '',
+    p.arrivalTime ? `DESCRIPTION:Arrivée à partir de ${p.arrivalTime}. Réservé via BHGuest.` : 'DESCRIPTION:Réservé via BHGuest.',
+    'END:VEVENT', 'END:VCALENDAR'
+  ].filter(Boolean).join('\r\n');
+  try {
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'sejour-bhguest.ics';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch(e) { showToast('Impossible de générer le fichier calendrier'); }
+}
+
 function showConfirmation(data, guestName, guestEmail) {
   const p = state.currentProperty;
   const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -2539,20 +2567,36 @@ function showConfirmation(data, guestName, guestEmail) {
   state._holdToken = null;
   localStorage.removeItem('guest_hold_token');
 
+  const addr = [p.address, p.postalCode, p.city].filter(Boolean).join(', ');
+  const hostFirst = p.host?.firstName || null;
+
   document.getElementById('confirmContent').innerHTML = `
     <div class="confirm-icon">${icon('check')}</div>
     <div class="confirm-title">Réservation confirmée !</div>
     <div class="confirm-sub">Un email de confirmation a été envoyé à ${guestEmail}</div>
     <div class="confirm-card">
-      <div class="confirm-row"><span>Logement</span><span>${p.name}</span></div>
-      <div class="confirm-row"><span>Arrivée</span><span>${fmtDate(state.selectedCheckin)}</span></div>
-      <div class="confirm-row"><span>Départ</span><span>${fmtDate(state.selectedCheckout)}</span></div>
-      <div class="confirm-row"><span>Voyageur</span><span>${guestName}</span></div>
-      <div class="confirm-row"><span>Total payé</span><span>${data.total_ttc}€</span></div>
-      ${p.arrivalTime ? `<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;font-size:13px;color:var(--text-light);">
-        ${icon('clock')} Arrivée à partir de ${p.arrivalTime}
-      </div>` : ''}
+      <div class="confirm-row"><span>Logement</span><span>${esc(p.name)}</span></div>
+      ${addr ? `<div class="confirm-row"><span>Adresse</span><span style="text-align:right;">${esc(addr)}</span></div>` : ''}
+      <div class="confirm-row"><span>Arrivée</span><span>${fmtDate(state.selectedCheckin)}${p.arrivalTime ? ' · dès ' + p.arrivalTime : ''}</span></div>
+      <div class="confirm-row"><span>Départ</span><span>${fmtDate(state.selectedCheckout)}${p.departureTime ? ' · avant ' + p.departureTime : ''}</span></div>
+      <div class="confirm-row"><span>Voyageur</span><span>${esc(guestName)}</span></div>
+      <div class="confirm-row"><span>Total payé</span><span><b>${data.total_ttc}€</b></span></div>
     </div>
+
+    <div class="confirm-actions">
+      <button class="confirm-action" onclick="addBookingToCalendar()">
+        <i class="fas fa-calendar-plus"></i> Ajouter au calendrier
+      </button>
+      ${addr ? `<button class="confirm-action" onclick="window.open('https://maps.apple.com/?q=' + encodeURIComponent('${esc(addr).replace(/'/g, "\\'")}'), '_blank')">
+        <i class="fas fa-map-location-dot"></i> Itinéraire
+      </button>` : ''}
+    </div>
+
+    ${hostFirst ? `<div class="confirm-host-note">
+      <i class="fas fa-comments"></i>
+      ${esc(hostFirst)} a été prévenu de votre arrivée. Retrouvez votre conversation dans <b>Mes réservations</b> pour toute question.
+    </div>` : ''}
+
     <button class="btn-confirm-home" onclick="navTo('home')">Voir d'autres logements</button>
     <div style="height:12px;"></div>
     <button onclick="navTo('bookings')" style="width:100%;padding:14px;background:var(--bg);border:none;border-radius:14px;font-size:15px;font-weight:600;color:var(--text);cursor:pointer;margin-top:8px;">
