@@ -443,7 +443,19 @@ async function loginWithPassword() {
       body: JSON.stringify({ email, password })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    if (!res.ok) {
+      // Email pas encore vérifié → proposer de renvoyer le lien
+      if (data.emailNotVerified) {
+        errBox.innerHTML = `${data.error}<br>
+          <button onclick="resendVerification('${(data.email || email).replace(/'/g, "\\'")}')"
+            style="margin-top:8px;background:none;border:1.5px solid currentColor;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:inherit;">
+            Renvoyer l'email de vérification
+          </button>`;
+        errBox.style.display = 'block';
+        return;
+      }
+      throw new Error(data.error);
+    }
     saveSession({ token: data.session_token, email: data.email, name: data.name });
     updateNavAccount();
     showToast('Connexion réussie !');

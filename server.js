@@ -40365,7 +40365,43 @@ app.post('/api/guest/auth/resend-verification', async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
 
     const result = await pool.query('SELECT id, name, email_verified FROM guest_users WHERE email = $1', [normalizedEmail]);
-    if (!result.rows[0]) return res.status(404).json({ error: 'Compte introuvable' });
+    if (!result.rows[0]) {
+      // 🔗 Compte créé côté hôte (table users) — renvoyer le lien hôte
+      const hostRes = await pool.query(
+        'SELECT id, first_name, email_verified FROM users WHERE LOWER(email) = $1 LIMIT 1',
+        [normalizedEmail]
+      );
+      const host = hostRes.rows[0];
+      if (!host) return res.status(404).json({ error: 'Compte introuvable' });
+      if (host.email_verified) return res.json({ success: true, message: 'Email déjà vérifié' });
+
+      const hToken = require('crypto').randomBytes(32).toString('hex');
+      const hExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await pool.query(
+        'UPDATE users SET verification_token = $1, verification_token_expires = $2 WHERE id = $3',
+        [hToken, hExpires, host.id]
+      );
+      const hUrl = `${process.env.APP_URL || 'https://boostinghost.fr'}/guest-app/public/host-verify.html?token=${hToken}`;
+      await sendEmailViaBrevo({
+        to: normalizedEmail,
+        subject: 'Vérifiez votre adresse email — BHGuest',
+        html: bhGuestEmailTemplate({
+          title: 'Confirmez votre email',
+          preheader: 'Activez votre compte BHGuest',
+          bodyHtml: `
+            <p style="color:#6B7280;margin:0 0 24px;">Bonjour ${host.first_name || ''}, voici votre nouveau lien de vérification, valable <strong>24 heures</strong>.</p>
+            <div style="text-align:center;margin:32px 0;">
+              <a href="${hUrl}" style="display:inline-block;background:#C2410C;color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:12px;font-size:16px;font-weight:700;font-family:Arial,sans-serif;">
+                ✅ Confirmer mon email
+              </a>
+            </div>
+            <p style="color:#9CA3AF;font-size:12px;word-break:break-all;">${hUrl}</p>
+          `
+        })
+      });
+      console.log(`📧 [AUTH] Lien de vérification hôte renvoyé à ${normalizedEmail}`);
+      return res.json({ success: true, host: true });
+    }
     if (result.rows[0].email_verified) return res.json({ success: true, message: 'Email déjà vérifié' });
 
     const verifToken = require('crypto').randomBytes(32).toString('hex');
@@ -40406,6 +40442,54 @@ app.post('/api/guest/auth/login', async (req, res) => {
     if (!email || !password) return res.status(400).json({ error: 'Email et mot de passe requis' });
     const normalizedEmail = email.toLowerCase().trim();
     const result = await pool.query('SELECT * FROM guest_users WHERE email = $1', [normalizedEmail]);
+    const secret0 = process.env.JWT_SECRET || 'dev-secret-change-me';
+
+    // 🔗 PONT HÔTE → VOYAGEUR
+    // Les comptes créés via host.html vivent dans `users`, pas dans `guest_users`.
+    // Sans ce repli, un hôte ne peut pas se connecter sur la marketplace.
+    // On accepte ses identifiants et on crée sa fiche voyageur liée à la volée.
+    if (!result.rows[0] || !result.rows[0].password_hash) {
+      const hostRes = await pool.query(
+        `SELECT id, email, first_name, last_name, phone, password_hash, email_verified,
+                avatar_url, birth_date, bio
+         FROM users WHERE LOWER(email) = $1 LIMIT 1`,
+        [normalizedEmail]
+      );
+      const host = hostRes.rows[0];
+      if (host && host.password_hash) {
+        const okHost = await bcrypt.compare(password, host.password_hash);
+        if (!okHost) return res.status(401).json({ error: 'Mot de passe incorrect' });
+        if (!host.email_verified) {
+          return res.status(403).json({
+            error: "Votre adresse email n'est pas encore vérifiée. Cliquez sur le lien reçu par email pour activer votre compte.",
+            emailNotVerified: true,
+            email: normalizedEmail
+          });
+        }
+
+        const fullName = [host.first_name, host.last_name].filter(Boolean).join(' ').trim() || null;
+        await pool.query(`
+          INSERT INTO guest_users (email, password_hash, name, phone, email_verified, host_user_id, avatar_url, birth_date, bio)
+          VALUES ($1, $2, $3, $4, TRUE, $5, $6, $7, $8)
+          ON CONFLICT (email) DO UPDATE SET
+            password_hash = COALESCE(guest_users.password_hash, $2),
+            name          = COALESCE(guest_users.name, $3),
+            phone         = COALESCE(guest_users.phone, $4),
+            email_verified = TRUE,
+            host_user_id  = COALESCE(guest_users.host_user_id, $5),
+            avatar_url    = COALESCE(guest_users.avatar_url, $6),
+            birth_date    = COALESCE(guest_users.birth_date, $7),
+            bio           = COALESCE(guest_users.bio, $8),
+            updated_at    = NOW()
+        `, [normalizedEmail, host.password_hash, fullName, host.phone || null, host.id,
+            host.avatar_url || null, host.birth_date || null, host.bio || null]);
+
+        const sessionToken0 = jwt.sign({ email: normalizedEmail, type: 'guest_session' }, secret0, { expiresIn: '30d' });
+        console.log(`🔗 [GUEST AUTH] Compte hôte relié au parcours voyageur: ${normalizedEmail}`);
+        return res.json({ success: true, session_token: sessionToken0, email: normalizedEmail, name: fullName, linkedFromHost: true });
+      }
+    }
+
     if (!result.rows[0]) return res.status(401).json({ error: 'Aucun compte trouvé avec cet email' });
     const user = result.rows[0];
     if (!user.password_hash) return res.status(401).json({ error: 'Ce compte utilise la connexion par lien magique.' });
