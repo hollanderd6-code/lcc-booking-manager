@@ -20205,6 +20205,104 @@ app.delete('/api/host/pricing/season/:ruleId', authenticateToken, async (req, re
   }
 });
 
+// ============================================
+// 🏠 MARKETPLACE B3 — Réductions & durée min de séjour (hôtes externes)
+// Types pricing_rules : 'long_stay' (réduction) et 'min_stay' (nuits mini).
+// ============================================
+
+// GET /api/host/pricing/discounts/:propertyId
+app.get('/api/host/pricing/discounts/:propertyId', authenticateToken, async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const chk = await assertHostOwnsProperty(req, propertyId);
+    if (!chk.ok) return res.status(chk.code).json({ error: chk.error });
+
+    const rules = await pool.query(
+      `SELECT rule_type, discount_pct, discount_after_nights, min_nights
+       FROM pricing_rules
+       WHERE property_id = $1 AND user_id = $2 AND rule_type IN ('long_stay','min_stay')
+         AND start_date IS NULL AND end_date IS NULL`,
+      [propertyId, req.user.id]
+    );
+
+    const longStay = rules.rows.find(r => r.rule_type === 'long_stay');
+    const minStay = rules.rows.find(r => r.rule_type === 'min_stay');
+    res.json({
+      // Réduction longs séjours : X% après N nuits
+      longStay: longStay ? {
+        discountPct: longStay.discount_pct != null ? parseFloat(longStay.discount_pct) : null,
+        afterNights: longStay.discount_after_nights || null
+      } : null,
+      // Durée minimale de séjour
+      minNights: minStay?.min_nights || null
+    });
+  } catch (e) {
+    console.error('❌ [HOST] get discounts:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/host/pricing/long-stay — réduction longs séjours
+// body: { propertyId, discountPct, afterNights }  (null/0 pour retirer)
+app.put('/api/host/pricing/long-stay', authenticateToken, async (req, res) => {
+  try {
+    const { propertyId, discountPct, afterNights } = req.body;
+    const chk = await assertHostOwnsProperty(req, propertyId);
+    if (!chk.ok) return res.status(chk.code).json({ error: chk.error });
+
+    // Supprimer l'existant (règle globale long_stay)
+    await pool.query(
+      `DELETE FROM pricing_rules WHERE user_id=$1 AND property_id=$2 AND rule_type='long_stay' AND start_date IS NULL AND end_date IS NULL`,
+      [req.user.id, propertyId]
+    );
+
+    const pct = parseFloat(discountPct);
+    const after = parseInt(afterNights);
+    if (pct > 0 && after > 0) {
+      if (pct > 90) return res.status(400).json({ error: 'Réduction max 90 %' });
+      await pool.query(
+        `INSERT INTO pricing_rules (user_id, property_id, name, rule_type, discount_pct, discount_after_nights, priority, active)
+         VALUES ($1,$2,$3,'long_stay',$4,$5,5,true)`,
+        [req.user.id, propertyId, `Réduction ${pct}% dès ${after} nuits`, pct, after]
+      );
+    }
+    try { triggerChannexRatesSync(propertyId, req.user.id); } catch(e){}
+    res.json({ success: true });
+  } catch (e) {
+    console.error('❌ [HOST] long-stay:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/host/pricing/min-stay — durée minimale de séjour
+// body: { propertyId, minNights }  (null/0 pour retirer)
+app.put('/api/host/pricing/min-stay', authenticateToken, async (req, res) => {
+  try {
+    const { propertyId, minNights } = req.body;
+    const chk = await assertHostOwnsProperty(req, propertyId);
+    if (!chk.ok) return res.status(chk.code).json({ error: chk.error });
+
+    await pool.query(
+      `DELETE FROM pricing_rules WHERE user_id=$1 AND property_id=$2 AND rule_type='min_stay' AND start_date IS NULL AND end_date IS NULL`,
+      [req.user.id, propertyId]
+    );
+
+    const mn = parseInt(minNights);
+    if (mn > 1) {
+      await pool.query(
+        `INSERT INTO pricing_rules (user_id, property_id, name, rule_type, min_nights, priority, active)
+         VALUES ($1,$2,$3,'min_stay',$4,5,true)`,
+        [req.user.id, propertyId, `Minimum ${mn} nuits`, mn]
+      );
+    }
+    try { triggerChannexRatesSync(propertyId, req.user.id); } catch(e){}
+    res.json({ success: true });
+  } catch (e) {
+    console.error('❌ [HOST] min-stay:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
