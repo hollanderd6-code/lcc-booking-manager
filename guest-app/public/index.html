@@ -1086,8 +1086,8 @@ body.screen-detail #bottomNav { display: none !important; }
         <p>Réservez en direct avec votre hôte. Moins d'intermédiaires, plus de transparence.</p>
         <div class="home-search">
           <i class="fas fa-search" style="color:#9ca3af;margin-left:8px;"></i>
-          <input type="text" id="homeSearchInput" placeholder="Destination, dates..." readonly onclick="navTo('home-list')">
-          <button class="home-search-btn" onclick="navTo('home-list')"><i class="fas fa-arrow-right"></i></button>
+          <input type="text" id="homeSearchInput" placeholder="Ville, logement..." autocomplete="off" enterkeyhint="search" onkeydown="if(event.key==='Enter'){event.preventDefault();homeSearch();}">
+          <button class="home-search-btn" onclick="homeSearch()"><i class="fas fa-arrow-right"></i></button>
         </div>
         <div class="home-trust">
           <div class="home-trust-badge"><i class="fas fa-shield-halved"></i> Paiement sécurisé</div>

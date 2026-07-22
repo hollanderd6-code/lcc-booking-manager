@@ -266,11 +266,31 @@ function showCityList(items){
   list.innerHTML = items.map(c=>{
     const cp = (c.codesPostaux && c.codesPostaux[0]) || '';
     const dept = c.departement?.nom ? `${c.departement.nom} (${c.codeDepartement})` : c.codeDepartement||'';
-    return `<div class="ac-item" onclick='selectCity(${JSON.stringify(c.nom)}, ${JSON.stringify(cp)}, ${JSON.stringify(dept)})'>
+    const at = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    return `<div class="ac-item" data-nom="${at(c.nom)}" data-cp="${at(cp)}" data-dept="${at(dept)}">
       <span>${c.nom}</span><span class="dept">${dept}</span></div>`;
   }).join('');
   list.classList.add('show');
 }
+// Sélection au pointerdown : sur mobile, le clic était perdu car la fermeture
+// du clavier décalait la liste avant la fin du "click".
+(function(){
+  const list = document.getElementById('cityList');
+  let lastPick = 0;
+  const pick = e => {
+    const it = e.target.closest('.ac-item');
+    if(!it) return;
+    if(Date.now() - lastPick < 600) { e.preventDefault(); return; }
+    lastPick = Date.now();
+    e.preventDefault();
+    e.stopPropagation();
+    selectCity(it.dataset.nom, it.dataset.cp, it.dataset.dept);
+  };
+  list.addEventListener('pointerdown', pick);
+  list.addEventListener('touchstart', pick, {passive:false});
+  list.addEventListener('mousedown', pick);
+  list.addEventListener('click', e=>{ e.stopPropagation(); });
+})();
 function hideCityList(){ document.getElementById('cityList').classList.remove('show'); }
 function selectCity(nom, cp, dept){
   cityInput.value = nom;

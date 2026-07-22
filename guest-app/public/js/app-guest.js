@@ -580,6 +580,22 @@ function navTo(name) {
   if (name === 'messages') loadGuestConversations();
   // Charger les city chips sur home et home-list
   if (name === 'home' || name === 'home-list') loadCityChips();
+  // 🔧 Arrivée sur la liste : recharger les logements puis appliquer les filtres
+  // (catégorie, ville, recherche texte) sélectionnés depuis l'accueil.
+  if (name === 'home-list') {
+    syncFilterChips();
+    loadProperties().then(() => filterProperties());
+  }
+}
+
+// Répercute _activeFilter / recherche accueil sur les contrôles de l'écran liste
+function syncFilterChips() {
+  document.querySelectorAll('.filter-chip').forEach(c => {
+    const m = (c.getAttribute('onclick') || '').match(/setFilter\(this,\s*'([^']*)'\)/);
+    c.classList.toggle('active', m ? m[1] === _activeFilter : false);
+  });
+  const li = document.getElementById('listSearchInput');
+  if (li && _homeQuery) { li.value = _homeQuery; _homeQuery = ''; }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1035,6 +1051,11 @@ async function loadCityChips() {
   }
 }
 
+// Échappement pour les attributs HTML (data-*)
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function selectCity(btn, city) {
   const chips = document.querySelectorAll('.city-chip');
   if (city !== null && btn.classList.contains('active')) {
@@ -1076,12 +1097,13 @@ function updateResetBtn() {
 
 // ── Filtres logements ────────────────────────────────────────
 let _activeFilter = '';
+let _homeQuery = '';
 
 function filterCat(el, cat) {
   document.querySelectorAll('.home-cat').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   _activeFilter = cat;
-  navTo('home-list');
+  navTo('home-list'); // navTo recharge la liste puis applique le filtre
 }
 
 function setFilter(el, filter) {
@@ -1091,19 +1113,54 @@ function setFilter(el, filter) {
   filterProperties();
 }
 
+// Recherche depuis l'accueil (barre "Destination, dates...")
+function homeSearch() {
+  _homeQuery = (document.getElementById('homeSearchInput')?.value || '').trim();
+  navTo('home-list');
+}
+
 function filterProperties() {
-  const search = (document.getElementById('listSearchInput')?.value || '').toLowerCase();
+  const grid = document.getElementById('propertiesList');
+  if (!grid) return;
+  const search = (document.getElementById('listSearchInput')?.value || '').trim().toLowerCase();
   const cityFilter = (state.search.city || '').toLowerCase();
-  const cards = document.querySelectorAll('.prop-card');
+  const cards = [...grid.querySelectorAll('.prop-card')];
+  let visible = 0;
+
   cards.forEach(card => {
-    const name = (card.dataset.name || '').toLowerCase();
+    const hay = (card.dataset.search || '').toLowerCase();
     const type = (card.dataset.type || '').toLowerCase();
     const cardCity = (card.dataset.city || '').toLowerCase();
-    const matchSearch = !search || name.includes(search);
+    const matchSearch = !search || search.split(/\s+/).every(w => hay.includes(w));
     const matchFilter = !_activeFilter || _activeFilter.startsWith('prix') || type.includes(_activeFilter);
     const matchCity = !cityFilter || cardCity.includes(cityFilter);
-    card.style.display = matchSearch && matchFilter && matchCity ? 'block' : 'none';
+    const ok = matchSearch && matchFilter && matchCity;
+    card.style.display = ok ? 'block' : 'none';
+    if (ok) visible++;
   });
+
+  // Tri par prix
+  if (_activeFilter === 'prix-asc' || _activeFilter === 'prix-desc') {
+    const dir = _activeFilter === 'prix-asc' ? 1 : -1;
+    [...cards]
+      .sort((a, b) => (parseFloat(a.dataset.price) - parseFloat(b.dataset.price)) * dir)
+      .forEach(c => grid.appendChild(c));
+  }
+
+  // Message si aucun résultat
+  let empty = document.getElementById('listNoResult');
+  if (!visible && cards.length) {
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.id = 'listNoResult';
+      empty.className = 'empty-state';
+      grid.appendChild(empty);
+    }
+    empty.innerHTML = `${icon('home')}<p>Aucun logement ne correspond à cette recherche</p>`;
+    empty.style.display = 'block';
+  } else if (empty) {
+    empty.style.display = 'none';
+  }
 }
 
 function resetFilters() {
@@ -1211,7 +1268,13 @@ async function loadProperties() {
     }
 
     grid.innerHTML = state.properties.map(p => `
-      <div class="prop-card" data-name="${(p.name||'').toLowerCase()}" data-type="${(p.description||'').toLowerCase()}" data-city="${(p.city||p.address||'').toLowerCase()}" onclick="openProperty('${p.id}')">
+      <div class="prop-card"
+           data-name="${esc((p.name||'').toLowerCase())}"
+           data-type="${esc(((p.propertyType||'') + ' ' + (p.description||'')).toLowerCase())}"
+           data-city="${esc(((p.city||'') + ' ' + (p.address||'') + ' ' + (p.postalCode||'')).toLowerCase())}"
+           data-price="${parseFloat(p.basePrice) || 0}"
+           data-search="${esc([p.name, p.city, p.address, p.postalCode, p.propertyType].filter(Boolean).join(' ').toLowerCase())}"
+           onclick="openProperty('${p.id}')">
         <div class="prop-card-img" style="${p.photoUrl ? 'padding:0;background:none;' : ''}">
           ${p.photoUrl
             ? `<img src="${p.photoUrl}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">`

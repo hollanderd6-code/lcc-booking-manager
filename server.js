@@ -38632,6 +38632,7 @@ app.get('/api/guest/properties', async (req, res) => {
         p.id, p.name, p.address, p.city, p.photo_url,
         p.base_price, p.weekend_price, p.max_guests,
         p.bedrooms, p.beds, p.bathrooms,
+        p.property_type, p.description, p.postal_code,
         p.channex_property_id, p.channex_room_type_id, p.channex_enabled,
         p.is_marketplace, p.marketplace_fee_pct,
         u.id as owner_id, u.is_external_host
@@ -38687,6 +38688,9 @@ app.get('/api/guest/properties', async (req, res) => {
       name: p.name,
       address: p.address,
       city: p.city,
+      postalCode: p.postal_code || null,
+      propertyType: p.property_type || null,
+      description: p.description || null,
       photoUrl: p.photo_url,
       basePrice: displayPrices[idx] != null ? displayPrices[idx] : (parseFloat(p.base_price) || null),
       weekendPrice: parseFloat(p.weekend_price) || null,
