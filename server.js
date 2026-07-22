@@ -4774,6 +4774,35 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                       });
                     } catch(mErr) { console.warn('⚠️ [BHGUEST][webhook] Email voyageur:', mErr.message); }
                   }
+
+                  // ✉️ Email à l'hôte : nouvelle réservation
+                  try {
+                    const hostRow = await pool.query('SELECT email, first_name FROM users WHERE id = $1', [ownerId]);
+                    const host = hostRow.rows[0];
+                    if (host && host.email) {
+                      const fmtD2 = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+                      const pNameRow2 = await pool.query('SELECT name FROM properties WHERE id = $1', [propId]).catch(() => ({ rows: [] }));
+                      const pName2 = pNameRow2.rows[0]?.name || 'votre logement';
+                      const nights2 = Math.round((new Date(endDate) - new Date(startDate)) / 86400000);
+                      await sendEmailViaBrevo({
+                        to: host.email,
+                        subject: `🎉 Nouvelle réservation — ${pName2}`,
+                        text: `${guestName || 'Un voyageur'} a réservé ${pName2} du ${fmtD2(startDate)} au ${fmtD2(endDate)}.`,
+                        html: bhEmailTemplate({
+                          icon:'🎉', title:'Nouvelle réservation !', subtitle:pName2,
+                          bodyHtml:`<p>Bonjour ${host.first_name || ''},</p>
+                            <p><strong>${guestName || 'Un voyageur'}</strong> vient de réserver et de payer.</p>
+                            <div class="feat-row"><div class="feat-icon">📅</div><div class="feat-text"><strong>Séjour</strong><br>${fmtD2(startDate)} → ${fmtD2(endDate)} (${nights2} nuit${nights2>1?'s':''})</div></div>
+                            ${amountTotal ? `<div class="feat-row"><div class="feat-icon">💰</div><div class="feat-text"><strong>Montant payé</strong><br>${amountTotal.toFixed(2)} €</div></div>` : ''}
+                            ${guestPhone ? `<div class="feat-row"><div class="feat-icon">📞</div><div class="feat-text"><strong>Téléphone</strong><br>${guestPhone}</div></div>` : ''}
+                            <p>Retrouvez la réservation et la conversation voyageur dans votre espace hôte.</p>
+                            <p class="signoff">L'équipe BHGuest</p>`,
+                          footerNote:'BHGuest'
+                        })
+                      });
+                      console.log(`✉️ [BHGUEST] Email hôte envoyé à ${host.email}`);
+                    }
+                  } catch(hmErr) { console.warn('⚠️ [BHGUEST][webhook] Email hôte:', hmErr.message); }
                 }
               }
             } catch(resaErr) {
@@ -26922,6 +26951,51 @@ planAmount = subscription.items.data[0].price.unit_amount;
 console.log('⏰ Tâche CRON emails automatiques activée (toutes les heures)');
 
 // ⏰ Rappels de ménage J-1 (tous les jours à 9h)
+// ⏰ Rappel voyageur J-1 pour les réservations BHGuest (10h)
+pool.query("ALTER TABLE reservations ADD COLUMN IF NOT EXISTS bhguest_reminder_sent BOOLEAN DEFAULT FALSE").catch(() => {});
+cron.schedule('0 10 * * *', async () => {
+  try {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    const rows = await pool.query(`
+      SELECT r.uid, r.guest_name, r.guest_email, r.start_date, r.end_date,
+             p.name AS property_name, p.address, p.city, p.arrival_time,
+             u.first_name AS host_first_name
+      FROM reservations r
+      JOIN properties p ON p.id = r.property_id
+      JOIN users u ON u.id = r.user_id
+      WHERE r.source = 'guest_app' AND r.status = 'confirmed'
+        AND r.start_date::date = $1
+        AND r.guest_email IS NOT NULL
+        AND COALESCE(r.bhguest_reminder_sent, FALSE) = FALSE
+    `, [tomorrowStr]);
+    for (const r of rows.rows) {
+      try {
+        const fmtD = iso => new Date(String(iso).slice(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+        const addr = [r.address, r.city].filter(Boolean).join(', ');
+        await sendEmailViaBrevo({
+          to: r.guest_email,
+          subject: `🧳 C'est demain ! Votre séjour à ${r.property_name}`,
+          text: `Votre séjour à ${r.property_name} commence demain (${fmtD(r.start_date)}).`,
+          html: bhEmailTemplate({
+            icon:'🧳', title:"C'est demain !", subtitle:r.property_name,
+            bodyHtml:`<p>Bonjour ${r.guest_name || ''},</p>
+              <p>Votre séjour commence <strong>demain</strong>. Voici l'essentiel :</p>
+              <div class="feat-row"><div class="feat-icon">📅</div><div class="feat-text"><strong>Arrivée</strong><br>${fmtD(r.start_date)}${r.arrival_time ? ' à partir de ' + r.arrival_time : ''}</div></div>
+              ${addr ? `<div class="feat-row"><div class="feat-icon">📍</div><div class="feat-text"><strong>Adresse</strong><br>${addr}</div></div>` : ''}
+              <p>${r.host_first_name ? r.host_first_name + ' vous attend' : 'Votre hôte vous attend'} — pour toute question, répondez-lui directement depuis la messagerie de votre réservation.</p>
+              <p class="signoff">Bon séjour,<br>L'équipe BHGuest</p>`,
+            footerNote:'BHGuest'
+          })
+        });
+        await pool.query('UPDATE reservations SET bhguest_reminder_sent = TRUE WHERE uid = $1', [r.uid]);
+        console.log(`🧳 [BHGUEST] Rappel J-1 envoyé à ${r.guest_email} (${r.property_name})`);
+      } catch(e1) { console.warn('⚠️ [BHGUEST] Rappel J-1:', e1.message); }
+    }
+    if (rows.rows.length) console.log(`🧳 [BHGUEST] ${rows.rows.length} rappel(s) J-1 traité(s)`);
+  } catch(e) { console.warn('⚠️ [BHGUEST] Cron rappel J-1:', e.message); }
+});
+
 cron.schedule('0 9 * * *', async () => {
   console.log('⏰ Vérification des rappels de ménage (J-1)...');
   
