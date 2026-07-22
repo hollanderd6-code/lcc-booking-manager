@@ -923,6 +923,35 @@ body {
 .detail-rule.no .ricon { background: #F1EFEA; color: var(--stone-light); }
 
 /* Panier d'accueil */
+/* ── Avis : liste sur la fiche ── */
+.reviews-list{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.review-item{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 15px;}
+.review-item-head{display:flex;align-items:center;gap:11px;}
+.review-item-avatar{width:36px;height:36px;border-radius:50%;background:var(--primary-tint,#FBEDE7);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;}
+.review-item-name{font-size:14px;font-weight:600;color:var(--ink);}
+.review-item-date{font-size:11.5px;color:var(--text2);text-transform:capitalize;}
+.review-item-stars{margin-left:auto;display:flex;gap:2px;}
+.review-item-text{font-size:13.5px;line-height:1.55;color:var(--text1,#44403C);margin-top:10px;}
+.reviews-more{font-size:12.5px;color:var(--text2);text-align:center;margin:-6px 0 16px;}
+
+/* ── Avis : formulaire plein écran (lien email) ── */
+#reviewOverlay{position:fixed;inset:0;background:rgba(28,25,23,.55);z-index:1000;display:flex;align-items:flex-end;justify-content:center;}
+.review-sheet{background:var(--bg,#FAF8F5);border-radius:22px 22px 0 0;width:100%;max-width:520px;padding:22px 20px calc(env(safe-area-inset-bottom) + 22px);}
+.review-head{display:flex;align-items:flex-start;gap:12px;}
+.review-title{flex:1;font-size:17px;line-height:1.35;color:var(--ink);}
+.review-title b{font-weight:700;}
+.review-close{width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid var(--line);color:var(--text2);font-size:15px;cursor:pointer;flex-shrink:0;}
+.review-stars{display:flex;justify-content:center;gap:10px;margin:22px 0 6px;}
+.review-star{background:none;border:none;font-size:32px;color:#E7E1D8;cursor:pointer;padding:4px;transition:transform .12s,color .15s;}
+.review-star.on{color:var(--primary);}
+.review-star:active{transform:scale(1.2);}
+.review-stars-label{text-align:center;font-size:13px;font-weight:600;color:var(--text2);min-height:18px;margin-bottom:14px;}
+.review-comment{width:100%;min-height:110px;padding:13px 15px;border:1px solid var(--line);border-radius:13px;font-size:15px;font-family:inherit;line-height:1.5;resize:vertical;outline:none;background:#fff;color:var(--ink);}
+.review-comment:focus{border-color:var(--primary);}
+.review-err{color:#DC2626;font-size:13px;min-height:18px;margin-top:8px;}
+.review-submit{width:100%;margin-top:6px;background:var(--primary);color:#fff;border:none;border-radius:13px;padding:15px;font-size:15.5px;font-weight:700;font-family:inherit;cursor:pointer;}
+.review-submit:disabled{opacity:.6;}
+
 /* ── Carte "Votre hôte" ── */
 .host-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px;}
 .host-card-top{display:flex;align-items:center;gap:13px;}

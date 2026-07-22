@@ -660,6 +660,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // ⭐ Lien "laisser un avis" (review_token dans URL)
+  const reviewToken = urlParamsInit.get('review_token');
+  if (reviewToken) {
+    window.history.replaceState({}, '', window.location.pathname);
+    openReviewForm(reviewToken);
+  }
+
   // 🔑 Lien magique / réinitialisation de mot de passe (magic_token dans URL)
   const magicToken = urlParamsInit.get('magic_token');
   const isReset = urlParamsInit.get('reset') === '1';
@@ -1684,6 +1691,102 @@ function updateGalleryDot(el) {
   if (dot) dot.textContent = idx;
 }
 
+// ══ ⭐ Avis : formulaire (via lien email) ══════════════════════
+let _reviewToken = null, _reviewRating = 0;
+
+async function openReviewForm(token) {
+  _reviewToken = token; _reviewRating = 0;
+  let ctx = null;
+  try {
+    const res = await fetch(`${API_URL}/api/guest/reviews/context/${token}`);
+    ctx = await res.json();
+    if (!res.ok) throw new Error(ctx.error || 'Lien invalide');
+  } catch(e) { showToast(e.message || 'Lien invalide ou expiré'); return; }
+
+  if (ctx.alreadySubmitted) { showToast('Vous avez déjà laissé un avis pour ce séjour. Merci !'); return; }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'reviewOverlay';
+  overlay.innerHTML = `
+    <div class="review-sheet">
+      <div class="review-head">
+        <div class="review-title">Votre séjour à<br><b>${esc(ctx.propertyName)}</b></div>
+        <button class="review-close" onclick="closeReviewForm()"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="review-stars" id="reviewStars">
+        ${[1,2,3,4,5].map(n => `<button class="review-star" data-n="${n}" onclick="setReviewRating(${n})"><i class="fas fa-star"></i></button>`).join('')}
+      </div>
+      <div class="review-stars-label" id="reviewStarsLabel">Touchez une étoile</div>
+      <textarea id="reviewComment" class="review-comment" maxlength="1000" placeholder="Racontez votre séjour (optionnel) : accueil, logement, quartier..."></textarea>
+      <div class="review-err" id="reviewErr"></div>
+      <button class="review-submit" id="reviewSubmitBtn" onclick="submitReview()">Publier mon avis</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function setReviewRating(n) {
+  _reviewRating = n;
+  document.querySelectorAll('#reviewStars .review-star').forEach(b => {
+    b.classList.toggle('on', parseInt(b.dataset.n, 10) <= n);
+  });
+  const labels = ['', 'Décevant', 'Moyen', 'Bien', 'Très bien', 'Excellent !'];
+  document.getElementById('reviewStarsLabel').textContent = labels[n];
+}
+
+async function submitReview() {
+  const err = document.getElementById('reviewErr');
+  err.textContent = '';
+  if (!_reviewRating) { err.textContent = 'Choisissez une note.'; return; }
+  const btn = document.getElementById('reviewSubmitBtn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API_URL}/api/guest/reviews/submit/${_reviewToken}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating: _reviewRating, comment: document.getElementById('reviewComment').value })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    closeReviewForm();
+    showToast('Merci pour votre avis ! ⭐');
+  } catch(e) {
+    err.textContent = e.message;
+    btn.disabled = false;
+  }
+}
+
+function closeReviewForm() {
+  document.getElementById('reviewOverlay')?.remove();
+  _reviewToken = null;
+}
+
+// ── Section avis sur la fiche logement ───────────────────────
+function renderReviewsSection(p) {
+  if (!Array.isArray(p.reviews) || !p.reviews.length) return '';
+  const stars = n => Array.from({length:5}, (_, i) =>
+    `<i class="fas fa-star" style="color:${i < n ? 'var(--primary)' : '#E7E1D8'};font-size:12px;"></i>`).join('');
+  const fmtM = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { month:'long', year:'numeric' }) : '';
+  const items = p.reviews.slice(0, 6).map(r => `
+    <div class="review-item">
+      <div class="review-item-head">
+        <div class="review-item-avatar">${esc((r.guestName || 'V').charAt(0).toUpperCase())}</div>
+        <div>
+          <div class="review-item-name">${esc(r.guestName)}</div>
+          <div class="review-item-date">${fmtM(r.date)}</div>
+        </div>
+        <div class="review-item-stars">${stars(r.rating)}</div>
+      </div>
+      ${r.comment ? `<div class="review-item-text">${esc(r.comment)}</div>` : ''}
+    </div>`).join('');
+  return `
+    <div class="detail-sec-t">
+      <i class="fas fa-star" style="color:var(--primary);"></i>
+      ${p.reviewsAvg} · ${p.reviewsCount} avis
+    </div>
+    <div class="reviews-list">${items}</div>
+    ${p.reviews.length > 6 ? `<div class="reviews-more">${p.reviews.length - 6} autres avis non affichés</div>` : ''}`;
+}
+
 // ── Carte "Votre hôte" sur la fiche logement ─────────────────
 function renderHostCard(p) {
   const h = p.host;
@@ -1827,6 +1930,8 @@ function renderDetail() {
           </div>
           ${basketPrice ? `<div class="bp">+${basketPrice}€</div>` : ''}
         </div>` : ''}
+
+      ${renderReviewsSection(p)}
 
       <div class="detail-sec-t">Règlement intérieur</div>
       <div class="detail-rules">${ruleItems}</div>

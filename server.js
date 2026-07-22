@@ -26951,6 +26951,114 @@ planAmount = subscription.items.data[0].price.unit_amount;
 console.log('⏰ Tâche CRON emails automatiques activée (toutes les heures)');
 
 // ⏰ Rappels de ménage J-1 (tous les jours à 9h)
+// ══════════════════════════════════════════════════════════════
+// ⭐ AVIS BHGUEST — demandés après le séjour, affichés sur la fiche
+// ══════════════════════════════════════════════════════════════
+pool.query(`
+  CREATE TABLE IF NOT EXISTS bhguest_reviews (
+    id SERIAL PRIMARY KEY,
+    reservation_uid TEXT UNIQUE NOT NULL,
+    property_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    guest_email TEXT,
+    guest_name TEXT,
+    rating INT CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT,
+    review_token TEXT UNIQUE,
+    requested_at TIMESTAMPTZ,
+    submitted_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`).catch(e => console.error('❌ bhguest_reviews table:', e.message));
+
+// ⏰ Demande d'avis le lendemain du départ (11h)
+cron.schedule('0 11 * * *', async () => {
+  try {
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = yesterday.toISOString().split('T')[0];
+    const rows = await pool.query(`
+      SELECT r.uid, r.guest_name, r.guest_email, r.property_id, r.user_id,
+             p.name AS property_name, u.first_name AS host_first_name
+      FROM reservations r
+      JOIN properties p ON p.id = r.property_id
+      JOIN users u ON u.id = r.user_id
+      WHERE r.source = 'guest_app' AND r.status = 'confirmed'
+        AND r.end_date::date = $1
+        AND r.guest_email IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM bhguest_reviews br WHERE br.reservation_uid = r.uid)
+    `, [yStr]);
+    for (const r of rows.rows) {
+      try {
+        const token = require('crypto').randomBytes(24).toString('hex');
+        await pool.query(`
+          INSERT INTO bhguest_reviews (reservation_uid, property_id, user_id, guest_email, guest_name, review_token, requested_at)
+          VALUES ($1, $2, $3, $4, $5, $6, NOW())
+          ON CONFLICT (reservation_uid) DO NOTHING
+        `, [r.uid, r.property_id, r.user_id, r.guest_email, r.guest_name, token]);
+        const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+        const link = `${appUrl}/guest-app/public/index.html?review_token=${token}`;
+        await sendEmailViaBrevo({
+          to: r.guest_email,
+          subject: `Comment s'est passé votre séjour à ${r.property_name} ?`,
+          text: `Laissez un avis sur votre séjour : ${link}`,
+          html: bhEmailTemplate({
+            icon:'⭐', title:'Votre avis compte', subtitle:r.property_name,
+            bodyHtml:`<p>Bonjour ${r.guest_name || ''},</p>
+              <p>Nous espérons que votre séjour s'est bien passé${r.host_first_name ? ' chez ' + r.host_first_name : ''}.
+              Prenez une minute pour laisser un avis — il aide les futurs voyageurs et votre hôte.</p>
+              <div style="text-align:center;margin:24px 0;"><a href="${link}" style="display:inline-block;padding:14px 32px;background:#C2410C;color:white;border-radius:10px;font-weight:700;text-decoration:none;">⭐ Laisser un avis</a></div>`,
+            footerNote:'BHGuest'
+          })
+        });
+        console.log(`⭐ [BHGUEST] Demande d'avis envoyée à ${r.guest_email} (${r.property_name})`);
+      } catch(e1) { console.warn('⚠️ [BHGUEST] Demande avis:', e1.message); }
+    }
+  } catch(e) { console.warn('⚠️ [BHGUEST] Cron avis:', e.message); }
+});
+
+// ── Charger le contexte d'un avis par token (pré-remplir le formulaire)
+app.get('/api/guest/reviews/context/:token', async (req, res) => {
+  try {
+    const r = await pool.query(`
+      SELECT br.guest_name, br.submitted_at, p.name AS property_name, p.photo_url
+      FROM bhguest_reviews br JOIN properties p ON p.id = br.property_id
+      WHERE br.review_token = $1
+    `, [req.params.token]);
+    if (!r.rows[0]) return res.status(404).json({ error: 'Lien invalide' });
+    const row = r.rows[0];
+    res.json({
+      propertyName: row.property_name,
+      photoUrl: row.photo_url || null,
+      guestName: row.guest_name || null,
+      alreadySubmitted: !!row.submitted_at
+    });
+  } catch(e) { res.status(500).json({ error: 'Erreur serveur' }); }
+});
+
+// ── Déposer l'avis
+app.post('/api/guest/reviews/submit/:token', async (req, res) => {
+  try {
+    const { rating, comment } = req.body || {};
+    const rate = parseInt(rating, 10);
+    if (!rate || rate < 1 || rate > 5) return res.status(400).json({ error: 'Note invalide (1 à 5)' });
+    const cmt = comment ? String(comment).trim().slice(0, 1000) : null;
+
+    const r = await pool.query('SELECT id, submitted_at FROM bhguest_reviews WHERE review_token = $1', [req.params.token]);
+    if (!r.rows[0]) return res.status(404).json({ error: 'Lien invalide' });
+    if (r.rows[0].submitted_at) return res.status(409).json({ error: 'Un avis a déjà été déposé pour ce séjour.' });
+
+    await pool.query(
+      'UPDATE bhguest_reviews SET rating = $1, comment = $2, submitted_at = NOW() WHERE review_token = $3',
+      [rate, cmt, req.params.token]
+    );
+    console.log(`⭐ [BHGUEST] Avis déposé (${rate}/5) via token ${req.params.token.slice(0,8)}…`);
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ [BHGUEST] submit review:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ⏰ Rappel voyageur J-1 pour les réservations BHGuest (10h)
 pool.query("ALTER TABLE reservations ADD COLUMN IF NOT EXISTS bhguest_reminder_sent BOOLEAN DEFAULT FALSE").catch(() => {});
 cron.schedule('0 10 * * *', async () => {
@@ -38860,6 +38968,26 @@ app.get('/api/guest/properties/:id', async (req, res) => {
       hostListingsCount = hc.rows[0]?.n || 1;
     } catch(e) {}
 
+    // ⭐ Avis BHGuest publiés sur ce logement
+    let reviews = [], reviewsAvg = null;
+    try {
+      const rv = await pool.query(`
+        SELECT guest_name, rating, comment, submitted_at
+        FROM bhguest_reviews
+        WHERE property_id = $1 AND submitted_at IS NOT NULL
+        ORDER BY submitted_at DESC LIMIT 30
+      `, [id]);
+      reviews = rv.rows.map(r => ({
+        guestName: (r.guest_name || 'Voyageur').split(/\s+/)[0],
+        rating: r.rating,
+        comment: r.comment || null,
+        date: r.submitted_at ? new Date(r.submitted_at).toISOString().slice(0, 10) : null
+      }));
+      if (reviews.length) {
+        reviewsAvg = Math.round(reviews.reduce((a, r) => a + r.rating, 0) / reviews.length * 10) / 10;
+      }
+    } catch(e) {}
+
     res.json({
       id: p.id,
       name: p.name,
@@ -38900,6 +39028,9 @@ app.get('/api/guest/properties/:id', async (req, res) => {
         since: p.host_since ? new Date(p.host_since).toISOString().slice(0, 10) : null,
         listingsCount: hostListingsCount
       },
+      reviews,
+      reviewsAvg,
+      reviewsCount: reviews.length,
       channexEnabled: p.channex_enabled,
       bookedDates: resas.rows.map(r => ({
         start: r.start_date,
