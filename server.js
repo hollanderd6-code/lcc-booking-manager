@@ -4462,7 +4462,88 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
-        
+
+        // 💳 DÉBIT DIFFÉRÉ — carte enregistrée, rien n'est encaissé.
+        // On crée la réservation confirmée et on planifie le prélèvement à J-2.
+        if (session.mode === 'setup' && session.metadata?.deferred === '1') {
+          try {
+            const m = session.metadata;
+            const connectedAcct = event.account || null;
+            const stripeOpts = connectedAcct ? { stripeAccount: connectedAcct } : {};
+
+            // Récupérer la carte enregistrée
+            const si = await stripe.setupIntents.retrieve(session.setup_intent, stripeOpts);
+            const pmId = si.payment_method;
+            const custId = si.customer || session.customer || null;
+            if (!pmId) throw new Error('Aucun moyen de paiement enregistré');
+
+            const uid = `BHGUEST_${session.id}`;
+            const captureAt = new Date(new Date(String(m.checkin).slice(0,10) + 'T00:00:00').getTime() - DEFERRED_CAPTURE_DAYS * 86400000)
+              .toISOString().slice(0, 10);
+
+            // Anti-doublon sur les dates
+            const dup = await pool.query(
+              `SELECT uid FROM reservations
+                 WHERE property_id = $1 AND status NOT IN ('cancelled')
+                   AND COALESCE(source,'') <> 'BLOCK'
+                   AND start_date < $3 AND end_date > $2 LIMIT 1`,
+              [m.property_id, m.checkin, m.checkout]
+            );
+            if (dup.rows.length === 0) {
+              const ins = await pool.query(`
+                INSERT INTO reservations (
+                  uid, user_id, property_id, source,
+                  guest_name, guest_email, guest_phone,
+                  start_date, end_date, amount_total, status, created_at, updated_at
+                ) VALUES ($1,$2,$3,'guest_app',$4,$5,$6,$7,$8,$9,'confirmed',NOW(),NOW())
+                ON CONFLICT (uid) DO NOTHING RETURNING id
+              `, [uid, m.property_user_id, m.property_id, m.guest_name || 'Voyageur',
+                  m.guest_email, m.guest_phone || null, m.checkin, m.checkout,
+                  (parseInt(m.amount_cents, 10) || 0) / 100]);
+              if (ins.rows[0]) { try { maybeAutoCreateHzMission(ins.rows[0].id, m.property_user_id); } catch(e) {} }
+            }
+
+            await pool.query(`
+              INSERT INTO bhguest_deferred_payments (
+                reservation_uid, property_id, user_id, guest_email, guest_name,
+                stripe_account_id, stripe_customer_id, stripe_payment_method_id,
+                amount_cents, application_fee_cents, capture_at, status
+              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'scheduled')
+              ON CONFLICT (reservation_uid) DO NOTHING
+            `, [uid, m.property_id, m.property_user_id, m.guest_email, m.guest_name || null,
+                connectedAcct, custId, pmId,
+                parseInt(m.amount_cents, 10) || 0, parseInt(m.fee_cents, 10) || 0, captureAt]);
+
+            console.log(`🗓️ [BHGUEST] Réservation ${uid} confirmée — prélèvement planifié le ${captureAt}`);
+
+            // Email de confirmation « sans débit »
+            try {
+              const pRes = await pool.query('SELECT name, address, city FROM properties WHERE id = $1', [m.property_id]);
+              const pName = pRes.rows[0]?.name || 'votre logement';
+              const fmtD = iso => new Date(String(iso).slice(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+              await sendEmailViaBrevo({
+                to: m.guest_email,
+                subject: `✅ Réservation confirmée — ${pName}`,
+                text: `Votre réservation est confirmée. Vous serez débité le ${fmtD(captureAt)}.`,
+                html: bhEmailTemplate({
+                  icon: '✅', title: 'Réservation confirmée', subtitle: pName,
+                  bodyHtml: `<p>Bonjour ${m.guest_name || ''},</p>
+                    <p>Votre séjour du <strong>${fmtD(m.checkin)}</strong> au <strong>${fmtD(m.checkout)}</strong> est confirmé.</p>
+                    <div style="background:#DCFCE7;color:#166534;border-radius:10px;padding:12px 14px;">
+                      <strong>Aucun montant n'a été débité.</strong><br>
+                      Votre carte sera prélevée de ${((parseInt(m.amount_cents,10)||0)/100).toFixed(2)}€ le <strong>${fmtD(captureAt)}</strong>.
+                      Vous pouvez annuler gratuitement jusqu'à cette date.
+                    </div>`,
+                  footerNote: 'BHGuest'
+                })
+              });
+            } catch(mailErr) { console.warn('⚠️ [BHGUEST] Email différé:', mailErr.message); }
+          } catch(defErr) {
+            console.error('❌ [BHGUEST] Setup différé:', defErr.message);
+          }
+          break;
+        }
+
         // 🔍 Déterminer le type de session (abonnement, caution, ou paiement)
         const paymentType = session.metadata?.payment_type;
         const depositId = session.metadata?.deposit_id;
@@ -19954,6 +20035,184 @@ app.get('/api/host/stripe/status', authenticateToken, async (req, res) => {
 
 // 📊 Dashboard hôte externe — logements, réservations à venir, revenus
 // ══════════════════════════════════════════════════════════════
+// 💳 PAIEMENT DIFFÉRÉ (modèle Booking)
+// La carte est enregistrée à la réservation, débitée seulement à
+// J-2, quand l'annulation gratuite n'est plus possible. Annuler
+// avant J-2 ne coûte donc rien à personne : rien n'a été encaissé.
+// Réservations à moins de 2 jours et liens personnalisés :
+// débit immédiat, comme avant.
+// ══════════════════════════════════════════════════════════════
+const DEFERRED_CAPTURE_DAYS = 2; // = fenêtre d'annulation gratuite
+
+pool.query(`
+  CREATE TABLE IF NOT EXISTS bhguest_deferred_payments (
+    id SERIAL PRIMARY KEY,
+    reservation_uid TEXT UNIQUE NOT NULL,
+    property_id TEXT,
+    user_id TEXT,
+    guest_email TEXT,
+    guest_name TEXT,
+    stripe_account_id TEXT,
+    stripe_customer_id TEXT,
+    stripe_payment_method_id TEXT,
+    stripe_payment_intent_id TEXT,
+    amount_cents INT NOT NULL,
+    application_fee_cents INT DEFAULT 0,
+    capture_at DATE NOT NULL,
+    status TEXT DEFAULT 'scheduled',
+    attempts INT DEFAULT 0,
+    last_error TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`).catch(e => console.error('❌ bhguest_deferred_payments table:', e.message));
+
+// Nombre de jours entre aujourd'hui et une date d'arrivée
+function daysUntilDate(dateStr) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d = new Date(String(dateStr).slice(0, 10) + 'T00:00:00');
+  return Math.round((d - today) / 86400000);
+}
+
+// La réservation est-elle éligible au débit différé ?
+function isDeferredEligible(checkin, hasHoldOrFixedPrice) {
+  if (hasHoldOrFixedPrice) return false;          // liens négociés : débit immédiat
+  return daysUntilDate(checkin) > DEFERRED_CAPTURE_DAYS;
+}
+
+// ⏰ Prélèvement des paiements différés (tous les jours à 8h)
+// Débite les cartes enregistrées dont la date de capture est atteinte.
+// 3 tentatives sur 3 jours ; au-delà, la réservation est annulée.
+cron.schedule('0 8 * * *', async () => {
+  try {
+    const rows = await pool.query(`
+      SELECT * FROM bhguest_deferred_payments
+      WHERE status = 'scheduled' AND capture_at <= CURRENT_DATE AND attempts < 3
+      ORDER BY capture_at ASC LIMIT 100
+    `);
+    if (!rows.rows.length) return;
+    console.log(`💳 [DEFERRED] ${rows.rows.length} prélèvement(s) à traiter`);
+
+    for (const d of rows.rows) {
+      // La réservation a-t-elle été annulée entre-temps ?
+      const rr = await pool.query('SELECT status, start_date, end_date FROM reservations WHERE uid = $1', [d.reservation_uid]);
+      if (!rr.rows[0] || rr.rows[0].status === 'cancelled') {
+        await pool.query("UPDATE bhguest_deferred_payments SET status = 'cancelled', updated_at = NOW() WHERE id = $1", [d.id]);
+        continue;
+      }
+
+      const stripeOpts = d.stripe_account_id ? { stripeAccount: d.stripe_account_id } : {};
+      try {
+        const piParams = {
+          amount: d.amount_cents,
+          currency: 'eur',
+          customer: d.stripe_customer_id || undefined,
+          payment_method: d.stripe_payment_method_id,
+          off_session: true,
+          confirm: true,
+          description: `Séjour BHGuest ${d.reservation_uid}`,
+          metadata: { reservation_uid: d.reservation_uid, source: 'bhguest_deferred' }
+        };
+        if (d.application_fee_cents > 0 && d.stripe_account_id) {
+          piParams.application_fee_amount = d.application_fee_cents;
+        }
+        const pi = await stripe.paymentIntents.create(piParams, stripeOpts);
+
+        await pool.query(
+          "UPDATE bhguest_deferred_payments SET status = 'captured', stripe_payment_intent_id = $1, attempts = attempts + 1, updated_at = NOW() WHERE id = $2",
+          [pi.id, d.id]
+        );
+        // Tracer dans payments pour que les remboursements retrouvent le PI
+        await pool.query(`
+          INSERT INTO payments (reservation_uid, status, stripe_payment_intent_id, created_at, updated_at)
+          VALUES ($1, 'paid', $2, NOW(), NOW())
+          ON CONFLICT DO NOTHING
+        `, [d.reservation_uid, pi.id]).catch(() => {});
+
+        console.log(`✅ [DEFERRED] ${d.reservation_uid} débité ${d.amount_cents / 100}€`);
+
+        try {
+          await sendEmailViaBrevo({
+            to: d.guest_email,
+            subject: `Paiement effectué — votre séjour approche`,
+            text: `Votre carte a été débitée de ${(d.amount_cents / 100).toFixed(2)}€.`,
+            html: bhEmailTemplate({
+              icon: '💳', title: 'Paiement effectué', subtitle: 'Votre séjour est réglé',
+              bodyHtml: `<p>Bonjour ${d.guest_name || ''},</p>
+                <p>Comme prévu, votre carte vient d'être débitée de <strong>${(d.amount_cents / 100).toFixed(2)}€</strong> pour votre séjour.</p>
+                <p>Ce séjour n'est désormais plus annulable. Bon voyage !</p>`,
+              footerNote: 'BHGuest'
+            })
+          });
+        } catch(e) {}
+      } catch(payErr) {
+        const attempts = (d.attempts || 0) + 1;
+        await pool.query(
+          "UPDATE bhguest_deferred_payments SET attempts = $1, last_error = $2, updated_at = NOW() WHERE id = $3",
+          [attempts, String(payErr.message).slice(0, 300), d.id]
+        );
+        console.warn(`⚠️ [DEFERRED] Échec ${d.reservation_uid} (tentative ${attempts}/3): ${payErr.message}`);
+
+        if (attempts < 3) {
+          // Relancer le voyageur : carte à mettre à jour
+          try {
+            await sendEmailViaBrevo({
+              to: d.guest_email,
+              subject: `⚠️ Problème de paiement — action requise`,
+              text: `Le paiement de votre séjour a échoué. Mettez à jour votre carte.`,
+              html: bhEmailTemplate({
+                icon: '⚠️', title: 'Paiement refusé', subtitle: 'Action requise',
+                bodyHtml: `<p>Bonjour ${d.guest_name || ''},</p>
+                  <p>Le prélèvement de <strong>${(d.amount_cents / 100).toFixed(2)}€</strong> pour votre séjour a été refusé par votre banque.</p>
+                  <p>Nous réessaierons demain. <strong>Sans paiement sous ${3 - attempts} jour(s), votre réservation sera annulée.</strong></p>
+                  <p>Vérifiez votre carte (provision, expiration) ou contactez votre hôte.</p>`,
+                footerNote: 'BHGuest'
+              })
+            });
+          } catch(e) {}
+        } else {
+          // 3 échecs : annuler et libérer les dates
+          await pool.query("UPDATE bhguest_deferred_payments SET status = 'failed', updated_at = NOW() WHERE id = $1", [d.id]);
+          await pool.query(
+            "UPDATE reservations SET status = 'cancelled', cancelled_by = 'system', cancellation_reason = 'Paiement refusé après 3 tentatives', updated_at = NOW() WHERE uid = $1",
+            [d.reservation_uid]
+          );
+          console.warn(`🚫 [DEFERRED] ${d.reservation_uid} annulée — paiement impossible`);
+          try {
+            await sendEmailViaBrevo({
+              to: d.guest_email,
+              subject: `Réservation annulée — paiement impossible`,
+              text: `Votre réservation a été annulée faute de paiement.`,
+              html: bhEmailTemplate({
+                icon: '❌', title: 'Réservation annulée', subtitle: 'Paiement impossible',
+                bodyHtml: `<p>Bonjour ${d.guest_name || ''},</p>
+                  <p>Après 3 tentatives, le paiement de votre séjour n'a pas pu être effectué. Votre réservation est annulée et les dates sont remises à la disposition d'autres voyageurs.</p>
+                  <p>Vous pouvez réserver à nouveau avec un autre moyen de paiement.</p>`,
+                footerNote: 'BHGuest'
+              })
+            });
+            const hr = await pool.query('SELECT email, first_name FROM users WHERE id = $1', [d.user_id]);
+            if (hr.rows[0]?.email) {
+              await sendEmailViaBrevo({
+                to: hr.rows[0].email,
+                subject: `Réservation annulée — paiement refusé`,
+                text: `Une réservation a été annulée faute de paiement. Les dates sont libérées.`,
+                html: bhEmailTemplate({
+                  icon: '📅', title: 'Réservation annulée', subtitle: 'Paiement refusé',
+                  bodyHtml: `<p>Bonjour ${hr.rows[0].first_name || ''},</p>
+                    <p>Le paiement de la réservation de <strong>${d.guest_name || 'un voyageur'}</strong> a été refusé après 3 tentatives. La réservation est annulée et <strong>les dates sont à nouveau disponibles</strong>.</p>`,
+                  footerNote: 'BHGuest'
+                })
+              });
+            }
+          } catch(e) {}
+        }
+      }
+    }
+  } catch(e) { console.warn('⚠️ [DEFERRED] Cron:', e.message); }
+});
+
+// ══════════════════════════════════════════════════════════════
 // ❌ ANNULATION CÔTÉ VOYAGEUR
 // Politique unique BHGuest : remboursement intégral jusqu'à J-2
 // (moins 3% de frais de traitement — « celui qui annule paie »),
@@ -19989,8 +20248,23 @@ app.get('/api/guest/reservations/:uid/cancel-preview', async (req, res) => {
       return res.status(404).json({ error: 'Réservation introuvable' });
     }
     if (resa.status === 'cancelled') return res.status(409).json({ error: 'Déjà annulée' });
+
+    // 💳 Paiement différé non encore prélevé → annulation totalement gratuite
+    const def = await pool.query(
+      "SELECT status, capture_at FROM bhguest_deferred_payments WHERE reservation_uid = $1", [resa.uid]
+    );
+    if (def.rows[0] && def.rows[0].status === 'scheduled') {
+      return res.json({
+        refundable: true, notCharged: true,
+        daysUntil: daysUntilDate(resa.start_date),
+        refundAmount: 0, feeAmount: 0,
+        amountTotal: parseFloat(resa.amount_total) || 0,
+        freeDays: GUEST_CANCEL_FREE_DAYS, feePct: 0
+      });
+    }
+
     const pol = guestCancelPolicy(resa.start_date, resa.amount_total);
-    res.json({ ...pol, amountTotal: parseFloat(resa.amount_total) || 0, freeDays: GUEST_CANCEL_FREE_DAYS, feePct: GUEST_CANCEL_FEE_PCT });
+    res.json({ ...pol, notCharged: false, amountTotal: parseFloat(resa.amount_total) || 0, freeDays: GUEST_CANCEL_FREE_DAYS, feePct: GUEST_CANCEL_FEE_PCT });
   } catch(e) { res.status(500).json({ error: 'Erreur serveur' }); }
 });
 
@@ -20011,6 +20285,52 @@ app.post('/api/guest/reservations/:uid/cancel', async (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
     if (String(resa.start_date).slice(0, 10) <= today) {
       return res.status(400).json({ error: 'Le séjour a commencé — contactez votre hôte ou le support.' });
+    }
+
+    // 💳 Paiement différé non prélevé → on annule sans aucun mouvement d'argent
+    const defRes = await pool.query(
+      "SELECT id, status FROM bhguest_deferred_payments WHERE reservation_uid = $1", [resa.uid]
+    );
+    if (defRes.rows[0] && defRes.rows[0].status === 'scheduled') {
+      await pool.query("UPDATE bhguest_deferred_payments SET status = 'cancelled', updated_at = NOW() WHERE id = $1", [defRes.rows[0].id]);
+      await pool.query(
+        "UPDATE reservations SET status = 'cancelled', cancelled_by = 'guest', updated_at = NOW() WHERE uid = $1",
+        [resa.uid]
+      );
+      const fmtD0 = iso => new Date(String(iso).slice(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+      try {
+        await sendEmailViaBrevo({
+          to: resa.guest_email,
+          subject: `Annulation confirmée — ${resa.property_name}`,
+          text: 'Votre annulation est confirmée. Aucun montant n\'a été débité.',
+          html: bhEmailTemplate({
+            icon: '✅', title: 'Annulation confirmée', subtitle: resa.property_name,
+            bodyHtml: `<p>Bonjour ${resa.guest_name || ''},</p>
+              <p>Votre séjour du <strong>${fmtD0(resa.start_date)}</strong> au <strong>${fmtD0(resa.end_date)}</strong> est annulé.</p>
+              <div style="background:#DCFCE7;color:#166534;border-radius:10px;padding:12px 14px;"><strong>Aucun montant n'a été débité</strong> — votre carte n'a jamais été prélevée. Rien ne vous sera facturé.</div>`,
+            footerNote: 'BHGuest'
+          })
+        });
+      } catch(e1) {}
+      try {
+        const hr = await pool.query('SELECT email, first_name FROM users WHERE id = $1', [resa.user_id]);
+        if (hr.rows[0]?.email) {
+          await sendEmailViaBrevo({
+            to: hr.rows[0].email,
+            subject: `Annulation voyageur — ${resa.property_name}`,
+            text: 'Un voyageur a annulé. Les dates sont à nouveau disponibles.',
+            html: bhEmailTemplate({
+              icon: '📅', title: 'Annulation voyageur', subtitle: resa.property_name,
+              bodyHtml: `<p>Bonjour ${hr.rows[0].first_name || ''},</p>
+                <p><strong>${resa.guest_name || 'Un voyageur'}</strong> a annulé son séjour du ${fmtD0(resa.start_date)} au ${fmtD0(resa.end_date)}, avant la date de prélèvement.</p>
+                <p>Aucun paiement n'avait été encaissé, donc <strong>aucun frais bancaire</strong> pour vous. Les dates sont à nouveau disponibles.</p>`,
+              footerNote: 'BHGuest'
+            })
+          });
+        }
+      } catch(e2) {}
+      console.log(`✅ [GUEST CANCEL] ${resa.uid} annulée avant prélèvement — aucun mouvement`);
+      return res.json({ success: true, refunded: false, notCharged: true, refundAmount: 0, feeAmount: 0, refundable: true });
     }
 
     const pol = guestCancelPolicy(resa.start_date, resa.amount_total);
@@ -42707,6 +43027,30 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       console.log(`💳 [GUEST] Paiement sur compte BH principal (pas de compte Connect)`);
     }
 
+    // 💳 Débit différé : si l'arrivée est à plus de 2 jours et qu'il ne s'agit
+    // pas d'un lien négocié, on enregistre la carte sans débiter. Le montant
+    // sera prélevé automatiquement à J-2 (voir cron « capture différée »).
+    const useDeferred = isDeferredEligible(checkin, !!(hold_token || validatedFixedPrice != null));
+    if (useDeferred) {
+      sessionParams.mode = 'setup';
+      delete sessionParams.line_items;
+      delete sessionParams.payment_intent_data;
+      sessionParams.setup_intent_data = {
+        metadata: {
+          ...sessionParams.metadata,
+          deferred: '1',
+          amount_cents: String(totalTTC),
+          fee_cents: String(feeAmount),
+          property_user_id: String(propUserId || ''),
+          nights: String(nights)
+        }
+      };
+      sessionParams.metadata.deferred = '1';
+      sessionParams.metadata.amount_cents = String(totalTTC);
+      sessionParams.metadata.fee_cents = String(feeAmount);
+      console.log(`🗓️ [GUEST] Débit différé — carte enregistrée, prélèvement à J-${DEFERRED_CAPTURE_DAYS} (${totalTTC / 100}€)`);
+    }
+
     const sessionOptions = stripeAccountId ? { stripeAccount: stripeAccountId } : {};
     const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
 
@@ -42715,7 +43059,11 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       sessionId: session.id,
       totalBase, discount, discountedBase, cleaningFee, touristTax, commission,
       totalTTC: totalTTC / 100, nights,
-      propertyName: prop.name
+      propertyName: prop.name,
+      deferred: useDeferred,
+      captureAt: useDeferred
+        ? new Date(new Date(String(checkin).slice(0,10) + 'T00:00:00').getTime() - DEFERRED_CAPTURE_DAYS * 86400000).toISOString().slice(0, 10)
+        : null
     });
 
   } catch (e) {

@@ -2178,7 +2178,7 @@ function renderDetail() {
           ${basketPrice ? `<div class="bp">+${basketPrice}€</div>` : ''}
         </div>` : ''}
 
-      <div class="cancel-policy"><i class="fas fa-shield-halved"></i> Annulation gratuite jusqu'à 2 jours avant l'arrivée <span>(frais de traitement 3%)</span></div>
+      <div class="cancel-policy"><i class="fas fa-shield-halved"></i> Annulation gratuite jusqu'à 2 jours avant l'arrivée <span>— vous n'êtes débité qu'à ce moment-là</span></div>
 
       ${renderReviewsSection(p)}
 
@@ -2669,7 +2669,12 @@ async function openGuestCancel(uid) {
     if (!res.ok) throw new Error(pol.error || 'Erreur');
   } catch(e) { showToast(e.message); return; }
 
-  const body = pol.refundable
+  const body = pol.notCharged
+    ? `<p style="font-size:14px;line-height:1.55;">Annulation <b>gratuite</b> — votre carte n'a pas encore été débitée.</p>
+       <div style="background:#DCFCE7;color:#166534;border-radius:11px;padding:12px 14px;font-size:13.5px;margin:12px 0;">
+         <b>Vous ne serez pas facturé.</b><br><span style="font-size:12px;">Aucun montant n'a été prélevé, rien ne vous sera débité.</span>
+       </div>`
+    : pol.refundable
     ? `<p style="font-size:14px;line-height:1.55;">Annulation <b>gratuite</b> (vous êtes à ${pol.daysUntil} jours de l'arrivée).</p>
        <div style="background:#DCFCE7;color:#166534;border-radius:11px;padding:12px 14px;font-size:13.5px;margin:12px 0;">
          Remboursement : <b>${pol.refundAmount.toFixed(2)}€</b> sur ${pol.amountTotal.toFixed(2)}€
@@ -2710,7 +2715,7 @@ async function confirmGuestCancel(uid) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur');
     closeGuestCancel();
-    showToast(data.refundable ? `Annulé — ${data.refundAmount.toFixed(2)}€ remboursés` : 'Séjour annulé');
+    showToast(data.notCharged ? 'Séjour annulé — aucun débit' : (data.refundable ? `Annulé — ${data.refundAmount.toFixed(2)}€ remboursés` : 'Séjour annulé'));
     loadMyBookings();
   } catch(e) {
     showToast(e.message);
