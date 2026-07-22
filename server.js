@@ -27021,8 +27021,15 @@ pool.query(`
 pool.query(`
   ALTER TABLE bhguest_reviews
     ADD COLUMN IF NOT EXISTS host_reply TEXT,
-    ADD COLUMN IF NOT EXISTS host_reply_at TIMESTAMPTZ
+    ADD COLUMN IF NOT EXISTS host_reply_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS rating_cleanliness INT CHECK (rating_cleanliness BETWEEN 1 AND 5),
+    ADD COLUMN IF NOT EXISTS rating_communication INT CHECK (rating_communication BETWEEN 1 AND 5),
+    ADD COLUMN IF NOT EXISTS rating_location INT CHECK (rating_location BETWEEN 1 AND 5),
+    ADD COLUMN IF NOT EXISTS rating_accuracy INT CHECK (rating_accuracy BETWEEN 1 AND 5),
+    ADD COLUMN IF NOT EXISTS rating_value INT CHECK (rating_value BETWEEN 1 AND 5)
 `).catch(() => {});
+// La note globale devient une moyenne décimale des critères
+pool.query("ALTER TABLE bhguest_reviews ALTER COLUMN rating TYPE NUMERIC(2,1)").catch(() => {});
 
 // ⏰ Demande d'avis le lendemain du départ (11h)
 cron.schedule('0 11 * * *', async () => {
@@ -27075,6 +27082,8 @@ app.get('/api/host/reviews', authenticateToken, async (req, res) => {
     const rows = await pool.query(`
       SELECT br.id, br.guest_name, br.rating, br.comment, br.submitted_at,
              br.host_reply, br.host_reply_at,
+             br.rating_cleanliness, br.rating_communication, br.rating_location,
+             br.rating_accuracy, br.rating_value,
              p.id AS property_id, p.name AS property_name
       FROM bhguest_reviews br
       JOIN properties p ON p.id = br.property_id
@@ -27085,7 +27094,11 @@ app.get('/api/host/reviews', authenticateToken, async (req, res) => {
     const reviews = rows.rows.map(r => ({
       id: r.id,
       guestName: (r.guest_name || 'Voyageur').split(/\s+/)[0],
-      rating: r.rating,
+      rating: parseFloat(r.rating),
+      criteria: (r.rating_cleanliness != null) ? {
+        cleanliness: r.rating_cleanliness, communication: r.rating_communication,
+        location: r.rating_location, accuracy: r.rating_accuracy, value: r.rating_value
+      } : null,
       comment: r.comment || null,
       date: r.submitted_at ? new Date(r.submitted_at).toISOString().slice(0, 10) : null,
       hostReply: r.host_reply || null,
@@ -27107,13 +27120,41 @@ app.post('/api/host/reviews/:id/reply', authenticateToken, async (req, res) => {
     const { reply } = req.body || {};
     const txt = reply ? String(reply).trim().slice(0, 600) : '';
     if (!txt) return res.status(400).json({ error: 'Réponse vide' });
-    const upd = await pool.query(
-      `UPDATE bhguest_reviews SET host_reply = $1, host_reply_at = NOW()
-       WHERE id = $2 AND user_id = $3 AND submitted_at IS NOT NULL
-       RETURNING id`,
+    const before = await pool.query(
+      'SELECT host_reply, guest_email, guest_name, property_id FROM bhguest_reviews WHERE id = $1 AND user_id = $2 AND submitted_at IS NOT NULL',
+      [parseInt(req.params.id), req.user.id]
+    );
+    if (!before.rows[0]) return res.status(403).json({ error: 'Avis introuvable' });
+    const wasFirstReply = !before.rows[0].host_reply;
+
+    await pool.query(
+      'UPDATE bhguest_reviews SET host_reply = $1, host_reply_at = NOW() WHERE id = $2 AND user_id = $3',
       [txt, parseInt(req.params.id), req.user.id]
     );
-    if (!upd.rows[0]) return res.status(403).json({ error: 'Avis introuvable' });
+
+    // ✉️ Prévenir le voyageur — à la première réponse uniquement, pas aux modifications
+    if (wasFirstReply && before.rows[0].guest_email) {
+      try {
+        const pRes = await pool.query('SELECT name FROM properties WHERE id = $1', [before.rows[0].property_id]);
+        const pName = pRes.rows[0]?.name || 'votre séjour';
+        const hostFirst = req.user.firstName || "L'hôte";
+        const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+        await sendEmailViaBrevo({
+          to: before.rows[0].guest_email,
+          subject: `💬 ${hostFirst} a répondu à votre avis — ${pName}`,
+          text: `${hostFirst} a répondu à votre avis sur ${pName}.`,
+          html: bhEmailTemplate({
+            icon: '💬', title: `${hostFirst} a répondu à votre avis`, subtitle: pName,
+            bodyHtml: `<p>Bonjour ${before.rows[0].guest_name || ''},</p>
+              <p style="background:#FBEDE7;border-radius:10px;padding:12px 14px;">« ${txt.slice(0, 250)}${txt.length > 250 ? '…' : ''} »</p>
+              <div style="text-align:center;margin:24px 0;"><a href="${appUrl}/guest-app/public/index.html" style="display:inline-block;padding:14px 32px;background:#C2410C;color:white;border-radius:10px;font-weight:700;text-decoration:none;">Voir sur BHGuest</a></div>`,
+            footerNote: 'BHGuest'
+          })
+        });
+        console.log(`✉️ [BHGUEST] Email "réponse à votre avis" envoyé`);
+      } catch(nErr) { console.warn('⚠️ [BHGUEST] Notif réponse avis:', nErr.message); }
+    }
+
     res.json({ success: true });
   } catch(e) {
     console.error('❌ [HOST] reply review:', e.message);
@@ -27141,23 +27182,70 @@ app.get('/api/guest/reviews/context/:token', async (req, res) => {
 });
 
 // ── Déposer l'avis
+const REVIEW_CRITERIA = ['cleanliness', 'communication', 'location', 'accuracy', 'value'];
+const REVIEW_CRITERIA_LABELS = {
+  cleanliness: 'Propreté', communication: 'Communication', location: 'Emplacement',
+  accuracy: "Exactitude de l'annonce", value: 'Rapport qualité-prix'
+};
+
 app.post('/api/guest/reviews/submit/:token', async (req, res) => {
   try {
-    const { rating, comment } = req.body || {};
-    const rate = parseInt(rating, 10);
-    if (!rate || rate < 1 || rate > 5) return res.status(400).json({ error: 'Note invalide (1 à 5)' });
+    const { ratings, comment } = req.body || {};
+    // Chaque critère est obligatoire, de 1 à 5
+    const vals = {};
+    for (const c of REVIEW_CRITERIA) {
+      const v = parseInt(ratings?.[c], 10);
+      if (!v || v < 1 || v > 5) {
+        return res.status(400).json({ error: `Notez chaque critère de 1 à 5 (${REVIEW_CRITERIA_LABELS[c]} manquant).` });
+      }
+      vals[c] = v;
+    }
+    const globalRating = Math.round(REVIEW_CRITERIA.reduce((a, c) => a + vals[c], 0) / REVIEW_CRITERIA.length * 10) / 10;
     const cmt = comment ? String(comment).trim().slice(0, 1000) : null;
 
-    const r = await pool.query('SELECT id, submitted_at FROM bhguest_reviews WHERE review_token = $1', [req.params.token]);
+    const r = await pool.query('SELECT id, submitted_at, user_id, property_id, guest_name FROM bhguest_reviews WHERE review_token = $1', [req.params.token]);
     if (!r.rows[0]) return res.status(404).json({ error: 'Lien invalide' });
     if (r.rows[0].submitted_at) return res.status(409).json({ error: 'Un avis a déjà été déposé pour ce séjour.' });
 
-    await pool.query(
-      'UPDATE bhguest_reviews SET rating = $1, comment = $2, submitted_at = NOW() WHERE review_token = $3',
-      [rate, cmt, req.params.token]
-    );
-    console.log(`⭐ [BHGUEST] Avis déposé (${rate}/5) via token ${req.params.token.slice(0,8)}…`);
-    res.json({ success: true });
+    await pool.query(`
+      UPDATE bhguest_reviews SET
+        rating = $1, comment = $2,
+        rating_cleanliness = $3, rating_communication = $4, rating_location = $5,
+        rating_accuracy = $6, rating_value = $7,
+        submitted_at = NOW()
+      WHERE review_token = $8
+    `, [globalRating, cmt, vals.cleanliness, vals.communication, vals.location, vals.accuracy, vals.value, req.params.token]);
+    console.log(`⭐ [BHGUEST] Avis déposé (${globalRating}/5) via token ${req.params.token.slice(0,8)}…`);
+
+    // ✉️ Prévenir l'hôte qu'un avis vient de tomber
+    try {
+      const row = r.rows[0];
+      const hostRes = await pool.query('SELECT email, first_name FROM users WHERE id = $1', [row.user_id]);
+      const host = hostRes.rows[0];
+      const pRes = await pool.query('SELECT name FROM properties WHERE id = $1', [row.property_id]);
+      const pName = pRes.rows[0]?.name || 'votre logement';
+      if (host?.email) {
+        const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+        const starsTxt = '⭐'.repeat(Math.round(globalRating));
+        await sendEmailViaBrevo({
+          to: host.email,
+          subject: `${starsTxt} Nouvel avis ${globalRating}/5 — ${pName}`,
+          text: `${row.guest_name || 'Un voyageur'} a laissé un avis ${globalRating}/5 sur ${pName}.`,
+          html: bhEmailTemplate({
+            icon: '⭐', title: `Nouvel avis : ${globalRating}/5`, subtitle: pName,
+            bodyHtml: `<p>Bonjour ${host.first_name || ''},</p>
+              <p><strong>${row.guest_name || 'Un voyageur'}</strong> vient de laisser un avis sur son séjour.</p>
+              ${cmt ? `<p style="background:#FBEDE7;border-radius:10px;padding:12px 14px;">« ${cmt.slice(0, 250)}${cmt.length > 250 ? '…' : ''} »</p>` : ''}
+              <p>Répondre publiquement montre votre sérieux aux futurs voyageurs — surtout quand la note est moyenne.</p>
+              <div style="text-align:center;margin:24px 0;"><a href="${appUrl}/guest-app/public/host-reviews.html" style="display:inline-block;padding:14px 32px;background:#C2410C;color:white;border-radius:10px;font-weight:700;text-decoration:none;">Voir et répondre</a></div>`,
+            footerNote: 'BHGuest'
+          })
+        });
+        console.log(`✉️ [BHGUEST] Email "nouvel avis" envoyé à ${host.email}`);
+      }
+    } catch(nErr) { console.warn('⚠️ [BHGUEST] Notif avis hôte:', nErr.message); }
+
+    res.json({ success: true, rating: globalRating });
   } catch(e) {
     console.error('❌ [BHGUEST] submit review:', e.message);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -39140,17 +39228,19 @@ app.get('/api/guest/properties/:id', async (req, res) => {
     } catch(e) {}
 
     // ⭐ Avis BHGuest publiés sur ce logement
-    let reviews = [], reviewsAvg = null;
+    let reviews = [], reviewsAvg = null, reviewRows = [];
     try {
       const rv = await pool.query(`
-        SELECT guest_name, rating, comment, submitted_at, host_reply
+        SELECT guest_name, rating, comment, submitted_at, host_reply,
+               rating_cleanliness, rating_communication, rating_location, rating_accuracy, rating_value
         FROM bhguest_reviews
         WHERE property_id = $1 AND submitted_at IS NOT NULL
         ORDER BY submitted_at DESC LIMIT 30
       `, [id]);
+      reviewRows = rv.rows;
       reviews = rv.rows.map(r => ({
         guestName: (r.guest_name || 'Voyageur').split(/\s+/)[0],
-        rating: r.rating,
+        rating: parseFloat(r.rating),
         comment: r.comment || null,
         hostReply: r.host_reply || null,
         date: r.submitted_at ? new Date(r.submitted_at).toISOString().slice(0, 10) : null
@@ -39203,6 +39293,15 @@ app.get('/api/guest/properties/:id', async (req, res) => {
       reviews,
       reviewsAvg,
       reviewsCount: reviews.length,
+      reviewsCriteria: (() => {
+        const C = { cleanliness:'rating_cleanliness', communication:'rating_communication', location:'rating_location', accuracy:'rating_accuracy', value:'rating_value' };
+        const out = {};
+        for (const [k, col] of Object.entries(C)) {
+          const vs = reviewRows.map(r => r[col]).filter(v => v != null);
+          if (vs.length) out[k] = Math.round(vs.reduce((a, b) => a + parseInt(b), 0) / vs.length * 10) / 10;
+        }
+        return Object.keys(out).length ? out : null;
+      })(),
       channexEnabled: p.channex_enabled,
       bookedDates: resas.rows.map(r => ({
         start: r.start_date,

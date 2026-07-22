@@ -1840,10 +1840,17 @@ function updateGalleryDot(el) {
 }
 
 // ══ ⭐ Avis : formulaire (via lien email) ══════════════════════
-let _reviewToken = null, _reviewRating = 0;
+let _reviewToken = null, _reviewRatings = {};
+const REVIEW_CRITERIA = [
+  { key: 'cleanliness',   label: 'Propreté' },
+  { key: 'communication', label: 'Communication' },
+  { key: 'location',      label: 'Emplacement' },
+  { key: 'accuracy',      label: "Exactitude de l'annonce" },
+  { key: 'value',         label: 'Rapport qualité-prix' }
+];
 
 async function openReviewForm(token) {
-  _reviewToken = token; _reviewRating = 0;
+  _reviewToken = token; _reviewRatings = {};
   let ctx = null;
   try {
     const res = await fetch(`${API_URL}/api/guest/reviews/context/${token}`);
@@ -1861,10 +1868,16 @@ async function openReviewForm(token) {
         <div class="review-title">Votre séjour à<br><b>${esc(ctx.propertyName)}</b></div>
         <button class="review-close" onclick="closeReviewForm()"><i class="fas fa-xmark"></i></button>
       </div>
-      <div class="review-stars" id="reviewStars">
-        ${[1,2,3,4,5].map(n => `<button class="review-star" data-n="${n}" onclick="setReviewRating(${n})"><i class="fas fa-star"></i></button>`).join('')}
+      <div class="review-criteria">
+        ${REVIEW_CRITERIA.map(c => `
+          <div class="review-crit">
+            <span class="review-crit-label">${c.label}</span>
+            <span class="review-crit-stars" id="crit-${c.key}">
+              ${[1,2,3,4,5].map(n => `<button class="review-star sm" data-n="${n}" onclick="setCritRating('${c.key}', ${n})"><i class="fas fa-star"></i></button>`).join('')}
+            </span>
+          </div>`).join('')}
       </div>
-      <div class="review-stars-label" id="reviewStarsLabel">Touchez une étoile</div>
+      <div class="review-global" id="reviewGlobal">Notez chaque critère</div>
       <textarea id="reviewComment" class="review-comment" maxlength="1000" placeholder="Racontez votre séjour (optionnel) : accueil, logement, quartier..."></textarea>
       <div class="review-err" id="reviewErr"></div>
       <button class="review-submit" id="reviewSubmitBtn" onclick="submitReview()">Publier mon avis</button>
@@ -1872,26 +1885,33 @@ async function openReviewForm(token) {
   document.body.appendChild(overlay);
 }
 
-function setReviewRating(n) {
-  _reviewRating = n;
-  document.querySelectorAll('#reviewStars .review-star').forEach(b => {
+function setCritRating(key, n) {
+  _reviewRatings[key] = n;
+  document.querySelectorAll(`#crit-${key} .review-star`).forEach(b => {
     b.classList.toggle('on', parseInt(b.dataset.n, 10) <= n);
   });
-  const labels = ['', 'Décevant', 'Moyen', 'Bien', 'Très bien', 'Excellent !'];
-  document.getElementById('reviewStarsLabel').textContent = labels[n];
+  const done = REVIEW_CRITERIA.filter(c => _reviewRatings[c.key]);
+  const g = document.getElementById('reviewGlobal');
+  if (done.length === REVIEW_CRITERIA.length) {
+    const avg = Math.round(done.reduce((a, c) => a + _reviewRatings[c.key], 0) / done.length * 10) / 10;
+    g.innerHTML = `Note globale : <b>${avg}</b> / 5 <i class="fas fa-star" style="color:var(--primary);font-size:13px;"></i>`;
+  } else {
+    g.textContent = `${done.length} / ${REVIEW_CRITERIA.length} critères notés`;
+  }
 }
 
 async function submitReview() {
   const err = document.getElementById('reviewErr');
   err.textContent = '';
-  if (!_reviewRating) { err.textContent = 'Choisissez une note.'; return; }
+  const missing = REVIEW_CRITERIA.find(c => !_reviewRatings[c.key]);
+  if (missing) { err.textContent = `Notez « ${missing.label} » pour continuer.`; return; }
   const btn = document.getElementById('reviewSubmitBtn');
   btn.disabled = true;
   try {
     const res = await fetch(`${API_URL}/api/guest/reviews/submit/${_reviewToken}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rating: _reviewRating, comment: document.getElementById('reviewComment').value })
+      body: JSON.stringify({ ratings: _reviewRatings, comment: document.getElementById('reviewComment').value })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur');
@@ -1927,11 +1947,22 @@ function renderReviewsSection(p) {
       ${r.comment ? `<div class="review-item-text">${esc(r.comment)}</div>` : ''}
       ${r.hostReply ? `<div class="review-reply"><div class="review-reply-t"><i class="fas fa-reply"></i> Réponse de l'hôte</div>${esc(r.hostReply)}</div>` : ''}
     </div>`).join('');
+  const CRIT_LABELS = { cleanliness:'Propreté', communication:'Communication', location:'Emplacement', accuracy:'Exactitude', value:'Qualité-prix' };
+  const critHtml = p.reviewsCriteria ? `
+    <div class="reviews-criteria">
+      ${Object.entries(p.reviewsCriteria).map(([k, v]) => `
+        <div class="reviews-crit-row">
+          <span>${CRIT_LABELS[k] || k}</span>
+          <span class="reviews-crit-bar"><i style="width:${Math.round(v / 5 * 100)}%"></i></span>
+          <b>${v}</b>
+        </div>`).join('')}
+    </div>` : '';
   return `
     <div class="detail-sec-t">
       <i class="fas fa-star" style="color:var(--primary);"></i>
       ${p.reviewsAvg} · ${p.reviewsCount} avis
     </div>
+    ${critHtml}
     <div class="reviews-list">${items}</div>
     ${p.reviews.length > 6 ? `<div class="reviews-more">${p.reviews.length - 6} autres avis non affichés</div>` : ''}`;
 }
