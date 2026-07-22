@@ -19636,7 +19636,7 @@ app.post('/api/host/register', async (req, res) => {
         referral_code, phone, is_external_host
       )
       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NULL, $7, $8, $9, $10, $11, TRUE)`,
-      [id, company || null, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires, myReferralCode, String(phone).trim()]
+      [id, (company && company.trim()) ? company.trim() : `${firstName} ${lastName}`, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires, myReferralCode, String(phone).trim()]
     );
 
     // Email de vérification (même mécanisme que Boostinghost)
