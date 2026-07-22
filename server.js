@@ -20035,6 +20035,55 @@ app.get('/api/host/stripe/status', authenticateToken, async (req, res) => {
 
 // 📊 Dashboard hôte externe — logements, réservations à venir, revenus
 // ══════════════════════════════════════════════════════════════
+// 📊 TAUX D'ANNULATION — réputation symétrique hôte / voyageur
+// Sous 3 réservations, on n'affiche rien : « 1 sur 1 » donnerait
+// 100% et condamnerait injustement un nouvel arrivant.
+// Les annulations système (paiement refusé) ne comptent pour personne.
+// ══════════════════════════════════════════════════════════════
+const CANCEL_RATE_MIN_BOOKINGS = 3;
+
+function cancelRateLabel(rate) {
+  if (rate == null) return null;
+  if (rate <= 5) return 'excellent';
+  if (rate <= 15) return 'correct';
+  return 'eleve';
+}
+
+// Taux d'annulation d'un hôte (annulations qu'IL a faites)
+async function getHostCancellationRate(userId) {
+  try {
+    const r = await pool.query(`
+      SELECT COUNT(*)::int AS total,
+             COUNT(*) FILTER (WHERE status = 'cancelled' AND cancelled_by = 'host')::int AS cancelled
+      FROM reservations
+      WHERE user_id = $1 AND source = 'guest_app'
+        AND COALESCE(reservation_type,'') <> 'block'
+    `, [userId]);
+    const { total, cancelled } = r.rows[0] || {};
+    if (!total || total < CANCEL_RATE_MIN_BOOKINGS) return null;
+    const rate = Math.round(cancelled / total * 1000) / 10;
+    return { rate, cancelled, total, level: cancelRateLabel(rate) };
+  } catch(e) { return null; }
+}
+
+// Taux d'annulation d'un voyageur (identifié par email)
+async function getGuestCancellationRate(guestEmail) {
+  if (!guestEmail) return null;
+  try {
+    const r = await pool.query(`
+      SELECT COUNT(*)::int AS total,
+             COUNT(*) FILTER (WHERE status = 'cancelled' AND cancelled_by = 'guest')::int AS cancelled
+      FROM reservations
+      WHERE LOWER(guest_email) = $1 AND source = 'guest_app'
+    `, [String(guestEmail).toLowerCase()]);
+    const { total, cancelled } = r.rows[0] || {};
+    if (!total || total < CANCEL_RATE_MIN_BOOKINGS) return null;
+    const rate = Math.round(cancelled / total * 1000) / 10;
+    return { rate, cancelled, total, level: cancelRateLabel(rate) };
+  } catch(e) { return null; }
+}
+
+// ══════════════════════════════════════════════════════════════
 // 💳 PAIEMENT DIFFÉRÉ (modèle Booking)
 // La carte est enregistrée à la réservation, débitée seulement à
 // J-2, quand l'annulation gratuite n'est plus possible. Annuler
@@ -20609,10 +20658,18 @@ app.get('/api/host/reservations', authenticateToken, async (req, res) => {
     `, [req.user.id]);
 
     const today = new Date().toISOString().slice(0, 10);
+
+    // Taux d'annulation par voyageur (un calcul par email distinct)
+    const rateByEmail = {};
+    for (const em of [...new Set(rows.rows.map(r => (r.guest_email || '').toLowerCase()).filter(Boolean))]) {
+      rateByEmail[em] = await getGuestCancellationRate(em);
+    }
+
     const out = rows.rows.map(r => {
       const gross = parseFloat(r.amount_total) || 0;
       return {
         uid: r.uid,
+        guestCancellationRate: rateByEmail[(r.guest_email || '').toLowerCase()] || null,
         propertyId: r.property_id,
         propertyName: r.property_name,
         propertyPhoto: r.property_photo || null,
@@ -20691,7 +20748,8 @@ app.get('/api/host/dashboard', authenticateToken, async (req, res) => {
         netRevenue: netTotal
       },
       properties: props.rows,
-      upcomingReservations: upcoming.slice(0, 10)
+      upcomingReservations: upcoming.slice(0, 10),
+      cancellationRate: await getHostCancellationRate(req.user.id)
     });
   } catch (e) {
     console.error('❌ [HOST] dashboard:', e.message);
@@ -39987,7 +40045,8 @@ app.get('/api/guest/properties/:id', async (req, res) => {
         avatarUrl: p.host_avatar_url || null,
         bio: p.host_bio || null,
         since: p.host_since ? new Date(p.host_since).toISOString().slice(0, 10) : null,
-        listingsCount: hostListingsCount
+        listingsCount: hostListingsCount,
+        cancellationRate: await getHostCancellationRate(p.owner_id)
       },
       reviews,
       reviewsAvg,

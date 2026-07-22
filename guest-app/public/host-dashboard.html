@@ -164,6 +164,7 @@ function render(d){
       <div class="stat big"><div class="s-val">${s.netRevenue.toLocaleString('fr-FR')}€</div><div class="s-lab">Revenus nets (après commission)</div></div>
       <div class="stat"><div class="s-val">${s.propertiesCount}</div><div class="s-lab">Logement${s.propertiesCount>1?'s':''}</div></div>
       <div class="stat" onclick="location.href='host-reservations.html'" style="cursor:pointer;"><div class="s-val">${s.upcomingCount}</div><div class="s-lab">Séjour${s.upcomingCount>1?'s':''} à venir <i class="fas fa-chevron-right" style="font-size:9px;color:var(--primary);"></i></div></div>
+      ${d.cancellationRate ? `<div class="stat" style="grid-column:1/-1;"><div class="s-val" style="color:${d.cancellationRate.level==='eleve'?'#B45309':d.cancellationRate.level==='excellent'?'#166534':'var(--ink)'}">${d.cancellationRate.rate}%</div><div class="s-lab">Votre taux d'annulation (${d.cancellationRate.cancelled} sur ${d.cancellationRate.total}) — visible par les voyageurs</div></div>` : ''}
     </div>
 
     <div class="quick">

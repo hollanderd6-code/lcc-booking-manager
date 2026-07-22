@@ -2050,6 +2050,21 @@ function renderHostCard(p) {
   const meta = [sinceTxt, h.listingsCount > 1 ? `${h.listingsCount} logements` : null]
     .filter(Boolean).join(' · ');
 
+  // Taux d'annulation de l'hôte (affiché seulement s'il est calculable)
+  let cancelHtml = '';
+  const cr = h.cancellationRate;
+  if (cr) {
+    const conf = {
+      excellent: { i: 'fa-circle-check',        t: `Annule rarement — ${cr.rate}% de ses réservations` },
+      correct:   { i: 'fa-circle-info',         t: `${cr.rate}% de réservations annulées par l'hôte` },
+      eleve:     { i: 'fa-triangle-exclamation', t: `${cr.rate}% de réservations annulées par l'hôte` }
+    }[cr.level];
+    cancelHtml = `<div class="host-cancel ${cr.level}">
+      <i class="fas ${conf.i}"></i>
+      <span>${conf.t}<b> (${cr.cancelled} sur ${cr.total})</b></span>
+    </div>`;
+  }
+
   // Bio tronquée à ~150 caractères, dépliable
   let bioHtml = '';
   if (h.bio) {
@@ -2078,6 +2093,7 @@ function renderHostCard(p) {
         <div class="host-badge"><i class="fas fa-circle-check"></i> Profil vérifié</div>
       </div>
       ${bioHtml}
+      ${cancelHtml}
       <div class="host-note"><i class="fas fa-comments"></i> Vous échangerez directement avec ${first}, sans intermédiaire.</div>
     </div>`;
 }
