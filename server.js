@@ -40170,61 +40170,373 @@ app.post('/api/attestation/send', authenticateToken, requireFeature('attestation
 // Les aperçus WhatsApp/iMessage/Facebook lisent ce HTML statique ;
 // les humains sont redirigés vers l'app sur la fiche.
 // ══════════════════════════════════════════════════════════════
-app.get('/logement/:id', async (req, res) => {
-  try {
-    const r = await pool.query(`
-      SELECT p.id, p.name, p.city, p.photo_url, p.base_price, p.description,
-             p.property_type,
-             (SELECT ROUND(AVG(rating)::numeric, 1) FROM bhguest_reviews br
-              WHERE br.property_id = p.id AND br.submitted_at IS NOT NULL) AS avg_rating,
-             (SELECT COUNT(*)::int FROM bhguest_reviews br
-              WHERE br.property_id = p.id AND br.submitted_at IS NOT NULL) AS reviews_count
-      FROM properties p
-      WHERE p.id = $1 AND p.is_marketplace = true
-    `, [req.params.id]);
-    const p = r.rows[0];
-    const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
-    const target = `${appUrl}/guest-app/public/index.html?property=${encodeURIComponent(req.params.id)}`;
-    if (!p) return res.redirect(302, `${appUrl}/guest-app/public/index.html`);
+// ══════════════════════════════════════════════════════════════
+// 🔍 SEO — pages publiques indexables
+// La marketplace est une SPA : Google n'y voit rien. Ces routes
+// servent du vrai HTML (contenu, données structurées Schema.org)
+// pour que les annonces remontent sur « location <ville> ».
+// Les humains cliquent et arrivent dans l'app ; les robots lisent.
+// ══════════════════════════════════════════════════════════════
+const SEO_ESC = t => String(t == null ? '' : t)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-    const escH = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const title = `${p.name}${p.city ? ' · ' + p.city : ''} — BHGuest`;
-    const bits = [];
-    if (p.base_price) bits.push(`dès ${Math.round(parseFloat(p.base_price))}€/nuit`);
-    if (p.avg_rating) bits.push(`⭐ ${p.avg_rating} (${p.reviews_count} avis)`);
-    bits.push('Réservation directe, sans frais cachés');
-    const desc = bits.join(' · ');
-    const img = p.photo_url || `${appUrl}/guest-app/public/icon.png`;
+function seoBaseUrl() {
+  return (process.env.APP_URL || 'https://www.boostinghost.fr').replace(/\/$/, '');
+}
 
-    res.set('Content-Type', 'text/html; charset=utf-8');
-    res.send(`<!DOCTYPE html>
+function seoSlug(t) {
+  return String(t || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'ville';
+}
+
+// Squelette commun : styles inline, aucune dépendance externe (rapide = mieux classé)
+function seoPage({ title, description, canonical, ogImage, bodyHtml, jsonLd }) {
+  const base = seoBaseUrl();
+  return `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>${escH(title)}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${SEO_ESC(title)}</title>
+<meta name="description" content="${SEO_ESC(description)}">
+<link rel="canonical" href="${SEO_ESC(canonical)}">
+<meta name="robots" content="index, follow, max-image-preview:large">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="BHGuest">
-<meta property="og:title" content="${escH(title)}">
-<meta property="og:description" content="${escH(desc)}">
-<meta property="og:image" content="${escH(img)}">
-<meta property="og:url" content="${escH(appUrl + '/logement/' + p.id)}">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="${SEO_ESC(title)}">
+<meta property="og:description" content="${SEO_ESC(description)}">
+<meta property="og:url" content="${SEO_ESC(canonical)}">
+${ogImage ? `<meta property="og:image" content="${SEO_ESC(ogImage)}">` : ''}
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${escH(title)}">
-<meta name="twitter:description" content="${escH(desc)}">
-<meta name="twitter:image" content="${escH(img)}">
-<meta name="description" content="${escH(desc)}">
-<meta http-equiv="refresh" content="0;url=${escH(target)}">
-<style>body{font-family:sans-serif;background:#FAF8F5;color:#1C1917;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}a{color:#C2410C;}</style>
+<meta name="twitter:title" content="${SEO_ESC(title)}">
+<meta name="twitter:description" content="${SEO_ESC(description)}">
+${ogImage ? `<meta name="twitter:image" content="${SEO_ESC(ogImage)}">` : ''}
+${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>` : ''}
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#FAF8F5;color:#1C1917;line-height:1.55}
+a{color:#C2410C}
+.hd{background:#1C1917;color:#fff;padding:14px 20px}
+.hd-in{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.lg{display:flex;align-items:center;gap:9px;text-decoration:none;color:#fff}
+.lg-m{width:32px;height:32px;background:#C2410C;border-radius:50% 50% 50% 6px;transform:rotate(45deg);display:flex;align-items:center;justify-content:center}
+.lg-m b{transform:rotate(-45deg);font-family:Georgia,serif;font-size:19px;font-weight:400}
+.lg-t{font-size:17px;font-weight:700}.lg-t i{color:#F0997B;font-style:normal}
+.cta{background:#C2410C;color:#fff;text-decoration:none;border-radius:9px;padding:9px 17px;font-size:14px;font-weight:700;white-space:nowrap}
+.wr{max-width:960px;margin:0 auto;padding:24px 20px 50px}
+.bc{font-size:12.5px;color:#78716C;margin-bottom:14px}
+.bc a{color:#78716C;text-decoration:none}
+h1{font-size:27px;font-weight:700;line-height:1.2;margin-bottom:7px}
+.sub{font-size:14.5px;color:#78716C;margin-bottom:18px}
+.hero-img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:14px;background:#EFEAE2;margin-bottom:14px}
+.gal{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:22px}
+.gal img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:9px;background:#EFEAE2}
+.px{background:#fff;border:1px solid #EDE8E1;border-radius:13px;padding:16px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.px b{font-size:25px}.px span{font-size:13px;color:#78716C}
+.fx{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.fx li{list-style:none;background:#fff;border:1px solid #EDE8E1;border-radius:999px;padding:7px 14px;font-size:13px}
+h2{font-size:19px;font-weight:700;margin:26px 0 10px}
+p.tx{font-size:14.5px;color:#44403C;white-space:pre-line;margin-bottom:14px}
+.rv{background:#fff;border:1px solid #EDE8E1;border-radius:12px;padding:14px 16px;margin-bottom:9px}
+.rv-h{font-size:13.5px;font-weight:600;margin-bottom:5px}
+.rv-h span{color:#C2410C}
+.rv p{font-size:13.5px;color:#44403C}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.cd{background:#fff;border:1px solid #EDE8E1;border-radius:13px;overflow:hidden;text-decoration:none;color:inherit;display:block}
+.cd img{width:100%;aspect-ratio:4/3;object-fit:cover;background:#EFEAE2}
+.cd-b{padding:12px 14px}
+.cd-n{font-size:14.5px;font-weight:700;margin-bottom:3px}
+.cd-c{font-size:12.5px;color:#78716C}
+.cd-p{font-size:14px;font-weight:700;color:#C2410C;margin-top:7px}
+.ft{background:#1C1917;color:rgba(255,255,255,.65);padding:30px 20px;font-size:13px}
+.ft-in{max-width:960px;margin:0 auto}
+.ft a{color:#F0997B;text-decoration:none}
+.tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.tags a{background:rgba(255,255,255,.08);border-radius:7px;padding:5px 11px;font-size:12.5px}
+@media(max-width:640px){h1{font-size:22px}.gal{grid-template-columns:repeat(3,1fr)}}
+</style>
 </head>
 <body>
-<p>Redirection vers <a href="${escH(target)}">${escH(p.name)}</a>…</p>
-<script>location.replace(${JSON.stringify(target)});</script>
+<header class="hd"><div class="hd-in">
+  <a class="lg" href="${base}/logements">
+    <span class="lg-m"><b>b</b></span><span class="lg-t">BH<i>Guest</i></span>
+  </a>
+  <a class="cta" href="${base}/guest-app/public/index.html">Ouvrir l'application</a>
+</div></header>
+${bodyHtml}
+<footer class="ft"><div class="ft-in">
+  <strong style="color:#fff">BHGuest</strong> — plateforme française de réservation directe entre voyageurs et hôtes.<br>
+  Réservez sans frais de service cachés, échangez directement avec votre hôte.
+  <div style="margin-top:12px"><a href="${base}/logements">Tous les logements</a> · <a href="${base}/guest-app/public/host-welcome.html">Devenir hôte</a></div>
+</div></footer>
 </body>
-</html>`);
+</html>`;
+}
+
+// ── Page publique d'un logement ──────────────────────────────
+app.get('/logement/:id', async (req, res) => {
+  const base = seoBaseUrl();
+  const appUrl = `${base}/guest-app/public/index.html?property=${encodeURIComponent(req.params.id)}`;
+  try {
+    const r = await pool.query(`
+      SELECT p.id, p.name, p.city, p.postal_code, p.address, p.photo_url,
+             p.base_price, p.description, p.highlights, p.good_to_know, p.property_type,
+             p.max_guests, p.bedrooms, p.beds, p.bathrooms, p.amenities,
+             u.first_name AS host_first_name,
+             (SELECT ROUND(AVG(rating)::numeric,1) FROM bhguest_reviews b WHERE b.property_id = p.id AND b.submitted_at IS NOT NULL AND COALESCE(b.moderation_status,'published') <> 'removed') AS avg_rating,
+             (SELECT COUNT(*)::int FROM bhguest_reviews b WHERE b.property_id = p.id AND b.submitted_at IS NOT NULL AND COALESCE(b.moderation_status,'published') <> 'removed') AS reviews_count
+      FROM properties p JOIN users u ON u.id = p.user_id
+      WHERE p.id = $1 AND p.is_marketplace = true
+    `, [req.params.id]);
+    const p = r.rows[0];
+    if (!p) return res.redirect(302, `${base}/logements`);
+
+    // Photos : table dédiée, ordonnée
+    let photos = [];
+    try {
+      const ph = await pool.query('SELECT url FROM property_photos WHERE property_id = $1 ORDER BY position ASC LIMIT 12', [p.id]);
+      photos = ph.rows.map(x => x.url);
+    } catch(e) {}
+    if (p.photo_url && !photos.includes(p.photo_url)) photos.unshift(p.photo_url);
+    photos = photos.filter(u => typeof u === 'string' && u.startsWith('http')).slice(0, 9);
+
+    // Avis publiés
+    const rv = await pool.query(`
+      SELECT guest_name, rating, comment, submitted_at, host_reply
+      FROM bhguest_reviews
+      WHERE property_id = $1 AND submitted_at IS NOT NULL AND comment IS NOT NULL
+        AND COALESCE(moderation_status,'published') <> 'removed'
+      ORDER BY submitted_at DESC LIMIT 8
+    `, [p.id]);
+
+    // Autres logements de la même ville
+    const near = await pool.query(`
+      SELECT id, name, city, photo_url, base_price FROM properties
+      WHERE is_marketplace = true AND id <> $1 AND LOWER(city) = LOWER($2)
+      LIMIT 4
+    `, [p.id, p.city || '']);
+
+    const price = p.base_price ? Math.round(parseFloat(p.base_price)) : null;
+    const typeLbl = { appartement:'Appartement', maison:'Maison', studio:'Studio', villa:'Villa' }[String(p.property_type || '').toLowerCase()] || 'Logement';
+    const title = `${p.name}${p.city ? ` — ${p.city}` : ''} | Location courte durée BHGuest`;
+    const descParts = [`${typeLbl}${p.city ? ` à ${p.city}` : ''}`];
+    if (p.max_guests) descParts.push(`${p.max_guests} voyageurs`);
+    if (p.bedrooms) descParts.push(`${p.bedrooms} chambre${p.bedrooms > 1 ? 's' : ''}`);
+    if (price) descParts.push(`dès ${price}€/nuit`);
+    descParts.push('Réservation directe avec l\'hôte, sans frais de service');
+    const metaDesc = descParts.join(' · ').slice(0, 300);
+
+    // Équipements
+    let amenities = [];
+    try {
+      let a = p.amenities;
+      if (typeof a === 'string') a = JSON.parse(a);
+      if (Array.isArray(a)) amenities = a;
+      else if (a && typeof a === 'object') amenities = Object.keys(a).filter(k => a[k]); // { wifi: true, ... }
+    } catch(e) {}
+    const AM_LBL = { wifi:'Wi-Fi', kitchen:'Cuisine équipée', washer:'Lave-linge', dryer:'Sèche-linge', tv:'Télévision',
+      parking:'Parking', ac:'Climatisation', heating:'Chauffage', pool:'Piscine', elevator:'Ascenseur',
+      balcony:'Balcon / terrasse', dishwasher:'Lave-vaisselle', workspace:'Espace de travail', pets:'Animaux acceptés' };
+
+    // Données structurées : Schema.org pour les résultats enrichis Google
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'LodgingBusiness',
+      name: p.name,
+      url: `${base}/logement/${p.id}`,
+      description: (p.description || metaDesc).slice(0, 500),
+      image: photos.slice(0, 5),
+      address: { '@type': 'PostalAddress', addressLocality: p.city || undefined, postalCode: p.postal_code || undefined, addressCountry: 'FR' },
+      ...(p.max_guests ? { maximumAttendeeCapacity: p.max_guests } : {}),
+      ...(p.bedrooms ? { numberOfRooms: p.bedrooms } : {}),
+      ...(price ? { priceRange: `€${price}` } : {}),
+      ...(p.avg_rating && p.reviews_count >= 1 ? {
+        aggregateRating: { '@type': 'AggregateRating', ratingValue: String(p.avg_rating), reviewCount: String(p.reviews_count), bestRating: '5' }
+      } : {}),
+      ...(rv.rows.length ? {
+        review: rv.rows.slice(0, 5).map(x => ({
+          '@type': 'Review',
+          author: { '@type': 'Person', name: (x.guest_name || 'Voyageur').split(/\s+/)[0] },
+          reviewRating: { '@type': 'Rating', ratingValue: String(x.rating), bestRating: '5' },
+          reviewBody: String(x.comment).slice(0, 400),
+          datePublished: x.submitted_at ? new Date(x.submitted_at).toISOString().slice(0, 10) : undefined
+        }))
+      } : {})
+    };
+
+    const facts = [];
+    if (p.max_guests) facts.push(`${p.max_guests} voyageur${p.max_guests > 1 ? 's' : ''}`);
+    if (p.bedrooms) facts.push(`${p.bedrooms} chambre${p.bedrooms > 1 ? 's' : ''}`);
+    if (p.beds) facts.push(`${p.beds} lit${p.beds > 1 ? 's' : ''}`);
+    if (p.bathrooms) facts.push(`${p.bathrooms} salle${p.bathrooms > 1 ? 's' : ''} de bain`);
+    amenities.forEach(a => { if (AM_LBL[a]) facts.push(AM_LBL[a]); });
+
+    const body = `<main class="wr">
+  <nav class="bc"><a href="${base}/logements">Logements</a>${p.city ? ` › <a href="${base}/logements/${seoSlug(p.city)}">${SEO_ESC(p.city)}</a>` : ''} › ${SEO_ESC(p.name)}</nav>
+  <h1>${SEO_ESC(p.name)}</h1>
+  <p class="sub">${SEO_ESC(typeLbl)}${p.city ? ` à ${SEO_ESC(p.city)}` : ''}${p.avg_rating ? ` · ★ ${p.avg_rating} (${p.reviews_count} avis)` : ''}</p>
+  ${photos[0] ? `<img class="hero-img" src="${SEO_ESC(photos[0])}" alt="${SEO_ESC(p.name)}${p.city ? ` — ${SEO_ESC(p.city)}` : ''}">` : ''}
+  ${photos.length > 1 ? `<div class="gal">${photos.slice(1, 9).map((u, i) => `<img src="${SEO_ESC(u)}" alt="${SEO_ESC(p.name)} — photo ${i + 2}" loading="lazy">`).join('')}</div>` : ''}
+  <div class="px">
+    <div>${price ? `<b>${price}€</b> <span>par nuit</span>` : '<b>Sur demande</b>'}</div>
+    <a class="cta" href="${SEO_ESC(appUrl)}">Voir les disponibilités</a>
+  </div>
+  ${facts.length ? `<ul class="fx">${facts.map(f => `<li>${SEO_ESC(f)}</li>`).join('')}</ul>` : ''}
+  ${p.description ? `<h2>Le logement</h2><p class="tx">${SEO_ESC(p.description)}</p>` : ''}
+  ${p.highlights ? `<h2>Les plus</h2><p class="tx">${SEO_ESC(p.highlights)}</p>` : ''}
+  ${p.good_to_know ? `<h2>À savoir</h2><p class="tx">${SEO_ESC(p.good_to_know)}</p>` : ''}
+  <h2>Votre hôte</h2>
+  <p class="tx">${SEO_ESC(p.host_first_name || 'Votre hôte')} vous accueille et répond directement à vos questions. Aucun intermédiaire : vous réservez et échangez en direct.</p>
+  ${rv.rows.length ? `<h2>Avis des voyageurs${p.avg_rating ? ` — ★ ${p.avg_rating}/5` : ''}</h2>
+    ${rv.rows.map(x => `<div class="rv">
+      <div class="rv-h">${SEO_ESC((x.guest_name || 'Voyageur').split(/\s+/)[0])} <span>${'★'.repeat(Math.round(x.rating))}</span></div>
+      <p>${SEO_ESC(x.comment)}</p>
+      ${x.host_reply ? `<p style="margin-top:8px;color:#78716C"><em>Réponse de l'hôte :</em> ${SEO_ESC(x.host_reply)}</p>` : ''}
+    </div>`).join('')}` : ''}
+  ${near.rows.length ? `<h2>Autres logements à ${SEO_ESC(p.city)}</h2>
+    <div class="cards">${near.rows.map(n => `<a class="cd" href="${base}/logement/${n.id}">
+      ${n.photo_url ? `<img src="${SEO_ESC(n.photo_url)}" alt="${SEO_ESC(n.name)}" loading="lazy">` : ''}
+      <div class="cd-b"><div class="cd-n">${SEO_ESC(n.name)}</div><div class="cd-c">${SEO_ESC(n.city || '')}</div>
+      ${n.base_price ? `<div class="cd-p">dès ${Math.round(parseFloat(n.base_price))}€ / nuit</div>` : ''}</div></a>`).join('')}</div>` : ''}
+</main>`;
+
+    res.set('Cache-Control', 'public, max-age=600');
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(seoPage({ title, description: metaDesc, canonical: `${base}/logement/${p.id}`, ogImage: photos[0], bodyHtml: body, jsonLd }));
   } catch(e) {
-    console.error('❌ [SHARE] /logement/:id:', e.message);
-    res.redirect(302, (process.env.APP_URL || 'https://www.boostinghost.fr') + '/guest-app/public/index.html');
+    console.error('❌ [SEO] /logement/:id:', e.message);
+    res.redirect(302, appUrl);
   }
+});
+
+// ── Toutes les villes ────────────────────────────────────────
+app.get('/logements', async (req, res) => {
+  const base = seoBaseUrl();
+  try {
+    const r = await pool.query(`
+      SELECT city, COUNT(*)::int AS n, MIN(base_price) AS from_price
+      FROM properties WHERE is_marketplace = true AND city IS NOT NULL AND city <> ''
+      GROUP BY city ORDER BY COUNT(*) DESC, city ASC LIMIT 200
+    `);
+    const recent = await pool.query(`
+      SELECT id, name, city, photo_url, base_price FROM properties
+      WHERE is_marketplace = true ORDER BY created_at DESC LIMIT 12
+    `);
+    const body = `<main class="wr">
+  <h1>Locations courte durée en France</h1>
+  <p class="sub">Réservez en direct avec votre hôte, sans frais de service ajoutés.</p>
+  ${r.rows.length ? `<h2>Nos destinations</h2><div class="fx">${r.rows.map(c =>
+    `<li><a href="${base}/logements/${seoSlug(c.city)}" style="text-decoration:none">${SEO_ESC(c.city)} <span style="color:#78716C">(${c.n})</span></a></li>`).join('')}</div>` : ''}
+  ${recent.rows.length ? `<h2>Logements récemment ajoutés</h2>
+    <div class="cards">${recent.rows.map(n => `<a class="cd" href="${base}/logement/${n.id}">
+      ${n.photo_url ? `<img src="${SEO_ESC(n.photo_url)}" alt="${SEO_ESC(n.name)} — ${SEO_ESC(n.city || '')}" loading="lazy">` : ''}
+      <div class="cd-b"><div class="cd-n">${SEO_ESC(n.name)}</div><div class="cd-c">${SEO_ESC(n.city || '')}</div>
+      ${n.base_price ? `<div class="cd-p">dès ${Math.round(parseFloat(n.base_price))}€ / nuit</div>` : ''}</div></a>`).join('')}</div>`
+    : '<p class="tx">Aucun logement disponible pour le moment.</p>'}
+</main>`;
+    res.set('Cache-Control', 'public, max-age=900');
+    res.send(seoPage({
+      title: 'Locations courte durée en France — BHGuest',
+      description: 'Trouvez un logement en location courte durée partout en France. Réservation directe avec l\'hôte, sans frais de service cachés.',
+      canonical: `${base}/logements`, bodyHtml: body
+    }));
+  } catch(e) {
+    console.error('❌ [SEO] /logements:', e.message);
+    res.redirect(302, `${base}/guest-app/public/index.html`);
+  }
+});
+
+// ── Page par ville ───────────────────────────────────────────
+app.get('/logements/:citySlug', async (req, res) => {
+  const base = seoBaseUrl();
+  try {
+    const all = await pool.query(`
+      SELECT id, name, city, postal_code, photo_url, base_price, max_guests, property_type
+      FROM properties WHERE is_marketplace = true AND city IS NOT NULL AND city <> ''
+    `);
+    const rows = all.rows.filter(p => seoSlug(p.city) === req.params.citySlug);
+    if (!rows.length) return res.redirect(302, `${base}/logements`);
+
+    const city = rows[0].city;
+    const prices = rows.map(p => parseFloat(p.base_price)).filter(v => v > 0);
+    const minP = prices.length ? Math.round(Math.min(...prices)) : null;
+
+    const body = `<main class="wr">
+  <nav class="bc"><a href="${base}/logements">Logements</a> › ${SEO_ESC(city)}</nav>
+  <h1>Location courte durée à ${SEO_ESC(city)}</h1>
+  <p class="sub">${rows.length} logement${rows.length > 1 ? 's' : ''} disponible${rows.length > 1 ? 's' : ''}${minP ? ` · à partir de ${minP}€ la nuit` : ''}</p>
+  <p class="tx">Réservez votre séjour à ${SEO_ESC(city)} en direct avec l'hôte. Pas de frais de service ajoutés au moment de payer, une annulation gratuite jusqu'à deux jours avant l'arrivée, et un échange direct avec la personne qui vous accueille.</p>
+  <div class="cards">${rows.map(n => `<a class="cd" href="${base}/logement/${n.id}">
+    ${n.photo_url ? `<img src="${SEO_ESC(n.photo_url)}" alt="${SEO_ESC(n.name)} — location à ${SEO_ESC(city)}" loading="lazy">` : ''}
+    <div class="cd-b"><div class="cd-n">${SEO_ESC(n.name)}</div>
+    <div class="cd-c">${SEO_ESC(city)}${n.max_guests ? ` · ${n.max_guests} voyageurs` : ''}</div>
+    ${n.base_price ? `<div class="cd-p">dès ${Math.round(parseFloat(n.base_price))}€ / nuit</div>` : ''}</div></a>`).join('')}</div>
+</main>`;
+
+    res.set('Cache-Control', 'public, max-age=900');
+    res.send(seoPage({
+      title: `Location courte durée à ${city} — ${rows.length} logement${rows.length > 1 ? 's' : ''} | BHGuest`,
+      description: `Louez un logement à ${city} en réservation directe${minP ? `, à partir de ${minP}€ la nuit` : ''}. Sans frais de service, échange direct avec l'hôte.`,
+      canonical: `${base}/logements/${req.params.citySlug}`,
+      ogImage: rows[0].photo_url || null,
+      bodyHtml: body,
+      jsonLd: {
+        '@context': 'https://schema.org', '@type': 'ItemList',
+        name: `Locations à ${city}`,
+        itemListElement: rows.slice(0, 20).map((n, i) => ({
+          '@type': 'ListItem', position: i + 1, url: `${base}/logement/${n.id}`, name: n.name
+        }))
+      }
+    }));
+  } catch(e) {
+    console.error('❌ [SEO] /logements/:city:', e.message);
+    res.redirect(302, `${base}/logements`);
+  }
+});
+
+// ── sitemap.xml ──────────────────────────────────────────────
+app.get('/sitemap.xml', async (req, res) => {
+  const base = seoBaseUrl();
+  try {
+    const props = await pool.query(`
+      SELECT id, city, updated_at FROM properties
+      WHERE is_marketplace = true ORDER BY updated_at DESC LIMIT 5000
+    `);
+    const cities = [...new Set(props.rows.map(p => p.city).filter(Boolean).map(seoSlug))];
+    const d = x => (x ? new Date(x) : new Date()).toISOString().slice(0, 10);
+    const urls = [
+      { loc: `${base}/logements`, pri: '0.9', freq: 'daily' },
+      { loc: `${base}/guest-app/public/host-welcome.html`, pri: '0.7', freq: 'monthly' },
+      ...cities.map(c => ({ loc: `${base}/logements/${c}`, pri: '0.8', freq: 'daily' })),
+      ...props.rows.map(p => ({ loc: `${base}/logement/${p.id}`, pri: '0.7', freq: 'weekly', lm: d(p.updated_at) }))
+    ];
+    res.set('Content-Type', 'application/xml; charset=utf-8');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(u => `<url><loc>${SEO_ESC(u.loc)}</loc>${u.lm ? `<lastmod>${u.lm}</lastmod>` : ''}<changefreq>${u.freq}</changefreq><priority>${u.pri}</priority></url>`).join('\n')}
+</urlset>`);
+  } catch(e) {
+    console.error('❌ [SEO] sitemap:', e.message);
+    res.status(500).send('');
+  }
+});
+
+// ── robots.txt ───────────────────────────────────────────────
+app.get('/robots.txt', (req, res) => {
+  const base = seoBaseUrl();
+  res.set('Content-Type', 'text/plain; charset=utf-8');
+  res.send(`User-agent: *
+Allow: /logement/
+Allow: /logements
+Disallow: /api/
+Disallow: /admin
+Disallow: /guest-app/public/host-
+Sitemap: ${base}/sitemap.xml
+`);
 });
 
 app.get('/api/guest/properties', async (req, res) => {
