@@ -1266,9 +1266,9 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
 </select>
 </div>
 <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;" id="depositStatusFilters">
-<button class="dep-filter-chip active" data-status="active" onclick="setDepositFilter('active')">🟢 Actives</button>
-<button class="dep-filter-chip" data-status="captured" onclick="setDepositFilter('captured')">💰 Débitées</button>
-<button class="dep-filter-chip" data-status="all" onclick="setDepositFilter('all')">📋 Toutes</button>
+<button class="dep-filter-chip active" data-status="active" onclick="setDepositFilter('active')"><span style="width:8px;height:8px;border-radius:50%;background:#16A34A;display:inline-block;margin-right:5px;vertical-align:1px;"></span>Actives</button>
+<button class="dep-filter-chip" data-status="captured" onclick="setDepositFilter('captured')"><i class="fas fa-euro-sign"></i> Débitées</button>
+<button class="dep-filter-chip" data-status="all" onclick="setDepositFilter('all')">Toutes</button>
 </div>
 <div id="depositMonthFilter" class="month-filter-row" style="display:none;">
 <label style="font-size:12px;font-weight:500;color:var(--text-secondary,#666);">Période :</label>
@@ -1300,7 +1300,7 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
 <i class="fab fa-stripe-s"></i>
 </div>
 <div class="stripe-connect-notice-content">
-<h3>⚠️ Compte Stripe Connect requis</h3>
+<h3><i class="fas fa-exclamation-triangle" style="color:#D97706;"></i> Compte Stripe Connect requis</h3>
 <p>Pour recevoir des paiements de locations directement sur votre compte, vous devez d'abord connecter votre compte Stripe Connect dans les paramètres.</p>
 <a href="/settings-account.html?tab=payments" class="btn btn-primary">
 <i class="fas fa-plug"></i>
@@ -1355,9 +1355,9 @@ Actualiser
 </select>
 </div>
 <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
-<button class="dep-filter-chip active" data-pstatus="active" onclick="setPaymentFilter('active')">🟢 Actifs</button>
-<button class="dep-filter-chip" data-pstatus="paid" onclick="setPaymentFilter('paid')">💰 Payés</button>
-<button class="dep-filter-chip" data-pstatus="all" onclick="setPaymentFilter('all')">📋 Tous</button>
+<button class="dep-filter-chip active" data-pstatus="active" onclick="setPaymentFilter('active')"><span style="width:8px;height:8px;border-radius:50%;background:#16A34A;display:inline-block;margin-right:5px;vertical-align:1px;"></span>Actifs</button>
+<button class="dep-filter-chip" data-pstatus="paid" onclick="setPaymentFilter('paid')"><i class="fas fa-euro-sign"></i> Payés</button>
+<button class="dep-filter-chip" data-pstatus="all" onclick="setPaymentFilter('all')">Tous</button>
 </div>
 <div id="paymentMonthFilter" class="month-filter-row" style="display:none;">
 <label style="font-size:12px;font-weight:500;color:var(--text-secondary,#666);">Période :</label>
@@ -2496,7 +2496,7 @@ function copyDepositLinkByUid(uid) {
           advancedActionsHtml = `
             <div class="deposit-details" id="details-${r.reservationUid}" style="display: none;">
               <div class="details-section">
-                <h4>📋 Informations</h4>
+                <h4><i class="far fa-file-alt" style="color:#6B7280;"></i> Informations</h4>
                 <div class="detail-row">
                   <span class="detail-label">ID Caution</span>
                   <span class="detail-value" style="font-size:11px; word-break:break-all;">${d.id}</span>
@@ -2520,11 +2520,11 @@ function copyDepositLinkByUid(uid) {
               
               ${canCapture || canRelease ? `
               <div class="details-actions">
-                <h4>⚡ Actions</h4>
+                <h4><i class="fas fa-bolt" style="color:#D97706;"></i> Actions</h4>
                 
                 <div style="margin-bottom: 12px;" onclick="event.stopPropagation()">
                   <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">
-                    💰 Montant à débiter (€)
+                    Montant à débiter (€)
                   </label>
                   <input 
                     type="number" 
@@ -3309,7 +3309,7 @@ function renderPaymentsTable() {
       detailsHtml = `
         <div class="deposit-details" id="payment-details-${r.reservationUid}" style="display:none;">
           <div class="details-section">
-            <h4>📋 Informations</h4>
+            <h4><i class="far fa-file-alt" style="color:#6B7280;"></i> Informations</h4>
             <div class="detail-row">
               <span class="detail-label">ID</span>
               <span class="detail-value" style="font-size:11px;word-break:break-all;">${p.id}</span>
@@ -3331,7 +3331,7 @@ function renderPaymentsTable() {
             </p>
           </div>` : ''}
           ${isPaid ? `<div class="details-actions">
-            <h4>⚡ Actions</h4>
+            <h4><i class="fas fa-bolt" style="color:#D97706;"></i> Actions</h4>
             <a href="https://dashboard.stripe.com/payments" target="_blank" class="btn btn-ghost btn-sm" onclick="event.stopPropagation()">
               <i class="fas fa-external-link-alt"></i> Voir dans Stripe
             </a>

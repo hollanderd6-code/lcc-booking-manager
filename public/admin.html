@@ -907,10 +907,10 @@
           <div>
             <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:5px;">Type</label>
             <select id="annType" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#FAFAF8;color:#0D1117;">
-              <option value="feature">🚀 Nouveauté</option>
-              <option value="bugfix">🐛 Correction de bug</option>
-              <option value="maintenance">⚠️ Maintenance</option>
-              <option value="info">📢 Information générale</option>
+              <option value="feature">Nouveauté</option>
+              <option value="bugfix">Correction de bug</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="info">Information générale</option>
             </select>
           </div>
           <div>
@@ -924,7 +924,7 @@
           <div>
             <label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:5px;">Statut initial</label>
             <select id="annStatus" style="width:100%;padding:9px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;background:#FAFAF8;color:#0D1117;">
-              <option value="en_cours">🔄 En cours</option>
+              <option value="en_cours">En cours</option>
               <option value="resolu">✅ Résolu</option>
               <option value="termine">✔️ Terminé</option>
             </select>
@@ -1128,7 +1128,7 @@
             <button class="support-filter-btn active" onclick="setSupportFilter('all', this)">Tous</button>
             <button class="support-filter-btn" onclick="setSupportFilter('waiting', this)">⏳ En attente</button>
             <button class="support-filter-btn" onclick="setSupportFilter('open', this)">✅ Ouverts</button>
-            <button class="support-filter-btn" onclick="setSupportFilter('closed', this)">🔒 Fermés</button>
+            <button class="support-filter-btn" onclick="setSupportFilter('closed', this)"><i class="fas fa-lock"></i> Fermés</button>
           </div>
         </div>
       </div>
@@ -1201,8 +1201,8 @@
     <div class="form-row"><label>Description</label><textarea id="formDesc" rows="3" placeholder="Décrivez la fonctionnalité…"></textarea></div>
     <div class="form-row"><label>Statut</label>
       <select id="formStatus">
-        <option value="reflection">💡 En réflexion</option>
-        <option value="in_progress">🔨 En cours</option>
+        <option value="reflection">En réflexion</option>
+        <option value="in_progress">En cours</option>
         <option value="available">✅ Disponible</option>
       </select>
     </div>
@@ -1711,11 +1711,11 @@ async function loadClientActionsLog(userId) {
       return;
     }
     const ACTION_LABELS = {
-      block: '🚫 Compte bloqué',
+      block: '<i class="fas fa-ban" style="color:#DC2626;"></i> Compte bloqué',
       unblock: '✅ Compte débloqué',
-      extend_trial: '🎁 Jours offerts',
-      change_plan: '🔄 Abonnement modifié',
-      impersonate: '🕵️ Connexion en tant que client'
+      extend_trial: '<i class="fas fa-gift" style="color:#C2410C;"></i> Jours offerts',
+      change_plan: '<i class="fas fa-sync-alt" style="color:#1D4ED8;"></i> Abonnement modifié',
+      impersonate: '<i class="fas fa-user-secret" style="color:#6D28D9;"></i> Connexion en tant que client'
     };
     el.innerHTML = actions.map(a => {
       const date = new Date(a.created_at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
@@ -1772,7 +1772,7 @@ function _showImpersonationWaitingModal(requestId, targetEmail) {
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
     modal.innerHTML = `
       <div style="background:var(--card-bg,#fff);border-radius:14px;padding:28px;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-        <div style="font-size:32px;margin-bottom:10px;">🔐</div>
+        <div style="margin-bottom:10px;"><i class="fas fa-lock" style="font-size:28px;color:#6D28D9;"></i></div>
         <div style="font-weight:700;font-size:15px;margin-bottom:6px;color:var(--text);">En attente d'autorisation</div>
         <div id="impersonationWaitText" style="font-size:13px;color:var(--muted);margin-bottom:18px;"></div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">La demande expire automatiquement après 2 minutes si le client ne répond pas.</div>
@@ -1858,11 +1858,11 @@ async function loadActionsLog() {
 }
 
 const ACTIONS_LOG_LABELS = {
-  block: '🚫 Compte bloqué',
+  block: '<i class="fas fa-ban" style="color:#DC2626;"></i> Compte bloqué',
   unblock: '✅ Compte débloqué',
-  extend_trial: '🎁 Jours offerts',
-  change_plan: '🔄 Abonnement modifié',
-  impersonate: '🕵️ Connexion impersonation'
+  extend_trial: '<i class="fas fa-gift" style="color:#C2410C;"></i> Jours offerts',
+  change_plan: '<i class="fas fa-sync-alt" style="color:#1D4ED8;"></i> Abonnement modifié',
+  impersonate: '<i class="fas fa-user-secret" style="color:#6D28D9;"></i> Connexion impersonation'
 };
 
 function renderActionsLog() {
@@ -2297,10 +2297,10 @@ function renderRoadmap() {
   if (currentRoadmapTab === 'published') items = allRoadmapItems.filter(i => i.is_published);
 
   if (!items.length) {
-    list.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i>${currentRoadmapTab === 'pending' ? 'Aucune suggestion en attente 🎉' : 'Aucun item publié.'}</div>`;
+    list.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i>${currentRoadmapTab === 'pending' ? 'Aucune suggestion en attente' : 'Aucun item publié.'}</div>`;
     return;
   }
-  const statusLabels = { reflection: '💡 En réflexion', in_progress: '🔨 En cours', available: '✅ Disponible' };
+  const statusLabels = { reflection: '<i class="far fa-lightbulb"></i> En réflexion', in_progress: '<i class="fas fa-hammer"></i> En cours', available: '<i class="fas fa-check"></i> Disponible' };
   list.innerHTML = items.map(item => `
     <div class="item-card ${item.is_published ? 'published' : 'pending'}">
       <div class="item-card-body">
@@ -2309,7 +2309,7 @@ function renderRoadmap() {
             ? `<span class="status-pill ${item.status}">${statusLabels[item.status] || item.status}</span>`
             : `<span class="status-pill pending">⏳ En attente</span>`
           }
-          ${item.upvotes || item.downvotes ? `<span class="votes-badge"><span style="color:var(--emerald)">👍 ${item.upvotes||0}</span><span style="color:var(--danger)">👎 ${item.downvotes||0}</span></span>` : ''}
+          ${item.upvotes || item.downvotes ? `<span class="votes-badge"><span style="color:var(--emerald)"><i class="far fa-thumbs-up"></i> ${item.upvotes||0}</span><span style="color:var(--danger)"><i class="far fa-thumbs-down"></i> ${item.downvotes||0}</span></span>` : ''}
         </div>
         <div class="item-card-title">${item.title}</div>
         ${item.description ? `<div class="item-card-desc">${item.description}</div>` : ''}
@@ -2322,8 +2322,8 @@ function renderRoadmap() {
         ${!item.is_published
           ? `<button class="action-btn success" onclick="roadmapPublish(${item.id})"><i class="fas fa-globe"></i> Publier</button>`
           : `<select class="status-select" onchange="roadmapStatus(${item.id}, this.value)">
-              <option value="reflection" ${item.status==='reflection'?'selected':''}>💡 En réflexion</option>
-              <option value="in_progress" ${item.status==='in_progress'?'selected':''}>🔨 En cours</option>
+              <option value="reflection" ${item.status==='reflection'?'selected':''}>En réflexion</option>
+              <option value="in_progress" ${item.status==='in_progress'?'selected':''}>En cours</option>
               <option value="available" ${item.status==='available'?'selected':''}>✅ Disponible</option>
             </select>
             <button class="action-btn" onclick="roadmapUnpublish(${item.id})"><i class="fas fa-eye-slash"></i> Dépublier</button>`
@@ -2433,12 +2433,12 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
 // ══════════════════════════════════════
 function getStatusPill(status) {
   const map = {
-    active:   ['pill-green', '✅ Actif'],
-    trial:    ['pill-amber', '⏳ Trial'],
-    expired:  ['pill-red',   '❌ Expiré'],
-    canceled: ['pill-red',   '❌ Annulé'],
-    blocked:  ['pill-red',   '🚫 Bloqué'],
-    past_due: ['pill-amber', '⚠️ Impayé'],
+    active:   ['pill-green', '<i class="fas fa-check"></i> Actif'],
+    trial:    ['pill-amber', '<i class="far fa-hourglass"></i> Trial'],
+    expired:  ['pill-red',   '<i class="fas fa-times"></i> Expiré'],
+    canceled: ['pill-red',   '<i class="fas fa-times"></i> Annulé'],
+    blocked:  ['pill-red',   '<i class="fas fa-ban"></i> Bloqué'],
+    past_due: ['pill-amber', '<i class="fas fa-exclamation-triangle"></i> Impayé'],
   };
   const [cls, label] = map[status] || ['pill-grey', status || '—'];
   return `<span class="pill ${cls}">${label}</span>`;
@@ -2765,7 +2765,7 @@ function appendSupportMsg(msg, animate = true) {
   const div = document.createElement('div');
   div.className = `support-msg ${isAdmin ? 'admin' : 'user'}`;
 
-  const initial = isAdmin ? '🛟' : (msg.sender_name || '?')[0].toUpperCase();
+  const initial = isAdmin ? '<i class="fas fa-headset" style="font-size:13px;"></i>' : (msg.sender_name || '?')[0].toUpperCase();
   const time = new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
   let bubble = supportEscape(msg.message || '');
@@ -2877,15 +2877,15 @@ async function adminLoadAnnouncements() {
     });
     var list = data.announcements || [];
     var TYPE_CONFIG = {
-      feature:     { emoji: '🚀', label: 'Nouveauté',   color: '#1D4ED8' },
-      bugfix:      { emoji: '🐛', label: 'Correction',  color: '#15803D' },
-      maintenance: { emoji: '⚠️', label: 'Maintenance', color: '#B45309' },
-      info:        { emoji: '📢', label: 'Information', color: '#6D28D9' }
+      feature:     { emoji: '<i class="fas fa-rocket"></i>', label: 'Nouveauté',   color: '#1D4ED8' },
+      bugfix:      { emoji: '<i class="fas fa-bug"></i>', label: 'Correction',  color: '#15803D' },
+      maintenance: { emoji: '<i class="fas fa-exclamation-triangle"></i>', label: 'Maintenance', color: '#B45309' },
+      info:        { emoji: '<i class="fas fa-bullhorn"></i>', label: 'Information', color: '#6D28D9' }
     };
     var STATUS_CONFIG = {
-      en_cours: { emoji: '🔄', label: 'En cours',  bg: '#EFF6FF', color: '#1D4ED8' },
-      resolu:   { emoji: '✅', label: 'Résolu',    bg: '#F0FDF4', color: '#15803D' },
-      termine:  { emoji: '✔️', label: 'Terminé',  bg: '#F3F4F6', color: '#6B7280' }
+      en_cours: { emoji: '<i class="fas fa-sync-alt"></i>', label: 'En cours',  bg: '#EFF6FF', color: '#1D4ED8' },
+      resolu:   { emoji: '<i class="fas fa-check"></i>', label: 'Résolu',    bg: '#F0FDF4', color: '#15803D' },
+      termine:  { emoji: '<i class="fas fa-check-double"></i>', label: 'Terminé',  bg: '#F3F4F6', color: '#6B7280' }
     };
     if (!list.length) {
       container.innerHTML = '<div style="text-align:center;padding:32px;color:#9CA3AF;font-size:13px;">Aucune annonce publiée.</div>';
@@ -2907,9 +2907,9 @@ async function adminLoadAnnouncements() {
         + '  <div style="display:flex;align-items:center;gap:8px;">'
         + '    <label style="font-size:11px;font-weight:600;color:#6B7280;">Changer statut :</label>'
         + '    <select onchange="adminUpdateAnnouncementStatus(' + a.id + ', this.value)" style="padding:4px 8px;border:1px solid rgba(0,0,0,.12);border-radius:6px;font-size:12px;font-family:\'DM Sans\',sans-serif;background:#FAFAF8;cursor:pointer;">'
-        + '      <option value="en_cours"' + (a.status === 'en_cours' ? ' selected' : '') + '>🔄 En cours</option>'
-        + '      <option value="resolu"' + (a.status === 'resolu' ? ' selected' : '') + '>✅ Résolu</option>'
-        + '      <option value="termine"' + (a.status === 'termine' ? ' selected' : '') + '>✔️ Terminé</option>'
+        + '      <option value="en_cours"' + (a.status === 'en_cours' ? ' selected' : '') + '>En cours</option>'
+        + '      <option value="resolu"' + (a.status === 'resolu' ? ' selected' : '') + '>Résolu</option>'
+        + '      <option value="termine"' + (a.status === 'termine' ? ' selected' : '') + '>Terminé</option>'
         + '    </select>'
         + '  </div>'
         + '</div>'
