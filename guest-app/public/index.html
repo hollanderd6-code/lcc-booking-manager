@@ -1572,6 +1572,8 @@ body.screen-detail #bottomNav { display: none !important; }
           </button>
         </div>
 
+        <div data-social-login="guest"></div>
+
         <div class="auth-security">
           <i class="fas fa-lock"></i>
           Connexion chiffrée — vos données sont protégées
@@ -1786,6 +1788,18 @@ body.screen-detail #bottomNav { display: none !important; }
     .catch(function() {});
 })();
 </script>
+<script>
+// Connexion sociale réussie : on reprend le parcours sans recharger
+window.onSocialLoginSuccess = function(d){
+  if (typeof state !== 'undefined') state.session = getSession();
+  if (typeof updateNavAccount === 'function') updateNavAccount();
+  if (typeof fetchProfile === 'function') fetchProfile();
+  if (typeof showToast === 'function') showToast('Connexion réussie !');
+  if (typeof navTo === 'function') navTo(d && d.profileComplete === false ? 'profile' : 'home');
+  else location.reload();
+};
+</script>
 <script src="js/app-guest.js"></script>
+<script src="social-auth.js"></script>
 </body>
 </html>

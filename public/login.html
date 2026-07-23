@@ -158,6 +158,7 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
           </form>
           <div class="divider"><span>ou</span></div>
           <button class="magic-btn" id="magicLinkBtn"><i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email</button>
+          <div data-social-login="bh" data-redirect="/app.html"></div>
           <div class="form-notif"><div class="dot"></div>Connexion sécurisée · Chiffrement TLS</div>
           <div class="form-footer-link" id="registerFooter">Pas encore de compte ? <a href="/register.html">Créer un compte gratuit</a></div>
           <style>
@@ -555,5 +556,6 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   }catch{showToast('Erreur de connexion.');btn.disabled=false;btn.innerHTML='<i class="fas fa-arrow-right-to-bracket"></i> Se connecter';}});
   document.getElementById('magicLinkBtn').addEventListener('click',async function(){const email=document.getElementById('loginEmail').value.trim();if(!email){showToast("Entrez d'abord votre adresse email.");document.getElementById('loginEmail').focus();return;}this.disabled=true;this.innerHTML='<i class="fas fa-spinner fa-spin"></i> Envoi…';try{const r=await fetch(API_BASE+'/api/auth/magic-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});const d=await r.json();if(r.ok){showToast('✉️ Lien envoyé ! Vérifiez votre boîte email.','success');this.innerHTML='<i class="fas fa-check"></i> Lien envoyé !';}else{showToast(d.error||"Erreur lors de l'envoi.");this.disabled=false;this.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email';}}catch{showToast('Erreur réseau.');this.disabled=false;this.innerHTML='<i class="fas fa-wand-magic-sparkles"></i> Recevoir un lien de connexion par email';}});
 </script>
+<script src="/social-auth.js"></script>
 </body>
 </html>

@@ -42690,6 +42690,207 @@ app.post('/api/guest/auth/forgot-password', async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════
+// 🔐 CONNEXION SOCIALE — Google & Apple
+// On vérifie nous-mêmes la signature du jeton d'identité contre
+// les clés publiques du fournisseur (JWKS). Aucune dépendance
+// supplémentaire : jsonwebtoken + crypto natif suffisent.
+// ══════════════════════════════════════════════════════════════
+const SOCIAL_JWKS_CACHE = {}; // { url: { keys, fetchedAt } }
+
+async function getJwk(jwksUrl, kid) {
+  const cached = SOCIAL_JWKS_CACHE[jwksUrl];
+  const fresh = cached && (Date.now() - cached.fetchedAt < 3600000);
+  if (fresh) {
+    const k = cached.keys.find(x => x.kid === kid);
+    if (k) return k;
+  }
+  const r = await fetch(jwksUrl);
+  if (!r.ok) throw new Error('Clés du fournisseur indisponibles');
+  const data = await r.json();
+  SOCIAL_JWKS_CACHE[jwksUrl] = { keys: data.keys || [], fetchedAt: Date.now() };
+  const k = (data.keys || []).find(x => x.kid === kid);
+  if (!k) throw new Error('Clé de signature introuvable');
+  return k;
+}
+
+// Identifiants clients acceptés (web + iOS + Android peuvent différer)
+function allowedAudiences(provider) {
+  // Chaque variable accepte plusieurs valeurs séparées par des virgules
+  // (deux apps iOS, plusieurs domaines, etc.)
+  const raw = provider === 'google'
+    ? [process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_ID_IOS, process.env.GOOGLE_CLIENT_ID_ANDROID]
+    : [process.env.APPLE_CLIENT_ID, process.env.APPLE_BUNDLE_ID];
+  return raw.filter(Boolean).flatMap(v => String(v).split(',')).map(v => v.trim()).filter(Boolean);
+}
+
+// Vérifie un jeton d'identité et renvoie { email, emailVerified, name, sub }
+async function verifySocialIdToken(provider, idToken) {
+  if (!idToken || typeof idToken !== 'string') throw new Error('Jeton manquant');
+  const cfg = provider === 'google'
+    ? { jwks: 'https://www.googleapis.com/oauth2/v3/certs', issuers: ['https://accounts.google.com', 'accounts.google.com'] }
+    : provider === 'apple'
+      ? { jwks: 'https://appleid.apple.com/auth/keys', issuers: ['https://appleid.apple.com'] }
+      : null;
+  if (!cfg) throw new Error('Fournisseur non pris en charge');
+
+  const auds = allowedAudiences(provider);
+  if (!auds.length) throw new Error(`Connexion ${provider} non configurée sur le serveur`);
+
+  const decoded = jwt.decode(idToken, { complete: true });
+  if (!decoded?.header?.kid) throw new Error('Jeton illisible');
+
+  const jwk = await getJwk(cfg.jwks, decoded.header.kid);
+  const pubKey = require('crypto').createPublicKey({ key: jwk, format: 'jwk' });
+
+  // La vérification échoue si signature, audience, émetteur ou expiration ne collent pas
+  const payload = jwt.verify(idToken, pubKey, {
+    algorithms: ['RS256'],
+    audience: auds,
+    issuer: cfg.issuers
+  });
+
+  const email = payload.email ? String(payload.email).toLowerCase().trim() : null;
+  if (!email) throw new Error('Ce compte ne partage pas d\'adresse email');
+
+  // Google renvoie un booléen, Apple parfois la chaîne "true"
+  const ev = payload.email_verified;
+  const emailVerified = ev === true || ev === 'true';
+
+  return {
+    email,
+    emailVerified,
+    sub: payload.sub,
+    name: payload.name || payload.given_name || null,
+    provider
+  };
+}
+
+// Colonnes de liaison (créées au démarrage)
+pool.query(`
+  ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS google_sub TEXT,
+    ADD COLUMN IF NOT EXISTS apple_sub TEXT
+`).catch(() => {});
+pool.query(`
+  ALTER TABLE guest_users
+    ADD COLUMN IF NOT EXISTS google_sub TEXT,
+    ADD COLUMN IF NOT EXISTS apple_sub TEXT
+`).catch(() => {});
+
+// ── BOOSTINGHOST : connexion / inscription sociale ───────────
+app.post('/api/auth/social', async (req, res) => {
+  try {
+    const { provider, idToken, name: clientName } = req.body || {};
+    const info = await verifySocialIdToken(provider, idToken);
+
+    // Apple ne transmet le nom qu'à la toute première autorisation :
+    // le client nous le renvoie, on ne peut pas le redemander ensuite.
+    const fullName = (info.name || clientName || '').trim();
+    const subCol = provider === 'google' ? 'google_sub' : 'apple_sub';
+
+    let u = (await pool.query(
+      `SELECT * FROM users WHERE ${subCol} = $1 OR LOWER(email) = $2 LIMIT 1`,
+      [info.sub, info.email]
+    )).rows[0];
+
+    if (u) {
+      // Rattacher l'identité sociale au compte existant
+      if (!u[subCol]) {
+        await pool.query(`UPDATE users SET ${subCol} = $1, email_verified = TRUE WHERE id = $2`, [info.sub, u.id]);
+        console.log(`🔗 [SOCIAL] ${provider} rattaché au compte BH ${info.email}`);
+      }
+    } else {
+      // Création : mot de passe aléatoire (l'utilisateur pourra en définir un via « mot de passe oublié »)
+      const parts = fullName.split(/\s+/).filter(Boolean);
+      const firstName = parts[0] || info.email.split('@')[0];
+      const lastName = parts.slice(1).join(' ') || '-';
+      const id = `u_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+      const randomPwd = await bcrypt.hash(require('crypto').randomBytes(24).toString('hex'), 10);
+      const referralCode = firstName.toUpperCase().slice(0, 6).replace(/[^A-Z]/g, '') + Math.random().toString(36).slice(2, 6).toUpperCase();
+
+      await pool.query(`
+        INSERT INTO users (id, company, first_name, last_name, email, password_hash,
+                           created_at, email_verified, referral_code, ${subCol})
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), TRUE, $7, $8)
+      `, [id, `${firstName} ${lastName}`.trim(), firstName, lastName, info.email, randomPwd, referralCode, info.sub]);
+
+      u = (await pool.query('SELECT * FROM users WHERE id = $1', [id])).rows[0];
+      console.log(`✨ [SOCIAL] Nouveau compte BH via ${provider} : ${info.email}`);
+    }
+
+    const token = generateToken({
+      id: u.id, company: u.company, firstName: u.first_name,
+      lastName: u.last_name, email: u.email, isExternalHost: u.is_external_host === true
+    });
+    res.json({
+      success: true, token,
+      user: { id: u.id, email: u.email, firstName: u.first_name, lastName: u.last_name, company: u.company },
+      isExternalHost: u.is_external_host === true
+    });
+  } catch(e) {
+    console.error('❌ [SOCIAL] BH:', e.message);
+    res.status(401).json({ error: e.message });
+  }
+});
+
+// ── BHGUEST : connexion / inscription sociale voyageur ───────
+app.post('/api/guest/auth/social', async (req, res) => {
+  try {
+    const { provider, idToken, name: clientName } = req.body || {};
+    const info = await verifySocialIdToken(provider, idToken);
+    const fullName = (info.name || clientName || '').trim() || null;
+    const subCol = provider === 'google' ? 'google_sub' : 'apple_sub';
+
+    const existing = (await pool.query(
+      `SELECT * FROM guest_users WHERE ${subCol} = $1 OR email = $2 LIMIT 1`,
+      [info.sub, info.email]
+    )).rows[0];
+
+    if (existing) {
+      await pool.query(
+        `UPDATE guest_users SET ${subCol} = COALESCE(${subCol}, $1), email_verified = TRUE,
+         name = COALESCE(name, $2), updated_at = NOW() WHERE email = $3`,
+        [info.sub, fullName, existing.email]
+      );
+    } else {
+      // Le compte peut déjà exister côté hôte : on le relie (même logique que
+      // le pont mis en place pour la connexion par mot de passe).
+      const host = (await pool.query('SELECT id FROM users WHERE LOWER(email) = $1 LIMIT 1', [info.email])).rows[0];
+      await pool.query(`
+        INSERT INTO guest_users (email, name, email_verified, ${subCol}, host_user_id)
+        VALUES ($1, $2, TRUE, $3, $4)
+        ON CONFLICT (email) DO UPDATE SET ${subCol} = $3, email_verified = TRUE, updated_at = NOW()
+      `, [info.email, fullName, info.sub, host?.id || null]);
+      console.log(`✨ [SOCIAL] Nouveau compte BHGuest via ${provider} : ${info.email}`);
+    }
+
+    const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
+    const sessionToken = jwt.sign({ email: info.email, type: 'guest_session' }, secret, { expiresIn: '30d' });
+
+    const row = (await pool.query('SELECT * FROM guest_users WHERE email = $1', [info.email])).rows[0];
+    res.json({
+      success: true,
+      session_token: sessionToken,
+      email: info.email,
+      name: row?.name || fullName,
+      profileComplete: profileStatus(row).complete
+    });
+  } catch(e) {
+    console.error('❌ [SOCIAL] Guest:', e.message);
+    res.status(401).json({ error: e.message });
+  }
+});
+
+// Identifiants publics à exposer au client (évite de les dupliquer partout)
+app.get('/api/auth/social/config', (req, res) => {
+  res.json({
+    google: process.env.GOOGLE_CLIENT_ID || null,
+    apple: process.env.APPLE_CLIENT_ID || null,
+    appleRedirect: (process.env.APP_URL || '') + '/guest-app/public/index.html'
+  });
+});
+
 // ── Définir un nouveau mot de passe (après lien de reset) ────
 // Met à jour guest_users ET la fiche hôte liée : un seul mot de
 // passe pour les deux parcours, comme promis par le compte unifié.
