@@ -11786,13 +11786,33 @@ let cleaningChecklists = [];
   document.body.insertAdjacentHTML('beforeend', modalHTML);
 })();
 
+// Rend la carte KPI "Checklists menage" toujours resolue, meme en cas d'echec reseau
+// (sinon le squelette gris reste affiche indefiniment).
+function bhSetChecklistsKpi(pending) {
+  const val = document.getElementById('kpiChecklistsValue');
+  const sub = document.getElementById('kpiChecklistsSub');
+  if (val) {
+    if (pending === null) { val.textContent = '\u2014'; }            // tiret cadratin = donnee indisponible
+    else if (window.bhAnimateValue) window.bhAnimateValue(val, pending);
+    else val.textContent = pending;
+  }
+  if (sub) {
+    sub.textContent = pending === null ? 'indisponible'
+      : pending === 0 ? 'tout est valide \u2713'
+      : pending === 1 ? 'checklist en attente' : 'checklists en attente';
+  }
+}
+window.bhSetChecklistsKpi = bhSetChecklistsKpi;
+
+var _bhChecklistsRetried = false;
+
 async function loadCleaningChecklists() {
   const container = document.getElementById('checklistsContainer');
   // Guard supprime : on fetch meme sans container pour mettre a jour le KPI
   
   try {
     const token = localStorage.getItem('lcc_token');
-    if (!token) return;
+    if (!token) { bhSetChecklistsKpi(null); return; }
     
     const response = await fetch(`${API_URL}/api/cleaning/checklists`, {
       headers: {
@@ -11801,25 +11821,19 @@ async function loadCleaningChecklists() {
     });
     
     if (!response.ok) {
-      throw new Error('Erreur lors du chargement des checklists');
+      throw new Error('Checklists HTTP ' + response.status);
     }
     
     const data = await response.json();
     cleaningChecklists = data.checklists || [];
     
     // Mettre à jour le KPI checklists en attente
-    (function() {
-      const pending = cleaningChecklists.filter(cl => {
-        const isCompleted = cl.is_validated || cl.owner_status === 'validated';
-        const isRejected = cl.owner_status === 'rejected';
-        return !isCompleted && !isRejected && cl.completed_at;
-      });
-      const val = document.getElementById('kpiChecklistsValue');
-      const sub = document.getElementById('kpiChecklistsSub');
-      if (val) { if (window.bhAnimateValue) window.bhAnimateValue(val, pending.length); else val.textContent = pending.length; }
-      if (sub) sub.textContent = pending.length === 0 ? 'tout est validé ✓'
-        : pending.length === 1 ? 'checklist en attente' : 'checklists en attente';
-    })();
+    bhSetChecklistsKpi(cleaningChecklists.filter(cl => {
+      const isCompleted = cl.is_validated || cl.owner_status === 'validated';
+      const isRejected = cl.owner_status === 'rejected';
+      return !isCompleted && !isRejected && cl.completed_at;
+    }).length);
+    _bhChecklistsRetried = true; // succes : plus besoin de retenter
     
     // ✅ Enrichir les checklists avec les données des réservations (nom voyageur, plateforme)
     if (window.RESERVATIONS && window.RESERVATIONS.length > 0) {
@@ -11855,6 +11869,13 @@ async function loadCleaningChecklists() {
     renderCleaningChecklists();
   } catch (err) {
     console.error('Erreur chargement checklists:', err);
+    // Une seule nouvelle tentative apres 2,5 s (token en cours de refresh, API lente au demarrage)
+    if (!_bhChecklistsRetried) {
+      _bhChecklistsRetried = true;
+      setTimeout(loadCleaningChecklists, 2500);
+    } else {
+      bhSetChecklistsKpi(null);
+    }
     if (container) container.innerHTML = `
       <div class="empty-state">
         <i class="fas fa-exclamation-circle"></i>
