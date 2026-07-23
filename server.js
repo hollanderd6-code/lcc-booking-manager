@@ -20952,6 +20952,110 @@ app.post('/api/host/reservations/:uid/cancel', authenticateToken, async (req, re
   }
 });
 
+// ── Statistiques de l'hôte : revenus, occupation, saisonnalité ──
+app.get('/api/host/stats', authenticateToken, async (req, res) => {
+  try {
+    const months = Math.min(24, Math.max(3, parseInt(req.query.months, 10) || 12));
+
+    // Réservations confirmées des N derniers mois
+    const rows = await pool.query(`
+      SELECT r.uid, r.start_date, r.end_date, r.amount_total, r.status, r.created_at,
+             p.id AS property_id, p.name AS property_name,
+             COALESCE(p.marketplace_fee_pct, 7) AS fee_pct
+      FROM reservations r
+      JOIN properties p ON p.id = r.property_id
+      WHERE r.user_id = $1 AND r.source = 'guest_app'
+        AND COALESCE(r.reservation_type,'') <> 'block'
+        AND r.start_date >= (CURRENT_DATE - ($2 || ' months')::interval)
+      ORDER BY r.start_date ASC
+    `, [req.user.id, String(months)]);
+
+    const nightsOf = r => Math.max(1, Math.round((new Date(r.end_date) - new Date(r.start_date)) / 86400000));
+    const confirmed = rows.rows.filter(r => r.status !== 'cancelled');
+
+    // Série mensuelle : revenus nets, nuits vendues, réservations
+    const series = {};
+    const key = d => String(d).slice(0, 7); // AAAA-MM
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
+      series[d.toISOString().slice(0, 7)] = { month: d.toISOString().slice(0, 7), gross: 0, net: 0, nights: 0, bookings: 0 };
+    }
+    for (const r of confirmed) {
+      const k = key(r.start_date);
+      if (!series[k]) continue;
+      const gross = parseFloat(r.amount_total) || 0;
+      series[k].gross += gross;
+      series[k].net += gross * (1 - parseFloat(r.fee_pct) / 100);
+      series[k].nights += nightsOf(r);
+      series[k].bookings += 1;
+    }
+    const monthly = Object.values(series).map(m => ({
+      ...m,
+      gross: Math.round(m.gross * 100) / 100,
+      net: Math.round(m.net * 100) / 100
+    }));
+
+    // Taux d'occupation : nuits vendues / nuits disponibles
+    const propsRes = await pool.query(
+      'SELECT id, name, created_at FROM properties WHERE user_id = $1 AND is_marketplace = true',
+      [req.user.id]
+    );
+    const listings = propsRes.rows.length || 1;
+    const today = new Date();
+    const daysWindow = Math.min(months * 30, Math.round((today - new Date(today.getFullYear(), today.getMonth() - months, 1)) / 86400000));
+    const nightsSold = confirmed
+      .filter(r => new Date(r.start_date) <= today)
+      .reduce((a, r) => a + nightsOf(r), 0);
+    const occupancy = daysWindow > 0 ? Math.round(nightsSold / (daysWindow * listings) * 1000) / 10 : 0;
+
+    // Par logement
+    const byProp = {};
+    for (const r of confirmed) {
+      const b = (byProp[r.property_id] = byProp[r.property_id] || { id: r.property_id, name: r.property_name, net: 0, nights: 0, bookings: 0 });
+      const gross = parseFloat(r.amount_total) || 0;
+      b.net += gross * (1 - parseFloat(r.fee_pct) / 100);
+      b.nights += nightsOf(r);
+      b.bookings += 1;
+    }
+    const properties = Object.values(byProp)
+      .map(b => ({ ...b, net: Math.round(b.net * 100) / 100, avgNight: b.nights ? Math.round(b.net / b.nights) : 0 }))
+      .sort((a, b) => b.net - a.net);
+
+    // Totaux
+    const totalNet = Math.round(confirmed.reduce((a, r) => a + (parseFloat(r.amount_total) || 0) * (1 - parseFloat(r.fee_pct) / 100), 0) * 100) / 100;
+    const totalNights = confirmed.reduce((a, r) => a + nightsOf(r), 0);
+    const upcoming = confirmed.filter(r => new Date(r.start_date) > today);
+
+    // Délai moyen entre réservation et arrivée
+    const leads = confirmed
+      .filter(r => r.created_at)
+      .map(r => Math.round((new Date(r.start_date) - new Date(r.created_at)) / 86400000))
+      .filter(v => v >= 0 && v < 400);
+    const avgLead = leads.length ? Math.round(leads.reduce((a, b) => a + b, 0) / leads.length) : null;
+
+    res.json({
+      months, listings,
+      totals: {
+        net: totalNet,
+        bookings: confirmed.length,
+        nights: totalNights,
+        avgStay: confirmed.length ? Math.round(totalNights / confirmed.length * 10) / 10 : 0,
+        avgNightly: totalNights ? Math.round(totalNet / totalNights) : 0,
+        occupancy,
+        cancelled: rows.rows.length - confirmed.length,
+        upcomingCount: upcoming.length,
+        upcomingNet: Math.round(upcoming.reduce((a, r) => a + (parseFloat(r.amount_total) || 0) * (1 - parseFloat(r.fee_pct) / 100), 0) * 100) / 100,
+        avgLeadDays: avgLead
+      },
+      monthly,
+      properties
+    });
+  } catch(e) {
+    console.error('❌ [HOST] GET /stats:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Liste complète des réservations de l'hôte externe ────────
 app.get('/api/host/reservations', authenticateToken, async (req, res) => {
   try {

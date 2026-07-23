@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Statistiques — BHGuest</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --primary:#C2410C; --primary-dark:#9A3412; --primary-tint:#FBEDE7; --primary-light:#F0997B;
+  --ink:#1C1917; --bg:#FAF8F5; --line:#EDE8E1; --text2:#78716C;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+.topbar{background:var(--ink);color:#fff;padding:max(env(safe-area-inset-top),44px) 16px 16px;display:flex;align-items:center;gap:12px;}
+.topbar .back{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.12);border:none;color:#fff;font-size:14px;cursor:pointer;flex-shrink:0;}
+.topbar h1{font-family:'Instrument Serif',serif;font-size:20px;font-weight:400;flex:1;}
+.wrap{max-width:640px;margin:0 auto;padding:14px 14px 20px;}
+
+.range{display:flex;gap:8px;margin-bottom:16px;}
+.range button{flex:1;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;}
+.range button.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+
+.hero-stat{background:var(--ink);color:#fff;border-radius:18px;padding:22px 20px;margin-bottom:12px;}
+.hero-stat .v{font-size:38px;font-weight:800;line-height:1;}
+.hero-stat .l{font-size:13px;color:rgba(255,255,255,.7);margin-top:5px;}
+.hero-stat .sub{font-size:12.5px;color:var(--primary-light);margin-top:10px;}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px;}
+.card .v{font-size:22px;font-weight:800;}
+.card .l{font-size:11.5px;color:var(--text2);margin-top:3px;line-height:1.35;}
+
+h2{font-size:15px;font-weight:700;margin:24px 0 12px;}
+.chart{background:#fff;border:1px solid var(--line);border-radius:15px;padding:16px 14px;}
+.bars{display:flex;align-items:flex-end;gap:5px;height:150px;}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;}
+.bar{width:100%;background:var(--primary);border-radius:5px 5px 0 0;min-height:3px;transition:height .3s;position:relative;}
+.bar.empty{background:#EFEAE2;}
+.bar-v{font-size:9.5px;font-weight:700;color:var(--ink);white-space:nowrap;}
+.bar-l{font-size:9.5px;color:var(--text2);text-transform:uppercase;white-space:nowrap;}
+
+.prop{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:13px 15px;margin-bottom:9px;}
+.prop-rank{width:26px;height:26px;border-radius:50%;background:var(--primary-tint);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.prop-n{flex:1;min-width:0;}
+.prop-n b{font-size:14px;display:block;}
+.prop-n span{font-size:11.5px;color:var(--text2);}
+.prop-v{text-align:right;flex-shrink:0;}
+.prop-v b{font-size:15px;display:block;}
+.prop-v span{font-size:10.5px;color:var(--text2);}
+
+.empty{padding:50px 20px;text-align:center;color:var(--text2);}
+.empty i{font-size:36px;color:var(--line);margin-bottom:12px;display:block;}
+.loading{padding:60px;text-align:center;color:var(--text2);}
+.note{font-size:11.5px;color:var(--text2);line-height:1.5;margin-top:10px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back" onclick="location.href='host-dashboard.html'"><i class="fas fa-arrow-left"></i></button>
+  <h1>Statistiques</h1>
+</div>
+
+<div class="wrap">
+  <div class="range">
+    <button data-m="3">3 mois</button>
+    <button data-m="6">6 mois</button>
+    <button class="on" data-m="12">12 mois</button>
+  </div>
+  <div id="content"><div class="loading"><i class="fas fa-spinner fa-spin"></i></div></div>
+</div>
+
+<script>
+const API_URL = location.origin;
+const token = localStorage.getItem('bhguest_host_token');
+if(!token){ location.href='host.html'; }
+
+const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const eur = n => (Math.round(n) || 0).toLocaleString('fr-FR') + '€';
+const MONTHS = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+
+async function load(months){
+  document.getElementById('content').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i></div>';
+  try{
+    const res = await fetch(`${API_URL}/api/host/stats?months=${months}`, { headers:{ 'Authorization':'Bearer '+token } });
+    if(res.status === 401 || res.status === 403){ localStorage.clear(); location.href='host.html'; return; }
+    const d = await res.json();
+    if(!res.ok) throw new Error(d.error || 'Erreur');
+    render(d);
+  }catch(e){
+    document.getElementById('content').innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+function render(d){
+  const t = d.totals;
+  if(!t.bookings){
+    document.getElementById('content').innerHTML = `<div class="empty"><i class="fas fa-chart-simple"></i>
+      Pas encore de réservation sur cette période.<br>Vos statistiques apparaîtront dès la première.</div>`;
+    return;
+  }
+
+  // Graphique : mise à l'échelle sur le meilleur mois
+  const max = Math.max(...d.monthly.map(m => m.net), 1);
+  const bars = d.monthly.map(m => {
+    const [y, mo] = m.month.split('-');
+    const h = Math.round(m.net / max * 100);
+    return `<div class="bar-col">
+      <span class="bar-v">${m.net > 0 ? Math.round(m.net) : ''}</span>
+      <div class="bar ${m.net > 0 ? '' : 'empty'}" style="height:${Math.max(h, 2)}%"></div>
+      <span class="bar-l">${MONTHS[parseInt(mo,10)-1]}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="hero-stat">
+      <div class="v">${eur(t.net)}</div>
+      <div class="l">Revenus nets encaissés (commission déduite)</div>
+      ${t.upcomingCount ? `<div class="sub"><i class="fas fa-arrow-trend-up"></i> ${eur(t.upcomingNet)} à venir sur ${t.upcomingCount} séjour${t.upcomingCount>1?'s':''}</div>` : ''}
+    </div>
+
+    <div class="grid">
+      <div class="card"><div class="v">${t.occupancy}%</div><div class="l">Taux d'occupation</div></div>
+      <div class="card"><div class="v">${t.nights}</div><div class="l">Nuits vendues</div></div>
+      <div class="card"><div class="v">${eur(t.avgNightly)}</div><div class="l">Revenu net moyen par nuit</div></div>
+      <div class="card"><div class="v">${t.avgStay}</div><div class="l">Durée moyenne de séjour (nuits)</div></div>
+      <div class="card"><div class="v">${t.bookings}</div><div class="l">Réservations</div></div>
+      <div class="card"><div class="v">${t.avgLeadDays != null ? t.avgLeadDays + ' j' : '—'}</div><div class="l">Délai moyen entre réservation et arrivée</div></div>
+    </div>
+
+    <h2>Revenus nets par mois</h2>
+    <div class="chart">
+      <div class="bars">${bars}</div>
+      <div class="note">Montants en euros, après déduction de la commission BHGuest. Un mois est rattaché à la date d'arrivée du séjour.</div>
+    </div>
+
+    ${d.properties.length > 1 ? `<h2>Par logement</h2>
+      ${d.properties.map((p,i) => `<div class="prop">
+        <div class="prop-rank">${i+1}</div>
+        <div class="prop-n"><b>${esc(p.name)}</b><span>${p.bookings} réservation${p.bookings>1?'s':''} · ${p.nights} nuits · ${eur(p.avgNight)}/nuit</span></div>
+        <div class="prop-v"><b>${eur(p.net)}</b><span>net</span></div>
+      </div>`).join('')}` : ''}
+
+    ${t.cancelled ? `<div class="note" style="margin-top:18px;">${t.cancelled} réservation${t.cancelled>1?'s':''} annulée${t.cancelled>1?'s':''} sur la période, non comptabilisée${t.cancelled>1?'s':''} ci-dessus.</div>` : ''}
+    <div class="note">Le taux d'occupation rapporte vos nuits vendues au nombre de nuits disponibles sur ${d.listings} logement${d.listings>1?'s':''}.</div>`;
+}
+
+document.querySelector('.range').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if(!b) return;
+  document.querySelectorAll('.range button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  load(b.dataset.m);
+});
+
+load(12);
+</script>
+<script src="host-nav.js"></script>
+</body>
+</html>
