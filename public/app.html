@@ -3213,7 +3213,7 @@ window.applyAgencyPermissions = function() {
   var curPath = location.pathname.toLowerCase();
   if (blockedPages.includes(curPath)) {
     document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;font-family:DM Sans,sans-serif;">'
-      + '<div><div style="font-size:48px;margin-bottom:16px;">🔒</div>'
+      + '<div><div style="margin-bottom:16px;"><i class="fas fa-lock" style="font-size:42px;color:#9CA3AF;"></i></div>'
       + '<h2 style="margin:0 0 8px;">Accès non autorisé</h2>'
       + '<p style="color:#6b7280;margin:0 0 24px;">Le propriétaire n\'a pas activé cette permission pour votre accès agence.</p>'
       + '<button onclick="exitAgencyMode()" style="padding:10px 24px;background:#7c3aed;color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer;">← Retour à mon compte</button>'
@@ -3270,7 +3270,7 @@ function _bhShowImpersonationModal(reqData) {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
   modal.innerHTML = `
     <div style="background:white;border-radius:16px;padding:28px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.25);">
-      <div style="font-size:38px;margin-bottom:12px;">🔐</div>
+      <div style="margin-bottom:12px;"><i class="fas fa-lock" style="font-size:34px;color:#1A7A5E;"></i></div>
       <div style="font-weight:700;font-size:17px;margin-bottom:8px;color:#1a1a1a;">Demande de connexion support</div>
       <div style="font-size:14px;color:#555;line-height:1.5;margin-bottom:6px;">
         L'équipe Boostinghost demande à se connecter temporairement à votre compte pour vous assister.
@@ -3360,14 +3360,14 @@ function _bhShowHostQuestionModal(q) {
   const _ciF = _fmtD(q.stay_checkin || _meta.checkin);
   const _coF = _fmtD(q.stay_checkout || _meta.checkout);
   const _rows = [];
-  if (_propName) _rows.push(`<div style="display:flex;align-items:center;gap:7px;"><span>🏠</span><strong style="color:#1f2937;">${_propName}</strong></div>`);
-  if (_ciF && _coF) _rows.push(`<div style="display:flex;align-items:center;gap:7px;"><span>📅</span><span>${_ciF} → ${_coF}</span></div>`);
+  if (_propName) _rows.push(`<div style="display:flex;align-items:center;gap:7px;"><i class="fas fa-home" style="color:#6B7280;width:14px;text-align:center;"></i><strong style="color:#1f2937;">${_propName}</strong></div>`);
+  if (_ciF && _coF) _rows.push(`<div style="display:flex;align-items:center;gap:7px;"><i class="far fa-calendar-alt" style="color:#6B7280;width:14px;text-align:center;"></i><span>${_ciF} → ${_coF}</span></div>`);
   if (_occBefore !== null) _rows.push(_occBefore
-    ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span>🔴</span><span>Loué la veille — départ le jour de l'arrivée</span></div>`
-    : `<div style="display:flex;align-items:center;gap:7px;color:#1A7A5E;"><span>🟢</span><span>Libre la veille de l'arrivée</span></div>`);
+    ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span style="width:9px;height:9px;border-radius:50%;background:#DC2626;display:inline-block;flex-shrink:0;"></span><span>Loué la veille — départ le jour de l'arrivée</span></div>`
+    : `<div style="display:flex;align-items:center;gap:7px;color:#1A7A5E;"><span style="width:9px;height:9px;border-radius:50%;background:#1A7A5E;display:inline-block;flex-shrink:0;"></span><span>Libre la veille de l'arrivée</span></div>`);
   if (_occAfter !== null) _rows.push(_occAfter
-    ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span>🔴</span><span>Reloué le jour du départ</span></div>`
-    : `<div style="display:flex;align-items:center;gap:7px;color:#1A7A5E;"><span>🟢</span><span>Libre le jour du départ</span></div>`);
+    ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span style="width:9px;height:9px;border-radius:50%;background:#DC2626;display:inline-block;flex-shrink:0;"></span><span>Reloué le jour du départ</span></div>`
+    : `<div style="display:flex;align-items:center;gap:7px;color:#1A7A5E;"><span style="width:9px;height:9px;border-radius:50%;background:#1A7A5E;display:inline-block;flex-shrink:0;"></span><span>Libre le jour du départ</span></div>`);
   const infoHtml = _rows.length
     ? `<div style="background:#F0F4F2;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12.5px;line-height:1.7;color:#374151;">${_rows.join('')}</div>`
     : '';
@@ -3416,7 +3416,7 @@ async function _bhAnswerHostQuestion(questionId, answer, text) {
       body: JSON.stringify({ answer, text: text || '' })
     });
     if (answer === 'self' && typeof window.showBHToast === 'function') {
-      showBHToast('À vous de répondre dans la conversation 💬', 'info');
+      showBHToast('À vous de répondre dans la conversation', 'info');
     } else if (typeof window.showBHToast === 'function') {
       showBHToast('Réponse transmise au voyageur ✅', 'success');
     }
@@ -5744,7 +5744,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     let presta = '';
     if (m.prestataire_nom) {
       const tel = m.prestataire_telephone ? String(m.prestataire_telephone).replace(/\s+/g, '') : '';
-      presta = '<div style="font-size:12px;margin-top:5px;color:#1A7A5E;font-weight:600;">👤 ' + m.prestataire_nom
+      presta = '<div style="font-size:12px;margin-top:5px;color:#1A7A5E;font-weight:600;"><i class="fas fa-user" style="font-size:11px;"></i> ' + m.prestataire_nom
         + (tel ? ' · <a href="tel:' + tel + '" style="color:#1A7A5E;text-decoration:underline;">Appeler</a>'
                + ' · <a href="sms:' + tel + '" style="color:#1A7A5E;text-decoration:underline;">SMS</a>' : '')
         + '</div>';
@@ -8809,7 +8809,7 @@ try {
         <span style="font-size:13px;color:#6B7280;">nuit(s)</span>
       </div>
       <div style="font-size:11px;color:#9CA3AF;margin-top:6px;">Laissez vide pour utiliser le réglage par défaut</div>
-      <div style="font-size:11px;color:#D97706;margin-top:4px;">⚠️ Booking.com : vérifiez que « Restrictions » est coché dans le calendrier de l'extranet.</div>
+      <div style="font-size:11px;color:#D97706;margin-top:4px;"><i class="fas fa-exclamation-triangle"></i> Booking.com : vérifiez que « Restrictions » est coché dans le calendrier de l'extranet.</div>
     </div>
 
     <!-- Boutons action -->
@@ -10132,7 +10132,7 @@ try {
                 + '<div style="font-size:11px;color:#9CA3AF;word-break:break-all;font-family:monospace;margin-bottom:8px;">' + c.shareUrl + '</div>'
                 + '<button type="button" data-arr-copy style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px;background:#1A7A5E;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;"><i class="fas fa-copy"></i> Copier le lien</button></div>';
             } else if (c.status === 'all_good') {
-              box.innerHTML = head + '<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:12px;padding:13px 15px;font-size:14px;color:#065F46;font-weight:600;"><i class="fas fa-check-circle"></i> Le voyageur a indiqué que tout est parfait 👍</div>';
+              box.innerHTML = head + '<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:12px;padding:13px 15px;font-size:14px;color:#065F46;font-weight:600;"><i class="fas fa-check-circle"></i> Le voyageur a indiqué que tout est parfait</div>';
             } else if (c.status === 'issue') {
               const photos = Array.isArray(c.photos) ? c.photos : [];
               const photoHtml = photos.length
@@ -11664,17 +11664,17 @@ html[data-theme-v3="1"] .sidebar .nav-section {
 
         // Vérifs basiques
         if (!payload.propertyId) {
-          alert("⚠️ Attention : veuillez sélectionner un logement.");
+          alert("Attention : veuillez sélectionner un logement.");
           return;
         }
         if (!payload.start || !payload.end) {
-          alert("⚠️ Attention : les dates sont obligatoires.");
+          alert("Attention : les dates sont obligatoires.");
           return;
         }
 
         const token = localStorage.getItem('lcc_token');
         if (!token) {
-          alert("⚠️ Impossible d\'enregistrer : vous n\'êtes pas authentifié (token manquant).");
+          alert("Impossible d\'enregistrer : vous n\'êtes pas authentifié (token manquant).");
           return;
         }
 
@@ -12308,7 +12308,7 @@ async function submitComplement() {
     if (cBtn) cBtn.remove();
 
     loadCleaningChecklists();
-    showToast('📨 Complément demandé — le cleaner a été notifié', 'warning');
+    showToast('Complément demandé — le cleaner a été notifié', 'warning');
   } catch(e) {
     console.error(e);
     showToast('Erreur lors de l\'envoi', 'error');
@@ -13009,7 +13009,7 @@ if (window.Capacitor) {
 
   function handleCleaningCompleted(data) {
     console.log('🧹 🔔 Ménage terminé!', data);
-    var msg = '🧹 Ménage terminé — ' + (data.propertyName || data.property_name || 'Logement');
+    var msg = 'Ménage terminé — ' + (data.propertyName || data.property_name || 'Logement');
     if (data.cleanerName || data.cleaner_name) msg += ' par ' + (data.cleanerName || data.cleaner_name);
     if (data.duration_seconds || data.duration) {
       var dur = data.duration_seconds || data.duration;
@@ -15583,7 +15583,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
                 onfocus="this.style.borderColor='#C2410C'" onblur="this.style.borderColor='#E5E7EB'">
             </div>
             <label style="font-size:11px;font-weight:600;color:#C2410C;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">
-              💶 Prix fixe total (optionnel)
+              Prix fixe total (optionnel)
             </label>
             <div style="display:flex;align-items:center;border:1.5px solid #E5E7EB;border-radius:9px;overflow:hidden;background:white;" id="bhFixedPriceWrap"
               onfocusin="this.style.borderColor='#C2410C'" onfocusout="this.style.borderColor='#E5E7EB'">
@@ -15712,7 +15712,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     + '<div style="flex:1;"><label style="' + lbl + '">Heure (optionnel)</label><input type="text" id="bhUpReqLabel" placeholder="14h00" style="' + inp + '"></div>'
     + '</div>'
     + '<div id="bhUpAttachedBlock"><label style="' + lbl + '">Réservation / voyageur <span style="color:#EF4444;">*</span></label>'
-    + '<input type="text" id="bhUpSearch" placeholder="🔍 Rechercher un nom…" oninput="bhFilterUpsellConvs(this.value)" style="' + inp + 'margin-bottom:7px;">'
+    + '<input type="text" id="bhUpSearch" placeholder="Rechercher un nom…" oninput="bhFilterUpsellConvs(this.value)" style="' + inp + 'margin-bottom:7px;">'
     + '<select id="bhUpConv" size="6" style="' + inp + 'padding:6px;height:auto;"><option value="">— Sélectionner —</option>' + convOptions + '</select></div>'
     + '<div id="bhUpFlyingBlock" style="display:none;">'
     + '<label style="' + lbl + '">Logement <span style="color:#EF4444;">*</span></label>'
@@ -15833,19 +15833,19 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     // Résumé
     var prop = _bhProperties.find(p => String(p.id) === String(propId));
     var lines = [];
-    if (prop) lines.push('🏠 ' + (prop.name || prop.id));
+    if (prop) lines.push('<i class="fas fa-home" style="color:#6B7280;width:15px;"></i> ' + (prop.name || prop.id));
     if (checkin && checkout) {
       var nights = Math.round((new Date(checkout) - new Date(checkin)) / 86400000);
-      lines.push('📅 ' + new Date(checkin + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric',month:'short'})
+      lines.push('<i class="far fa-calendar-alt" style="color:#6B7280;width:15px;"></i> ' + new Date(checkin + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric',month:'short'})
         + ' → ' + new Date(checkout + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric',month:'short'})
         + ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')');
     }
     if (fixedPrice) {
       var commission = Math.round(fixedPrice * 100 / 103 * 3) / 100;
       var hostReceives = Math.round((fixedPrice - commission) * 100) / 100;
-      lines.push('💶 Prix total : ' + fixedPrice + '€ TTC (dont ' + commission.toFixed(2) + '€ frais BHGuest)');
+      lines.push('<i class="fas fa-euro-sign" style="color:#6B7280;width:15px;"></i> Prix total : ' + fixedPrice + '€ TTC (dont ' + commission.toFixed(2) + '€ frais BHGuest)');
     }
-    if (promo) lines.push('🏷️ Code promo : ' + promo);
+    if (promo) lines.push('<i class="fas fa-tag" style="color:#6B7280;width:15px;"></i> Code promo : ' + promo);
     document.getElementById('bhLinkSummary').innerHTML = lines.join('<br>');
 
     // Afficher/masquer le bouton Envoyer selon email/SMS remplis
