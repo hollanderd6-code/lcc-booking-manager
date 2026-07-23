@@ -81,7 +81,7 @@ input[readonly]{background:#F0EEE8;color:var(--muted)}
 
   <!-- Erreur / expiré -->
   <div id="errorState" class="state hidden">
-    <div class="big">⚠️</div>
+    <div class="big"><i class="fas fa-exclamation-triangle" style="color:#D97706;"></i></div>
     <h2 id="errorTitle">Lien invalide</h2>
     <p id="errorMsg">Ce lien d'enregistrement n'est pas valide. Contactez votre hôte.</p>
   </div>
@@ -95,7 +95,7 @@ input[readonly]{background:#F0EEE8;color:var(--muted)}
 
   <!-- Succès -->
   <div id="successState" class="state hidden">
-    <div class="big">🎉</div>
+    <div class="big"><i class="fas fa-check-circle" style="color:#16A34A;"></i></div>
     <h2>C'est fait, merci !</h2>
     <p>Votre enregistrement est complété. Vos informations d'accès vous seront envoyées automatiquement. Excellent séjour !</p>
   </div>
@@ -166,7 +166,7 @@ input[readonly]{background:#F0EEE8;color:var(--muted)}
       <h2>Pièce d'identité (optionnel)</h2>
       <div class="sub">Une photo de votre passeport ou carte d'identité peut être demandée par votre hôte. Stockée de façon sécurisée et supprimée automatiquement après votre séjour.</div>
       <div class="upload" id="idUpload">
-        <div class="ico">📄</div>
+        <div class="ico"><i class="far fa-file-alt"></i></div>
         <div class="t">Ajouter une photo</div>
         <div class="s">Passeport ou carte d'identité</div>
       </div>
@@ -216,7 +216,7 @@ input[readonly]{background:#F0EEE8;color:var(--muted)}
       var d=res.d;
       if(!res.ok || !d.ok){ $('errorMsg').textContent=(d&&d.error)||'Lien invalide.'; show('errorState'); return; }
       if(d.alreadySubmitted){ show('doneState'); return; }
-      $('heroProp').textContent='📍 '+(d.propertyName||'Votre logement');
+      $('heroProp').textContent=(d.propertyName||'Votre logement');
       // Pré-remplissage
       if(d.guestName){
         var parts=d.guestName.trim().split(' ');

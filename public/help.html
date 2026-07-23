@@ -627,7 +627,7 @@ html[data-theme-v3="1"] .mobile-header {
 <div class="card-body">
   <p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px;">Retrouvez les réponses aux questions les plus posées sur Boostinghost.</p>
 
-  <input id="faqSearch" placeholder="🔍 Rechercher une question…" style="margin-bottom:16px;" oninput="filterFaq(this.value)" />
+  <input id="faqSearch" placeholder="Rechercher une question…" style="margin-bottom:16px;" oninput="filterFaq(this.value)" />
 
   <div id="faqList">
 
@@ -785,7 +785,7 @@ html[data-theme-v3="1"] .mobile-header {
         <div class="tuto-play-btn"><i class="fas fa-play"></i></div>
       </div>
       <div class="tuto-info">
-        <div class="tuto-title">📖 Créez un livret d'accueil professionnel en 5 minutes</div>
+        <div class="tuto-title"><i class="fas fa-book-open" style="color:#6B7280;"></i> Créez un livret d'accueil professionnel en 5 minutes</div>
       </div>
     </div>
 
@@ -807,7 +807,7 @@ html[data-theme-v3="1"] .mobile-header {
         <div class="tuto-play-btn"><i class="fas fa-play"></i></div>
       </div>
       <div class="tuto-info">
-        <div class="tuto-title">📨 Messages automatiques &amp; SMS par logement</div>
+        <div class="tuto-title"><i class="far fa-envelope" style="color:#6B7280;"></i> Messages automatiques &amp; SMS par logement</div>
       </div>
     </div>
 
@@ -818,7 +818,7 @@ html[data-theme-v3="1"] .mobile-header {
         <div class="tuto-play-btn"><i class="fas fa-play"></i></div>
       </div>
       <div class="tuto-info">
-        <div class="tuto-title">🏠 Comment ajouter vos logements sur Boostinghost</div>
+        <div class="tuto-title"><i class="fas fa-home" style="color:#6B7280;"></i> Comment ajouter vos logements sur Boostinghost</div>
       </div>
     </div>
 
@@ -828,7 +828,7 @@ html[data-theme-v3="1"] .mobile-header {
         <div class="tuto-play-btn"><i class="fas fa-play"></i></div>
       </div>
       <div class="tuto-info">
-        <div class="tuto-title">🔗 Comment envoyer un lien BHGuest à vos voyageurs ? (et bloquer les dates automatiquement)</div>
+        <div class="tuto-title"><i class="fas fa-link" style="color:#6B7280;"></i> Comment envoyer un lien BHGuest à vos voyageurs ? (et bloquer les dates automatiquement)</div>
       </div>
     </div>
 
@@ -850,7 +850,7 @@ html[data-theme-v3="1"] .mobile-header {
 
     <!-- Guide 1 — Calendrier -->
     <a href="tuto-calendrier-annotator.html" class="guide-card" style="text-decoration:none;color:inherit;">
-      <div class="guide-icon" style="background:linear-gradient(135deg,#059669,#10b981);">📅</div>
+      <div class="guide-icon" style="background:linear-gradient(135deg,#059669,#10b981);"><i class="far fa-calendar-alt"></i></div>
       <div class="guide-info">
         <div class="guide-title">Calendrier des réservations</div>
         <div class="guide-desc">4 vues, recherche, actions rapides, édition groupée et taux d'occupation.</div>
@@ -860,7 +860,7 @@ html[data-theme-v3="1"] .mobile-header {
 
     <!-- Guide 2 — Messages -->
     <a href="tuto-messages-annotator.html" class="guide-card" style="text-decoration:none;color:inherit;">
-      <div class="guide-icon" style="background:linear-gradient(135deg,#3b82f6,#6366f1);">💬</div>
+      <div class="guide-icon" style="background:linear-gradient(135deg,#3b82f6,#6366f1);"><i class="far fa-comment"></i></div>
       <div class="guide-info">
         <div class="guide-title">Messages automatiques</div>
         <div class="guide-desc">Configurez vos templates, conditions d'envoi et messagerie avec les voyageurs.</div>
@@ -870,7 +870,7 @@ html[data-theme-v3="1"] .mobile-header {
 
     <!-- Guide 3 — Connecter Airbnb -->
     <a href="tuto-connecter-airbnb-annotator.html" class="guide-card" style="text-decoration:none;color:inherit;">
-      <div class="guide-icon" style="background:linear-gradient(135deg,#ef4444,#f97316);">🔗</div>
+      <div class="guide-icon" style="background:linear-gradient(135deg,#ef4444,#f97316);"><i class="fas fa-link"></i></div>
       <div class="guide-info">
         <div class="guide-title">Connecter Airbnb</div>
         <div class="guide-desc">Synchronisez votre compte Airbnb, créez le channel et mappez vos annonces.</div>
@@ -880,7 +880,7 @@ html[data-theme-v3="1"] .mobile-header {
 
     <!-- Guide 4 — BHGuest -->
     <a href="tuto-bhguest-annotator.html" class="guide-card" style="text-decoration:none;color:inherit;">
-      <div class="guide-icon" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);">🏠</div>
+      <div class="guide-icon" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);"><i class="fas fa-home"></i></div>
       <div class="guide-info">
         <div class="guide-title">BHGuest — Réservations directes</div>
         <div class="guide-desc">Créez des liens de réservation, gérez les holds et les paiements directs.</div>
@@ -1021,10 +1021,10 @@ document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeTuto
     <div class="roadmap-filters">
       <button class="roadmap-filter-btn active" onclick="filterRoadmap('all', this)">Tout voir</button>
       <button class="roadmap-filter-btn" onclick="filterRoadmap('reflection', this)">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#F59E0B;margin-right:5px;vertical-align:middle;"></span>💡 En réflexion
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#F59E0B;margin-right:5px;vertical-align:middle;"></span>En réflexion
       </button>
       <button class="roadmap-filter-btn" onclick="filterRoadmap('in_progress', this)">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3B82F6;margin-right:5px;vertical-align:middle;"></span>🔨 En cours
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#3B82F6;margin-right:5px;vertical-align:middle;"></span>En cours
       </button>
       <button class="roadmap-filter-btn" onclick="filterRoadmap('available', this)">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10B981;margin-right:5px;vertical-align:middle;"></span>✅ Disponible
@@ -1339,7 +1339,7 @@ async function openUserConv(convId) {
   document.getElementById('activeChatWrapper').style.display = 'block';
 
   // Statut
-  const statusLabel = { open: '🟢 Ouvert', waiting: '🟡 En attente de réponse', closed: '🔒 Résolu' };
+  const statusLabel = { open: 'Ouvert', waiting: 'En attente de réponse', closed: 'Résolu' };
   document.getElementById('activeConvStatus').textContent = statusLabel[conv.status] || conv.status;
 
   // Désactiver la saisie si fermé
@@ -1517,7 +1517,7 @@ function appendSupportMessage(msg, animate = true) {
   div.className = `support-msg ${isUser ? 'user' : 'admin'}`;
   if (!animate) div.style.animation = 'none';
 
-  const initial = isUser ? 'V' : '🛟';
+  const initial = isUser ? 'V' : '<i class="fas fa-headset" style="font-size:13px;"></i>';
   const time = new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
   let bubbleContent = escapeHtml(msg.message || '');
@@ -1621,7 +1621,7 @@ async function uploadSupportImage() {
   const tempUrl = document.getElementById('imagePreviewImg').src;
   appendSupportMessage({
     sender_type: 'user',
-    message: '📷 Image',
+    message: 'Image',
     image_url: tempUrl,
     created_at: new Date().toISOString()
   });
@@ -1684,8 +1684,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let roadmapFilter = 'all';
 
   const STATUS_LABELS = {
-    reflection: '💡 En réflexion',
-    in_progress: '🔨 En cours',
+    reflection: '<i class="far fa-lightbulb"></i> En réflexion',
+    in_progress: '<i class="fas fa-hammer"></i> En cours',
     available: '✅ Disponible'
   };
   const STATUS_CLASS = { reflection:'reflection', in_progress:'in_progress', available:'available' };
@@ -1728,10 +1728,10 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="roadmap-votes">
           <button class="roadmap-vote-btn ${myVote===1?'active-up':''}" onclick="voteRoadmap(${item.id}, 1, this)">
-            👍 <span class="vote-up-count">${item.upvotes}</span>
+            <i class="far fa-thumbs-up"></i> <span class="vote-up-count">${item.upvotes}</span>
           </button>
           <button class="roadmap-vote-btn ${myVote===-1?'active-down':''}" onclick="voteRoadmap(${item.id}, -1, this)">
-            👎 <span class="vote-down-count">${item.downvotes}</span>
+            <i class="far fa-thumbs-down"></i> <span class="vote-down-count">${item.downvotes}</span>
           </button>
         </div>
       </div>`;

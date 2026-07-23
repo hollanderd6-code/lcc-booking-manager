@@ -871,7 +871,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
       Chargement du marché...
     </div>
     <div id="dashboard-empty" style="display:none;text-align:center;padding:48px 24px;">
-      <div style="font-size:48px;margin-bottom:16px;">📊</div>
+      <div style="margin-bottom:16px;"><i class="fas fa-chart-line" style="font-size:40px;color:#9CA3AF;"></i></div>
       <h3 style="font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px;">Aucun logement configuré</h3>
       <p style="font-size:14px;color:var(--muted);margin-bottom:20px;">Activez le pricing dynamique sur vos logements dans l'onglet Configuration.</p>
       <button class="btn-accept" style="width:auto;padding:10px 24px;" onclick="switchTab('config')">
@@ -930,7 +930,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
         </div>
         <div class="pcard-body">
           <div class="zone-info">
-            <div class="zone-map-thumb">🗺️</div>
+            <div class="zone-map-thumb"><i class="fas fa-map-marked-alt"></i></div>
             <div>
               <p style="font-size:13.5px;color:var(--text);line-height:1.6;">
                 <strong>Cercle de 1,5 km</strong> autour de chaque logement — concurrents similaires identifiés automatiquement via l'adresse du logement.
@@ -954,7 +954,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
       Chargement de l'historique...
     </div>
     <div id="history-empty" style="display:none;text-align:center;padding:48px 24px;">
-      <div style="font-size:48px;margin-bottom:12px;">📭</div>
+      <div style="margin-bottom:12px;"><i class="fas fa-inbox" style="font-size:40px;color:#9CA3AF;"></i></div>
       <p style="color:var(--muted);font-size:14px;">Aucun ajustement pour le moment.<br>Lance un calcul depuis l'onglet Calendrier (« Recalculer ») ou attends l'analyse automatique.</p>
     </div>
     <div id="history-content" style="display:none;"></div>
@@ -1684,19 +1684,19 @@ function renderConfigCard(cfg, idx) {
         oninput="updateStrat('${pid}', this.value); markDirty('${pid}')"
         style="width:100%;accent-color:var(--pg);cursor:pointer;">
       <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;">
-        <span>🏠 Remplir</span><span>Équilibré</span><span>Tenir le prix 💰</span>
+        <span><i class="fas fa-home"></i> Remplir</span><span>Équilibré</span><span>Tenir le prix <i class="fas fa-euro-sign"></i></span>
       </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
       <div onclick="setMode('${pid}','manual')" id="mode-manual-${pid}"
         style="padding:10px 12px;border-radius:10px;border:1.5px solid ${!modeAuto ? 'var(--pg)' : 'rgba(200,184,154,.3)'};background:${!modeAuto ? 'var(--pg-soft2)' : 'white'};cursor:pointer;transition:all .15s;">
-        <div style="font-size:12.5px;font-weight:700;color:${!modeAuto ? 'var(--pg)' : 'var(--ink)'};">🖐 Manuel</div>
+        <div style="font-size:12.5px;font-weight:700;color:${!modeAuto ? 'var(--pg)' : 'var(--ink)'};"><i class="far fa-hand-paper"></i> Manuel</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">Suggestion + validation</div>
       </div>
       <div onclick="setMode('${pid}','auto')" id="mode-auto-${pid}"
         style="padding:10px 12px;border-radius:10px;border:1.5px solid ${modeAuto ? 'var(--pg)' : 'rgba(200,184,154,.3)'};background:${modeAuto ? 'var(--pg-soft2)' : 'white'};cursor:pointer;transition:all .15s;">
-        <div style="font-size:12.5px;font-weight:700;color:${modeAuto ? 'var(--pg)' : 'var(--ink)'};">🤖 Auto <span style="font-size:10px;background:var(--pg);color:white;padding:1px 6px;border-radius:4px;margin-left:4px;">Recommandé</span></div>
+        <div style="font-size:12.5px;font-weight:700;color:${modeAuto ? 'var(--pg)' : 'var(--ink)'};"><i class="fas fa-robot"></i> Auto <span style="font-size:10px;background:var(--pg);color:white;padding:1px 6px;border-radius:4px;margin-left:4px;">Recommandé</span></div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">Prix mis à jour automatiquement</div>
       </div>
     </div>
@@ -1759,11 +1759,11 @@ function markDirty(pid) {
 
 function stratLabel(v){
   v = parseInt(v);
-  if (v <= 15) return '🏠 Occupation max';
+  if (v <= 15) return 'Occupation max';
   if (v < 45)  return 'Plutôt occupation';
   if (v <= 55) return 'Équilibré';
   if (v < 85)  return 'Plutôt revenu';
-  return 'Revenu max 💰';
+  return 'Revenu max';
 }
 function updateStrat(pid, v){
   const el = document.getElementById('strat-label-' + pid);
@@ -1942,7 +1942,7 @@ function openAlgoModal(name, median, reco, marketOcc, selfOcc, season) {
   const fSelf    = selfOcc >= 80 ? 1.08 : selfOcc >= 60 ? 1.03 : selfOcc >= 40 ? 0.98 : 0.93;
   const fSeason  = parseFloat(season) || 1;
 
-  $('modal-prop-name').textContent = '🧮 ' + name;
+  $('modal-prop-name').textContent = name;
   $('f-base').textContent   = fmtEuro(median);
   $('f-occ').textContent    = '× ' + fMarket.toFixed(2);
   $('f-self').textContent   = '× ' + fSelf.toFixed(2);
@@ -2004,7 +2004,7 @@ async function loadCalendar(){
     _calRows=d.nights||[];
     renderMode(d.mode, d.isActive, d.configured);
     if(!_calRows.length){
-      $('calGrid').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:34px 16px;color:var(--muted);"><div style=\'font-size:30px;margin-bottom:8px;\'>📅</div><div style=\'font-size:14px;color:var(--ink);font-weight:600;\'>Aucun planning pour ce logement</div><div style=\'font-size:12.5px;margin-top:4px;\'>Clique « Recalculer » pour générer les prix.</div></div>';
+      $('calGrid').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:34px 16px;color:var(--muted);"><div style=\'font-size:30px;margin-bottom:8px;\'><i class="far fa-calendar-alt" style="color:#9CA3AF;"></i></div><div style=\'font-size:14px;color:var(--ink);font-weight:600;\'>Aucun planning pour ce logement</div><div style=\'font-size:12.5px;margin-top:4px;\'>Clique « Recalculer » pour générer les prix.</div></div>';
       $('calMeta').textContent=''; return;
     }
     renderCalendar(_calRows);
@@ -2052,8 +2052,8 @@ function showNight(i){
       <span class="fchip">base <b>${ffmt(b.base)}€</b></span>
       ${chip('saison',b.season)}${chip('jour',b.dow)}${chip('lead',b.lead)}${chip('pacing',b.pacing)}${chip('marché',b.market)}${chip('événement',b.event)}${chip('gap',b.gap)}
     </div>
-    ${b.eventLabel?`<div style="font-size:12px;color:#1A7A5E;">🎪 ${b.eventLabel}</div>`:''}
-    ${(b.clampedToMin||b.clampedToMax)?`<div style="font-size:12px;color:var(--muted);">⚠️ borné au ${b.clampedToMin?'minimum':'maximum'} configuré</div>`:''}`;
+    ${b.eventLabel?`<div style="font-size:12px;color:#1A7A5E;"><i class="fas fa-star" style="font-size:10px;"></i> ${b.eventLabel}</div>`:''}
+    ${(b.clampedToMin||b.clampedToMax)?`<div style="font-size:12px;color:var(--muted);"><i class="fas fa-exclamation-triangle" style="font-size:10px;"></i> borné au ${b.clampedToMin?'minimum':'maximum'} configuré</div>`:''}`;
   $('calDetail').classList.add('show');
 }
 async function recomputeCalendar(){

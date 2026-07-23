@@ -1789,21 +1789,21 @@ function renderTasks() {
   };
 
   if (activeFilter === 'today') {
-    html += section("🟢 Aujourd'hui", todayTasks, 'today');
-    html += section('⚠️ Complément demandé', complementTasks, 'complement');
+    html += section("<span style=\"display:inline-block;width:9px;height:9px;border-radius:50%;background:#16A34A;margin-right:2px;\"></span> Aujourd'hui", todayTasks, 'today');
+    html += section('<i class="fas fa-exclamation-triangle" style="color:#D97706;"></i> Complément demandé', complementTasks, 'complement');
     if (!html) html = emptyState('coffee', 'Rien pour aujourd\'hui', 'Aucun ménage à faire aujourd\'hui. Consultez « Tous » pour les prochains.');
   } else if (activeFilter === 'tomorrow') {
-    html += section('🟠 Demain', tomorrowTasks, 'tomorrow');
+    html += section('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#F97316;margin-right:2px;"></span> Demain', tomorrowTasks, 'tomorrow');
     if (!html) html = emptyState('calendar', 'Rien pour demain', 'Aucun ménage prévu demain.');
   } else if (activeFilter === 'done') {
     html += section('✅ Terminés', doneTasks, 'done');
     if (!html) html = emptyState('check', 'Aucun ménage terminé', 'Les ménages validés apparaîtront ici.');
   } else {
     // 'all'
-    html += section("🟢 Aujourd'hui", todayTasks, 'today');
-    html += section('🟠 Demain', tomorrowTasks, 'tomorrow');
-    html += section('📅 À venir', upcomingTasks, 'upcoming');
-    html += section('⚠️ Complément demandé', complementTasks, 'complement');
+    html += section("<span style=\"display:inline-block;width:9px;height:9px;border-radius:50%;background:#16A34A;margin-right:2px;\"></span> Aujourd'hui", todayTasks, 'today');
+    html += section('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#F97316;margin-right:2px;"></span> Demain', tomorrowTasks, 'tomorrow');
+    html += section('<i class="far fa-calendar-alt" style="color:#6B7280;"></i> À venir', upcomingTasks, 'upcoming');
+    html += section('<i class="fas fa-exclamation-triangle" style="color:#D97706;"></i> Complément demandé', complementTasks, 'complement');
     html += section('✅ Terminés', doneTasks, 'done');
     if (!html) html = emptyState('sparkles', 'Tout est à jour', 'Aucune tâche en attente. Beau travail ✨');
   }
@@ -1899,7 +1899,7 @@ function renderTaskCard(task, type) {
       break;
     case 'complement':
       badgeClass = 'badge-complement';
-      badgeText = '⚠️ Complément';
+      badgeText = '<i class="fas fa-exclamation-triangle"></i> Complément';
       cardClass = 'complement';
       actionBtn = `<button class="task-card-btn btn-start" onclick="openChecklist('${task.reservationKey}')"><i class="fas fa-redo"></i> Corriger</button>`;
       break;
@@ -2008,7 +2008,7 @@ function renderRestockSection() {
   const chips = consumableItems.map((it, idx) => {
     const on = restockSelected.has(it.label);
     return `<button type="button" class="restock-chip${on ? ' on' : ''}" onclick="toggleRestock(${idx})">
-      <span class="restock-ico">${it.icon || '📦'}</span>
+      <span class="restock-ico">${it.icon || '<i class="fas fa-box" style="color:#9CA3AF;"></i>'}</span>
       <span>${escapeHtml(it.label)}</span>
       <i class="fas ${on ? 'fa-check-circle' : 'fa-plus-circle'}"></i>
     </button>`;
@@ -2161,7 +2161,7 @@ function renderChecklistBody() {
   // ── BLOC OBLIGATOIRE : État du logement / dégradations (tout en haut) ──
   html += `
     <div class="damage-card" id="damageCard">
-      <div class="damage-title">🏠 État du logement à l'arrivée</div>
+      <div class="damage-title"><i class="fas fa-home"></i> État du logement à l'arrivée</div>
       <div class="damage-subtitle">À vérifier avant de commencer le ménage.</div>
       <div class="damage-choice">
         <button type="button" class="damage-btn ras ${damageState==='ras'?'on':''}" onclick="setDamageState('ras')">
@@ -2174,7 +2174,7 @@ function renderChecklistBody() {
       <div id="damageForm" style="display:${damageState==='reported'?'block':'none'};">
         <textarea id="damageDesc" rows="2" maxlength="2000" placeholder="Décrivez la dégradation (ex : table rayée, vaisselle cassée, tache sur le canapé…)" class="maint-field"></textarea>
         <div class="damage-photos-head">
-          📸 Photos de la dégradation
+          <i class="fas fa-camera"></i> Photos de la dégradation
           <span class="photo-counter ${damagePhotos.length>=2?'enough':'not-enough'}" id="damagePhotoCounter">${damagePhotos.length}/2 min.</span>
         </div>
         <div class="damage-photos-subtitle">Au moins 2 photos — nécessaires pour justifier une retenue sur la caution.</div>
@@ -2225,7 +2225,7 @@ function renderChecklistBody() {
   html += `
     <div class="photos-section">
       <div class="photos-section-title">
-        📸 Photos du ménage
+        <i class="fas fa-camera"></i> Photos du ménage
         <span class="photo-counter not-enough" id="photoCounter">
           0/5 min.
         </span>
@@ -2698,7 +2698,7 @@ async function doSubmit() {
     // Show success
     const certTs = new Date().toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
     document.getElementById('successSubtitle').innerHTML = 
-      `Ménage certifié et signé.<br><span style="font-size:12px;opacity:.7;">📅 ${certTs} · Signature et IP enregistrées</span>`;
+      `Ménage certifié et signé.<br><span style="font-size:12px;opacity:.7;"><i class="far fa-calendar-alt"></i> ${certTs} · Signature et IP enregistrées</span>`;
     document.getElementById('successOverlay').classList.add('active');
     
   } catch (err) {

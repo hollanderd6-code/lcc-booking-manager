@@ -1249,7 +1249,7 @@ async function loadPoliceRecord(r){
           ${rec.enfants_moins_15?`<div><b>Enfants -15 ans</b> ${_polEsc(rec.enfants_moins_15)}</div>`:''}
           <div style="color:var(--text-muted);margin-top:4px;">Signée le ${_polFmtDate(rec.signed_at)}${rec.signer_ip?' · IP '+_polEsc(rec.signer_ip):''}</div>
           <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn" style="font-size:12px;padding:6px 12px;background:var(--green,#1A7A5E);border:none;color:#fff;font-weight:600;border-radius:8px;cursor:pointer;" onclick="viewPoliceFiche('${rec.id}')">📄 Voir la fiche</button>
+            <button class="btn" style="font-size:12px;padding:6px 12px;background:var(--green,#1A7A5E);border:none;color:#fff;font-weight:600;border-radius:8px;cursor:pointer;" onclick="viewPoliceFiche('${rec.id}')"><i class="far fa-file-alt"></i> Voir la fiche</button>
             <button class="btn" style="font-size:12px;padding:6px 12px;background:var(--white,#fff);border:1px solid rgba(0,0,0,.12);color:var(--text);border-radius:8px;cursor:pointer;" onclick="downloadPoliceFiche('${rec.id}','${_polEsc((rec.guest_prenoms||'')+'-'+(rec.guest_nom||''))}')">⬇️ Télécharger</button>
           </div>
         </div>`;

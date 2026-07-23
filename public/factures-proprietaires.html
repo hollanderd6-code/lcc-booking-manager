@@ -1211,7 +1211,7 @@ html[data-theme-v3="1"] .invoice-paper {
 <div class="editor-sidebar" id="editorSidebar">
 <!-- Bannière READ-ONLY (masquée par défaut) -->
 <div class="readonly-banner" id="readonlyBanner" style="display:none;">
-  ⚠️ Facture en lecture seule - Déjà émise
+  <i class="fas fa-exclamation-triangle"></i> Facture en lecture seule - Déjà émise
 </div>
 <div class="editor-section">
 <div class="editor-section-title">Informations Facture</div>
@@ -1371,7 +1371,7 @@ html[data-theme-v3="1"] .invoice-paper {
 <!-- MODAL DE CONFIRMATION PERSONNALISÉE (remplace confirm() natif bloqué sur Capacitor) -->
 <div class="modal-overlay" id="bh-confirm-modal" style="z-index:99999;">
   <div class="modal-content" style="max-width:360px;text-align:center;padding:28px 24px;">
-    <div id="bh-confirm-icon" style="font-size:36px;margin-bottom:12px;">⚠️</div>
+    <div id="bh-confirm-icon" style="font-size:30px;margin-bottom:12px;color:#D97706;"><i class="fas fa-exclamation-triangle"></i></div>
     <h3 id="bh-confirm-title" style="margin:0 0 8px;font-size:17px;font-weight:700;color:#111827;"></h3>
     <p id="bh-confirm-message" style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.5;"></p>
     <div style="display:flex;gap:10px;justify-content:center;">
@@ -1433,7 +1433,7 @@ html[data-theme-v3="1"] .invoice-paper {
       </div>
     </div>
     <div id="deleteClientSection" style="display:none;margin-top:8px;">
-      <button onclick="deleteClient()" style="width:100%;padding:12px;background:white;color:#ef4444;border:2px solid #ef4444;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">🗑️ Supprimer ce client</button>
+      <button onclick="deleteClient()" style="width:100%;padding:12px;background:white;color:#ef4444;border:2px solid #ef4444;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;"><i class="far fa-trash-alt"></i> Supprimer ce client</button>
     </div>
   </div>
   <!-- Footer sticky avec bouton Enregistrer -->
@@ -1457,7 +1457,7 @@ let token = localStorage.getItem('lcc_token');
     // Le vrai bhConfirm global expose la signature (title, message, ok, cancel, variant).
     // On le détecte via la présence de la modale globale bh-confirm-overlay logic.
     var g = window.__bhLayoutConfirm || layoutConfirm;
-    var isDanger = (icon === '🗑️') || (String(message).toLowerCase().indexOf('supprim') > -1);
+    var isDanger = (String(icon).indexOf('trash') > -1) || (String(message).toLowerCase().indexOf('supprim') > -1);
     if (typeof g === 'function') {
       return g(title || 'Confirmation', message || '', isDanger ? 'Supprimer' : 'Confirmer', 'Annuler', isDanger ? 'danger' : 'default');
     }
@@ -1472,7 +1472,7 @@ let token = localStorage.getItem('lcc_token');
       var cancelBtn = document.getElementById('bh-confirm-cancel');
       titleEl.textContent = title || 'Confirmation';
       msgEl.textContent = message || '';
-      iconEl.textContent = icon || '⚠️';
+      iconEl.innerHTML = icon || '<i class="fas fa-exclamation-triangle"></i>';
       modal.classList.add('active');
       function cleanup(r){ modal.classList.remove('active'); okBtn.removeEventListener('click', onOk); cancelBtn.removeEventListener('click', onCancel); resolve(r); }
       function onOk(){ cleanup(true); }
@@ -1484,7 +1484,7 @@ let token = localStorage.getItem('lcc_token');
 })();
 // bhConfirmDanger : conserve l'API, route vers la version danger
 window.bhConfirmDanger = function(message, title) {
-  return window.bhConfirm(message, title || 'Confirmation', '🗑️');
+  return window.bhConfirm(message, title || 'Confirmation', '<i class="far fa-trash-alt" style="color:#DC2626;"></i>');
 };
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
   let clients = [];
@@ -2280,7 +2280,7 @@ window.sendOwnerInvoice = async function (id) {
   if (inv && inv.status === 'draft') {
     return alert("Veuillez d'abord finaliser la facture (Passer en Facturée) avant de l'envoyer.");
   }
-  if (!await window.bhConfirm('Envoyer cette facture au client ?', 'Envoyer la facture', '📧')) return;
+  if (!await window.bhConfirm('Envoyer cette facture au client ?', 'Envoyer la facture', '<i class="far fa-envelope" style="color:#1D4ED8;"></i>')) return;
 
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/send', {
@@ -2549,7 +2549,7 @@ window.deleteOwnerInvoice = async function (id) {
 
 
 window.createOwnerCreditNote = async function(id) {
-  if (!await window.bhConfirm('Créer un avoir pour cette facture ?', 'Créer un avoir', '📋')) return;
+  if (!await window.bhConfirm('Créer un avoir pour cette facture ?', 'Créer un avoir', '<i class="far fa-file-alt" style="color:#6B7280;"></i>')) return;
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/credit-note', {
       method: 'POST',
@@ -2588,7 +2588,7 @@ window.finalizeOwnerInvoice = async function (id) {
 
 
 window.markOwnerInvoicePaid = async function (id) {
-  if (!await window.bhConfirm('Marquer cette facture comme encaissée ?', 'Marquer comme encaissée', '💰')) return;
+  if (!await window.bhConfirm('Marquer cette facture comme encaissée ?', 'Marquer comme encaissée', '<i class="fas fa-euro-sign" style="color:#15803D;"></i>')) return;
 
   try {
     const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/mark-paid', {

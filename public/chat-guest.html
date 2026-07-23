@@ -1130,7 +1130,7 @@
         
         // Si c'est un lien Stripe (caution), afficher un bouton
         if (rawUrl.includes('checkout.stripe.com') || rawUrl.includes('caution')) {
-          return `<a href="${rawUrl}" target="_blank" rel="noopener noreferrer" class="deposit-link-btn">💳 Autoriser la caution</a>`;
+          return `<a href="${rawUrl}" target="_blank" rel="noopener noreferrer" class="deposit-link-btn"><i class="far fa-credit-card"></i> Autoriser la caution</a>`;
         }
         
         // Lien normal — cliquable et bleu
@@ -1168,7 +1168,7 @@
       const avatar = document.createElement('div');
       avatar.className = 'message-avatar';
       avatar.textContent = message.sender_type === 'guest' ? 'V' : 
-                          message.sender_type === 'bot' ? '🤖' : 'P';
+                          message.sender_type === 'bot' ? '<i class="fas fa-robot" style="font-size:13px;"></i>' : 'P';
       
       const contentDiv = document.createElement('div');
       contentDiv.className = 'message-content';

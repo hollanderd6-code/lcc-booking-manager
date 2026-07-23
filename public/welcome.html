@@ -1292,7 +1292,7 @@ function nextSection() {
     modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(13,17,23,.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;';
     modal.innerHTML = `
       <div style="background:white;border-radius:20px;padding:28px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.15);">
-        <div style="width:52px;height:52px;border-radius:50%;background:#FEF9C3;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:22px;">⚠️</div>
+        <div style="width:52px;height:52px;border-radius:50%;background:#FEF9C3;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><i class="fas fa-exclamation-triangle" style="font-size:20px;color:#B45309;"></i></div>
         <h3 style="font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;color:#0D1117;margin:0 0 8px;">Champs obligatoires manquants</h3>
         <p style="font-size:13px;color:#7A8695;margin:0 0 20px;">Veuillez remplir tous les champs marqués d'un <span style="color:#EF4444;font-weight:700;">*</span> avant de continuer.</p>
         <button onclick="document.getElementById('_validModal').remove()" style="width:100%;height:40px;border-radius:12px;border:none;background:#1A7A5E;color:white;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">OK, je complète</button>

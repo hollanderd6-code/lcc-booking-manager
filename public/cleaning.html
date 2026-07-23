@@ -1763,7 +1763,7 @@ html[data-theme-v3="1"] #templatesList > div {
         <option value="">Tous les statuts</option>
         <option value="pending">⏳ En attente</option>
         <option value="validated">✅ Validées</option>
-        <option value="rejected">⚠️ Rejetées</option>
+        <option value="rejected">Rejetées</option>
       </select>
     </div>
   </div>
@@ -2558,7 +2558,7 @@ function formatDateFr(dateStr) {
         let presta = '';
         if (m.prestataire_nom) {
           const tel = m.prestataire_telephone ? String(m.prestataire_telephone).replace(/\s+/g, '') : '';
-          presta = '<div style="font-size:11px;margin-top:3px;color:#1A7A5E;font-weight:600;">👤 ' + m.prestataire_nom
+          presta = '<div style="font-size:11px;margin-top:3px;color:#1A7A5E;font-weight:600;"><i class="fas fa-user" style="font-size:10px;"></i> ' + m.prestataire_nom
             + (tel ? ' · <a href="tel:' + tel + '" style="color:#1A7A5E;">Appeler</a>'
                    + ' · <a href="sms:' + tel + '" style="color:#1A7A5E;">SMS</a>' : '')
             + '</div>';
@@ -3354,7 +3354,7 @@ function formatDateFr(dateStr) {
           wrap.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;">' + items.map(it => {
             const isStd = it.property_id == null;
             return '<span style="display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:22px;border:1px solid var(--border);font-size:13.5px;font-weight:600;background:' + (isStd ? 'var(--bg-card,#f7f5f0)' : '#eef6ff') + ';">'
-              + '<span>' + (it.icon || '📦') + '</span>' + _restockEsc(it.label)
+              + '<span>' + (it.icon || '<i class="fas fa-box" style="color:#9CA3AF;"></i>') + '</span>' + _restockEsc(it.label)
               + (isStd ? '' : '<span style="font-size:10px;color:#3b82f6;text-transform:uppercase;font-weight:700;">perso</span>')
               + '<i class="fas fa-times" style="cursor:pointer;color:var(--text-tertiary);margin-left:2px;" onclick="deleteRestockItem(' + it.id + ')"></i>'
               + '</span>';
@@ -3615,7 +3615,7 @@ function formatDateFr(dateStr) {
           const st = MAINT_ST[t.status] || MAINT_ST.open;
           const pname = getPropertyNameById(t.property_id);
           const when = t.created_at ? new Date(t.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
-          const byTxt = t.created_by === 'cleaner' ? ('🧹 ' + _maintEsc(t.created_by_name || 'Agent'))
+          const byTxt = t.created_by === 'cleaner' ? ('<i class="fas fa-broom"></i> ' + _maintEsc(t.created_by_name || 'Agent'))
                       : (t.created_by_name ? _maintEsc(t.created_by_name) : 'Hôte');
           const isDamage = t.kind === 'damage';
           let photos = [];
@@ -3701,7 +3701,7 @@ function formatDateFr(dateStr) {
             + thumbs
             + '<label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 6px;">Montant à retenir (€)</label>'
             + '<input id="retainAmount" type="number" min="1" max="' + maxEur + '" step="0.01" placeholder="0,00" style="width:100%;box-sizing:border-box;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-size:16px;font-family:inherit;background:var(--bg);color:var(--text);">'
-            + '<p style="font-size:11.5px;color:var(--text-secondary);margin:8px 0 0;line-height:1.45;">⚠️ Le débit est définitif et ne peut se faire qu\'une fois : le montant retenu est prélevé, le reste de l\'empreinte est automatiquement libéré.</p>'
+            + '<p style="font-size:11.5px;color:var(--text-secondary);margin:8px 0 0;line-height:1.45;"><i class="fas fa-exclamation-triangle" style="color:#D97706;"></i> Le débit est définitif et ne peut se faire qu\'une fois : le montant retenu est prélevé, le reste de l\'empreinte est automatiquement libéré.</p>'
             + '<button onclick="confirmRetain()" style="margin-top:14px;width:100%;cursor:pointer;border:none;background:#dc2626;color:#fff;font-weight:700;padding:13px;border-radius:10px;font-size:15px;"><i class="fas fa-hand-holding-dollar"></i> Confirmer la retenue</button>';
         } catch (e) {
           console.error(e);
@@ -3923,7 +3923,7 @@ function formatDateFr(dateStr) {
         const sf = document.getElementById('checklistStatusFilter')?.value || '';
         let filtered = sf ? allChecklists.filter(c => (c.owner_status || 'pending') === sf) : allChecklists;
         if (!filtered.length) { container.innerHTML = '<p class="text-secondary" style="font-size:13px;">Aucune checklist.</p>'; return; }
-        const sL = { pending: '⏳ En attente', validated: '✅ Validé', rejected: '⚠️ Rejeté' };
+        const sL = { pending: '<i class="far fa-hourglass"></i> En attente', validated: '<i class="fas fa-check"></i> Validé', rejected: '<i class="fas fa-exclamation-triangle"></i> Rejeté' };
         const sC = { pending: 'status-pending', validated: 'status-validated', rejected: 'status-rejected' };
         container.innerHTML = filtered.map(function(c) {
           var st = c.owner_status || 'pending', pn = getPropertyNameById(c.property_id) || c.property_id;
@@ -3958,7 +3958,7 @@ function formatDateFr(dateStr) {
           document.getElementById('detailPropertyName').textContent = pn;
           document.getElementById('detailSubtitle').textContent = 'Départ le ' + cd + ' — ' + (c.cleaner_name || 'N/A');
           document.getElementById('detailInfos').innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:10px;font-size:13px;">'
-            + (completedAt ? '<span style="padding:4px 10px;background:var(--bg-secondary);border-radius:8px;">🕐 Soumis le '+completedAt+'</span>' : '')
+            + (completedAt ? '<span style="padding:4px 10px;background:var(--bg-secondary);border-radius:8px;"><i class="far fa-clock"></i> Soumis le '+completedAt+'</span>' : '')
             + '<span style="padding:4px 10px;background:var(--bg-secondary);border-radius:8px;">' + (c.cleaner_name||'N/A') + '</span>'
             + '<span class="checklist-item-status ' + (st==='validated'?'status-validated':st==='rejected'?'status-rejected':'status-pending') + '">' + (st==='validated'?'✅ Validé':st==='rejected'?'⚠️ Rejeté':'⏳ En attente') + '</span>'
             + '</div>';
@@ -4233,7 +4233,7 @@ function formatDateFr(dateStr) {
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             if (err.error === 'option_required') {
-              showToast('⚠️ Option SMS requise — activez-la dans vos paramètres', 'warning');
+              showToast('Option SMS requise — activez-la dans vos paramètres', 'warning');
             } else {
               showToast('Erreur lors de la mise à jour', 'error');
             }
@@ -4245,7 +4245,7 @@ function formatDateFr(dateStr) {
           const cleaner = cleaners.find(c => c.id === cleanerId);
           if (cleaner) cleaner.sms_recap_enabled = newEnabled;
           renderCleaners();
-          showToast(newEnabled ? '📱 SMS récap activé pour ce cleaner' : 'SMS récap désactivé', newEnabled ? 'success' : 'info');
+          showToast(newEnabled ? 'SMS récap activé pour ce cleaner' : 'SMS récap désactivé', newEnabled ? 'success' : 'info');
         } catch(e) {
           console.error(e);
           pill.style.opacity = '';
@@ -4526,7 +4526,7 @@ function formatDateFr(dateStr) {
       window.loadStats = loadStats;
 
       // ========== HISTORIQUE PAR CLEANER / LOGEMENT ==========
-      var sL = { pending: '⏳ En attente', validated: '✅ Validé', rejected: '⚠️ Rejeté' };
+      var sL = { pending: '<i class="far fa-hourglass"></i> En attente', validated: '<i class="fas fa-check"></i> Validé', rejected: '<i class="fas fa-exclamation-triangle"></i> Rejeté' };
       var sC = { pending: 'status-pending', validated: 'status-validated', rejected: 'status-rejected' };
 
       function openHistoryByCleaner(encodedName) {

@@ -1615,7 +1615,7 @@ html[data-theme-v3="1"] .btn-ghost {
             if (sendBtn) sendBtn.disabled = true;
           } else {
             console.error('❌ Erreur API:', result);
-            alert("⚠️ Erreur: " + (result.error || 'Erreur inconnue') + "\n\nVérifie les logs de la console (F12)");
+            alert("Erreur: " + (result.error || 'Erreur inconnue') + "\n\nVérifie les logs de la console (F12)");
             const pdfBtn = document.getElementById('pdfBtn');
             if (pdfBtn) pdfBtn.disabled = false;
           }
@@ -1805,7 +1805,7 @@ html[data-theme-v3="1"] .btn-ghost {
           });
           const data = await res.json();
           if (res.ok) alert('✅ Facture renvoyée à ' + email);
-          else alert('⚠️ ' + (data.error || 'Erreur'));
+          else alert(data.error || 'Erreur');
         } catch(e) {
           alert('❌ Erreur réseau');
         }

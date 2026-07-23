@@ -579,7 +579,7 @@ function renderLocks() {
     const hasConnection = connections.some(c => c.connected);
     document.getElementById('locksContent').innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">🔒</div>
+        <div class="empty-state-icon"><i class="fas fa-lock"></i></div>
         <div class="empty-state-title">Aucune serrure</div>
         <div class="empty-state-text">${hasConnection ? 'Cliquez sur "Synchroniser" pour récupérer vos serrures' : 'Connectez d\'abord une marque dans l\'onglet Configuration'}</div>
       </div>`;
@@ -625,7 +625,7 @@ function renderCodes() {
   if (filtered.length === 0) {
     document.getElementById('codesContent').innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">🔑</div>
+        <div class="empty-state-icon"><i class="fas fa-key"></i></div>
         <div class="empty-state-title">Aucun code ${currentCodeFilter !== 'all' ? currentCodeFilter : ''}</div>
         <div class="empty-state-text">Les codes apparaîtront ici quand vous en générerez ou qu'ils seront créés automatiquement.</div>
       </div>`;
@@ -665,7 +665,7 @@ function renderCodes() {
 // ══════════════════════════════════════
 function renderConfig() {
   if (brands.length === 0) {
-    document.getElementById('brandsGrid').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Impossible de charger les marques</div></div>';
+    document.getElementById('brandsGrid').innerHTML = '<div class="empty-state"><div class="empty-state-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="empty-state-title">Impossible de charger les marques</div></div>';
     return;
   }
 
@@ -882,7 +882,7 @@ async function openLockDetail(lockId) {
       </div>
     `}
 
-    <div style="font-size:12px;font-weight:700;margin-bottom:6px;">🔑 Codes enregistrés (${lockCodes.length})</div>
+    <div style="font-size:12px;font-weight:700;margin-bottom:6px;"><i class="fas fa-key" style="color:#6B7280;"></i> Codes enregistrés (${lockCodes.length})</div>
     ${lockCodes.length > 0 ? lockCodes.map(c => {
       const statusClass = c.status === 'active' ? 'status-active' : c.status === 'expired' ? 'status-expired' : 'status-revoked';
       const statusLabel = c.status === 'active' ? 'Actif' : c.status === 'expired' ? 'Expiré' : 'Révoqué';
@@ -951,7 +951,7 @@ async function remoteLock(lockId, action) {
   if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${action === 'unlock' ? 'Déverrouillage...' : 'Verrouillage...'}`; }
   try {
     const data = await api(`/lock/${lockId}/${action}`, { method: 'POST', body: '{}' });
-    showToast(data.success ? (action === 'unlock' ? '🔓 Serrure déverrouillée !' : '🔒 Serrure verrouillée !') : 'Commande envoyée (en attente)', 'success');
+    showToast(data.success ? (action === 'unlock' ? 'Serrure déverrouillée !' : 'Serrure verrouillée !') : 'Commande envoyée (en attente)', 'success');
   } catch (e) {
     showToast(`Erreur : ${e.message}`, 'error');
   } finally {
@@ -971,7 +971,7 @@ async function loadActivity(lockId) {
       container.innerHTML = (window.bhEmptyState ? window.bhEmptyState('lock','Aucune activité','L\'activité récente de vos serrures apparaîtra ici.') : '<div style="font-size:13px;color:var(--sl-text-muted);padding:8px 0;">Aucune activité récente.</div>');
       return;
     }
-    container.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:8px;">📋 Dernière activité</div>' +
+    container.innerHTML = '<div style="font-size:13px;font-weight:700;margin-bottom:8px;"><i class="fas fa-list" style="color:#6B7280;"></i> Dernière activité</div>' +
       logs.slice(0, 20).map(log => {
         const date = log.createdAt || log.timestamp || '';
         const fDate = date ? new Date(date).toLocaleString('fr-FR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '';

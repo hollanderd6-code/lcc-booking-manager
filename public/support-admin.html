@@ -318,7 +318,7 @@
 
 <!-- PIN LOCK SCREEN -->
 <div class="pin-overlay" id="pinOverlay">
-  <div class="pin-logo">🔐</div>
+  <div class="pin-logo"><i class="fas fa-lock"></i></div>
   <div class="pin-title">Support Admin</div>
   <div class="pin-subtitle">Entrez votre code d'accès à 8 chiffres</div>
   <div class="pin-input-container" id="pinContainer">
@@ -355,7 +355,7 @@
 
     <!-- Team panel (hidden by default) -->
     <div id="teamPanel" style="display:none; border-bottom:1px solid var(--border); padding:16px 20px; background:#f8fafc;">
-      <div style="font-size:13px; font-weight:700; margin-bottom:10px;">👥 Équipe support</div>
+      <div style="font-size:13px; font-weight:700; margin-bottom:10px;"><i class="fas fa-users" style="color:#6B7280;"></i> Équipe support</div>
       <div id="teamList" style="margin-bottom:12px; font-size:13px;">Chargement...</div>
       <div style="display:flex; gap:6px;">
         <input type="email" id="teamEmailInput" placeholder="email@exemple.com" style="flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); font-size:12px; outline:none;"/>
@@ -725,7 +725,7 @@ function appendChatMessage(msg, animate = true) {
   div.className = `chat-msg ${isAdmin ? 'admin' : 'user'}`;
   if (!animate) div.style.animation = 'none';
 
-  const initial = isAdmin ? '🛟' : (msg.sender_name || '?')[0].toUpperCase();
+  const initial = isAdmin ? '<i class="fas fa-headset" style="font-size:13px;"></i>' : (msg.sender_name || '?')[0].toUpperCase();
   const time = new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
   let bubbleHTML = escapeHtml(msg.message || '');
