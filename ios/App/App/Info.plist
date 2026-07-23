@@ -39,6 +39,8 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Boostinghost utilise la camera pour joindre les photos du menage a la checklist.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Utilisez Face ID pour vous connecter rapidement à Boostinghost</string>
 	<key>NSPhotoLibraryUsageDescription</key>
