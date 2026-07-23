@@ -1927,3 +1927,124 @@ html[data-theme-v3="1"][data-theme="dark"] .calendar-wrapper::before {
 html[data-theme-v3="1"][data-theme="dark"] .booking-block {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 1px 3px rgba(0,0,0,.4) !important;
 }
+
+/* =============================================================
+   V3.2 — CALENDRIER : HIÉRARCHIE, MATIÈRE, LISIBILITÉ
+   Bloc additif : ne modifie aucune règle existante.
+   ============================================================= */
+
+/* ── 1. Prix : chiffres tabulaires, poids réduit, teintes assagies ──
+   Les tarifs criaient aussi fort que les noms de voyageurs. On les
+   repasse au second plan : alignement colonne par colonne, pas de gras. */
+html[data-theme-v3="1"] .cell-price {
+  font-family: 'DM Sans', sans-serif !important;
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: "tnum" 1 !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: .01em !important;
+  color: #3E7C67 !important;
+  opacity: .92 !important;
+}
+html[data-theme-v3="1"] .calendar-cell.weekend .cell-price { color: #A87A21 !important; }
+html[data-theme-v3="1"] .calendar-cell.has-rule .cell-price { color: #A85F18 !important; }
+html[data-theme-v3="1"] .calendar-cell.has-rule.weekend .cell-price { color: #B0521C !important; }
+html[data-theme-v3="1"] .cell-price-override { text-decoration: underline dotted 1.2px !important; text-underline-offset: 3px !important; }
+html[data-theme-v3="1"] .cell-min-stay {
+  background: rgba(200,184,154,.22) !important;
+  color: #8A8375 !important;
+  border-radius: 4px !important;
+  letter-spacing: .03em !important;
+}
+
+/* ── 2. Trame de fond : on sort du rose froid, tout passe en sable ──
+   Le week-end était teinté rouge (.02) : sur fond crème ça vire au rose. */
+html[data-theme-v3="1"] .calendar-cell.weekend { background: rgba(200,184,154,.10) !important; }
+html[data-theme-v3="1"] .calendar-cell.has-rule { background: rgba(183,121,31,.06) !important; }
+html[data-theme-v3="1"] .calendar-cell.has-rule.weekend { background: rgba(183,121,31,.10) !important; }
+html[data-theme-v3="1"] .calendar-cell { border-color: rgba(200,184,154,.32) !important; }
+
+/* ── 3. Colonne du jour : filet jade vertical, pas juste l'en-tête ── */
+html[data-theme-v3="1"] .calendar-cell.today {
+  background: rgba(26,122,94,.045) !important;
+  box-shadow: inset 1px 0 0 rgba(26,122,94,.28), inset -1px 0 0 rgba(26,122,94,.28) !important;
+}
+
+/* ── 4. Colonne logements : ombre portée pendant le scroll horizontal ──
+   Détail qui sépare franchement une grille "tableur" d'une grille produit. */
+html[data-theme-v3="1"] .property-list-column {
+  box-shadow: 6px 0 16px -8px rgba(13,17,23,.16) !important;
+  border-right: 1px solid rgba(200,184,154,.55) !important;
+  z-index: 6 !important;
+}
+html[data-theme-v3="1"] .property-item {
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: .02em !important;
+}
+
+/* ── 5. En-tête de jours : numéro éditorial, jour en capitales fines ── */
+html[data-theme-v3="1"] .day-header .day-number {
+  font-family: 'Instrument Serif', serif !important;
+  font-weight: 400 !important;
+  font-size: 19px !important;
+  line-height: 1 !important;
+  font-variant-numeric: lining-nums !important;
+}
+html[data-theme-v3="1"] .day-header.today .day-number { color: #1A7A5E !important; }
+
+/* ── 6. Barres de réservation : texte plus lisible, pastille plateforme cerclée ── */
+html[data-theme-v3="1"] .booking-block {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: .012em !important;
+  padding: 2px 10px !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,.16) !important;
+}
+html[data-theme-v3="1"] .booking-block .platform-icon,
+html[data-theme-v3="1"] .booking-block .booking-letter {
+  width: 17px !important; height: 17px !important;
+  border-radius: 50% !important;
+  background: rgba(255,255,255,.18) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.30) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 9.5px !important;
+  flex: none !important;
+  text-shadow: none !important;
+}
+html[data-theme-v3="1"] .booking-block.expedia { color: #4A3200 !important; text-shadow: none !important; }
+html[data-theme-v3="1"] .booking-block.expedia .platform-icon,
+html[data-theme-v3="1"] .booking-block.expedia .booking-letter {
+  background: rgba(0,0,0,.10) !important;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.12) !important;
+}
+
+/* ── 7. "Bloqué" : hachures chaudes au lieu du gris-bleu industriel ── */
+html[data-theme-v3="1"] .booking-block.booking-blocked {
+  background: repeating-linear-gradient(45deg,
+    rgba(184,172,150,.55), rgba(184,172,150,.55) 5px,
+    rgba(212,203,186,.55) 5px, rgba(212,203,186,.55) 10px) !important;
+  color: #6E675A !important;
+  box-shadow: inset 0 0 0 1px rgba(160,148,124,.45) !important;
+  text-shadow: none !important;
+  opacity: 1 !important;
+}
+html[data-theme-v3="1"] .booking-block.booking-blocked .platform-icon,
+html[data-theme-v3="1"] .booking-block.booking-blocked .booking-letter {
+  background: rgba(110,103,90,.14) !important;
+  box-shadow: none !important;
+}
+
+/* ── 8. Cellule libre : invite au clic, très légère ── */
+html[data-theme-v3="1"] .calendar-cell:hover {
+  background: rgba(26,122,94,.055) !important;
+  box-shadow: inset 0 0 0 1px rgba(26,122,94,.16) !important;
+}
+
+/* ── 9. Dark mode ── */
+html[data-theme-v3="1"][data-theme="dark"] .calendar-cell { border-color: rgba(255,255,255,.06) !important; }
+html[data-theme-v3="1"][data-theme="dark"] .calendar-cell.weekend { background: rgba(255,255,255,.025) !important; }
+html[data-theme-v3="1"][data-theme="dark"] .property-list-column { box-shadow: 6px 0 16px -8px rgba(0,0,0,.5) !important; }
+html[data-theme-v3="1"][data-theme="dark"] .cell-price { color: #6EBFA0 !important; }
+html[data-theme-v3="1"][data-theme="dark"] .calendar-cell.weekend .cell-price { color: #D9A94E !important; }
