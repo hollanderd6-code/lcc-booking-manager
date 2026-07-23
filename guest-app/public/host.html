@@ -111,6 +111,8 @@ body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:v
       <div class="field"><label>Mot de passe</label><input type="password" id="loginPassword" placeholder="Votre mot de passe" autocomplete="current-password"></div>
       <button type="submit" class="btn-primary" id="btnLogin">Se connecter</button>
     </form>
+
+    <div data-social-login="host" data-redirect="host-dashboard.html"></div>
   </div>
 
   <div class="foot">
@@ -197,5 +199,6 @@ async function doLogin(e){
 
 function val(id){ return (document.getElementById(id)?.value || '').trim(); }
 </script>
+<script src="social-auth.js"></script>
 </body>
 </html>

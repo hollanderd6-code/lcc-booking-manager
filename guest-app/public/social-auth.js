@@ -32,19 +32,23 @@
   // Envoie le jeton d'identité au serveur et connecte l'utilisateur
   async function finish(box, provider, idToken, name) {
     var mode = box.getAttribute('data-social-login') || 'guest';
-    var url = mode === 'bh' ? '/api/auth/social' : '/api/guest/auth/social';
+    var isBh = (mode === 'bh' || mode === 'host');
+    var url = isBh ? '/api/auth/social' : '/api/guest/auth/social';
     var btns = box.querySelectorAll('button');
     btns.forEach(function (b) { b.disabled = true; });
     try {
       var res = await fetch(API + url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: provider, idToken: idToken, name: name || null })
+        body: JSON.stringify({
+          provider: provider, idToken: idToken, name: name || null,
+          asHost: mode === 'host'
+        })
       });
       var d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Connexion refusée');
 
-      if (mode === 'bh') {
+      if (isBh) {
         localStorage.setItem('lcc_token', d.token);
         if (d.isExternalHost) localStorage.setItem('bhguest_host_token', d.token);
         location.href = box.getAttribute('data-redirect') || (d.isExternalHost ? 'host-dashboard.html' : 'app.html');

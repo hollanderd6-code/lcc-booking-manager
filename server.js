@@ -42781,7 +42781,7 @@ pool.query(`
 // ── BOOSTINGHOST : connexion / inscription sociale ───────────
 app.post('/api/auth/social', async (req, res) => {
   try {
-    const { provider, idToken, name: clientName } = req.body || {};
+    const { provider, idToken, name: clientName, asHost } = req.body || {};
     const info = await verifySocialIdToken(provider, idToken);
 
     // Apple ne transmet le nom qu'à la toute première autorisation :
@@ -42800,6 +42800,12 @@ app.post('/api/auth/social', async (req, res) => {
         await pool.query(`UPDATE users SET ${subCol} = $1, email_verified = TRUE WHERE id = $2`, [info.sub, u.id]);
         console.log(`🔗 [SOCIAL] ${provider} rattaché au compte BH ${info.email}`);
       }
+      // Inscription depuis l'espace hôte : activer le statut marketplace
+      if (asHost && u.is_external_host !== true) {
+        await pool.query('UPDATE users SET is_external_host = TRUE WHERE id = $1', [u.id]);
+        u.is_external_host = true;
+        console.log(`🏠 [SOCIAL] ${info.email} devient hôte marketplace`);
+      }
     } else {
       // Création : mot de passe aléatoire (l'utilisateur pourra en définir un via « mot de passe oublié »)
       const parts = fullName.split(/\s+/).filter(Boolean);
@@ -42811,9 +42817,9 @@ app.post('/api/auth/social', async (req, res) => {
 
       await pool.query(`
         INSERT INTO users (id, company, first_name, last_name, email, password_hash,
-                           created_at, email_verified, referral_code, ${subCol})
-        VALUES ($1, $2, $3, $4, $5, $6, NOW(), TRUE, $7, $8)
-      `, [id, `${firstName} ${lastName}`.trim(), firstName, lastName, info.email, randomPwd, referralCode, info.sub]);
+                           created_at, email_verified, referral_code, ${subCol}, is_external_host)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), TRUE, $7, $8, $9)
+      `, [id, `${firstName} ${lastName}`.trim(), firstName, lastName, info.email, randomPwd, referralCode, info.sub, asHost === true]);
 
       u = (await pool.query('SELECT * FROM users WHERE id = $1', [id])).rows[0];
       console.log(`✨ [SOCIAL] Nouveau compte BH via ${provider} : ${info.email}`);
