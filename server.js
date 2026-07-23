@@ -4538,6 +4538,57 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                 })
               });
             } catch(mailErr) { console.warn('⚠️ [BHGUEST] Email différé:', mailErr.message); }
+
+            // ✉️🔔 Prévenir l'hôte : réservation confirmée (paiement à J-2)
+            try {
+              const hr = await pool.query('SELECT email, first_name FROM users WHERE id = $1', [m.property_user_id]);
+              const hostD = hr.rows[0];
+              const pNameD = (await pool.query('SELECT name FROM properties WHERE id = $1', [m.property_id]).catch(() => ({ rows: [] }))).rows[0]?.name || 'votre logement';
+              const fmtD2 = iso => new Date(String(iso).slice(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'long' });
+              const amountD = (parseInt(m.amount_cents, 10) || 0) / 100;
+
+              if (hostD?.email) {
+                await sendEmailViaBrevo({
+                  to: hostD.email,
+                  subject: `🎉 Nouvelle réservation — ${pNameD}`,
+                  text: `${m.guest_name || 'Un voyageur'} a réservé ${pNameD} du ${fmtD2(m.checkin)} au ${fmtD2(m.checkout)}.`,
+                  html: bhEmailTemplate({
+                    icon: '🎉', title: 'Nouvelle réservation !', subtitle: pNameD,
+                    bodyHtml: `<p>Bonjour ${hostD.first_name || ''},</p>
+                      <p><strong>${m.guest_name || 'Un voyageur'}</strong> vient de réserver.</p>
+                      <div class="feat-row"><div class="feat-icon">📅</div><div class="feat-text"><strong>Séjour</strong><br>${fmtD2(m.checkin)} → ${fmtD2(m.checkout)}</div></div>
+                      <div class="feat-row"><div class="feat-icon">💰</div><div class="feat-text"><strong>Montant</strong><br>${amountD.toFixed(2)} €</div></div>
+                      ${m.guest_phone ? `<div class="feat-row"><div class="feat-icon">📞</div><div class="feat-text"><strong>Téléphone</strong><br>${m.guest_phone}</div></div>` : ''}
+                      <p style="background:#FBEDE7;border-radius:10px;padding:12px 14px;">Le paiement sera prélevé automatiquement <strong>2 jours avant l'arrivée</strong>, à la fin de la période d'annulation gratuite.</p>`,
+                    footerNote: 'BHGuest'
+                  })
+                });
+                console.log(`✉️ [BHGUEST] Email hôte (différé) envoyé à ${hostD.email}`);
+              }
+
+              const toksD = await pool.query('SELECT DISTINCT fcm_token FROM host_fcm_tokens WHERE user_id = $1', [m.property_user_id]);
+              if (toksD.rows.length) {
+                const admin = require('firebase-admin');
+                const fmtS = iso => new Date(String(iso).slice(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+                for (const row of toksD.rows) {
+                  try {
+                    await admin.messaging().send({
+                      notification: {
+                        title: `🎉 Nouvelle réservation — ${pNameD}`,
+                        body: `${m.guest_name || 'Un voyageur'} · ${fmtS(m.checkin)} → ${fmtS(m.checkout)} · ${amountD.toFixed(0)}€`
+                      },
+                      data: { type: 'new_booking', property_id: String(m.property_id), click_action: 'FLUTTER_NOTIFICATION_CLICK' },
+                      token: row.fcm_token
+                    });
+                  } catch (tErr) {
+                    if (tErr.code === 'messaging/invalid-registration-token' || tErr.code === 'messaging/registration-token-not-registered') {
+                      await pool.query('DELETE FROM host_fcm_tokens WHERE fcm_token = $1', [row.fcm_token]).catch(() => {});
+                    }
+                  }
+                }
+                console.log(`🔔 [BHGUEST] Push réservation (différé) envoyé (${toksD.rows.length} appareil(s))`);
+              }
+            } catch(hErr) { console.warn('⚠️ [BHGUEST] Notif hôte différé:', hErr.message); }
           } catch(defErr) {
             console.error('❌ [BHGUEST] Setup différé:', defErr.message);
           }
@@ -4884,6 +4935,31 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                       console.log(`✉️ [BHGUEST] Email hôte envoyé à ${host.email}`);
                     }
                   } catch(hmErr) { console.warn('⚠️ [BHGUEST][webhook] Email hôte:', hmErr.message); }
+
+                  // 🔔 Push natif : la réservation vaut mieux qu'un email non lu
+                  try {
+                    const toks = await pool.query('SELECT DISTINCT fcm_token FROM host_fcm_tokens WHERE user_id = $1', [ownerId]);
+                    if (toks.rows.length) {
+                      const admin = require('firebase-admin');
+                      const fmtShort = iso => new Date(String(iso).slice(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+                      const pn = (await pool.query('SELECT name FROM properties WHERE id = $1', [propId]).catch(() => ({ rows: [] }))).rows[0]?.name || 'votre logement';
+                      const bodyTxt = `${guestName || 'Un voyageur'} · ${fmtShort(startDate)} → ${fmtShort(endDate)}${amountTotal ? ` · ${amountTotal.toFixed(0)}€` : ''}`;
+                      for (const row of toks.rows) {
+                        try {
+                          await admin.messaging().send({
+                            notification: { title: `🎉 Nouvelle réservation — ${pn}`, body: bodyTxt },
+                            data: { type: 'new_booking', property_id: String(propId), click_action: 'FLUTTER_NOTIFICATION_CLICK' },
+                            token: row.fcm_token
+                          });
+                        } catch (tErr) {
+                          if (tErr.code === 'messaging/invalid-registration-token' || tErr.code === 'messaging/registration-token-not-registered') {
+                            await pool.query('DELETE FROM host_fcm_tokens WHERE fcm_token = $1', [row.fcm_token]).catch(() => {});
+                          }
+                        }
+                      }
+                      console.log(`🔔 [BHGUEST] Push réservation envoyé (${toks.rows.length} appareil(s))`);
+                    }
+                  } catch(pErr) { console.warn('⚠️ [BHGUEST][webhook] Push hôte:', pErr.message); }
                 }
               }
             } catch(resaErr) {
