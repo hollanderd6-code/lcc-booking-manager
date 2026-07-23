@@ -1247,7 +1247,7 @@ html[data-theme-v3="1"] .app-container {
         </div>
         <!-- Indicateur mode SMS -->
         <div id="smsModeBar" style="display:none;background:#DBEAFE;color:#1E40AF;font-size:12px;font-weight:600;padding:6px 16px;text-align:center;border-radius:0 0 12px 12px;">
-          📱 Mode SMS activé — le message sera envoyé par SMS au voyageur
+          <i class="fas fa-mobile-alt"></i> Mode SMS activé — le message sera envoyé par SMS au voyageur
           <span onclick="toggleSmsMode()" style="cursor:pointer;margin-left:8px;text-decoration:underline;">Désactiver</span>
         </div>
 
@@ -1358,7 +1358,7 @@ html[data-theme-v3="1"] .app-container {
           <h3 style="font-size:14px;font-weight:700;color:#0D1117;margin:0;display:flex;align-items:center;gap:7px;">
             <i class="fas fa-clock" style="color:#1A7A5E;font-size:13px;"></i> Prochains envois (J+7)
           </h3>
-          <span style="font-size:11px;color:#9CA3AF;">Cliquez 🚫 pour bloquer un envoi spécifique</span>
+          <span style="font-size:11px;color:#9CA3AF;">Cliquez <i class="fas fa-ban" style="color:#DC2626;"></i> pour bloquer un envoi spécifique</span>
         </div>
         <div id="scheduledList"></div>
       </div>
@@ -1540,9 +1540,9 @@ function insertTplVar(variable) {
             <div style="font-size:11.5px;color:#9CA3AF;margin-bottom:8px;line-height:1.5;">Coche une ou plusieurs conditions. Le message ne part que si <b>toutes</b> sont remplies. Sans coche : envoyé toujours.</div>
             <div id="tplConditions" style="display:flex;flex-direction:column;gap:7px;">
               <div style="font-size:10.5px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;">Avant d'envoyer, exiger…</div>
-              <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="deposit_active"><span>💳 Caution validée <span style="color:#9CA3AF;">(si le logement en a une, hors Airbnb)</span></span></label>
-              <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="police_complete"><span>🛂 Fiche de police signée <span style="color:#9CA3AF;">(voyageurs étrangers)</span></span></label>
-              <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="deposit_pending"><span>⏳ Caution <b>non</b> encore payée <span style="color:#9CA3AF;">(relances)</span></span></label>
+              <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="deposit_active"><span><i class="far fa-credit-card" style="color:#6B7280;width:16px;text-align:center;"></i> Caution validée <span style="color:#9CA3AF;">(si le logement en a une, hors Airbnb)</span></span></label>
+              <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="police_complete"><span><i class="far fa-id-card" style="color:#6B7280;width:16px;text-align:center;"></i> Fiche de police signée <span style="color:#9CA3AF;">(voyageurs étrangers)</span></span></label>
+              <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="deposit_pending"><span><i class="far fa-hourglass" style="color:#6B7280;width:16px;text-align:center;"></i> Caution <b>non</b> encore payée <span style="color:#9CA3AF;">(relances)</span></span></label>
               <div style="font-size:10.5px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.04em;margin-top:8px;">Limiter à la plateforme…</div>
               <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="platform_booking"><span>Booking.com</span></label>
               <label class="tpl-cond-row"><input type="checkbox" class="tplCond" value="platform_airbnb"><span>Airbnb</span></label>
@@ -1569,18 +1569,18 @@ function insertTplVar(variable) {
               <button type="button" onclick="insertTplVar('{heure_arrivee}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Heure d'arrivée</button>
               <button type="button" onclick="insertTplVar('{heure_depart}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Heure de départ</button>
               <button type="button" onclick="insertTplVar('{code_acces}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Code d'accès</button>
-              <button type="button" onclick="insertTplVar('{code_serrure}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #6EE7B7;background:#D1FAE5;font-size:12px;cursor:pointer;color:#065F46;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#10B981';this.style.color='white';this.style.borderColor='#10B981'" onmouseout="this.style.background='#D1FAE5';this.style.color='#065F46';this.style.borderColor='#6EE7B7'">🔑 Code serrure</button>
+              <button type="button" onclick="insertTplVar('{code_serrure}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #6EE7B7;background:#D1FAE5;font-size:12px;cursor:pointer;color:#065F46;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#10B981';this.style.color='white';this.style.borderColor='#10B981'" onmouseout="this.style.background='#D1FAE5';this.style.color='#065F46';this.style.borderColor='#6EE7B7'"><i class="fas fa-key"></i> Code serrure</button>
               <button type="button" onclick="insertTplVar('{wifi_nom}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Nom du WiFi</button>
               <button type="button" onclick="insertTplVar('{wifi_mdp}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Mot de passe WiFi</button>
               <button type="button" onclick="insertTplVar('{instructions}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Instructions d'accès</button>
               <button type="button" onclick="insertTplVar('{livret}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #cbd5e1;background:white;font-size:12px;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#1A7A5E';this.style.color='white';this.style.borderColor='#1A7A5E'" onmouseout="this.style.background='white';this.style.color='#374151';this.style.borderColor='#cbd5e1'">Lien livret d'accueil</button>
-              <button type="button" onclick="insertTplVar('{caution_url}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #FDE68A;background:#FEF3C7;font-size:12px;cursor:pointer;color:#92400E;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#F59E0B';this.style.color='white';this.style.borderColor='#F59E0B'" onmouseout="this.style.background='#FEF3C7';this.style.color='#92400E';this.style.borderColor='#FDE68A'">🔒 Lien caution</button>
-              <button type="button" onclick="insertTplVar('{checkin_link}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #93C5FD;background:#DBEAFE;font-size:12px;cursor:pointer;color:#1E40AF;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#3B82F6';this.style.color='white';this.style.borderColor='#3B82F6'" onmouseout="this.style.background='#DBEAFE';this.style.color='#1E40AF';this.style.borderColor='#93C5FD'">🛂 Lien check-in</button>
+              <button type="button" onclick="insertTplVar('{caution_url}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #FDE68A;background:#FEF3C7;font-size:12px;cursor:pointer;color:#92400E;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#F59E0B';this.style.color='white';this.style.borderColor='#F59E0B'" onmouseout="this.style.background='#FEF3C7';this.style.color='#92400E';this.style.borderColor='#FDE68A'"><i class="fas fa-lock"></i> Lien caution</button>
+              <button type="button" onclick="insertTplVar('{checkin_link}')" style="padding:4px 10px;border-radius:999px;border:1.5px solid #93C5FD;background:#DBEAFE;font-size:12px;cursor:pointer;color:#1E40AF;font-family:'DM Sans',sans-serif;" onmouseover="this.style.background='#3B82F6';this.style.color='white';this.style.borderColor='#3B82F6'" onmouseout="this.style.background='#DBEAFE';this.style.color='#1E40AF';this.style.borderColor='#93C5FD'"><i class="far fa-id-card"></i> Lien check-in</button>
             </div>
             <textarea id="tplMessage" rows="6" placeholder="Bonjour {prenom}, votre arrivée est prévue le {arrivee}..." style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;box-sizing:border-box;resize:vertical;"></textarea>
             <!-- Mention traduction automatique -->
             <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
-              <span style="font-size:18px;">🌍</span>
+              <i class="fas fa-globe" style="font-size:16px;color:#166534;"></i>
               <div>
                 <div style="font-size:12px;font-weight:600;color:#166534;">Traduction automatique activée</div>
                 <div style="font-size:11.5px;color:#15803d;margin-top:1px;">Ce message sera automatiquement traduit dans la langue du voyageur au moment de l'envoi. Rédigez-le en français, il sera adapté selon la nationalité de chaque voyageur.</div>
@@ -3741,7 +3741,7 @@ async function sendSmsMessage(convId) {
     if (!res.ok) throw new Error(data.error || 'Erreur envoi SMS');
 
     if (input) input.value = '';
-    showBHToast('📱 SMS envoyé', 'success');
+    showBHToast('SMS envoyé', 'success');
 
   } catch(e) {
     console.error('❌ sendSmsMessage:', e.message);
@@ -3786,7 +3786,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Toast notification
-      showBHToast(`💬 Nouveau message voyageur`, 'info');
+      showBHToast(`Nouveau message voyageur`, 'info');
     });
 
     // Marquer les messages SMS avec un badge visuel
@@ -3801,7 +3801,7 @@ document.addEventListener('DOMContentLoaded', () => {
               last.classList.add('sms-message');
               const timeEl = last.querySelector('.chat-time, small, .msg-time');
               if (timeEl && !timeEl.querySelector('.sms-source-badge')) {
-                timeEl.insertAdjacentHTML('beforeend', ' <span class="sms-source-badge">📱 SMS</span>');
+                timeEl.insertAdjacentHTML('beforeend', ' <span class="sms-source-badge">SMS</span>');
               }
             }
           }
@@ -3982,7 +3982,7 @@ function showBHToast(msg, type = 'info') {
 <!-- Modal confirm SMS -->
 <div id="smsConfirmModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:20px;">
   <div style="background:white;border-radius:18px;padding:28px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-    <div style="font-size:32px;text-align:center;margin-bottom:12px;">📱</div>
+    <div style="text-align:center;margin-bottom:12px;"><i class="fas fa-mobile-alt" style="font-size:28px;color:#1E40AF;"></i></div>
     <h3 style="font-family:'Instrument Serif',serif;font-size:20px;color:#0D1117;margin:0 0 10px;text-align:center;">Activer les SMS</h3>
     <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 8px;text-align:center;">Souhaitez-vous activer l'option SMS automatiques ?</p>
     <p style="font-size:12px;color:#6b7280;text-align:center;margin:0 0 24px;">Des frais de <strong>5,99 €/mois</strong> seront automatiquement ajoutés à votre abonnement. Vous pouvez désactiver cette option à tout moment.</p>
@@ -4657,7 +4657,7 @@ window.sendPracticalInfos = async function() {
         + '<label style="font-size:12px;color:#6B7280;font-weight:600;display:block;margin-bottom:6px;">Choisir le template :</label>'
         + '<select id="bhTplPicker" style="width:100%;padding:8px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;font-family:inherit;">' + opts + '</select>'
         + '</div>';
-      var ok = await window.bhConfirm('📋 Envoyer les infos d\'arrivée', pickHtml, 'Continuer', 'Annuler');
+      var ok = await window.bhConfirm('Envoyer les infos d\'arrivée', pickHtml, 'Continuer', 'Annuler');
       if (!ok) return;
       var sel = document.getElementById('bhTplPicker');
       chosen = templates[sel ? parseInt(sel.value) : 0];
@@ -4683,7 +4683,7 @@ window.sendPracticalInfos = async function() {
       .replace(/\{livret\}/gi, prop.welcomeBookUrl || prop.welcome_book_url || '');
 
     var confirmed = await window.bhConfirm(
-      '📋 ' + (chosen.title || 'Message d\'arrivée'),
+      (chosen.title || 'Message d\'arrivée'),
       '<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 14px;font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.6;max-height:260px;overflow-y:auto;margin-top:8px;">'
         + preview.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         + '</div>',
@@ -4732,7 +4732,7 @@ window.openQuickNoteModal = function() {
         <span style="font-size:16px;font-weight:700;color:#111827;">Note interne</span>
         <span style="font-size:12px;color:#9CA3AF;margin-left:auto;">Visible uniquement par vous</span>
       </div>
-      ${!uid ? '<div style="font-size:12px;color:#EF4444;background:#FEF2F2;border-radius:8px;padding:8px 12px;margin-bottom:12px;">⚠️ Aucune réservation liée à cette conversation — la note ne peut pas être sauvegardée.</div>' : ''}
+      ${!uid ? '<div style="font-size:12px;color:#EF4444;background:#FEF2F2;border-radius:8px;padding:8px 12px;margin-bottom:12px;"><i class="fas fa-exclamation-triangle"></i> Aucune réservation liée à cette conversation — la note ne peut pas être sauvegardée.</div>' : ''}
       <textarea id="bhQuickNoteText" rows="5" placeholder="Ex : voyageur difficile, dommages signalés, remise accordée…"
         style="width:100%;box-sizing:border-box;border:1.5px solid #E5E7EB;border-radius:10px;padding:12px;font-size:13px;font-family:'DM Sans',sans-serif;resize:none;line-height:1.6;outline:none;color:#374151;"
         onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='#E5E7EB'"
@@ -4778,7 +4778,7 @@ window._saveQuickNote = async function() {
     if (conv) conv.notes = data.notes || '';
 
     document.getElementById('bhQuickNoteModal')?.remove();
-    if (window.showBHToast) showBHToast(note ? '📝 Note enregistrée' : '🗑️ Note supprimée', 'success');
+    if (window.showBHToast) showBHToast(note ? 'Note enregistrée' : 'Note supprimée', 'success');
 
     // Mettre à jour le badge du bouton
     var btn = document.getElementById('btnQuickNote');
@@ -5203,7 +5203,7 @@ function deleteTemplate(id) {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;';
   overlay.innerHTML = `
     <div style="background:white;border-radius:16px;padding:24px;max-width:320px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);">
-      <div style="font-size:32px;margin-bottom:12px;">🗑️</div>
+      <div style="margin-bottom:12px;"><i class="far fa-trash-alt" style="font-size:28px;color:#DC2626;"></i></div>
       <div style="font-size:15px;font-weight:700;color:#0D1117;margin-bottom:8px;">Supprimer ce template ?</div>
       <div style="font-size:13px;color:#6b7280;margin-bottom:20px;">Cette action est irréversible.</div>
       <div style="display:flex;gap:10px;justify-content:center;">
@@ -5307,7 +5307,7 @@ async function loadScheduled() {
               title="${blocked ? 'Débloquer cet envoi' : 'Bloquer cet envoi'}"
               style="flex-shrink:0;width:34px;height:34px;border-radius:10px;border:1.5px solid ${blocked ? '#FCA5A5' : '#E5E7EB'};background:${blocked ? '#FEE2E2' : '#F9FAFB'};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s;"
               onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-              ${blocked ? '✅' : '🚫'}
+              ${blocked ? '<i class="fas fa-check" style="color:#16A34A;"></i>' : '<i class="fas fa-ban" style="color:#DC2626;"></i>'}
             </button>
           </div>`;
       });
@@ -5333,10 +5333,10 @@ async function toggleBlock(templateId, convId, isCurrentlyBlocked, btn) {
       body: JSON.stringify({ template_id: templateId, conversation_id: convId })
     });
     await loadScheduled(); // Recharger
-    if (window.showToast) showToast(isCurrentlyBlocked ? '✅ Envoi débloqué' : '🚫 Envoi bloqué', 'success');
+    if (window.showToast) showToast(isCurrentlyBlocked ? 'Envoi débloqué' : 'Envoi bloqué', 'success');
   } catch(e) {
     btn.disabled = false;
-    btn.innerHTML = isCurrentlyBlocked ? '✅' : '🚫';
+    btn.innerHTML = isCurrentlyBlocked ? '<i class="fas fa-check" style="color:#16A34A;"></i>' : '<i class="fas fa-ban" style="color:#DC2626;"></i>';
   }
 }
 
@@ -5723,7 +5723,7 @@ window.showSmsConfirm = function() {
 <!-- Modal confirm SMS -->
 <div id="smsConfirmModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:20px;">
   <div style="background:white;border-radius:18px;padding:28px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);">
-    <div style="font-size:32px;text-align:center;margin-bottom:12px;">📱</div>
+    <div style="text-align:center;margin-bottom:12px;"><i class="fas fa-mobile-alt" style="font-size:28px;color:#1E40AF;"></i></div>
     <h3 style="font-family:'Instrument Serif',serif;font-size:20px;color:#0D1117;margin:0 0 10px;text-align:center;">Activer les SMS</h3>
     <p style="font-size:13px;color:#374151;line-height:1.6;margin:0 0 8px;text-align:center;">Souhaitez-vous activer l'option SMS automatiques ?</p>
     <p style="font-size:12px;color:#6b7280;text-align:center;margin:0 0 24px;">Des frais de <strong>5,99 €/mois</strong> seront automatiquement ajoutés à votre abonnement. Vous pouvez désactiver cette option à tout moment.</p>
@@ -5789,7 +5789,7 @@ window.showSmsConfirm = function() {
 
   function doCopy(text) {
     function done(ok) {
-      if (window.showToast) showToast(ok ? '📋 Message copié' : '❌ Copie impossible', ok ? 'success' : 'error');
+      if (window.showToast) showToast(ok ? 'Message copié' : 'Copie impossible', ok ? 'success' : 'error');
       try { if (ok && navigator.vibrate) navigator.vibrate(12); } catch (e) {}
     }
     // 1) Capacitor natif
@@ -5896,7 +5896,7 @@ document.addEventListener('click', function(e) {
 .chat-message.bh-internal-note .chat-text { color: #9A3412 !important; font-size: 13px !important; }
 .chat-message.bh-internal-note .chat-time { color: #C2854A !important; }
 .chat-message.bh-internal-note .chat-bubble::before {
-  content: "🔒 Note interne · non visible par le voyageur";
+  content: "Note interne · non visible par le voyageur";
   display: block;
   font-size: 10px;
   font-weight: 700;
