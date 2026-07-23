@@ -3800,10 +3800,11 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
   /* 1. La carte de gauche s'étire sur toute la hauteur du hero */
   .bh2-hero{align-items:stretch}
   .bh2-today{align-self:stretch;display:flex;flex-direction:column}
-  .bh2-ops{flex:1;min-height:0}
-  /* 2. Les 3 tuiles respirent : label en haut, chiffre + libellé ancrés en bas */
-  .bh2-op{display:flex;flex-direction:column;padding:16px 16px 15px}
-  .bh2-op-num{margin-top:auto;margin-bottom:5px}
+  /* 2. Les tuiles gardent une hauteur mesurée et se centrent dans la carte :
+     l'espace libre devient de la marge intérieure, pas un trou. */
+  .bh2-ops{flex:1;min-height:0;align-content:center;align-items:center}
+  .bh2-op{display:flex;flex-direction:column;justify-content:center;min-height:132px;padding:16px 16px 15px}
+  .bh2-op-num{font-size:34px;margin:2px 0 4px}
   /* 3. Occupation : anneau et légende côte à côte -> colonne droite plus compacte */
   .bh2-occ{display:grid;grid-template-columns:auto 1fr;column-gap:18px;align-items:center;padding:16px 20px 18px}
   .bh2-occ-lbl{grid-column:1/-1}
