@@ -5668,6 +5668,14 @@ app.use((req, res, next) => {
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
+// 🍎 /.well-known/ : Express ignore par défaut les chemins commençant par un
+// point, ce qui casserait la vérification de domaine Apple (et Let's Encrypt).
+// Montage dédié et limité à ce dossier, placé avant le static général.
+app.use('/.well-known', express.static(path.join(__dirname, 'public', '.well-known'), {
+  dotfiles: 'allow',
+  setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache')
+}));
+
 app.use(express.static('public', {
   etag: true,
   setHeaders: (res, filePath) => {
@@ -42720,7 +42728,7 @@ function allowedAudiences(provider) {
   // (deux apps iOS, plusieurs domaines, etc.)
   const raw = provider === 'google'
     ? [process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_ID_IOS, process.env.GOOGLE_CLIENT_ID_ANDROID]
-    : [process.env.APPLE_CLIENT_ID, process.env.APPLE_BUNDLE_ID];
+    : [process.env.APPLE_CLIENT_ID, process.env.APPLE_CLIENT_ID_BH, process.env.APPLE_BUNDLE_ID];
   return raw.filter(Boolean).flatMap(v => String(v).split(',')).map(v => v.trim()).filter(Boolean);
 }
 
@@ -42890,10 +42898,15 @@ app.post('/api/guest/auth/social', async (req, res) => {
 
 // Identifiants publics à exposer au client (évite de les dupliquer partout)
 app.get('/api/auth/social/config', (req, res) => {
+  const base = process.env.APP_URL || '';
   res.json({
     google: process.env.GOOGLE_CLIENT_ID || null,
+    // Un Services ID par site : Apple affiche le nom de l'app liée dans sa
+    // fenêtre. Sans ça, les visiteurs de Boostinghost voient « BHGuest ».
     apple: process.env.APPLE_CLIENT_ID || null,
-    appleRedirect: (process.env.APP_URL || '') + '/guest-app/public/index.html'
+    appleRedirect: base + '/guest-app/public/index.html',
+    appleBh: process.env.APPLE_CLIENT_ID_BH || process.env.APPLE_CLIENT_ID || null,
+    appleRedirectBh: process.env.APPLE_CLIENT_ID_BH ? base + '/login.html' : base + '/guest-app/public/index.html'
   });
 });
 

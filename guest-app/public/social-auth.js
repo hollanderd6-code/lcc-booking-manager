@@ -108,13 +108,17 @@
         if (resp.identityToken) return finish(box, 'apple', resp.identityToken, nm);
       } catch (e) { showError(box, 'Connexion Apple annulée'); return; }
     }
-    if (!cfg || !cfg.apple) { showError(box, 'Connexion Apple non configurée'); return; }
+    // Boostinghost et BHGuest peuvent avoir chacun leur Services ID
+    var mode = box.getAttribute('data-social-login') || 'guest';
+    var appleId = (mode === 'bh') ? cfg && cfg.appleBh : cfg && cfg.apple;
+    var appleRedir = (mode === 'bh') ? cfg && cfg.appleRedirectBh : cfg && cfg.appleRedirect;
+    if (!appleId) { showError(box, 'Connexion Apple non configurée'); return; }
     await loadScript('https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/fr_FR/appleid.auth.js');
     if (!window.AppleID) { showError(box, 'Apple indisponible'); return; }
     window.AppleID.auth.init({
-      clientId: cfg.apple,
+      clientId: appleId,
       scope: 'name email',
-      redirectURI: cfg.appleRedirect,
+      redirectURI: appleRedir,
       usePopup: true
     });
     try {
@@ -138,7 +142,7 @@
     } catch (e) { cfg = {}; }
 
     // Rien de configuré côté serveur : on n'affiche aucun bouton mort
-    if (!cfg.google && !cfg.apple && !isNative()) return;
+    if (!cfg.google && !cfg.apple && !cfg.appleBh && !isNative()) return;
 
     var css = document.createElement('style');
     css.textContent =
@@ -161,7 +165,7 @@
       var html = '<div class="social-sep">ou</div>';
       if (cfg.google || isNative())
         html += '<button type="button" class="social-btn" data-p="google">' + GOOGLE_SVG + ' Continuer avec Google</button>';
-      if (cfg.apple || isNative())
+      if (cfg.apple || cfg.appleBh || isNative())
         html += '<button type="button" class="social-btn apple" data-p="apple">' + APPLE_SVG + ' Continuer avec Apple</button>';
       html += '<div class="social-err"></div><div class="gsi-holder"></div>';
       box.innerHTML = html;
