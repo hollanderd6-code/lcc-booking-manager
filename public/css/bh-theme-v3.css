@@ -1819,3 +1819,111 @@ html[data-theme-v3="1"] .year-grid {
     display: none !important;
   }
 }
+
+/* =============================================================
+   V3.1 — RAFFINEMENTS LUXE (boutons, calendrier, détails)
+   Bloc additif : ne modifie aucune règle existante.
+   ============================================================= */
+
+/* ── Boutons : lumière interne, focus ring, press feedback ── */
+html[data-theme-v3="1"] .btn { letter-spacing: .01em !important; }
+html[data-theme-v3="1"] .btn:active { transform: scale(.98) translateY(0) !important; }
+html[data-theme-v3="1"] .btn:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--jade-glow), var(--shadow-jade-v3) !important;
+}
+html[data-theme-v3="1"] .btn-primary {
+  background: linear-gradient(180deg, #1F8A6B 0%, var(--jade) 55%, #15654E 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), var(--shadow-jade-v3) !important;
+}
+html[data-theme-v3="1"] .btn-primary:hover {
+  background: linear-gradient(180deg, #26A37E 0%, var(--jade-light) 55%, #1A7A5E 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 10px 32px rgba(26,122,94,.3) !important;
+}
+html[data-theme-v3="1"] .btn-ghost:active,
+html[data-theme-v3="1"] .btn-secondary:active { background: var(--cream-deep) !important; }
+
+/* ── Calendrier : filet laiton signature en tête ── */
+html[data-theme-v3="1"] .calendar-wrapper {
+  border-top: none !important;
+  position: relative !important;
+}
+html[data-theme-v3="1"] .calendar-wrapper::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0; left: 0; right: 0 !important;
+  height: 2px !important;
+  background: linear-gradient(90deg, transparent, var(--sand) 18%, #D9C9A8 50%, var(--sand) 82%, transparent) !important;
+  z-index: 10 !important;
+  pointer-events: none !important;
+}
+
+/* ── Navigation période : mois plus éditorial, boutons pilule ── */
+html[data-theme-v3="1"] .month-name { font-size: 23px !important; }
+html[data-theme-v3="1"] .period-nav-btn {
+  border-radius: 999px !important;
+  width: 34px !important; height: 34px !important;
+  border-color: var(--border-warm-v3) !important;
+}
+html[data-theme-v3="1"] .period-nav-btn:active { transform: scale(.94) !important; }
+
+/* ── En-têtes de jours : dimanche/samedi sable, aujourd'hui jade ── */
+html[data-theme-v3="1"] .day-header.weekend { background: var(--cream-deep) !important; }
+html[data-theme-v3="1"] .day-header.today .day-name { color: var(--jade) !important; }
+html[data-theme-v3="1"] .day-header.today {
+  box-shadow: inset 0 0 0 100px rgba(26,122,94,.04) !important;
+}
+
+/* ── Colonne logements : marqueur jade sur l'actif ── */
+html[data-theme-v3="1"] .property-item { position: relative !important; }
+html[data-theme-v3="1"] .property-item.active::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 0; top: 10px; bottom: 10px !important;
+  width: 3px !important;
+  border-radius: 0 3px 3px 0 !important;
+  background: var(--jade) !important;
+}
+
+/* ── Barres de réservation : relief, liseré lumière, hover lift ── */
+html[data-theme-v3="1"] .booking-block {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 1px 3px rgba(13,17,23,.18) !important;
+  transition: transform .15s var(--ease-out-v3), box-shadow .15s, filter .15s !important;
+}
+html[data-theme-v3="1"] .booking-block:hover {
+  filter: brightness(1.05) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.26), 0 5px 14px rgba(13,17,23,.22) !important;
+  z-index: 5 !important;
+}
+html[data-theme-v3="1"] .booking-block.expedia {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 3px rgba(13,17,23,.14) !important;
+}
+
+/* ── Scrollbars fines assorties (zone calendrier + modales) ── */
+html[data-theme-v3="1"] .calendar-grid-wrapper::-webkit-scrollbar,
+html[data-theme-v3="1"] .calendar-wrapper ::-webkit-scrollbar,
+html[data-theme-v3="1"] .modal-content ::-webkit-scrollbar {
+  height: 8px !important; width: 8px !important;
+}
+html[data-theme-v3="1"] .calendar-grid-wrapper::-webkit-scrollbar-track,
+html[data-theme-v3="1"] .calendar-wrapper ::-webkit-scrollbar-track,
+html[data-theme-v3="1"] .modal-content ::-webkit-scrollbar-track {
+  background: var(--cream-deep) !important;
+}
+html[data-theme-v3="1"] .calendar-grid-wrapper::-webkit-scrollbar-thumb,
+html[data-theme-v3="1"] .calendar-wrapper ::-webkit-scrollbar-thumb,
+html[data-theme-v3="1"] .modal-content ::-webkit-scrollbar-thumb {
+  background: var(--sand) !important;
+  border-radius: 99px !important;
+  border: 2px solid var(--cream-deep) !important;
+}
+html[data-theme-v3="1"] .calendar-grid-wrapper::-webkit-scrollbar-thumb:hover { background: #B3A184 !important; }
+
+/* ── Dark mode : ajustements des raffinements ── */
+html[data-theme-v3="1"][data-theme="dark"] .calendar-wrapper::before {
+  background: linear-gradient(90deg, transparent, rgba(200,184,154,.5) 18%, rgba(217,201,168,.65) 50%, rgba(200,184,154,.5) 82%, transparent) !important;
+}
+html[data-theme-v3="1"][data-theme="dark"] .booking-block {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 1px 3px rgba(0,0,0,.4) !important;
+}
