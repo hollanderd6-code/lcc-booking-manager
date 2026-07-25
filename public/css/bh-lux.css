@@ -166,34 +166,41 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-delta{ color:var(--lux-green) !important;
 
 
 /* ===========================================================================
-   3b. DASHBOARD — hauteur héros ajustée + couleur redonnée
+   3b. DASHBOARD — les 4 KPI intégrés dans la carte « journée » (fin du vide)
    =========================================================================== */
 @media(min-width:921px){
-  /* Chaque carte prend sa HAUTEUR NATURELLE : la colonne droite (CA+occupation)
-     ne force plus la carte gauche à s'étirer. Plus de vide dans « journée ». */
-  html.bh-lux[data-theme-v3="1"] .bh2-hero{ align-items:start !important; }
+  /* La carte gauche s'étire pour matcher la colonne droite ; son contenu
+     se répartit : tuiles en haut, 4 KPI en bas — plus aucun vide. */
+  html.bh-lux[data-theme-v3="1"] .bh2-hero{ align-items:stretch !important; }
   html.bh-lux[data-theme-v3="1"] .bh2-today{
-    align-self:start !important; display:flex !important; flex-direction:column !important;
+    align-self:stretch !important; display:flex !important; flex-direction:column !important;
   }
   html.bh-lux[data-theme-v3="1"] .bh2-ops{ flex:none !important; }
   html.bh-lux[data-theme-v3="1"] .bh2-op{ min-height:0 !important; padding:12px 22px 14px !important; }
-  /* léger resserrement vertical entre le titre et les tuiles */
-  html.bh-lux[data-theme-v3="1"] .bh2-today-head{ margin-bottom:6px !important; }
+  html.bh-lux[data-theme-v3="1"] .bh2-today-head{ margin-bottom:8px !important; }
+
+  /* Les 4 KPI intégrés : grille 2×2 qui remplit l'espace restant */
+  html.bh-lux[data-theme-v3="1"] .bh2-stats-inside{
+    display:grid !important; grid-template-columns:1fr 1fr !important; gap:0 !important;
+    margin:0 !important; margin-top:auto !important;
+    border-top:1px solid var(--lux-line2) !important; padding-top:2px !important;
+  }
+  html.bh-lux[data-theme-v3="1"] .bh2-stats-inside .bh2-stat{
+    background:transparent !important; border:none !important; border-radius:0 !important;
+    box-shadow:none !important; padding:14px 22px !important;
+  }
+  html.bh-lux[data-theme-v3="1"] .bh2-stats-inside .bh2-stat:nth-child(even){ border-left:1px solid var(--lux-line2) !important; }
+  html.bh-lux[data-theme-v3="1"] .bh2-stats-inside .bh2-stat:nth-child(n+3){ border-top:1px solid var(--lux-line2) !important; }
+  html.bh-lux[data-theme-v3="1"] .bh2-stats-inside .bh2-stat:hover{ background:rgba(30,110,82,.02) !important; box-shadow:none !important; transform:none !important; }
 }
 
-/* Couleur : chiffres des 3 opérations en vert, icônes plus soutenues */
+/* Couleur : chiffres opérations en vert, icônes pleines */
 html.bh-lux[data-theme-v3="1"] .bh2-op-num{ color:var(--lux-green) !important; }
-html.bh-lux[data-theme-v3="1"] .bh2-op-ic{
-  background:var(--lux-green) !important; color:#fff !important;
-}
-/* Icônes des stat-cards du bas : mêmes pastilles vertes pleines */
+html.bh-lux[data-theme-v3="1"] .bh2-op-ic{ background:var(--lux-green) !important; color:#fff !important; }
 html.bh-lux[data-theme-v3="1"] .bh2-stat-ic:not(.n){ background:var(--lux-green) !important; color:#fff !important; }
-/* Chiffres stat-cards : gardent l'encre (hiérarchie) mais accent vert au survol */
 html.bh-lux[data-theme-v3="1"] .bh2-stat:hover .bh2-num{ color:var(--lux-green) !important; }
-/* Icône occupation + CA : pastille verte pleine aussi */
 html.bh-lux[data-theme-v3="1"] .bh2-occ-lbl i,
 html.bh-lux[data-theme-v3="1"] .bh2-ca-lbl i{ color:var(--lux-green) !important; }
-/* Anneau occupation : chiffre en vert pour l'accent */
 html.bh-lux[data-theme-v3="1"] .bh2-occ-num{ color:var(--lux-green) !important; }
 
 /* ===========================================================================

@@ -19,7 +19,7 @@
 <link href="/css/style.css?v=11" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=1">
 <link rel="stylesheet" href="/css/bh-badges.css?v=1">
 <link rel="stylesheet" href="/css/bh-theme-v3.css?v=12">
-<link rel="stylesheet" href="/css/bh-lux.css?v=7">  
+<link rel="stylesheet" href="/css/bh-lux.css?v=8">  
 <script>
   // Activation permanente du thème V3
   document.documentElement.setAttribute('data-theme-v3','1');
@@ -3844,6 +3844,24 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 <div class="bh2-op-sub" id="kpiCleaning48hSub">départs à nettoyer</div>
 </div>
 </div>
+<section class="bh2-stats bh2-stats-inside">
+<div class="bh2-stat" id="kpiPropertiesCard">
+<span class="bh2-stat-ic"><i class="fas fa-home"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiPropertiesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl">Logements actifs</div></div>
+</div>
+<div class="bh2-stat" id="kpiDepositsCard">
+<span class="bh2-stat-ic"><i class="fas fa-shield-halved"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiDepositsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl" id="kpiDepositsSub">Cautions</div></div>
+</div>
+<div class="bh2-stat" id="kpiChecklistsCard" onclick="if(window.openChecklistsKpiModal){window.openChecklistsKpiModal();}">
+<span class="bh2-stat-ic"><i class="fas fa-clipboard-check"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiChecklistsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl" id="kpiChecklistsSub">Checklists ménage</div></div>
+</div>
+<div class="bh2-stat" id="kpiTopRisksCard">
+<span class="bh2-stat-ic n"><i class="fas fa-sticky-note"></i></span>
+<div style="min-width:0"><div class="bh2-num" id="kpiTopRisksValue">0</div><div class="bh2-lbl" id="kpiTopRisksSub">Réservations avec note</div></div>
+</div>
+</section>
 </section>
 <div class="bh2-feat">
 <section class="bh2-ca" id="kpiCaCard" onclick="window.openCaKpiModal && window.openCaKpiModal()">
@@ -3862,24 +3880,6 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 </section>
 </div>
 </div>
-<section class="bh2-stats">
-<div class="bh2-stat" id="kpiPropertiesCard">
-<span class="bh2-stat-ic"><i class="fas fa-home"></i></span>
-<div style="min-width:0"><div class="bh2-num" id="kpiPropertiesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl">Logements actifs</div></div>
-</div>
-<div class="bh2-stat" id="kpiDepositsCard">
-<span class="bh2-stat-ic"><i class="fas fa-shield-halved"></i></span>
-<div style="min-width:0"><div class="bh2-num" id="kpiDepositsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl" id="kpiDepositsSub">Cautions</div></div>
-</div>
-<div class="bh2-stat" id="kpiChecklistsCard" onclick="if(window.openChecklistsKpiModal){window.openChecklistsKpiModal();}">
-<span class="bh2-stat-ic"><i class="fas fa-clipboard-check"></i></span>
-<div style="min-width:0"><div class="bh2-num" id="kpiChecklistsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div><div class="bh2-lbl" id="kpiChecklistsSub">Checklists ménage</div></div>
-</div>
-<div class="bh2-stat" id="kpiTopRisksCard">
-<span class="bh2-stat-ic n"><i class="fas fa-sticky-note"></i></span>
-<div style="min-width:0"><div class="bh2-num" id="kpiTopRisksValue">0</div><div class="bh2-lbl" id="kpiTopRisksSub">Réservations avec note</div></div>
-</div>
-</section>
 <script>
 (function(){
   var d=new Date();
