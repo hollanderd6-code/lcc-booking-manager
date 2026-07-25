@@ -1,12 +1,17 @@
-// social-auth.js — Boutons « Continuer avec Google / Apple »
-// Partagé par BHGuest et Boostinghost. Le conteneur porte les attributs :
+// social-auth.js — Boutons « Continuer avec Google / Apple » (Hosterzz)
+// Le conteneur porte data-social-login. Si le compte n'existe pas,
+// window.onSocialNeedsRole(data, callback) est appelé pour demander
+// le rôle et le téléphone avant de rejouer l'inscription. Le conteneur porte les attributs :
 //   data-social-login="guest" | "bh"   → point d'entrée serveur
 //   data-redirect="host-dashboard.html" (optionnel, pour BH)
 // Sur iOS natif, on passe par les plugins Capacitor si présents.
 (function () {
   'use strict';
 
-  var API = window.__SOCIAL_API || window.location.origin;
+  // BH : auth-fetch.js remplace window.fetch et redirige tout '/api/...' vers
+  // https://www.boostinghost.fr en natif. On garde donc des chemins RELATIFS
+  // et on laisse l'intercepteur faire la redirection — ne pas prefixer d'une base.
+  var API = window.__SOCIAL_API || '';
   var cfg = null;
 
   function isNative() {
@@ -31,9 +36,7 @@
 
   // Envoie le jeton d'identité au serveur et connecte l'utilisateur
   async function finish(box, provider, idToken, name) {
-    var mode = box.getAttribute('data-social-login') || 'guest';
-    var isBh = (mode === 'bh' || mode === 'host');
-    var url = isBh ? '/api/auth/social' : '/api/guest/auth/social';
+    var url = '/api/auth/social';
     var btns = box.querySelectorAll('button');
     btns.forEach(function (b) { b.disabled = true; });
     try {
@@ -42,38 +45,86 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider: provider, idToken: idToken, name: name || null,
-          asHost: mode === 'host'
+          role: window.__hzSocialRole || null,
+          phone: window.__hzSocialPhone || null
         })
       });
       var d = await res.json();
+
+      // Compte inconnu : Hosterzz a besoin du rôle et du téléphone
+      if (!res.ok && d.needsRole) {
+        if (typeof window.onSocialNeedsRole === 'function') {
+          window.onSocialNeedsRole(d, function (role, phone, profil) {
+            window.__hzSocialRole = role;
+            window.__hzSocialPhone = phone;
+            window.__hzSocialProfil = profil || null;
+            finish(box, provider, idToken, name);
+          });
+          btns.forEach(function (b) { b.disabled = false; });
+          return;
+        }
+        throw new Error(d.error || 'Complétez votre inscription');
+      }
       if (!res.ok) throw new Error(d.error || 'Connexion refusée');
 
-      if (isBh) {
-        localStorage.setItem('lcc_token', d.token);
-        if (d.isExternalHost) localStorage.setItem('bhguest_host_token', d.token);
-        location.href = box.getAttribute('data-redirect') || (d.isExternalHost ? 'host-dashboard.html' : 'app.html');
-      } else {
-        // BHGuest : même format de session que la connexion par mot de passe
-        localStorage.setItem('guest_session', JSON.stringify({
-          token: d.session_token, email: d.email, name: d.name || null
-        }));
-        if (typeof window.onSocialLoginSuccess === 'function') window.onSocialLoginSuccess(d);
-        else location.reload();
-      }
+      window.__hzSocialRole = null;
+      window.__hzSocialPhone = null;
+      localStorage.setItem('hz_token', d.token);
+      if (d.user && d.user.role) localStorage.setItem('hz_role', d.user.role);
+      if (typeof window.onSocialLoginSuccess === 'function') window.onSocialLoginSuccess(d);
+      else location.reload();
     } catch (e) {
       showError(box, e.message);
       btns.forEach(function (b) { b.disabled = false; });
     }
   }
 
+  // ── Initialisation des plugins natifs (une seule fois) ──────
+  // @capgo/capacitor-social-login exige initialize() avant login().
+  // Sans cet appel, login() leve une erreur silencieuse et le bouton
+  // semble ne rien faire.
+  var nativeInitDone = false;
+  async function ensureNativeInit() {
+    if (nativeInitDone || !isNative()) return;
+    var P = window.Capacitor.Plugins;
+    if (!P || !P.SocialLogin || !P.SocialLogin.initialize) return;
+
+    var iosId = cfg && cfg.googleIOS;
+    var webId = cfg && cfg.google;
+    // Sans identifiant iOS, inutile d'initialiser : le plugin repondrait
+    // « No provider was initialized » sans indiquer la cause reelle.
+    if (!iosId) { console.error('[SOCIAL] googleIOS absent de /config'); return; }
+
+    await P.SocialLogin.initialize({
+      google: {
+        iOSClientId: iosId,
+        // iOSServerClientId + webClientId : requis par la 8.3.x pour
+        // enregistrer le provider Google sur iOS.
+        iOSServerClientId: webId || iosId,
+        webClientId: webId || iosId,
+        mode: 'online'
+      }
+    });
+    nativeInitDone = true;
+  }
+
   // ── Google ──────────────────────────────────────────────────
   async function googleSignIn(box) {
     if (isNative() && window.Capacitor.Plugins && window.Capacitor.Plugins.SocialLogin) {
       try {
-        var r = await window.Capacitor.Plugins.SocialLogin.login({ provider: 'google' });
+        await ensureNativeInit();
+        var r = await window.Capacitor.Plugins.SocialLogin.login({
+          provider: 'google',
+          options: { scopes: ['email', 'profile'] }
+        });
         var t = r && (r.result && (r.result.idToken || r.result.id_token));
         if (t) return finish(box, 'google', t);
-      } catch (e) { showError(box, 'Connexion Google annulée'); return; }
+      } catch (e) {
+        console.error('[SOCIAL] Google natif:', e);
+        // Annulation utilisateur = silencieux ; vraie erreur = on l'affiche
+        showError(box, /cancel|annul/i.test(e && e.message || '') ? 'Connexion Google annulée' : 'Connexion Google indisponible');
+        return;
+      }
     }
     if (!cfg || !cfg.google) { showError(box, 'Connexion Google non configurée'); return; }
     await loadScript('https://accounts.google.com/gsi/client');
@@ -97,21 +148,38 @@
   }
 
   // ── Apple ───────────────────────────────────────────────────
+  // BH sert deux Services ID Apple : `bh` (Boostinghost) et `guest` (BHGuest).
+  // On choisit selon l'attribut data-social-login du conteneur, sinon Apple
+  // affiche le mauvais nom d'app et renvoie vers la mauvaise URL.
+  function appleCfg(box) {
+    var mode = box && box.getAttribute('data-social-login');
+    if (mode === 'bh') {
+      return {
+        clientId: (cfg && cfg.appleBh) || (cfg && cfg.apple),
+        redirect: (cfg && cfg.appleRedirectBh) || (cfg && cfg.appleRedirect)
+      };
+    }
+    return { clientId: cfg && cfg.apple, redirect: cfg && cfg.appleRedirect };
+  }
+
   async function appleSignIn(box) {
+    var ac = appleCfg(box);
     if (isNative() && window.Capacitor.Plugins && window.Capacitor.Plugins.SignInWithApple) {
       try {
         var r = await window.Capacitor.Plugins.SignInWithApple.authorize({
-          clientId: cfg && cfg.apple, scopes: 'name email'
+          clientId: ac.clientId, scopes: 'name email'
         });
         var resp = r && (r.response || r);
         var nm = [resp.givenName, resp.familyName].filter(Boolean).join(' ');
         if (resp.identityToken) return finish(box, 'apple', resp.identityToken, nm);
-      } catch (e) { showError(box, 'Connexion Apple annulée'); return; }
+      } catch (e) {
+        console.error('[SOCIAL] Apple natif:', e);
+        showError(box, /cancel|annul|1001/i.test(e && e.message || '') ? 'Connexion Apple annulée' : 'Connexion Apple indisponible');
+        return;
+      }
     }
-    // Boostinghost et BHGuest peuvent avoir chacun leur Services ID
-    var mode = box.getAttribute('data-social-login') || 'guest';
-    var appleId = (mode === 'bh') ? cfg && cfg.appleBh : cfg && cfg.apple;
-    var appleRedir = (mode === 'bh') ? cfg && cfg.appleRedirectBh : cfg && cfg.appleRedirect;
+    var appleId = ac.clientId;
+    var appleRedir = ac.redirect;
     if (!appleId) { showError(box, 'Connexion Apple non configurée'); return; }
     await loadScript('https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/fr_FR/appleid.auth.js');
     if (!window.AppleID) { showError(box, 'Apple indisponible'); return; }
@@ -142,7 +210,7 @@
     } catch (e) { cfg = {}; }
 
     // Rien de configuré côté serveur : on n'affiche aucun bouton mort
-    if (!cfg.google && !cfg.apple && !cfg.appleBh && !isNative()) return;
+    if (!cfg.google && !cfg.apple && !isNative()) return;
 
     var css = document.createElement('style');
     css.textContent =
@@ -165,7 +233,7 @@
       var html = '<div class="social-sep">ou</div>';
       if (cfg.google || isNative())
         html += '<button type="button" class="social-btn" data-p="google">' + GOOGLE_SVG + ' Continuer avec Google</button>';
-      if (cfg.apple || cfg.appleBh || isNative())
+      if (cfg.apple || isNative())
         html += '<button type="button" class="social-btn apple" data-p="apple">' + APPLE_SVG + ' Continuer avec Apple</button>';
       html += '<div class="social-err"></div><div class="gsi-holder"></div>';
       box.innerHTML = html;
