@@ -139,3 +139,27 @@ html.bh-lux[data-theme-v3="1"] .cell-price-override{ color:var(--lux-green) !imp
 
 
 /* Le fond de page reste celui du thème v3 (pas de surcharge globale ici). */
+
+
+/* ===========================================================================
+   DASHBOARD — 4 KPI intégrés dans la carte « Votre journée »
+   (uniquement la DISPOSITION ; couleurs/serif d'origine conservés)
+   =========================================================================== */
+@media(min-width:921px){
+  html[data-theme-v3="1"] .bh2-hero{ align-items:stretch !important; }
+  html[data-theme-v3="1"] .bh2-today{
+    align-self:stretch !important; display:flex !important; flex-direction:column !important;
+  }
+  html[data-theme-v3="1"] .bh2-ops{ flex:none !important; }
+  /* Les 4 KPI en grille 2×2, poussés en bas de la carte */
+  html[data-theme-v3="1"] .bh2-stats-inside{
+    display:grid !important; grid-template-columns:1fr 1fr !important;
+    gap:10px !important; margin:14px 0 0 !important; margin-top:auto !important;
+  }
+}
+/* En dessous de 921px : les KPI restent en 2 colonnes dans la carte */
+@media(max-width:920px){
+  html[data-theme-v3="1"] .bh2-stats-inside{
+    display:grid !important; grid-template-columns:1fr 1fr !important; gap:8px !important; margin-top:12px !important;
+  }
+}
