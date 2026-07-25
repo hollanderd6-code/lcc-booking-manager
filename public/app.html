@@ -19,7 +19,7 @@
 <link href="/css/style.css?v=11" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=1">
 <link rel="stylesheet" href="/css/bh-badges.css?v=1">
 <link rel="stylesheet" href="/css/bh-theme-v3.css?v=12">
-<link rel="stylesheet" href="/css/bh-lux.css?v=3">  
+<link rel="stylesheet" href="/css/bh-lux.css?v=4">  
 <script>
   // Activation permanente du thème V3
   document.documentElement.setAttribute('data-theme-v3','1');
@@ -6244,8 +6244,10 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           const yv = 34 - (v / max) * 30;
           return x.toFixed(1) + ',' + yv.toFixed(1);
         });
-        spark.innerHTML = '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#6ee7b7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
-          + '<polygon points="0,38 ' + pts.join(' ') + ' 300,38" fill="rgba(110,231,183,.09)"/>';
+        var _sparkColor = document.documentElement.classList.contains('bh-lux') ? '#1E6E52' : '#6ee7b7';
+        var _sparkFill  = document.documentElement.classList.contains('bh-lux') ? 'rgba(30,110,82,.08)' : 'rgba(110,231,183,.09)';
+        spark.innerHTML = '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + _sparkColor + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
+          + '<polygon points="0,38 ' + pts.join(' ') + ' 300,38" fill="' + _sparkFill + '"/>';
       }
     } catch(e) { console.warn('CA sparkline error', e); }
   }

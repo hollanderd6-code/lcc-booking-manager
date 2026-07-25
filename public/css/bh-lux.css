@@ -80,64 +80,89 @@ html.bh-lux[data-theme-v3="1"] .sidebar .nav-item.active{
 html.bh-lux .sidebar .nav-item.active i{ color:var(--lux-green) !important; }
 
 /* ===========================================================================
-   3. DASHBOARD "Votre journée"
+   3. DASHBOARD "Votre journée" — raffiné : filets internes, CA clair, sans-serif
    =========================================================================== */
-/* Carte du jour + occupation : blanc franc, bord discret, radius homogène */
-html.bh-lux[data-theme-v3="1"] .bh2-today, html.bh-lux .bh2-occ, html.bh-lux .bh2-stat{
-  background:var(--lux-panel) !important;
-  border:1px solid var(--lux-line) !important;
-  border-radius:var(--lux-radius) !important;
-  box-shadow:var(--lux-shadow) !important;
+/* Titre héros : sans-serif, plus d'italique serif */
+html.bh-lux[data-theme-v3="1"] .bh2-today-head h2{
+  font-family:'DM Sans',sans-serif !important; font-style:normal !important;
+  font-weight:600 !important; font-size:15px !important; letter-spacing:-.01em !important;
+  color:var(--lux-ink) !important; text-transform:uppercase !important; letter-spacing:.04em !important;
 }
-html.bh-lux .bh2-today-head h2{ color:var(--lux-ink) !important; font-weight:600 !important; font-size:16px !important; }
-html.bh-lux .bh2-today-head h2 em{ color:var(--lux-green) !important; font-style:normal !important; }
-html.bh-lux .bh2-today-date{ color:var(--lux-t3) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-today-head h2 em{ color:var(--lux-green) !important; font-style:normal !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-today-date{ color:var(--lux-t3) !important; }
 
-/* Tuiles opérations : fond uni (plus de dégradé crème), accent vert au survol */
+/* Carte du jour : conteneur net */
+html.bh-lux[data-theme-v3="1"] .bh2-today{
+  background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important;
+  border-radius:14px !important; box-shadow:var(--lux-shadow) !important;
+}
+
+/* Tuiles internes : PLUS DE BORDURE ni fond, séparées par un filet fin */
+html.bh-lux[data-theme-v3="1"] .bh2-ops{ gap:0 !important; }
 html.bh-lux[data-theme-v3="1"] .bh2-op{
-  background:var(--lux-panel) !important;
-  border:1px solid var(--lux-line) !important;
-  border-radius:10px !important;
+  background:transparent !important; border:none !important; border-radius:0 !important;
+  padding:4px 22px !important; box-shadow:none !important;
 }
-html.bh-lux[data-theme-v3="1"] .bh2-op:hover{
-  border-color:var(--lux-green-line) !important;
-  box-shadow:var(--lux-shadow-md) !important;
-}
-html.bh-lux[data-theme-v3="1"] .bh2-op-lbl, html.bh-lux .bh2-lbl, html.bh-lux .bh2-occ-lbl,
-html.bh-lux .bh2-op-sub{ color:var(--lux-t3) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-op + .bh2-op{ border-left:1px solid var(--lux-line2) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-op:first-child{ padding-left:4px !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-op:hover{ background:transparent !important; box-shadow:none !important; transform:none !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-op:hover .bh2-op-num{ color:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-op-lbl{ color:var(--lux-t3) !important; }
 html.bh-lux[data-theme-v3="1"] .bh2-op-ic{
-  background:var(--lux-green-soft) !important; color:var(--lux-green) !important; box-shadow:none !important;
-  border-radius:8px !important;
+  background:var(--lux-green-soft) !important; color:var(--lux-green) !important; box-shadow:none !important; border-radius:8px !important;
 }
-/* Chiffres en vert sobre au lieu du laiton, poids fort */
-html.bh-lux[data-theme-v3="1"] .bh2-op-num, html.bh-lux .bh2-num{
-  color:var(--lux-ink) !important; font-weight:600 !important; font-size:30px !important;
+html.bh-lux[data-theme-v3="1"] .bh2-op-num{
+  font-family:'DM Sans',sans-serif !important; color:var(--lux-ink) !important;
+  font-weight:600 !important; font-size:34px !important; letter-spacing:-.03em !important;
+  transition:color .15s !important;
 }
-html.bh-lux .bh2-op-go{ color:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-op-sub{ color:var(--lux-t3) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-op-go{ color:var(--lux-green) !important; }
 
-/* Stat cards du bas */
-html.bh-lux .bh2-stat{ border-radius:11px !important; }
-html.bh-lux .bh2-stat:hover{ border-color:var(--lux-green-line) !important; box-shadow:var(--lux-shadow-md) !important; }
-html.bh-lux .bh2-stat-ic{ background:var(--lux-green-soft) !important; color:var(--lux-green) !important; border-radius:8px !important; }
-html.bh-lux .bh2-stat-ic.n{ background:rgba(139,139,132,.12) !important; color:var(--lux-t3) !important; }
+/* Stat cards du bas : mêmes règles visuelles, sans-serif */
+html.bh-lux[data-theme-v3="1"] .bh2-stat{
+  background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important;
+  border-radius:12px !important; box-shadow:var(--lux-shadow) !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-stat:hover{ border-color:var(--lux-green-line) !important; box-shadow:var(--lux-shadow-md) !important; transform:none !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-stat-ic{ background:var(--lux-green-soft) !important; color:var(--lux-green) !important; border-radius:8px !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-stat-ic.n{ background:rgba(139,139,132,.12) !important; color:var(--lux-t3) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-num{
+  font-family:'DM Sans',sans-serif !important; color:var(--lux-ink) !important;
+  font-weight:600 !important; font-size:30px !important; letter-spacing:-.03em !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-lbl{ color:var(--lux-t3) !important; }
 
-/* Occupation : anneau vert (plus laiton) */
-html.bh-lux .bh2-occ-num{ color:var(--lux-ink) !important; font-weight:600 !important; font-size:22px !important; }
-html.bh-lux .occ-rfg{ stroke:var(--lux-green) !important; }
-html.bh-lux .occ-rbg{ stroke:var(--lux-line) !important; }
-html.bh-lux .bh2-occ-lbl i{ color:var(--lux-green) !important; }
-html.bh-lux .bh2-occ-legend b{ color:var(--lux-green) !important; }
+/* Occupation : carte + anneau vert, chiffre sans-serif */
+html.bh-lux[data-theme-v3="1"] .bh2-occ{
+  background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important;
+  border-radius:14px !important; box-shadow:var(--lux-shadow) !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-occ:hover{ border-color:var(--lux-green-line) !important; box-shadow:var(--lux-shadow-md) !important; transform:none !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-occ-lbl{ color:var(--lux-t3) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-occ-lbl i{ color:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-occ-num{
+  font-family:'DM Sans',sans-serif !important; color:var(--lux-ink) !important;
+  font-weight:600 !important; font-size:22px !important;
+}
+html.bh-lux[data-theme-v3="1"] .occ-rfg{ stroke:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] .occ-rbg{ stroke:var(--lux-line) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-occ-legend b{ color:var(--lux-green) !important; }
 
-/* Carte CA : encre (garde son impact) mais halo vert sobre, chiffre sans-serif */
+/* ── CARTE CA : passée en CLAIR comme les autres ── */
 html.bh-lux[data-theme-v3="1"] .bh2-ca{
-  background:var(--lux-ink) !important; border-radius:var(--lux-radius) !important;
+  background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important;
+  border-radius:14px !important; box-shadow:var(--lux-shadow) !important; color:var(--lux-ink) !important;
 }
-html.bh-lux[data-theme="dark"] .bh2-ca{ background:#000 !important; border:1px solid var(--lux-line) !important; }
-html.bh-lux .bh2-ca #kpiCaValue{ font-weight:600 !important; font-size:32px !important; }
-html.bh-lux[data-theme-v3="1"] .bh2-ca::before{
-  background:radial-gradient(closest-side,rgba(30,110,82,.4),transparent 70%) !important;
+html.bh-lux[data-theme-v3="1"] .bh2-ca::before{ display:none !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-ca-lbl{ color:var(--lux-t3) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-ca-lbl i{ color:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-ca #kpiCaValue{
+  font-family:'DM Sans',sans-serif !important; color:var(--lux-ink) !important;
+  font-weight:600 !important; font-size:34px !important; letter-spacing:-.03em !important;
 }
-html.bh-lux .bh2-ca-lbl i, html.bh-lux .bh2-ca-delta{ color:#5CB894 !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-ca #kpiCaSub{ color:var(--lux-t3) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-ca-delta{ color:var(--lux-green) !important; }
 
 /* ===========================================================================
    4. BOUTONS
