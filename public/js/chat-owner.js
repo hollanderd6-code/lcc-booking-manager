@@ -497,7 +497,8 @@ function renderConversations() {
         const name = (cleanGuestName(conv) || '').toLowerCase();
         const prop  = (conv.property_name || '').toLowerCase();
         const plat  = (conv.platform || '').toLowerCase();
-        return name.includes(q) || prop.includes(q) || plat.includes(q);
+        const last  = (conv.last_message || '').toLowerCase();
+        return name.includes(q) || prop.includes(q) || plat.includes(q) || last.includes(q);
       })
     : allConversations;
 

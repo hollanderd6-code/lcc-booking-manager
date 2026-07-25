@@ -323,3 +323,51 @@ html.bh-lux[data-theme-v3="1"] input:focus, html.bh-lux select:focus, html.bh-lu
   border-color:var(--lux-green) !important; box-shadow:0 0 0 3px var(--lux-green-soft) !important; outline:none !important;
 }
 html.bh-lux ::selection{ background:var(--lux-green-soft); }
+
+/* ===========================================================================
+   7. MESSAGES
+   =========================================================================== */
+/* Conteneur split */
+html.bh-lux[data-theme-v3="1"] .msgs-split{
+  background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important;
+  border-radius:14px !important; box-shadow:var(--lux-shadow) !important;
+}
+html.bh-lux[data-theme-v3="1"] .msgs-left{ border-right:1px solid var(--lux-line) !important; background:var(--lux-panel) !important; }
+
+/* Onglets */
+html.bh-lux[data-theme-v3="1"] .msgs-tab{ color:var(--lux-t3) !important; font-weight:500 !important; }
+html.bh-lux[data-theme-v3="1"] .msgs-tab:hover{ color:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] .msgs-tab.active{ color:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] .msgs-tabs{ border-color:var(--lux-line2) !important; }
+
+/* Recherche */
+html.bh-lux[data-theme-v3="1"] .msgs-search{ background:var(--lux-side) !important; border:1px solid var(--lux-line) !important; border-radius:9px !important; }
+html.bh-lux[data-theme-v3="1"] .msgs-search input{ background:transparent !important; color:var(--lux-ink) !important; }
+html.bh-lux[data-theme-v3="1"] .msgs-search i{ color:var(--lux-t3) !important; opacity:1 !important; }
+html.bh-lux[data-theme-v3="1"] .msgs-search input::placeholder{ color:var(--lux-t3) !important; }
+
+/* Liste conversations */
+html.bh-lux[data-theme-v3="1"] .conversation-item{ border-bottom:1px solid var(--lux-line2) !important; }
+html.bh-lux[data-theme-v3="1"] .conversation-item:hover{ background:var(--lux-side) !important; }
+html.bh-lux[data-theme-v3="1"] .conversation-item.active{ background:var(--lux-green-soft) !important; box-shadow:inset 3px 0 0 var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] .conv-unread{ background:rgba(30,110,82,.03) !important; }
+
+/* En-tête de conversation (droite) */
+html.bh-lux[data-theme-v3="1"] .msgs-right{ background:var(--lux-panel) !important; }
+html.bh-lux[data-theme-v3="1"] .msgs-chat-name{ color:var(--lux-ink) !important; }
+html.bh-lux[data-theme-v3="1"] .msgs-chat-meta{ color:var(--lux-t3) !important; }
+html.bh-lux[data-theme-v3="1"] .msgs-icon-btn{ border:1px solid var(--lux-line) !important; background:var(--lux-panel) !important; color:var(--lux-t2) !important; border-radius:8px !important; }
+html.bh-lux[data-theme-v3="1"] .msgs-icon-btn:hover{ background:var(--lux-side) !important; color:var(--lux-green) !important; }
+
+/* Bulles : owner (toi) en jade, voyageur en pierre claire, bot en vert très pâle */
+html.bh-lux[data-theme-v3="1"] .chat-message.owner .chat-bubble{ background:var(--lux-green) !important; color:#fff !important; }
+html.bh-lux[data-theme-v3="1"] .chat-message.guest .chat-bubble{ background:var(--lux-side) !important; color:var(--lux-ink) !important; border:1px solid var(--lux-line) !important; }
+html.bh-lux[data-theme-v3="1"] .chat-message.bot .chat-bubble{ background:var(--lux-green-soft) !important; color:var(--lux-green-deep) !important; }
+html.bh-lux[data-theme-v3="1"] .chat-message.guest .chat-avatar{ background:var(--lux-t3) !important; }
+html.bh-lux[data-theme-v3="1"] .chat-message.bot .chat-avatar{ background:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] .chat-message.sms-message .chat-bubble{ border-left:3px solid var(--lux-r-book) !important; }
+
+/* Zone de saisie */
+html.bh-lux[data-theme-v3="1"] .chat-input, html.bh-lux[data-theme-v3="1"] .msgs-composer{ background:var(--lux-panel) !important; border-color:var(--lux-line) !important; }
+html.bh-lux[data-theme-v3="1"] .msgs-attach-btn{ color:var(--lux-t3) !important; }
+html.bh-lux[data-theme-v3="1"] .msgs-attach-btn:hover{ color:var(--lux-green) !important; }
