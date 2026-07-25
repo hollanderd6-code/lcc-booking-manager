@@ -46,11 +46,11 @@ html.bh-lux[data-theme="dark"]{
    1. TYPOGRAPHIE — on retire le serif, tout en DM Sans, chiffres tabulaires
    =========================================================================== */
 html.bh-lux, html.bh-lux body{ background:var(--lux-bg) !important; color:var(--lux-ink) !important; }
-html.bh-lux [style*="Instrument Serif"],
-html.bh-lux .bh2-today-head h2,
-html.bh-lux .bh2-op-num, html.bh-lux .bh2-num, html.bh-lux .bh2-occ-num,
-html.bh-lux .bh2-ca #kpiCaValue, html.bh-lux .month-name, html.bh-lux .page-title,
-html.bh-lux .calendar-title-modern{
+html.bh-lux[data-theme-v3="1"] [style*="Instrument Serif"],
+html.bh-lux[data-theme-v3="1"] .bh2-today-head h2,
+html.bh-lux[data-theme-v3="1"] .bh2-op-num, html.bh-lux .bh2-num, html.bh-lux .bh2-occ-num,
+html.bh-lux[data-theme-v3="1"] .bh2-ca #kpiCaValue, html.bh-lux .month-name, html.bh-lux .page-title,
+html.bh-lux[data-theme-v3="1"] .calendar-title-modern{
   font-family:'DM Sans',system-ui,sans-serif !important;
   letter-spacing:-.02em !important;
 }
@@ -59,21 +59,21 @@ html.bh-lux{ font-feature-settings:'tnum','cv02','cv03' !important; }
 /* ===========================================================================
    2. LAYOUT — fonds, sidebar, header
    =========================================================================== */
-html.bh-lux .main-content, html.bh-lux .page-content,
+html.bh-lux[data-theme-v3="1"] .main-content, html.bh-lux .page-content,
 html.bh-lux main.main-content{ background:var(--lux-bg) !important; }
-html.bh-lux header.main-header{
+html.bh-lux[data-theme-v3="1"] header.main-header{
   background:var(--lux-bg) !important; border-color:var(--lux-line2) !important;
 }
 html.bh-lux .page-title{ color:var(--lux-ink) !important; font-weight:600 !important; font-size:20px !important; }
 
 html.bh-lux .sidebar{ background:var(--lux-side) !important; border-color:var(--lux-line) !important; }
-html.bh-lux .sidebar .nav-item{
+html.bh-lux[data-theme-v3="1"] .sidebar .nav-item{
   color:var(--lux-t2) !important; border-radius:8px !important; font-weight:450 !important;
 }
 html.bh-lux .sidebar .nav-item i{ color:var(--lux-t3) !important; }
 html.bh-lux .sidebar .nav-item:hover{ background:rgba(29,29,27,.04) !important; color:var(--lux-ink) !important; }
 html.bh-lux[data-theme="dark"] .sidebar .nav-item:hover{ background:rgba(255,255,255,.05) !important; }
-html.bh-lux .sidebar .nav-item.active{
+html.bh-lux[data-theme-v3="1"] .sidebar .nav-item.active{
   background:var(--lux-panel) !important; color:var(--lux-ink) !important; font-weight:500 !important;
   box-shadow:var(--lux-shadow),0 0 0 1px var(--lux-line) !important;
 }
@@ -83,7 +83,7 @@ html.bh-lux .sidebar .nav-item.active i{ color:var(--lux-green) !important; }
    3. DASHBOARD "Votre journée"
    =========================================================================== */
 /* Carte du jour + occupation : blanc franc, bord discret, radius homogène */
-html.bh-lux .bh2-today, html.bh-lux .bh2-occ, html.bh-lux .bh2-stat{
+html.bh-lux[data-theme-v3="1"] .bh2-today, html.bh-lux .bh2-occ, html.bh-lux .bh2-stat{
   background:var(--lux-panel) !important;
   border:1px solid var(--lux-line) !important;
   border-radius:var(--lux-radius) !important;
@@ -94,23 +94,23 @@ html.bh-lux .bh2-today-head h2 em{ color:var(--lux-green) !important; font-style
 html.bh-lux .bh2-today-date{ color:var(--lux-t3) !important; }
 
 /* Tuiles opérations : fond uni (plus de dégradé crème), accent vert au survol */
-html.bh-lux .bh2-op{
+html.bh-lux[data-theme-v3="1"] .bh2-op{
   background:var(--lux-panel) !important;
   border:1px solid var(--lux-line) !important;
   border-radius:10px !important;
 }
-html.bh-lux .bh2-op:hover{
+html.bh-lux[data-theme-v3="1"] .bh2-op:hover{
   border-color:var(--lux-green-line) !important;
   box-shadow:var(--lux-shadow-md) !important;
 }
-html.bh-lux .bh2-op-lbl, html.bh-lux .bh2-lbl, html.bh-lux .bh2-occ-lbl,
+html.bh-lux[data-theme-v3="1"] .bh2-op-lbl, html.bh-lux .bh2-lbl, html.bh-lux .bh2-occ-lbl,
 html.bh-lux .bh2-op-sub{ color:var(--lux-t3) !important; }
-html.bh-lux .bh2-op-ic{
+html.bh-lux[data-theme-v3="1"] .bh2-op-ic{
   background:var(--lux-green-soft) !important; color:var(--lux-green) !important; box-shadow:none !important;
   border-radius:8px !important;
 }
 /* Chiffres en vert sobre au lieu du laiton, poids fort */
-html.bh-lux .bh2-op-num, html.bh-lux .bh2-num{
+html.bh-lux[data-theme-v3="1"] .bh2-op-num, html.bh-lux .bh2-num{
   color:var(--lux-ink) !important; font-weight:600 !important; font-size:30px !important;
 }
 html.bh-lux .bh2-op-go{ color:var(--lux-green) !important; }
@@ -129,12 +129,12 @@ html.bh-lux .bh2-occ-lbl i{ color:var(--lux-green) !important; }
 html.bh-lux .bh2-occ-legend b{ color:var(--lux-green) !important; }
 
 /* Carte CA : encre (garde son impact) mais halo vert sobre, chiffre sans-serif */
-html.bh-lux .bh2-ca{
+html.bh-lux[data-theme-v3="1"] .bh2-ca{
   background:var(--lux-ink) !important; border-radius:var(--lux-radius) !important;
 }
 html.bh-lux[data-theme="dark"] .bh2-ca{ background:#000 !important; border:1px solid var(--lux-line) !important; }
 html.bh-lux .bh2-ca #kpiCaValue{ font-weight:600 !important; font-size:32px !important; }
-html.bh-lux .bh2-ca::before{
+html.bh-lux[data-theme-v3="1"] .bh2-ca::before{
   background:radial-gradient(closest-side,rgba(30,110,82,.4),transparent 70%) !important;
 }
 html.bh-lux .bh2-ca-lbl i, html.bh-lux .bh2-ca-delta{ color:#5CB894 !important; }
@@ -142,97 +142,120 @@ html.bh-lux .bh2-ca-lbl i, html.bh-lux .bh2-ca-delta{ color:#5CB894 !important; 
 /* ===========================================================================
    4. BOUTONS
    =========================================================================== */
-html.bh-lux .btn-primary{
+html.bh-lux[data-theme-v3="1"] .btn-primary{
   background:var(--lux-green) !important;
   border:none !important; border-radius:8px !important;
   box-shadow:none !important; font-weight:500 !important; letter-spacing:.01em !important;
 }
 html.bh-lux .btn-primary:hover{ background:var(--lux-green-deep) !important; box-shadow:none !important; }
-html.bh-lux .btn-secondary, html.bh-lux .btn-ghost{
+html.bh-lux[data-theme-v3="1"] .btn-secondary, html.bh-lux .btn-ghost{
   background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important; color:var(--lux-t2) !important;
   border-radius:8px !important;
 }
-html.bh-lux .btn-secondary:hover, html.bh-lux .btn-ghost:hover{
+html.bh-lux[data-theme-v3="1"] .btn-secondary:hover, html.bh-lux .btn-ghost:hover{
   background:var(--lux-side) !important; color:var(--lux-ink) !important;
 }
 
 /* ===========================================================================
-   5. CALENDRIER
+   5. CALENDRIER  — spécificité alignée sur le thème v3 (html.bh-lux[data-theme-v3="1"])
+      pour surcharger les règles !important de bh-theme-v3.css
    =========================================================================== */
-html.bh-lux .calendar-wrapper, html.bh-lux .calendar-container{
+html.bh-lux[data-theme-v3="1"] .calendar-wrapper,
+html.bh-lux[data-theme-v3="1"] .calendar-container{
   background:var(--lux-panel) !important; border-color:var(--lux-line) !important;
 }
-html.bh-lux .calendar-wrapper::before{ display:none !important; } /* retire le filet laiton v3.1 */
-html.bh-lux .month-name{ color:var(--lux-ink) !important; font-weight:600 !important; font-size:17px !important; }
-html.bh-lux .month-name em{ color:var(--lux-ink) !important; font-style:normal !important; }
+html.bh-lux[data-theme-v3="1"] .calendar-wrapper::before{ display:none !important; }
+html.bh-lux[data-theme-v3="1"] .month-name{ font-family:'DM Sans',sans-serif !important; color:var(--lux-ink) !important; font-weight:600 !important; font-size:17px !important; letter-spacing:-.02em !important; }
 
-/* Segmented nav Jour/Semaine/Mois/Année */
-html.bh-lux .calendar-action-btn, html.bh-lux .period-nav-btn{
+/* Boutons de période / actions */
+html.bh-lux[data-theme-v3="1"] .calendar-action-btn,
+html.bh-lux[data-theme-v3="1"] .period-nav-btn{
   background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important;
   color:var(--lux-t2) !important; border-radius:8px !important; box-shadow:none !important;
 }
-html.bh-lux .calendar-action-btn:hover, html.bh-lux .period-nav-btn:hover{ background:var(--lux-side) !important; }
-html.bh-lux .calendar-action-btn.active, html.bh-lux .period-nav-btn.active{
+html.bh-lux[data-theme-v3="1"] .calendar-action-btn:hover,
+html.bh-lux[data-theme-v3="1"] .period-nav-btn:hover{ background:var(--lux-side) !important; }
+html.bh-lux[data-theme-v3="1"] .calendar-action-btn.active,
+html.bh-lux[data-theme-v3="1"] .period-nav-btn.active{
   background:var(--lux-ink) !important; color:var(--lux-bg) !important; border-color:var(--lux-ink) !important;
 }
 
 /* En-têtes de jour */
-html.bh-lux .day-header{ background:var(--lux-side) !important; color:var(--lux-t3) !important; }
-html.bh-lux .day-header .day-name, html.bh-lux .day-header .day-number{ color:var(--lux-ink) !important; }
-html.bh-lux .day-header.today{ background:var(--lux-green-soft) !important; }
-html.bh-lux .day-header.today .day-name, html.bh-lux .day-header.today .day-number{ color:var(--lux-green) !important; }
-html.bh-lux .day-header.weekend{ background:var(--lux-line2) !important; }
+html.bh-lux[data-theme-v3="1"] .day-header{ background:var(--lux-side) !important; color:var(--lux-t3) !important; border-color:var(--lux-line2) !important; }
+html.bh-lux[data-theme-v3="1"] .day-header .day-name,
+html.bh-lux[data-theme-v3="1"] .day-header .day-number{ color:var(--lux-ink) !important; }
+html.bh-lux[data-theme-v3="1"] .day-header.today{ background:var(--lux-green-soft) !important; }
+html.bh-lux[data-theme-v3="1"] .day-header.today .day-name,
+html.bh-lux[data-theme-v3="1"] .day-header.today .day-number{ color:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] .day-header.weekend{ background:var(--lux-line2) !important; }
+html.bh-lux[data-theme-v3="1"] .day-header.weekend .day-name{ color:var(--lux-t2) !important; }
 
 /* Cellules */
-html.bh-lux .calendar-cell{ border-color:var(--lux-line2) !important; }
-html.bh-lux .calendar-cell.weekend{ background:color-mix(in srgb,var(--lux-side) 60%,transparent) !important; }
-html.bh-lux .calendar-cell.today{ background:rgba(30,110,82,.04) !important; box-shadow:none !important; }
-html.bh-lux .property-item{ background:var(--lux-side) !important; color:var(--lux-t2) !important; border-color:var(--lux-line2) !important; }
-html.bh-lux .property-item.active::before{ background:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] .calendar-cell{ border-color:var(--lux-line2) !important; }
+html.bh-lux[data-theme-v3="1"] .calendar-cell:hover{ background:var(--lux-green-soft) !important; }
+html.bh-lux[data-theme-v3="1"] .calendar-cell.weekend{ background:var(--lux-line2) !important; }
+html.bh-lux[data-theme-v3="1"] .calendar-cell.today{ background:rgba(30,110,82,.05) !important; }
 
-/* Barres de réservation : teintes douces + liseré couleur à gauche */
-html.bh-lux .booking-block{
-  border-radius:6px !important; font-weight:500 !important; font-size:11.5px !important;
-  box-shadow:none !important; color:#fff !important;
+/* Colonne logements */
+html.bh-lux[data-theme-v3="1"] .property-item{ background:var(--lux-side) !important; color:var(--lux-t2) !important; border-color:var(--lux-line2) !important; }
+html.bh-lux[data-theme-v3="1"] .property-item.active::before{ background:var(--lux-green) !important; }
+
+/* ── BARRES DE RÉSERVATION ── */
+/* forme : on garde la pilule v3 mais on adoucit couleurs & relief */
+html.bh-lux[data-theme-v3="1"] .booking-block{
+  border-radius:7px !important; font-weight:500 !important; box-shadow:none !important;
+  transition:filter .15s, box-shadow .15s !important;
 }
-html.bh-lux .booking-block:hover{ filter:brightness(1.04) !important; transform:none !important; box-shadow:var(--lux-shadow-md) !important; }
-/* Sources : versions désaturées et nobles */
-html.bh-lux .booking-block.bhguest, html.bh-lux .booking-block.direct-bhguest{
+html.bh-lux[data-theme-v3="1"] .booking-block:hover{ filter:brightness(1.02) !important; box-shadow:var(--lux-shadow-md) !important; }
+
+/* Teintes sobres + liseré couleur à gauche (remplacent les dégradés saturés v3) */
+html.bh-lux[data-theme-v3="1"] .booking-block.direct{
   background:var(--lux-green-soft) !important; color:var(--lux-green-deep) !important;
   box-shadow:inset 3px 0 0 var(--lux-green) !important;
 }
-html.bh-lux .booking-block.booking{
+html.bh-lux[data-theme-v3="1"] .booking-block.booking{
   background:#E9EEF5 !important; color:#2C4A73 !important; box-shadow:inset 3px 0 0 var(--lux-r-book) !important;
 }
-html.bh-lux .booking-block.airbnb{
+html.bh-lux[data-theme-v3="1"] .booking-block.airbnb{
   background:#FCEBEA !important; color:#B23B36 !important; box-shadow:inset 3px 0 0 var(--lux-r-air) !important;
 }
-html.bh-lux .booking-block.direct{
-  background:#F0EEE9 !important; color:#6A6250 !important; box-shadow:inset 3px 0 0 var(--lux-r-dir) !important;
+html.bh-lux[data-theme-v3="1"] .booking-block.vrbo{
+  background:#EAF0F7 !important; color:#1E4E86 !important; box-shadow:inset 3px 0 0 #2E6BB0 !important;
 }
-html.bh-lux[data-theme="dark"] .booking-block.booking{ background:rgba(110,141,184,.18) !important; color:#B9CCE6 !important; }
-html.bh-lux[data-theme="dark"] .booking-block.airbnb{ background:rgba(224,120,114,.16) !important; color:#F0B4B0 !important; }
-html.bh-lux[data-theme="dark"] .booking-block.direct{ background:rgba(178,167,140,.15) !important; color:#D6CDB8 !important; }
-/* Blocs bloqués : hachures discrètes */
-html.bh-lux .booking-block.blocked, html.bh-lux .blocked-block{
+html.bh-lux[data-theme-v3="1"] .booking-block.expedia{
+  background:#FBF3DD !important; color:#7A5B12 !important; box-shadow:inset 3px 0 0 #C79A2E !important;
+}
+/* blocages : le calendrier ajoute la classe .block (platform 'block') */
+html.bh-lux[data-theme-v3="1"] .booking-block.block,
+html.bh-lux[data-theme-v3="1"] .booking-block.blocked,
+html.bh-lux[data-theme-v3="1"] .blocked-block{
   background:repeating-linear-gradient(45deg,var(--lux-line2),var(--lux-line2) 6px,transparent 6px,transparent 12px) !important;
-  color:var(--lux-t3) !important; border:1px dashed var(--lux-line) !important; box-shadow:none !important;
+  color:var(--lux-t3) !important; box-shadow:inset 0 0 0 1px var(--lux-line) !important;
 }
+html.bh-lux[data-theme-v3="1"] .booking-block:hover.block{ box-shadow:inset 0 0 0 1px var(--lux-line) !important; filter:none !important; }
+
+/* Dark : versions translucides */
+html.bh-lux[data-theme-v3="1"][data-theme="dark"] .booking-block.direct{ background:rgba(62,154,118,.16) !important; color:#8FD3B6 !important; }
+html.bh-lux[data-theme-v3="1"][data-theme="dark"] .booking-block.booking{ background:rgba(110,141,187,.18) !important; color:#B9CCE6 !important; box-shadow:inset 3px 0 0 #6E8DBB !important; }
+html.bh-lux[data-theme-v3="1"][data-theme="dark"] .booking-block.airbnb{ background:rgba(224,120,114,.16) !important; color:#F0B4B0 !important; box-shadow:inset 3px 0 0 #E07872 !important; }
+html.bh-lux[data-theme-v3="1"][data-theme="dark"] .booking-block.vrbo{ background:rgba(46,107,176,.18) !important; color:#A9C6E6 !important; }
+html.bh-lux[data-theme-v3="1"][data-theme="dark"] .booking-block.expedia{ background:rgba(199,154,46,.18) !important; color:#E4C878 !important; }
 
 /* Prix dans les cellules */
-html.bh-lux .cell-price, html.bh-lux .price-label{ color:var(--lux-t4) !important; font-weight:500 !important; }
+html.bh-lux[data-theme-v3="1"] .cell-price{ color:var(--lux-t4) !important; font-weight:500 !important; }
+html.bh-lux[data-theme-v3="1"] .cell-price-override{ color:var(--lux-green) !important; }
 
 /* ===========================================================================
    6. GÉNÉRIQUE — cartes, modales, inputs
    =========================================================================== */
-html.bh-lux .card, html.bh-lux .widget, html.bh-lux .panel, html.bh-lux .modal-content{
+html.bh-lux[data-theme-v3="1"] .card, html.bh-lux .widget, html.bh-lux .panel, html.bh-lux .modal-content{
   background:var(--lux-panel) !important; border-color:var(--lux-line) !important; border-radius:var(--lux-radius) !important;
 }
-html.bh-lux input, html.bh-lux select, html.bh-lux textarea{
+html.bh-lux[data-theme-v3="1"] input, html.bh-lux select, html.bh-lux textarea{
   background:var(--lux-panel) !important; border-color:var(--lux-line) !important; color:var(--lux-ink) !important;
   border-radius:8px !important;
 }
-html.bh-lux input:focus, html.bh-lux select:focus, html.bh-lux textarea:focus{
+html.bh-lux[data-theme-v3="1"] input:focus, html.bh-lux select:focus, html.bh-lux textarea:focus{
   border-color:var(--lux-green) !important; box-shadow:0 0 0 3px var(--lux-green-soft) !important; outline:none !important;
 }
 html.bh-lux ::selection{ background:var(--lux-green-soft); }
