@@ -164,6 +164,33 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca #kpiCaValue{
 html.bh-lux[data-theme-v3="1"] .bh2-ca #kpiCaSub{ color:var(--lux-t3) !important; }
 html.bh-lux[data-theme-v3="1"] .bh2-ca-delta{ color:var(--lux-green) !important; }
 
+
+/* ===========================================================================
+   3b. DASHBOARD — hauteur héros ajustée + couleur redonnée
+   =========================================================================== */
+@media(min-width:921px){
+  /* La carte ne s'étire plus sur toute la colonne droite : hauteur = contenu */
+  html.bh-lux[data-theme-v3="1"] .bh2-hero{ align-items:start !important; }
+  html.bh-lux[data-theme-v3="1"] .bh2-today{ align-self:start !important; }
+  html.bh-lux[data-theme-v3="1"] .bh2-ops{ flex:none !important; }
+  html.bh-lux[data-theme-v3="1"] .bh2-op{ min-height:0 !important; padding:6px 22px !important; }
+}
+
+/* Couleur : chiffres des 3 opérations en vert, icônes plus soutenues */
+html.bh-lux[data-theme-v3="1"] .bh2-op-num{ color:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-op-ic{
+  background:var(--lux-green) !important; color:#fff !important;
+}
+/* Icônes des stat-cards du bas : mêmes pastilles vertes pleines */
+html.bh-lux[data-theme-v3="1"] .bh2-stat-ic:not(.n){ background:var(--lux-green) !important; color:#fff !important; }
+/* Chiffres stat-cards : gardent l'encre (hiérarchie) mais accent vert au survol */
+html.bh-lux[data-theme-v3="1"] .bh2-stat:hover .bh2-num{ color:var(--lux-green) !important; }
+/* Icône occupation + CA : pastille verte pleine aussi */
+html.bh-lux[data-theme-v3="1"] .bh2-occ-lbl i,
+html.bh-lux[data-theme-v3="1"] .bh2-ca-lbl i{ color:var(--lux-green) !important; }
+/* Anneau occupation : chiffre en vert pour l'accent */
+html.bh-lux[data-theme-v3="1"] .bh2-occ-num{ color:var(--lux-green) !important; }
+
 /* ===========================================================================
    4. BOUTONS
    =========================================================================== */
