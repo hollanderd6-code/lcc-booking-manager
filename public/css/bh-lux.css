@@ -169,18 +169,16 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-delta{ color:var(--lux-green) !important;
    3b. DASHBOARD — hauteur héros ajustée + couleur redonnée
    =========================================================================== */
 @media(min-width:921px){
-  /* La carte gauche s'étire (comme la colonne droite) MAIS son contenu est
-     réparti : le bloc des 3 tuiles se centre dans la hauteur disponible,
-     donc plus de vide en bas. Robuste quelles que soient les données. */
-  html.bh-lux[data-theme-v3="1"] .bh2-hero{ align-items:stretch !important; }
+  /* Chaque carte prend sa HAUTEUR NATURELLE : la colonne droite (CA+occupation)
+     ne force plus la carte gauche à s'étirer. Plus de vide dans « journée ». */
+  html.bh-lux[data-theme-v3="1"] .bh2-hero{ align-items:start !important; }
   html.bh-lux[data-theme-v3="1"] .bh2-today{
-    align-self:stretch !important; display:flex !important; flex-direction:column !important;
+    align-self:start !important; display:flex !important; flex-direction:column !important;
   }
-  /* le header (titre + date) reste en haut, les tuiles occupent le reste, centrées */
-  html.bh-lux[data-theme-v3="1"] .bh2-ops{
-    flex:1 !important; display:grid !important; align-content:center !important;
-  }
-  html.bh-lux[data-theme-v3="1"] .bh2-op{ min-height:0 !important; padding:10px 22px !important; }
+  html.bh-lux[data-theme-v3="1"] .bh2-ops{ flex:none !important; }
+  html.bh-lux[data-theme-v3="1"] .bh2-op{ min-height:0 !important; padding:12px 22px 14px !important; }
+  /* léger resserrement vertical entre le titre et les tuiles */
+  html.bh-lux[data-theme-v3="1"] .bh2-today-head{ margin-bottom:6px !important; }
 }
 
 /* Couleur : chiffres des 3 opérations en vert, icônes plus soutenues */
