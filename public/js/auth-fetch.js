@@ -10,7 +10,7 @@
     const originalFetch = window.fetch.bind(window);
 
     // URL de l'API en production (mobile)
-    const API_BASE_URL = 'https://lcc-booking-manager.onrender.com';
+    const API_BASE_URL = 'https://www.boostinghost.fr';
 
     // ============================================
     // 🔍 DÉTECTION NATIVE
@@ -70,19 +70,6 @@
     (async () => {
       try {
         if (isNative() && window.Capacitor?.Plugins?.Preferences) {
-          // 🤖 ANDROID UNIQUEMENT : si déconnexion volontaire en cours, NE PAS restaurer le token.
-          // (iOS : getPlatform() !== 'android' → comportement inchangé)
-          try {
-            const _plat = window.Capacitor?.getPlatform?.();
-            if (_plat === 'android') {
-              const _fl = await window.Capacitor.Plugins.Preferences.get({ key: 'lcc_force_logout' });
-              if (_fl?.value === '1') {
-                console.log('🤖 [AUTH-FETCH] Déconnexion volontaire Android → restauration token ignorée');
-                return;
-              }
-            }
-          } catch(_) {}
-
           const lsToken = localStorage.getItem(TOKEN_KEY);
           if (!lsToken) {
             const result = await window.Capacitor.Plugins.Preferences.get({ key: TOKEN_KEY });
@@ -109,6 +96,80 @@
         return null;
       }
     };
+
+    // ============================================
+    // 🔄 REFRESH SILENCIEUX DU TOKEN (fenêtre glissante 90j)
+    // ============================================
+
+    // Décode l'expiration (ms) d'un JWT sans vérifier la signature
+    const getTokenExpMs = (token) => {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        return payload?.exp ? payload.exp * 1000 : null;
+      } catch { return null; }
+    };
+
+    // Un seul refresh à la fois (évite les appels en rafale)
+    let _refreshPromise = null;
+
+    const refreshToken = () => {
+      if (_refreshPromise) return _refreshPromise;
+      _refreshPromise = (async () => {
+        try {
+          // Les sous-comptes utilisent un autre type de token → pas de refresh ici
+          if (localStorage.getItem('lcc_account_type') === 'sub') return null;
+
+          // On régénère à partir du token long (90j) si dispo, sinon du token courant
+          const baseToken = localStorage.getItem('lcc_faceid_token') || getToken();
+          if (!baseToken) return null;
+
+          // Si le token de base est déjà expiré, impossible de refresh
+          const exp = getTokenExpMs(baseToken);
+          if (exp && exp < Date.now()) return null;
+
+          const url = resolveUrl('/api/auth/refresh-faceid');
+          const r = await originalFetch(url, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + baseToken }
+          });
+          if (!r.ok) return null;
+          const d = await r.json();
+          if (d?.token) {
+            await nativeSet('lcc_token', d.token);
+            await nativeSet('lcc_faceid_token', d.token);
+            try { localStorage.setItem('lcc_last_refresh', String(Date.now())); } catch {}
+            console.log('🔄 [AUTH-FETCH] Token rafraîchi (90j)');
+            return d.token;
+          }
+          return null;
+        } catch (e) {
+          console.warn('⚠️ [AUTH-FETCH] Refresh échoué:', e?.message);
+          return null;
+        } finally {
+          _refreshPromise = null;
+        }
+      })();
+      return _refreshPromise;
+    };
+
+    // Refresh proactif au démarrage : roule la fenêtre 90j à chaque ouverture,
+    // au plus une fois toutes les 6h pour éviter les appels inutiles.
+    const proactiveRefresh = async () => {
+      try {
+        if (localStorage.getItem('lcc_account_type') === 'sub') return;
+        const token = getToken();
+        if (!token) return;
+        const exp = getTokenExpMs(token);
+        if (exp && exp < Date.now()) return; // expiré → le 401 gérera
+
+        const last = parseInt(localStorage.getItem('lcc_last_refresh') || '0', 10);
+        if (Date.now() - last < 6 * 60 * 60 * 1000) return; // < 6h, on saute
+
+        await refreshToken();
+      } catch {}
+    };
+    // Lancer après un court délai (laisse le token se restaurer depuis Preferences)
+    setTimeout(() => { proactiveRefresh(); }, 1500);
 
     // ============================================
     // 🔗 GESTION DES URLs
@@ -199,7 +260,12 @@
       '/api/auth/register',
       '/api/verify-email',
       '/api/health',
-      '/api/webhooks/stripe'
+      '/api/webhooks/stripe',
+      // Connexion sociale : appelees sans token (compte inconnu => 401 needsRole).
+      // Sans ca, l'intercepteur avale le 401, efface le token et redirige,
+      // et la reponse n'atteint jamais social-auth.js.
+      '/api/auth/social/config',
+      '/api/auth/social'
     ];
 
     const isPublicRoute = (urlStr) => {
@@ -283,7 +349,33 @@
           console.log('⚠️ [AUTH-FETCH] Route login, pas de déconnexion');
           return res;
         }
-        
+
+        // 🔄 TENTATIVE DE REFRESH SILENCIEUX avant toute déconnexion
+        // (sauf si la requête échouée était déjà le refresh lui-même, ou un retry)
+        const isRefreshCall = urlStr.includes('/api/auth/refresh-faceid');
+        if (!isRefreshCall && !init.__authRetried) {
+          console.log('🔄 [AUTH-FETCH] 401 → tentative de refresh silencieux...');
+          const newToken = await refreshToken();
+          if (newToken) {
+            console.log('✅ [AUTH-FETCH] Refresh OK, on rejoue la requête');
+            const retryHeaders = new Headers(init.headers || {});
+            retryHeaders.set('Authorization', 'Bearer ' + newToken);
+            try {
+              const retryRes = await originalFetch(resolvedUrl, {
+                ...init,
+                headers: retryHeaders,
+                __authRetried: true
+              });
+              console.log('📥 [AUTH-FETCH] Réponse après refresh:', retryRes.status);
+              return retryRes;
+            } catch (e) {
+              console.warn('⚠️ [AUTH-FETCH] Retry échoué:', e?.message);
+            }
+          } else {
+            console.warn('🚨 [AUTH-FETCH] Refresh impossible → déconnexion');
+          }
+        }
+
         // Pour les autres cas : déconnexion
         console.warn('🚨 [AUTH-FETCH] Déconnexion...');
 
