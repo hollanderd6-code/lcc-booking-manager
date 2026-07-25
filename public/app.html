@@ -7040,21 +7040,21 @@ try {
   var MS = 86400000;
 
   var PLT = {
-    airbnb:            { bg:'#FF5A5F', label:'Airbnb',       cls:'airbnb'   },
-    booking:           { bg:'#003580', label:'Booking.com',   cls:'booking'  },
-    bdc:               { bg:'#003580', label:'Booking.com',   cls:'booking'  },
-    direct:            { bg:'#1A7A5E', label:'Direct',        cls:'direct'   },
-    manuel:            { bg:'#1A7A5E', label:'Direct',        cls:'direct'   },
-    abritel:           { bg:'#0096D6', label:'Abritel',       cls:'abritel'  },
-    expedia:           { bg:'#FFC72C', label:'Expedia',       cls:'expedia'  },
-    vrbo:              { bg:'#1569C7', label:'Vrbo',          cls:'vrbo'     },
-    gites:             { bg:'#2E7D32', label:'Gîtes',         cls:'gites'    },
+    airbnb:            { bg:'#FCEBEA', fg:'#B23B36', ac:'#D14A44', label:'Airbnb',       cls:'airbnb'   },
+    booking:           { bg:'#E9EEF5', fg:'#2C4A73', ac:'#3C5F8F', label:'Booking.com',   cls:'booking'  },
+    bdc:               { bg:'#E9EEF5', fg:'#2C4A73', ac:'#3C5F8F', label:'Booking.com',   cls:'booking'  },
+    direct:            { bg:'#EAF1ED', fg:'#164F3B', ac:'#1E6E52', label:'Direct',        cls:'direct'   },
+    manuel:            { bg:'#EAF1ED', fg:'#164F3B', ac:'#1E6E52', label:'Direct',        cls:'direct'   },
+    abritel:           { bg:'#E6F2F9', fg:'#1E5C7A', ac:'#2E86B0', label:'Abritel',       cls:'abritel'  },
+    expedia:           { bg:'#FBF3DD', fg:'#7A5B12', ac:'#C79A2E', label:'Expedia',       cls:'expedia'  },
+    vrbo:              { bg:'#EAF0F7', fg:'#1E4E86', ac:'#2E6BB0', label:'Vrbo',          cls:'vrbo'     },
+    gites:             { bg:'#EAF1ED', fg:'#1F5A2A', ac:'#2E7D32', label:'Gîtes',         cls:'gites'    },
     // BHguest — réservations via l'app Boostinghost Guest
-    guest_app:         { bg:'#C2410C', label:'BHGuest',       cls:'bhguest'  },
-    bhguest:           { bg:'#C2410C', label:'BHGuest',       cls:'bhguest'  },
-    'boostinghost guest': { bg:'#C2410C', label:'BHGuest',    cls:'bhguest'  },
-    boostinghost_guest:{ bg:'#C2410C', label:'BHGuest',       cls:'bhguest'  },
-    bhguest_hold:      { bg:'rgba(194,65,12,0.3)', label:'Pré-réservation', cls:'bhguest-hold' },
+    guest_app:         { bg:'#F5EAE1', fg:'#8A3D12', ac:'#C2410C', label:'BHGuest',       cls:'bhguest'  },
+    bhguest:           { bg:'#F5EAE1', fg:'#8A3D12', ac:'#C2410C', label:'BHGuest',       cls:'bhguest'  },
+    'boostinghost guest': { bg:'#F5EAE1', fg:'#8A3D12', ac:'#C2410C', label:'BHGuest',    cls:'bhguest'  },
+    boostinghost_guest:{ bg:'#F5EAE1', fg:'#8A3D12', ac:'#C2410C', label:'BHGuest',       cls:'bhguest'  },
+    bhguest_hold:      { bg:'#FBF1EA', fg:'#B06A3C', ac:'rgba(194,65,12,.4)', label:'Pré-réservation', cls:'bhguest-hold' },
   };
 
   function pltInfo(r) {
@@ -7070,7 +7070,7 @@ try {
     if (raw.includes('abritel')) return PLT['abritel'];
     if (raw.includes('expedia')) return PLT['expedia'];
     // Fallback
-    return { bg:'#6B7280', label:(raw||'Direct'), cls:'unknown' };
+    return { bg:'#F0EEE9', fg:'#5A5A54', ac:'#9A8E74', label:(raw||'Direct'), cls:'unknown' };
   }
 
   function ds(d) {
@@ -7903,22 +7903,24 @@ try {
         blk.style.width = ((clippedEnd - clippedStart) * colW) + 'px';
 
         if (isBlock) {
-          blk.style.background = 'repeating-linear-gradient(45deg,#D1D5DB,#D1D5DB 4px,#E5E7EB 4px,#E5E7EB 8px)';
+          blk.style.background = 'repeating-linear-gradient(45deg,#EDECE8,#EDECE8 5px,#F7F6F3 5px,#F7F6F3 10px)';
+          blk.style.boxShadow = 'inset 0 0 0 1px #E4E1DB';
           blk.style.cursor = 'pointer';
-          blk.innerHTML = '<i class="fas fa-ban" style="font-size:10px;color:#9CA3AF;flex-shrink:0;"></i>'
-            +'<span style="font-size:11px;font-weight:600;color:#9CA3AF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Bloqué</span>';
+          blk.innerHTML = '<i class="fas fa-ban" style="font-size:10px;color:#A8A69E;flex-shrink:0;"></i>'
+            +'<span style="font-size:11px;font-weight:500;color:#8B8B84;font-family:\'DM Sans\',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Bloqué</span>';
           blk.onclick = (function(rr){ return function(evt){ evt.stopPropagation(); openBlockModal(rr.startDate||rr.start||'', rr.propertyId, rr.uid||rr.id, rr.endDate||rr.end||''); }; })(r);
         } else {
+          var _fg = p2.fg || 'white';
           blk.style.background = p2.bg;
-          blk.style.color      = 'white';
-          blk.style.boxShadow  = '0 2px 6px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.18)';
+          blk.style.color      = _fg;
+          blk.style.boxShadow  = 'inset 3px 0 0 ' + (p2.ac || 'transparent');
           var iconInner = p2.cls === 'airbnb'
-            ? '<i class="fa-brands fa-airbnb" style="font-size:8px;color:white;"></i>'
-            : (p2.cls === 'booking' ? '<span style="font-size:8px;font-weight:800;color:white;">B</span>' : '<span style="font-size:8px;font-weight:800;color:white;">'+p2.label[0]+'</span>');
-          blk.innerHTML = (compactMode ? '' : '<div style="width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+iconInner+'</div>')
-            +'<span style="font-size:'+(compactMode?'10px':'11.5px')+';font-weight:500;font-family:Georgia,\'Times New Roman\',serif;letter-spacing:.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 1px rgba(0,0,0,.15);">'+guestName(r)+'</span>';
-          blk.onmouseover = function(){ this.style.filter='brightness(1.1)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.22)'; this.style.zIndex='5'; };
-          blk.onmouseout  = function(){ this.style.filter=''; this.style.boxShadow='0 2px 6px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.18)'; this.style.zIndex='3'; };
+            ? '<i class="fa-brands fa-airbnb" style="font-size:8px;color:'+_fg+';"></i>'
+            : (p2.cls === 'booking' ? '<span style="font-size:8px;font-weight:800;color:'+_fg+';">B</span>' : '<span style="font-size:8px;font-weight:800;color:'+_fg+';">'+p2.label[0]+'</span>');
+          blk.innerHTML = (compactMode ? '' : '<div style="width:15px;height:15px;background:'+(p2.ac||'rgba(0,0,0,.15)')+';border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="color:#fff;font-size:8px;font-weight:800;">'+(p2.cls==='airbnb'?'':p2.label[0])+'</span>'+(p2.cls==='airbnb'?'<i class=\'fa-brands fa-airbnb\' style=\'font-size:8px;color:#fff;\'></i>':'')+'</div>')
+            +'<span style="font-size:'+(compactMode?'10px':'11.5px')+';font-weight:600;font-family:\'DM Sans\',system-ui,sans-serif;letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
+          blk.onmouseover = function(){ this.style.filter='brightness(.97)'; this.style.boxShadow='inset 3px 0 0 '+(p2.ac||'transparent')+', 0 4px 14px rgba(29,29,27,.14)'; this.style.zIndex='5'; };
+          blk.onmouseout  = function(){ this.style.filter=''; this.style.boxShadow='inset 3px 0 0 '+(p2.ac||'transparent'); this.style.zIndex='3'; };
           blk.onclick     = function(evt){ evt.stopPropagation(); openBooking(r); };
           blk.dataset.bookingId = String(r.id||'');
           // Point rouge sur la cellule de CHECKOUT (fin du séjour)
