@@ -42901,6 +42901,7 @@ app.get('/api/auth/social/config', (req, res) => {
   const base = process.env.APP_URL || '';
   res.json({
     google: process.env.GOOGLE_CLIENT_ID || null,
+    googleIOS: process.env.GOOGLE_CLIENT_ID_IOS || null,
     // Un Services ID par site : Apple affiche le nom de l'app liée dans sa
     // fenêtre. Sans ça, les visiteurs de Boostinghost voient « BHGuest ».
     apple: process.env.APPLE_CLIENT_ID || null,
