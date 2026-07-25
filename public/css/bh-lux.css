@@ -1,4 +1,4 @@
-/* ============================================================================
+/* v3 · barres densifiées ============================================================================
    BH-LUX — Calque "luxe sobre" (blanc cassé · vert unique · sans-serif)
    Additif, réversible. Se charge APRÈS bh-theme-v3.css.
    Activé par la classe <html class="bh-lux">.
@@ -191,10 +191,10 @@ html.bh-lux[data-theme-v3="1"] .day-header.weekend{ background:var(--lux-line2) 
 html.bh-lux[data-theme-v3="1"] .day-header.weekend .day-name{ color:var(--lux-t2) !important; }
 
 /* Cellules */
-html.bh-lux[data-theme-v3="1"] .calendar-cell{ border-color:var(--lux-line2) !important; }
+html.bh-lux[data-theme-v3="1"] .calendar-cell{ border-color:var(--lux-line) !important; }
 html.bh-lux[data-theme-v3="1"] .calendar-cell:hover{ background:var(--lux-green-soft) !important; }
-html.bh-lux[data-theme-v3="1"] .calendar-cell.weekend{ background:var(--lux-line2) !important; }
-html.bh-lux[data-theme-v3="1"] .calendar-cell.today{ background:rgba(30,110,82,.05) !important; }
+html.bh-lux[data-theme-v3="1"] .calendar-cell.weekend{ background:#F0EEE9 !important; }
+html.bh-lux[data-theme-v3="1"] .calendar-cell.today{ background:rgba(30,110,82,.07) !important; box-shadow:inset 1px 0 0 var(--lux-green-line), inset -1px 0 0 var(--lux-green-line) !important; }
 
 /* Colonne logements */
 html.bh-lux[data-theme-v3="1"] .property-item{ background:var(--lux-side) !important; color:var(--lux-t2) !important; border-color:var(--lux-line2) !important; }
@@ -242,7 +242,7 @@ html.bh-lux[data-theme-v3="1"][data-theme="dark"] .booking-block.vrbo{ backgroun
 html.bh-lux[data-theme-v3="1"][data-theme="dark"] .booking-block.expedia{ background:rgba(199,154,46,.18) !important; color:#E4C878 !important; }
 
 /* Prix dans les cellules */
-html.bh-lux[data-theme-v3="1"] .cell-price{ color:var(--lux-t4) !important; font-weight:500 !important; }
+html.bh-lux[data-theme-v3="1"] .cell-price{ color:var(--lux-t3) !important; font-weight:500 !important; }
 html.bh-lux[data-theme-v3="1"] .cell-price-override{ color:var(--lux-green) !important; }
 
 /* ===========================================================================
