@@ -20,6 +20,15 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.177135694872-1cd8spfieqtmhapdumu9agr7ucfq7qg2</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
@@ -44,7 +53,7 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Utilisez Face ID pour vous connecter rapidement à Boostinghost</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Boostinghost accède à vos photos pour joindre des images à la checklist.</string>
+	<string>Boostinghost utilise l'appareil photo pour joindre les photos du ménage à la checklist.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Nous avons besoin d'envoyer des notifications pour les nouveaux messages</string>
 	<key>UIBackgroundModes</key>
