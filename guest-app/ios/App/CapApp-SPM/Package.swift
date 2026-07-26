@@ -12,9 +12,11 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.4.0"),
-        .package(name: "CapacitorFirebaseMessaging", path: "../../../../node_modules/@capacitor-firebase/messaging"),
-        .package(name: "CapacitorApp", path: "../../../../node_modules/@capacitor/app"),
-        .package(name: "CapacitorPushNotifications", path: "../../../../node_modules/@capacitor/push-notifications")
+        .package(name: "CapacitorCommunityStripe", path: "../../../node_modules/@capacitor-community/stripe"),
+        .package(name: "CapacitorFirebaseMessaging", path: "../../../node_modules/@capacitor-firebase/messaging"),
+        .package(name: "CapacitorApp", path: "../../../node_modules/@capacitor/app"),
+        .package(name: "CapacitorPushNotifications", path: "../../../node_modules/@capacitor/push-notifications"),
+        .package(name: "CapgoCapacitorSocialLogin", path: "../../../node_modules/@capgo/capacitor-social-login")
     ],
     targets: [
         .target(
@@ -22,9 +24,11 @@ let package = Package(
             dependencies: [
                 .product(name: "Capacitor", package: "capacitor-swift-pm"),
                 .product(name: "Cordova", package: "capacitor-swift-pm"),
+                .product(name: "CapacitorCommunityStripe", package: "CapacitorCommunityStripe"),
                 .product(name: "CapacitorFirebaseMessaging", package: "CapacitorFirebaseMessaging"),
                 .product(name: "CapacitorApp", package: "CapacitorApp"),
-                .product(name: "CapacitorPushNotifications", package: "CapacitorPushNotifications")
+                .product(name: "CapacitorPushNotifications", package: "CapacitorPushNotifications"),
+                .product(name: "CapgoCapacitorSocialLogin", package: "CapgoCapacitorSocialLogin")
             ]
         )
     ]

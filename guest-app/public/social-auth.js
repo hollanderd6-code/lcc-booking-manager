@@ -6,11 +6,53 @@
 (function () {
   'use strict';
 
-  var API = window.__SOCIAL_API || window.location.origin;
+  // En natif, l'app tourne sur capacitor://localhost qui n'a pas d'API.
+  // BHGuest tape sur www.boostinghost.fr (cf. API_URL dans app-guest.js).
+  var API = window.__SOCIAL_API ||
+            (isNativeEarly() ? 'https://www.boostinghost.fr' : window.location.origin);
+
+  function isNativeEarly() {
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  }
   var cfg = null;
 
   function isNative() {
     return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  }
+
+  // Le bundle Capacitor core n'enregistre pas les plugins tiers : on enregistre
+  // SocialLogin explicitement si absent de Plugins.
+  function getSocialLogin() {
+    var C = window.Capacitor;
+    if (!C) return null;
+    if (C.Plugins && C.Plugins.SocialLogin) return C.Plugins.SocialLogin;
+    if (typeof C.registerPlugin === 'function') {
+      try {
+        var pg = C.registerPlugin('SocialLogin');
+        if (pg) { C.Plugins = C.Plugins || {}; C.Plugins.SocialLogin = pg; return pg; }
+      } catch (e) { console.error('[SOCIAL] registerPlugin:', e && e.message); }
+    }
+    return null;
+  }
+
+  // Init unique des providers natifs (Google + Apple via SocialLogin)
+  var nativeInitDone = false;
+  async function ensureNativeInit() {
+    if (nativeInitDone || !isNative()) return;
+    var SL = getSocialLogin();
+    if (!SL || !SL.initialize) { console.error('[SOCIAL] SocialLogin indisponible'); return; }
+    var iosId = cfg && cfg.googleIOSGuest;   // client iOS propre a BHGuest
+    var webId = cfg && cfg.google;
+    var opts = {};
+    if (iosId) {
+      opts.google = { iOSClientId: iosId, iOSServerClientId: webId || iosId, webClientId: webId || iosId, mode: 'online' };
+    } else {
+      console.warn('[SOCIAL] googleIOSGuest absent : Google natif desactive');
+    }
+    opts.apple = {};
+    console.log('[SOCIAL] initialize providers=', Object.keys(opts).join(','));
+    await SL.initialize(opts);
+    nativeInitDone = true;
   }
 
   function loadScript(src) {
@@ -68,12 +110,19 @@
 
   // ── Google ──────────────────────────────────────────────────
   async function googleSignIn(box) {
-    if (isNative() && window.Capacitor.Plugins && window.Capacitor.Plugins.SocialLogin) {
+    var SLg = isNative() ? getSocialLogin() : null;
+    if (SLg) {
       try {
-        var r = await window.Capacitor.Plugins.SocialLogin.login({ provider: 'google' });
+        await ensureNativeInit();
+        var r = await SLg.login({ provider: 'google', options: { scopes: ['email', 'profile'] } });
         var t = r && (r.result && (r.result.idToken || r.result.id_token));
         if (t) return finish(box, 'google', t);
-      } catch (e) { showError(box, 'Connexion Google annulée'); return; }
+        showError(box, 'Connexion Google annulée'); return;
+      } catch (e) {
+        console.error('[SOCIAL] Google natif:', e);
+        showError(box, /cancel|annul/i.test(e && e.message || '') ? 'Connexion Google annulée' : 'Connexion Google indisponible');
+        return;
+      }
     }
     if (!cfg || !cfg.google) { showError(box, 'Connexion Google non configurée'); return; }
     await loadScript('https://accounts.google.com/gsi/client');
@@ -98,15 +147,22 @@
 
   // ── Apple ───────────────────────────────────────────────────
   async function appleSignIn(box) {
-    if (isNative() && window.Capacitor.Plugins && window.Capacitor.Plugins.SignInWithApple) {
+    var SLa = isNative() ? getSocialLogin() : null;
+    if (SLa) {
       try {
-        var r = await window.Capacitor.Plugins.SignInWithApple.authorize({
-          clientId: cfg && cfg.apple, scopes: 'name email'
-        });
-        var resp = r && (r.response || r);
-        var nm = [resp.givenName, resp.familyName].filter(Boolean).join(' ');
-        if (resp.identityToken) return finish(box, 'apple', resp.identityToken, nm);
-      } catch (e) { showError(box, 'Connexion Apple annulée'); return; }
+        await ensureNativeInit();
+        var r = await SLa.login({ provider: 'apple', options: { scopes: ['name', 'email'] } });
+        var res = (r && r.result) || {};
+        var tok = res.idToken || res.identityToken || (res.authorization && res.authorization.idToken);
+        var prof = res.profile || res;
+        var nm = [prof && prof.givenName, prof && prof.familyName].filter(Boolean).join(' ') || (prof && prof.name) || null;
+        if (tok) return finish(box, 'apple', tok, nm);
+        showError(box, 'Connexion Apple annulée'); return;
+      } catch (e) {
+        console.error('[SOCIAL] Apple natif:', e);
+        showError(box, /cancel|annul|1001/i.test(e && e.message || '') ? 'Connexion Apple annulée' : 'Connexion Apple indisponible');
+        return;
+      }
     }
     // Boostinghost et BHGuest peuvent avoir chacun leur Services ID
     var mode = box.getAttribute('data-social-login') || 'guest';
