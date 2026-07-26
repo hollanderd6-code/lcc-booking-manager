@@ -83,37 +83,66 @@
   // @capgo/capacitor-social-login exige initialize() avant login().
   // Sans cet appel, login() leve une erreur silencieuse et le bouton
   // semble ne rien faire.
+  // BH charge un bundle Capacitor core qui n'enregistre PAS les plugins tiers.
+  // SocialLogin n'existe donc pas dans Plugins tant qu'on ne l'enregistre pas.
+  function getSocialLogin() {
+    var C = window.Capacitor;
+    if (!C) { console.error('[SOCIAL] window.Capacitor absent'); return null; }
+    // Diagnostic : que connait le pont natif ?
+    try {
+      var headers = (C.PluginHeaders || []).map(function(h){return h.name;});
+      console.log('[SOCIAL] PluginHeaders natifs:', JSON.stringify(headers));
+      console.log('[SOCIAL] Plugins JS:', Object.keys(C.Plugins || {}).join(','));
+    } catch(e) {}
+    if (C.Plugins && C.Plugins.SocialLogin) return C.Plugins.SocialLogin;
+    if (typeof C.registerPlugin === 'function') {
+      try {
+        var p = C.registerPlugin('SocialLogin');
+        if (p) { C.Plugins = C.Plugins || {}; C.Plugins.SocialLogin = p; return p; }
+      } catch (e) { console.error('[SOCIAL] registerPlugin SocialLogin:', e && e.message); }
+    }
+    return null;
+  }
+
   var nativeInitDone = false;
   async function ensureNativeInit() {
     if (nativeInitDone || !isNative()) return;
-    var P = window.Capacitor.Plugins;
-    if (!P || !P.SocialLogin || !P.SocialLogin.initialize) return;
+    var SL = getSocialLogin();
+    if (!SL || !SL.initialize) { console.error('[SOCIAL] SocialLogin indisponible a l\'init'); return; }
 
     var iosId = cfg && cfg.googleIOS;
     var webId = cfg && cfg.google;
-    // Sans identifiant iOS, inutile d'initialiser : le plugin repondrait
-    // « No provider was initialized » sans indiquer la cause reelle.
-    if (!iosId) { console.error('[SOCIAL] googleIOS absent de /config'); return; }
-
-    await P.SocialLogin.initialize({
-      google: {
+    var opts = {};
+    // Google : uniquement si un client iOS est configure
+    if (iosId) {
+      opts.google = {
         iOSClientId: iosId,
-        // iOSServerClientId + webClientId : requis par la 8.3.x pour
-        // enregistrer le provider Google sur iOS.
         iOSServerClientId: webId || iosId,
         webClientId: webId || iosId,
         mode: 'online'
-      }
-    });
+      };
+    } else {
+      console.warn('[SOCIAL] googleIOS absent : Google natif desactive');
+    }
+    // Apple : le plugin gere Sign in with Apple nativement, sans client id
+    // cote JS (il s'appuie sur la capability Xcode + l'App ID).
+    opts.apple = {};
+
+    console.log('[SOCIAL] initialize providers=', Object.keys(opts).join(','));
+    await SL.initialize(opts);
     nativeInitDone = true;
   }
 
   // ── Google ──────────────────────────────────────────────────
   async function googleSignIn(box) {
-    if (isNative() && window.Capacitor.Plugins && window.Capacitor.Plugins.SocialLogin) {
+    var SLg = isNative() ? getSocialLogin() : null;
+    console.log('[SOCIAL] googleSignIn appele, native=', isNative(), 'plugin=', !!SLg);
+    if (SLg) {
       try {
+        console.log('[SOCIAL] avant ensureNativeInit');
         await ensureNativeInit();
-        var r = await window.Capacitor.Plugins.SocialLogin.login({
+        console.log('[SOCIAL] init faite, appel login google');
+        var r = await SLg.login({
           provider: 'google',
           options: { scopes: ['email', 'profile'] }
         });
@@ -164,14 +193,22 @@
 
   async function appleSignIn(box) {
     var ac = appleCfg(box);
-    if (isNative() && window.Capacitor.Plugins && window.Capacitor.Plugins.SignInWithApple) {
+    // Apple natif via @capgo/capacitor-social-login (provider 'apple').
+    // On a retire @capacitor-community/apple-sign-in (incompatible Cap 8).
+    var SLa = isNative() ? getSocialLogin() : null;
+    if (SLa) {
       try {
-        var r = await window.Capacitor.Plugins.SignInWithApple.authorize({
-          clientId: ac.clientId, scopes: 'name email'
-        });
-        var resp = r && (r.response || r);
-        var nm = [resp.givenName, resp.familyName].filter(Boolean).join(' ');
-        if (resp.identityToken) return finish(box, 'apple', resp.identityToken, nm);
+        await ensureNativeInit();
+        var r = await SLa.login({ provider: 'apple', options: { scopes: ['name', 'email'] } });
+        var res = (r && r.result) || {};
+        var tok = res.idToken || res.identityToken ||
+                  (res.authorization && res.authorization.idToken);
+        var prof = res.profile || res;
+        var nm = [prof && prof.givenName, prof && prof.familyName].filter(Boolean).join(' ')
+              || (prof && prof.name) || null;
+        if (tok) return finish(box, 'apple', tok, nm);
+        showError(box, 'Connexion Apple annulée');
+        return;
       } catch (e) {
         console.error('[SOCIAL] Apple natif:', e);
         showError(box, /cancel|annul|1001/i.test(e && e.message || '') ? 'Connexion Apple annulée' : 'Connexion Apple indisponible');
@@ -206,8 +243,10 @@
     if (!boxes.length) return;
     try {
       var r = await fetch(API + '/api/auth/social/config');
+      console.log('[SOCIAL] config status:', r.status);
       cfg = await r.json();
-    } catch (e) { cfg = {}; }
+      console.log('[SOCIAL] config OK, googleIOS=', cfg && cfg.googleIOS);
+    } catch (e) { console.error('[SOCIAL] config ECHEC:', e && e.message); cfg = {}; }
 
     // Rien de configuré côté serveur : on n'affiche aucun bouton mort
     if (!cfg.google && !cfg.apple && !isNative()) return;
@@ -221,7 +260,8 @@
       'font-size:14.5px;font-weight:600;font-family:inherit;cursor:pointer;margin-bottom:9px}' +
       '.social-btn:active{transform:scale(.98)}.social-btn:disabled{opacity:.6}' +
       '.social-btn.apple{background:#000;border-color:#000;color:#fff}' +
-      '.social-btn svg{width:18px;height:18px;flex-shrink:0}' +
+      '.social-btn svg{width:18px;height:18px;flex-shrink:0;pointer-events:none}' +
+      '.social-btn *{pointer-events:none}' +
       '.social-err{display:none;color:#DC2626;font-size:13px;margin-top:6px;text-align:center}' +
       '.gsi-holder{position:absolute;left:-9999px;top:-9999px;opacity:0}';
     document.head.appendChild(css);
@@ -238,7 +278,9 @@
       html += '<div class="social-err"></div><div class="gsi-holder"></div>';
       box.innerHTML = html;
       box.addEventListener('click', function (e) {
-        var b = e.target.closest('.social-btn');
+        var b = e.target.closest ? e.target.closest('.social-btn') : null;
+        // Repli : si le clic vient d'un noeud interne (SVG path), remonter au bouton
+        if (!b && e.target && e.target.parentElement) b = e.target.parentElement.closest('.social-btn');
         if (!b) return;
         box.querySelector('.social-err').style.display = 'none';
         if (b.dataset.p === 'google') googleSignIn(box);
