@@ -16232,8 +16232,19 @@ function notifSwitchTab(tab) {
   border-radius:9px !important; box-shadow:none !important;
 }
 #detailsModalActions #deleteBookingBtn.btn.btn-danger:hover{ background:#FCEBEA !important; }
-/* Total prix détaillé : vert sobre au lieu du jade vif */
-#reservationDetailsContent [data-info-cards]{ }
+/* Fond de la modale : blanc cassé net (surcharge le #FAF7F2 de bh-luxe-modals) */
+#reservationDetailsModal > div#reservationDetailsSheet{ background:#FBFBFA !important; }
+#detailsModalActions{ background:#FBFBFA !important; }
+/* Cartes internes Logement/Arrivée/Départ : blanc pur bordé pour contraster sur le fond */
+#reservationDetailsContent [data-info-cards] > div{
+  background:#fff !important; border:1px solid #EAE9E5 !important; border-radius:11px !important;
+}
+/* Chips email / date : blanc bordé */
+#reservationDetailsContent a[href^="mailto:"],
+#reservationDetailsContent a[href^="mailto:"] + div,
+#reservationDetailsContent div[style*="Réservé le"]{ }
+/* Prix détaillé (total) : encre au lieu du jade vif */
+#reservationDetailsContent span[style*="color:#1A7A5E"]{ color:#1D1D1B !important; }
 </style>
 <style id="bh-luxe-modals">
 /* ════════════════════════════════════════════════════════════
