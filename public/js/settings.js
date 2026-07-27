@@ -3083,8 +3083,13 @@ async function initReviewsSection(propertyId, isConnected) {
     });
     const data  = await res.json();
 
-    const reviews = data.reviews || [];
-    renderReviewScores(data.scores || {}, reviews);
+    // Déduplication de sécurité par id
+    const seen = new Set();
+    const reviews = (data.reviews || []).filter(r => {
+      if (seen.has(r.id)) return false;
+      seen.add(r.id); return true;
+    });
+    renderReviewScores(data.scores || {}, reviews, data.overall_score);
     loading.style.display = 'none';
 
     if (reviews.length === 0) { empty.style.display = 'block'; return; }
@@ -3106,16 +3111,20 @@ async function initReviewsSection(propertyId, isConnected) {
   }
 }
 
-function renderReviewScores(scores, reviews) {
+function renderReviewScores(scores, reviews, overallScore) {
   const globalEl = document.getElementById('reviewsGlobalScore');
   const subEl    = document.getElementById('reviewsSubScores');
   const maxEl    = document.getElementById('reviewsScoreMax');
 
-  // Calculer la note globale moyenne sur tous les avis
-  const validScores = (reviews || []).map(r => r.score).filter(s => s !== null && s !== undefined);
-  if (!validScores.length) { globalEl.textContent = '—'; if (subEl) subEl.innerHTML = ''; return; }
-
-  const avg = validScores.reduce((a, b) => a + b, 0) / validScores.length;
+  // Note globale : priorité au score calculé serveur (avis publiés notés uniquement)
+  let avg = (overallScore !== null && overallScore !== undefined) ? Number(overallScore) : null;
+  if (avg === null) {
+    const validScores = (reviews || [])
+      .filter(r => !r.is_hidden && r.score !== null && r.score !== undefined && Number(r.score) > 0)
+      .map(r => Number(r.score));
+    if (validScores.length) avg = validScores.reduce((a, b) => a + b, 0) / validScores.length;
+  }
+  if (avg === null) { globalEl.textContent = '—'; if (subEl) subEl.innerHTML = ''; return; }
   globalEl.textContent = avg.toFixed(1);
   if (maxEl) maxEl.textContent = '/10';
 
@@ -3155,8 +3164,9 @@ function buildReviewCard(review, propertyId) {
     ? new Date(review.reviewed_at).toLocaleDateString('fr-FR', {day:'numeric',month:'short',year:'numeric'})
     : '';
 
-  // Note : affichée sur 10 avec couleur selon le score
-  const score = review.score !== null && review.score !== undefined ? parseFloat(review.score) : null;
+  // Note : affichée sur 10, MAIS masquée si avis en attente / note nulle ou 0 (évite le trompeur « 0.0/10 »)
+  const rawScore = review.score !== null && review.score !== undefined ? parseFloat(review.score) : null;
+  const score = (review.is_hidden || rawScore === null || rawScore <= 0) ? null : rawScore;
   const scoreColor = score === null ? '#9CA3AF' : score >= 8 ? '#1A7A5E' : score >= 6 ? '#f59e0b' : '#ef4444';
   const scoreHtml = score !== null
     ? '<span style="font-size:18px;font-weight:800;color:' + scoreColor + ';">' + score.toFixed(1) + '</span><span style="font-size:11px;color:#9CA3AF;">/10</span>'

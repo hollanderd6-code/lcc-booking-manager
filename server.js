@@ -40121,22 +40121,43 @@ app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res)
 
     const channexPropertyId = prop.channex_property_id;
 
-    // 2. Récupérer les avis depuis Channex (paginé, 25 max)
-    const [reviewsRes, scoresRes] = await Promise.all([
-      channexAPI.get('/reviews', {
+    // 2. Récupérer TOUS les avis depuis Channex avec pagination complète
+    let rawReviews = [];
+    let page = 1;
+    const PAGE_SIZE = 100;
+    while (true) {
+      const resp = await channexAPI.get('/reviews', {
         params: {
           'filter[property_id]': channexPropertyId,
-          pagination: 1,
-          'pagination[page_size]': 25
+          'pagination[page_size]': PAGE_SIZE,
+          'pagination[page]': page
         }
-      }),
-      channexAPI.get('/reviews/scores', {
-        params: { 'filter[property_id]': channexPropertyId }
-      }).catch(() => null) // non-bloquant si non supporté par cette version Channex
-    ]);
+      });
+      const data = resp.data?.data || [];
+      const meta = resp.data?.meta || {};
+      rawReviews = rawReviews.concat(data);
+      console.log(`⭐ [CHANNEX REVIEWS] Page ${page}: ${data.length} avis | total meta: ${meta.total || '?'}`);
+      if (data.length < PAGE_SIZE) break;
+      page++;
+      if (page > 30) break; // sécurité : max 3000 avis
+    }
+
+    // Certaines versions de Channex ignorent filter[property_id] → refiltrer côté serveur
+    rawReviews = rawReviews.filter(r => {
+      const a = r.attributes || r;
+      const pid = a.property_id || a.property?.id;
+      return !pid || pid === channexPropertyId;
+    });
+
+    // Déduplication par id (au cas où l'API renverrait des doublons entre pages)
+    const seenIds = new Set();
+    rawReviews = rawReviews.filter(r => {
+      if (seenIds.has(r.id)) return false;
+      seenIds.add(r.id);
+      return true;
+    });
 
     // 3. Formater les avis
-    const rawReviews = reviewsRes.data?.data || [];
     const reviews = rawReviews.map(r => {
       const attrs = r.attributes || r;
 
@@ -40182,12 +40203,18 @@ app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res)
       };
     });
 
-    // 4. Scores globaux par catégorie (agrégés sur tous les avis)
+    // 4. Scores globaux par catégorie — UNIQUEMENT sur les avis publiés avec note valide
+    const publishedReviews = reviews.filter(r =>
+      !r.is_hidden &&
+      r.score !== null && r.score !== undefined && Number(r.score) > 0
+    );
+
     const scores = {};
-    reviews.forEach(r => {
+    publishedReviews.forEach(r => {
       Object.entries(r.category_scores || {}).forEach(([key, val]) => {
+        if (val.score === null || val.score === undefined || Number(val.score) <= 0) return;
         if (!scores[key]) scores[key] = { total: 0, count: 0 };
-        scores[key].total += val.score;
+        scores[key].total += Number(val.score);
         scores[key].count += 1;
       });
     });
@@ -40195,8 +40222,22 @@ app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res)
       scores[k].score = scores[k].total / scores[k].count;
     });
 
-    console.log(`⭐ [CHANNEX REVIEWS] ${reviews.length} avis pour ${property_id}`);
-    res.json({ reviews, scores });
+    // Note globale = moyenne des notes des avis publiés (cohérent avec la liste)
+    const validScores = publishedReviews
+      .map(r => Number(r.score))
+      .filter(n => !isNaN(n) && n > 0);
+    const overallScore = validScores.length
+      ? Math.round((validScores.reduce((a, b) => a + b, 0) / validScores.length) * 10) / 10
+      : null;
+
+    console.log(`⭐ [CHANNEX REVIEWS] ${reviews.length} avis (${publishedReviews.length} publiés notés) pour ${property_id} · note globale ${overallScore ?? '—'}`);
+    res.json({
+      reviews,
+      scores,
+      overall_score: overallScore,
+      total_count: reviews.length,
+      published_count: publishedReviews.length
+    });
 
   } catch (e) {
     console.error('❌ [CHANNEX REVIEWS GET]', e.response?.data || e.message);
