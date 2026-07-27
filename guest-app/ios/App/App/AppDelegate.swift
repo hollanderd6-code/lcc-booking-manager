@@ -4,6 +4,8 @@ import WebKit
 import FirebaseCore
 import FirebaseMessaging
 import UserNotifications
+import SocialLoginPlugin
+import StripePlugin
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -26,9 +28,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
 
         FirebaseApp.configure()
-        
-        // ✅ Enregistrer le plugin Stripe manuellement
-        
+
         UNUserNotificationCenter.current().delegate = self
         Messaging.messaging().delegate = self
         
@@ -49,6 +49,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let capVC = CAPBridgeViewController()
         capVC.view.backgroundColor = purpleColor
         capVC.view.isOpaque = true
+
+        // ✅ Enregistrer les plugins tiers manuellement (AppDelegate custom :
+        //    l'auto-découverte Capacitor ne les charge pas dans ce setup).
+        //    Forcer le chargement de la vue garantit que capVC.bridge existe.
+        _ = capVC.view
+        capVC.bridge?.registerPluginInstance(SocialLoginPlugin())
+        capVC.bridge?.registerPluginInstance(StripePlugin())
 
         if let webView = capVC.webView {
             webView.backgroundColor = purpleColor
@@ -336,4 +343,3 @@ extension AppDelegate: MessagingDelegate {
         }
     }
 }
-

@@ -110,6 +110,7 @@
 
   // ── Google ──────────────────────────────────────────────────
   async function googleSignIn(box) {
+    console.log('[SOCIAL] googleSignIn appele, native=', isNative(), 'plugin=', !!(isNative() && getSocialLogin()));
     var SLg = isNative() ? getSocialLogin() : null;
     if (SLg) {
       try {
