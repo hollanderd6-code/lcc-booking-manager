@@ -19,7 +19,7 @@
 <link href="/css/style.css?v=11" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=1">
 <link rel="stylesheet" href="/css/bh-badges.css?v=1">
 <link rel="stylesheet" href="/css/bh-theme-v3.css?v=12">
-<link rel="stylesheet" href="/css/bh-lux.css?v=11">  
+<link rel="stylesheet" href="/css/bh-lux.css?v=12">  
 <script>
   // Activation permanente du thème V3
   document.documentElement.setAttribute('data-theme-v3','1');
@@ -8234,7 +8234,7 @@ try {
 <!-- MODALS DU CALENDRIER MODERNE -->
 <!-- Reservation Details Modal -->
 <div id="reservationDetailsModal" style="display:none;position:fixed;inset:0;background:rgba(13,17,23,.6);backdrop-filter:blur(4px);z-index:9999;align-items:flex-end;justify-content:center;">
-  <div id="reservationDetailsSheet" style="background:#F5F0E8;border-radius:24px 24px 0 0;width:100%;max-width:620px;max-height:calc(92vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.18);">
+  <div id="reservationDetailsSheet" style="background:#FBFBFA;border:1px solid #EAE9E5;border-radius:20px 20px 0 0;width:100%;max-width:620px;max-height:calc(92vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.18);">
 
     <!-- Drag handle -->
     <div style="display:flex;justify-content:center;padding:10px 0 4px;">
@@ -8243,8 +8243,8 @@ try {
 
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 20px 14px;">
-      <h2 id="detailsModalTitle" style="font-size:15px;font-weight:600;color:#6B7280;margin:0;letter-spacing:.02em;">Détails de la réservation</h2>
-      <button id="closeDetailsModal" style="background:rgba(0,0,0,.07);border:none;border-radius:50%;width:30px;height:30px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6B7280;transition:background .15s;" onmouseover="this.style.background='rgba(0,0,0,.12)'" onmouseout="this.style.background='rgba(0,0,0,.07)'">×</button>
+      <h2 id="detailsModalTitle" style="font-size:12px;font-weight:600;color:#8B8B84;margin:0;letter-spacing:.1em;text-transform:uppercase;">Détails de la réservation</h2>
+      <button id="closeDetailsModal" style="background:transparent;border:1px solid #EAE9E5;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#5A5A54;transition:.15s;" onmouseover="this.style.borderColor='#1E6E52';this.style.color='#1E6E52'" onmouseout="this.style.borderColor='#EAE9E5';this.style.color='#5A5A54'">×</button>
     </div>
 
     <!-- Scrollable content -->
@@ -8252,10 +8252,10 @@ try {
     </div>
 
     <!-- Footer actions -->
-    <div id="detailsModalActions" style="padding:10px 16px calc(28px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;border-top:1px solid rgba(200,184,154,.35);background:#F5F0E8;">
+    <div id="detailsModalActions" style="padding:14px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:7px;border-top:1px solid #F1F0EC;background:#FBFBFA;">
       <!-- Ligne 1 : Message + Modifier -->
       <div style="display:flex;gap:6px;">
-        <button id="footerMsgBtn" type="button" style="flex:1;height:38px;border-radius:10px;font-size:13px;font-weight:600;background:#1A7A5E;border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s;" onmouseover="this.style.background='#15624B'" onmouseout="this.style.background='#1A7A5E'">
+        <button id="footerMsgBtn" type="button" style="flex:1;height:40px;border-radius:9px;font-size:13px;font-weight:600;background:#1E6E52;border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s;" onmouseover="this.style.background='#164F3B'" onmouseout="this.style.background='#1E6E52'">
           <i class="fas fa-comment-dots" style="font-size:12px;"></i> Message
         </button>
         <button class="btn btn-primary" id="editBookingBtn" type="button" style="flex:1;height:38px;border-radius:10px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;">
@@ -9698,12 +9698,12 @@ console.log('👤 DEBUG GUEST:', {
           background:${pc.bg};color:${pc.color};
           display:flex;align-items:center;justify-content:center;
           font-weight:800;font-size:20px;letter-spacing:-.5px;
-          box-shadow:0 4px 12px rgba(0,0,0,.12);
+          box-shadow:none;border:1px solid #EAE9E5;
         ">${guestInitial}</div>
 
         <!-- Nom + meta -->
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:17px;color:#111827;line-height:1.2;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${guest}</div>
+          <div style="font-weight:600;font-size:18px;color:#1D1D1B;line-height:1.2;margin-bottom:3px;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${guest}</div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             ${occupancyAdults ? `<span style="font-size:12px;color:#6B7280;display:flex;align-items:center;gap:3px;"><i class="fas fa-user" style="font-size:10px;opacity:.7;"></i> ${occupancyAdults}${occupancyChildren ? '+'+occupancyChildren : ''}</span>` : ''}
             ${guestCountryFlag ? `<span style="font-size:13px;">${guestCountryFlag} <span style="font-size:12px;color:#6B7280;">${guestCountryName}</span></span>` : ''}
@@ -9716,7 +9716,7 @@ console.log('👤 DEBUG GUEST:', {
           <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;background:${pc.bg};color:${pc.color};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;">
             <i class="${pc.icon}" style="font-size:11px;"></i> ${pc.label}
           </div>
-          ${(priceFormatted && _canViewFinances) ? `<div style="font-size:19px;font-weight:800;color:#1A7A5E;line-height:1;">${priceFormatted}</div>` : ''}
+          ${(priceFormatted && _canViewFinances) ? `<div style="font-size:20px;font-weight:600;color:#1D1D1B;line-height:1;letter-spacing:-.02em;">${priceFormatted}</div>` : ''}
           ${nights ? `<div style="font-size:11px;color:#9CA3AF;margin-top:1px;">${nights} nuit${nights>1?'s':''}</div>` : ''}
         </div>
       </div>
@@ -9724,19 +9724,19 @@ console.log('👤 DEBUG GUEST:', {
       <!-- ── LOGEMENT + DATES ── -->
       <div data-info-cards="1" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px;">
         <!-- Logement -->
-        <div style="background:rgba(255,255,255,.55);border-radius:14px;padding:12px 14px;">
-          <div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Logement</div>
-          <div style="font-size:14px;font-weight:700;color:#111827;">${propertyName || '—'}</div>
+        <div style="background:#fff;border:1px solid #EAE9E5;border-radius:11px;padding:12px 14px;">
+          <div style="font-size:10px;font-weight:600;color:#B4B4AD;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;">Logement</div>
+          <div style="font-size:15px;font-weight:600;color:#1D1D1B;letter-spacing:-.01em;">${propertyName || '—'}</div>
         </div>
         <!-- Arrivée -->
-        <div style="background:rgba(255,255,255,.55);border-radius:14px;padding:12px 14px;">
-          <div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Arrivée</div>
-          <div style="font-size:14px;font-weight:700;color:#111827;">${start}</div>
+        <div style="background:#fff;border:1px solid #EAE9E5;border-radius:11px;padding:12px 14px;">
+          <div style="font-size:10px;font-weight:600;color:#B4B4AD;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;">Arrivée</div>
+          <div style="font-size:15px;font-weight:600;color:#1D1D1B;letter-spacing:-.01em;">${start}</div>
         </div>
         <!-- Départ -->
-        <div style="background:rgba(255,255,255,.55);border-radius:14px;padding:12px 14px;">
-          <div style="font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Départ</div>
-          <div style="font-size:14px;font-weight:700;color:#111827;">${end}</div>
+        <div style="background:#fff;border:1px solid #EAE9E5;border-radius:11px;padding:12px 14px;">
+          <div style="font-size:10px;font-weight:600;color:#B4B4AD;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;">Départ</div>
+          <div style="font-size:15px;font-weight:600;color:#1D1D1B;letter-spacing:-.01em;">${end}</div>
         </div>
       </div>
 
@@ -9744,12 +9744,12 @@ console.log('👤 DEBUG GUEST:', {
       ${(guestEmail || createdAtFmt) ? `
         <div style="margin-bottom:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
           ${guestEmail ? `
-            <a href="mailto:${guestEmail}" style="display:inline-flex;align-items:center;gap:7px;padding:8px 13px;background:rgba(255,255,255,.55);border-radius:10px;font-size:12px;color:#1A7A5E;text-decoration:none;font-weight:500;">
+            <a href="mailto:${guestEmail}" style="display:inline-flex;align-items:center;gap:7px;padding:8px 13px;background:#fff;border:1px solid #EAE9E5;border-radius:9px;font-size:12px;color:#5A5A54;text-decoration:none;font-weight:500;">
               <i class="fas fa-envelope" style="font-size:11px;opacity:.8;"></i> ${guestEmail}
             </a>
           ` : ''}
           ${createdAtFmt ? `
-            <div style="display:inline-flex;align-items:center;gap:7px;padding:8px 13px;background:rgba(255,255,255,.55);border-radius:10px;font-size:12px;color:#6B7280;font-weight:500;">
+            <div style="display:inline-flex;align-items:center;gap:7px;padding:8px 13px;background:#fff;border:1px solid #EAE9E5;border-radius:9px;font-size:12px;color:#6A6357;font-weight:500;">
               <i class="fas fa-calendar-plus" style="font-size:11px;opacity:.8;"></i> Réservé le ${createdAtFmt}
             </div>
           ` : ''}
@@ -16210,6 +16210,31 @@ function notifSwitchTab(tab) {
   }
 }
 </script>
+
+<style id="bh-modal-details-lux">
+/* Modale Détails réservation — finitions sobres (boutons footer) */
+#detailsModalActions #editBookingBtn.btn.btn-primary{
+  background:#fff !important; border:1px solid #EAE9E5 !important; color:#1D1D1B !important;
+  border-radius:9px !important; height:40px !important; box-shadow:none !important; font-weight:600 !important;
+}
+#detailsModalActions #editBookingBtn.btn.btn-primary:hover{ background:#F7F7F5 !important; }
+#detailsModalActions #invoiceBookingBtn.btn,
+#detailsModalActions #closeDetailsBtn.btn,
+#detailsModalActions #hzMissionBtnFromDetails.btn{
+  background:#fff !important; border:1px solid #EAE9E5 !important; color:#5A5A54 !important;
+  border-radius:9px !important; box-shadow:none !important;
+}
+#detailsModalActions #invoiceBookingBtn.btn:hover,
+#detailsModalActions #closeDetailsBtn.btn:hover,
+#detailsModalActions #hzMissionBtnFromDetails.btn:hover{ background:#F7F7F5 !important; }
+#detailsModalActions #deleteBookingBtn.btn.btn-danger{
+  background:#fff !important; border:1px solid #EAD9D7 !important; color:#B23B36 !important;
+  border-radius:9px !important; box-shadow:none !important;
+}
+#detailsModalActions #deleteBookingBtn.btn.btn-danger:hover{ background:#FCEBEA !important; }
+/* Total prix détaillé : vert sobre au lieu du jade vif */
+#reservationDetailsContent [data-info-cards]{ }
+</style>
 <style id="bh-luxe-modals">
 /* ════════════════════════════════════════════════════════════
    COUCHE LUXE MODALES — surcharge les styles inline (!important)
