@@ -140,7 +140,7 @@
     carte.__bhToday = true;
     carte.style.cursor = 'pointer';
     carte.addEventListener('click', function (e) {
-      if (e.target.closest('.bh2-op, .bh2-quick, button, a')) return; // les actions internes gardent la priorité
+      if (e.target.closest('.bh2-op, .bh2-quick, .bh2-stat, button, a')) return; // les actions internes gardent la priorité
       bhOpenToday();
     });
   }
