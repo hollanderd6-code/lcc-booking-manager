@@ -40129,15 +40129,19 @@ app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res)
       const resp = await channexAPI.get('/reviews', {
         params: {
           'filter[property_id]': channexPropertyId,
-          'pagination[page_size]': PAGE_SIZE,
-          'pagination[page]': page
+          'pagination[page]': page,
+          'pagination[limit]': PAGE_SIZE,      // format documenté Channex
+          'pagination[page_size]': PAGE_SIZE   // compat anciennes versions
         }
       });
       const data = resp.data?.data || [];
       const meta = resp.data?.meta || {};
       rawReviews = rawReviews.concat(data);
-      console.log(`⭐ [CHANNEX REVIEWS] Page ${page}: ${data.length} avis | total meta: ${meta.total || '?'}`);
+      const metaTotal = meta.total != null ? meta.total : '?';
+      console.log(`⭐ [CHANNEX REVIEWS] Page ${page}: reçu ${data.length} | meta.total=${metaTotal} meta.page=${meta.page || '?'} meta.limit=${meta.limit || '?'}`);
+      // Arrêt : soit page incomplète, soit on a atteint le total annoncé par meta
       if (data.length < PAGE_SIZE) break;
+      if (meta.total != null && rawReviews.length >= meta.total) break;
       page++;
       if (page > 30) break; // sécurité : max 3000 avis
     }
