@@ -19,7 +19,7 @@
 <link href="/css/style.css?v=11" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=1">
 <link rel="stylesheet" href="/css/bh-badges.css?v=1">
 <link rel="stylesheet" href="/css/bh-theme-v3.css?v=12">
-<link rel="stylesheet" href="/css/bh-lux.css?v=12">  
+<link rel="stylesheet" href="/css/bh-lux.css?v=13">  
 <script>
   // Activation permanente du thème V3
   document.documentElement.setAttribute('data-theme-v3','1');
@@ -16245,6 +16245,37 @@ function notifSwitchTab(tab) {
 #reservationDetailsContent div[style*="Réservé le"]{ }
 /* Prix détaillé (total) : encre au lieu du jade vif */
 #reservationDetailsContent span[style*="color:#1A7A5E"]{ color:#1D1D1B !important; }
+
+/* ═══ TOUTES LES MODALES BOTTOM-SHEET EN BLANC CASSÉ ═══ */
+.bh-sheet-panel,
+#blockModal > div,
+#newReservationModal > div,
+#hzMissionModal > div,
+#cleaningTodayModal > div,
+#todayMovesModal > div,
+#cleaning48hModal > div,
+#kpiNotesModal > div,
+#kpiOccupancyModal > div,
+#kpiDepositsModal > div,
+#kpiActivePropertiesModal > div{
+  background:#FBFBFA !important; border:1px solid #EAE9E5 !important;
+}
+/* Sous-cartes internes translucides -> blanc pur bordé */
+.bh-sheet-panel div[style*="rgba(255,255,255,.55)"],
+#blockModal div[style*="rgba(255,255,255,.55)"],
+#newReservationModal div[style*="rgba(255,255,255,.55)"],
+#cleaningTodayModal div[style*="rgba(255,255,255,.55)"]{
+  background:#fff !important; border:1px solid #EAE9E5 !important;
+}
+/* Barres de progression laiton -> gris clair */
+.bh-sheet-panel div[style*="background:rgba(200,184,154"]{ background:#EAE9E5 !important; }
+/* En-têtes laiton -> gris */
+.bh-sheet-panel [style*="color:#B7791F"]{ color:#8B8B84 !important; }
+
+/* ═══ LISERÉ PLATEFORME (badge modale détails) ═══ */
+#reservationDetailsContent [style*="border-radius:99px"][style*="background:"]{
+  box-shadow:inset 3px 0 0 rgba(0,0,0,.22) !important;
+}
 </style>
 <style id="bh-luxe-modals">
 /* ════════════════════════════════════════════════════════════
