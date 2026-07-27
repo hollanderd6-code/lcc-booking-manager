@@ -15986,6 +15986,40 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     await window.bhHoldDates();
   };
 
+  // Helper de copie multi-stratégie, fiable même après un await
+  async function bhTryCopy(text) {
+    // Stratégie 1 : Clipboard API moderne
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (e) { /* geste expiré ou permission refusée → on tente le fallback */ }
+    // Stratégie 2 : textarea + execCommand (fonctionne dans plus de contextes)
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '0'; ta.style.left = '0';
+      ta.style.width = '1px'; ta.style.height = '1px';
+      ta.style.padding = '0'; ta.style.border = 'none';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      var sel = document.getSelection();
+      var savedRange = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+      ta.focus();
+      ta.select();
+      try { ta.setSelectionRange(0, text.length); } catch (e2) {}
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e3) { ok = false; }
+      ta.remove();
+      if (savedRange && sel) { sel.removeAllRanges(); sel.addRange(savedRange); }
+      if (ok) return true;
+    } catch (e) { /* on tombe sur la sélection manuelle */ }
+    return false;
+  }
+
   window.bhCopyLink = async function() {
     // Vérifier email ou téléphone obligatoire
     var email = (document.getElementById('bhLinkEmail')?.value || '').trim();
@@ -16059,22 +16093,11 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
       if (linkText) linkText.textContent = url;
     }
 
-    var _copied = false;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(url); _copied = true; }
-    } catch(e) { _copied = false; }
+    // Copie robuste APRÈS un await : le geste utilisateur ayant expiré,
+    // navigator.clipboard.writeText peut être refusé. On tente dans l'ordre :
+    // 1) writeText, 2) execCommand via textarea, 3) sélection manuelle.
+    var _copied = await bhTryCopy(url);
     if (!_copied) {
-      // Repli : clipboard.writeText est souvent refusé APRÈS un await (geste utilisateur expiré).
-      try {
-        var ta = document.createElement('textarea');
-        ta.value = url; ta.style.position='fixed'; ta.style.top='0'; ta.style.left='0'; ta.style.opacity='0';
-        document.body.appendChild(ta); ta.focus(); ta.select();
-        try { ta.setSelectionRange(0, url.length); } catch(e2){}
-        _copied = document.execCommand('copy'); ta.remove();
-      } catch(e) {}
-    }
-    if (!_copied) {
-      // Dernier recours : sélectionner le lien pour copie manuelle.
       var lt = document.getElementById('bhLinkText');
       if (lt) { try { var rng=document.createRange(); rng.selectNodeContents(lt); var seln=window.getSelection(); seln.removeAllRanges(); seln.addRange(rng); } catch(e3){} }
     }
