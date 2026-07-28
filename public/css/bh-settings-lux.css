@@ -1,0 +1,148 @@
+/* ============================================================================
+   BH-SETTINGS-LUX — Refonte sobre de la page Réglages logement
+   Additif, chargé après bh-theme-v3.css. Activé par <html class="bh-lux">.
+   Dark auto (prefers-color-scheme) + manuel [data-theme="dark"].
+   ============================================================================ */
+
+html.bh-lux{
+  --lux-bg:#FBFBFA;      --lux-panel:#FFFFFF;   --lux-side:#F7F7F5;
+  --lux-ink:#1D1D1B;     --lux-t2:#5A5A54;      --lux-t3:#8B8B84;   --lux-t4:#B4B4AD;
+  --lux-line:#EAE9E5;    --lux-line2:#F1F0EC;
+  --lux-green:#1E6E52;   --lux-green-deep:#164F3B; --lux-green-soft:#EAF1ED; --lux-green-line:rgba(30,110,82,.22);
+  --lux-shadow:0 1px 2px rgba(29,29,27,.04);
+  --lux-shadow-md:0 1px 2px rgba(29,29,27,.05),0 8px 24px rgba(29,29,27,.06);
+}
+html.bh-lux[data-theme="dark"]{
+  --lux-bg:#17171A;      --lux-panel:#1F1F23;   --lux-side:#151518;
+  --lux-ink:#ECEBE7;     --lux-t2:#B0AFA8;      --lux-t3:#83827B;   --lux-t4:#5C5B55;
+  --lux-line:#2A2A2E;    --lux-line2:#242428;
+  --lux-green:#3E9A76;   --lux-green-deep:#5CB894; --lux-green-soft:rgba(62,154,118,.14); --lux-green-line:rgba(62,154,118,.32);
+}
+@media (prefers-color-scheme: dark){
+  html.bh-lux:not([data-theme="light"]):not([data-theme="dark"]){
+    --lux-bg:#17171A;      --lux-panel:#1F1F23;   --lux-side:#151518;
+    --lux-ink:#ECEBE7;     --lux-t2:#B0AFA8;      --lux-t3:#83827B;   --lux-t4:#5C5B55;
+    --lux-line:#2A2A2E;    --lux-line2:#242428;
+    --lux-green:#3E9A76;   --lux-green-deep:#5CB894; --lux-green-soft:rgba(62,154,118,.14); --lux-green-line:rgba(62,154,118,.32);
+  }
+}
+
+/* ── Fond de page + conteneur ── */
+html.bh-lux[data-theme-v3="1"] body,
+html.bh-lux[data-theme-v3="1"] .main-content,
+html.bh-lux[data-theme-v3="1"] .page-content{ background:var(--lux-bg) !important; }
+html.bh-lux[data-theme-v3="1"] .settings-container{ background:transparent !important; }
+
+/* Fini le serif/laiton : tout en DM Sans */
+html.bh-lux[data-theme-v3="1"] [style*="Instrument Serif"]{ font-family:'DM Sans',system-ui,sans-serif !important; }
+
+/* ── Bouton retour ── */
+html.bh-lux[data-theme-v3="1"] .settings-back-btn{
+  background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important;
+  color:var(--lux-t2) !important; border-radius:9px !important;
+}
+html.bh-lux[data-theme-v3="1"] .settings-back-btn:hover{ background:var(--lux-side) !important; color:var(--lux-green) !important; }
+
+/* ── Cartes ── */
+html.bh-lux[data-theme-v3="1"] .card,
+html.bh-lux[data-theme-v3="1"] .settings-card,
+html.bh-lux[data-theme-v3="1"] .info-box{
+  background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important;
+  border-radius:12px !important; box-shadow:var(--lux-shadow) !important;
+}
+
+/* ── En-têtes de section ── */
+html.bh-lux[data-theme-v3="1"] .form-section-header,
+html.bh-lux[data-theme-v3="1"] .properties-section-header{
+  border-bottom:1px solid var(--lux-line2) !important; padding-bottom:12px !important;
+}
+html.bh-lux[data-theme-v3="1"] .form-section-header h3,
+html.bh-lux[data-theme-v3="1"] .properties-section-header h3{
+  font-family:'DM Sans',sans-serif !important; color:var(--lux-ink) !important;
+  font-weight:600 !important; letter-spacing:-.01em !important;
+}
+html.bh-lux[data-theme-v3="1"] .form-section-header small,
+html.bh-lux[data-theme-v3="1"] .properties-section-header small{ color:var(--lux-t3) !important; }
+/* Icône de section : pastille verte pâle */
+html.bh-lux[data-theme-v3="1"] .form-section-header > i,
+html.bh-lux[data-theme-v3="1"] .properties-section-header > i{
+  color:var(--lux-green) !important;
+  background:var(--lux-green-soft) !important;
+  width:34px !important; height:34px !important; border-radius:9px !important;
+  display:inline-flex !important; align-items:center !important; justify-content:center !important;
+  font-size:14px !important;
+}
+
+/* ── Chips (équipements, règles…) : sobres ── */
+html.bh-lux[data-theme-v3="1"] .chip-label{
+  border:1px solid var(--lux-line) !important; background:var(--lux-panel) !important;
+  color:var(--lux-t2) !important; border-radius:9px !important;
+}
+html.bh-lux[data-theme-v3="1"] .chip-label i{ color:var(--lux-t3) !important; opacity:1 !important; }
+html.bh-lux[data-theme-v3="1"] .chip-label:hover{
+  border-color:var(--lux-green-line) !important; background:var(--lux-green-soft) !important; color:var(--lux-green-deep) !important;
+}
+html.bh-lux[data-theme-v3="1"] .chip-toggle:checked + .chip-label{
+  background:var(--lux-green-soft) !important; border-color:var(--lux-green) !important;
+  color:var(--lux-green-deep) !important; box-shadow:none !important; font-weight:500 !important;
+}
+html.bh-lux[data-theme-v3="1"] .chip-toggle:checked + .chip-label i{ color:var(--lux-green) !important; }
+
+/* ── Inputs / selects / textarea ── */
+html.bh-lux[data-theme-v3="1"] input[type="text"],
+html.bh-lux[data-theme-v3="1"] input[type="number"],
+html.bh-lux[data-theme-v3="1"] input[type="url"],
+html.bh-lux[data-theme-v3="1"] input[type="email"],
+html.bh-lux[data-theme-v3="1"] select,
+html.bh-lux[data-theme-v3="1"] textarea{
+  background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important;
+  color:var(--lux-ink) !important; border-radius:9px !important;
+}
+html.bh-lux[data-theme-v3="1"] input:focus,
+html.bh-lux[data-theme-v3="1"] select:focus,
+html.bh-lux[data-theme-v3="1"] textarea:focus{
+  border-color:var(--lux-green) !important; box-shadow:0 0 0 3px var(--lux-green-soft) !important; outline:none !important;
+}
+
+/* ── Boutons ── */
+html.bh-lux[data-theme-v3="1"] .btn-primary,
+html.bh-lux[data-theme-v3="1"] button[style*="background:#1A7A5E"],
+html.bh-lux[data-theme-v3="1"] button[style*="background: #1A7A5E"]{
+  background:var(--lux-green) !important; border:none !important; border-radius:9px !important;
+  box-shadow:none !important; font-weight:500 !important;
+}
+html.bh-lux[data-theme-v3="1"] .btn-primary:hover{ background:var(--lux-green-deep) !important; }
+html.bh-lux[data-theme-v3="1"] .btn-secondary,
+html.bh-lux[data-theme-v3="1"] .btn-ghost{
+  background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important;
+  color:var(--lux-t2) !important; border-radius:9px !important;
+}
+
+/* ── Toggles / switches (si structurés en .toggle-switch) ── */
+html.bh-lux[data-theme-v3="1"] .toggle-switch input:checked + .toggle-slider,
+html.bh-lux[data-theme-v3="1"] .switch input:checked + .slider{ background:var(--lux-green) !important; }
+
+/* ── Info-box : accents laiton -> vert/gris ── */
+html.bh-lux[data-theme-v3="1"] .info-box{ background:var(--lux-green-soft) !important; border:1px solid var(--lux-green-line) !important; color:var(--lux-t2) !important; }
+html.bh-lux[data-theme-v3="1"] [style*="color:#B7791F"],
+html.bh-lux[data-theme-v3="1"] [style*="color: #B7791F"]{ color:var(--lux-t3) !important; }
+
+/* ── Bloc AVIS ── */
+html.bh-lux[data-theme-v3="1"] #reviewsGlobalScore{ color:var(--lux-green) !important; font-weight:600 !important; }
+html.bh-lux[data-theme-v3="1"] #reviewsSubScores [style*="background:#1A7A5E"],
+html.bh-lux[data-theme-v3="1"] #reviewsSubScores [style*="background: #1A7A5E"]{ background:var(--lux-green) !important; }
+/* barres de sous-scores : piste claire */
+html.bh-lux[data-theme-v3="1"] #reviewsSubScores [style*="background:#E"],
+html.bh-lux[data-theme-v3="1"] #reviewsSubScores [style*="rgba(200,184,154"]{ background:var(--lux-line) !important; }
+
+/* Cartes d'avis */
+html.bh-lux[data-theme-v3="1"] .review-card,
+html.bh-lux[data-theme-v3="1"] [id^="review-"]{
+  background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important; border-radius:11px !important;
+}
+
+/* ── Divers : titres serif de la page ── */
+html.bh-lux[data-theme-v3="1"] h1,
+html.bh-lux[data-theme-v3="1"] h2{
+  font-family:'DM Sans',sans-serif !important; letter-spacing:-.02em !important; color:var(--lux-ink) !important;
+}
