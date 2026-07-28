@@ -796,16 +796,16 @@ html[data-theme-v3="1"] .emoji-panel {
   align-items: center;
   gap: 8px;
   height: 40px;
-  padding: 0 20px;
-  border: none;
+  padding: 0 18px;
+  border: 1px solid #E5E0D6;
   border-radius: 12px;
-  background: #1A7A5E;
-  color: white;
+  background: #FFFFFF;
+  color: #4A4A45;
   font-family: 'DM Sans', sans-serif;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background .15s;
+  transition: background .15s, border-color .15s, color .15s;
   white-space: nowrap;
   position: fixed;
   top: 52px;
@@ -813,9 +813,14 @@ html[data-theme-v3="1"] .emoji-panel {
   z-index: 200;
   max-width: calc(100vw - 280px - 48px);
   overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
 }
-.msgs-back-btn:hover { background: #15624B; }
-.msgs-back-btn i { font-size: 13px; }
+.msgs-back-btn:hover {
+  background: #FAF8F4;
+  border-color: #1A7A5E;
+  color: #1A7A5E;
+}
+.msgs-back-btn i { font-size: 13px; color: inherit; }
 
 /* Close conversation button */
 #chatCloseConvBtn {
