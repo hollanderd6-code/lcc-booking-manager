@@ -16618,7 +16618,7 @@ html.bh-lux .bh2-stats.bh2-stats-inside{
   display:grid !important;
   grid-template-columns:1fr 1fr !important;
   gap:0 !important;
-  margin:16px 0 0 !important;
+  margin:16px 0 -4px !important;
   border-top:1px solid #EAE9E5 !important;
   background:transparent !important;
 }
@@ -16632,8 +16632,10 @@ html.bh-lux #kpiTopRisksCard.bh2-stat{
   border-radius:0 !important;
   box-shadow:none !important;
   transform:none !important;
-  padding:13px 18px 13px 0 !important;
+  padding:14px 18px 14px 0 !important;
   margin:0 !important;
+  min-height:74px !important;
+  box-sizing:border-box !important;
   display:flex !important;
   flex-direction:column !important;
   align-items:flex-start !important;
@@ -16679,6 +16681,21 @@ html.bh-lux .bh2-stats.bh2-stats-inside .bh2-lbl{
   overflow:visible !important;
   text-overflow:clip !important;
   line-height:1.3 !important;
+}
+/* Le JS pose des styles inline sur ces valeurs (fontWeight 700 sur Notes,
+   couleur #1e293b bleutee sur Logements) : d'ou l'ecart de poids et de teinte
+   entre la rangee du haut et celle du bas. On uniformise par ID. */
+html.bh-lux #kpiPropertiesValue,
+html.bh-lux #kpiDepositsValue,
+html.bh-lux #kpiChecklistsValue,
+html.bh-lux #kpiTopRisksValue{
+  font-family:'DM Sans',system-ui,sans-serif !important;
+  font-weight:600 !important;
+  font-size:24px !important;
+  line-height:1.1 !important;
+  color:#1D1D1B !important;
+  letter-spacing:-.015em !important;
+  font-variant-numeric:tabular-nums !important;
 }
 html.bh-lux .bh2-stats.bh2-stats-inside .bh2-num{
   order:2 !important;

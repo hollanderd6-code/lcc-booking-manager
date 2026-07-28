@@ -174,10 +174,15 @@ function getSidebarHTML() {
       ` : ''}
     </div>
 
-    <!-- GESTION -->
-    ${(canSeePage('settings') || canSeePage('cleaning') || canSeePage('deposits')) ? `
+    <!-- EXPLOITATION : le quotidien -->
+    ${(canSeePage('settings') || canSeePage('cleaning') || canSeePage('contrat')) ? `
     <div class="nav-section">
-      <div class="nav-section-title">Gestion</div>
+      <div class="nav-section-title">Exploitation</div>
+      ${canSeePage('cleaning') ? `
+      <a class="nav-item" data-page="cleaning" href="/cleaning.html">
+        <i class="fas fa-broom"></i><span>Gestion du ménage</span>
+      </a>
+      ` : ''}
       ${canSeePage('settings') ? `
       <a class="nav-item" data-page="settings" href="/settings.html">
         <i class="fas fa-home"></i><span>Mes logements</span>
@@ -191,23 +196,23 @@ function getSidebarHTML() {
         <i class="fas fa-file-contract"></i><span>Contrats</span>
       </a>
       ` : ''}
-      ${canSeePage('cleaning') ? `
-      <a class="nav-item" data-page="cleaning" href="/cleaning.html">
-        <i class="fas fa-broom"></i><span>Gestion du ménage</span>
-      </a>
-      ` : ''}
-      ${canSeePage('deposits') ? `
-      <a class="nav-item" data-page="deposits" href="/deposits.html">
-        <i class="fas fa-wallet"></i><span>Finances</span>
+      ${canSeePage('smart-locks') ? `
+      <a class="nav-item" data-page="smart-locks" href="/smart-locks.html">
+        <i class="fas fa-lock"></i><span>Serrures connectées</span>
       </a>
       ` : ''}
     </div>
     ` : ''}
 
-    <!-- FACTURATION -->
-    ${(canSeePage('factures') || canSeePage('reporting')) ? `
+    <!-- FINANCES : cautions, factures, clients, revenus, tarification -->
+    ${(canSeePage('factures') || canSeePage('reporting') || canSeePage('deposits')) ? `
     <div class="nav-section">
-      <div class="nav-section-title">Facturation</div>
+      <div class="nav-section-title">Finances</div>
+      ${canSeePage('reporting') ? `
+      <a class="nav-item" data-page="reporting" href="/reporting.html">
+        <i class="fas fa-chart-line"></i><span>Revenus</span>
+      </a>
+      ` : ''}
       ${canSeePage('factures') ? `
       <a class="nav-item" data-page="factures" href="/factures.html">
         <i class="fas fa-file-invoice"></i><span>Factures séjours</span>
@@ -216,41 +221,24 @@ function getSidebarHTML() {
         <i class="fas fa-users"></i><span>Mes Clients</span>
       </a>
       ` : ''}
-      ${canSeePage('reporting') ? `
-      <a class="nav-item" data-page="reporting" href="/reporting.html">
-        <i class="fas fa-chart-line"></i><span>Revenus</span>
+      ${canSeePage('deposits') ? `
+      <a class="nav-item" data-page="deposits" href="/deposits.html">
+        <i class="fas fa-wallet"></i><span>Cautions</span>
+      </a>
+      ` : ''}
+      ${!isSubAccount ? `
+      <a class="nav-item" data-page="pricing" href="/dynamic-pricing.html">
+        <i class="fas fa-bolt"></i>
+        <span>BoostPrice</span>
+        <span class="nav-badge-beta">Bêta</span>
       </a>
       ` : ''}
     </div>
     ` : ''}
 
-    <!-- REVENUS INTELLIGENTS (compte principal uniquement) -->
+    <!-- PIED DE MENU : pas de titre de section, ces deux entrées se suffisent -->
     ${!isSubAccount ? `
-    <div class="nav-section">
-      <div class="nav-section-title">Revenus intelligents</div>
-      <a class="nav-item" data-page="pricing" href="/dynamic-pricing.html">
-        <i class="fas fa-bolt" style="font-size:13px;color:#B45309;"></i>
-        <span>BoostPrice</span>
-        <span style="margin-left:6px;font-size:10px;font-weight:700;background:rgba(245,158,11,.15);color:#B45309;border:1px solid rgba(245,158,11,.3);padding:1px 7px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;">Bêta</span>
-      </a>
-    </div>
-    ` : ''}
-
-    <!-- SERRURES -->
-    ${canSeePage('smart-locks') ? `
-    <div class="nav-section">
-      <div class="nav-section-title">Avancé</div>
-      <a class="nav-item" data-page="smart-locks" href="/smart-locks.html">
-        <i class="fas fa-lock"></i>
-        <span>Serrures connectées</span>
-      </a>
-    </div>
-    ` : ''}
-
-    <!-- PARAMÈTRES (compte principal uniquement) -->
-    ${!isSubAccount ? `
-    <div class="nav-section">
-      <div class="nav-section-title">Paramètres</div>
+    <div class="nav-section nav-section--footer">
       <a class="nav-item" data-page="settings-account" href="/settings-account.html">
         <i class="fas fa-cog"></i><span>Paramètres</span>
       </a>
