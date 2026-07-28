@@ -5391,5 +5391,56 @@ html[data-theme-v3="1"] .btn-primary {
 <script src="/js/bh-global-search.js?v=5"></script>
 <script src="/js/bh-polish.js?v=1"></script>
 <script src="/js/bh-pull-refresh.js?v=1"></script>
+
+<!-- ===== FIX UI : onglets + bouton retour (dernier calque) ===== -->
+<style>
+/* Onglet actif : vert plein, texte et icônes blancs, aucun double contour */
+.cleaning-tab.active,
+html[data-theme-v3="1"] .cleaning-tab.active {
+  background: #1A7A5E !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+  border: none !important;
+  outline: none !important;
+}
+.cleaning-tab.active i,
+.cleaning-tab.active svg,
+.cleaning-tab.active .tab-label,
+html[data-theme-v3="1"] .cleaning-tab.active i,
+html[data-theme-v3="1"] .cleaning-tab.active .tab-label {
+  color: #FFFFFF !important;
+}
+.cleaning-tab.active .tab-badge,
+html[data-theme-v3="1"] .cleaning-tab.active .tab-badge {
+  background: rgba(255,255,255,.24) !important;
+  color: #FFFFFF !important;
+}
+.cleaning-tab:focus,
+.cleaning-tab:focus-visible,
+.cleaning-back-btn:focus,
+.cleaning-back-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Bouton retour : outline blanc sobre */
+.cleaning-back-btn,
+html[data-theme-v3="1"] .cleaning-back-btn {
+  background: #FFFFFF !important;
+  color: #4A4A45 !important;
+  border: 1px solid #E5E0D6 !important;
+  border-radius: 12px !important;
+  padding: 0 18px !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04) !important;
+  transition: background .15s, border-color .15s, color .15s !important;
+}
+.cleaning-back-btn:hover,
+html[data-theme-v3="1"] .cleaning-back-btn:hover {
+  background: #FAF8F4 !important;
+  border-color: #1A7A5E !important;
+  color: #1A7A5E !important;
+}
+.cleaning-back-btn i { font-size: 13px !important; color: inherit !important; }
+</style>
 </body>
 </html>

@@ -4470,5 +4470,27 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/js/bh-page-transitions.js?v=1"></script>
 <script src="/js/bh-global-search.js?v=5"></script>
 <script src="/js/bh-polish.js?v=1"></script>
+
+<!-- ===== FIX UI : bouton retour (dernier calque) ===== -->
+<style>
+.settings-back-btn {
+  background: #FFFFFF !important;
+  color: #4A4A45 !important;
+  border: 1px solid #E5E0D6 !important;
+  border-radius: 12px !important;
+  padding: 0 18px !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04) !important;
+  transition: background .15s, border-color .15s, color .15s !important;
+}
+.settings-back-btn:hover {
+  background: #FAF8F4 !important;
+  border-color: #1A7A5E !important;
+  color: #1A7A5E !important;
+}
+.settings-back-btn:focus, .settings-back-btn:focus-visible {
+  outline: none !important; box-shadow: none !important;
+}
+.settings-back-btn i { font-size: 13px !important; color: inherit !important; }
+</style>
 </body>
 </html>
