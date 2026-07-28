@@ -1,0 +1,323 @@
+/* ============================================================================
+   BH-LUX-APP — Calque sobre pour app.html (dashboard + calendrier + modales)
+   Additif, réversible, chargé APRÈS bh-theme-v3.css et bh-lux.css.
+   Activé par <html class="bh-lux">. Ne touche à aucun HTML.
+
+   Objectifs :
+   1. Une seule famille de gris (chauds) — fin des gris Tailwind froids
+   2. Terracotta = marque BHGuest, plus une couleur de bouton
+   3. Serif réservé aux chiffres, titres en sans
+   4. Hiérarchie : opérationnel (urgent) > contexte
+   5. Calendrier : les prix cessent d'écraser les réservations
+   ============================================================================ */
+
+html.bh-lux{
+  --lux-bg:#FBFBFA;      --lux-panel:#FFFFFF;   --lux-side:#F7F7F5;
+  --lux-ink:#1D1D1B;     --lux-t2:#5A5A54;      --lux-t3:#8B8B84;   --lux-t4:#B4B4AD;
+  --lux-line:#EAE9E5;    --lux-line2:#F1F0EC;
+  --lux-green:#1E6E52;   --lux-green-deep:#164F3B;
+  --lux-green-soft:#EAF1ED; --lux-green-line:rgba(30,110,82,.22);
+  --lux-terra:#B4470F;   --lux-terra-soft:#F7EDE6; --lux-terra-line:rgba(180,71,15,.28);
+  --lux-shadow:0 1px 2px rgba(29,29,27,.04);
+  --lux-shadow-md:0 1px 2px rgba(29,29,27,.05),0 8px 24px rgba(29,29,27,.06);
+}
+html.bh-lux[data-theme="dark"]{
+  --lux-terra:#D9793F;   --lux-terra-soft:rgba(217,121,63,.14); --lux-terra-line:rgba(217,121,63,.34);
+}
+
+/* ===========================================================================
+   1. UNE SEULE FAMILLE DE GRIS
+   Les gris Tailwind froids (#6B7280, #9CA3AF, #374151, #E5E7EB…) posés sur
+   un fond crème donnent un rendu délavé. On les remappe sur les gris chauds.
+   =========================================================================== */
+html.bh-lux[data-theme-v3="1"] [style*="#6B7280"],
+html.bh-lux[data-theme-v3="1"] [style*="#6b7280"],
+html.bh-lux[data-theme-v3="1"] [style*="#7A8695"],
+html.bh-lux[data-theme-v3="1"] [style*="#7a8695"]{ color:var(--lux-t2) !important; }
+
+html.bh-lux[data-theme-v3="1"] [style*="color:#9CA3AF"],
+html.bh-lux[data-theme-v3="1"] [style*="color: #9CA3AF"],
+html.bh-lux[data-theme-v3="1"] [style*="color:#9ca3af"]{ color:var(--lux-t3) !important; }
+
+html.bh-lux[data-theme-v3="1"] [style*="color:#374151"],
+html.bh-lux[data-theme-v3="1"] [style*="color: #374151"],
+html.bh-lux[data-theme-v3="1"] [style*="color:#111827"],
+html.bh-lux[data-theme-v3="1"] [style*="color:#0D1117"],
+html.bh-lux[data-theme-v3="1"] [style*="color: #0D1117"]{ color:var(--lux-ink) !important; }
+
+/* Bordures : 4 valeurs différentes existaient, il n'en reste qu'une */
+html.bh-lux[data-theme-v3="1"] [style*="#E5E7EB"],
+html.bh-lux[data-theme-v3="1"] [style*="#e5e7eb"],
+html.bh-lux[data-theme-v3="1"] [style*="#E2E8F0"],
+html.bh-lux[data-theme-v3="1"] [style*="#E8E0D0"]{ border-color:var(--lux-line) !important; }
+
+html.bh-lux[data-theme-v3="1"]{ --calendar-border:var(--lux-line); }
+
+/* Accents vifs génériques → versions sourdes */
+html.bh-lux[data-theme-v3="1"] [style*="color:#10B981"],
+html.bh-lux[data-theme-v3="1"] [style*="color: #10B981"],
+html.bh-lux[data-theme-v3="1"] [style*="color:#059669"]{ color:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] [style*="color:#EF4444"],
+html.bh-lux[data-theme-v3="1"] [style*="color: #EF4444"],
+html.bh-lux[data-theme-v3="1"] [style*="color:#DC2626"]{ color:#B4322C !important; }
+html.bh-lux[data-theme-v3="1"] [style*="color:#F59E0B"]{ color:#9A7420 !important; }
+
+/* ===========================================================================
+   2. TERRACOTTA — marque, pas bouton
+   BHGuest garde son identité (badges, pastilles, barres du calendrier) mais
+   cesse de crier plus fort que l'action principale « Nouvelle réservation ».
+   =========================================================================== */
+
+/* Boutons promo BHGuest → outline */
+html.bh-lux[data-theme-v3="1"] #calendarPromoBtn,
+html.bh-lux[data-theme-v3="1"] #bhCalPromoBtn,
+html.bh-lux[data-theme-v3="1"] [data-bh-copy-link]{
+  background:var(--lux-panel) !important;
+  background-image:none !important;
+  color:var(--lux-terra) !important;
+  border:1px solid var(--lux-terra-line) !important;
+  border-radius:9px !important;
+  box-shadow:none !important;
+  font-weight:600 !important;
+  text-shadow:none !important;
+}
+html.bh-lux[data-theme-v3="1"] #calendarPromoBtn:hover,
+html.bh-lux[data-theme-v3="1"] #bhCalPromoBtn:hover,
+html.bh-lux[data-theme-v3="1"] [data-bh-copy-link]:hover{
+  background:var(--lux-terra-soft) !important;
+  border-color:var(--lux-terra) !important;
+}
+html.bh-lux[data-theme-v3="1"] #calendarPromoBtn *,
+html.bh-lux[data-theme-v3="1"] #bhCalPromoBtn *,
+html.bh-lux[data-theme-v3="1"] [data-bh-copy-link] *{ color:inherit !important; }
+
+/* Le bouton promo vit dans le bandeau noir du calendrier : version adaptée */
+html.bh-lux[data-theme-v3="1"] .calendar-header #calendarPromoBtn,
+html.bh-lux[data-theme-v3="1"] .calendar-header #bhCalPromoBtn{
+  background:rgba(255,255,255,.06) !important;
+  color:#E8A87C !important;
+  border-color:rgba(232,168,124,.35) !important;
+}
+html.bh-lux[data-theme-v3="1"] .calendar-header #calendarPromoBtn:hover,
+html.bh-lux[data-theme-v3="1"] .calendar-header #bhCalPromoBtn:hover{
+  background:rgba(232,168,124,.14) !important;
+}
+
+/* Bannière promo dans la modale « Nouvelle réservation » → carte sobre.
+   Elle reste repérable, mais ne vole plus la vedette au formulaire. */
+html.bh-lux[data-theme-v3="1"] .modal [style*="linear-gradient(135deg,#C2410C"],
+html.bh-lux[data-theme-v3="1"] .modal [style*="linear-gradient(135deg, #C2410C"]{
+  background:var(--lux-terra-soft) !important;
+  background-image:none !important;
+  border:1px solid var(--lux-terra-line) !important;
+  color:var(--lux-terra) !important;
+  box-shadow:none !important;
+}
+html.bh-lux[data-theme-v3="1"] .modal [style*="linear-gradient(135deg,#C2410C"] *,
+html.bh-lux[data-theme-v3="1"] .modal [style*="linear-gradient(135deg, #C2410C"] *{
+  color:var(--lux-terra) !important;
+}
+
+/* Barres BHGuest du calendrier : aplaties, alignées sur les autres plateformes
+   (fond doux + liseré, comme .direct / .booking / .airbnb dans bh-lux.css) */
+html.bh-lux[data-theme-v3="1"] .booking-block.bhguest{
+  background:#F3E3D8 !important;
+  background-image:none !important;
+  color:#7A3410 !important;
+  box-shadow:inset 3px 0 0 var(--lux-terra) !important;
+  text-shadow:none !important;
+}
+html.bh-lux[data-theme-v3="1"][data-theme="dark"] .booking-block.bhguest{
+  background:rgba(217,121,63,.18) !important; color:#E7B58E !important;
+}
+
+/* ===========================================================================
+   3. TYPOGRAPHIE — le serif ne sert plus qu'aux chiffres
+   Les titres « Tableau de bord », « Votre journée », « Calendrier des
+   réservations » repassent en DM Sans. Le serif devient un signal rare.
+   =========================================================================== */
+html.bh-lux[data-theme-v3="1"] .bh2-today-head h2,
+html.bh-lux[data-theme-v3="1"] .page-title,
+html.bh-lux[data-theme-v3="1"] .bh-dh-title,
+html.bh-lux[data-theme-v3="1"] .calendar-header h2,
+html.bh-lux[data-theme-v3="1"] .calendar-header h3,
+html.bh-lux[data-theme-v3="1"] h1, html.bh-lux[data-theme-v3="1"] h2{
+  font-family:'DM Sans',system-ui,sans-serif !important;
+  font-weight:600 !important;
+  letter-spacing:-.02em !important;
+  font-style:normal !important;
+}
+/* Les mots en italique vert des titres : même graisse, plus d'italique */
+html.bh-lux[data-theme-v3="1"] .page-title em,
+html.bh-lux[data-theme-v3="1"] .bh-dh-title em,
+html.bh-lux[data-theme-v3="1"] .bh2-today-head h2 em,
+html.bh-lux[data-theme-v3="1"] h1 em, html.bh-lux[data-theme-v3="1"] h2 em{
+  font-family:'DM Sans',system-ui,sans-serif !important;
+  font-style:normal !important;
+  font-weight:600 !important;
+  color:var(--lux-green) !important;
+}
+/* Le mois du calendrier reste en serif : c'est le bon endroit pour lui */
+html.bh-lux[data-theme-v3="1"] .month-name{
+  font-family:'Instrument Serif',Georgia,serif !important;
+  font-weight:400 !important; font-style:normal !important;
+}
+
+/* Chiffres : le serif conservé, mais en encre plutôt qu'en laiton */
+html.bh-lux[data-theme-v3="1"] .bh2-op-num{
+  color:var(--lux-ink) !important;
+  font-size:40px !important;
+  letter-spacing:-.01em !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-occ-num{ color:var(--lux-green) !important; }
+
+/* ===========================================================================
+   4. HIÉRARCHIE DES KPI
+   Haut (Arrivées / Départs / Ménages 48h) = opérationnel, à traiter aujourd'hui.
+   Bas (Logements / Cautions / Checklists / Notes) = contexte, doit s'effacer.
+   =========================================================================== */
+
+/* Bloc opérationnel : légèrement renforcé */
+html.bh-lux[data-theme-v3="1"] .bh2-op{
+  background:var(--lux-panel) !important;
+  border:1px solid var(--lux-line) !important;
+  border-radius:12px !important;
+  box-shadow:var(--lux-shadow) !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-op-lbl{
+  color:var(--lux-t3) !important; letter-spacing:.06em !important; font-weight:600 !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-op-sub{ color:var(--lux-t3) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-op-ic{
+  background:var(--lux-green-soft) !important; color:var(--lux-green) !important;
+  box-shadow:none !important; border:none !important;
+}
+
+/* Bloc contexte : allégé — plus de carte, plus d'icône, chiffre en sans */
+html.bh-lux[data-theme-v3="1"] .bh2-stat{
+  background:transparent !important;
+  border:none !important;
+  border-top:1px solid var(--lux-line2) !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  padding:11px 2px !important;
+  display:flex !important;
+  align-items:baseline !important;
+  justify-content:space-between !important;
+  gap:10px !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-stat-ic{ display:none !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-num{
+  font-family:'DM Sans',system-ui,sans-serif !important;
+  font-weight:600 !important;
+  font-size:19px !important;
+  color:var(--lux-ink) !important;
+  order:2 !important;
+  margin:0 !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-lbl{
+  color:var(--lux-t2) !important;
+  font-size:12.5px !important;
+  font-weight:500 !important;
+  letter-spacing:0 !important;
+  text-transform:none !important;
+  order:1 !important;
+  margin:0 !important;
+}
+
+/* Carte CA : le noir est gardé (c'est le point fort de l'écran), juste calé */
+html.bh-lux[data-theme-v3="1"] .bh2-ca{
+  background:#16181A !important; border:none !important; border-radius:14px !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-ca-lbl{ color:rgba(255,255,255,.55) !important; letter-spacing:.08em !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow{ color:rgba(255,255,255,.45) !important; }
+
+/* Carte occupation : alignée sur les autres cartes */
+html.bh-lux[data-theme-v3="1"] .bh2-occ{
+  background:var(--lux-panel) !important; border:1px solid var(--lux-line) !important;
+  border-radius:14px !important; box-shadow:var(--lux-shadow) !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-occ-lbl,
+html.bh-lux[data-theme-v3="1"] .bh2-occ-legend{ color:var(--lux-t3) !important; }
+
+/* ===========================================================================
+   5. CALENDRIER — les prix cessent d'écraser les réservations
+   Le prix répété sur chaque cellule était le plus gros bruit de l'écran.
+   Prix standard quasi invisible, prix modifié / week-end seuls colorés.
+   =========================================================================== */
+html.bh-lux[data-theme-v3="1"] .cell-price{
+  color:var(--lux-t4) !important;
+  font-weight:400 !important;
+  font-size:11.5px !important;
+  opacity:.75 !important;
+  transition:opacity .15s, color .15s !important;
+}
+html.bh-lux[data-theme-v3="1"] .calendar-cell:hover .cell-price{ opacity:1 !important; color:var(--lux-t2) !important; }
+html.bh-lux[data-theme-v3="1"] .cell-price-override,
+html.bh-lux[data-theme-v3="1"] .cell-price.weekend,
+html.bh-lux[data-theme-v3="1"] .calendar-cell.weekend .cell-price{
+  color:#9A7420 !important; font-weight:600 !important; opacity:1 !important;
+}
+
+/* Bandeau noir du calendrier : même noir que la carte CA (il y en avait deux) */
+html.bh-lux[data-theme-v3="1"] .calendar-header{
+  background:#16181A !important; border:none !important;
+}
+
+/* Segmenté Jour / Sem. / Mois / Année */
+html.bh-lux[data-theme-v3="1"] .calendar-header .period-nav-btn{
+  background:transparent !important; border:none !important; color:rgba(255,255,255,.6) !important;
+}
+html.bh-lux[data-theme-v3="1"] .calendar-header .period-nav-btn.active{
+  background:var(--lux-green) !important; color:#fff !important; border:none !important;
+}
+
+/* ===========================================================================
+   6. MODALES — hiérarchie des actions
+   « Supprimer » ne doit pas peser autant que « Facture » ou « Fermer ».
+   =========================================================================== */
+html.bh-lux[data-theme-v3="1"] .modal-actions button[onclick*="delete"],
+html.bh-lux[data-theme-v3="1"] .modal-actions button[onclick*="Delete"],
+html.bh-lux[data-theme-v3="1"] .modal-actions button[onclick*="supprim"],
+html.bh-lux[data-theme-v3="1"] .modal-actions .btn-danger{
+  background:transparent !important;
+  border:1px solid transparent !important;
+  color:var(--lux-t3) !important;
+  font-weight:500 !important;
+  box-shadow:none !important;
+}
+html.bh-lux[data-theme-v3="1"] .modal-actions button[onclick*="delete"]:hover,
+html.bh-lux[data-theme-v3="1"] .modal-actions button[onclick*="Delete"]:hover,
+html.bh-lux[data-theme-v3="1"] .modal-actions button[onclick*="supprim"]:hover,
+html.bh-lux[data-theme-v3="1"] .modal-actions .btn-danger:hover{
+  color:#B4322C !important; border-color:rgba(180,50,44,.3) !important;
+}
+
+/* Boutons secondaires de modale : une seule recette */
+html.bh-lux[data-theme-v3="1"] .modal-actions button{
+  border-radius:10px !important; font-weight:600 !important; box-shadow:none !important;
+}
+
+/* Champs de formulaire : focus vert cohérent partout */
+html.bh-lux[data-theme-v3="1"] .modal input:focus,
+html.bh-lux[data-theme-v3="1"] .modal select:focus,
+html.bh-lux[data-theme-v3="1"] .modal textarea:focus{
+  border-color:var(--lux-green) !important;
+  box-shadow:0 0 0 3px var(--lux-green-soft) !important;
+  outline:none !important;
+}
+
+/* ===========================================================================
+   7. FINITIONS
+   =========================================================================== */
+/* Plus aucun double contour au focus clavier — un seul anneau vert */
+html.bh-lux[data-theme-v3="1"] button:focus,
+html.bh-lux[data-theme-v3="1"] a:focus{ outline:none !important; }
+html.bh-lux[data-theme-v3="1"] button:focus-visible,
+html.bh-lux[data-theme-v3="1"] a:focus-visible{
+  outline:2px solid var(--lux-green) !important; outline-offset:2px !important;
+}
+
+/* Laiton décoratif résiduel → gris chaud */
+html.bh-lux[data-theme-v3="1"] [style*="color:#B7791F"],
+html.bh-lux[data-theme-v3="1"] [style*="color: #B7791F"]{ color:var(--lux-t3) !important; }
