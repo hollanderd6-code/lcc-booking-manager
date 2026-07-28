@@ -20,18 +20,19 @@
 <link rel="stylesheet" href="/css/bh-badges.css?v=1">
 <link rel="stylesheet" href="/css/bh-theme-v3.css?v=12">
 <link rel="stylesheet" href="/css/bh-lux.css?v=13">
-<link rel="stylesheet" href="/css/bh-lux-app.css?v=3">
+<link rel="stylesheet" href="/css/bh-lux-app.css?v=4">
 <script id="bh-guest-mark">
-/* Logo BHGuest — goutte + b, vectoriel, net à toutes les tailles.
-   bhGuestMark(size, color, ink)
-     color : couleur de la goutte   (défaut terracotta)
-     ink   : couleur du b et du contre-poinçon (défaut blanc)
-   Sur fond terracotta on inverse : bhGuestMark(13, '#fff', '#C2410C'). */
+/* Logo BHGuest — goutte + b, vectoriel.
+   viewBox recadre au plus juste sur le dessin (150..780 x 247..777) : sinon
+   le logo flotte au milieu d'un carre vide et parait deux fois trop petit.
+   bhGuestMark(size, color, ink) — size = LARGEUR ; sur fond colore, inverser :
+   bhGuestMark(14, '#fff', '#B4470F'). */
 window.bhGuestMark = function (size, color, ink) {
   size = size || 16;
   color = color || '#C2410C';
   ink = ink || '#fff';
-  return '<svg viewBox="0 0 1024 1024" width="' + size + '" height="' + size +
+  var h = Math.round(size * 0.845);
+  return '<svg viewBox="144 241 642 542" width="' + size + '" height="' + h +
     '" style="display:block;flex-shrink:0" aria-label="BHGuest" role="img">' +
       '<path d="M150 512 L322 330 A265 265 0 1 1 322 694 Z" fill="' + color + '"/>' +
       '<path d="M418 350 h74 v20 h-26 v240 h-48 Z" fill="' + ink + '"/>' +
@@ -7152,7 +7153,7 @@ try {
       inner = '<span style="font-size:'+(size*0.55)+'px;font-weight:800;color:white;line-height:1;">B</span>';
     } else if (p.cls === 'bhguest' || p.cls === 'bhguest-hold') {
       return '<div style="width:'+size+'px;height:'+size+'px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
-           + window.bhGuestMark(Math.round(size*0.86), p.ac || '#C2410C') + '</div>';
+           + window.bhGuestMark(size, p.ac || '#C2410C') + '</div>';
     } else {
       inner = '<span style="font-size:'+(size*0.55)+'px;font-weight:800;color:white;line-height:1;">'+p.label[0]+'</span>';
     }
@@ -7942,7 +7943,7 @@ try {
             : (p2.cls === 'booking' ? '<span style="font-size:8px;font-weight:800;color:'+_fg+';">B</span>' : '<span style="font-size:8px;font-weight:800;color:'+_fg+';">'+p2.label[0]+'</span>');
           var _isBhg = (p2.cls === 'bhguest' || p2.cls === 'bhguest-hold');
           blk.innerHTML = (compactMode ? '' : (_isBhg
-            ? '<div style="width:15px;height:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+window.bhGuestMark(14, p2.ac||'#C2410C')+'</div>'
+            ? '<div style="width:16px;height:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+window.bhGuestMark(16, p2.ac||'#C2410C')+'</div>'
             : '<div style="width:15px;height:15px;background:'+(p2.ac||'rgba(0,0,0,.15)')+';border-radius:'+(p2.cls==='booking'?'3px':'50%')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="color:#fff;font-size:8px;font-weight:800;">'+(p2.cls==='airbnb'?'':p2.label[0])+'</span>'+(p2.cls==='airbnb'?'<i class=\'fa-brands fa-airbnb\' style=\'font-size:8px;color:#fff;\'></i>':'')+'</div>'))
             +'<span style="font-size:'+(compactMode?'10px':'11.5px')+';font-weight:600;font-family:\'DM Sans\',system-ui,sans-serif;letter-spacing:-.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
           blk.onmouseover = function(){ this.style.filter='brightness(.96)'; this.style.boxShadow='inset 4px 0 0 '+(p2.ac||'transparent')+', 0 5px 16px rgba(29,29,27,.2)'; this.style.zIndex='5'; };
@@ -9740,7 +9741,7 @@ console.log('👤 DEBUG GUEST:', {
         <!-- Badge plateforme + prix -->
         <div style="text-align:right;flex-shrink:0;">
           <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;background:${pc.bg};color:${pc.color};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;">
-            ${platformKey === 'bhguest' ? window.bhGuestMark(13, '#fff', pc.bgSolid || '#B4470F') : `<i class="${pc.icon}" style="font-size:11px;"></i>`} ${pc.label}
+            ${platformKey === 'bhguest' ? window.bhGuestMark(15, '#fff', '#B4470F') : `<i class="${pc.icon}" style="font-size:11px;"></i>`} ${pc.label}
           </div>
           ${(priceFormatted && _canViewFinances) ? `<div style="font-size:20px;font-weight:600;color:#1D1D1B;line-height:1;letter-spacing:-.02em;">${priceFormatted}</div>` : ''}
           ${nights ? `<div style="font-size:11px;color:#9CA3AF;margin-top:1px;">${nights} nuit${nights>1?'s':''}</div>` : ''}
@@ -16642,13 +16643,21 @@ html.bh-lux #kpiTopRisksCard.bh2-stat{
   min-width:0 !important;
   transition:background .15s !important;
 }
-html.bh-lux .bh2-stats.bh2-stats-inside > .bh2-stat:nth-child(1),
-html.bh-lux .bh2-stats.bh2-stats-inside > .bh2-stat:nth-child(2){
-  border-bottom:1px solid #F1F0EC !important;
+/* Separateurs : poses via les memes selecteurs a ID, sinon le border:none
+   de la regle ID ci-dessus l'emporte sur un :nth-child(). */
+html.bh-lux #kpiPropertiesCard.bh2-stat{
+  border-right:1px solid #EAE9E5 !important;
+  border-bottom:1px solid #EAE9E5 !important;
 }
-html.bh-lux .bh2-stats.bh2-stats-inside > .bh2-stat:nth-child(2n){
-  padding-left:18px !important;
-  border-left:1px solid #F1F0EC !important;
+html.bh-lux #kpiDepositsCard.bh2-stat{
+  border-bottom:1px solid #EAE9E5 !important;
+  padding-left:22px !important;
+}
+html.bh-lux #kpiChecklistsCard.bh2-stat{
+  border-right:1px solid #EAE9E5 !important;
+}
+html.bh-lux #kpiTopRisksCard.bh2-stat{
+  padding-left:22px !important;
 }
 html.bh-lux .bh2-stats.bh2-stats-inside > .bh2-stat:hover{
   background:#F7F7F5 !important;
