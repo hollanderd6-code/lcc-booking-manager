@@ -193,62 +193,9 @@ html.bh-lux[data-theme-v3="1"] .bh2-op-ic{
   box-shadow:none !important; border:none !important;
 }
 
-/* Bloc contexte : lignes label / valeur, plus de cartes ni d'icônes.
-   Le HTML a été remis à plat (label et valeur en enfants directs) : le CSS
-   seul ne pouvait pas les réordonner, ils étaient enfermés dans un <div>. */
-html.bh-lux[data-theme-v3="1"] .bh2-stats,
-html.bh-lux[data-theme-v3="1"] .bh2-stats-inside{
-  display:block !important;
-  margin:14px 0 0 !important;
-  border-top:1px solid var(--lux-line) !important;
-  padding-top:2px !important;
-}
-html.bh-lux[data-theme-v3="1"] .bh2-stat{
-  background:transparent !important;
-  border:none !important;
-  border-bottom:1px solid var(--lux-line2) !important;
-  border-radius:0 !important;
-  box-shadow:none !important;
-  transform:none !important;
-  padding:11px 2px !important;
-  display:flex !important;
-  align-items:baseline !important;
-  justify-content:space-between !important;
-  gap:14px !important;
-  position:static !important;
-}
-html.bh-lux[data-theme-v3="1"] .bh2-stat:last-child{ border-bottom:none !important; }
-html.bh-lux[data-theme-v3="1"] .bh2-stat:hover{
-  background:var(--lux-side) !important;
-  border-color:var(--lux-line2) !important;
-  box-shadow:none !important;
-  transform:none !important;
-}
-html.bh-lux[data-theme-v3="1"] .bh2-stat-ic{ display:none !important; }
-html.bh-lux[data-theme-v3="1"] .bh2-stat .bh2-lbl{
-  font-family:'DM Sans',system-ui,sans-serif !important;
-  color:var(--lux-t2) !important;
-  font-size:13px !important;
-  font-weight:500 !important;
-  letter-spacing:0 !important;
-  text-transform:none !important;
-  padding-right:0 !important;
-  white-space:normal !important;
-  overflow:visible !important;
-  text-overflow:clip !important;
-  min-width:0 !important;
-  line-height:1.35 !important;
-}
-html.bh-lux[data-theme-v3="1"] .bh2-stat .bh2-num{
-  font-family:'DM Sans',system-ui,sans-serif !important;
-  font-weight:600 !important;
-  font-size:19px !important;
-  color:var(--lux-ink) !important;
-  line-height:1.2 !important;
-  flex:0 0 auto !important;
-  margin:0 !important;
-  font-variant-numeric:tabular-nums !important;
-}
+/* Bloc contexte (KPI de contexte) : traité en fin de app.html, car des
+   sélecteurs à ID (#kpiPropertiesCard.bh2-stat) y sont imbattables depuis
+   une feuille externe. */
 
 /* Carte CA : le noir est gardé (c'est le point fort de l'écran), juste calé */
 html.bh-lux[data-theme-v3="1"] .bh2-ca{
@@ -354,16 +301,6 @@ html.bh-lux[data-theme-v3="1"] [style*="color: #B7791F"]{ color:var(--lux-t3) !i
    avec des libellés tronqués (« LOGEMENTS A… », « CHECKLISTS E… »).
    =========================================================================== */
 @media (max-width:920px){
-  html.bh-lux[data-theme-v3="1"] .bh2-stats,
-  html.bh-lux[data-theme-v3="1"] .bh2-stats-inside{
-    display:block !important;
-    grid-template-columns:none !important;
-    margin-top:12px !important;
-  }
-  html.bh-lux[data-theme-v3="1"] .bh2-stat{ padding:10px 0 !important; }
-  html.bh-lux[data-theme-v3="1"] .bh2-stat .bh2-lbl{ font-size:12.5px !important; }
-  html.bh-lux[data-theme-v3="1"] .bh2-stat .bh2-num{ font-size:17px !important; }
-
   /* Bloc opérationnel : libellés lisibles, plus de troncature */
   html.bh-lux[data-theme-v3="1"] .bh2-op-lbl{
     font-size:10px !important; letter-spacing:.04em !important;
