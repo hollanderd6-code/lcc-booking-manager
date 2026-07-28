@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const el = document.createElement('div');
       el.id = 'ptr-indicator';
       el.style.cssText = 'position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height .2s;z-index:100;background:#F5F2EC;';
-      el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#1A7A5E;"><i class="fas fa-sync-alt" id="ptr-icon"></i><span id="ptr-text">Tirer pour actualiser</span></div>';
+      el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#1E6E52;"><i class="fas fa-sync-alt" id="ptr-icon"></i><span id="ptr-text">Tirer pour actualiser</span></div>';
       listContainer.style.position = 'relative';
       listContainer.insertBefore(el, listContainer.firstChild);
       return el;
@@ -558,7 +558,7 @@ function renderConversations() {
           <div class="conversation-avatar" style="background: ${getPlatformColor(conv.platform)};">
             ${guestInitial}
           </div>
-          ${isUnread ? `<div style="position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:#1A7A5E;border:2px solid white;"></div>` : ''}
+          ${isUnread ? `<div style="position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:#1E6E52;border:2px solid white;"></div>` : ''}
         </div>
 
         <div class="conversation-content">
@@ -566,19 +566,19 @@ function renderConversations() {
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1px;">
             <h3 style="font-size:13.5px;font-weight:${isUnread ? '800' : '600'};color:${isUnread ? '#0D1117' : '#374151'};margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62%;font-family:'DM Sans',sans-serif;">${guestName}</h3>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
-              <span style="font-size:11px;color:${isUnread ? '#1A7A5E' : '#B0BAC5'};font-weight:${isUnread ? '600' : '400'};white-space:nowrap;">${lastMessageTime}</span>
-              ${unreadCount > 0 ? `<span style="min-width:18px;height:18px;padding:0 5px;background:#1A7A5E;color:#fff;font-size:10px;font-weight:700;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;">${unreadCount}</span>` : ''}
+              <span style="font-size:11px;color:${isUnread ? '#1E6E52' : '#B0BAC5'};font-weight:${isUnread ? '600' : '400'};white-space:nowrap;">${lastMessageTime}</span>
+              ${unreadCount > 0 ? `<span style="min-width:18px;height:18px;padding:0 5px;background:#1E6E52;color:#fff;font-size:10px;font-weight:700;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;">${unreadCount}</span>` : ''}
             </div>
           </div>
 
           <!-- Ligne 2 : Logement · Date · Plateforme -->
           <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;overflow:hidden;">
-            <span style="font-size:11px;font-weight:600;color:${conv.property_color || '#1A7A5E'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;">${conv.property_name || 'Logement'}</span>
+            <span style="font-size:11px;font-weight:600;color:${conv.property_color || '#1E6E52'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;">${conv.property_name || 'Logement'}</span>
             <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>
             <span style="font-size:11px;color:#94A3B8;white-space:nowrap;flex-shrink:0;">${checkinDate}</span>
             <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>
             ${(conv.platform || '').toLowerCase().includes('boostinghost') || (conv.platform || '').toLowerCase().includes('guest')
-              ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#7C3AED;font-weight:700;white-space:nowrap;flex-shrink:0;"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:#7C3AED;border-radius:3px;color:white;font-size:9px;font-weight:900;font-family:'DM Sans',sans-serif;">B</span>BOOSTINGHOST GUEST</span>`
+              ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#1E6E52;font-weight:700;white-space:nowrap;flex-shrink:0;"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:#1E6E52;border-radius:3px;color:white;font-size:9px;font-weight:900;font-family:'DM Sans',sans-serif;">B</span>BOOSTINGHOST GUEST</span>`
               : `<span style="font-size:11px;color:${platformColor};font-weight:600;white-space:nowrap;flex-shrink:0;"><i class="fas ${platformIcon}" style="font-size:9px;margin-right:2px;"></i>${(conv.platform || 'direct').toUpperCase()}</span>`
             }
           </div>
@@ -587,7 +587,7 @@ function renderConversations() {
           ${snippet ? `
           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
             <p style="font-size:12px;color:${isUnread ? '#374151' : '#94A3B8'};font-weight:${isUnread ? '500' : '400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0;flex:1;font-family:'DM Sans',sans-serif;">${snippet}</p>
-            ${isUnread ? `<div style="width:8px;height:8px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></div>` : ''}
+            ${isUnread ? `<div style="width:8px;height:8px;border-radius:50%;background:#1E6E52;flex-shrink:0;"></div>` : ''}
           </div>` : ''}
 
           <!-- Éléments cachés pour compatibilité (delete, status, unread-badge, meta) -->
@@ -654,10 +654,10 @@ function getPlatformIcon(platform) {
 function getPlatformColor(platform) {
   const p = (platform || '').toLowerCase();
   // Valeurs converties par server.js (OTA_MAP)
-  if (p.includes('airbnb') || p === 'abb') return '#FF5A5F';
-  if (p.includes('booking') || p === 'bdc') return '#003580';
-  if (p.includes('expedia') || p === 'exp') return '#FFC72C';
-  if (p.includes('vrbo') || p.includes('homeaway') || p.includes('abritel')) return '#3D6AFF';
+  if (p.includes('airbnb') || p === 'abb') return '#C0433C';
+  if (p.includes('booking') || p === 'bdc') return '#2E5288';
+  if (p.includes('expedia') || p === 'exp') return '#B88A22';
+  if (p.includes('vrbo') || p.includes('homeaway') || p.includes('abritel')) return '#2E6BB0';
   // Autres OTAs
   if (p.includes('tripadvisor')) return '#00AA6C';
   if (p.includes('google'))      return '#4285F4';
@@ -665,11 +665,11 @@ function getPlatformColor(platform) {
   if (p.includes('holidu'))      return '#00C2A8';
   if (p.includes('tui'))         return '#E2001A';
   // BHGuest
-  if (p.includes('boostinghost') || p.includes('guest')) return '#7C3AED';
+  if (p.includes('boostinghost') || p.includes('guest')) return '#1E6E52';
   // Direct / manuel
-  if (p.includes('direct') || p.includes('manual')) return '#1A7A5E';
+  if (p.includes('direct') || p.includes('manual')) return '#1E6E52';
   // Fallback vert Boostinghost
-  return '#1A7A5E';
+  return '#1E6E52';
 }
 
 function getStatusLabel(status) {
@@ -981,7 +981,7 @@ function _ensureAiThinkingStyle() {
   const st = document.createElement('style');
   st.id = 'aiThinkingStyle';
   st.textContent = '@keyframes bhAiDot{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}'
-    + '#aiThinkingIndicator .bh-ai-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#1A7A5E;margin:0 1px;animation:bhAiDot 1.2s infinite ease-in-out}'
+    + '#aiThinkingIndicator .bh-ai-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#1E6E52;margin:0 1px;animation:bhAiDot 1.2s infinite ease-in-out}'
     + '#aiThinkingIndicator .bh-ai-dot:nth-child(2){animation-delay:.15s}'
     + '#aiThinkingIndicator .bh-ai-dot:nth-child(3){animation-delay:.3s}';
   document.head.appendChild(st);
@@ -998,7 +998,7 @@ function showAiThinking() {
   wrap.innerHTML = '<div class="chat-avatar">🤖</div>'
     + '<div class="chat-content"><div class="chat-sender">Assistant</div>'
     + '<div class="chat-bubble" style="display:inline-flex;align-items:center;gap:8px;">'
-    + '<span style="font-size:13px;color:#1A7A5E;font-weight:600;">L\'IA réfléchit</span>'
+    + '<span style="font-size:13px;color:#1E6E52;font-weight:600;">L\'IA réfléchit</span>'
     + '<span class="bh-ai-dot"></span><span class="bh-ai-dot"></span><span class="bh-ai-dot"></span>'
     + '</div></div>';
   container.appendChild(wrap);
@@ -1794,7 +1794,7 @@ async function _checkChannexConversation(conversationId, conv) {
       // Adapter le sendBtn pour la plateforme
       const platform = (conv ? conv.platform || '' : '').toLowerCase();
       const platformLabel = platform.includes('airbnb') ? 'Airbnb' : platform.includes('booking') ? 'Booking.com' : 'Plateforme';
-      const platformColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#1A7A5E';
+      const platformColor = platform.includes('airbnb') ? '#C0433C' : platform.includes('booking') ? '#2E5288' : '#1E6E52';
 
       const sendBtn = document.getElementById('sendBtn');
       if (sendBtn) {
@@ -1997,7 +1997,7 @@ function _checkShortcutTrigger(input) {
 
   popup.innerHTML = filtered.map((s, i) => `
     <div class="shortcut-item" data-key="${s.key}"
-      style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;border-bottom:1px solid rgba(200,184,154,.2);transition:background .1s;"
+      style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;border-bottom:1px solid #F1F0EC;transition:background .1s;"
       onmouseenter="this.style.background='rgba(26,122,94,.06)'"
       onmouseleave="this.style.background=''"
       onmousedown="event.preventDefault();_selectShortcut('${s.key}')">
