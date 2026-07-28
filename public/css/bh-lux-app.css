@@ -193,36 +193,61 @@ html.bh-lux[data-theme-v3="1"] .bh2-op-ic{
   box-shadow:none !important; border:none !important;
 }
 
-/* Bloc contexte : allégé — plus de carte, plus d'icône, chiffre en sans */
+/* Bloc contexte : lignes label / valeur, plus de cartes ni d'icônes.
+   Le HTML a été remis à plat (label et valeur en enfants directs) : le CSS
+   seul ne pouvait pas les réordonner, ils étaient enfermés dans un <div>. */
+html.bh-lux[data-theme-v3="1"] .bh2-stats,
+html.bh-lux[data-theme-v3="1"] .bh2-stats-inside{
+  display:block !important;
+  margin:14px 0 0 !important;
+  border-top:1px solid var(--lux-line) !important;
+  padding-top:2px !important;
+}
 html.bh-lux[data-theme-v3="1"] .bh2-stat{
   background:transparent !important;
   border:none !important;
-  border-top:1px solid var(--lux-line2) !important;
+  border-bottom:1px solid var(--lux-line2) !important;
   border-radius:0 !important;
   box-shadow:none !important;
+  transform:none !important;
   padding:11px 2px !important;
   display:flex !important;
   align-items:baseline !important;
   justify-content:space-between !important;
-  gap:10px !important;
+  gap:14px !important;
+  position:static !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-stat:last-child{ border-bottom:none !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-stat:hover{
+  background:var(--lux-side) !important;
+  border-color:var(--lux-line2) !important;
+  box-shadow:none !important;
+  transform:none !important;
 }
 html.bh-lux[data-theme-v3="1"] .bh2-stat-ic{ display:none !important; }
-html.bh-lux[data-theme-v3="1"] .bh2-num{
+html.bh-lux[data-theme-v3="1"] .bh2-stat .bh2-lbl{
+  font-family:'DM Sans',system-ui,sans-serif !important;
+  color:var(--lux-t2) !important;
+  font-size:13px !important;
+  font-weight:500 !important;
+  letter-spacing:0 !important;
+  text-transform:none !important;
+  padding-right:0 !important;
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+  min-width:0 !important;
+  line-height:1.35 !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-stat .bh2-num{
   font-family:'DM Sans',system-ui,sans-serif !important;
   font-weight:600 !important;
   font-size:19px !important;
   color:var(--lux-ink) !important;
-  order:2 !important;
+  line-height:1.2 !important;
+  flex:0 0 auto !important;
   margin:0 !important;
-}
-html.bh-lux[data-theme-v3="1"] .bh2-lbl{
-  color:var(--lux-t2) !important;
-  font-size:12.5px !important;
-  font-weight:500 !important;
-  letter-spacing:0 !important;
-  text-transform:none !important;
-  order:1 !important;
-  margin:0 !important;
+  font-variant-numeric:tabular-nums !important;
 }
 
 /* Carte CA : le noir est gardé (c'est le point fort de l'écran), juste calé */
@@ -321,3 +346,70 @@ html.bh-lux[data-theme-v3="1"] a:focus-visible{
 /* Laiton décoratif résiduel → gris chaud */
 html.bh-lux[data-theme-v3="1"] [style*="color:#B7791F"],
 html.bh-lux[data-theme-v3="1"] [style*="color: #B7791F"]{ color:var(--lux-t3) !important; }
+
+
+/* ===========================================================================
+   8. MOBILE — le dashboard doit tenir dans un écran
+   Avant : les 4 KPI de contexte occupaient la moitié de la hauteur en cartes,
+   avec des libellés tronqués (« LOGEMENTS A… », « CHECKLISTS E… »).
+   =========================================================================== */
+@media (max-width:920px){
+  html.bh-lux[data-theme-v3="1"] .bh2-stats,
+  html.bh-lux[data-theme-v3="1"] .bh2-stats-inside{
+    display:block !important;
+    grid-template-columns:none !important;
+    margin-top:12px !important;
+  }
+  html.bh-lux[data-theme-v3="1"] .bh2-stat{ padding:10px 0 !important; }
+  html.bh-lux[data-theme-v3="1"] .bh2-stat .bh2-lbl{ font-size:12.5px !important; }
+  html.bh-lux[data-theme-v3="1"] .bh2-stat .bh2-num{ font-size:17px !important; }
+
+  /* Bloc opérationnel : libellés lisibles, plus de troncature */
+  html.bh-lux[data-theme-v3="1"] .bh2-op-lbl{
+    font-size:10px !important; letter-spacing:.04em !important;
+    white-space:normal !important; line-height:1.25 !important;
+  }
+  html.bh-lux[data-theme-v3="1"] .bh2-op-num{ font-size:30px !important; }
+  html.bh-lux[data-theme-v3="1"] .bh2-op-ic{ width:26px !important; height:26px !important; font-size:11px !important; }
+
+  /* Le vide au-dessus de la première carte */
+  html.bh-lux[data-theme-v3="1"] .bh2-hero{ margin-top:0 !important; }
+
+  /* Le bouton flottant + recouvrait la carte CA */
+  html.bh-lux[data-theme-v3="1"] .main-content{ padding-bottom:96px !important; }
+}
+
+/* ===========================================================================
+   9. NAVIGATION
+   =========================================================================== */
+/* Sidebar desktop : intitulés de section moins criards, item actif marqué
+   par un filet vert plutôt que par un aplat qui alourdit la colonne */
+html.bh-lux[data-theme-v3="1"] .sidebar,
+html.bh-lux[data-theme-v3="1"] #bhSidebar{ background:var(--lux-side) !important; border-right:1px solid var(--lux-line) !important; }
+html.bh-lux[data-theme-v3="1"] .nav-section-title,
+html.bh-lux[data-theme-v3="1"] .sidebar-section-title{
+  color:var(--lux-t4) !important; font-size:10px !important; letter-spacing:.1em !important; font-weight:600 !important;
+}
+html.bh-lux[data-theme-v3="1"] .nav-item{ color:var(--lux-t2) !important; border-radius:9px !important; }
+html.bh-lux[data-theme-v3="1"] .nav-item:hover{ background:var(--lux-line2) !important; color:var(--lux-ink) !important; }
+html.bh-lux[data-theme-v3="1"] .nav-item.active{
+  background:var(--lux-green-soft) !important; color:var(--lux-green-deep) !important; font-weight:600 !important;
+  box-shadow:inset 3px 0 0 var(--lux-green) !important;
+}
+html.bh-lux[data-theme-v3="1"] .nav-item.active i{ color:var(--lux-green) !important; }
+
+/* Barre d'onglets mobile */
+html.bh-lux[data-theme-v3="1"] .mobile-tabs,
+html.bh-lux[data-theme-v3="1"] .mobile-bottom-nav{
+  background:rgba(251,251,250,.92) !important;
+  backdrop-filter:saturate(180%) blur(14px) !important;
+  -webkit-backdrop-filter:saturate(180%) blur(14px) !important;
+  border-top:1px solid var(--lux-line) !important;
+  box-shadow:none !important;
+}
+html.bh-lux[data-theme-v3="1"] .mobile-tabs a,
+html.bh-lux[data-theme-v3="1"] .mobile-tabs button,
+html.bh-lux[data-theme-v3="1"] .mobile-bottom-nav a{ color:var(--lux-t3) !important; }
+html.bh-lux[data-theme-v3="1"] .mobile-tabs a.active,
+html.bh-lux[data-theme-v3="1"] .mobile-tabs .active,
+html.bh-lux[data-theme-v3="1"] .mobile-bottom-nav a.active{ color:var(--lux-green) !important; font-weight:600 !important; }
