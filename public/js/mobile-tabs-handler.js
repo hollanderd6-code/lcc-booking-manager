@@ -352,14 +352,15 @@
     setTimeout(function() {
       var page = document.body.getAttribute('data-page') || '';
       var pageToKey = {
-        'welcome':'welcome','livrets':'welcome','contrat':'contrat','cleaning':'cleaning',
+        'welcome':'welcome','livrets':'welcome','contrat':'contrat',
+        'settings':'properties','logements':'properties','properties':'properties',
         'deposits':'finances','factures':'factures','clients':'clients','reporting':'reporting',
         'dynamic-pricing':'pricing','smart-locks':'locks','smart_locks':'locks',
         'settings-account':'settings','notifications':'settings','help':'support'
       };
       var activeKey = pageToKey[page];
       if (!activeKey) return;
-      var IC_COLORS = { welcome:'#1A7A5E',contrat:'#3B82F6',cleaning:'#06B6D4',finances:'#10B981',factures:'#8B5CF6',clients:'#EC4899',reporting:'#0EA5E9',pricing:'#F59E0B',locks:'#64748B',settings:'#475569',support:'#14B8A6' };
+      var IC_COLORS = { welcome:'#1A7A5E',contrat:'#3B82F6',properties:'#0891B2',finances:'#10B981',factures:'#8B5CF6',clients:'#EC4899',reporting:'#0EA5E9',pricing:'#F59E0B',locks:'#64748B',settings:'#475569',support:'#14B8A6' };
       var el = sheet.querySelector('.bh-more-item[data-menu-key="' + activeKey + '"]');
       if (el) {
         var col = IC_COLORS[activeKey] || '#1A7A5E';
