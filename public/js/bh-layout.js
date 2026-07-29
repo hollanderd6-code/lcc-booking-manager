@@ -57,7 +57,14 @@ if (typeof window.renderAgencyToggle !== 'function') {
   'use strict';
 
 /* /js/bh-layout.js – injection sidebar + header avec filtrage permissions sous-comptes */
-const LOGO_B_SVG = `<img src="/img/brand/web/mono-rond.svg" alt="Boostinghost" width="36" height="36" style="width:36px;height:36px;flex-shrink:0;">`;
+// LOGO_B_SVG retire : remplace par LOGO_SIDEBAR / LOGO_MOBILE / LOGO_MONO.
+
+/* Verrou complet (monogramme + mot-symbole + baseline) pour la sidebar
+   et l'en-tete mobile. Le texte fait partie du SVG : il est vectorise,
+   donc identique partout sans dependre d'une police installee. */
+const LOGO_SIDEBAR = `<img src="/img/brand/verrou/verrou-sidebar.svg" alt="Boostinghost — Smart Property Manager" width="162" height="38" style="display:block;flex-shrink:0;">`;
+const LOGO_MOBILE  = `<img src="/img/brand/verrou/verrou-mobile.svg" alt="Boostinghost — Smart Property Manager" width="128" height="30" style="display:block;flex-shrink:0;">`;
+const LOGO_MONO    = `<img src="/img/brand/web/mono-sidebar.svg" alt="Boostinghost" width="34" height="34" style="display:block;flex-shrink:0;">`;
 
 function getSidebarHTML() {
   // ── Détecter le type de compte (nouveau système + ancien système) ──
@@ -265,10 +272,8 @@ function getSidebarHTML() {
 `;
 }
 
-  const BRAND_TEXT_HTML = `<span class="mobile-logo-title" style="font-size:16px !important; line-height:1.15;">
-    <span style="color:#1A7A5E; font-weight:700 !important;">Boosting</span><span style="color:#111827; font-weight:700 !important;">host</span>
-  </span>
-  <span class="mobile-logo-subtitle" style="font-size:7px !important; color:#6B7280; font-weight:700 !important; letter-spacing:0 !important; text-transform:uppercase !important; display:block !important; margin-top:1px; width:100% !important; text-align:justify !important; text-align-last:justify !important; -moz-text-align-last:justify !important;">Smart Property Manager</span>`;
+  // BRAND_TEXT_HTML retire : le mot-symbole fait desormais partie du verrou SVG.
+
 
   function escapeHtml(str) {
     return (str || "").replace(/[&<>"']/g, (m) => ({
@@ -443,41 +448,40 @@ function getSidebarHTML() {
       mobileLogo.appendChild(mobileLogoText);
     }
 
-    // Toujours (ré)injecter l'image standard du logo pour garantir un rendu
-    // identique sur toutes les pages, même si la page avait déjà sa propre image.
-    const existingImg = mobileLogo.querySelector("img[src^='data:']");
-    const existingSvg = mobileLogo.querySelector("svg");
-    const isStandardLogo = existingImg && existingImg.getAttribute('alt') === 'Boostinghost' && existingImg.style.borderRadius === '50%';
-    if (!isStandardLogo) {
-      if (existingImg) existingImg.remove();
-      if (existingSvg) existingSvg.remove();
-      const oldIcon = mobileLogo.querySelector("i.fas, i.fa, img");
-      if (oldIcon) oldIcon.remove();
-      mobileLogo.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
+    // Compte delegue : monogramme seul + prenom du collaborateur.
+    // Compte principal : verrou complet (le mot-symbole est dans le SVG).
+    const isSubAcc = localStorage.getItem('lcc_account_type') === 'sub'
+                  || localStorage.getItem('lcc_is_sub_account') === 'true';
+
+    let nomSousCompte = null;
+    if (isSubAcc) {
+      try {
+        const subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+        if (subData.firstName) {
+          nomSousCompte = subData.firstName + (subData.lastName ? ' ' + subData.lastName : '');
+        }
+      } catch (e) {}
     }
 
-    // Injecter le texte si absent ou incorrect
-    if (mobileLogoText) {
-      // Pour les sous-comptes : afficher le prénom du cleaner au lieu de "Boostinghost"
-      const isSubAcc = localStorage.getItem('lcc_account_type') === 'sub'
-                    || localStorage.getItem('lcc_is_sub_account') === 'true';
-      if (isSubAcc) {
-        try {
-          const subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
-          const subName = subData.firstName ? (subData.firstName + (subData.lastName ? ' ' + subData.lastName : '')) : null;
-          if (subName) {
-            mobileLogoText.innerHTML = `<span class="mobile-logo-title" style="font-size:16px;font-weight:700;color:#0D1117;">${subName}</span><span style="font-size:10px;color:#7A8695;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-top:1px;">Espace collaborateur</span>`;
-            return;
-          }
-        } catch(e) {}
+    const marqueVoulue = nomSousCompte ? LOGO_MONO : LOGO_MOBILE;
+    const imgActuelle = mobileLogo.querySelector('img');
+    const srcVoulue = marqueVoulue.match(/src="([^"]+)"/)[1];
+
+    if (!imgActuelle || imgActuelle.getAttribute('src') !== srcVoulue) {
+      mobileLogo.querySelectorAll('img, svg, i.fas, i.fa').forEach(el => el.remove());
+      mobileLogo.insertAdjacentHTML('afterbegin', marqueVoulue);
+    }
+
+    // Le texte n'accompagne plus que les comptes delegues : pour le compte
+    // principal, le mot-symbole est deja dans le verrou.
+    if (nomSousCompte) {
+      const attendu = `<span class="mobile-logo-title" style="font-size:15px;font-weight:700;color:#20221F;">${escapeHtml(nomSousCompte)}</span>`
+                    + `<span class="mobile-logo-subtitle" style="font-size:8px;color:#8B8B84;font-weight:600;letter-spacing:.08em;text-transform:uppercase;display:block;">Espace collaborateur</span>`;
+      if (mobileLogoText.innerHTML.replace(/\s+/g, '') !== attendu.replace(/\s+/g, '')) {
+        mobileLogoText.innerHTML = attendu;
       }
-      // Toujours réinjecter le branding standard pour garantir un logo+texte
-      // STRICTEMENT identique sur toutes les pages, peu importe ce que contenait
-      // le HTML statique de la page. (On ne réécrit pas si c'est déjà exactement
-      // le bon HTML, pour éviter de recréer le DOM à chaque appel.)
-      if (mobileLogoText.innerHTML.replace(/\s+/g,'') !== BRAND_TEXT_HTML.replace(/\s+/g,'')) {
-        mobileLogoText.innerHTML = BRAND_TEXT_HTML;
-      }
+    } else if (mobileLogoText.innerHTML !== '') {
+      mobileLogoText.innerHTML = '';
     }
   }
 
@@ -486,16 +490,20 @@ function getSidebarHTML() {
 
     sidebarAnchors.forEach(a => {
       const existing = a.querySelector("img, svg");
+      const src = existing ? (existing.getAttribute("src") || "") : "";
+      // Un logo est valide s'il vient du dossier de marque, ou s'il s'agit
+      // d'un ancien format encore en place sur une page non migree.
       const isOkImg =
         existing &&
         existing.tagName.toLowerCase() === "img" &&
-        ((existing.getAttribute("src") || "").includes("boostinghost-icon-circle.png") || (existing.getAttribute("src") || "").startsWith("data:image") ||
-         (existing.src || "").includes("boostinghost-icon-circle.png") || (existing.getAttribute("src") || "").startsWith("data:image"));
+        (src.startsWith("/img/brand/") ||
+         src.includes("boostinghost-icon-circle.png") ||
+         src.startsWith("data:image"));
 
       if (!isOkImg) {
         const old = a.querySelector("svg, img");
         if (old) old.remove();
-        a.insertAdjacentHTML("afterbegin", LOGO_B_SVG);
+        a.insertAdjacentHTML("afterbegin", LOGO_SIDEBAR);
       }
     });
   }
