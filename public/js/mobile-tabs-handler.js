@@ -96,6 +96,7 @@
       reporting:  { c:'#0EA5E9', p:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>' },
       pricing:    { c:'#F59E0B', p:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>' },
       locks:      { c:'#64748B', p:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' },
+      properties: { c:'#0891B2', p:'<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/>' },
       settings:   { c:'#475569', p:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>' },
       support:    { c:'#14B8A6', p:'<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>' }
     };
@@ -534,7 +535,6 @@
     calendar:  { svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
     messages:  { svg: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>' },
     properties:{ svg: '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>' },
-    cleaning:  { svg: '<path d="M19 11V4a1 1 0 0 0-1-1h-1a1 1 0 0 0-1 1v7"/><path d="M5 11l1.5-7h11L19 11"/><path d="M3 11h18v2a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M8 17v4"/><path d="M16 17v4"/>' },
     more:      { svg: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>' }
   };
 
@@ -544,8 +544,22 @@
     tabs.forEach(function(tab) {
       var id = tab.dataset.tab;
       var cfg = LUCIDE_TABS[id];
-      if (!cfg) return;
       if (tab.querySelector('svg.lucide-tab')) return; // déjà fait
+      if (!cfg) {
+        // Onglet sans tracé Lucide (ex. Ménage, qui garde le balai FontAwesome) :
+        // on saute la conversion mais on applique quand même l'état actif,
+        // sinon le libellé reste gris et l'onglet paraît inactif.
+        var faIcon = tab.querySelector('i');
+        var faSpan = tab.querySelector('span');
+        var faCol = tab.classList.contains('active') ? TAB_ACTIVE : TAB_INACTIVE;
+        if (faIcon) faIcon.style.color = faCol;
+        if (faSpan) {
+          faSpan.style.color = faCol;
+          faSpan.style.fontWeight = tab.classList.contains('active') ? '700' : '500';
+          faSpan.style.transition = 'color .25s ease';
+        }
+        return;
+      }
 
       var iconEl = tab.querySelector('i');
       var isActive = tab.classList.contains('active');
@@ -575,6 +589,7 @@
       var isActive = tab.classList.contains('active');
       var col = isActive ? TAB_ACTIVE : TAB_INACTIVE;
       if (svg) svg.setAttribute('stroke', col);
+      else { var fa = tab.querySelector('i'); if (fa) fa.style.color = col; }
       if (span) {
         span.style.color = col;
         span.style.fontWeight = isActive ? '700' : '500';
