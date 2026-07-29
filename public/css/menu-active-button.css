@@ -1,16 +1,162 @@
 /* ============================================================================
-   ÉTAT ACTIF DANS LE MENU « PLUS »
+   ETAT ACTIF DANS LE MENU « PLUS »
 
-   Ce fichier ne contient plus de règles de mise en valeur.
+   L'entree correspondant a la page courante est teintee de la couleur de sa
+   propre icone : fond a ~9 %, liseré vertical, libelle colore. L'icone reste
+   donc lisible — l'ancien aplat vert uniforme rendait invisible une icone
+   verte (Livrets d'accueil) et ne correspondait pas a l'entree.
 
-   Pourquoi : la mise en valeur est faite par mobile-tabs-handler.js, qui
-   connaît la couleur de l'icône de chaque entrée (table IC_COLORS) et
-   applique un fond teinté de cette couleur. Les anciennes règles d'ici
-   posaient un aplat vert avec !important par-dessus : l'icône colorée
-   devenait illisible (icône verte sur fond vert) et la couleur ne
-   correspondait plus à l'entrée.
+   Le ciblage se fait sur data-menu-key, pose par mobile-tabs-handler.js, et
+   non sur [onclick*="..."] : une URL modifiee ne casse plus la regle.
 
-   Les anciens sélecteurs [onclick*="..."] étaient de surcroît fragiles :
-   toute URL modifiée cassait la règle sans erreur visible. La table
-   pageToKey du JS est la source de vérité.
+   mobile-tabs-handler.js applique le meme rendu en JS. Les deux sont
+   volontairement redondants : si le JS est servi depuis le cache, le CSS
+   assure quand meme l'etat actif.
    ============================================================================ */
+
+/* Livrets d'accueil */
+body[data-page="welcome"] .bh-more-item[data-menu-key="welcome"],
+body[data-page="livrets"] .bh-more-item[data-menu-key="welcome"] {
+  background: #1A7A5E16 !important;
+  border: 1px solid #1A7A5E4D !important;
+  box-shadow: inset 3px 0 0 #1A7A5E !important;
+}
+body[data-page="welcome"] .bh-more-item[data-menu-key="welcome"] span,
+body[data-page="livrets"] .bh-more-item[data-menu-key="welcome"] span {
+  color: #1A7A5E !important;
+  font-weight: 700 !important;
+}
+
+/* Contrats */
+body[data-page="contrat"] .bh-more-item[data-menu-key="contrat"],
+body[data-page="contrats"] .bh-more-item[data-menu-key="contrat"] {
+  background: #3B82F616 !important;
+  border: 1px solid #3B82F64D !important;
+  box-shadow: inset 3px 0 0 #3B82F6 !important;
+}
+body[data-page="contrat"] .bh-more-item[data-menu-key="contrat"] span,
+body[data-page="contrats"] .bh-more-item[data-menu-key="contrat"] span {
+  color: #3B82F6 !important;
+  font-weight: 700 !important;
+}
+
+/* Mes logements */
+body[data-page="settings"] .bh-more-item[data-menu-key="properties"],
+body[data-page="logements"] .bh-more-item[data-menu-key="properties"],
+body[data-page="properties"] .bh-more-item[data-menu-key="properties"] {
+  background: #0891B216 !important;
+  border: 1px solid #0891B24D !important;
+  box-shadow: inset 3px 0 0 #0891B2 !important;
+}
+body[data-page="settings"] .bh-more-item[data-menu-key="properties"] span,
+body[data-page="logements"] .bh-more-item[data-menu-key="properties"] span,
+body[data-page="properties"] .bh-more-item[data-menu-key="properties"] span {
+  color: #0891B2 !important;
+  font-weight: 700 !important;
+}
+
+/* Cautions / Finances */
+body[data-page="deposits"] .bh-more-item[data-menu-key="finances"],
+body[data-page="cautions"] .bh-more-item[data-menu-key="finances"] {
+  background: #10B98116 !important;
+  border: 1px solid #10B9814D !important;
+  box-shadow: inset 3px 0 0 #10B981 !important;
+}
+body[data-page="deposits"] .bh-more-item[data-menu-key="finances"] span,
+body[data-page="cautions"] .bh-more-item[data-menu-key="finances"] span {
+  color: #10B981 !important;
+  font-weight: 700 !important;
+}
+
+/* Factures sejours */
+body[data-page="factures"] .bh-more-item[data-menu-key="factures"] {
+  background: #8B5CF616 !important;
+  border: 1px solid #8B5CF64D !important;
+  box-shadow: inset 3px 0 0 #8B5CF6 !important;
+}
+body[data-page="factures"] .bh-more-item[data-menu-key="factures"] span {
+  color: #8B5CF6 !important;
+  font-weight: 700 !important;
+}
+
+/* Mes Clients */
+body[data-page="clients"] .bh-more-item[data-menu-key="clients"] {
+  background: #EC489916 !important;
+  border: 1px solid #EC48994D !important;
+  box-shadow: inset 3px 0 0 #EC4899 !important;
+}
+body[data-page="clients"] .bh-more-item[data-menu-key="clients"] span {
+  color: #EC4899 !important;
+  font-weight: 700 !important;
+}
+
+/* Revenus */
+body[data-page="reporting"] .bh-more-item[data-menu-key="reporting"],
+body[data-page="revenus"] .bh-more-item[data-menu-key="reporting"] {
+  background: #0EA5E916 !important;
+  border: 1px solid #0EA5E94D !important;
+  box-shadow: inset 3px 0 0 #0EA5E9 !important;
+}
+body[data-page="reporting"] .bh-more-item[data-menu-key="reporting"] span,
+body[data-page="revenus"] .bh-more-item[data-menu-key="reporting"] span {
+  color: #0EA5E9 !important;
+  font-weight: 700 !important;
+}
+
+/* BoostPrice */
+body[data-page="dynamic-pricing"] .bh-more-item[data-menu-key="pricing"],
+body[data-page="pricing"] .bh-more-item[data-menu-key="pricing"] {
+  background: #F59E0B16 !important;
+  border: 1px solid #F59E0B4D !important;
+  box-shadow: inset 3px 0 0 #F59E0B !important;
+}
+body[data-page="dynamic-pricing"] .bh-more-item[data-menu-key="pricing"] span,
+body[data-page="pricing"] .bh-more-item[data-menu-key="pricing"] span {
+  color: #F59E0B !important;
+  font-weight: 700 !important;
+}
+
+/* Serrures connectees */
+body[data-page="smart-locks"] .bh-more-item[data-menu-key="locks"],
+body[data-page="smart_locks"] .bh-more-item[data-menu-key="locks"] {
+  background: #64748B16 !important;
+  border: 1px solid #64748B4D !important;
+  box-shadow: inset 3px 0 0 #64748B !important;
+}
+body[data-page="smart-locks"] .bh-more-item[data-menu-key="locks"] span,
+body[data-page="smart_locks"] .bh-more-item[data-menu-key="locks"] span {
+  color: #64748B !important;
+  font-weight: 700 !important;
+}
+
+/* Parametres */
+body[data-page="settings-account"] .bh-more-item[data-menu-key="settings"],
+body[data-page="notifications"] .bh-more-item[data-menu-key="settings"] {
+  background: #47556916 !important;
+  border: 1px solid #4755694D !important;
+  box-shadow: inset 3px 0 0 #475569 !important;
+}
+body[data-page="settings-account"] .bh-more-item[data-menu-key="settings"] span,
+body[data-page="notifications"] .bh-more-item[data-menu-key="settings"] span {
+  color: #475569 !important;
+  font-weight: 700 !important;
+}
+
+/* Support */
+body[data-page="help"] .bh-more-item[data-menu-key="support"],
+body[data-page="support"] .bh-more-item[data-menu-key="support"] {
+  background: #14B8A616 !important;
+  border: 1px solid #14B8A64D !important;
+  box-shadow: inset 3px 0 0 #14B8A6 !important;
+}
+body[data-page="help"] .bh-more-item[data-menu-key="support"] span,
+body[data-page="support"] .bh-more-item[data-menu-key="support"] span {
+  color: #14B8A6 !important;
+  font-weight: 700 !important;
+}
+
+/* Pastille de fin de ligne, commune a toutes les entrees actives */
+.bh-more-item .bh-more-dot { margin-left: auto; }
+
+/* Neutralise l'ancien effet de translation au survol sur l'entree active */
+.bh-more-item[data-menu-key]:hover { transform: none !important; }
