@@ -1418,18 +1418,33 @@ var _bhNativeConfirm = window.confirm;
   function tabsOf(bar) { return Array.prototype.slice.call(bar.querySelectorAll('.tab-btn')).filter(function (t) { return t.offsetWidth > 0; }); }
   function labelOf(t) { var sp = t.querySelector('span'); return deburr(sp ? sp.textContent : t.textContent); }
 
+  // Menage a son propre onglet dans la barre : il sort de MORE.
+  // Mes logements (settings) prend sa place dans le menu Plus.
   var MORE = { 'settings-account': 1, help: 1, support: 1, factures: 1, clients: 1, deposits: 1, cautions: 1,
-    cleaning: 1, menages: 1, welcome: 1, livrets: 1, contrat: 1, contrats: 1, reporting: 1, revenus: 1,
+    welcome: 1, livrets: 1, contrat: 1, contrats: 1, reporting: 1, revenus: 1,
     pricing: 1, finances: 1, notifications: 1, avis: 1,
+    settings: 1, logements: 1, properties: 1, biens: 1,
     'smart-locks': 1, smart_locks: 1, serrures: 1 };
   var TOLABEL = { app: 'accueil', dashboard: 'accueil', accueil: 'accueil', index: 'accueil',
     reservations: 'reservations', messages: 'messages',
-    logements: 'logements', properties: 'logements', biens: 'logements',
-    settings: 'logements' };
+    cleaning: 'menage', menage: 'menage', menages: 'menage' };
 
   function keyForPage(page) { page = deburr(page); if (TOLABEL[page]) return TOLABEL[page]; if (MORE[page]) return 'plus'; return ''; }
   function findByLabel(tabs, key) { if (!key) return -1; for (var i = 0; i < tabs.length; i++) if (labelOf(tabs[i]).indexOf(key) !== -1) return i; return -1; }
   function plusIndex(tabs) { return findByLabel(tabs, 'plus'); }
+
+  // Diagnostic : bhDiagOnglets() en console indique quel onglet la barre
+  // considere actif et pourquoi. Utile quand un cache sert une vieille version.
+  window.bhDiagOnglets = function () {
+    var bar = document.querySelector('.mobile-tabs');
+    if (!bar) return console.log('[BH] pas de barre d\'onglets sur cette page');
+    var ts = tabsOf(bar);
+    var page = document.body && document.body.dataset ? document.body.dataset.page : '(aucun)';
+    console.log('[BH] data-page =', page, '| cle =', keyForPage(page));
+    console.log('[BH] onglets  =', ts.map(function (t) { return labelOf(t); }));
+    console.log('[BH] index attendu =', pageIndex(ts), '| version tables = menage-v2');
+    return pageIndex(ts);
+  };
 
   function pageIndex(tabs) {
     var idx = findByLabel(tabs, keyForPage(document.body && document.body.dataset && document.body.dataset.page));
