@@ -7,11 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
-<link href="/css/style.css?v=11" rel="stylesheet"/>
-<link href="/css/bh-theme-v3.css?v=11" rel="stylesheet"/>
-<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-bottom-bar.css?v=1">
-<link rel="stylesheet" href="/css/bh-badges.css?v=1">
+<link href="/css/style.css?v=9d18f851" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css?v=c17d3c2f" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/bh-brand.css?v=333fff82">
+<link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/bh-bottom-bar.css?v=e8b22340">
+<link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
 <style>
 /* ============================================================
    DARK BAR + STICKY HEADER (identical to settings-2.html)
@@ -789,11 +790,11 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .mode-seg button{border:none;background:none;font-size:12px;font-weight:600;color:var(--muted);padding:6px 11px;border-radius:7px;cursor:pointer;transition:background .15s,color .15s}
 .mode-seg button.on{background:#1A7A5E;color:#fff}
 </style>
-<link rel="stylesheet" href="/css/bh-v3-mobile.css?v=10">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=10">
-<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=12">
-<link rel="stylesheet" href="/css/menu-active-button.css?v=12">
-<link rel="stylesheet" href="/css/bh-core.css?v=3">
+<link rel="stylesheet" href="/css/bh-v3-mobile.css?v=b181131f">
+<link rel="stylesheet" href="/css/mobile-native-styles.css?v=ec508074">
+<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=d9f1468e">
+<link rel="stylesheet" href="/css/menu-active-button.css?v=5206d90a">
+<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
 <style>
 /* ── Correctif espace fantôme sous le header mobile ──
    Neutralise tous les contributeurs possibles (padding body hérités,
@@ -813,6 +814,13 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   }
 }
 </style>
+
+  <!-- Marque Boostinghost — genere par outils/marque.js -->
+  <link rel="icon" href="/img/brand/web/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/img/brand/web/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png">
+  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
+  <meta name="theme-color" content="#0E3B2E">
 </head>
 <body data-back-href="/app.html" data-back-label="Tableau de bord" data-kicker="Revenus" data-page="pricing" data-subtitle="Ajustement automatique des prix selon le marché." data-title="BoostPrice">
 
@@ -1176,7 +1184,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 <!-- Toast -->
 <div class="pricing-toast" id="pricingToast"></div>
 
-<script src="/js/auth-fetch.js"></script>
+<script src="/js/auth-fetch.js?v=cd78753d"></script>
 <script>
 // ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
 (function() {
@@ -1234,10 +1242,11 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 })();
 </script>
 
-<script src="/js/bh-layout.js?v=12"></script>
-<script src="/js/mobile-native-experience.js?v=12"></script>
-<script src="/js/mobile-tabs-handler.js?v=12"></script>
-<script src="/js/messages-badge-desktop-mobile.js"></script>
+<script src="/js/bh-guest-mark.js?v=535077b0"></script>
+<script src="/js/bh-layout.js?v=33468b0e"></script>
+<script src="/js/mobile-native-experience.js?v=2594b603"></script>
+<script src="/js/mobile-tabs-handler.js?v=e901dd8d"></script>
+<script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
 
 <script>
 'use strict';
@@ -2227,9 +2236,9 @@ async function setCalMode(mode){
 }
 </style>
 
-<script src="/js/bh-haptics.js?v=1"></script>
-<script src="/js/bh-page-transitions.js?v=1"></script>
-<script src="/js/bh-global-search.js?v=5"></script>
+<script src="/js/bh-haptics.js?v=41ebfc2f"></script>
+<script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
+<script src="/js/bh-global-search.js?v=610ed2a6"></script>
 <script src="/js/bh-polish.js?v=1"></script>
 </body>
 </html>

@@ -578,7 +578,7 @@ function renderConversations() {
             <span style="font-size:11px;color:#94A3B8;white-space:nowrap;flex-shrink:0;">${checkinDate}</span>
             <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>
             ${(conv.platform || '').toLowerCase().includes('boostinghost') || (conv.platform || '').toLowerCase().includes('guest')
-              ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#1E6E52;font-weight:700;white-space:nowrap;flex-shrink:0;"><span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:#1E6E52;border-radius:3px;color:white;font-size:9px;font-weight:900;font-family:'DM Sans',sans-serif;">B</span>BOOSTINGHOST GUEST</span>`
+              ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#B4470F;font-weight:700;white-space:nowrap;flex-shrink:0;">${window.bhGuestMark ? window.bhGuestMark(13, '#B4470F') : ''}BHGUEST</span>`
               : `<span style="font-size:11px;color:${platformColor};font-weight:600;white-space:nowrap;flex-shrink:0;"><i class="fas ${platformIcon}" style="font-size:9px;margin-right:2px;"></i>${(conv.platform || 'direct').toUpperCase()}</span>`
             }
           </div>

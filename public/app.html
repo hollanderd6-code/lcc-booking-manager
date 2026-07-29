@@ -16,31 +16,13 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <!-- FullCalendar CSS -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet"/>
-<link href="/css/style.css?v=11" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=1">
-<link rel="stylesheet" href="/css/bh-badges.css?v=1">
-<link rel="stylesheet" href="/css/bh-theme-v3.css?v=12">
-<link rel="stylesheet" href="/css/bh-lux.css?v=13">
-<link rel="stylesheet" href="/css/bh-lux-app.css?v=4">
-<script id="bh-guest-mark">
-/* Logo BHGuest — goutte + b, vectoriel.
-   viewBox recadre au plus juste sur le dessin (150..780 x 247..777) : sinon
-   le logo flotte au milieu d'un carre vide et parait deux fois trop petit.
-   bhGuestMark(size, color, ink) — size = LARGEUR ; sur fond colore, inverser :
-   bhGuestMark(14, '#fff', '#B4470F'). */
-window.bhGuestMark = function (size, color, ink) {
-  size = size || 16;
-  color = color || '#C2410C';
-  ink = ink || '#fff';
-  var h = Math.round(size * 0.845);
-  return '<svg viewBox="144 241 642 542" width="' + size + '" height="' + h +
-    '" style="display:block;flex-shrink:0" aria-label="BHGuest" role="img">' +
-      '<path d="M150 512 L322 330 A265 265 0 1 1 322 694 Z" fill="' + color + '"/>' +
-      '<path d="M418 350 h74 v20 h-26 v240 h-48 Z" fill="' + ink + '"/>' +
-      '<ellipse cx="524" cy="522" rx="70" ry="76" fill="none" stroke="' + ink + '" stroke-width="60"/>' +
-      '<ellipse cx="524" cy="522" rx="40" ry="46" fill="' + color + '"/>' +
-    '</svg>';
-};
-</script>  
+<link href="/css/style.css?v=9d18f851" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=e8b22340">
+<link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
+<link rel="stylesheet" href="/css/bh-theme-v3.css?v=c17d3c2f">
+<link rel="stylesheet" href="/css/bh-brand.css?v=333fff82">
+<link rel="stylesheet" href="/css/bh-lux.css?v=1a3d3ed7">
+<link rel="stylesheet" href="/css/bh-lux-app.css?v=340266b7">
+  
 <script>
   // Activation permanente du thème V3
   document.documentElement.setAttribute('data-theme-v3','1');
@@ -2563,7 +2545,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   }
 }
 </style>
-<script src="/js/auth-fetch.js"></script>
+<script src="/js/auth-fetch.js?v=cd78753d"></script>
 <style>
 /* UI fixes */
 #todayMovesModal .modal-footer,
@@ -2657,7 +2639,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 </style>
  <!-- Protection sous-comptes -->
-<script src="/js/sub-account-guard.js?v=2"></script>
+<script src="/js/sub-account-guard.js?v=3558a1b3"></script>
 
 <style id="ios-calendar-scroll-fix">
 /* ✅ FIX iOS Capacitor : scroll vertical liste logements */
@@ -3547,9 +3529,9 @@ setTimeout(function() {
 }
 </style>
 
-<link rel="stylesheet" href="/css/bh-v3-mobile.css?v=10">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=10">
-<link rel="stylesheet" href="/css/bh-core.css?v=3">
+<link rel="stylesheet" href="/css/bh-v3-mobile.css?v=b181131f">
+<link rel="stylesheet" href="/css/mobile-native-styles.css?v=ec508074">
+<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
 <style>
 /* ══ BH MLIST — listes raffinées pour les modales KPI ══ */
 .bh-mlist{ display:flex; flex-direction:column; gap:9px; }
@@ -3574,6 +3556,13 @@ setTimeout(function() {
 .bh-mrow-note{ font:400 12.5px 'DM Sans',sans-serif; color:#7C2D12; line-height:1.45; margin-top:6px; }
 .bh-mrow-score{ font:700 12px 'DM Sans',sans-serif; color:#B7791F; flex:none; }
 </style>
+
+  <!-- Marque Boostinghost — genere par outils/marque.js -->
+  <link rel="icon" href="/img/brand/web/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/img/brand/web/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png">
+  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
+  <meta name="theme-color" content="#0E3B2E">
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none; position: sticky; top: 40px; z-index: 9998; width: 100%;">
@@ -4219,7 +4208,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 <!-- FullCalendar retiré : le dashboard utilise renderModernCalendar() (calendrier maison), pas la lib FullCalendar -->
 <!-- <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script> -->
 <!-- <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script> -->
-<script src="/js/app.js?v=4"></script>
+<script src="/js/app.js?v=b135ab18"></script>
 <style>
     /* Styles spécifiques calendrier & UI complémentaire */
     #calendar {
@@ -12751,7 +12740,7 @@ if (document.readyState === 'loading') {
 </script>
 
 <!-- Capacitor Core -->
-<script src="/js/vendor/capacitor-8.4.0.js"></script>
+<script src="/js/vendor/capacitor-8.4.0.js?v=f384d8ca"></script>
 
 <!-- Initialisation des notifications -->
 <script>
@@ -12769,8 +12758,8 @@ if (document.readyState === 'loading') {
   }
 </script>
 <!-- 📱 Expérience Mobile Native -->
-<script src="/js/mobile-native-experience.js?v=12"></script>
-<script src="/js/mobile-tabs-handler.js?v=12"></script>
+<script src="/js/mobile-native-experience.js?v=2594b603"></script>
+<script src="/js/mobile-tabs-handler.js?v=e901dd8d"></script>
 
 <script id="calendar-horizontal-scroll-lock-fix-v2">
 (function() {
@@ -12874,7 +12863,7 @@ if (document.readyState === 'loading') {
   }
 })();
 </script>    
-<script src="/js/push-notifications-handler.js"></script>    
+<script src="/js/push-notifications-handler.js?v=288ea9dc"></script>    
 <script>
 // console.log('🚀 FIREBASE MESSAGING PUSH CODE');
 // (function () {
@@ -13251,8 +13240,9 @@ if (window.Capacitor) {
 </script>
 
 <!-- Badge Messages -->
-<script src="/js/messages-badge-desktop-mobile.js"></script>
-<script src="/js/bh-layout.js?v=12"></script>  
+<script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
+<script src="/js/bh-guest-mark.js?v=535077b0"></script>
+<script src="/js/bh-layout.js?v=33468b0e"></script>  
 
 <style id="final-overrides">
 /* Force view-selector hidden regardless of any external CSS */
@@ -14314,10 +14304,10 @@ function bhConfirm(message) {
 }
 </script>
 
-<script src="/js/bh-auto-refresh.js?v=1"></script>
-<script src="/js/bh-haptics.js?v=1"></script>
-<script src="/js/bh-page-transitions.js?v=1"></script>
-<script src="/js/bh-global-search.js?v=5"></script>
+<script src="/js/bh-auto-refresh.js?v=a3ac1b53"></script>
+<script src="/js/bh-haptics.js?v=41ebfc2f"></script>
+<script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
+<script src="/js/bh-global-search.js?v=610ed2a6"></script>
 <style>
 /* ══ BH SHEETS — habillage commun des modales KPI (bottom sheets) ══ */
 .bh-sheet-panel{
@@ -14374,8 +14364,8 @@ function bhConfirm(message) {
 })();
 </script>
 <script src="/js/bh-polish.js?v=1"></script>
-<script src="/js/bh-pull-refresh.js?v=1"></script>
-<script src="/js/bh-today.js?v=1"></script>
+<script src="/js/bh-pull-refresh.js?v=5bb91f71"></script>
+<script src="/js/bh-today.js?v=912a597e"></script>
 
 
 
@@ -15244,7 +15234,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
   if (e.target === this) closeBatchEditModal();
 });
 </script>
-<script src="/js/bh-onboarding.js"></script>
+<script src="/js/bh-onboarding.js?v=8414290c"></script>
 
 <script>
 // ── Sticky calendar headers (mobile + desktop) ──────────────

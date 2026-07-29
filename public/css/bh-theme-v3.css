@@ -13,15 +13,23 @@
    TOKENS LIGHT
 ───────────────────────────────────────────────────────────── */
 html[data-theme-v3="1"] {
-  --jade:           #1A7A5E;
-  --jade-light:     #2AAE86;
-  --jade-glow:      rgba(26,122,94,.12);
-  --jade-subtle:    rgba(26,122,94,.07);
-  --obsidian:       #0D1117;
+  /* Palette « Maison Vert » — voir css/bh-brand.css.
+     Le jade sert d'accent d'interface (boutons, liens, etats actifs) ;
+     le vert de marque #0E3B2E est reserve au logo et aux aplats pleins :
+     il est trop sombre pour rester lisible sur un element de 12 px. */
+  --jade:           #1E6E52;
+  --jade-light:     #2E8A69;
+  --jade-glow:      rgba(30,110,82,.12);
+  --jade-subtle:    rgba(30,110,82,.07);
+  --marque:         #0E3B2E;
+  --ivoire:         #F2EADA;
+  --obsidian:       #0E3B2E;
   --slate:          #1C2333;
-  --cream:          #FAF8F5;
-  --cream-warm:     #F5F0E8;
-  --cream-deep:     #EDE8DF;
+  /* Cremes ramenees vers des gris chauds neutres : les anciens beiges
+     juraient avec les gris froids herites de Tailwind ailleurs dans l'app. */
+  --cream:          #FBFBFA;
+  --cream-warm:     #F7F7F5;
+  --cream-deep:     #EAE9E5;
   --sand:           #C8B89A;
   --text-1:         #0D1117;
   --text-2:         #3D4A5C;
@@ -808,7 +816,7 @@ html[data-theme-v3="1"] .page-content {
   /* Couleurs par KPI via ID */
   html[data-theme-v3="1"] #kpiPropertiesCard .kpi-pill {
     background: rgba(26,122,94,.15) !important;
-    color: #1A7A5E !important;
+    color: var(--jade) !important;
   }
   html[data-theme-v3="1"] #kpiTodayMovesCard .kpi-pill {
     background: rgba(59,130,246,.12) !important;
@@ -828,16 +836,16 @@ html[data-theme-v3="1"] .page-content {
   }
   html[data-theme-v3="1"] #kpiDepositsCard .kpi-pill {
     background: rgba(26,122,94,.12) !important;
-    color: #1A7A5E !important;
+    color: var(--jade) !important;
   }
   html[data-theme-v3="1"] #kpiChecklistsCard .kpi-pill {
     background: rgba(26,122,94,.15) !important;
-    color: #1A7A5E !important;
+    color: var(--jade) !important;
   }
 
   html[data-theme-v3="1"] #kpiCaCard .kpi-pill {
     background: rgba(26,122,94,.15) !important;
-    color: #1A7A5E !important;
+    color: var(--jade) !important;
   }
 
   /* Header dashboard compact */
@@ -1516,7 +1524,7 @@ html[data-theme-v3="1"] .booking-block:hover { filter: brightness(1.08) !importa
 
 html[data-theme-v3="1"] .booking-block.airbnb  { background: linear-gradient(90deg,#FF5A5F,#E84C50) !important; }
 html[data-theme-v3="1"] .booking-block.booking { background: linear-gradient(90deg,#003580,#00224F) !important; }
-html[data-theme-v3="1"] .booking-block.direct  { background: linear-gradient(90deg,#1A7A5E,#0F5C45) !important; }
+html[data-theme-v3="1"] .booking-block.direct  { background: linear-gradient(90deg,var(--jade),#0F5C45) !important; }
 html[data-theme-v3="1"] .booking-block.vrbo    { background: linear-gradient(90deg,#1569C7,#0E4C99) !important; }
 html[data-theme-v3="1"] .booking-block.expedia { background: linear-gradient(90deg,#FFC72C,#E6AD00) !important; color: #333 !important; }
 html[data-theme-v3="1"] .booking-block.hotels  { background: linear-gradient(90deg,#D32F2F,#B71C1C) !important; }
@@ -1625,7 +1633,7 @@ html[data-theme-v3="1"][data-theme="dark"] .sidebar .user-profile:hover { backgr
 html[data-theme-v3="1"][data-theme="dark"] .sidebar .nav-section-title { color: rgba(255,255,255,.25) !important; }
 html[data-theme-v3="1"][data-theme="dark"] .sidebar .user-name,
 html[data-theme-v3="1"][data-theme="dark"] .sidebar #sidebarUserName { color: var(--text-1) !important; }
-/* Sidebar footer reste clair même en dark — fond #F5F0E8 */
+/* Sidebar footer reste clair même en dark — fond --cream-warm */
 html[data-theme-v3="1"] .sidebar .sidebar-footer .user-name,
 html[data-theme-v3="1"] .sidebar .sidebar-footer #sidebarUserName { color: #0D1117 !important; font-weight: 600 !important; }
 html[data-theme-v3="1"] .sidebar .sidebar-footer .user-email,
@@ -1837,7 +1845,7 @@ html[data-theme-v3="1"] .btn-primary {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.18), var(--shadow-jade-v3) !important;
 }
 html[data-theme-v3="1"] .btn-primary:hover {
-  background: linear-gradient(180deg, #26A37E 0%, var(--jade-light) 55%, #1A7A5E 100%) !important;
+  background: linear-gradient(180deg, #26A37E 0%, var(--jade-light) 55%, var(--jade) 100%) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 10px 32px rgba(26,122,94,.3) !important;
 }
 html[data-theme-v3="1"] .btn-ghost:active,
@@ -1990,7 +1998,7 @@ html[data-theme-v3="1"] .day-header .day-number {
   line-height: 1 !important;
   font-variant-numeric: lining-nums !important;
 }
-html[data-theme-v3="1"] .day-header.today .day-number { color: #1A7A5E !important; }
+html[data-theme-v3="1"] .day-header.today .day-number { color: var(--jade) !important; }
 
 /* ── 6. Barres de réservation : texte plus lisible, pastille plateforme cerclée ── */
 html[data-theme-v3="1"] .booking-block {

@@ -6,23 +6,27 @@
     "SplashScreen": {
       "launchShowDuration": 2000,
       "launchAutoHide": true,
-      "backgroundColor": "#FFFFFF",
+      "backgroundColor": "#0E3B2E",
       "androidSplashResourceName": "splash",
       "androidScaleType": "CENTER",
       "showSpinner": false,
       "iosSpinnerStyle": "small",
-      "spinnerColor": "#10B981"
+      "spinnerColor": "#F2EADA"
     },
     "StatusBar": {
-      "style": "dark",
-      "backgroundColor": "#FFFFFF",
+      "style": "light",
+      "backgroundColor": "#0E3B2E",
       "overlaysWebView": false
     },
     "Haptics": {
       "enabled": true
     },
     "FirebaseMessaging": {
-      "presentationOptions": ["badge", "sound", "alert"]
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
     },
     "Keyboard": {
       "resize": "body",
@@ -30,7 +34,7 @@
     }
   },
   "ios": {
-    "backgroundColor": "#FFFFFF",
+    "backgroundColor": "#FBFBFA",
     "contentInset": "automatic",
     "allowsLinkPreview": false
   },

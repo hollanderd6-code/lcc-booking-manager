@@ -6,26 +6,34 @@
     "SplashScreen": {
       "launchShowDuration": 2000,
       "launchAutoHide": true,
-      "backgroundColor": "#5BC6A3",
+      "backgroundColor": "#0E3B2E",
       "androidSplashResourceName": "splash",
       "androidScaleType": "CENTER",
-      "showSpinner": false
+      "showSpinner": false,
+      "spinnerColor": "#F2EADA"
     },
     "StatusBar": {
       "style": "light",
-      "backgroundColor": "#5BC6A3",
+      "backgroundColor": "#0E3B2E",
       "overlaysWebView": false
     },
     "Haptics": {
       "enabled": true
     },
     "PushNotifications": {
-      "presentationOptions": ["badge", "sound", "alert"]
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
     }
   },
   "android": {
     "allowMixedContent": true,
     "captureInput": true,
     "webContentsDebuggingEnabled": true
+  },
+  "ios": {
+    "backgroundColor": "#FBFBFA"
   }
 }

@@ -1,0 +1,79 @@
+/* ============================================================================
+   BH-BRAND — Palette « Maison Vert »
+   A charger APRES bh-theme-v3.css et AVANT les calques bh-lux-*.
+   Ne redefinit que des couleurs : aucune regle de mise en page.
+   ============================================================================ */
+
+:root,
+html.bh-lux {
+  /* Marque — reserve au logo, aux fonds pleins et aux en-tetes */
+  --bh-vert:            #0E3B2E;   /* vert bouteille */
+  --bh-vert-fonce:      #0A2C22;
+  --bh-ivoire:          #F2EADA;   /* texte sur fond de marque */
+  --bh-filet:           rgba(242,234,218,.45);
+
+  /* Interface — le vert d'action, plus clair pour rester lisible en petit */
+  --bh-action:          #1E6E52;
+  --bh-action-survol:   #164F3B;
+  --bh-action-doux:     #E8F0EC;
+  --bh-action-filet:    rgba(30,110,82,.24);
+
+  /* Neutres chauds */
+  --bh-fond:            #FBFBFA;
+  --bh-panneau:         #FFFFFF;
+  --bh-cote:            #F7F7F5;
+  --bh-encre:           #20221F;
+  --bh-t2:              #5A5A54;
+  --bh-t3:              #8B8B84;
+  --bh-t4:              #B4B4AD;
+  --bh-ligne:           #EAE9E5;
+  --bh-ligne-2:         #F1F0EC;
+
+  /* Sous-marque : BHGuest garde le terracotta, il ne bouge pas */
+  --bh-guest:           #B4470F;
+  --bh-guest-doux:      #F7EDE6;
+}
+
+/* ── Remplacement de l'ancien jade #1A7A5E ────────────────────────────────
+   L'ancien vert etait utilise a la fois pour la marque et pour l'interface.
+   On separe les deux : le logo prend le vert bouteille, l'interface garde un
+   vert plus clair, seul lisible sur de petits elements. */
+html.bh-lux[data-theme-v3="1"] {
+  --primary-color: var(--bh-action);
+  --primary-dark:  var(--bh-action-survol);
+  --lux-green:      var(--bh-action);
+  --lux-green-deep: var(--bh-action-survol);
+  --lux-green-soft: var(--bh-action-doux);
+  --lux-green-line: var(--bh-action-filet);
+  --lux-ink:  var(--bh-encre);
+  --lux-bg:   var(--bh-fond);
+  --lux-panel:var(--bh-panneau);
+  --lux-side: var(--bh-cote);
+  --lux-line: var(--bh-ligne);
+  --lux-line2:var(--bh-ligne-2);
+}
+
+html.bh-lux[data-theme-v3="1"] [style*="#1A7A5E"] { color: var(--bh-action) !important; }
+html.bh-lux[data-theme-v3="1"] [style*="background:#1A7A5E"],
+html.bh-lux[data-theme-v3="1"] [style*="background: #1A7A5E"],
+html.bh-lux[data-theme-v3="1"] [style*="linear-gradient(135deg,#1A7A5E"],
+html.bh-lux[data-theme-v3="1"] [style*="linear-gradient(135deg, #1A7A5E"] {
+  background: var(--bh-action) !important;
+  background-image: none !important;
+}
+
+/* ── Zones de marque : en-tete, blocs sombres, carte CA ───────────────────
+   Les aplats noirs deviennent vert bouteille : l'ecran gagne une couleur
+   au lieu d'en avoir deux (un noir + un vert sans rapport). */
+html.bh-lux[data-theme-v3="1"] .calendar-header,
+html.bh-lux[data-theme-v3="1"] .bh2-ca {
+  background: var(--bh-vert) !important;
+}
+html.bh-lux[data-theme-v3="1"] .calendar-header .period-nav-btn.active {
+  background: var(--bh-action) !important;
+}
+html.bh-lux[data-theme-v3="1"] .bh2-ca-lbl { color: rgba(242,234,218,.55) !important; }
+html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !important; }
+
+/* ── Barre de statut mobile / theme du navigateur ─────────────────────────
+   A completer par <meta name="theme-color" content="#0E3B2E"> dans le head. */

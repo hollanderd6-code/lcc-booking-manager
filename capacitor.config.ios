@@ -6,23 +6,28 @@
     "SplashScreen": {
       "launchShowDuration": 0,
       "launchAutoHide": true,
-      "backgroundColor": "#FFFFFF",
-      "showSpinner": false
+      "backgroundColor": "#0E3B2E",
+      "showSpinner": false,
+      "spinnerColor": "#F2EADA"
     },
     "StatusBar": {
-      "style": "dark",
-      "backgroundColor": "#FFFFFF",
+      "style": "light",
+      "backgroundColor": "#0E3B2E",
       "overlaysWebView": false
     },
     "Haptics": {
       "enabled": true
     },
     "PushNotifications": {
-      "presentationOptions": ["badge", "sound", "alert"]
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
     }
   },
   "ios": {
-    "backgroundColor": "#FFFFFF",
+    "backgroundColor": "#FBFBFA",
     "contentInset": "automatic"
   }
 }

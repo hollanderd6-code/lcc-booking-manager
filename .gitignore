@@ -1,2 +1,32 @@
 node_modules/
 .DS_Store
+
+# ── Artefacts de build iOS / Capacitor ──
+ios/App/CapApp-SPM/.build/
+guest-app/ios/App/CapApp-SPM/.build/
+ios/App/build/
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# ── Android ──
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+
+# ── Node ──
+node_modules/
+guest-app/node_modules/
+boostinghost-poc/node_modules/
+
+# ── macOS ──
+.DS_Store
+**/.DS_Store
+
+# ── Environnement ──
+.env
+.env.local

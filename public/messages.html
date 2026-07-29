@@ -8,12 +8,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
-<link href="/css/style.css?v=11" rel="stylesheet"/>
-<link href="/css/bh-shared.css?v=1" rel="stylesheet"/>
-<link href="/css/bh-theme-v3.css?v=12" rel="stylesheet"/><link href="/css/bh-messages-lux.css?v=1" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-lux.css?v=9">
-<link rel="stylesheet" href="/css/bh-bottom-bar.css?v=1">
-<link rel="stylesheet" href="/css/bh-badges.css?v=1">
+<link href="/css/style.css?v=9d18f851" rel="stylesheet"/>
+<link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css?v=c17d3c2f" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/bh-brand.css?v=333fff82"><link href="/css/bh-messages-lux.css?v=38cf4f8e" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/bh-lux.css?v=1a3d3ed7">
+<link rel="stylesheet" href="/css/bh-bottom-bar.css?v=e8b22340">
+<link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
 <style>
 /* ============================================================
    DARK BAR + STICKY HEADER (identical to app.html)
@@ -1022,14 +1023,21 @@ html[data-theme-v3="1"] .app-container {
   }
 }
 </style>
-<link rel="stylesheet" href="/css/bh-v3-mobile.css?v=10">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=10">
-<link rel="stylesheet" href="/css/bh-core.css?v=3">
+<link rel="stylesheet" href="/css/bh-v3-mobile.css?v=b181131f">
+<link rel="stylesheet" href="/css/mobile-native-styles.css?v=ec508074">
+<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
+
+  <!-- Marque Boostinghost — genere par outils/marque.js -->
+  <link rel="icon" href="/img/brand/web/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/img/brand/web/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png">
+  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
+  <meta name="theme-color" content="#0E3B2E">
 </head>
 
 <body data-page="messages" data-kicker="Communication" data-title="Messages" data-subtitle="">
 
-<script src="/js/auth-fetch.js"></script>
+<script src="/js/auth-fetch.js?v=cd78753d"></script>
 
 <script>
 // ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
@@ -1720,7 +1728,8 @@ console.log('✅ Fonctions helpers messages chargées');
 function isMobileDevice() { return false; }
 window.isMobileDevice = function() { return false; };
 </script>
-<script src="/js/chat-owner.js"></script>
+<script src="/js/bh-guest-mark.js?v=535077b0"></script>
+<script src="/js/chat-owner.js?v=82ae6831"></script>
 <!-- Auth + User -->
 <script>
     (async function() {
@@ -2196,13 +2205,13 @@ function closeBookingMessageModal() {
 })();
 </script>
 
-<script src="/js/bh-layout.js?v=12"></script>
-<script src="/js/bh-host-questions.js?v=1"></script>
-<script src="/js/logout-fix.js"></script>
-<script src="/js/mobile-native-experience.js?v=12"></script>
-<script src="/js/mobile-tabs-handler.js?v=12"></script>
+<script src="/js/bh-layout.js?v=33468b0e"></script>
+<script src="/js/bh-host-questions.js?v=673b138b"></script>
+<script src="/js/logout-fix.js?v=cb4a6950"></script>
+<script src="/js/mobile-native-experience.js?v=2594b603"></script>
+<script src="/js/mobile-tabs-handler.js?v=e901dd8d"></script>
 <!-- chat-emoji-photo removed - emoji bar not wanted -->
-<script src="/js/messages-badge-desktop-mobile.js"></script> 
+<script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script> 
 <script>
 // Fix scroll iOS Capacitor
 if (window.Capacitor && window.Capacitor.isNativePlatform()) {
@@ -3994,12 +4003,12 @@ function showBHToast(msg, type = 'info') {
     </div>
   </div>
 </div>
-<script src="/js/bh-auto-refresh.js?v=1"></script>
-<script src="/js/bh-haptics.js?v=1"></script>
-<script src="/js/bh-page-transitions.js?v=1"></script>
-<script src="/js/bh-global-search.js?v=5"></script>
+<script src="/js/bh-auto-refresh.js?v=a3ac1b53"></script>
+<script src="/js/bh-haptics.js?v=41ebfc2f"></script>
+<script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
+<script src="/js/bh-global-search.js?v=610ed2a6"></script>
 <script src="/js/bh-polish.js?v=1"></script>
-<script src="/js/bh-pull-refresh.js?v=1"></script>
+<script src="/js/bh-pull-refresh.js?v=5bb91f71"></script>
 </body>
      ============================================================ -->
 <style>
@@ -5483,7 +5492,7 @@ function renderLogs(logs) {
 }
 
 </script>
-<script src="/js/bh-onboarding-pages.js"></script>
+<script src="/js/bh-onboarding-pages.js?v=226650ec"></script>
 <script>
 // ============================================================
 // 📱 SMS — Fonctions onglet SMS
@@ -6191,54 +6200,7 @@ document.addEventListener('click', function(e) {
      La liste est produite par chat-owner.js : la plateforme y arrive parfois
      libellee « Boostinghost Guest », non reconnue, donc rendue en vert avec
      un simple « B ». On la normalise apres rendu. -->
-<script id="bh-guest-mark">
-window.bhGuestMark = window.bhGuestMark || function (size, color, ink) {
-  size = size || 16; color = color || '#B4470F'; ink = ink || '#fff';
-  var h = Math.round(size * 0.845);
-  return '<svg viewBox="144 241 642 542" width="' + size + '" height="' + h +
-    '" style="display:block;flex-shrink:0" aria-label="BHGuest" role="img">' +
-      '<path d="M150 512 L322 330 A265 265 0 1 1 322 694 Z" fill="' + color + '"/>' +
-      '<path d="M418 350 h74 v20 h-26 v240 h-48 Z" fill="' + ink + '"/>' +
-      '<ellipse cx="524" cy="522" rx="70" ry="76" fill="none" stroke="' + ink + '" stroke-width="60"/>' +
-      '<ellipse cx="524" cy="522" rx="40" ry="46" fill="' + color + '"/>' +
-    '</svg>';
-};
-(function () {
-  var TERRA = '#B4470F';
-  function estBhGuest(txt) {
-    var t = (txt || '').toLowerCase().trim();
-    return t.indexOf('boostinghost') !== -1 || t.indexOf('bhguest') !== -1 || t === 'guest_app';
-  }
-  function normaliser(racine) {
-    var noeuds = (racine || document).querySelectorAll(
-      '#conversationsList .conversation-item span, #conversationsList .conversation-item div'
-    );
-    Array.prototype.forEach.call(noeuds, function (el) {
-      if (el.dataset.bhgDone) return;
-      if (el.children.length > 1) return;
-      if (!estBhGuest(el.textContent)) return;
-      el.dataset.bhgDone = '1';
-      el.style.setProperty('color', TERRA, 'important');
-      el.style.setProperty('display', 'inline-flex', 'important');
-      el.style.setProperty('align-items', 'center', 'important');
-      el.style.setProperty('gap', '5px', 'important');
-      el.textContent = 'BHGuest';
-      el.insertAdjacentHTML('afterbegin', window.bhGuestMark(12, TERRA));
-      var prec = el.previousElementSibling;
-      if (prec && prec.textContent.trim() === 'B') prec.style.display = 'none';
-    });
-  }
-  function demarrer() {
-    normaliser(document);
-    var liste = document.getElementById('conversationsList');
-    if (!liste) return;
-    new MutationObserver(function () { normaliser(liste); })
-      .observe(liste, { childList: true, subtree: true });
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer);
-  else demarrer();
-})();
-</script>
+
 
 </body>
 </html>
