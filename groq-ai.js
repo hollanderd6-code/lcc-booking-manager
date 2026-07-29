@@ -286,7 +286,11 @@ function buildSystemPrompt(ctx, temporalCtx, fewShotExamples) {
       .join('\n\n');
     fewShotBlock = `\n════════════════════════════════════════
 EXEMPLES DE RÉPONSES DE L'HÔTE
-(Apprends son style, ses formulations et les infos spécifiques qu'il donne)
+(Apprends son STYLE et ses formulations — PAS le contenu.
+ ⚠️ Ces exemples viennent d'autres séjours, à des phases différentes.
+ Ne recopie JAMAIS une phrase liée à une phase (« vous voilà arrivé », « bon retour »,
+ « bon séjour qui commence »…) sans vérifier le CONTEXTE TEMPOREL ci-dessus.
+ Si l'arrivée n'a pas encore eu lieu, ne parle jamais du voyageur comme s'il était sur place.)
 ════════════════════════════════════════
 ${examples}\n`;
   }
