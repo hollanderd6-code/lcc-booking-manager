@@ -62,8 +62,8 @@ if (typeof window.renderAgencyToggle !== 'function') {
 /* Verrou complet (monogramme + mot-symbole + baseline) pour la sidebar
    et l'en-tete mobile. Le texte fait partie du SVG : il est vectorise,
    donc identique partout sans dependre d'une police installee. */
-const LOGO_SIDEBAR = `<img src="/img/brand/verrou/verrou-sidebar.svg" alt="Boostinghost — Smart Property Manager" width="162" height="38" style="display:block;flex-shrink:0;">`;
-const LOGO_MOBILE  = `<img src="/img/brand/verrou/verrou-mobile.svg" alt="Boostinghost — Smart Property Manager" width="128" height="30" style="display:block;flex-shrink:0;">`;
+const LOGO_SIDEBAR = `<img class="bh-verrou" src="/img/brand/verrou/verrou-sidebar.svg" alt="Boostinghost — Smart Property Manager" width="162" height="38" style="display:block;flex-shrink:0;">`;
+const LOGO_MOBILE  = `<img class="bh-verrou" src="/img/brand/verrou/verrou-mobile.svg" alt="Boostinghost — Smart Property Manager" width="128" height="30" style="display:block;flex-shrink:0;">`;
 const LOGO_MONO    = `<img src="/img/brand/web/mono-sidebar.svg" alt="Boostinghost" width="34" height="34" style="display:block;flex-shrink:0;">`;
 
 function getSidebarHTML() {
@@ -1776,7 +1776,9 @@ var _bhNativeConfirm = window.confirm;
     // pour que le logo soit cohérent partout. Cible large : .mobile-header et .mobile-logo.
     s.textContent =
       '.mobile-header .mobile-logo,.mobile-logo{gap:6px!important;min-width:0!important;flex:1 1 auto!important;overflow:hidden!important;}' +
-      '.mobile-header .mobile-logo img,.mobile-logo img{width:30px!important;height:30px!important;min-width:30px!important;border-radius:8px!important;flex-shrink:0!important;}' +
+      '.mobile-header .mobile-logo img:not(.bh-verrou),.mobile-logo img:not(.bh-verrou){width:30px!important;height:30px!important;min-width:30px!important;border-radius:8px!important;flex-shrink:0!important;}' +
+      // Le verrou n'est pas carre : largeur libre, hauteur imposee, aucun recadrage.
+      '.mobile-logo img.bh-verrou{width:auto!important;height:30px!important;min-width:0!important;max-width:100%!important;border-radius:0!important;object-fit:contain!important;flex-shrink:1!important;}' +
       // Texte en colonne : titre au-dessus, sous-titre dessous, calés à la même largeur
       '.mobile-header .mobile-logo-text,.mobile-logo-text{display:inline-flex!important;flex-direction:column!important;align-items:stretch!important;min-width:0!important;overflow:hidden!important;}' +
       '.mobile-header .mobile-logo-title,.mobile-logo-title{font-size:15px!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}' +

@@ -52,7 +52,7 @@
     text-decoration: none !important;
   }
 
-  html[data-theme-v3="1"] .mobile-logo img,
+  html[data-theme-v3="1"] .mobile-logo img:not(.bh-verrou),
   html[data-theme-v3="1"] .mobile-header .bh-logo {
     width: 36px !important;
     height: 36px !important;

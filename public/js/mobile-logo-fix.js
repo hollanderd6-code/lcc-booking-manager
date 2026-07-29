@@ -59,7 +59,19 @@
       
       // Forcer l'affichage de l'image
       if (logoImg) {
-        logoImg.style.cssText = `
+        // Le verrou (monogramme + mot-symbole) n'est pas carre : lui imposer
+        // 32x32 avec object-fit:cover recadrait le milieu du mot-symbole.
+        const estVerrou = logoImg.classList.contains('bh-verrou');
+        logoImg.style.cssText = estVerrou ? `
+          display: block !important;
+          width: auto !important;
+          height: 30px !important;
+          max-width: 100% !important;
+          border-radius: 0 !important;
+          object-fit: contain !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+        ` : `
           display: block !important;
           width: 32px !important;
           height: 32px !important;
