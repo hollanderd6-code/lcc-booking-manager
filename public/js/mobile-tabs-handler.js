@@ -18,6 +18,7 @@
     messages: '/messages.html',
     'smart-locks': '/smart-locks.html',
     properties: '/settings.html',
+    cleaning: '/cleaning.html',
     more: 'bottomsheet'
   };
 
@@ -121,7 +122,7 @@
 
     if (canSeePage('welcome'))  buttons += item('welcome', "Livrets d'accueil", "window.location.href='/welcome.html'");
     if (canSeePage('contrat'))  buttons += item('contrat', 'Contrats', "window.location.href='/contrat.html'");
-    if (canSeePage('cleaning')) buttons += item('cleaning', 'Ménages', "window.location.href='/cleaning.html'");
+    if (canSeePage('settings')) buttons += item('properties', 'Mes logements', "window.location.href='/settings.html'");
 
     buttons += hr;
 
@@ -172,7 +173,6 @@
   const PLUS_PAGES = [
     'smart-locks',
     'settings-account', 
-    'cleaning',
     'deposits',
     'factures',
     'clients',
@@ -185,9 +185,9 @@
   ];
 
   // ✅ Vérifier data-page="settings" en priorité
-  if (dataPage === 'settings') {
-    // settings.html (Mes logements) → Onglet Logements
-    activeTab = 'properties';
+  if (dataPage === 'cleaning' || currentPath.includes('cleaning')) {
+    // cleaning.html → onglet Ménage (promu dans la barre)
+    activeTab = 'cleaning';
   } else if (dataPage && PLUS_PAGES.includes(dataPage)) {
     // Pages du menu Plus → Onglet Plus
     activeTab = 'more';
@@ -412,7 +412,7 @@
         const t = tab.dataset.tab;
         if (t === 'dashboard' && !canSeePage('dashboard')) tab.style.display = 'none';
         if (t === 'messages'  && !canSeePage('messages'))  tab.style.display = 'none';
-        if (t === 'properties'&& !canSeePage('settings'))  tab.style.display = 'none';
+        if (t === 'cleaning'  && !canSeePage('cleaning'))  tab.style.display = 'none';
         if (t === 'calendar'  && !canSeePage('calendar'))  tab.style.display = 'none';
       });
     }, 150);

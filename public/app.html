@@ -6065,13 +6065,9 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       let color = '#000000'; // Noir par défaut
       
       switch(type) {
-        case 'properties': // Logements actifs — noir desktop uniquement, CSS gère mobile
-          if (window.innerWidth > 768) {
-            element.style.setProperty('color', '#1e293b', 'important');
-          } else {
-            element.style.removeProperty('color');
-          }
-          element.style.fontWeight = '700';
+        case 'properties': // Logements actifs — teinte laissee au calque bh-lux
+          element.style.removeProperty('color');
+          element.style.removeProperty('font-weight');
           return;
           
         case 'moves': // Check-in / Check-out
@@ -6825,8 +6821,8 @@ cleaningCard.addEventListener('touchstart', handler, { passive: true });
     var subEl = document.getElementById('kpiTopRisksSub');
     if (valEl) {
       valEl.textContent = withNotes.length;
-      valEl.style.color = withNotes.length > 0 ? '#C2410C' : '#1A7A5E';
-      valEl.style.fontWeight = '700';
+      valEl.style.removeProperty('color');
+      valEl.style.removeProperty('font-weight');
     }
     if (subEl) {
       subEl.textContent = withNotes.length === 0
@@ -13430,7 +13426,7 @@ if (window.Capacitor) {
 @media (min-width: 1367px) {
   html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-value,
   html[data-theme-v3="1"] #kpiPropertiesCard .kpi-value,
-  html[data-theme-v3="1"] #kpiPropertiesValue { color: #1e293b !important; }
+  html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-value { color: #1e293b !important; }
 
   html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub--green,
   html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub--green { color: #1A7A5E !important; font-weight: 600 !important; }
@@ -16691,17 +16687,17 @@ html.bh-lux #kpiChecklistsValue,
 html.bh-lux #kpiTopRisksValue{
   font-family:'DM Sans',system-ui,sans-serif !important;
   font-weight:600 !important;
-  font-size:24px !important;
+  font-size:27px !important;
   line-height:1.1 !important;
   color:#1D1D1B !important;
-  letter-spacing:-.015em !important;
+  letter-spacing:-.02em !important;
   font-variant-numeric:tabular-nums !important;
 }
 html.bh-lux .bh2-stats.bh2-stats-inside .bh2-num{
   order:2 !important;
   font-family:'DM Sans',system-ui,sans-serif !important;
   font-weight:600 !important;
-  font-size:24px !important;
+  font-size:27px !important;
   line-height:1.1 !important;
   color:#1D1D1B !important;
   margin:0 !important;
@@ -16712,7 +16708,9 @@ html.bh-lux .bh2-stats.bh2-stats-inside .bh2-num{
   html.bh-lux .bh2-stats.bh2-stats-inside > .bh2-stat{ padding:11px 12px 11px 0 !important; }
   html.bh-lux .bh2-stats.bh2-stats-inside > .bh2-stat:nth-child(2n){ padding-left:12px !important; }
   html.bh-lux .bh2-stats.bh2-stats-inside .bh2-lbl{ font-size:10px !important; }
-  html.bh-lux .bh2-stats.bh2-stats-inside .bh2-num{ font-size:21px !important; }
+  html.bh-lux .bh2-stats.bh2-stats-inside .bh2-num,
+  html.bh-lux #kpiPropertiesValue, html.bh-lux #kpiDepositsValue,
+  html.bh-lux #kpiChecklistsValue, html.bh-lux #kpiTopRisksValue{ font-size:23px !important; }
 }
 </style>
 

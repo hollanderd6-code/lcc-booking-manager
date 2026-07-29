@@ -148,7 +148,7 @@
         { id: 'dashboard',   icon: 'fa-home',       label: 'Accueil',    perm: 'can_view_reservations' },
         { id: 'calendar',    icon: 'fa-calendar-check', label: 'Réservations', perm: 'can_view_reservations' },
         { id: 'messages',    icon: 'fa-comment',    label: 'Messages',   perm: 'can_view_messages', badge: 0 },
-        { id: 'properties',  icon: 'fa-building',   label: 'Logements',  perm: 'can_view_properties' },
+        { id: 'cleaning',    icon: 'fa-broom',      label: 'Ménage',     perm: 'can_view_cleaning' },
         { id: 'more',        icon: 'fa-ellipsis-h', label: 'Plus',       perm: null }
       ];
 
@@ -162,7 +162,7 @@
       if (!_activeTabId) {
         const _p = window.location.pathname;
         const _dp = document.body.getAttribute('data-page');
-        if (_dp === 'settings' || _p.includes('settings')) _activeTabId = 'properties';
+        if (_p.includes('cleaning')) _activeTabId = 'cleaning';
         else if (_p.includes('messages')) _activeTabId = 'messages';
         else if (_p.includes('reservations')) _activeTabId = 'calendar';
         else if (_p.includes('app')) _activeTabId = 'dashboard';
@@ -187,7 +187,7 @@
       var RACCOURCIS = {
         calendar: [{ label: 'Nouvelle réservation', icon: 'fa-plus', go: function(){ location.href='/reservations.html?nouvelle=1'; } }],
         messages: [{ label: 'Message à tous', icon: 'fa-bullhorn', go: function(){ location.href='/messages.html?broadcast=1'; } }],
-        properties: [{ label: 'Ajouter un logement', icon: 'fa-plus', go: function(){ location.href='/settings.html?ajouter=1'; } }]
+        cleaning: [{ label: 'Voir les checklists', icon: 'fa-clipboard-check', go: function(){ location.href='/cleaning.html?tab=checklists'; } }]
       };
       document.querySelectorAll('.tab-btn').forEach(btn => {
         var tabId = btn.dataset.tab;

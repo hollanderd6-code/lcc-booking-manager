@@ -201,3 +201,21 @@ body[data-page="smart_locks"] .bottom-sheet .btn[onclick*="smart-locks"] {
   box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
   font-weight: 700 !important;
 }
+
+
+/* Mes logements — desormais dans le menu Plus (l'onglet Menage l'a remplace
+   dans la barre du bas) */
+body[data-page="settings"] .bottom-sheet .btn[onclick*="settings.html"],
+body[data-page="settings"] [class*="sheet"] .btn[onclick*="settings.html"] {
+  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  font-weight: 700 !important;
+}
+body[data-page="settings"] .bottom-sheet .btn[onclick*="settings.html"]::before {
+  content: '\2713';
+  margin-right: 8px;
+  font-weight: 700;
+  opacity: .8;
+}
