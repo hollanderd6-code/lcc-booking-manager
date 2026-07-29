@@ -235,14 +235,18 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo {
   background: transparent !important;
 }
 
-/* Masquer l'image ronde verte */
+/* Monogramme de la sidebar.
+   border-radius:50% recadrait en cercle un cartouche carre : les angles du
+   filet interieur etaient rognes. Le monogramme est desormais un carre a
+   coins adoucis, comme sur l'en-tete mobile et l'icone d'application.
+   object-fit:contain (et non cover) : le trace ne doit jamais etre rogne. */
 html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
   display: inline-block !important;
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px !important;
-  border-radius: 50% !important;
-  object-fit: cover !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  border-radius: 9px !important;
+  object-fit: contain !important;
   flex-shrink: 0 !important;
 }
 

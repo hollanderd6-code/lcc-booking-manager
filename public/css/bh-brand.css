@@ -138,3 +138,22 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
 /* Fond vert : on inverse */
 .sidebar-logo.sur-vert .bh-mot { color: #F2EADA; }
 .sidebar-logo.sur-vert .bh-baseline { color: rgba(242,234,218,.62); }
+
+
+/* ============================================================================
+   MONOGRAMME — carre a coins adoucis, jamais un cercle
+
+   bh-theme-v3.css imposait border-radius:50% + object-fit:cover sur l'image
+   de la sidebar : le cartouche carre etait recadre en cercle et les angles du
+   filet interieur disparaissaient. Corrige a la source ; la regle ci-dessous
+   est un filet de securite au cas ou une autre feuille reimposerait le cercle.
+   ============================================================================ */
+.sidebar-logo > img,
+.sidebar-header .sidebar-logo > img,
+html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
+  border-radius: 9px !important;
+  object-fit: contain !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+}
