@@ -364,10 +364,23 @@
       var el = sheet.querySelector('.bh-more-item[data-menu-key="' + activeKey + '"]');
       if (el) {
         var col = IC_COLORS[activeKey] || '#1A7A5E';
-        el.style.background = col + '1A'; // ~10% opacity
-        el.style.borderColor = 'transparent';
+        // Fond teinte de la couleur de l'entree + liseré : l'icone coloree
+        // reste lisible, contrairement a un aplat vert uniforme.
+        el.style.setProperty('background', col + '16', 'important');
+        el.style.setProperty('border', '1px solid ' + col + '4D', 'important');
+        el.style.setProperty('box-shadow', 'inset 3px 0 0 ' + col, 'important');
         var label = el.querySelector('span');
-        if (label) { label.style.color = col; label.style.fontWeight = '700'; }
+        if (label) {
+          label.style.setProperty('color', col, 'important');
+          label.style.fontWeight = '700';
+        }
+        // Pastille discrete en fin de ligne plutot qu'une coche devant le texte
+        if (!el.querySelector('.bh-more-dot')) {
+          var dot = document.createElement('span');
+          dot.className = 'bh-more-dot';
+          dot.style.cssText = 'width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-left:auto;background:' + col + ';';
+          el.appendChild(dot);
+        }
       }
     }, 50);
   }
