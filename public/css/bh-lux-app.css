@@ -367,3 +367,46 @@ html.bh-lux[data-theme-v3="1"] .nav-badge-beta{
 }
 html.bh-lux[data-theme-v3="1"] .nav-item[data-page="pricing"] i{ color:#9A7420 !important; }
 html.bh-lux[data-theme-v3="1"] .nav-section{ margin-bottom:14px !important; }
+
+
+/* ===========================================================================
+   10. PIED DE SIDEBAR — le beige (#F5F0E8 / #EDE8DF) est repose par
+   bh-theme-v3.css apres bh-layout.js : on le neutralise ici.
+   =========================================================================== */
+html.bh-lux[data-theme-v3="1"] .sidebar-footer,
+html.bh-lux[data-theme-v3="1"] .sidebar > div:last-child,
+html.bh-lux[data-theme-v3="1"] #bhSidebar > div:last-child{
+  background:var(--lux-side) !important;
+  border-top:1px solid var(--lux-line) !important;
+}
+html.bh-lux[data-theme-v3="1"] .sidebar-footer > div{
+  background:transparent !important;
+}
+html.bh-lux[data-theme-v3="1"] #logoutBtn{
+  background:var(--lux-panel) !important;
+  border:1px solid var(--lux-line) !important;
+  color:var(--lux-t2) !important;
+}
+html.bh-lux[data-theme-v3="1"] #logoutBtn:hover{
+  border-color:var(--lux-green) !important; color:var(--lux-green) !important;
+}
+/* Badge a zero : un compteur vide ne merite pas une pastille rouge */
+html.bh-lux[data-theme-v3="1"] .nav-item .badge:empty{ display:none !important; }
+
+/* ===========================================================================
+   11. CALENDRIER — prix trop pales, correction du reglage precedent
+   Le gris --lux-t4 a 75 % d'opacite etait illisible. On remonte d'un cran :
+   semaine lisible mais discrete, week-end nettement marque.
+   =========================================================================== */
+html.bh-lux[data-theme-v3="1"] .cell-price{
+  color:var(--lux-t2) !important;
+  font-weight:500 !important;
+  font-size:12px !important;
+  opacity:1 !important;
+}
+html.bh-lux[data-theme-v3="1"] .calendar-cell:hover .cell-price{ color:var(--lux-ink) !important; }
+html.bh-lux[data-theme-v3="1"] .cell-price-override,
+html.bh-lux[data-theme-v3="1"] .cell-price.weekend,
+html.bh-lux[data-theme-v3="1"] .calendar-cell.weekend .cell-price{
+  color:#8A6516 !important; font-weight:700 !important; opacity:1 !important;
+}

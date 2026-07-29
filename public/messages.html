@@ -796,16 +796,16 @@ html[data-theme-v3="1"] .emoji-panel {
   align-items: center;
   gap: 8px;
   height: 40px;
-  padding: 0 18px;
-  border: 1px solid #E5E0D6;
+  padding: 0 20px;
+  border: none;
   border-radius: 12px;
-  background: #FFFFFF;
-  color: #4A4A45;
+  background: #1A7A5E;
+  color: white;
   font-family: 'DM Sans', sans-serif;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background .15s, border-color .15s, color .15s;
+  transition: background .15s;
   white-space: nowrap;
   position: fixed;
   top: 52px;
@@ -813,14 +813,9 @@ html[data-theme-v3="1"] .emoji-panel {
   z-index: 200;
   max-width: calc(100vw - 280px - 48px);
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0,0,0,.04);
 }
-.msgs-back-btn:hover {
-  background: #FAF8F4;
-  border-color: #1A7A5E;
-  color: #1A7A5E;
-}
-.msgs-back-btn i { font-size: 13px; color: inherit; }
+.msgs-back-btn:hover { background: #15624B; }
+.msgs-back-btn i { font-size: 13px; }
 
 /* Close conversation button */
 #chatCloseConvBtn {
@@ -6191,6 +6186,59 @@ document.addEventListener('click', function(e) {
 #invoiceModal .inv-content { background: #FAF7F2 !important; border: 1px solid rgba(200,184,154,.55) !important; border-radius: 24px !important; }
 #invoiceModal .inv-header h2 { font-family: 'Instrument Serif', serif !important; font-weight: 400 !important; }
 </style>
+
+<!-- ===== BHGuest dans la liste de conversations =====
+     La liste est produite par chat-owner.js : la plateforme y arrive parfois
+     libellee « Boostinghost Guest », non reconnue, donc rendue en vert avec
+     un simple « B ». On la normalise apres rendu. -->
+<script id="bh-guest-mark">
+window.bhGuestMark = window.bhGuestMark || function (size, color, ink) {
+  size = size || 16; color = color || '#B4470F'; ink = ink || '#fff';
+  var h = Math.round(size * 0.845);
+  return '<svg viewBox="144 241 642 542" width="' + size + '" height="' + h +
+    '" style="display:block;flex-shrink:0" aria-label="BHGuest" role="img">' +
+      '<path d="M150 512 L322 330 A265 265 0 1 1 322 694 Z" fill="' + color + '"/>' +
+      '<path d="M418 350 h74 v20 h-26 v240 h-48 Z" fill="' + ink + '"/>' +
+      '<ellipse cx="524" cy="522" rx="70" ry="76" fill="none" stroke="' + ink + '" stroke-width="60"/>' +
+      '<ellipse cx="524" cy="522" rx="40" ry="46" fill="' + color + '"/>' +
+    '</svg>';
+};
+(function () {
+  var TERRA = '#B4470F';
+  function estBhGuest(txt) {
+    var t = (txt || '').toLowerCase().trim();
+    return t.indexOf('boostinghost') !== -1 || t.indexOf('bhguest') !== -1 || t === 'guest_app';
+  }
+  function normaliser(racine) {
+    var noeuds = (racine || document).querySelectorAll(
+      '#conversationsList .conversation-item span, #conversationsList .conversation-item div'
+    );
+    Array.prototype.forEach.call(noeuds, function (el) {
+      if (el.dataset.bhgDone) return;
+      if (el.children.length > 1) return;
+      if (!estBhGuest(el.textContent)) return;
+      el.dataset.bhgDone = '1';
+      el.style.setProperty('color', TERRA, 'important');
+      el.style.setProperty('display', 'inline-flex', 'important');
+      el.style.setProperty('align-items', 'center', 'important');
+      el.style.setProperty('gap', '5px', 'important');
+      el.textContent = 'BHGuest';
+      el.insertAdjacentHTML('afterbegin', window.bhGuestMark(12, TERRA));
+      var prec = el.previousElementSibling;
+      if (prec && prec.textContent.trim() === 'B') prec.style.display = 'none';
+    });
+  }
+  function demarrer() {
+    normaliser(document);
+    var liste = document.getElementById('conversationsList');
+    if (!liste) return;
+    new MutationObserver(function () { normaliser(liste); })
+      .observe(liste, { childList: true, subtree: true });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer);
+  else demarrer();
+})();
+</script>
 
 </body>
 </html>
