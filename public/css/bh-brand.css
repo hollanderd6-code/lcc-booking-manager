@@ -79,31 +79,24 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
    A completer par <meta name="theme-color" content="#0E3B2E"> dans le head. */
 
 /* ============================================================================
-   VERROU — le logo horizontal n'est pas carre
+   VERROU — rendu en <span> avec image de fond
 
-   Plusieurs feuilles imposent width/height identiques + object-fit:cover a
-   toute image du logo (bh-mobile.css, bh-v3-mobile.css, le style injecte par
-   bh-layout.js, mobile-logo-fix.js). Applique a un verrou 128x30, cover
-   recadre le milieu du mot-symbole : on ne voyait plus que « OOST ».
+   Quatre feuilles imposent width/height/object-fit a « toute image du logo »
+   (bh-mobile.css, bh-v3-mobile.css, le style injecte par bh-layout.js, et
+   mobile-logo-fix.js en inline). Un verrou 128x30 force dans un carre etait
+   recadre en son milieu : on ne lisait plus que « OOST ».
 
-   Regle de securite : toute image portant .bh-verrou garde son rapport.
+   Le verrou n'est donc plus un <img> : aucune de ces regles ne peut le
+   toucher. Les valeurs ci-dessous ne sont qu'un filet de securite.
    ============================================================================ */
-img.bh-verrou,
-.mobile-logo img.bh-verrou,
-.sidebar-logo img.bh-verrou,
-html[data-theme-v3="1"] .mobile-logo img.bh-verrou,
-html[data-theme-v3="1"] .sidebar-logo img.bh-verrou {
-  width: auto !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
+.bh-verrou {
+  display: inline-block !important;
+  flex: none !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: contain !important;
   border-radius: 0 !important;
-  object-fit: contain !important;
-  display: block !important;
 }
-.mobile-logo img.bh-verrou,
-html[data-theme-v3="1"] .mobile-logo img.bh-verrou { height: 30px !important; }
-.sidebar-logo img.bh-verrou,
-html[data-theme-v3="1"] .sidebar-logo img.bh-verrou { height: 38px !important; }
-
-/* L'en-tete mobile centre son contenu : le verrou ne doit pas etre etire */
 .mobile-logo { overflow: visible !important; }
+.mobile-logo .bh-verrou { height: 30px !important; width: 128px !important; }
+.sidebar-logo .bh-verrou { height: 38px !important; width: 162px !important; }

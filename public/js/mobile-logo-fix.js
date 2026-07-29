@@ -22,6 +22,7 @@
     const mobileHeader = document.querySelector('.mobile-header');
     const mobileLogo = document.querySelector('.mobile-logo');
     const logoImg = document.querySelector('.mobile-logo img');
+    const verrou  = document.querySelector('.mobile-logo .bh-verrou');
     const logoText = document.querySelector('.mobile-logo-text');
     
     if (window.innerWidth <= 768) {
@@ -58,20 +59,9 @@
       }
       
       // Forcer l'affichage de l'image
-      if (logoImg) {
-        // Le verrou (monogramme + mot-symbole) n'est pas carre : lui imposer
-        // 32x32 avec object-fit:cover recadrait le milieu du mot-symbole.
-        const estVerrou = logoImg.classList.contains('bh-verrou');
-        logoImg.style.cssText = estVerrou ? `
-          display: block !important;
-          width: auto !important;
-          height: 30px !important;
-          max-width: 100% !important;
-          border-radius: 0 !important;
-          object-fit: contain !important;
-          visibility: visible !important;
-          opacity: 1 !important;
-        ` : `
+      // Le verrou porte ses dimensions en inline : on ne le retouche pas.
+      if (logoImg && !verrou) {
+        logoImg.style.cssText = `
           display: block !important;
           width: 32px !important;
           height: 32px !important;

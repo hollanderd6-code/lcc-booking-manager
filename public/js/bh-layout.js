@@ -59,11 +59,41 @@ if (typeof window.renderAgencyToggle !== 'function') {
 /* /js/bh-layout.js – injection sidebar + header avec filtrage permissions sous-comptes */
 // LOGO_B_SVG retire : remplace par LOGO_SIDEBAR / LOGO_MOBILE / LOGO_MONO.
 
-/* Verrou complet (monogramme + mot-symbole + baseline) pour la sidebar
-   et l'en-tete mobile. Le texte fait partie du SVG : il est vectorise,
-   donc identique partout sans dependre d'une police installee. */
-const LOGO_SIDEBAR = `<img class="bh-verrou" src="/img/brand/verrou/verrou-sidebar.svg" alt="Boostinghost — Smart Property Manager" width="162" height="38" style="display:block;flex-shrink:0;">`;
-const LOGO_MOBILE  = `<img class="bh-verrou" src="/img/brand/verrou/verrou-mobile.svg" alt="Boostinghost — Smart Property Manager" width="128" height="30" style="display:block;flex-shrink:0;">`;
+/* Verrou complet (monogramme + mot-symbole + baseline).
+
+   Rendu via un <span> et une image de fond, PAS un <img> : quatre feuilles
+   differentes imposent width/height/object-fit a « toute image du logo »
+   (bh-mobile.css, bh-v3-mobile.css, le style injecte plus bas, et
+   mobile-logo-fix.js qui l'ecrit en inline). Un verrou 128x30 force dans un
+   carre etait recadre en son milieu : on ne lisait plus que « OOST ».
+   Un <span> echappe a toutes ces regles par construction. */
+/* bhDiagLogo() en console : dit ce que contient l'en-tete, quelles
+   dimensions sont reellement appliquees, et quelle regle CSS les impose. */
+window.bhDiagLogo = function () {
+  ['.mobile-logo', '.sidebar-logo'].forEach(function (sel) {
+    var c = document.querySelector(sel);
+    if (!c) return console.log('[BH]', sel, ': absent');
+    var el = c.querySelector('.bh-verrou, img, svg');
+    if (!el) return console.log('[BH]', sel, ': aucun logo');
+    var r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+    console.log('[BH]', sel, '->', el.tagName.toLowerCase(),
+      '| classe:', el.className || '(aucune)',
+      '| rendu:', Math.round(r.width) + 'x' + Math.round(r.height),
+      '| css:', cs.width + ' x ' + cs.height,
+      '| object-fit:', cs.objectFit,
+      '| fond:', (cs.backgroundImage || '').slice(0, 60));
+  });
+  console.log('[BH] version bh-layout : verrou-span-v3');
+};
+
+function verrouHTML(fichier, largeur, hauteur, texte) {
+  return '<span class="bh-verrou" role="img" aria-label="' + texte + '" style="'
+    + 'display:inline-block;flex:none;width:' + largeur + 'px;height:' + hauteur + 'px;'
+    + 'background:url(/img/brand/verrou/' + fichier + ') no-repeat center/contain;'
+    + 'border-radius:0;"></span>';
+}
+const LOGO_SIDEBAR = verrouHTML('verrou-sidebar.svg', 162, 38, 'Boostinghost — Smart Property Manager');
+const LOGO_MOBILE  = verrouHTML('verrou-mobile.svg',  128, 30, 'Boostinghost — Smart Property Manager');
 const LOGO_MONO    = `<img src="/img/brand/web/mono-sidebar.svg" alt="Boostinghost" width="34" height="34" style="display:block;flex-shrink:0;">`;
 
 function getSidebarHTML() {
@@ -464,11 +494,12 @@ function getSidebarHTML() {
     }
 
     const marqueVoulue = nomSousCompte ? LOGO_MONO : LOGO_MOBILE;
-    const imgActuelle = mobileLogo.querySelector('img');
-    const srcVoulue = marqueVoulue.match(/src="([^"]+)"/)[1];
+    const dejaBon = nomSousCompte
+      ? !!mobileLogo.querySelector('img[src="/img/brand/web/mono-sidebar.svg"]')
+      : !!mobileLogo.querySelector('span.bh-verrou');
 
-    if (!imgActuelle || imgActuelle.getAttribute('src') !== srcVoulue) {
-      mobileLogo.querySelectorAll('img, svg, i.fas, i.fa').forEach(el => el.remove());
+    if (!dejaBon) {
+      mobileLogo.querySelectorAll('img, svg, span.bh-verrou, i.fas, i.fa').forEach(el => el.remove());
       mobileLogo.insertAdjacentHTML('afterbegin', marqueVoulue);
     }
 
@@ -489,6 +520,7 @@ function getSidebarHTML() {
     const sidebarAnchors = document.querySelectorAll(".sidebar-logo");
 
     sidebarAnchors.forEach(a => {
+      if (a.querySelector("span.bh-verrou")) return;   // deja le bon verrou
       const existing = a.querySelector("img, svg");
       const src = existing ? (existing.getAttribute("src") || "") : "";
       // Un logo est valide s'il vient du dossier de marque, ou s'il s'agit
