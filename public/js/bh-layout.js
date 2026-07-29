@@ -93,7 +93,7 @@ function verrouHTML(fichier, largeur, hauteur, texte) {
     + 'border-radius:0;"></span>';
 }
 const LOGO_SIDEBAR = verrouHTML('verrou-sidebar.svg', 162, 38, 'Boostinghost — Smart Property Manager');
-const LOGO_MOBILE  = verrouHTML('verrou-mobile.svg',  128, 30, 'Boostinghost — Smart Property Manager');
+const LOGO_MOBILE  = verrouHTML('verrou-mobile.svg',  161, 34, 'Boostinghost — Smart Property Manager');
 const LOGO_MONO    = `<img src="/img/brand/web/mono-sidebar.svg" alt="Boostinghost" width="34" height="34" style="display:block;flex-shrink:0;">`;
 
 function getSidebarHTML() {
@@ -176,16 +176,18 @@ function getSidebarHTML() {
   return `
 <aside class="sidebar">
   <div class="sidebar-header">
-    <a class="sidebar-logo" href="/app.html" style="display:flex;align-items:center;gap:10px;padding:22px 18px 18px;text-decoration:none;">
-      ${isSubAccount ? `
-        <img src="/img/brand/web/mono-sidebar.svg" alt="Boostinghost" width="38" height="38" style="flex-shrink:0;">
-        <span style="font-family:'DM Sans',sans-serif;font-size:10px;color:#8B8B84;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">
-          Espace collaborateur
-        </span>
-      ` : `
-        <img src="/img/brand/verrou/verrou-sidebar.svg" alt="Boostinghost — Smart Property Manager"
-             width="162" height="38" style="display:block;flex-shrink:0;">
-      `}
+    <a class="sidebar-logo" href="/app.html" style="display:flex;align-items:center;gap:11px;padding:22px 18px 18px;text-decoration:none;">
+      <img src="/img/brand/web/mono-sidebar.svg" alt="Boostinghost"
+           style="width:38px;height:38px;min-width:38px;border-radius:9px;flex-shrink:0;object-fit:contain;">
+      <div style="display:flex;flex-direction:column;justify-content:center;min-width:0;">
+        ${isSubAccount ? `
+          <span class="bh-mot" style="font-size:15px;line-height:1.15;color:#20221F;font-weight:600;">Espace</span>
+          <span class="bh-baseline">Collaborateur</span>
+        ` : `
+          <span class="bh-mot">Boostinghost</span>
+          <span class="bh-baseline">Smart Property Manager</span>
+        `}
+      </div>
     </a>
   </div>
 

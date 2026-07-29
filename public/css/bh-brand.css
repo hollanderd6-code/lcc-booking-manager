@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Marcellus&display=swap');
+
 /* ============================================================================
    BH-BRAND — Palette « Maison Vert »
    A charger APRES bh-theme-v3.css et AVANT les calques bh-lux-*.
@@ -100,3 +102,39 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
 .mobile-logo { overflow: visible !important; }
 .mobile-logo .bh-verrou { height: 30px !important; width: 128px !important; }
 .sidebar-logo .bh-verrou { height: 38px !important; width: 162px !important; }
+
+
+/* ============================================================================
+   MOT-SYMBOLE EN TEXTE (sidebar desktop)
+
+   Le verrou d'un seul tenant se faisait ecraser par les regles de largeur des
+   feuilles mobiles. On reprend donc la structure d'origine, qui fonctionnait :
+   une image carree + du texte HTML a cote. Le texte est ici en Marcellus,
+   tres espace, avec la baseline calee sur la meme largeur.
+   ============================================================================ */
+.sidebar-logo .bh-mot,
+.mobile-logo .bh-mot {
+  font-family: 'Marcellus', 'Instrument Serif', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.1;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #20221F;
+  white-space: nowrap;
+  font-weight: 400;
+}
+.sidebar-logo .bh-baseline,
+.mobile-logo .bh-baseline {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 7.5px;
+  line-height: 1.2;
+  letter-spacing: .21em;
+  text-transform: uppercase;
+  color: #8B8B84;
+  white-space: nowrap;
+  margin-top: 3px;
+  font-weight: 500;
+}
+/* Fond vert : on inverse */
+.sidebar-logo.sur-vert .bh-mot { color: #F2EADA; }
+.sidebar-logo.sur-vert .bh-baseline { color: rgba(242,234,218,.62); }
