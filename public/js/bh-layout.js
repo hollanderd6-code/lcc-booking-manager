@@ -86,15 +86,19 @@ window.bhDiagLogo = function () {
   console.log('[BH] version bh-layout : verrou-span-v3');
 };
 
-function verrouHTML(fichier, largeur, hauteur, texte) {
+function verrouHTML(chemin, largeur, hauteur, texte) {
+  // Le chemin est passe EN ENTIER, pas assemble par morceaux : c'est ce qui
+  // permet a outils/marque.js d'y accrocher un ?v= calcule sur le contenu du
+  // fichier. Sans cela, le navigateur garde le SVG en cache indefiniment et
+  // une correction du trace n'arrive jamais chez l'utilisateur.
   return '<span class="bh-verrou" role="img" aria-label="' + texte + '" style="'
     + 'display:inline-block;flex:none;width:' + largeur + 'px;height:' + hauteur + 'px;'
-    + 'background:url(/img/brand/verrou/' + fichier + ') no-repeat center/contain;'
+    + 'background:url(' + chemin + ') no-repeat center/contain;'
     + 'border-radius:0;"></span>';
 }
-const LOGO_SIDEBAR = verrouHTML('verrou-sidebar.svg', 146, 38, 'Boostinghost — Smart Property Manager');
-const LOGO_MOBILE  = verrouHTML('verrou-mobile.svg',  187, 42, 'Boostinghost — Smart Property Manager');
-const LOGO_MONO    = `<img src="/img/brand/web/mono-sidebar.svg" alt="Boostinghost" width="34" height="34" style="display:block;flex-shrink:0;">`;
+const LOGO_SIDEBAR = verrouHTML('/img/brand/verrou/verrou-sidebar.svg?v=fb0cdd1d', 144, 38, 'Boostinghost — Smart Property Manager');
+const LOGO_MOBILE  = verrouHTML('/img/brand/verrou/verrou-mobile.svg?v=cb45d47d',  186, 42, 'Boostinghost — Smart Property Manager');
+const LOGO_MONO    = `<img src="/img/brand/web/mono-sidebar.svg?v=43278ecb" alt="Boostinghost" width="34" height="34" style="display:block;flex-shrink:0;">`;
 
 function getSidebarHTML() {
   // ── Détecter le type de compte (nouveau système + ancien système) ──
@@ -177,7 +181,7 @@ function getSidebarHTML() {
 <aside class="sidebar">
   <div class="sidebar-header">
     <a class="sidebar-logo" href="/app.html" style="display:flex;align-items:center;gap:11px;padding:22px 18px 18px;text-decoration:none;">
-      <img src="/img/brand/web/mono-sidebar.svg" alt="Boostinghost"
+      <img src="/img/brand/web/mono-sidebar.svg?v=43278ecb" alt="Boostinghost"
            style="width:38px;height:38px;min-width:38px;border-radius:9px;flex-shrink:0;object-fit:contain;">
       <div style="display:flex;flex-direction:column;justify-content:center;min-width:0;">
         ${isSubAccount ? `
@@ -497,7 +501,7 @@ function getSidebarHTML() {
 
     const marqueVoulue = nomSousCompte ? LOGO_MONO : LOGO_MOBILE;
     const dejaBon = nomSousCompte
-      ? !!mobileLogo.querySelector('img[src="/img/brand/web/mono-sidebar.svg"]')
+      ? !!mobileLogo.querySelector('img[src="/img/brand/web/mono-sidebar.svg?v=43278ecb"]')
       : !!mobileLogo.querySelector('span.bh-verrou');
 
     if (!dejaBon) {

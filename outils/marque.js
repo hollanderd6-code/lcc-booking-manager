@@ -74,7 +74,7 @@ function traiter(fichier) {
   // ── 1. ?v= recalcules sur le hash ────────────────────────────────────────
   let nbV = 0;
   s = s.replace(
-    /((?:href|src)=["'])(\/(?:css|js|img)\/[^"'?]+\.(?:css|js))(\?v=[^"']*)?(["'])/g,
+    /((?:href|src)=["'])(\/(?:css|js|img)\/[^"'?]+\.(?:css|js|svg|png))(\?v=[^"']*)?(["'])/g,
     (m, p1, chemin, ancienV, p4) => {
       const h = hash(chemin);
       if (!h) return m;
@@ -119,7 +119,41 @@ function traiter(fichier) {
   return 0;
 }
 
+/* ── Images referencees depuis les CSS et les JS ────────────────────────────
+   Un logo appele par url(/img/brand/...svg) dans une feuille ou dans du JS
+   n'a aucun parametre de version : le navigateur le garde indefiniment en
+   cache, et une correction du trace n'arrive jamais chez l'utilisateur.
+   On leur applique le meme hash de contenu qu'aux css et js.              */
+function versionnerImages() {
+  let n = 0;
+  for (const sd of ['css', 'js']) {
+    const rep = path.join(RACINE, sd);
+    if (!fs.existsSync(rep)) continue;
+    for (const f of fs.readdirSync(rep)) {
+      if (!/\.(css|js)$/.test(f)) continue;
+      const abs = path.join(rep, f);
+      let t = fs.readFileSync(abs, 'utf8');
+      const avant = t;
+      t = t.replace(
+        /(\/img\/[^"'`)\s?]+\.(?:svg|png|jpg|webp))(\?v=[^"'`)\s]*)?/g,
+        (m, chemin) => {
+          const h = hash(chemin);
+          return h ? `${chemin}?v=${h}` : m;
+        }
+      );
+      if (t !== avant) {
+        if (!ESSAI) fs.writeFileSync(abs, t);
+        console.log(`  ${sd}/${f.padEnd(36)} images versionnees`);
+        n++;
+      }
+    }
+  }
+  return n;
+}
+
+const nImg = versionnerImages();
+
 const pages = fs.readdirSync(RACINE).filter(f => f.endsWith('.html'));
 console.log(ESSAI ? 'ESSAI — aucune ecriture\n' : 'Application\n');
 const n = pages.reduce((acc, f) => acc + traiter(f), 0);
-console.log(`\n${n} page(s) sur ${pages.length} mise(s) a jour.`);
+console.log(`\n${n} page(s) sur ${pages.length} mise(s) a jour, ${nImg} fichier(s) css/js dont les images ont ete versionnees.`);
