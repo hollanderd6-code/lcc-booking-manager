@@ -99,7 +99,7 @@ window.bhDiagLogo = function () {
    que le calcul cesse de fonctionner.
 
    Rappele au redimensionnement, a la rotation, et des que le DOM bouge.     */
-const VERROU_L = 191, VERROU_H = 42;
+const VERROU_L = 187, VERROU_H = 42;
 // En dessous de 33px de haut, le mot-symbole tombe sous 9px : illisible.
 // On prefere alors le monogramme seul, net et parfaitement lisible.
 const VERROU_H_MIN = 33;
@@ -195,8 +195,8 @@ function verrouHTML(fichier, largeur, hauteur, texte) {
     + 'background:url(/img/brand/verrou/' + fichier + ') no-repeat center/contain;'
     + 'border-radius:0;"></span>';
 }
-const LOGO_SIDEBAR = verrouHTML('verrou-sidebar.svg', 150, 38, 'Boostinghost — Smart Property Manager');
-const LOGO_MOBILE  = verrouHTML('verrou-mobile.svg',  191, 42, 'Boostinghost — Smart Property Manager');
+const LOGO_SIDEBAR = verrouHTML('verrou-sidebar.svg', 146, 38, 'Boostinghost — Smart Property Manager');
+const LOGO_MOBILE  = verrouHTML('verrou-mobile.svg',  187, 42, 'Boostinghost — Smart Property Manager');
 const LOGO_MONO    = `<img src="/img/brand/web/mono-sidebar.svg" alt="Boostinghost" width="34" height="34" style="display:block;flex-shrink:0;">`;
 
 function getSidebarHTML() {
@@ -672,7 +672,7 @@ function getSidebarHTML() {
     if (!mobileHeader.classList.contains('mobile-header')) mobileHeader.classList.add('mobile-header');
     if (!mobileHeader.id) mobileHeader.id = 'bhMobileHeader';
     if (!mobileHeader.querySelector('.mobile-logo')) {
-      mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="min-width:0;display:flex;align-items:center;gap:10px;text-decoration:none;overflow:visible;"><span class="mobile-logo-text"></span></a>';
+      mobileHeader.innerHTML = '<a class="mobile-logo" href="/app.html" style="min-width:0;display:flex;align-items:center;gap:6px;text-decoration:none;overflow:visible;"><span class="mobile-logo-text"></span></a>';
     }
 
     // Style : logo centré, rien d'autre (comme messages.html)
@@ -1917,7 +1917,7 @@ var _bhNativeConfirm = window.confirm;
       '.mobile-header .mobile-logo,.mobile-logo{gap:6px!important;min-width:0!important;flex:1 1 auto!important;overflow:hidden!important;}' +
       '.mobile-header .mobile-logo img:not(.bh-verrou),.mobile-logo img:not(.bh-verrou){width:30px!important;height:30px!important;min-width:30px!important;border-radius:8px!important;flex-shrink:0!important;}' +
       // Le verrou n'est pas carre : largeur libre, hauteur imposee, aucun recadrage.
-      '.mobile-logo .bh-verrou{max-width:100%!important;min-width:0!important;border-radius:0!important;flex-shrink:1!important;aspect-ratio:191/42;}' +
+      '.mobile-logo .bh-verrou{max-width:100%!important;min-width:0!important;border-radius:0!important;flex-shrink:1!important;aspect-ratio:187/42;}' +
       // Texte en colonne : titre au-dessus, sous-titre dessous, calés à la même largeur
       '.mobile-header .mobile-logo-text,.mobile-logo-text{display:inline-flex!important;flex-direction:column!important;align-items:stretch!important;min-width:0!important;overflow:hidden!important;}' +
       '.mobile-header .mobile-logo-title,.mobile-logo-title{font-size:15px!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}' +

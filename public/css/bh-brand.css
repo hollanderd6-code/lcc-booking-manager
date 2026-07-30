@@ -117,11 +117,11 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
    ne se deforme jamais, meme avant le premier calcul. */
 .mobile-logo .bh-verrou {
   height: 42px;
-  width: 191px;
+  width: 187px;
   max-width: 100%;
-  aspect-ratio: 191 / 42;
+  aspect-ratio: 187 / 42;
 }
-.sidebar-logo .bh-verrou { height: 38px !important; width: 150px !important; }
+.sidebar-logo .bh-verrou { height: 38px !important; width: 146px !important; }
 
 
 /* ============================================================================
@@ -177,3 +177,11 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
   height: 38px !important;
   min-width: 38px !important;
 }
+
+
+/* ── Ecart monogramme / mot-symbole ───────────────────────────────────────
+   Quand le logo est rendu en deux elements (monogramme + texte, cas des
+   sous-comptes et de certaines pages), l'ecart vient du gap flex et non du
+   trace SVG. On l'aligne sur la valeur du verrou. */
+.mobile-logo { gap: 6px !important; }
+.mobile-logo .mobile-logo-text { margin-left: 0 !important; padding-left: 0 !important; }
