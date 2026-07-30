@@ -258,12 +258,66 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
     background: var(--bh-ligne, #EAE9E5) !important;
   }
 
-  /* Boutons d'action un peu plus compacts pour laisser respirer le logo */
-  .bh-entete-fusionnee .bh-zone-droite .header-actions { gap: 4px !important; }
-  .bh-entete-fusionnee .bh-zone-droite .header-actions > * {
-    width: 32px !important; height: 32px !important; min-width: 32px !important;
+  /* ── Une seule recette pour TOUS les boutons de l'en-tete ────────────────
+     Les elements de gauche venaient de la barre du haut (paddings et rayons
+     propres a un fond sombre), ceux de droite des actions de page : ils
+     n'avaient ni la meme taille, ni le meme espacement, ni le meme rayon.
+     On les aligne sur une seule regle, appliquee aux deux zones. */
+  .bh-entete-fusionnee .bh-zone-gauche,
+  .bh-entete-fusionnee .bh-zone-droite,
+  .bh-entete-fusionnee .bh-zone-droite .header-actions,
+  .bh-entete-fusionnee .bh-zone-droite .mobile-header-actions {
+    gap: 6px !important;
   }
-  .bh-entete-fusionnee .bh-theme-toggle { transform: scale(.85); }
+  .bh-entete-fusionnee .bh-zone-gauche > *,
+  .bh-entete-fusionnee .bh-zone-droite > *:not(.header-actions):not(.mobile-header-actions),
+  .bh-entete-fusionnee .bh-zone-droite .header-actions > *,
+  .bh-entete-fusionnee .bh-zone-droite .mobile-header-actions > * {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    max-width: 34px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 11px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: none !important;
+    box-sizing: border-box !important;
+  }
+  /* Les icones a l'interieur : meme corps de part et d'autre */
+  .bh-entete-fusionnee .bh-zone-gauche > * i,
+  .bh-entete-fusionnee .bh-zone-gauche > * svg,
+  .bh-entete-fusionnee .bh-zone-droite > * i,
+  .bh-entete-fusionnee .bh-zone-droite > * svg,
+  .bh-entete-fusionnee .bh-zone-droite .header-actions > * i,
+  .bh-entete-fusionnee .bh-zone-droite .header-actions > * svg {
+    font-size: 14px !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+  }
+  /* Le bloc de statuts : une seule pastille, au meme gabarit */
+  .bh-entete-fusionnee .bh-zone-gauche > div > * { margin: 0 !important; }
+  .bh-entete-fusionnee #svc-status-render,
+  .bh-entete-fusionnee #svc-status-channex {
+    padding: 0 !important;
+    gap: 3px !important;
+    border: none !important;
+    background: transparent !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+  }
+  /* Le filet vertical herite de la barre sombre n'a plus de sens ici */
+  .bh-entete-fusionnee .bh-zone-gauche > div[style*="width:1px"],
+  .bh-entete-fusionnee .bh-zone-droite > div[style*="width:1px"],
+  .bh-entete-fusionnee .bh-zone-droite div[style*="width:1px"] {
+    display: none !important;
+  }
+  .bh-entete-fusionnee .bh-theme-toggle { transform: none !important; }
 
   /* La barre du haut disparait : son contenu vit maintenant dans l'en-tete */
   body.bh-entete-fusionnee #bhTopBar { display: none !important; }
