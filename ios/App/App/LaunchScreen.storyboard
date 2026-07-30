@@ -1,4 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ecran de lancement Boostinghost — identite « Maison Vert ».
+
+  Le verrou (cartouche + BOOSTINGHOST + baseline) est une IMAGE et non du
+  texte. Trois raisons :
+
+    1. Le mot-symbole est en Marcellus et le B en Cormorant Garamond. Utiliser
+       ces polices dans un storyboard imposerait de les embarquer dans le
+       bundle et de les declarer dans Info.plist ; a la moindre omission, iOS
+       retomberait silencieusement sur Helvetica.
+    2. Une UILabel ne sait pas gerer l'approche (letter-spacing) sans passer
+       par une chaine attribuee, illisible et fragile en XML.
+    3. L'image provient du meme trace vectorise que le web, l'icone d'app et
+       l'image de partage : le dessin est rigoureusement identique partout.
+
+  L'image est fournie en 1x, 2x et 3x dans LaunchLogo.imageset. Sa largeur est
+  contrainte a 62 % de la largeur d'ecran, plafonnee a 260 pt : elle respire
+  sur un iPhone SE comme sur un iPad, sans jamais toucher les bords.
+
+  Fond  : #0E3B2E (vert bouteille de la marque)
+  Encre : #F2EADA (ivoire)
+-->
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="21701" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
     <device id="retina6_12" orientation="portrait" appearance="light"/>
     <dependencies>
@@ -16,60 +38,34 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
 
-                            <!-- Logo B -->
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="B" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="logo-B">
-                                <rect key="frame" x="146.5" y="286" width="100" height="100"/>
-                                <constraints>
-                                    <constraint firstAttribute="width" constant="112" id="logo-B-width"/>
-                                    <constraint firstAttribute="height" constant="112" id="logo-B-height"/>
-                                </constraints>
-                                <fontDescription key="fontDescription" type="system" weight="heavy" pointSize="72"/>
-                                <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                <nil key="highlightedColor"/>
-                            </label>
-
-                            <!-- BOOSTINGHOST -->
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="BOOSTINGHOST" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="brand-name">
-                                <rect key="frame" x="40" y="426" width="313" height="32"/>
-                                <constraints>
-                                    <constraint firstAttribute="height" constant="32" id="brand-name-height"/>
-                                </constraints>
-                                <fontDescription key="fontDescription" type="system" weight="bold" pointSize="24"/>
-                                <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                <nil key="highlightedColor"/>
-                            </label>
-
-                            <!-- SMART PROPERTY MANAGER -->
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="SMART PROPERTY MANAGER" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="tagline">
-                                <rect key="frame" x="40" y="466" width="313" height="20"/>
-                                <constraints>
-                                    <constraint firstAttribute="height" constant="20" id="tagline-height"/>
-                                </constraints>
-                                <fontDescription key="fontDescription" type="system" weight="medium" pointSize="13"/>
-                                <color key="textColor" white="1" alpha="0.70" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                <nil key="highlightedColor"/>
-                            </label>
+                            <!-- Verrou complet : cartouche, mot-symbole et baseline -->
+                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LaunchLogo" translatesAutoresizingMaskIntoConstraints="NO" id="verrou">
+                                <rect key="frame" x="74.5" y="358" width="244" height="142"/>
+                            </imageView>
 
                         </subviews>
 
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
 
-                        <!-- Fond #1A7A5E -->
-                        <color key="backgroundColor" red="0.10196078431372549" green="0.47843137254901963" blue="0.36862745098039216" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <!-- Vert bouteille #0E3B2E -->
+                        <color key="backgroundColor" red="0.054901960784313725" green="0.23137254901960784" blue="0.18039215686274510" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
 
                         <constraints>
-                            <constraint firstItem="logo-B" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="logo-B-centerX"/>
-                            <constraint firstItem="logo-B" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-80" id="logo-B-centerY"/>
+                            <!-- Centre horizontalement -->
+                            <constraint firstItem="verrou" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="verrou-centerX"/>
 
-                            <constraint firstItem="brand-name" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="brand-name-centerX"/>
-                            <constraint firstItem="brand-name" firstAttribute="top" secondItem="logo-B" secondAttribute="bottom" constant="28" id="brand-name-top"/>
-                            <constraint firstItem="brand-name" firstAttribute="leading" secondItem="Bcu-3y-fUS" secondAttribute="leading" constant="40" id="brand-name-leading"/>
-                            <constraint firstItem="Bcu-3y-fUS" firstAttribute="trailing" secondItem="brand-name" secondAttribute="trailing" constant="40" id="brand-name-trailing"/>
+                            <!-- Legerement au-dessus du centre geometrique : un bloc
+                                 pose exactement au milieu parait toujours trop bas -->
+                            <constraint firstItem="verrou" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-24" id="verrou-centerY"/>
 
-                            <constraint firstItem="tagline" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="tagline-centerX"/>
-                            <constraint firstItem="tagline" firstAttribute="top" secondItem="brand-name" secondAttribute="bottom" constant="8" id="tagline-top"/>
-                            <constraint firstItem="tagline" firstAttribute="leading" secondItem="Bcu-3y-fUS" secondAttribute="leading" constant="40" id="tagline-leading"/>
-                            <constraint firstItem="Bcu-3y-fUS" firstAttribute="trailing" secondItem="tagline" secondAttribute="trailing" constant="40" id="tagline-trailing"/>
+                            <!-- 62 % de la largeur d'ecran -->
+                            <constraint firstItem="verrou" firstAttribute="width" secondItem="Ze5-6b-2t3" secondAttribute="width" multiplier="0.62" id="verrou-width"/>
+
+                            <!-- Jamais plus de 260 pt, pour les iPad -->
+                            <constraint firstItem="verrou" firstAttribute="width" relation="lessThanOrEqual" constant="260" id="verrou-width-max"/>
+
+                            <!-- Rapport du trace conserve : 240 x 140 -->
+                            <constraint firstItem="verrou" firstAttribute="height" secondItem="verrou" secondAttribute="width" multiplier="140:240" id="verrou-ratio"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -78,4 +74,7 @@
             <point key="canvasLocation" x="53" y="375"/>
         </scene>
     </scenes>
+    <resources>
+        <image name="LaunchLogo" width="240" height="140"/>
+    </resources>
 </document>

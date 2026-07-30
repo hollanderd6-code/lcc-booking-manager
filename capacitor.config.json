@@ -8,7 +8,7 @@
       "launchAutoHide": true,
       "backgroundColor": "#0E3B2E",
       "androidSplashResourceName": "splash",
-      "androidScaleType": "CENTER",
+      "androidScaleType": "CENTER_INSIDE",
       "showSpinner": false,
       "iosSpinnerStyle": "small",
       "spinnerColor": "#F2EADA"
