@@ -185,3 +185,93 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
    trace SVG. On l'aligne sur la valeur du verrou. */
 .mobile-logo { gap: 6px !important; }
 .mobile-logo .mobile-logo-text { margin-left: 0 !important; padding-left: 0 !important; }
+
+/* ============================================================================
+   EN-TETE MOBILE FUSIONNE
+
+   Avant : #bhTopBar et .mobile-header etaient deux barres « fixed » posees
+   toutes deux en haut, donc superposees. Dans la barre du haut, la bascule
+   agence etait en position:absolute a gauche et le bloc de statuts en
+   absolute centre : rien ne se poussait, tout se recouvrait, et le logo
+   passait sous les boutons.
+
+   Maintenant : une seule rangee en grille a trois colonnes. Les zones
+   laterales prennent la place de leur contenu, le logo occupe le centre.
+   Aucun recouvrement n'est possible, quel que soit le nombre de boutons.
+   ============================================================================ */
+@media (max-width: 920px) {
+  .mobile-header.bh-entete-fusionnee {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 0 10px !important;
+  }
+  .bh-entete-fusionnee .bh-zone-gauche,
+  .bh-entete-fusionnee .bh-zone-droite {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .bh-entete-fusionnee .bh-zone-droite { justify-content: flex-end; }
+
+  /* Le logo occupe la colonne centrale et s'y centre */
+  .bh-entete-fusionnee .mobile-logo {
+    grid-column: 2;
+    justify-content: center !important;
+    min-width: 0 !important;
+  }
+
+  /* Les libelles de statut n'ont pas la place : on garde les pastilles.
+     « Fonctionnement du site » et « Connexion API » restent lisibles au
+     survol grace a l'attribut title deja present sur les pastilles. */
+  .bh-entete-fusionnee #svc-name-render,
+  .bh-entete-fusionnee #svc-name-channex,
+  .bh-entete-fusionnee #svc-label-render,
+  .bh-entete-fusionnee #svc-label-channex,
+  .bh-entete-fusionnee #svc-ago-render,
+  .bh-entete-fusionnee #svc-ago-channex,
+  .bh-entete-fusionnee .bh-demo-mode-label,
+  .bh-entete-fusionnee #bhAnnouncementsBtn span:not([id]) {
+    display: none !important;
+  }
+  .bh-entete-fusionnee #svc-status-render,
+  .bh-entete-fusionnee #svc-status-channex {
+    padding: 4px !important;
+    gap: 0 !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  /* Les icones serveur et prise n'apportent rien a cote d'une pastille */
+  .bh-entete-fusionnee .bh-zone-gauche > div > i.fas { display: none !important; }
+  .bh-entete-fusionnee #bhAnnouncementsBtn { padding: 4px 6px !important; }
+  /* La bascule agence : icone seule, le libelle prendrait trop de place */
+  .bh-entete-fusionnee #agencySwitcherLabel { display: none !important; }
+  .bh-entete-fusionnee #agencySwitcherBtn { padding: 5px 8px !important; }
+
+  /* Les elements rapatries etaient prevus pour un fond sombre */
+  .bh-entete-fusionnee #bhAnnouncementsBtn,
+  .bh-entete-fusionnee .bh-demo-nav i { color: var(--bh-t2, #5A5A54) !important; }
+  .bh-entete-fusionnee .bh-zone-gauche i.fas { color: var(--bh-t3, #8B8B84) !important; }
+  .bh-entete-fusionnee .bh-zone-gauche > div[style*="width:1px"] {
+    background: var(--bh-ligne, #EAE9E5) !important;
+  }
+
+  /* Boutons d'action un peu plus compacts pour laisser respirer le logo */
+  .bh-entete-fusionnee .bh-zone-droite .header-actions { gap: 4px !important; }
+  .bh-entete-fusionnee .bh-zone-droite .header-actions > * {
+    width: 32px !important; height: 32px !important; min-width: 32px !important;
+  }
+  .bh-entete-fusionnee .bh-theme-toggle { transform: scale(.85); }
+
+  /* La barre du haut disparait : son contenu vit maintenant dans l'en-tete */
+  body.bh-entete-fusionnee #bhTopBar { display: none !important; }
+}
+
+@media (max-width: 400px) {
+  /* Tres petits ecrans : on sacrifie la bascule de theme, accessible
+     depuis les parametres, plutot que la lisibilite du logo. */
+  .bh-entete-fusionnee .bh-theme-toggle,
+  .bh-entete-fusionnee .bh-demo-mode-label { display: none !important; }
+}

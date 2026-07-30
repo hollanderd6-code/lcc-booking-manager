@@ -86,6 +86,109 @@ window.bhDiagLogo = function () {
   console.log('[BH] version bh-layout : verrou-span-v3');
 };
 
+/* ── Fusion de l'en-tete mobile ────────────────────────────────────────────
+   Sur mobile, #bhTopBar (statuts, Informations, bascule agence) et
+   .mobile-header (logo, actions de page) sont DEUX barres « fixed » posees
+   toutes les deux en haut : elles se superposent. Dans la barre du haut, la
+   bascule agence est en position:absolute a gauche et le bloc de statuts en
+   absolute centre — donc rien ne se pousse, tout se recouvre.
+
+   On les fusionne en une seule rangee a trois zones (gauche / logo / droite),
+   en grille : le logo reste optiquement centre et les zones laterales
+   s'ajustent a leur contenu. Plus aucun recouvrement possible, quel que soit
+   le nombre de boutons presents.
+
+   Desktop inchange : la barre du haut y a la place de s'etaler.             */
+const SEUIL_MOBILE = 920;
+
+function fusionnerEnteteMobile() {
+  if (window.innerWidth > SEUIL_MOBILE) return defusionnerEnteteMobile();
+
+  const barre = document.getElementById('bhTopBar');
+  const entete = document.querySelector('.mobile-header');
+  if (!entete) return;
+
+  let zoneG = entete.querySelector('.bh-zone-gauche');
+  if (!zoneG) {
+    zoneG = document.createElement('div');
+    zoneG.className = 'bh-zone-gauche';
+    entete.insertBefore(zoneG, entete.firstChild);
+  }
+  let zoneD = entete.querySelector('.bh-zone-droite');
+  if (!zoneD) {
+    zoneD = document.createElement('div');
+    zoneD.className = 'bh-zone-droite';
+    entete.appendChild(zoneD);
+  }
+
+  if (barre) {
+    // On rapatrie les elements de la barre du haut, en les remettant dans le
+    // flux : sans cela ils resteraient en absolute et continueraient a
+    // recouvrir le logo. Ce qui etait a droite (Informations, bascule de
+    // theme) va dans la zone droite, le reste a gauche.
+    Array.prototype.slice.call(barre.children).forEach(function (el) {
+      el.style.position = 'static';
+      el.style.left = 'auto';
+      el.style.right = 'auto';
+      el.style.top = 'auto';
+      el.style.transform = 'none';
+      const aDroite = el.classList.contains('bh-demo-right');
+      (aDroite ? zoneD : zoneG).appendChild(el);
+    });
+    barre.style.display = 'none';
+    barre.dataset.fusionne = '1';
+  }
+
+  // Les actions de page (rafraichir, notifications, recherche) vont a droite
+  const actions = entete.querySelector('.header-actions, .mobile-header-actions');
+  if (actions && actions.parentElement !== zoneD) zoneD.appendChild(actions);
+
+  // Statuts : deux pastilles vertes en permanence, sans libelle, n'informent
+  // de rien et consomment la place du mot-symbole. On ne les montre donc que
+  // lorsqu'un service n'est pas au vert — c'est la seule information utile.
+  ['render', 'channex'].forEach(function (id) {
+    const pastille = document.getElementById('svc-status-' + id);
+    if (!pastille) return;
+    const bloc = pastille.parentElement;
+    if (!bloc) return;
+    const point = document.getElementById('svc-dot-' + id);
+    const couleur = point ? getComputedStyle(point).backgroundColor : '';
+    // vert = tout va bien -> on masque le bloc entier (icone comprise)
+    const auVert = /rgb\(\s*74,\s*222,\s*128\s*\)|rgb\(\s*34,\s*197,\s*94\s*\)/.test(couleur);
+    bloc.style.display = auVert ? 'none' : 'flex';
+    bloc.dataset.bhStatut = auVert ? 'ok' : 'alerte';
+    // le filet separateur suit le sort du bloc
+    const filet = bloc.previousElementSibling;
+    if (filet && /^\s*$/.test(filet.textContent || '')) {
+      filet.style.display = auVert ? 'none' : 'block';
+    }
+  });
+
+  entete.classList.add('bh-entete-fusionnee');
+  document.body.classList.add('bh-entete-fusionnee');
+}
+
+function defusionnerEnteteMobile() {
+  const entete = document.querySelector('.mobile-header');
+  const barre = document.getElementById('bhTopBar');
+  if (!entete || !entete.classList.contains('bh-entete-fusionnee')) return;
+  const zoneG = entete.querySelector('.bh-zone-gauche');
+  if (barre && zoneG) {
+    Array.prototype.slice.call(zoneG.children).forEach(function (el) {
+      el.style.position = '';
+      el.style.left = '';
+      el.style.right = '';
+      el.style.top = '';
+      el.style.transform = '';
+      barre.appendChild(el);
+    });
+    barre.style.display = '';
+    delete barre.dataset.fusionne;
+  }
+  entete.classList.remove('bh-entete-fusionnee');
+  document.body.classList.remove('bh-entete-fusionnee');
+}
+
 /* ── Verrou adaptatif ──────────────────────────────────────────────────────
    Le logo est centre tandis que les boutons de l'en-tete sont poses en
    absolu : ils se chevauchent au lieu de se pousser. Leur nombre varie selon
@@ -113,27 +216,43 @@ function ajusterVerrou() {
 
   const rl = logo.getBoundingClientRect();
   if (!rl.height) return;
-  const hautLogo = rl.top, basLogo = rl.bottom;
-  const largeurEcran = window.innerWidth || document.documentElement.clientWidth;
-  const milieu = largeurEcran / 2;
 
-  let borneG = MARGE, borneD = largeurEcran - MARGE;
-
-  document.querySelectorAll('button, a, [role="button"], .bh-icon-btn, svg.lucide, i.fas')
-    .forEach(function (el) {
-      if (el === logo || logo.contains(el) || el.contains(logo)) return;
-      const r = el.getBoundingClientRect();
-      if (r.width < 8 || r.height < 8) return;
-      // recouvrement vertical avec la bande du logo
-      if (r.bottom <= hautLogo || r.top >= basLogo) return;
-      const cs = getComputedStyle(el);
-      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return;
-      const centre = r.left + r.width / 2;
-      if (centre < milieu) borneG = Math.max(borneG, r.right + MARGE);
-      else borneD = Math.min(borneD, r.left - MARGE);
-    });
-
-  const dispo = Math.max(0, borneD - borneG);
+  let dispo;
+  const entete = logo.closest('.mobile-header');
+  if (entete && entete.classList.contains('bh-entete-fusionnee')) {
+    // En-tete fusionne : la grille garantit deja l'absence de recouvrement.
+    // On deduit la colonne centrale de la largeur de l'en-tete moins les deux
+    // zones laterales. Mesurer .mobile-logo directement ne marche pas : sa
+    // largeur depend du verrou, dont la largeur depend d'elle.
+    const zg = entete.querySelector('.bh-zone-gauche');
+    const zd = entete.querySelector('.bh-zone-droite');
+    const cs = getComputedStyle(entete);
+    const marges = parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0);
+    const ecart = parseFloat(cs.columnGap || cs.gap || 0) || 0;
+    dispo = entete.clientWidth - marges - ecart * 2
+          - (zg ? zg.offsetWidth : 0) - (zd ? zd.offsetWidth : 0);
+    dispo = Math.max(0, dispo);
+  } else {
+    // En-tete non fusionne (desktop, ou page hors du gabarit) : mesure
+    // geometrique de ce qui recoupe la bande du logo.
+    const hautLogo = rl.top, basLogo = rl.bottom;
+    const largeurEcran = window.innerWidth || document.documentElement.clientWidth;
+    const milieu = largeurEcran / 2;
+    let borneG = MARGE, borneD = largeurEcran - MARGE;
+    document.querySelectorAll('button, a, [role="button"], .bh-icon-btn')
+      .forEach(function (el) {
+        if (el === logo || logo.contains(el) || el.contains(logo)) return;
+        const r = el.getBoundingClientRect();
+        if (r.width < 8 || r.height < 8) return;
+        if (r.bottom <= hautLogo || r.top >= basLogo) return;
+        const cs = getComputedStyle(el);
+        if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return;
+        const centre = r.left + r.width / 2;
+        if (centre < milieu) borneG = Math.max(borneG, r.right + MARGE);
+        else borneD = Math.min(borneD, r.left - MARGE);
+      });
+    dispo = Math.max(0, borneD - borneG);
+  }
   cible.dataset.dispo = Math.round(dispo);
 
   if (dispo >= VERROU_L) {
@@ -152,7 +271,7 @@ function ajusterVerrou() {
   // Place insuffisante : on garde le meme element, on change juste son fond
   // pour le monogramme carre (pas de retrait/reinsertion, donc pas de
   // clignotement ni de conflit avec normalizeBranding).
-  const cote = Math.min(VERROU_H, Math.max(26, Math.floor(dispo)));
+  const cote = Math.max(28, Math.min(VERROU_H, Math.floor(dispo)));
   cible.style.setProperty('width', cote + 'px', 'important');
   cible.style.setProperty('height', cote + 'px', 'important');
   cible.style.setProperty('background-image', 'url(/img/brand/web/mono-sidebar.svg)', 'important');
@@ -698,8 +817,9 @@ function getSidebarHTML() {
     mobileHeader.appendChild(sentinel);
 
     normalizeBranding();
+    fusionnerEnteteMobile();
     ajusterVerrou();
-    setTimeout(function(){ normalizeBranding(); forceUpdateSidebarLogo(); ajusterVerrou(); }, 100);
+    setTimeout(function(){ normalizeBranding(); forceUpdateSidebarLogo(); fusionnerEnteteMobile(); ajusterVerrou(); }, 100);
     setTimeout(function(){ normalizeBranding(); ajusterVerrou(); }, 400);
     setTimeout(ajusterVerrou, 900);   // apres l'apparition des boutons differes
 
