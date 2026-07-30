@@ -236,10 +236,20 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
    obsolete, et il s'applique quel que soit le fichier qui a cree le bouton.
    ============================================================================ */
 @media (max-width: 920px) {
-  /* Les conteneurs cessent d'etirer leurs enfants et adoptent le meme ecart */
+  /* Les deux conteneurs cessent d'etirer leurs enfants et adoptent
+     STRICTEMENT le meme ecart. Le groupe de gauche etait a 6 px et celui de
+     droite a 0 : le conteneur gauche etait donc plus large, ce qui poussait
+     le logo vers la droite. Meme valeur des deux cotes, et plus aucune marge
+     sur les enfants : les deux groupes sont desormais identiques et le logo
+     retrouve le centre. */
   .mobile-header > div {
     align-items: center !important;
-    gap: 6px !important;
+    gap: 4px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .mobile-header > div > * {
+    margin: 0 !important;
   }
 
   .mobile-header #bh-mobile-svc,

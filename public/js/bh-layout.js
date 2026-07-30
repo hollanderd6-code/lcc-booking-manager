@@ -1835,12 +1835,12 @@ var _bhNativeConfirm = window.confirm;
       // Le groupe de boutons à droite ne doit jamais se comprimer ni sortir de l'écran
       '.mobile-header>[style*="flex-end"]{flex-shrink:0!important;}' +
       '.mobile-header #bh-mobile-ann-btn{margin-right:6px!important;}' +
-      '.mobile-header>[style*="flex-end"]{gap:6px!important;margin-left:8px!important;}' +
-      '.mobile-header>[style*="flex-start"]{gap:6px!important;margin-right:8px!important;}' +
+      '.mobile-header>[style*="flex-end"]{gap:4px!important;margin:0!important;}' +
+      '.mobile-header>[style*="flex-start"]{gap:4px!important;margin:0!important;}' +
       /* Sans bouton agence : le groupe droit (2 boutons) laisse un vide entre le logo
          et les boutons. On décolle le groupe du bord droit pour le ramener vers le
          centre, ce qui rééquilibre comme s'il y avait 3 boutons. */
-      '.mobile-header.bh-no-agency>[style*="flex-end"]{margin-right:12px!important;}' +
+      
       '.mobile-header #bh-mobile-svc,.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{' +
         'background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);' +
         'border:1px solid rgba(14,59,46,.16)!important;border-radius:10px!important;height:32px!important;cursor:pointer;' +
