@@ -112,7 +112,15 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
   border-radius: 0 !important;
 }
 .mobile-logo { overflow: visible !important; }
-.mobile-logo .bh-verrou { height: 42px !important; width: 191px !important; }
+/* Largeur nominale ; ajusterVerrou() (bh-layout.js) la reduit si les boutons
+   de l'en-tete ne laissent pas la place. aspect-ratio garantit que le trace
+   ne se deforme jamais, meme avant le premier calcul. */
+.mobile-logo .bh-verrou {
+  height: 42px;
+  width: 191px;
+  max-width: 100%;
+  aspect-ratio: 191 / 42;
+}
 .sidebar-logo .bh-verrou { height: 38px !important; width: 150px !important; }
 
 

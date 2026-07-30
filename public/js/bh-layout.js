@@ -86,6 +86,93 @@ window.bhDiagLogo = function () {
   console.log('[BH] version bh-layout : verrou-span-v3');
 };
 
+/* ── Verrou adaptatif ──────────────────────────────────────────────────────
+   L'en-tete mobile centre le logo, tandis que les boutons (bascule agence,
+   informations, rafraichir, notifications, recherche) sont poses en absolu
+   de part et d'autre. Leur nombre varie selon la page et le type de compte :
+   une largeur fixe finit donc toujours par passer sous un bouton.
+
+   On mesure la place reellement libre entre le dernier element de gauche et
+   le premier de droite, puis :
+     - place suffisante        -> verrou complet, hauteur nominale
+     - place intermediaire     -> verrou reduit proportionnellement
+     - place insuffisante      -> monogramme seul
+
+   Rappele au redimensionnement et des que l'en-tete change.                */
+const VERROU_L = 191, VERROU_H = 42;   // dimensions nominales
+const VERROU_H_MIN = 26;               // en dessous, le texte n'est plus lisible
+
+function ajusterVerrou() {
+  const entete = document.querySelector('.mobile-header');
+  if (!entete) return;
+  const logo = entete.querySelector('.mobile-logo');
+  if (!logo) return;
+  const verrou = logo.querySelector('.bh-verrou');
+  const mono = logo.querySelector('img');
+  if (!verrou && !mono) return;
+
+  const zone = entete.getBoundingClientRect();
+  if (!zone.width) return;
+  const milieu = zone.left + zone.width / 2;
+
+  // Bornes imposees par tout ce qui n'est pas le logo lui-meme
+  let borneG = zone.left + 8, borneD = zone.right - 8;
+  entete.querySelectorAll('button, a, .bh-icon-btn, [id$="Btn"]').forEach(function (el) {
+    if (el === logo || logo.contains(el) || el.contains(logo)) return;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;                 // masque
+    if (getComputedStyle(el).display === 'none') return;
+    const centre = r.left + r.width / 2;
+    if (centre < milieu) borneG = Math.max(borneG, r.right + 10);
+    else borneD = Math.min(borneD, r.left - 10);
+  });
+
+  const dispo = Math.max(0, borneD - borneG);
+
+  if (verrou) {
+    if (dispo >= VERROU_L) {
+      verrou.style.setProperty('width', VERROU_L + 'px', 'important');
+      verrou.style.setProperty('height', VERROU_H + 'px', 'important');
+      return;
+    }
+    const hauteur = Math.round(dispo * VERROU_H / VERROU_L);
+    if (hauteur >= VERROU_H_MIN) {
+      verrou.style.setProperty('width', Math.floor(dispo) + 'px', 'important');
+      verrou.style.setProperty('height', hauteur + 'px', 'important');
+      return;
+    }
+    // Trop juste : on remplace le verrou par le monogramme seul
+    verrou.remove();
+    logo.insertAdjacentHTML('afterbegin', LOGO_MONO);
+    return;
+  }
+
+  // Un monogramme est en place : on repasse au verrou si la place revient
+  if (mono && dispo >= VERROU_L + 12 && !logo.querySelector('.bh-verrou')
+      && mono.getAttribute('src') === '/img/brand/web/mono-sidebar.svg'
+      && !logo.querySelector('.mobile-logo-title')) {
+    mono.remove();
+    logo.insertAdjacentHTML('afterbegin', LOGO_MOBILE);
+  }
+}
+
+let minuteurVerrou = null;
+function planifierAjustVerrou() {
+  clearTimeout(minuteurVerrou);
+  minuteurVerrou = setTimeout(ajusterVerrou, 60);
+}
+window.addEventListener('resize', planifierAjustVerrou);
+window.addEventListener('orientationchange', planifierAjustVerrou);
+if (window.ResizeObserver) {
+  const obs = new ResizeObserver(planifierAjustVerrou);
+  const brancher = function () {
+    const e = document.querySelector('.mobile-header');
+    if (e) obs.observe(e);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', brancher);
+  else brancher();
+}
+
 function verrouHTML(fichier, largeur, hauteur, texte) {
   return '<span class="bh-verrou" role="img" aria-label="' + texte + '" style="'
     + 'display:inline-block;flex:none;width:' + largeur + 'px;height:' + hauteur + 'px;'
@@ -595,8 +682,10 @@ function getSidebarHTML() {
     mobileHeader.appendChild(sentinel);
 
     normalizeBranding();
-    setTimeout(function(){ normalizeBranding(); forceUpdateSidebarLogo(); }, 100);
-    setTimeout(function(){ normalizeBranding(); }, 400);
+    ajusterVerrou();
+    setTimeout(function(){ normalizeBranding(); forceUpdateSidebarLogo(); ajusterVerrou(); }, 100);
+    setTimeout(function(){ normalizeBranding(); ajusterVerrou(); }, 400);
+    setTimeout(ajusterVerrou, 900);   // apres l'apparition des boutons differes
 
   }
 
@@ -1812,7 +1901,7 @@ var _bhNativeConfirm = window.confirm;
       '.mobile-header .mobile-logo,.mobile-logo{gap:6px!important;min-width:0!important;flex:1 1 auto!important;overflow:hidden!important;}' +
       '.mobile-header .mobile-logo img:not(.bh-verrou),.mobile-logo img:not(.bh-verrou){width:30px!important;height:30px!important;min-width:30px!important;border-radius:8px!important;flex-shrink:0!important;}' +
       // Le verrou n'est pas carre : largeur libre, hauteur imposee, aucun recadrage.
-      '.mobile-logo .bh-verrou{width:191px!important;height:42px!important;min-width:0!important;max-width:100%!important;border-radius:0!important;object-fit:contain!important;flex-shrink:1!important;}' +
+      '.mobile-logo .bh-verrou{max-width:100%!important;min-width:0!important;border-radius:0!important;flex-shrink:1!important;aspect-ratio:191/42;}' +
       // Texte en colonne : titre au-dessus, sous-titre dessous, calés à la même largeur
       '.mobile-header .mobile-logo-text,.mobile-logo-text{display:inline-flex!important;flex-direction:column!important;align-items:stretch!important;min-width:0!important;overflow:hidden!important;}' +
       '.mobile-header .mobile-logo-title,.mobile-logo-title{font-size:15px!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}' +
