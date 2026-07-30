@@ -235,7 +235,7 @@
         return '<button data-i="' + i + '" style="display:flex;align-items:center;gap:11px;width:100%;'
           + 'padding:12px 14px;border:none;background:transparent;border-radius:11px;cursor:pointer;'
           + 'font:600 14px \'DM Sans\',sans-serif;color:#0D1117;text-align:left;">'
-          + '<span style="width:30px;height:30px;border-radius:9px;background:rgba(26,122,94,.1);color:#1A7A5E;'
+          + '<span style="width:30px;height:30px;border-radius:9px;background:rgba(14,59,46,.1);color:#0E3B2E;'
           + 'display:flex;align-items:center;justify-content:center;"><i class="fas ' + it.icon + '"></i></span>'
           + it.label + '</button>';
       }).join('');

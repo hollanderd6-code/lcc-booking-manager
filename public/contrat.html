@@ -12,11 +12,11 @@
 <!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <!-- CSS plateforme -->
-<link href="/css/style.css?v=9d18f851" rel="stylesheet"/>
-<link href="/css/bh-theme-v3.css?v=8d0e239f" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-brand.css?v=69892992">
+<link href="/css/style.css?v=17204d03" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css?v=7d47a1eb" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/bh-brand.css?v=c0705a60">
 <link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-bottom-bar.css?v=e8b22340">
+<link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
 <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
 
 <style>
@@ -72,7 +72,7 @@ html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
 }
 html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
-  background: #1A7A5E; color: white; border-color: #1A7A5E;
+  background: #0E3B2E; color: white; border-color: #0E3B2E;
 }
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
   margin-left: auto; display: flex; align-items: center; gap: 10px; flex-shrink: 0;
@@ -91,7 +91,7 @@ html[data-theme-v3="1"] .bh-theme-toggle::after {
   width: 18px; height: 18px; background: white;
   border-radius: 50%; transition: transform .2s;
 }
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #0E3B2E; }
 html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
 
 html[data-theme-v3="1"],
@@ -132,7 +132,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .contrat-back-btn {
   display: inline-flex; align-items: center; gap: 8px;
   height: 40px; padding: 0 20px; border: none; border-radius: 12px;
-  background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif;
+  background: #0E3B2E; color: white; font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap; position: fixed; top: 52px; right: 24px; z-index: 200;
 }
@@ -157,7 +157,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   font-family: 'Instrument Serif', serif;
   font-size: 28px; font-weight: 400; color: #0D1117; margin: 0;
 }
-.contrat-title em { font-style: italic; color: #1A7A5E; }
+.contrat-title em { font-style: italic; color: #0E3B2E; }
 
 /* Steps */
 .contrat-steps {
@@ -178,11 +178,11 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   font-size: 12px; font-weight: 700; flex-shrink: 0;
 }
 .contrat-step-label { font-size: 12.5px; font-weight: 600; color: #7A8695; }
-.contrat-step.active { background: rgba(26,122,94,.08); }
-.contrat-step.active .contrat-step-num { background: #1A7A5E; color: white; }
-.contrat-step.active .contrat-step-label { color: #1A7A5E; }
+.contrat-step.active { background: rgba(14,59,46,.08); }
+.contrat-step.active .contrat-step-num { background: #0E3B2E; color: white; }
+.contrat-step.active .contrat-step-label { color: #0E3B2E; }
 .contrat-step.done { cursor: pointer; }
-.contrat-step.done:hover { background: rgba(26,122,94,.06); border-radius: 10px; }
+.contrat-step.done:hover { background: rgba(14,59,46,.06); border-radius: 10px; }
 .contrat-sep { width: 24px; height: 2px; background: rgba(13,17,23,.08); flex-shrink: 0; }
 
 /* Cards */
@@ -196,8 +196,8 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 }
 .contrat-card-icon {
   width: 40px; height: 40px; border-radius: 10px;
-  background: rgba(26,122,94,.1); display: flex; align-items: center;
-  justify-content: center; color: #1A7A5E; font-size: 16px; flex-shrink: 0;
+  background: rgba(14,59,46,.1); display: flex; align-items: center;
+  justify-content: center; color: #0E3B2E; font-size: 16px; flex-shrink: 0;
 }
 .contrat-card-title { font-size: 16px; font-weight: 700; color: #0D1117; margin: 0; }
 .contrat-card-sub { font-size: 13px; color: #7A8695; margin: 2px 0 0; }
@@ -220,8 +220,8 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   box-sizing: border-box;
 }
 .form-input:focus, .form-textarea:focus, .form-select:focus {
-  border-color: #1A7A5E; background: white;
-  box-shadow: 0 0 0 3px rgba(26,122,94,.08);
+  border-color: #0E3B2E; background: white;
+  box-shadow: 0 0 0 3px rgba(14,59,46,.08);
 }
 .form-textarea { resize: vertical; min-height: 90px; }
 .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -237,19 +237,19 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   font-size: 14px; color: #374151;
 }
 .regles-list li:last-child { border-bottom: none; }
-.regles-list li i { color: #1A7A5E; margin-top: 2px; flex-shrink: 0; }
+.regles-list li i { color: #0E3B2E; margin-top: 2px; flex-shrink: 0; }
 .regles-add {
   display: flex; gap: 8px; margin-top: 12px;
 }
 .regles-add .form-input { flex: 1; }
 .btn-add-regle {
   height: 42px; padding: 0 16px; border-radius: 10px;
-  background: rgba(26,122,94,.1); color: #1A7A5E;
-  border: 1px dashed rgba(26,122,94,.3); cursor: pointer;
+  background: rgba(14,59,46,.1); color: #0E3B2E;
+  border: 1px dashed rgba(14,59,46,.3); cursor: pointer;
   font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif;
   transition: all .15s; white-space: nowrap;
 }
-.btn-add-regle:hover { background: rgba(26,122,94,.18); border-color: #1A7A5E; }
+.btn-add-regle:hover { background: rgba(14,59,46,.18); border-color: #0E3B2E; }
 
 /* Signature */
 .signature-zone {
@@ -278,11 +278,11 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 /* Checkbox acceptation */
 .accept-box {
   display: flex; gap: 12px; align-items: flex-start;
-  background: rgba(26,122,94,.05); border: 1px solid rgba(26,122,94,.15);
+  background: rgba(14,59,46,.05); border: 1px solid rgba(14,59,46,.15);
   border-radius: 12px; padding: 16px; margin-top: 20px;
 }
 .accept-box input[type="checkbox"] {
-  width: 18px; height: 18px; accent-color: #1A7A5E;
+  width: 18px; height: 18px; accent-color: #0E3B2E;
   flex-shrink: 0; margin-top: 1px; cursor: pointer;
 }
 .accept-box label {
@@ -306,8 +306,8 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .contrat-preview .preview-section { margin-bottom: 20px; }
 .contrat-preview .preview-section-title {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .1em; color: #1A7A5E; margin-bottom: 8px;
-  padding-bottom: 6px; border-bottom: 1px solid rgba(26,122,94,.15);
+  letter-spacing: .1em; color: #0E3B2E; margin-bottom: 8px;
+  padding-bottom: 6px; border-bottom: 1px solid rgba(14,59,46,.15);
 }
 .contrat-preview .preview-row {
   display: flex; gap: 8px; margin-bottom: 4px; font-size: 14px;
@@ -341,7 +341,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .btn-prev:hover { background: #f0ede7; }
 .btn-next {
   height: 44px; padding: 0 24px; border-radius: 12px;
-  background: #1A7A5E; color: white; border: none; cursor: pointer;
+  background: #0E3B2E; color: white; border: none; cursor: pointer;
   font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
   display: inline-flex; align-items: center; gap: 8px; transition: all .15s;
 }
@@ -352,7 +352,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .final-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .btn-download {
   flex: 1; height: 48px; padding: 0 24px; border-radius: 12px;
-  background: #1A7A5E; color: white; border: none; cursor: pointer;
+  background: #0E3B2E; color: white; border: none; cursor: pointer;
   font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   transition: all .15s; min-width: 180px;
@@ -387,10 +387,10 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   cursor: pointer; transition: all .15s;
   display: flex; align-items: center; justify-content: center; gap: 7px;
 }
-.contrat-tab-btn:hover { background: rgba(26,122,94,.05); color: #0D1117; }
-.contrat-tab-btn.active { background: rgba(26,122,94,.1); color: #1A7A5E; }
+.contrat-tab-btn:hover { background: rgba(14,59,46,.05); color: #0D1117; }
+.contrat-tab-btn.active { background: rgba(14,59,46,.1); color: #0E3B2E; }
 .contrat-tab-btn .tab-badge {
-  background: #1A7A5E; color: white; font-size: 11px; font-weight: 700;
+  background: #0E3B2E; color: white; font-size: 11px; font-weight: 700;
   padding: 1px 7px; border-radius: 20px; min-width: 20px; text-align: center;
 }
 
@@ -411,7 +411,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .extra-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 5px 0; border-bottom: 1px solid rgba(200,184,154,.15); }
 .extra-row:last-child { border-bottom: none; }
 .extra-price-zone { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.extra-euro { font-size: 14px; font-weight: 700; color: #1A7A5E; }
+.extra-euro { font-size: 14px; font-weight: 700; color: #0E3B2E; }
 
 /* Titre de section — Option A (ligne verte à gauche) */
 #mandatView .form-card-title {
@@ -431,7 +431,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   display: block;
   width: 3px;
   height: 18px;
-  background: #1A7A5E;
+  background: #0E3B2E;
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -443,12 +443,12 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .missions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 @media(max-width:600px){ .missions-grid { grid-template-columns: 1fr; } }
 .mission-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1.5px solid rgba(13,17,23,.08); border-radius: 10px; cursor: pointer; transition: all .15s; background: white; }
-.mission-item:hover { border-color: rgba(26,122,94,.3); background: rgba(26,122,94,.03); }
-.mission-item input[type="checkbox"] { accent-color: #1A7A5E; width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+.mission-item:hover { border-color: rgba(14,59,46,.3); background: rgba(14,59,46,.03); }
+.mission-item input[type="checkbox"] { accent-color: #0E3B2E; width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; cursor: pointer; }
 .mission-item label { font-size: 13.5px; color: #374151; cursor: pointer; line-height: 1.4; }
-.mission-item.checked { border-color: #1A7A5E; background: rgba(26,122,94,.05); }
-.mission-item.checked label { color: #1A7A5E; font-weight: 600; }
-.missions-block-title { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #1A7A5E; margin: 18px 0 8px; }
+.mission-item.checked { border-color: #0E3B2E; background: rgba(14,59,46,.05); }
+.mission-item.checked label { color: #0E3B2E; font-weight: 600; }
+.missions-block-title { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #0E3B2E; margin: 18px 0 8px; }
 
 /* Cards rémunération */
 .remu-cards { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
@@ -458,12 +458,12 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   padding: 14px 10px; text-align: center; cursor: pointer;
   background: white; transition: all .15s;
 }
-.remu-card:hover { border-color: rgba(26,122,94,.4); background: rgba(26,122,94,.03); }
-.remu-card.selected { border-color: #1A7A5E; background: rgba(26,122,94,.07); }
+.remu-card:hover { border-color: rgba(14,59,46,.4); background: rgba(14,59,46,.03); }
+.remu-card.selected { border-color: #0E3B2E; background: rgba(14,59,46,.07); }
 .remu-card-icon { font-size: 20px; color: #9CA3AF; margin-bottom: 8px; }
-.remu-card.selected .remu-card-icon { color: #1A7A5E; }
+.remu-card.selected .remu-card-icon { color: #0E3B2E; }
 .remu-card-label { font-size: 12px; font-weight: 600; color: #374151; line-height: 1.3; }
-.remu-card.selected .remu-card-label { color: #1A7A5E; }
+.remu-card.selected .remu-card-label { color: #0E3B2E; }
 
 /* Boutons navigation wizard */
 .wiz-nav {
@@ -474,7 +474,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .wiz-btn-next {
   display: inline-flex; align-items: center; gap: 8px;
   height: 44px; padding: 0 24px; border-radius: 12px;
-  background: #1A7A5E; color: white; border: none;
+  background: #0E3B2E; color: white; border: none;
   font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700;
   cursor: pointer; transition: background .15s;
 }
@@ -491,7 +491,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 
 /* Clauses libres */
 .clauses-list { list-style: none; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
-.clause-item { display: flex; align-items: flex-start; gap: 10px; background: rgba(26,122,94,.05); border: 1px solid rgba(26,122,94,.15); border-radius: 10px; padding: 10px 14px; }
+.clause-item { display: flex; align-items: flex-start; gap: 10px; background: rgba(14,59,46,.05); border: 1px solid rgba(14,59,46,.15); border-radius: 10px; padding: 10px 14px; }
 .clause-item span { flex: 1; font-size: 14px; color: #374151; }
 .clause-item button { background: none; border: none; cursor: pointer; color: #DC2626; font-size: 13px; padding: 0; flex-shrink: 0; }
 
@@ -513,8 +513,8 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   color: #7A8695; font-size: 13px; font-weight: 600;
   font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .15s;
 }
-.history-filter-btn:hover { border-color: #1A7A5E; color: #1A7A5E; }
-.history-filter-btn.active { background: #1A7A5E; color: white; border-color: #1A7A5E; }
+.history-filter-btn:hover { border-color: #0E3B2E; color: #0E3B2E; }
+.history-filter-btn.active { background: #0E3B2E; color: white; border-color: #0E3B2E; }
 
 .history-list { display: flex; flex-direction: column; gap: 12px; }
 .history-period-row {
@@ -526,8 +526,8 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   color: #7A8695; font-size: 12px; font-weight: 600;
   font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .15s;
 }
-.history-period-btn:hover { border-color: #1A7A5E; color: #1A7A5E; }
-.history-period-btn.active { background: #1A7A5E; color: white; border-color: #1A7A5E; }
+.history-period-btn:hover { border-color: #0E3B2E; color: #0E3B2E; }
+.history-period-btn.active { background: #0E3B2E; color: white; border-color: #0E3B2E; }
 .history-period-label {
   font-size: 12px; color: #9CA3AF; margin-bottom: 14px; display: none;
 }
@@ -544,7 +544,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   display: flex; align-items: center; justify-content: center; font-size: 16px;
 }
 .history-card-icon.sent { background: rgba(59,130,246,.1); color: #3B82F6; }
-.history-card-icon.signed { background: rgba(26,122,94,.1); color: #1A7A5E; }
+.history-card-icon.signed { background: rgba(14,59,46,.1); color: #0E3B2E; }
 .history-card-icon.expired { background: rgba(156,163,175,.1); color: #9CA3AF; }
 
 .history-card-info { flex: 1; min-width: 0; }
@@ -557,7 +557,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
 }
 .history-badge.sent { background: rgba(59,130,246,.1); color: #2563EB; }
-.history-badge.signed { background: rgba(26,122,94,.1); color: #1A7A5E; }
+.history-badge.signed { background: rgba(14,59,46,.1); color: #0E3B2E; }
 .history-badge.expired { background: rgba(156,163,175,.1); color: #6B7280; }
 
 .history-empty {
@@ -617,7 +617,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 }
 .toast:empty { display: none; }
 .toast.show { opacity: 1; }
-.toast.success { background: #1A7A5E; }
+.toast.success { background: #0E3B2E; }
 .toast.error { background: #DC2626; }
 
 /* Masquer le mobile header ET bhHeader sur desktop (bh-layout.js les force en display:flex) */
@@ -765,9 +765,9 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   }
 }
 </style>
-<link rel="stylesheet" href="/css/menu-active-button.css?v=5206d90a">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=ec508074">
-<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
+<link rel="stylesheet" href="/css/menu-active-button.css?v=f21f319b">
+<link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
+<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
 
   <!-- Marque Boostinghost — genere par outils/marque.js -->
   <link rel="icon" href="/img/brand/web/favicon.svg" type="image/svg+xml">
@@ -1116,10 +1116,10 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
         <!-- Annulation -->
         <div class="contrat-card" style="border:1px solid rgba(200,184,154,.3);box-shadow:none;margin-bottom:16px;">
           <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;gap:10px;">
-            <i class="fas fa-calendar-xmark" style="color:#1A7A5E;font-size:15px;flex-shrink:0;"></i>
+            <i class="fas fa-calendar-xmark" style="color:#0E3B2E;font-size:15px;flex-shrink:0;"></i>
             <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;min-width:0;">Politique d'annulation</span>
             <label class="include-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
-              <input type="checkbox" id="toggleAnnulation" checked style="accent-color:#1A7A5E;"/> Inclure
+              <input type="checkbox" id="toggleAnnulation" checked style="accent-color:#0E3B2E;"/> Inclure
             </label>
           </div>
           <div class="contrat-card-body" id="annulationBody">
@@ -1159,10 +1159,10 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
         <!-- Obligations -->
         <div class="contrat-card" style="border:1px solid rgba(200,184,154,.3);box-shadow:none;margin-bottom:16px;">
           <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;gap:10px;">
-            <i class="fas fa-handshake" style="color:#1A7A5E;font-size:15px;flex-shrink:0;"></i>
+            <i class="fas fa-handshake" style="color:#0E3B2E;font-size:15px;flex-shrink:0;"></i>
             <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;min-width:0;">Obligations du locataire</span>
             <label class="include-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
-              <input type="checkbox" id="toggleObligations" checked style="accent-color:#1A7A5E;"/> Inclure
+              <input type="checkbox" id="toggleObligations" checked style="accent-color:#0E3B2E;"/> Inclure
             </label>
           </div>
           <div class="contrat-card-body" id="obligationsBody">
@@ -1179,10 +1179,10 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
         <!-- Assurance -->
         <div class="contrat-card" style="border:1px solid rgba(200,184,154,.3);box-shadow:none;margin-bottom:16px;">
           <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;gap:10px;">
-            <i class="fas fa-shield-halved" style="color:#1A7A5E;font-size:15px;flex-shrink:0;"></i>
+            <i class="fas fa-shield-halved" style="color:#0E3B2E;font-size:15px;flex-shrink:0;"></i>
             <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;min-width:0;">Assurance responsabilité civile</span>
             <label class="include-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
-              <input type="checkbox" id="toggleAssurance" checked style="accent-color:#1A7A5E;"/> Inclure
+              <input type="checkbox" id="toggleAssurance" checked style="accent-color:#0E3B2E;"/> Inclure
             </label>
           </div>
           <div class="contrat-card-body" id="assuranceBody">
@@ -1195,10 +1195,10 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
         <!-- État des lieux -->
         <div class="contrat-card" style="border:1px solid rgba(200,184,154,.3);box-shadow:none;margin-bottom:0;">
           <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;gap:10px;">
-            <i class="fas fa-clipboard-list" style="color:#1A7A5E;font-size:15px;flex-shrink:0;"></i>
+            <i class="fas fa-clipboard-list" style="color:#0E3B2E;font-size:15px;flex-shrink:0;"></i>
             <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;min-width:0;">État des lieux</span>
             <label class="include-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
-              <input type="checkbox" id="toggleEDL" checked style="accent-color:#1A7A5E;"/> Inclure
+              <input type="checkbox" id="toggleEDL" checked style="accent-color:#0E3B2E;"/> Inclure
             </label>
           </div>
           <div class="contrat-card-body" id="edlBody">
@@ -1255,7 +1255,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
           <div class="signature-zone" id="signatureZone" style="display:none;">
             <canvas id="signatureCanvas"></canvas>
             <div class="signature-actions">
-              <span class="signature-hint"><i class="fas fa-pen" style="margin-right:4px;color:#1A7A5E;"></i>Signez avec la souris ou le doigt</span>
+              <span class="signature-hint"><i class="fas fa-pen" style="margin-right:4px;color:#0E3B2E;"></i>Signez avec la souris ou le doigt</span>
               <button class="btn-clear-sig" onclick="clearSignature()"><i class="fas fa-trash"></i> Effacer</button>
             </div>
           </div>
@@ -1307,8 +1307,8 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   <div class="mandat-section active" data-msection="1">
     <div class="form-card">
       <div class="form-card-title"><i class="fas fa-building"></i> Prestataire (votre conciergerie)</div>
-      <div class="form-notice" style="background:rgba(26,122,94,.07);border:1px solid rgba(26,122,94,.2);border-radius:10px;padding:12px 16px;font-size:13px;color:#1A7A5E;margin-bottom:16px;">
-        <i class="fas fa-info-circle"></i> Ces informations sont récupérées depuis votre profil. Modifiez-les dans <a href="/settings-account.html" style="color:#1A7A5E;font-weight:600;">Paramètres</a>.
+      <div class="form-notice" style="background:rgba(14,59,46,.07);border:1px solid rgba(14,59,46,.2);border-radius:10px;padding:12px 16px;font-size:13px;color:#0E3B2E;margin-bottom:16px;">
+        <i class="fas fa-info-circle"></i> Ces informations sont récupérées depuis votre profil. Modifiez-les dans <a href="/settings-account.html" style="color:#0E3B2E;font-weight:600;">Paramètres</a>.
       </div>
       <div class="form-grid-2">
         <div class="form-group"><label class="form-label">Raison sociale / Nom</label><input type="text" class="form-input" id="m_companyName" placeholder="La Conciergerie de Charles"/></div>
@@ -1487,7 +1487,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
       <ul class="clauses-list" id="missionLibreList"></ul>
       <div style="display:flex;gap:8px;margin-top:8px;">
         <input type="text" class="form-input" id="missionLibreInput" placeholder="Ajouter une mission personnalisée..." style="flex:1;"/>
-        <button type="button" onclick="addMissionLibre()" style="height:44px;padding:0 16px;background:#1A7A5E;color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap;"><i class="fas fa-plus"></i> Ajouter</button>
+        <button type="button" onclick="addMissionLibre()" style="height:44px;padding:0 16px;background:#0E3B2E;color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap;"><i class="fas fa-plus"></i> Ajouter</button>
       </div>
 
       <!-- Dépense urgente plafond -->
@@ -1536,13 +1536,13 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
         <input type="hidden" id="m_remuType"/>
       </div>
 
-      <div id="m_remuCommission" style="display:none;background:rgba(26,122,94,.04);border:1px solid rgba(26,122,94,.15);border-radius:12px;padding:16px;margin-top:4px;">
+      <div id="m_remuCommission" style="display:none;background:rgba(14,59,46,.04);border:1px solid rgba(14,59,46,.15);border-radius:12px;padding:16px;margin-top:4px;">
         <div class="form-grid-2">
           <div class="form-group" style="margin-bottom:0;">
             <label class="form-label">Taux (%)</label>
             <div style="display:flex;align-items:center;gap:8px;">
               <input type="number" class="form-input" id="m_commissionRate" placeholder="20" min="0" max="100" step="0.5" style="max-width:120px;"/>
-              <span style="font-size:15px;font-weight:700;color:#1A7A5E;">%</span>
+              <span style="font-size:15px;font-weight:700;color:#0E3B2E;">%</span>
             </div>
           </div>
           <div class="form-group" style="margin-bottom:0;">
@@ -1555,40 +1555,40 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
         </div>
       </div>
 
-      <div id="m_remuForfaitMensuel" style="display:none;background:rgba(26,122,94,.04);border:1px solid rgba(26,122,94,.15);border-radius:12px;padding:16px;margin-top:4px;">
+      <div id="m_remuForfaitMensuel" style="display:none;background:rgba(14,59,46,.04);border:1px solid rgba(14,59,46,.15);border-radius:12px;padding:16px;margin-top:4px;">
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">Montant mensuel</label>
           <div style="display:flex;align-items:center;gap:8px;">
             <input type="number" class="form-input" id="m_forfaitMensuel" placeholder="200" style="max-width:160px;"/>
-            <span style="font-size:15px;font-weight:700;color:#1A7A5E;">€ / mois</span>
+            <span style="font-size:15px;font-weight:700;color:#0E3B2E;">€ / mois</span>
           </div>
         </div>
       </div>
 
-      <div id="m_remuForfaitResa" style="display:none;background:rgba(26,122,94,.04);border:1px solid rgba(26,122,94,.15);border-radius:12px;padding:16px;margin-top:4px;">
+      <div id="m_remuForfaitResa" style="display:none;background:rgba(14,59,46,.04);border:1px solid rgba(14,59,46,.15);border-radius:12px;padding:16px;margin-top:4px;">
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">Montant par réservation</label>
           <div style="display:flex;align-items:center;gap:8px;">
             <input type="number" class="form-input" id="m_forfaitResa" placeholder="50" style="max-width:160px;"/>
-            <span style="font-size:15px;font-weight:700;color:#1A7A5E;">€ / réservation</span>
+            <span style="font-size:15px;font-weight:700;color:#0E3B2E;">€ / réservation</span>
           </div>
         </div>
       </div>
 
-      <div id="m_remuMixte" style="display:none;background:rgba(26,122,94,.04);border:1px solid rgba(26,122,94,.15);border-radius:12px;padding:16px;margin-top:4px;">
+      <div id="m_remuMixte" style="display:none;background:rgba(14,59,46,.04);border:1px solid rgba(14,59,46,.15);border-radius:12px;padding:16px;margin-top:4px;">
         <div class="form-grid-2">
           <div class="form-group" style="margin-bottom:0;">
             <label class="form-label">Taux commission</label>
             <div style="display:flex;align-items:center;gap:8px;">
               <input type="number" class="form-input" id="m_mixteRate" placeholder="15" min="0" max="100" style="max-width:120px;"/>
-              <span style="font-size:15px;font-weight:700;color:#1A7A5E;">%</span>
+              <span style="font-size:15px;font-weight:700;color:#0E3B2E;">%</span>
             </div>
           </div>
           <div class="form-group" style="margin-bottom:0;">
             <label class="form-label">Forfait mensuel</label>
             <div style="display:flex;align-items:center;gap:8px;">
               <input type="number" class="form-input" id="m_mixteForfait" placeholder="100" style="max-width:120px;"/>
-              <span style="font-size:15px;font-weight:700;color:#1A7A5E;">€ / mois</span>
+              <span style="font-size:15px;font-weight:700;color:#0E3B2E;">€ / mois</span>
             </div>
           </div>
         </div>
@@ -1641,13 +1641,13 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <input type="text" class="form-input" id="extraLibreLabel" placeholder="Nom de la prestation..." style="flex:1;min-width:120px;"/>
             <input type="number" class="form-input" id="extraLibrePrice" placeholder="Prix" min="0" style="width:80px;"/>
-            <span style="font-size:14px;font-weight:700;color:#1A7A5E;">€</span>
+            <span style="font-size:14px;font-weight:700;color:#0E3B2E;">€</span>
             <select class="form-input" id="extraLibreUnit" style="width:140px;">
               <option value="par_prestation">par prestation</option>
               <option value="par_heure">par heure</option>
               <option value="par_nuit">par nuit</option>
             </select>
-            <button type="button" onclick="addExtraLibre()" style="height:44px;padding:0 14px;background:#1A7A5E;color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap;"><i class="fas fa-plus"></i></button>
+            <button type="button" onclick="addExtraLibre()" style="height:44px;padding:0 14px;background:#0E3B2E;color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap;"><i class="fas fa-plus"></i></button>
           </div>
         </div>
       </div>
@@ -1762,7 +1762,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
       <ul class="clauses-list" id="mandatClausesList"></ul>
       <div style="display:flex;gap:8px;margin-top:12px;">
         <input type="text" class="form-input" id="mandatClauseInput" placeholder="Saisir une clause personnalisée..." style="flex:1;"/>
-        <button type="button" onclick="addMandatClause()" style="height:44px;padding:0 16px;background:#1A7A5E;color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap;"><i class="fas fa-plus"></i> Ajouter</button>
+        <button type="button" onclick="addMandatClause()" style="height:44px;padding:0 16px;background:#0E3B2E;color:white;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap;"><i class="fas fa-plus"></i> Ajouter</button>
       </div>
     </div>
 
@@ -1786,7 +1786,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
         <canvas id="mandatSignatureCanvas" style="width:100%;height:160px;display:block;cursor:crosshair;touch-action:none;"></canvas>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-        <span style="font-size:12px;color:#7A8695;"><i class="fas fa-pen" style="color:#1A7A5E;margin-right:4px;"></i>Signez dans le cadre</span>
+        <span style="font-size:12px;color:#7A8695;"><i class="fas fa-pen" style="color:#0E3B2E;margin-right:4px;"></i>Signez dans le cadre</span>
         <button type="button" class="btn-clear" onclick="clearMandatSignature()"><i class="fas fa-trash"></i> Effacer</button>
       </div>
 
@@ -1840,10 +1840,10 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 <div class="toast" id="toast"></div>
 
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/bh-layout.js?v=6aab0b85"></script>
+<script src="/js/bh-layout.js?v=2f884d1c"></script>
 <script src="/js/logout-fix.js?v=cb4a6950"></script>
-<script src="/js/mobile-native-experience.js?v=2594b603"></script>
-<script src="/js/mobile-tabs-handler.js?v=e901dd8d"></script>
+<script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
+<script src="/js/mobile-tabs-handler.js?v=01e3d29a"></script>
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
 
 <script>
@@ -2000,7 +2000,7 @@ const propTypeLabels = { appartement:'Appartement', maison:'Maison', studio:'Stu
 
     <div class="preview-section">
       <div class="preview-section-title">5. Conditions financières</div>
-      <div class="preview-row"><span class="lbl">Loyer total</span><span class="val" style="color:#1A7A5E;font-weight:700;">${parseFloat(v('totalPrice') || 0).toFixed(2)} € charges comprises</span></div>
+      <div class="preview-row"><span class="lbl">Loyer total</span><span class="val" style="color:#0E3B2E;font-weight:700;">${parseFloat(v('totalPrice') || 0).toFixed(2)} € charges comprises</span></div>
       ${v('cleaningFee') && parseFloat(v('cleaningFee')) > 0 ? `<div class="preview-row"><span class="lbl">Dont frais de ménage</span><span class="val">${parseFloat(v('cleaningFee')).toFixed(2)} €</span></div>` : ''}
       ${v('deposit') && parseFloat(v('deposit')) > 0 ? `<div class="preview-row"><span class="lbl">Dépôt de garantie</span><span class="val">${parseFloat(v('deposit')).toFixed(2)} €</span></div>` : ''}
       ${v('acompte') && parseFloat(v('acompte')) > 0 ? `<div class="preview-row"><span class="lbl">Acompte versé</span><span class="val">${parseFloat(v('acompte')).toFixed(2)} €${v('acompteDate') ? ' le ' + new Date(v('acompteDate')).toLocaleDateString('fr-FR') : ''}</span></div>` : ''}
@@ -2632,10 +2632,10 @@ function renderHistory(filter) {
     let cardName, cardMeta;
     if (isMandat) {
       const owner = `${d.ownerFirstName || ''} ${d.ownerLastName || ''}`.trim() || '—';
-      cardName = `<i class="fas fa-handshake" style="color:#1A7A5E;font-size:12px;margin-right:6px;"></i>Mandat — ${owner}`;
+      cardName = `<i class="fas fa-handshake" style="color:#0E3B2E;font-size:12px;margin-right:6px;"></i>Mandat — ${owner}`;
       cardMeta = `
-        <span><i class="fas fa-home" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${d.propAddress || '—'}</span>
-        <span><i class="fas fa-building" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${d.companyName || '—'}</span>`;
+        <span><i class="fas fa-home" style="margin-right:4px;color:#0E3B2E;font-size:11px;"></i>${d.propAddress || '—'}</span>
+        <span><i class="fas fa-building" style="margin-right:4px;color:#0E3B2E;font-size:11px;"></i>${d.companyName || '—'}</span>`;
     } else {
       const checkin = c.checkin ? new Date(c.checkin).toLocaleDateString('fr-FR') : (d.checkin ? new Date(d.checkin).toLocaleDateString('fr-FR') : '—');
       const checkout = c.checkout ? new Date(c.checkout).toLocaleDateString('fr-FR') : (d.checkout ? new Date(d.checkout).toLocaleDateString('fr-FR') : '—');
@@ -2644,9 +2644,9 @@ function renderHistory(filter) {
       const price = c.total_price || d.totalPrice;
       cardName = guestName;
       cardMeta = `
-        <span><i class="fas fa-home" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${propName}</span>
-        ${d.checkin || c.checkin ? `<span><i class="fas fa-calendar" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${checkin} → ${checkout}</span>` : ''}
-        <span><i class="fas fa-euro-sign" style="margin-right:4px;color:#1A7A5E;font-size:11px;"></i>${price ? parseFloat(price).toFixed(0) + ' €' : '—'}</span>`;
+        <span><i class="fas fa-home" style="margin-right:4px;color:#0E3B2E;font-size:11px;"></i>${propName}</span>
+        ${d.checkin || c.checkin ? `<span><i class="fas fa-calendar" style="margin-right:4px;color:#0E3B2E;font-size:11px;"></i>${checkin} → ${checkout}</span>` : ''}
+        <span><i class="fas fa-euro-sign" style="margin-right:4px;color:#0E3B2E;font-size:11px;"></i>${price ? parseFloat(price).toFixed(0) + ' €' : '—'}</span>`;
     }
 
     return `<div class="history-card">
@@ -2658,7 +2658,7 @@ function renderHistory(filter) {
         <div class="history-card-meta">${cardMeta}</div>
         <div class="history-card-meta" style="margin-top:4px;">
           <span>Créé le ${created}</span>
-          ${signedAt ? `<span style="color:#1A7A5E;font-weight:600;"><i class="fas fa-check-circle" style="margin-right:3px;"></i>Signé le ${signedAt}</span>` : ''}
+          ${signedAt ? `<span style="color:#0E3B2E;font-weight:600;"><i class="fas fa-check-circle" style="margin-right:3px;"></i>Signé le ${signedAt}</span>` : ''}
         </div>
       </div>
       <div style="flex-shrink:0;display:flex;flex-direction:column;gap:7px;align-items:flex-end;">
@@ -2796,7 +2796,7 @@ async function prefillMandatFromProfile() {
     if (user.logoUrl) {
       mandatLogoUrl = user.logoUrl;
       const logoPreview = document.getElementById('m_logoPreview');
-      if (logoPreview) logoPreview.innerHTML = `<img src="${user.logoUrl}" style="height:44px;max-width:160px;object-fit:contain;border-radius:6px;border:1px solid rgba(200,184,154,.3);padding:3px;background:white;"/> <span style="font-size:12px;color:#1A7A5E;"><i class="fas fa-check-circle"></i> Logo depuis votre profil</span>`;
+      if (logoPreview) logoPreview.innerHTML = `<img src="${user.logoUrl}" style="height:44px;max-width:160px;object-fit:contain;border-radius:6px;border:1px solid rgba(200,184,154,.3);padding:3px;background:white;"/> <span style="font-size:12px;color:#0E3B2E;"><i class="fas fa-check-circle"></i> Logo depuis votre profil</span>`;
     }
   } catch(e) { console.warn('prefillMandatFromProfile:', e); }
 
@@ -3010,7 +3010,7 @@ function addExtraLibre() {
   const list = document.getElementById('extraLibreList');
   const div = document.createElement('div');
   div.setAttribute('data-label', text);
-  div.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:rgba(26,122,94,.05);border:1px solid rgba(26,122,94,.15);border-radius:8px;padding:8px 12px;font-size:13px;color:#374151;';
+  div.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:rgba(14,59,46,.05);border:1px solid rgba(14,59,46,.15);border-radius:8px;padding:8px 12px;font-size:13px;color:#374151;';
   div.innerHTML = `<span>${text}</span><button onclick="this.closest('div').remove()" style="background:none;border:none;cursor:pointer;color:#DC2626;font-size:12px;"><i class="fas fa-times"></i></button>`;
   list.appendChild(div);
   document.getElementById('extraLibreLabel').value = '';
@@ -3036,7 +3036,7 @@ function buildMandatPreview() {
 
   const row = (icon, label, value) => value
     ? `<div style="display:flex;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid rgba(200,184,154,.2);">
-        <i class="fas ${icon}" style="color:#1A7A5E;font-size:12px;width:16px;flex-shrink:0;margin-top:3px;"></i>
+        <i class="fas ${icon}" style="color:#0E3B2E;font-size:12px;width:16px;flex-shrink:0;margin-top:3px;"></i>
         <span style="color:#7A8695;font-size:13px;min-width:160px;flex-shrink:0;">${label}</span>
         <strong style="font-size:14px;color:#0D1117;">${value}</strong>
        </div>` : '';
@@ -3052,8 +3052,8 @@ function buildMandatPreview() {
       ${row('fa-bell', 'Préavis résiliation', vm('m_preavis') === '0' ? 'Aucun' : `${vm('m_preavis') || 30} jours`)}
       ${row('fa-handshake', 'Exclusivité', vm('m_exclusivite') === 'totale' ? 'Totale' : vm('m_exclusivite') === 'partielle' ? 'Partielle' : 'Sans exclusivité')}
     </div>
-    <div style="background:rgba(26,122,94,.06);border:1px solid rgba(26,122,94,.15);border-radius:10px;padding:12px 16px;margin-bottom:${clauses.length > 0 ? '12px' : '0'};">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#1A7A5E;margin-bottom:8px;">
+    <div style="background:rgba(14,59,46,.06);border:1px solid rgba(14,59,46,.15);border-radius:10px;padding:12px 16px;margin-bottom:${clauses.length > 0 ? '12px' : '0'};">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0E3B2E;margin-bottom:8px;">
         <i class="fas fa-tasks" style="margin-right:6px;"></i>${missions.length} mission${missions.length > 1 ? 's' : ''} sélectionnée${missions.length > 1 ? 's' : ''}
       </div>
       <div style="font-size:13px;color:#374151;line-height:1.7;">${missions.join(' · ') || '—'}</div>
@@ -3226,11 +3226,11 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script src="/js/auth-fetch.js?v=cd78753d"></script>
-<script src="/js/bh-layout.js?v=6aab0b85"></script>
-<script src="/js/mobile-native-experience.js?v=2594b603"></script>
-<script src="/js/mobile-tabs-handler.js?v=e901dd8d"></script>
+<script src="/js/bh-layout.js?v=2f884d1c"></script>
+<script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
+<script src="/js/mobile-tabs-handler.js?v=01e3d29a"></script>
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
-<script src="/js/bh-onboarding-pages.js?v=226650ec"></script>
+<script src="/js/bh-onboarding-pages.js?v=313cb8ca"></script>
 <script>
 // ── Mode Agence : banner, exit, refresh token ─────────────────
 (function() {
@@ -3292,7 +3292,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ── Onglets ── */
 .contrat-tabs { border-radius: 999px; border-color: rgba(200,184,154,.5) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04); }
 .contrat-tab-btn { border-radius: 999px !important; }
-.contrat-tab-btn.active { box-shadow: 0 1px 3px rgba(26,122,94,.15); }
+.contrat-tab-btn.active { box-shadow: 0 1px 3px rgba(14,59,46,.15); }
 
 /* ── Stepper ── */
 .contrat-steps { border-radius: 18px; border-color: rgba(200,184,154,.45) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04); }
@@ -3328,9 +3328,9 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ── Navigation & actions finales : pilules ── */
 .btn-prev, .btn-next, .btn-download, .btn-email { border-radius: 999px !important; }
 .btn-prev, .btn-email { border-color: rgba(200,184,154,.6) !important; }
-.btn-prev:hover, .btn-email:hover { background: #fff !important; border-color: #1A7A5E !important; color: #1A7A5E !important; }
-.btn-next:not(:disabled), .btn-download { box-shadow: 0 1px 4px rgba(26,122,94,.25); }
-.btn-next:not(:disabled):hover, .btn-download:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,122,94,.3); }
+.btn-prev:hover, .btn-email:hover { background: #fff !important; border-color: #0E3B2E !important; color: #0E3B2E !important; }
+.btn-next:not(:disabled), .btn-download { box-shadow: 0 1px 4px rgba(14,59,46,.25); }
+.btn-next:not(:disabled):hover, .btn-download:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14,59,46,.3); }
 
 /* ── Aperçu contrat : document soigné ── */
 .contrat-preview { border-radius: 20px; border-color: rgba(200,184,154,.5) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04); }
@@ -3338,7 +3338,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ── Historique ── */
 .history-filter-btn { border-radius: 999px !important; border-color: rgba(200,184,154,.55) !important; }
-.history-filter-btn.active { box-shadow: 0 1px 4px rgba(26,122,94,.25); }
+.history-filter-btn.active { box-shadow: 0 1px 4px rgba(14,59,46,.25); }
 .history-period-btn { border-color: rgba(200,184,154,.55) !important; }
 .history-card {
   border-radius: 18px;
@@ -3347,7 +3347,7 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 .history-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(26,122,94,.35) !important;
+  border-color: rgba(14,59,46,.35) !important;
   box-shadow: 0 8px 24px rgba(13,17,23,.09);
 }
 .history-card-name {
@@ -3364,7 +3364,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
 <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
-<script src="/js/bh-global-search.js?v=610ed2a6"></script>
+<script src="/js/bh-global-search.js?v=813e6615"></script>
 <script src="/js/bh-polish.js?v=1"></script>
 </body>
 </html>

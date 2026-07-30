@@ -25,7 +25,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --bg: #f0f4f8; --bg-card: #ffffff; --bg-secondary: #f8fafc; --text-primary: #0f172a; --text-secondary: #64748b; --border: rgba(148,163,184,0.35); --green: #16a34a; --blue: #3b82f6; --radius: 18px; --shadow: 0 4px 24px rgba(15,23,42,0.08); }
+    :root { --bg: #f0f4f8; --bg-card: #ffffff; --bg-secondary: #f8fafc; --text-primary: #0f172a; --text-secondary: #64748b; --border: rgba(148,163,184,0.35); --green: #0E3B2E; --blue: #3b82f6; --radius: 18px; --shadow: 0 4px 24px rgba(15,23,42,0.08); }
     body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; }
     .top-header { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
     .header-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text-primary); }
@@ -45,7 +45,7 @@
     .page-hero-icon { position: relative; z-index: 1; width: 56px; height: 56px; border-radius: 16px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
     .card { background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 20px; overflow: hidden; }
     .card-header { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--bg-secondary); display: flex; align-items: center; gap: 10px; }
-    .card-title-icon { width: 28px; height: 28px; border-radius: 8px; background: rgba(16,185,129,0.1); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+    .card-title-icon { width: 28px; height: 28px; border-radius: 8px; background: rgba(14,59,46,0.1); color: #0A2C22; display: flex; align-items: center; justify-content: center; font-size: 12px; }
     .card-title { font-size: 14px; font-weight: 700; }
     .card-body { padding: 20px 24px; }
     .legal-section { margin-bottom: 24px; }
@@ -57,8 +57,8 @@
     .legal-section a { color: var(--blue); text-decoration: none; }
     .legal-section a:hover { text-decoration: underline; }
     .updated { font-size: 12px; color: var(--text-secondary); margin-bottom: 24px; display: flex; align-items: center; gap: 6px; }
-    .updated i { color: #059669; }
-    .highlight-box { background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.2); border-radius: 10px; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #374151; line-height: 1.6; }
+    .updated i { color: #0A2C22; }
+    .highlight-box { background: rgba(14,59,46,0.05); border: 1px solid rgba(14,59,46,0.2); border-radius: 10px; padding: 12px 16px; margin-top: 8px; font-size: 13px; color: #374151; line-height: 1.6; }
     @media (max-width: 640px) { .page-wrapper { padding: 20px 14px 50px; } .page-title { font-size: 22px; } }
   
 /* ============================================================
@@ -73,7 +73,7 @@ html[data-theme-v3="1"] .top-header {
   background: rgba(245,242,236,.92) !important;
   border-bottom-color: rgba(200,184,154,.35) !important;
 }
-html[data-theme-v3="1"] .brand-boosting { color: #1A7A5E !important; }
+html[data-theme-v3="1"] .brand-boosting { color: #0E3B2E !important; }
 html[data-theme-v3="1"] .logo-wordmark { font-family: 'DM Sans', sans-serif !important; }
 html[data-theme-v3="1"] .btn-back {
   background: rgba(255,255,255,.6) !important;
@@ -110,8 +110,8 @@ html[data-theme-v3="1"] .card-title {
   font-weight: 700 !important;
 }
 html[data-theme-v3="1"] .card-title-icon {
-  background: rgba(26,122,94,.1) !important;
-  color: #1A7A5E !important;
+  background: rgba(14,59,46,.1) !important;
+  color: #0E3B2E !important;
 }
 /* Legal content */
 html[data-theme-v3="1"] .legal-section h2 {
@@ -124,18 +124,18 @@ html[data-theme-v3="1"] .legal-section li {
   font-family: 'DM Sans', sans-serif !important;
   color: #374151 !important;
 }
-html[data-theme-v3="1"] .legal-section a { color: #1A7A5E !important; }
+html[data-theme-v3="1"] .legal-section a { color: #0E3B2E !important; }
 html[data-theme-v3="1"] .updated { color: #7A8695 !important; }
-html[data-theme-v3="1"] .updated i { color: #1A7A5E !important; }
+html[data-theme-v3="1"] .updated i { color: #0E3B2E !important; }
 html[data-theme-v3="1"] .highlight-box {
-  background: rgba(26,122,94,.06) !important;
-  border-color: rgba(26,122,94,.2) !important;
+  background: rgba(14,59,46,.06) !important;
+  border-color: rgba(14,59,46,.2) !important;
   color: #374151 !important;
 }
 
   </style>
-<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
-  <link rel="stylesheet" href="/css/bh-brand.css?v=69892992">
+<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+  <link rel="stylesheet" href="/css/bh-brand.css?v=c0705a60">
 
   <!-- Marque Boostinghost — genere par outils/marque.js -->
   <link rel="icon" href="/img/brand/web/favicon.svg" type="image/svg+xml">
@@ -233,6 +233,6 @@ html[data-theme-v3="1"] .highlight-box {
     </div>
   </div>
 
-<script src="/js/cookies-banner.js?v=f5c42275"></script>
+<script src="/js/cookies-banner.js?v=811063cf"></script>
 </body>
 </html>

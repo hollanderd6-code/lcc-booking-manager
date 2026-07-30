@@ -9,13 +9,13 @@ html.bh-lux{
   --lux-bg:#FBFBFA;      --lux-panel:#FFFFFF;   --lux-side:#F7F7F5;
   --lux-ink:#1D1D1B;     --lux-t2:#5A5A54;      --lux-t3:#8B8B84;   --lux-t4:#B4B4AD;
   --lux-line:#EAE9E5;    --lux-line2:#F1F0EC;
-  --lux-green:#1E6E52;   --lux-green-deep:#164F3B; --lux-green-soft:#EAF1ED; --lux-green-line:rgba(30,110,82,.22);
+  --lux-green:#0E3B2E;   --lux-green-deep:#0A2C22; --lux-green-soft:#E4EDE8; --lux-green-line:rgba(14,59,46,.22);
   --lux-shadow:0 1px 2px rgba(29,29,27,.04);
   --lux-shadow-md:0 1px 2px rgba(29,29,27,.05),0 8px 24px rgba(29,29,27,.06);
   /* Plateformes sobres (identiques au calendrier) */
   --plt-air-bg:#FCEBEA;    --plt-air-fg:#B23B36;   --plt-air-ac:#D14A44;
   --plt-book-bg:#E9EEF5;   --plt-book-fg:#2C4A73;  --plt-book-ac:#3C5F8F;
-  --plt-guest-bg:#EAF1ED;  --plt-guest-fg:#164F3B; --plt-guest-ac:#1E6E52;
+  --plt-guest-bg:#E4EDE8;  --plt-guest-fg:#0A2C22; --plt-guest-ac:#0E3B2E;
   --plt-abr-bg:#F5EAE1;    --plt-abr-fg:#7A3410;   --plt-abr-ac:#C2410C;
   --plt-other-bg:#F1F0EC;  --plt-other-fg:#5A5A54;
 }
@@ -106,8 +106,8 @@ html.bh-lux[data-theme-v3="1"] .stat-card-value{ color:var(--lux-ink) !important
 
 /* ── Boutons ── */
 html.bh-lux[data-theme-v3="1"] .btn-primary,
-html.bh-lux[data-theme-v3="1"] button[style*="background:#1A7A5E"],
-html.bh-lux[data-theme-v3="1"] button[style*="background: #1A7A5E"]{
+html.bh-lux[data-theme-v3="1"] button[style*="background:#0E3B2E"],
+html.bh-lux[data-theme-v3="1"] button[style*="background: #0E3B2E"]{
   background:var(--lux-green) !important; border:none !important; border-radius:9px !important; box-shadow:none !important; font-weight:500 !important;
 }
 html.bh-lux[data-theme-v3="1"] .btn-primary:hover{ background:var(--lux-green-deep) !important; }
@@ -125,7 +125,7 @@ html.bh-lux[data-theme-v3="1"] .plt-guest{ background:var(--plt-guest-bg) !impor
 html.bh-lux[data-theme-v3="1"] .plt-other{ background:var(--plt-other-bg) !important; color:var(--plt-other-fg) !important; }
 
 /* ── Jade vif générique → vert sobre (icônes, accents inline) ── */
-html.bh-lux[data-theme-v3="1"] [style*="color:#1A7A5E"],
-html.bh-lux[data-theme-v3="1"] [style*="color: #1A7A5E"]{ color:var(--lux-green) !important; }
-html.bh-lux[data-theme-v3="1"] [style*="background:#1A7A5E"],
-html.bh-lux[data-theme-v3="1"] [style*="background: #1A7A5E"]{ background:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] [style*="color:#0E3B2E"],
+html.bh-lux[data-theme-v3="1"] [style*="color: #0E3B2E"]{ color:var(--lux-green) !important; }
+html.bh-lux[data-theme-v3="1"] [style*="background:#0E3B2E"],
+html.bh-lux[data-theme-v3="1"] [style*="background: #0E3B2E"]{ background:var(--lux-green) !important; }

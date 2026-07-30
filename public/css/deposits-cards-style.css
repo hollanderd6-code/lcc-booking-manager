@@ -38,7 +38,7 @@
 .deposit-card {
   background: var(--bg-primary, #fff);
   border: 1px solid var(--border-color, #e5e7eb);
-  border-left: 3px solid var(--primary-color, #10B981);
+  border-left: 3px solid var(--primary-color, #0E3B2E);
   border-radius: 12px;
   padding: 14px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -127,8 +127,8 @@
 
 /* Badge pour le montant */
 .badge-amount {
-  background: rgba(16, 185, 129, 0.15);
-  color: #059669;
+  background: rgba(14, 59, 46, 0.15);
+  color: #0A2C22;
   font-weight: 700;
 }
 
@@ -163,14 +163,14 @@
 }
 
 .btn-primary.btn-card {
-  background: linear-gradient(135deg, #10B981, #059669);
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22);
   color: white;
-  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 2px 6px rgba(14, 59, 46, 0.2);
 }
 
 .btn-primary.btn-card:hover {
-  background: linear-gradient(135deg, #059669, #047857);
-  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+  background: linear-gradient(135deg, #0A2C22, #0A2C22);
+  box-shadow: 0 4px 10px rgba(14, 59, 46, 0.3);
   transform: translateY(-1px);
 }
 
@@ -221,8 +221,8 @@
 }
 
 .badge-paid {
-  background: rgba(22, 163, 74, 0.15);
-  color: #166534;
+  background: rgba(14, 59, 46, 0.15);
+  color: #0A2C22;
 }
 
 .badge-refunded {

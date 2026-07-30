@@ -89,7 +89,7 @@
         if (spans.length >= 2) {
           // "Boosting" en vert
           spans[0].style.cssText = `
-            color: #10B981 !important;
+            color: #0E3B2E !important;
             font-weight: 800 !important;
           `;
           // "host" en noir

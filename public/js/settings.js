@@ -220,7 +220,7 @@ function openGroupsModal() {
             style="flex:1;padding:10px 14px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;"
             onkeydown="if(event.key==='Enter') createGroup()" />
           <button onclick="createGroup()"
-            style="padding:10px 18px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;">
+            style="padding:10px 18px;background:#0E3B2E;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;">
             <i class="fas fa-plus"></i> Créer
           </button>
         </div>
@@ -239,7 +239,7 @@ function renderGroupsBody() {
   return groups.map(g => `
     <div id="_group_${g.id}" style="background:#FAFAF8;border:1px solid #E8E0D0;border-radius:14px;padding:16px;margin-bottom:12px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-        <i class="fas fa-layer-group" style="color:#1A7A5E;font-size:14px;"></i>
+        <i class="fas fa-layer-group" style="color:#0E3B2E;font-size:14px;"></i>
         <input value="${escapeHtml(g.name)}" id="_gname_${g.id}"
           style="flex:1;font-size:15px;font-weight:700;border:none;background:transparent;outline:none;font-family:'DM Sans',sans-serif;color:#0D1117;"
           onblur="renameGroup('${g.id}', this.value)" />
@@ -252,9 +252,9 @@ function renderGroupsBody() {
         ${properties.map(p => {
           const pid = p._id || p.id;
           const checked = (g.propertyIds || []).includes(pid);
-          return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 8px;border-radius:8px;${checked ? 'background:rgba(26,122,94,.06);' : ''}">
+          return `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 8px;border-radius:8px;${checked ? 'background:rgba(14,59,46,.06);' : ''}">
             <input type="checkbox" ${checked ? 'checked' : ''} onchange="togglePropertyInGroup('${g.id}','${pid}',this.checked)"
-              style="accent-color:#1A7A5E;width:15px;height:15px;" />
+              style="accent-color:#0E3B2E;width:15px;height:15px;" />
             <span style="font-size:13px;font-weight:${checked ? '600' : '400'};color:#0D1117;">${escapeHtml(p.name || 'Sans nom')}</span>
           </label>`;
         }).join('')}
@@ -1303,7 +1303,7 @@ function renderProperties() {
       const id = p._id || p.id || "";
       const isFirst = idx === 0;
       const isLast = idx === properties.length - 1;
-      const color = p.color || "#059669";
+      const color = p.color || "#0A2C22";
       const name = p.name || "Sans nom";
       const address = p.address || "";
       const arrivalTime = p.arrivalTime || "";
@@ -1405,7 +1405,7 @@ function renderProperties() {
           <!-- Info -->
           <div class="property-info">
             <div class="property-name">${escapeHtml(name)}</div>
-            ${address ? `<div class="property-address"><i class="fas fa-location-dot" style="color:#1A7A5E;font-size:11px;"></i> ${escapeHtml(address)}</div>` : ''}
+            ${address ? `<div class="property-address"><i class="fas fa-location-dot" style="color:#0E3B2E;font-size:11px;"></i> ${escapeHtml(address)}</div>` : ''}
             <!-- Stats -->
             <div class="property-stats">
               <div class="prop-stat">
@@ -1417,16 +1417,16 @@ function renderProperties() {
                 <div class="prop-stat-label">Départ</div>
               </div>
               <div class="prop-stat">
-                <div class="prop-stat-val" style="color:#1A7A5E;">${depositShort}</div>
+                <div class="prop-stat-val" style="color:#0E3B2E;">${depositShort}</div>
                 <div class="prop-stat-label">Caution</div>
               </div>
             </div>
             <!-- OTA status -->
             ${p.channexEnabled ? `
             <button type="button" class="btn-channex-manage" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:4px;padding:6px 10px;background:#e8f5f1;border:1px solid #b8ddd4;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;text-align:left;">
-              <span style="width:7px;height:7px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>
-              <span style="font-size:11px;font-weight:600;color:#1A7A5E;flex:1;">Synchronisation OTA active</span>
-              <i class="fas fa-cog" style="font-size:11px;color:#1A7A5E;opacity:.7;"></i>
+              <span style="width:7px;height:7px;border-radius:50%;background:#0E3B2E;flex-shrink:0;"></span>
+              <span style="font-size:11px;font-weight:600;color:#0E3B2E;flex:1;">Synchronisation OTA active</span>
+              <i class="fas fa-cog" style="font-size:11px;color:#0E3B2E;opacity:.7;"></i>
             </button>
             ${p.channexPropertyId ? `
             <div onclick="navigator.clipboard?.writeText('${p.channexPropertyId}').then(()=>showToast('ID copié','success')).catch(()=>{})" style="width:100%;margin-bottom:4px;padding:4px 10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Cliquer pour copier">
@@ -1440,7 +1440,7 @@ function renderProperties() {
               <i class="fas fa-cloud-download-alt" style="font-size:10px;"></i>
               <span>Importer l'historique des réservations</span>
             </button>` : ''}` : `
-            <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#0E3B2E,#1E6E52);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
               <i class="fas fa-plug"></i> Connecter mes plateformes
             </button>`}
             <!-- Actions -->
@@ -1548,7 +1548,7 @@ function renderPropertiesFiltered(filteredProps) {
   // Temporarily override to avoid infinite loop — render cards directly
   const cardsHtml = filteredProps.map((p, idx) => {
     const id = p._id || p.id || "";
-    const color = p.color || "#059669";
+    const color = p.color || "#0A2C22";
     const name = p.name || "Sans nom";
     const address = p.address || "";
     const arrivalTime = p.arrivalTime || "";
@@ -1562,7 +1562,7 @@ function renderPropertiesFiltered(filteredProps) {
     // Group badge
     const groups = getGroups();
     const group = groups.find(g => (g.propertyIds || []).includes(id));
-    const groupBadge = group ? `<div style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(26,122,94,.1);color:#1A7A5E;margin-bottom:6px;"><i class="fas fa-layer-group" style="font-size:9px;"></i>${escapeHtml(group.name)}</div>` : '';
+    const groupBadge = group ? `<div style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(14,59,46,.1);color:#0E3B2E;margin-bottom:6px;"><i class="fas fa-layer-group" style="font-size:9px;"></i>${escapeHtml(group.name)}</div>` : '';
 
     return `
       <div class="property-card" data-id="${escapeHtml(id)}">
@@ -1580,17 +1580,17 @@ function renderPropertiesFiltered(filteredProps) {
         <div class="property-info">
           ${groupBadge}
           <div class="property-name">${escapeHtml(name)}</div>
-          ${address ? `<div class="property-address"><i class="fas fa-location-dot" style="color:#1A7A5E;font-size:11px;"></i> ${escapeHtml(address)}</div>` : ''}
+          ${address ? `<div class="property-address"><i class="fas fa-location-dot" style="color:#0E3B2E;font-size:11px;"></i> ${escapeHtml(address)}</div>` : ''}
           <div class="property-stats">
             <div class="prop-stat"><div class="prop-stat-val">${arrivalLabel}</div><div class="prop-stat-label">Arrivée</div></div>
             <div class="prop-stat"><div class="prop-stat-val">${departureLabel}</div><div class="prop-stat-label">Départ</div></div>
-            <div class="prop-stat"><div class="prop-stat-val" style="color:#1A7A5E;">${depositShort}</div><div class="prop-stat-label">Caution</div></div>
+            <div class="prop-stat"><div class="prop-stat-val" style="color:#0E3B2E;">${depositShort}</div><div class="prop-stat-label">Caution</div></div>
           </div>
           ${p.channexEnabled ? `
           <button type="button" class="btn-channex-manage" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:4px;padding:6px 10px;background:#e8f5f1;border:1px solid #b8ddd4;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;text-align:left;">
-            <span style="width:7px;height:7px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></span>
-            <span style="font-size:11px;font-weight:600;color:#1A7A5E;flex:1;">Synchronisation OTA active</span>
-            <i class="fas fa-cog" style="font-size:11px;color:#1A7A5E;opacity:.7;"></i>
+            <span style="width:7px;height:7px;border-radius:50%;background:#0E3B2E;flex-shrink:0;"></span>
+            <span style="font-size:11px;font-weight:600;color:#0E3B2E;flex:1;">Synchronisation OTA active</span>
+            <i class="fas fa-cog" style="font-size:11px;color:#0E3B2E;opacity:.7;"></i>
           </button>
           ${p.channexPropertyId ? `
           <div onclick="navigator.clipboard?.writeText('${p.channexPropertyId}').then(()=>showToast('ID copié','success')).catch(()=>{})" style="width:100%;margin-bottom:4px;padding:4px 10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;" title="Cliquer pour copier">
@@ -1604,7 +1604,7 @@ function renderPropertiesFiltered(filteredProps) {
             <i class="fas fa-cloud-download-alt" style="font-size:10px;"></i>
             <span>Importer l'historique des réservations</span>
           </button>` : ''}` : `
-          <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#0E3B2E,#1E6E52);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             <i class="fas fa-plug"></i> Connecter mes plateformes
           </button>`}
           <div class="property-actions">
@@ -1696,7 +1696,7 @@ function renderListItem(p) {
   // Badges OTA
   let otaBadges = '';
   if (p.channexEnabled) {
-    otaBadges = `<span class="ota-chip"><span style="width:7px;height:7px;border-radius:50%;background:#1A7A5E;display:inline-block;"></span> Sync OTA</span>`;
+    otaBadges = `<span class="ota-chip"><span style="width:7px;height:7px;border-radius:50%;background:#0E3B2E;display:inline-block;"></span> Sync OTA</span>`;
   } else {
     otaBadges = `<span class="ota-chip" style="color:#9CA3AF;border-color:rgba(156,163,175,.3);background:rgba(156,163,175,.07);">Non connecté</span>`;
   }
@@ -1997,8 +1997,8 @@ async function syncChannexBookings(propertyId, btn) {
   const original = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:10px;"></i><span>Importation en cours...</span>';
-  btn.style.color = '#1A7A5E';
-  btn.style.borderColor = '#1A7A5E';
+  btn.style.color = '#0E3B2E';
+  btn.style.borderColor = '#0E3B2E';
   try {
     const token = localStorage.getItem('lcc_token');
     const r = await fetch(`${API_URL}/api/channex/sync-bookings/${propertyId}`, {
@@ -2009,7 +2009,7 @@ async function syncChannexBookings(propertyId, btn) {
     if (!r.ok) throw new Error(d.error || 'Erreur serveur');
     const { imported = 0, updated = 0, errors = 0, total = 0 } = d;
     showToast(`✅ ${imported} réservation(s) importée(s), ${updated} mise(s) à jour sur ${total} trouvée(s)`, 'success');
-    btn.innerHTML = `<i class="fas fa-check" style="font-size:10px;color:#1A7A5E;"></i><span style="color:#1A7A5E;">Import terminé (${imported} nouvelles)</span>`;
+    btn.innerHTML = `<i class="fas fa-check" style="font-size:10px;color:#0E3B2E;"></i><span style="color:#0E3B2E;">Import terminé (${imported} nouvelles)</span>`;
     // Refresh calendrier si dispo
     if (typeof loadReservations === 'function') loadReservations();
   } catch(e) {
@@ -2120,7 +2120,7 @@ async function openChannexModal(propertyId, propertyName, isConnected, channelCo
 // ── Connexion effective à Channex (avec ou sans rattachement) ──
 async function _connectAndProceed(modal, propertyId, existingChannexPropertyId) {
   modal.innerHTML = `<div style="background:#fff;border-radius:20px;padding:40px;text-align:center;">
-    <i class="fas fa-spinner fa-spin" style="font-size:28px;color:#1A7A5E;"></i>
+    <i class="fas fa-spinner fa-spin" style="font-size:28px;color:#0E3B2E;"></i>
     <div style="margin-top:12px;color:#6B7280;font-size:13px;">Activation en cours...</div>
   </div>`;
   try {
@@ -2172,23 +2172,23 @@ function _showPropertyTypeScreen(modal, propertyId, propertyName, existingProper
         <button onclick="_selectPropertyType('new')" style="
           width:100%;display:flex;align-items:flex-start;gap:12px;padding:14px;margin-bottom:8px;
           background:${!selectedExistingId ? '#f0fdf8' : '#f9fafb'};
-          border:2px solid ${!selectedExistingId ? '#1A7A5E' : '#e5e7eb'};
+          border:2px solid ${!selectedExistingId ? '#0E3B2E' : '#e5e7eb'};
           border-radius:12px;cursor:pointer;text-align:left;">
-          <i class="fas fa-home" style="color:#1A7A5E;font-size:18px;margin-top:2px;flex-shrink:0;"></i>
+          <i class="fas fa-home" style="color:#0E3B2E;font-size:18px;margin-top:2px;flex-shrink:0;"></i>
           <div>
             <div style="font-size:13px;font-weight:600;color:#111827;">Logement indépendant</div>
             <div style="font-size:12px;color:#6B7280;margin-top:2px;">Créer un nouvel établissement Channex dédié à ce logement</div>
           </div>
-          ${!selectedExistingId ? `<i class="fas fa-check-circle" style="margin-left:auto;color:#1A7A5E;font-size:15px;align-self:center;"></i>` : ''}
+          ${!selectedExistingId ? `<i class="fas fa-check-circle" style="margin-left:auto;color:#0E3B2E;font-size:15px;align-self:center;"></i>` : ''}
         </button>
 
         <!-- Option 2 : rattacher avec champ texte -->
         <button onclick="_selectPropertyType('existing')" style="
           width:100%;display:flex;align-items:flex-start;gap:12px;padding:14px;
           background:${selectedExistingId !== null ? '#f0fdf8' : '#f9fafb'};
-          border:2px solid ${selectedExistingId !== null ? '#1A7A5E' : '#e5e7eb'};
+          border:2px solid ${selectedExistingId !== null ? '#0E3B2E' : '#e5e7eb'};
           border-radius:12px;cursor:pointer;text-align:left;">
-          <i class="fas fa-building" style="color:#1A7A5E;font-size:18px;margin-top:2px;flex-shrink:0;"></i>
+          <i class="fas fa-building" style="color:#0E3B2E;font-size:18px;margin-top:2px;flex-shrink:0;"></i>
           <div style="flex:1;">
             <div style="font-size:13px;font-weight:600;color:#111827;">Partie d'un immeuble / établissement</div>
             <div style="font-size:12px;color:#6B7280;margin-top:2px;">Rattacher à un établissement Channex existant (même Hotel ID Booking)</div>
@@ -2205,14 +2205,14 @@ function _showPropertyTypeScreen(modal, propertyId, propertyName, existingProper
               </div>
             ` : ''}
           </div>
-          ${selectedExistingId !== null ? `<i class="fas fa-check-circle" style="margin-left:auto;color:#1A7A5E;font-size:15px;align-self:center;flex-shrink:0;"></i>` : ''}
+          ${selectedExistingId !== null ? `<i class="fas fa-check-circle" style="margin-left:auto;color:#0E3B2E;font-size:15px;align-self:center;flex-shrink:0;"></i>` : ''}
         </button>
 
         <div style="margin-top:16px;">
           <button id="btnPropertyTypeContinue"
             onclick="_continuePropertyType('${propertyId}','${safePropertyName}')"
             style="width:100%;height:44px;border-radius:10px;border:none;
-              background:linear-gradient(135deg,#1A7A5E,#2AAE86);
+              background:linear-gradient(135deg,#0E3B2E,#1E6E52);
               color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
             Continuer <i class="fas fa-arrow-right"></i>
           </button>
@@ -2325,7 +2325,7 @@ function _showPlatformPicker(modal, propertyId, propertyName, isConnected) {
           <button id="btnOtaContinue" onclick="_continueToIframe('${propertyId}','${safePropertyName}')"
             ${selected ? '' : 'disabled'}
             style="flex:2;height:42px;border-radius:10px;border:none;
-              background:${selected ? 'linear-gradient(135deg,#1A7A5E,#2AAE86)' : '#e5e7eb'};
+              background:${selected ? 'linear-gradient(135deg,#0E3B2E,#1E6E52)' : '#e5e7eb'};
               color:${selected ? 'white' : '#9ca3af'};font-size:14px;font-weight:600;cursor:${selected ? 'pointer' : 'not-allowed'};">
             Continuer <i class="fas fa-arrow-right"></i>
           </button>
@@ -2374,7 +2374,7 @@ async function _loadChannexIframe(propertyId, modal, channelCode) {
         <button onclick="document.getElementById('channexModal').remove()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6B7280;">✕</button>
       </div>
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;">
-        <i class="fas fa-spinner fa-spin" style="font-size:24px;color:#1A7A5E;"></i>
+        <i class="fas fa-spinner fa-spin" style="font-size:24px;color:#0E3B2E;"></i>
         <div style="margin-top:10px;color:#6B7280;font-size:13px;">Chargement...</div>
       </div>
     </div>
@@ -2410,7 +2410,7 @@ async function _loadChannexIframe(propertyId, modal, channelCode) {
         <i class="fas fa-exclamation-circle" style="font-size:28px;color:#dc2626;margin-bottom:8px;display:block;"></i>
         <div style="font-size:13px;color:#374151;margin-bottom:16px;">${e.message}</div>
         <button onclick="_showPlatformPicker(window._otaModal,'${propertyId}',window._otaPropertyName,window._otaIsConnected)" style="padding:8px 20px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:13px;cursor:pointer;margin-right:8px;">Retour</button>
-        <button onclick="document.getElementById('channexModal').remove()" style="padding:8px 20px;border-radius:8px;border:none;background:#1A7A5E;color:#fff;font-size:13px;cursor:pointer;">Fermer</button>
+        <button onclick="document.getElementById('channexModal').remove()" style="padding:8px 20px;border-radius:8px;border:none;background:#0E3B2E;color:#fff;font-size:13px;cursor:pointer;">Fermer</button>
       </div>
     `;
   }
@@ -2422,7 +2422,7 @@ async function _closeChannexIframe(propertyId) {
     modal.innerHTML = `
       <div style="background:#fff;border-radius:20px;padding:40px;text-align:center;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
         <div style="width:56px;height:56px;background:#f0fdf8;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-          <i class="fas fa-spinner fa-spin" style="font-size:22px;color:#1A7A5E;"></i>
+          <i class="fas fa-spinner fa-spin" style="font-size:22px;color:#0E3B2E;"></i>
         </div>
         <div style="font-size:15px;font-weight:700;color:#0D1117;margin-bottom:6px;">Finalisation en cours…</div>
         <div id="autoSyncStatus" style="font-size:13px;color:#6B7280;line-height:1.6;">Synchronisation des disponibilités et import des réservations…</div>
@@ -2490,7 +2490,7 @@ async function _closeChannexIframe(propertyId) {
       modal.innerHTML = `
         <div style="background:#fff;border-radius:20px;padding:40px;text-align:center;max-width:420px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.2);">
           <div style="width:56px;height:56px;background:#f0fdf8;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-            <i class="fas fa-check" style="font-size:22px;color:#1A7A5E;"></i>
+            <i class="fas fa-check" style="font-size:22px;color:#0E3B2E;"></i>
           </div>
           <div style="font-size:16px;font-weight:700;color:#0D1117;margin-bottom:8px;">Plateforme connectée ! 🎉</div>
           <div style="font-size:13px;color:#6B7280;line-height:1.7;margin-bottom:20px;">
@@ -2499,7 +2499,7 @@ async function _closeChannexIframe(propertyId) {
             ✅ Calendrier mis à jour
           </div>
           <button onclick="document.getElementById('channexModal').remove();window.location.href='/app.html';" 
-            style="width:100%;height:44px;border-radius:10px;border:none;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
+            style="width:100%;height:44px;border-radius:10px;border:none;background:linear-gradient(135deg,#0E3B2E,#1E6E52);color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
             Voir mon calendrier <i class="fas fa-arrow-right"></i>
           </button>
         </div>
@@ -2639,8 +2639,8 @@ function renderPricingRules() {
 
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #E8E0D0;border-radius:10px;margin-bottom:6px;background:${rule.active ? '#fff' : '#F9F9F9'};">
-        <div style="width:32px;height:32px;border-radius:8px;background:rgba(26,122,94,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <i class="fas ${typeInfo.icon}" style="color:#1A7A5E;font-size:13px;"></i>
+        <div style="width:32px;height:32px;border-radius:8px;background:rgba(14,59,46,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fas ${typeInfo.icon}" style="color:#0E3B2E;font-size:13px;"></i>
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:600;color:#0D1117;">${rule.name}</div>
@@ -2701,10 +2701,10 @@ function openPricingRuleModal(existingRule = null) {
               { val: 'min_stay', icon: 'fa-moon', label: 'Séjour min.' },
               { val: 'long_stay', icon: 'fa-percentage', label: 'Longue durée' }
             ].map(t => `
-              <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:12px 8px;border:1.5px solid ${(rule.rule_type || 'period') === t.val ? '#1A7A5E' : '#E8E0D0'};border-radius:12px;cursor:pointer;background:${(rule.rule_type || 'period') === t.val ? 'rgba(26,122,94,.06)' : '#fff'};min-height:68px;position:relative;text-align:center;">
+              <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:12px 8px;border:1.5px solid ${(rule.rule_type || 'period') === t.val ? '#0E3B2E' : '#E8E0D0'};border-radius:12px;cursor:pointer;background:${(rule.rule_type || 'period') === t.val ? 'rgba(14,59,46,.06)' : '#fff'};min-height:68px;position:relative;text-align:center;">
                 <input type="radio" name="pr_type" value="${t.val}" ${(rule.rule_type || 'period') === t.val ? 'checked' : ''} onchange="updatePricingRuleForm()" style="position:absolute;opacity:0;width:0;height:0;" />
-                <i class="fas ${t.icon}" style="color:${(rule.rule_type || 'period') === t.val ? '#1A7A5E' : '#9CA3AF'};font-size:20px;"></i>
-                <span style="font-size:11px;font-weight:600;color:${(rule.rule_type || 'period') === t.val ? '#1A7A5E' : '#374151'};line-height:1.3;">${t.label}</span>
+                <i class="fas ${t.icon}" style="color:${(rule.rule_type || 'period') === t.val ? '#0E3B2E' : '#9CA3AF'};font-size:20px;"></i>
+                <span style="font-size:11px;font-weight:600;color:${(rule.rule_type || 'period') === t.val ? '#0E3B2E' : '#374151'};line-height:1.3;">${t.label}</span>
               </label>
             `).join('')}
           </div>
@@ -2722,7 +2722,7 @@ function openPricingRuleModal(existingRule = null) {
 
         <!-- Actif -->
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-          <input id="pr_active" type="checkbox" ${rule.active !== false ? 'checked' : ''} style="width:16px;height:16px;accent-color:#1A7A5E;" />
+          <input id="pr_active" type="checkbox" ${rule.active !== false ? 'checked' : ''} style="width:16px;height:16px;accent-color:#0E3B2E;" />
           <label for="pr_active" style="font-size:13px;color:#374151;cursor:pointer;">Règle active</label>
         </div>
 
@@ -2732,7 +2732,7 @@ function openPricingRuleModal(existingRule = null) {
             Annuler
           </button>
           <button type="button" onclick="savePricingRule(${isEdit ? rule.id : 'null'})"
-            style="flex:2;padding:12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">
+            style="flex:2;padding:12px;background:linear-gradient(135deg,#0E3B2E,#1E6E52);color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">
             <i class="fas fa-save"></i> ${isEdit ? 'Modifier' : 'Créer la règle'}
           </button>
         </div>
@@ -2763,12 +2763,12 @@ function updatePricingRuleForm() {
     const label = r.closest('label');
     if (label) {
       const active = r.checked;
-      label.style.borderColor = active ? '#1A7A5E' : '#E8E0D0';
-      label.style.background = active ? 'rgba(26,122,94,.06)' : '#fff';
+      label.style.borderColor = active ? '#0E3B2E' : '#E8E0D0';
+      label.style.background = active ? 'rgba(14,59,46,.06)' : '#fff';
       const icon = label.querySelector('i');
-      if (icon) icon.style.color = active ? '#1A7A5E' : '#9CA3AF';
+      if (icon) icon.style.color = active ? '#0E3B2E' : '#9CA3AF';
       const span = label.querySelector('span');
-      if (span) span.style.color = active ? '#1A7A5E' : '#374151';
+      if (span) span.style.color = active ? '#0E3B2E' : '#374151';
     }
   });
 
@@ -2803,10 +2803,10 @@ function updatePricingRuleForm() {
         <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;">Jours concernés</label>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           ${days.map(d => `
-            <label style="display:flex;align-items:center;gap:4px;padding:7px 12px;border:1.5px solid ${selectedDays.includes(d.val) ? '#1A7A5E' : '#E8E0D0'};border-radius:8px;cursor:pointer;background:${selectedDays.includes(d.val) ? 'rgba(26,122,94,.08)' : '#fff'};font-size:13px;font-weight:500;">
+            <label style="display:flex;align-items:center;gap:4px;padding:7px 12px;border:1.5px solid ${selectedDays.includes(d.val) ? '#0E3B2E' : '#E8E0D0'};border-radius:8px;cursor:pointer;background:${selectedDays.includes(d.val) ? 'rgba(14,59,46,.08)' : '#fff'};font-size:13px;font-weight:500;">
               <input type="checkbox" name="pr_day" value="${d.val}" ${selectedDays.includes(d.val) ? 'checked' : ''}
-                onchange="this.closest('label').style.borderColor=this.checked?'#1A7A5E':'#E8E0D0';this.closest('label').style.background=this.checked?'rgba(26,122,94,.08)':'#fff'"
-                style="accent-color:#1A7A5E;" />
+                onchange="this.closest('label').style.borderColor=this.checked?'#0E3B2E':'#E8E0D0';this.closest('label').style.background=this.checked?'rgba(14,59,46,.08)':'#fff'"
+                style="accent-color:#0E3B2E;" />
               ${d.label}
             </label>
           `).join('')}
@@ -2945,10 +2945,10 @@ function renderCustomChips(containerId, items, removeCallback) {
   const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = items.map((item, i) => `
-    <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(26,122,94,.08);border:1.5px solid rgba(26,122,94,.3);border-radius:999px;font-size:13px;font-weight:500;color:#1A7A5E;">
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(14,59,46,.08);border:1.5px solid rgba(14,59,46,.3);border-radius:999px;font-size:13px;font-weight:500;color:#0E3B2E;">
       ${escapeHtml(item)}
       <button type="button" onclick="${removeCallback}(${i})"
-        style="background:none;border:none;cursor:pointer;color:#1A7A5E;font-size:14px;line-height:1;padding:0;display:flex;align-items:center;">×</button>
+        style="background:none;border:none;cursor:pointer;color:#0E3B2E;font-size:14px;line-height:1;padding:0;display:flex;align-items:center;">×</button>
     </span>
   `).join('');
 }
@@ -3167,7 +3167,7 @@ function buildReviewCard(review, propertyId) {
   // Note : affichée sur 10, MAIS masquée si avis en attente / note nulle ou 0 (évite le trompeur « 0.0/10 »)
   const rawScore = review.score !== null && review.score !== undefined ? parseFloat(review.score) : null;
   const score = (review.is_hidden || rawScore === null || rawScore <= 0) ? null : rawScore;
-  const scoreColor = score === null ? '#9CA3AF' : score >= 8 ? '#1A7A5E' : score >= 6 ? '#f59e0b' : '#ef4444';
+  const scoreColor = score === null ? '#9CA3AF' : score >= 8 ? '#0E3B2E' : score >= 6 ? '#f59e0b' : '#ef4444';
   const scoreHtml = score !== null
     ? '<span style="font-size:18px;font-weight:800;color:' + scoreColor + ';">' + score.toFixed(1) + '</span><span style="font-size:11px;color:#9CA3AF;">/10</span>'
     : '';
@@ -3509,7 +3509,7 @@ function buildNoteCard(reservation) {
   const platformBadge = `<div style="display:inline-flex;align-items:center;background:${plt.bg};color:${plt.color};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;flex-shrink:0;">${logoBadge}${plt.label}</div>`;
 
   const commentHtml = parsed.comment
-    ? `<div style="font-size:13px;color:#374151;background:#FAFAF8;border-left:3px solid #1A7A5E;border-radius:0 8px 8px 0;padding:8px 12px;margin:10px 0;font-style:italic;">&ldquo;${escapeHtml(parsed.comment)}&rdquo;</div>`
+    ? `<div style="font-size:13px;color:#374151;background:#FAFAF8;border-left:3px solid #0E3B2E;border-radius:0 8px 8px 0;padding:8px 12px;margin:10px 0;font-style:italic;">&ldquo;${escapeHtml(parsed.comment)}&rdquo;</div>`
     : '';
 
   const metaHtml = parsed.meta.length
@@ -3519,7 +3519,7 @@ function buildNoteCard(reservation) {
   card.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:34px;height:34px;border-radius:50%;background:#E8F4F0;color:#1A7A5E;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;">${initial}</div>
+        <div style="width:34px;height:34px;border-radius:50%;background:#E8F4F0;color:#0E3B2E;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;">${initial}</div>
         <div>
           <div style="font-size:14px;font-weight:600;color:#0D1117;">${escapeHtml(guestName)}</div>
           ${dateStr ? `<div style="font-size:11px;color:#9CA3AF;margin-top:1px;">${dateStr}</div>` : ''}
@@ -3538,7 +3538,7 @@ async function initNotesSection(propertyId) {
   const section = document.getElementById('notesSection');
   if (!section) return;
 
-  section.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:12px 0;"><i class="fas fa-spinner fa-spin" style="color:#1A7A5E;"></i><span style="font-size:13px;color:#6B7280;">Chargement des notes…</span></div>`;
+  section.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:12px 0;"><i class="fas fa-spinner fa-spin" style="color:#0E3B2E;"></i><span style="font-size:13px;color:#6B7280;">Chargement des notes…</span></div>`;
 
   try {
     const token = localStorage.getItem('lcc_token');
@@ -3619,14 +3619,14 @@ async function initNotesSection(propertyId) {
       background: rgba(13,17,23,.75);
     }
     .dnd-handle:hover {
-      background: rgba(26,122,94,.85) !important;
+      background: rgba(14,59,46,.85) !important;
       transform: scale(1.1);
       opacity: 1 !important;
     }
     .dnd-handle:active,
     .dnd-handle.dragging {
       cursor: grabbing !important;
-      background: rgba(26,122,94,.95) !important;
+      background: rgba(14,59,46,.95) !important;
       transform: scale(0.95);
     }
 
@@ -3634,15 +3634,15 @@ async function initNotesSection(propertyId) {
     .property-card.dnd-ghost {
       opacity: 0.35;
       transform: scale(0.97);
-      outline: 2px dashed rgba(26,122,94,.5);
+      outline: 2px dashed rgba(14,59,46,.5);
       outline-offset: 2px;
     }
 
     /* ── Carte cible (drop zone) ── */
     .property-card.dnd-over {
-      outline: 2px dashed #1A7A5E;
+      outline: 2px dashed #0E3B2E;
       outline-offset: 3px;
-      background: rgba(26,122,94,.04);
+      background: rgba(14,59,46,.04);
     }
 
     /* ── Clone flottant (touch) ── */

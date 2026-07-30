@@ -10,11 +10,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
-<link href="/css/style.css?v=9d18f851" rel="stylesheet"/>
-<link href="/css/bh-theme-v3.css?v=8d0e239f" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-brand.css?v=69892992">
+<link href="/css/style.css?v=17204d03" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css?v=7d47a1eb" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/bh-brand.css?v=c0705a60">
 <link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-bottom-bar.css?v=e8b22340">
+<link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
 <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -25,9 +25,9 @@ html, body { margin: 0 !important; }
    VARIABLES
 ══════════════════════════════════════════ */
 :root {
-  --primary: #1A7A5E;
-  --primary-light: rgba(26,122,94,.08);
-  --primary-mid: rgba(26,122,94,.18);
+  --primary: #0E3B2E;
+  --primary-light: rgba(14,59,46,.08);
+  --primary-mid: rgba(14,59,46,.18);
   --bg: #F5F2EC;
   --border: #E8E0D0;
   --text: #0D1117;
@@ -65,7 +65,7 @@ html[data-theme-v3="1"] .bh-demo-nav { position: fixed; top: 0; left: 0; right: 
 .bh-demo-mode-label { color: rgba(255,255,255,.4); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em; }
 .bh-theme-toggle { width: 36px; height: 20px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.1); cursor: pointer; position: relative; transition: all .2s; }
 .bh-theme-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,.7); transition: all .2s; }
-[data-theme="dark"] .bh-theme-toggle { background: rgba(26,122,94,.5); border-color: rgba(26,122,94,.8); }
+[data-theme="dark"] .bh-theme-toggle { background: rgba(14,59,46,.5); border-color: rgba(14,59,46,.8); }
 [data-theme="dark"] .bh-theme-toggle::after { transform: translateX(16px); background: white; }
 html[data-theme-v3="1"] header.main-header { position: fixed !important; top: 40px !important; left: 0 !important; right: 0 !important; z-index: 50 !important; margin-left: 260px !important; }
 @media(max-width:1366px){ html[data-theme-v3="1"] header.main-header { margin-left: 0 !important; } }
@@ -76,7 +76,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
    BOUTON RETOUR
 ══════════════════════════════════════════ */
 .rp-header-btns { position: fixed; top: 52px; right: 24px; z-index: 200; display: flex; gap: 10px; align-items: center; }
-.rp-btn-back { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 20px; border: none; border-radius: 12px; background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
+.rp-btn-back { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 20px; border: none; border-radius: 12px; background: #0E3B2E; color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
 .rp-btn-back:hover { background: #15624B; }
 
 /* ══════════════════════════════════════════
@@ -276,12 +276,12 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 ══════════════════════════════════════════ */
 .view-tabs { display: flex; gap: 3px; background: rgba(0,0,0,.06); border-radius: 9px; padding: 3px; border: 1px solid rgba(0,0,0,.1); }
 .view-tab { padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: #374151; font-family: 'DM Sans', sans-serif; transition: all .12s; }
-.view-tab.active { background: #1A7A5E; color: white; box-shadow: 0 2px 6px rgba(26,122,94,.3); font-weight: 700; }
-.view-tab:not(.active):hover { background: rgba(26,122,94,.08); color: #1A7A5E; }
+.view-tab.active { background: #0E3B2E; color: white; box-shadow: 0 2px 6px rgba(14,59,46,.3); font-weight: 700; }
+.view-tab:not(.active):hover { background: rgba(14,59,46,.08); color: #0E3B2E; }
 #rentabiliteSection .view-tabs { background: rgba(0,0,0,.06) !important; border: 1px solid rgba(0,0,0,.1) !important; }
 #rentabiliteSection .view-tab { color: #374151 !important; font-weight: 600 !important; }
-#rentabiliteSection .view-tab.active { background: #1A7A5E !important; color: white !important; box-shadow: 0 2px 6px rgba(26,122,94,.3) !important; }
-#rentabiliteSection .view-tab:not(.active):hover { background: rgba(26,122,94,.08) !important; color: #1A7A5E !important; }
+#rentabiliteSection .view-tab.active { background: #0E3B2E !important; color: white !important; box-shadow: 0 2px 6px rgba(14,59,46,.3) !important; }
+#rentabiliteSection .view-tab:not(.active):hover { background: rgba(14,59,46,.08) !important; color: #0E3B2E !important; }
 
 /* ══════════════════════════════════════════
    CHARTS
@@ -327,12 +327,12 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 /* ══════════════════════════════════════════
    SECTION CONCIERGERIE
 ══════════════════════════════════════════ */
-.concierge-section { background: linear-gradient(135deg, rgba(26,122,94,.06), rgba(26,122,94,.02)); border: 1.5px solid rgba(26,122,94,.2); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+.concierge-section { background: linear-gradient(135deg, rgba(14,59,46,.06), rgba(14,59,46,.02)); border: 1.5px solid rgba(14,59,46,.2); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
 .concierge-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
 .concierge-title { font-size: 15px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
 .concierge-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
 @media (max-width: 600px) { .concierge-grid { grid-template-columns: 1fr 1fr; } }
-.concierge-kpi { background: white; border-radius: 12px; padding: 14px 16px; border: 1px solid rgba(26,122,94,.15); }
+.concierge-kpi { background: white; border-radius: 12px; padding: 14px 16px; border: 1px solid rgba(14,59,46,.15); }
 .concierge-kpi-value { font-size: 19px; font-weight: 700; color: var(--primary); }
 .concierge-kpi-label { font-size: 11px; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: .4px; }
 
@@ -353,7 +353,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .compare-metric { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-top: 1px solid var(--border); font-size: 14px; }
 .compare-metric-label { color: var(--text-muted); }
 .compare-metric-value { font-weight: 700; color: var(--text); }
-.compare-metric-value.winner { color: #10B981; }
+.compare-metric-value.winner { color: #0E3B2E; }
 .compare-metric-value.loser  { color: #EF4444; }
 .score-circle { width: 72px; height: 72px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; font-size: 22px; color: white; flex-shrink: 0; }
 .score-detail-bar { height: 6px; border-radius: 999px; background: #E5E7EB; overflow: hidden; flex: 1; }
@@ -369,19 +369,19 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .rentab-row:last-child { border-bottom: none; }
 .rentab-row-val { font-weight: 600; color: #374151; font-size: 13px; }
 .rentab-row-val.neg { color: #dc2626; }
-.rentab-row-val.pos { color: #1A7A5E; }
-.rentab-marge-block { background: #f0fdf4; border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+.rentab-row-val.pos { color: #0E3B2E; }
+.rentab-marge-block { background: #F1F6F3; border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
 .rentab-marge-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing:.06em; }
-.rentab-marge-val { font-size: 20px; font-weight: 800; color: #1A7A5E; }
-.rentab-marge-pct { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #1A7A5E; color: white; }
+.rentab-marge-val { font-size: 20px; font-weight: 800; color: #0E3B2E; }
+.rentab-marge-pct { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #0E3B2E; color: white; }
 .rentab-marge-pct.warn { background: #F59E0B; }
 .rentab-marge-pct.danger { background: #EF4444; }
-.rentab-table th { background: #1A7A5E; color: white; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing:.05em; padding: 9px 12px; text-align: left; }
+.rentab-table th { background: #0E3B2E; color: white; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing:.05em; padding: 9px 12px; text-align: left; }
 .rentab-table td { padding: 9px 12px; font-size: 12px; border-bottom: 1px solid #f3f4f6; color: #374151; }
 .rentab-table tr:nth-child(even) td { background: #fafaf8; }
-.rentab-table tr:hover td { background: #f0fdf4; }
+.rentab-table tr:hover td { background: #F1F6F3; }
 .rentab-table td.neg { color: #dc2626; font-weight: 600; }
-.rentab-table td.pos { color: #1A7A5E; font-weight: 700; }
+.rentab-table td.pos { color: #0E3B2E; font-weight: 700; }
 .rentab-table td.muted { color: #9ca3af; }
 /* Desktop page header */
 @media (min-width: 1367px) {
@@ -418,10 +418,10 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   }
 }
 </style>
-<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=d9f1468e">
-<link rel="stylesheet" href="/css/menu-active-button.css?v=5206d90a">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=ec508074">
-<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
+<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=13677c32">
+<link rel="stylesheet" href="/css/menu-active-button.css?v=f21f319b">
+<link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
+<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
 
   <!-- Marque Boostinghost — genere par outils/marque.js -->
   <link rel="icon" href="/img/brand/web/favicon.svg" type="image/svg+xml">
@@ -469,7 +469,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   <div class="ml-auto">
     <button class="btn-csv" onclick="exportCSV()"><i class="fas fa-download"></i> CSV</button>
     <button class="btn-export" onclick="exportConcierge()"><i class="fas fa-handshake"></i> Export conciergerie</button>
-    <button class="btn-export" onclick="showExportComptaModal()" style="background:#1A7A5E;">
+    <button class="btn-export" onclick="showExportComptaModal()" style="background:#0E3B2E;">
       <i class="fas fa-file-csv"></i> Export comptable
     </button>
   </div>
@@ -479,7 +479,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 <div id="exportComptaModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(13,17,23,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
   <div style="background:white;border-radius:20px;padding:32px;max-width:420px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,.18);">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-      <div style="width:44px;height:44px;border-radius:11px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;"><i class="fas fa-chart-pie" style="font-size:18px;color:#15803D;"></i></div>
+      <div style="width:44px;height:44px;border-radius:11px;background:#F1F6F3;display:flex;align-items:center;justify-content:center;"><i class="fas fa-chart-pie" style="font-size:18px;color:#0A2C22;"></i></div>
       <div>
         <div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700;color:#0D1117;">Export comptable</div>
         <div style="font-size:12px;color:#7A8695;">Fichier CSV estampillé Boostinghost</div>
@@ -507,21 +507,21 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
     </div>
 
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
-      <button onclick="downloadExport('reservations')" style="display:flex;align-items:center;gap:10px;padding:13px 18px;border:1.5px solid #e5e7eb;border-radius:12px;background:#fafaf8;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#0D1117;text-align:left;transition:border-color .15s;" onmouseover="this.style.borderColor='#1A7A5E'" onmouseout="this.style.borderColor='#e5e7eb'">
-        <i class="fas fa-home" style="font-size:19px;color:#15803D;"></i>
+      <button onclick="downloadExport('reservations')" style="display:flex;align-items:center;gap:10px;padding:13px 18px;border:1.5px solid #e5e7eb;border-radius:12px;background:#fafaf8;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#0D1117;text-align:left;transition:border-color .15s;" onmouseover="this.style.borderColor='#0E3B2E'" onmouseout="this.style.borderColor='#e5e7eb'">
+        <i class="fas fa-home" style="font-size:19px;color:#0A2C22;"></i>
         <div>
           <div>Export Réservations</div>
           <div style="font-size:11px;color:#7A8695;font-weight:400;">Date, logement, voyageur, plateforme, montants</div>
         </div>
-        <i class="fas fa-download" style="margin-left:auto;color:#1A7A5E;"></i>
+        <i class="fas fa-download" style="margin-left:auto;color:#0E3B2E;"></i>
       </button>
-      <button onclick="downloadExport('invoices')" style="display:flex;align-items:center;gap:10px;padding:13px 18px;border:1.5px solid #e5e7eb;border-radius:12px;background:#fafaf8;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#0D1117;text-align:left;transition:border-color .15s;" onmouseover="this.style.borderColor='#1A7A5E'" onmouseout="this.style.borderColor='#e5e7eb'">
-        <i class="far fa-file-alt" style="font-size:19px;color:#15803D;"></i>
+      <button onclick="downloadExport('invoices')" style="display:flex;align-items:center;gap:10px;padding:13px 18px;border:1.5px solid #e5e7eb;border-radius:12px;background:#fafaf8;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:#0D1117;text-align:left;transition:border-color .15s;" onmouseover="this.style.borderColor='#0E3B2E'" onmouseout="this.style.borderColor='#e5e7eb'">
+        <i class="far fa-file-alt" style="font-size:19px;color:#0A2C22;"></i>
         <div>
           <div>Export Factures propriétaires</div>
           <div style="font-size:11px;color:#7A8695;font-weight:400;">Numéro, client, HT, TVA, TTC, statut</div>
         </div>
-        <i class="fas fa-download" style="margin-left:auto;color:#1A7A5E;"></i>
+        <i class="fas fa-download" style="margin-left:auto;color:#0E3B2E;"></i>
       </button>
     </div>
 
@@ -620,7 +620,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
           <select id="compareYearA" class="ctrl-select" onchange="renderComparator()"></select>
         </div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--primary);color:white;font-weight:800;font-size:12px;flex-shrink:0;box-shadow:0 2px 8px rgba(26,122,94,.3);">VS</div>
+      <div style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--primary);color:white;font-weight:800;font-size:12px;flex-shrink:0;box-shadow:0 2px 8px rgba(14,59,46,.3);">VS</div>
       <div style="display:flex;flex-direction:column;gap:8px;">
         <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Logement B</div>
         <select id="compareB" class="ctrl-select" style="width:100%;" onchange="renderComparator()"><option value="">Choisir un logement</option></select>
@@ -643,8 +643,8 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   <!-- ── RENTABILITÉ ── -->
   <p class="rp-section-title" style="margin-top:8px;">Rentabilité</p>
   <div class="card" id="rentabiliteSection">
-    <div class="card-header" style="border-bottom:2px solid #1A7A5E;">
-      <div class="card-title" style="color:#1A7A5E;font-size:16px;">
+    <div class="card-header" style="border-bottom:2px solid #0E3B2E;">
+      <div class="card-title" style="color:#0E3B2E;font-size:16px;">
         <i class="fas fa-chart-line"></i> Score de rentabilité
       </div>
       <div class="view-tabs">
@@ -737,9 +737,9 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 </script>
 
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/bh-layout.js?v=6aab0b85"></script>
-<script src="/js/mobile-native-experience.js?v=2594b603"></script>
-<script src="/js/mobile-tabs-handler.js?v=e901dd8d"></script>
+<script src="/js/bh-layout.js?v=2f884d1c"></script>
+<script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
+<script src="/js/mobile-tabs-handler.js?v=01e3d29a"></script>
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
 
 <script>
@@ -752,8 +752,8 @@ let _yearMonthly = null;   // données 12 mois (toujours l'année complète, ind
 
 const PLATFORM_COLORS = {
   'Airbnb': '#FF5A5F', 'Booking.com': '#003580',
-  'Expedia': '#FFC72C', 'Vrbo': '#1A5276', 'Direct': '#1A7A5E',
-  'Bloqué': '#9CA3AF', 'Direct': '#1A7A5E'
+  'Expedia': '#FFC72C', 'Vrbo': '#1A5276', 'Direct': '#0E3B2E',
+  'Bloqué': '#9CA3AF', 'Direct': '#0E3B2E'
 };
 
 // Normalise les noms de plateforme
@@ -764,7 +764,7 @@ function normalizePlatform(name) {
   if (n === 'manuel' || n === 'manual' || n === 'direct') return 'Direct';
   return name;
 }
-const FALLBACK_COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899'];
+const FALLBACK_COLORS = ['#6366f1','#f59e0b','#0E3B2E','#ef4444','#8b5cf6','#ec4899'];
 
 // ── Init ──────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
@@ -872,7 +872,7 @@ function render(d) {
 function renderKPIs(s) {
   // ── 2 cartes hero (CA brut + Revenu net) ──
   const heroCards = [
-    { label:'CA Brut', value: fmt(s.totalGrossRevenue), sub:`dont ${fmt(s.totalCleaningFee)} ménage · ${fmt(s.totalTouristTax)} taxe séjour`, accent:'#1A7A5E', bg:'rgba(26,122,94,.08)', icon:'fa-euro-sign' },
+    { label:'CA Brut', value: fmt(s.totalGrossRevenue), sub:`dont ${fmt(s.totalCleaningFee)} ménage · ${fmt(s.totalTouristTax)} taxe séjour`, accent:'#0E3B2E', bg:'rgba(14,59,46,.08)', icon:'fa-euro-sign' },
     { label:'Revenu net', value: fmt(s.totalNetRevenue), sub:`Conciergerie : ${fmt(s.totalConcierge)} · Proprio : ${fmt(s.totalOwnerRevenue)}`, accent:'#3b82f6', bg:'rgba(59,130,246,.08)', icon:'fa-wallet' },
   ];
   const heroEl = document.getElementById('kpiHeroRow');
@@ -893,7 +893,7 @@ function renderKPIs(s) {
     { label:'Nuits louées', value: fmtN(s.totalNights), sub:`sur la période`, accent:'#8b5cf6', bg:'rgba(139,92,246,.08)', icon:'fa-moon' },
     { label:'Commissions OTA', value: fmt(s.totalOtaCommission), sub:`déduit du CA brut`, accent:'#ef4444', bg:'rgba(239,68,68,.08)', icon:'fa-percent' },
     { label:'Taxe de séjour', value: fmt(s.totalTouristTax), sub:`collectée`, accent:'#0ea5e9', bg:'rgba(14,165,233,.08)', icon:'fa-landmark' },
-    { label:'Frais de ménage', value: fmt(s.totalCleaningFee), sub:`inclus dans CA`, accent:'#10b981', bg:'rgba(16,185,129,.08)', icon:'fa-broom' },
+    { label:'Frais de ménage', value: fmt(s.totalCleaningFee), sub:`inclus dans CA`, accent:'#0E3B2E', bg:'rgba(14,59,46,.08)', icon:'fa-broom' },
     { label:'Revenu propriétaire', value: fmt(s.totalOwnerRevenue), sub:`après commission conciergerie`, accent:'#6366f1', bg:'rgba(99,102,241,.08)', icon:'fa-home' },
     { label:'Moy. par réservation', value: s.totalBookings ? fmt(Math.round(s.totalGrossRevenue / s.totalBookings)) : '—', sub:`CA brut moyen`, accent:'#f97316', bg:'rgba(249,115,22,.08)', icon:'fa-chart-simple' },
     { label:'Moy. par nuit', value: s.totalNights ? fmt(Math.round(s.totalGrossRevenue / s.totalNights)) : '—', sub:`RevPAN`, accent:'#14b8a6', bg:'rgba(20,184,166,.08)', icon:'fa-bed' },
@@ -943,9 +943,9 @@ function renderConcierge(d) {
 function renderBarChart(monthly, type) {
   const labels = monthly.map(m => m.label);
   const map = { gross: monthly.map(m=>m.grossRevenue), net: monthly.map(m=>m.netRevenue), owner: monthly.map(m=>m.ownerRevenue) };
-  const cols = { gross:'#1A7A5E', net:'#3b82f6', owner:'#8b5cf6' };
+  const cols = { gross:'#0E3B2E', net:'#3b82f6', owner:'#8b5cf6' };
   const vals = map[type] || map.gross;
-  const col  = cols[type] || '#1A7A5E';
+  const col  = cols[type] || '#0E3B2E';
 
   if (_chartBar) _chartBar.destroy();
   _chartBar = new Chart(document.getElementById('monthlyChart').getContext('2d'), {
@@ -1039,11 +1039,11 @@ function renderPropTable(props) {
 
   const tbody = `<tbody>${props.map(p => {
     const occ = p.occupancyRate || 0;
-    const occCol = occ >= 70 ? '#1A7A5E' : occ >= 40 ? '#f59e0b' : '#9CA3AF';
+    const occCol = occ >= 70 ? '#0E3B2E' : occ >= 40 ? '#f59e0b' : '#9CA3AF';
     return `<tr>
       <td style="text-align:left;">
         <div style="display:flex;align-items:center;gap:8px;">
-          <div style="width:9px;height:9px;border-radius:50%;background:${p.color||'#10B981'};flex-shrink:0;"></div>
+          <div style="width:9px;height:9px;border-radius:50%;background:${p.color||'#0E3B2E'};flex-shrink:0;"></div>
           <div>
             <div style="font-weight:600;font-size:13px;">${p.name}</div>
             <div style="font-size:11px;color:#9CA3AF;">${fmtN(p.bookings)} rés.</div>
@@ -1077,7 +1077,7 @@ function renderPaymentBreakdown(monthly) {
   let html = `
     <section style="margin-top:32px;">
       <h3 style="font-size:15px;font-weight:700;color:#1F2937;margin:0 0 16px;display:flex;align-items:center;gap:8px;">
-        <i class="fas fa-university" style="color:#1A7A5E;"></i> Virements reçus par plateforme
+        <i class="fas fa-university" style="color:#0E3B2E;"></i> Virements reçus par plateforme
         <span style="font-size:11px;font-weight:500;color:#9CA3AF;margin-left:4px;">basé sur la date de paiement effective</span>
       </h3>
       <div style="overflow-x:auto;">
@@ -1089,7 +1089,7 @@ function renderPaymentBreakdown(monthly) {
               <th style="padding:10px 12px;text-align:right;font-weight:600;color:#6B7280;border-bottom:2px solid #E5E7EB;">Rés.</th>
               <th style="padding:10px 12px;text-align:right;font-weight:600;color:#6B7280;border-bottom:2px solid #E5E7EB;">Brut</th>
               <th style="padding:10px 12px;text-align:right;font-weight:600;color:#E53E3E;border-bottom:2px solid #E5E7EB;">Commission OTA</th>
-              <th style="padding:10px 12px;text-align:right;font-weight:600;color:#1A7A5E;border-bottom:2px solid #E5E7EB;">Net reçu</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:600;color:#0E3B2E;border-bottom:2px solid #E5E7EB;">Net reçu</th>
               <th style="padding:10px 12px;text-align:left;font-weight:600;color:#6B7280;border-bottom:2px solid #E5E7EB;">Date(s) virement</th>
             </tr>
           </thead>
@@ -1123,7 +1123,7 @@ function renderPaymentBreakdown(monthly) {
               <td style="padding:8px 12px;text-align:right;color:#6B7280;">${p.bookings}</td>
               <td style="padding:8px 12px;text-align:right;color:#374151;">${fmt(p.grossRevenue)}</td>
               <td style="padding:8px 12px;text-align:right;color:#E53E3E;">- ${fmt(p.otaCommissionAmount)}</td>
-              <td style="padding:8px 12px;text-align:right;font-weight:700;color:#1A7A5E;">${fmt(p.hostPayout)}</td>
+              <td style="padding:8px 12px;text-align:right;font-weight:700;color:#0E3B2E;">${fmt(p.hostPayout)}</td>
               <td style="padding:8px 12px;color:#9CA3AF;font-size:12px;">${(() => {
                 const dates = (p.paymentDates || []).sort();
                 if (dates.length === 0) return '—';
@@ -1332,7 +1332,7 @@ function renderRentabLogement(byProp) {
     return `
     <div class="rentab-card">
       <div class="rentab-card-name">
-        <div class="rentab-card-dot" style="background:${p.color || '#1A7A5E'};"></div>
+        <div class="rentab-card-dot" style="background:${p.color || '#0E3B2E'};"></div>
         ${p.name || 'Logement'}
       </div>
       <div>
@@ -1390,7 +1390,7 @@ function renderRentabMois(monthly) {
 
   const rows = months.map(m => {
     const mc = margeClass(m.netMarginPct || 0);
-    const badgeColor = mc === '' ? '#1A7A5E' : mc === 'warn' ? '#F59E0B' : '#EF4444';
+    const badgeColor = mc === '' ? '#0E3B2E' : mc === 'warn' ? '#F59E0B' : '#EF4444';
     return `<tr>
       <td><b>${m.label}</b></td>
       <td class="muted">${m.bookings}</td>
@@ -1414,10 +1414,10 @@ function renderRentabMois(monthly) {
     return acc;
   }, { bookings:0, gross:0, ota:0, menage:0, conc:0, marge:0 });
   const totPct = tot.gross > 0 ? Math.round(tot.marge / tot.gross * 100 * 10) / 10 : 0;
-  const totColor = margeClass(totPct) === '' ? '#1A7A5E' : margeClass(totPct) === 'warn' ? '#F59E0B' : '#EF4444';
+  const totColor = margeClass(totPct) === '' ? '#0E3B2E' : margeClass(totPct) === 'warn' ? '#F59E0B' : '#EF4444';
 
   const tfoot = `<tfoot>
-    <tr style="background:#f0fdf4;font-weight:700;">
+    <tr style="background:#F1F6F3;font-weight:700;">
       <td><b>TOTAL</b></td>
       <td>${tot.bookings}</td>
       <td>${fmtE(tot.gross)}</td>
@@ -1459,10 +1459,10 @@ function renderRentabResa(reservations) {
 
   const rows = resas.map(r => {
     const mc = margeClass(r.netMarginPct || 0);
-    const badgeColor = mc === '' ? '#1A7A5E' : mc === 'warn' ? '#F59E0B' : '#EF4444';
+    const badgeColor = mc === '' ? '#0E3B2E' : mc === 'warn' ? '#F59E0B' : '#EF4444';
     const date = r.startDate ? new Date(r.startDate).toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'2-digit' }) : '—';
     return `<tr>
-      <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r.propertyColor || '#1A7A5E'};margin-right:6px;"></span>${r.propertyName || '—'}</td>
+      <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r.propertyColor || '#0E3B2E'};margin-right:6px;"></span>${r.propertyName || '—'}</td>
       <td class="muted">${r.guestName || '—'}</td>
       <td class="muted">${r.platform || '—'}</td>
       <td class="muted">${date}</td>
@@ -1611,7 +1611,7 @@ function renderComparator() {
   ];
 
   const renderCol = (prop, score, metrics, side, periodLabel) => {
-    const color = prop.color || '#1A7A5E';
+    const color = prop.color || '#0E3B2E';
     const scoreVal = score?.score;
     const scoreColor = score?.color || '#9CA3AF';
 
@@ -1757,9 +1757,9 @@ function renderComparator() {
 .card .view-tab { color: #374151 !important; }
 .reporting-page .view-tab.active,
 #reportContent .view-tab.active,
-.card .view-tab.active { background: #1A7A5E !important; color: white !important; }
+.card .view-tab.active { background: #0E3B2E !important; color: white !important; }
 </style>
-<script src="/js/bh-onboarding-pages.js?v=226650ec"></script>   
+<script src="/js/bh-onboarding-pages.js?v=313cb8ca"></script>   
 <style id="bh-luxe-reporting">
 /* ════════════════════════════════════════════════════════════
    COUCHE LUXE REPORTING — cohérente v2
@@ -1778,7 +1778,7 @@ function renderComparator() {
 /* ── KPI hero & stats : cohérence serif ── */
 .kpi-hero { border-radius: 20px !important; border-color: rgba(200,184,154,.45) !important; }
 .stat-card { border-radius: 16px !important; border-color: rgba(200,184,154,.45) !important; }
-.stat-card:hover { border-color: rgba(26,122,94,.35) !important; }
+.stat-card:hover { border-color: rgba(14,59,46,.35) !important; }
 .stat-value {
   font-family: 'Instrument Serif', serif !important;
   font-size: 21px !important;
@@ -1797,11 +1797,11 @@ function renderComparator() {
   border-color: rgba(200,184,154,.55) !important;
   transition: border-color .15s, box-shadow .15s;
 }
-.ctrl-select:focus { border-color: #1A7A5E !important; box-shadow: 0 0 0 3px rgba(26,122,94,.1); }
-.btn-export { border-radius: 999px !important; box-shadow: 0 1px 4px rgba(26,122,94,.25); }
+.ctrl-select:focus { border-color: #0E3B2E !important; box-shadow: 0 0 0 3px rgba(14,59,46,.1); }
+.btn-export { border-radius: 999px !important; box-shadow: 0 1px 4px rgba(14,59,46,.25); }
 .btn-export:hover { opacity: 1 !important; background: #15624B !important; }
 .btn-csv { border-radius: 999px !important; border-color: rgba(200,184,154,.6) !important; }
-.btn-csv:hover { border-color: #1A7A5E !important; color: #1A7A5E !important; }
+.btn-csv:hover { border-color: #0E3B2E !important; color: #0E3B2E !important; }
 .view-tab { border-radius: 999px !important; }
 
 /* ── Modal export compta : luxe ── */
@@ -1824,7 +1824,7 @@ function renderComparator() {
 
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
 <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
-<script src="/js/bh-global-search.js?v=610ed2a6"></script>
+<script src="/js/bh-global-search.js?v=813e6615"></script>
 <script src="/js/bh-polish.js?v=1"></script>
 </body>
 </html>

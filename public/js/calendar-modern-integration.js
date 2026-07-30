@@ -116,7 +116,7 @@
     const platformColors = {
       'airbnb': '#FF5A5F',
       'booking': '#003580',
-      'direct': '#10B981'
+      'direct': '#0E3B2E'
     };
 
     const platformNames = {
@@ -126,7 +126,7 @@
     };
 
     const platform = (booking.source || booking.platform || 'direct').toLowerCase();
-    const platformColor = platformColors[platform] || '#10B981';
+    const platformColor = platformColors[platform] || '#0E3B2E';
     const platformName = platformNames[platform] || 'Direct';
 
     const startDate = new Date(booking.startDate);
@@ -381,7 +381,7 @@
       position: fixed;
       top: 20px;
       right: 20px;
-      background: ${type === 'success' ? '#10B981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+      background: ${type === 'success' ? '#0E3B2E' : type === 'error' ? '#ef4444' : '#3b82f6'};
       color: white;
       padding: 16px 24px;
       border-radius: 8px;

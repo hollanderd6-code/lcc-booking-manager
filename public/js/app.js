@@ -22,7 +22,7 @@ window.activeFilters = activeFilters;
 const SOURCE_COLORS = {
   airbnb:  { bg: '#FF5A5F', border: '#FF5A5F' },
   booking: { bg: '#003580', border: '#003580' },
-  direct:  { bg: '#10B981', border: '#10B981' },
+  direct:  { bg: '#0E3B2E', border: '#0E3B2E' },
   vrbo:    { bg: '#1569C7', border: '#1569C7' },
   expedia: { bg: '#FFC72C', border: '#FFC72C' },
   abritel: { bg: '#0096D6', border: '#0096D6' },
@@ -774,14 +774,14 @@ function showReservationModal(reservation) {
 
   if (guestPhone) {
     html += '<p style="margin:0 0 6px 0;font-size:13px;">';
-    html +=   '<i class="fas fa-phone" style="color:#1A7A5E;margin-right:6px;"></i>';
-    html +=   '<a href="tel:' + guestPhone + '" style="color:#1A7A5E;text-decoration:none;">' + guestPhone + '</a>';
+    html +=   '<i class="fas fa-phone" style="color:#0E3B2E;margin-right:6px;"></i>';
+    html +=   '<a href="tel:' + guestPhone + '" style="color:#0E3B2E;text-decoration:none;">' + guestPhone + '</a>';
     html += '</p>';
   }
   if (guestEmail) {
     html += '<p style="margin:0 0 12px 0;font-size:13px;">';
-    html +=   '<i class="fas fa-envelope" style="color:#1A7A5E;margin-right:6px;"></i>';
-    html +=   '<a href="mailto:' + guestEmail + '" style="color:#1A7A5E;text-decoration:none;">' + guestEmail + '</a>';
+    html +=   '<i class="fas fa-envelope" style="color:#0E3B2E;margin-right:6px;"></i>';
+    html +=   '<a href="mailto:' + guestEmail + '" style="color:#0E3B2E;text-decoration:none;">' + guestEmail + '</a>';
     html += '</p>';
   }
 
@@ -1406,7 +1406,7 @@ window.loadPushNotifHistory = async function() {
     list.innerHTML = notifs.map(function(n) {
       var date = new Date(n.created_at);
       var dateStr = date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-      return '<div style="background:' + (n.is_read ? '#fff' : '#f0fdf4') + ';border-radius:12px;padding:12px 14px;margin-bottom:8px;border-left:3px solid ' + (n.is_read ? '#e5e7eb' : '#1A7A5E') + ';">' +
+      return '<div style="background:' + (n.is_read ? '#fff' : '#F1F6F3') + ';border-radius:12px;padding:12px 14px;margin-bottom:8px;border-left:3px solid ' + (n.is_read ? '#e5e7eb' : '#0E3B2E') + ';">' +
         '<div style="font-size:13px;font-weight:600;color:#111;margin-bottom:3px;">' + (n.title || '') + '</div>' +
         '<div style="font-size:12px;color:#555;margin-bottom:4px;">' + (n.body || '') + '</div>' +
         '<div style="font-size:11px;color:#aaa;">' + dateStr + '</div>' +

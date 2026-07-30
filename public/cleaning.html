@@ -11,12 +11,12 @@
 <!-- Font Awesome -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <!-- CSS plateforme globale -->
-<link href="/css/style.css?v=9d18f851" rel="stylesheet"/>
-<link href="/css/bh-theme-v3.css?v=8d0e239f" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-brand.css?v=69892992"><link href="/css/bh-lux-pages.css?v=9b5de445" rel="stylesheet"/><link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=e8b22340">
+<link href="/css/style.css?v=17204d03" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css?v=7d47a1eb" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/bh-brand.css?v=c0705a60"><link href="/css/bh-lux-pages.css?v=a9a507f3" rel="stylesheet"/><link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
 <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
 <link href="/css/cleaning-cards-style.css?v=69576b51" rel="stylesheet"/>
-<link href="/css/guest-info-styles.css?v=8e9be275" rel="stylesheet"/>
+<link href="/css/guest-info-styles.css?v=497eaf0c" rel="stylesheet"/>
 <style>
     html, body {
       margin: 0 !important;
@@ -312,13 +312,13 @@
       color:var(--text-secondary); font-family:inherit; font-size:13px; font-weight:600;
       padding:6px 13px; border-radius:18px; transition:all .15s;
     }
-    .maint-filter.active { background:var(--accent,#1A7A5E); color:#fff; border-color:var(--accent,#1A7A5E); }
+    .maint-filter.active { background:var(--accent,#0E3B2E); color:#fff; border-color:var(--accent,#0E3B2E); }
     .resp-type {
       flex:1; cursor:pointer; border:1.5px solid var(--border); background:var(--bg,#fff);
       color:var(--text-secondary); font-family:inherit; font-size:13px; font-weight:600;
       padding:9px 6px; border-radius:9px; transition:all .15s;
     }
-    .resp-type.on { border-color:var(--accent,#1A7A5E); background:#e9f5f0; color:var(--accent,#1A7A5E); }
+    .resp-type.on { border-color:var(--accent,#0E3B2E); background:#e9f5f0; color:var(--accent,#0E3B2E); }
     .maint-label { display:block; font-size:12.5px; font-weight:600; color:var(--text-secondary); margin-bottom:5px; }
     .maint-input {
       width:100%; padding:10px 12px; border:1px solid var(--border,#ddd); border-radius:10px;
@@ -356,7 +356,7 @@
       line-height: 1.1;
     }
 
-    .stat-card-value.green { color: #059669; }
+    .stat-card-value.green { color: #0A2C22; }
     .stat-card-value.orange { color: #f59e0b; }
     .stat-card-value.red { color: #ef4444; }
     .stat-card-value.blue { color: #3b82f6; }
@@ -416,8 +416,8 @@
     }
 
     .status-validated {
-      background: #d1fae5;
-      color: #059669;
+      background: #DCE9E3;
+      color: #0A2C22;
     }
 
     .status-rejected {
@@ -656,8 +656,8 @@
     }
 
     .task-check-icon.checked {
-      background: #d1fae5;
-      color: #059669;
+      background: #DCE9E3;
+      color: #0A2C22;
     }
 
     .task-check-icon.unchecked {
@@ -705,13 +705,13 @@
     }
 
     .btn-validate {
-      background: #059669 !important;
+      background: #0A2C22 !important;
       color: white !important;
       border: none !important;
     }
 
     .btn-validate:hover {
-      background: #047857 !important;
+      background: #0A2C22 !important;
     }
 
     .btn-reject {
@@ -907,7 +907,7 @@
     select:focus {
       outline: none !important;
       border-color: var(--primary-color) !important;
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+      box-shadow: 0 0 0 3px rgba(14, 59, 46, 0.1) !important;
       background-color: #ffffff !important;
     }
 
@@ -985,7 +985,7 @@
     .btn-action:hover,
     button[type="submit"]:hover {
       transform: translateY(-1px) !important;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
+      box-shadow: 0 4px 12px rgba(14, 59, 46, 0.2) !important;
     }
 
     .btn-secondary {
@@ -1023,7 +1023,7 @@
     }
 
     .success-message {
-      color: #059669;
+      color: #0A2C22;
       font-size: 13px;
       margin-top: 6px;
       display: flex;
@@ -1071,7 +1071,7 @@
 
     input[type="file"]:hover {
       border-color: var(--primary-color) !important;
-      background: #f0fdf4 !important;
+      background: #F1F6F3 !important;
     }
 
     /* Modals avec inputs modernes */
@@ -1170,9 +1170,9 @@ html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
 }
 html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
-  background: #1A7A5E;
+  background: #0E3B2E;
   color: white;
-  border-color: #1A7A5E;
+  border-color: #0E3B2E;
 }
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
   margin-left: auto;
@@ -1208,7 +1208,7 @@ html[data-theme-v3="1"] .bh-theme-toggle::after {
   border-radius: 50%;
   transition: transform .2s;
 }
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #0E3B2E; }
 html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
 
 
@@ -1253,7 +1253,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .cleaning-back-btn {
   display: inline-flex; align-items: center; gap: 8px;
   height: 40px; padding: 0 20px; border: none; border-radius: 12px;
-  background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif;
+  background: #0E3B2E; color: white; font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap; position: fixed; top: 52px; right: 24px; z-index: 200;
 }
@@ -1303,10 +1303,10 @@ html[data-theme-v3="1"] .cleaning-tab {
   cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 7px;
 }
 html[data-theme-v3="1"] .cleaning-tab.active {
-  background: #1A7A5E; color: white;
+  background: #0E3B2E; color: white;
 }
 html[data-theme-v3="1"] .cleaning-tab:not(.active):hover {
-  background: rgba(26,122,94,.08); color: #1A7A5E;
+  background: rgba(14,59,46,.08); color: #0E3B2E;
 }
 
 /* ===== MOBILE : menu d'onglets repensé + fix scroll bas ===== */
@@ -1342,8 +1342,8 @@ html[data-theme-v3="1"] .cleaning-tab:not(.active):hover {
   .cleaning-tab i { font-size: 14px !important; }
   html[data-theme-v3="1"] .cleaning-tab.active,
   .cleaning-tab.active {
-    background: #1A7A5E !important; color: #fff !important;
-    box-shadow: 0 3px 10px rgba(26,122,94,.30) !important; transform: none !important;
+    background: #0E3B2E !important; color: #fff !important;
+    box-shadow: 0 3px 10px rgba(14,59,46,.30) !important; transform: none !important;
   }
   html[data-theme-v3="1"] .cleaning-tab:active,
   .cleaning-tab:active { transform: scale(.95) !important; }
@@ -1351,7 +1351,7 @@ html[data-theme-v3="1"] .cleaning-tab:not(.active):hover {
     min-width: 18px !important; height: 18px !important; padding: 0 5px !important;
     font-size: 10.5px !important; background: #EF4444 !important;
   }
-  .cleaning-tab.active .tab-badge { background: #fff !important; color: #1A7A5E !important; }
+  .cleaning-tab.active .tab-badge { background: #fff !important; color: #0E3B2E !important; }
   .cleaning-tab .tab-label { display: inline !important; }
 }
 
@@ -1399,7 +1399,7 @@ html[data-theme-v3="1"] .card-title {
 
 /* Buttons */
 html[data-theme-v3="1"] .btn-primary {
-  background: #1A7A5E !important; border-color: #1A7A5E !important;
+  background: #0E3B2E !important; border-color: #0E3B2E !important;
   border-radius: 10px !important; font-family: 'DM Sans', sans-serif !important;
   font-weight: 600 !important;
 }
@@ -1409,7 +1409,7 @@ html[data-theme-v3="1"] .btn-primary:hover { background: #15624B !important; }
 html[data-theme-v3="1"] .cleaning-card {
   background: #F5F0E8 !important;
   border: 1px solid rgba(200,184,154,.4) !important;
-  border-left: 3px solid #1A7A5E !important;
+  border-left: 3px solid #0E3B2E !important;
   border-radius: 14px !important;
 }
 html[data-theme-v3="1"] .cleaning-card:hover {
@@ -1424,8 +1424,8 @@ html[data-theme-v3="1"] .assign-select-card {
 }
 html[data-theme-v3="1"] .assign-select:focus,
 html[data-theme-v3="1"] .assign-select-card:focus {
-  border-color: #1A7A5E !important;
-  box-shadow: 0 0 0 3px rgba(26,122,94,.08) !important;
+  border-color: #0E3B2E !important;
+  box-shadow: 0 0 0 3px rgba(14,59,46,.08) !important;
 }
 
 /* Stat cards */
@@ -1449,8 +1449,8 @@ html[data-theme-v3="1"] select {
 html[data-theme-v3="1"] input:focus,
 html[data-theme-v3="1"] textarea:focus,
 html[data-theme-v3="1"] select:focus {
-  border-color: #1A7A5E !important;
-  box-shadow: 0 0 0 3px rgba(26,122,94,.08) !important;
+  border-color: #0E3B2E !important;
+  box-shadow: 0 0 0 3px rgba(14,59,46,.08) !important;
   outline: none !important;
 }
 
@@ -1522,8 +1522,8 @@ html[data-theme-v3="1"] .checklist-detail-modal .btn {
   font-family: 'DM Sans', sans-serif !important;
 }
 html[data-theme-v3="1"] .checklist-detail-modal .btn-primary {
-  background: #1A7A5E !important;
-  border-color: #1A7A5E !important;
+  background: #0E3B2E !important;
+  border-color: #0E3B2E !important;
 }
 html[data-theme-v3="1"] .checklist-detail-modal .btn-ghost,
 html[data-theme-v3="1"] .checklist-detail-modal .btn-secondary {
@@ -1560,7 +1560,7 @@ html[data-theme-v3="1"] #templateTasksEditor input[type=text] {
 }
 html[data-theme-v3="1"] #templateTasksEditor input[type=text]:focus {
   background: white !important;
-  border-color: #1A7A5E !important;
+  border-color: #0E3B2E !important;
 }
 /* Templates list cards */
 html[data-theme-v3="1"] .template-card,
@@ -1572,15 +1572,15 @@ html[data-theme-v3="1"] #templatesList > div {
 </style>
 <script src="/js/auth-fetch.js?v=cd78753d"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=d9f1468e">
-<link rel="stylesheet" href="/css/menu-active-button.css?v=5206d90a">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=ec508074">
-<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
+<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=13677c32">
+<link rel="stylesheet" href="/css/menu-active-button.css?v=f21f319b">
+<link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
+<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
 <style>
 /* card-title serif — grammaire éditoriale unifiée */
 .card-title{ font-family:'Instrument Serif',Georgia,serif !important;
   font-size:18px !important; font-weight:400 !important; letter-spacing:.01em; }
-.card-title i{ font-size:14px; color:#1A7A5E; }
+.card-title i{ font-size:14px; color:#0E3B2E; }
 </style>
 
   <!-- Marque Boostinghost — genere par outils/marque.js -->
@@ -1929,7 +1929,7 @@ html[data-theme-v3="1"] #templatesList > div {
         <div class="checklist-detail-notes" id="detailOwnerNotes" style="background:#fee2e2; color:#991b1b; border-color:#ef4444;"></div>
       </div>
       <div class="checklist-detail-section" id="detailSignatureSection" style="display:none;">
-        <div class="checklist-detail-section-title"><i class="fas fa-shield-check" style="color:#1A7A5E;margin-right:6px;"></i>Certification du ménage</div>
+        <div class="checklist-detail-section-title"><i class="fas fa-shield-check" style="color:#0E3B2E;margin-right:6px;"></i>Certification du ménage</div>
         <div id="detailSignatureContent"></div>
       </div>
     </div>
@@ -1964,7 +1964,7 @@ html[data-theme-v3="1"] #templatesList > div {
         <i class="fas fa-user-tag"></i>
         Responsable des achats
       </div>
-      <button style="cursor:pointer;border:none;background:#fff;color:var(--accent,#1A7A5E);border:1px solid var(--border);font-weight:700;padding:8px 14px;border-radius:10px;font-size:13px;white-space:nowrap;flex:0 0 auto;width:auto;" onclick="openResponsibleModal('')">
+      <button style="cursor:pointer;border:none;background:#fff;color:var(--accent,#0E3B2E);border:1px solid var(--border);font-weight:700;padding:8px 14px;border-radius:10px;font-size:13px;white-space:nowrap;flex:0 0 auto;width:auto;" onclick="openResponsibleModal('')">
         <i class="fas fa-plus"></i> Par logement
       </button>
     </div>
@@ -1983,7 +1983,7 @@ html[data-theme-v3="1"] #templatesList > div {
         <i class="fas fa-basket-shopping"></i>
         Liste de courses
       </div>
-      <button style="cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;font-weight:700;padding:8px 14px;border-radius:10px;font-size:13px;white-space:nowrap;flex:0 0 auto;width:auto;" onclick="loadRestockAlerts()">
+      <button style="cursor:pointer;border:none;background:var(--accent,#0E3B2E);color:#fff;font-weight:700;padding:8px 14px;border-radius:10px;font-size:13px;white-space:nowrap;flex:0 0 auto;width:auto;" onclick="loadRestockAlerts()">
         <i class="fas fa-sync-alt"></i> Actualiser
       </button>
     </div>
@@ -2011,7 +2011,7 @@ html[data-theme-v3="1"] #templatesList > div {
       <input id="restockNewLabel" type="text" placeholder="Nouvel article (ex : Éponges)" maxlength="80"
         style="flex:1;padding:11px 13px;border:1px solid var(--border,#ddd);border-radius:10px;font-size:14px;font-family:inherit;"
         onkeydown="if(event.key==='Enter')addRestockItem()">
-      <button onclick="addRestockItem()" style="cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;font-weight:700;padding:11px 16px;border-radius:10px;font-size:14px;">
+      <button onclick="addRestockItem()" style="cursor:pointer;border:none;background:var(--accent,#0E3B2E);color:#fff;font-weight:700;padding:11px 16px;border-radius:10px;font-size:14px;">
         <i class="fas fa-plus"></i> Ajouter
       </button>
     </div>
@@ -2023,7 +2023,7 @@ html[data-theme-v3="1"] #templatesList > div {
   <section class="card">
     <div class="card-header">
       <div class="card-title"><i class="fas fa-screwdriver-wrench"></i> Incidents &amp; interventions</div>
-      <button style="cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;font-weight:700;padding:8px 14px;border-radius:10px;font-size:13px;white-space:nowrap;flex:0 0 auto;width:auto;" onclick="openTicketModal()">
+      <button style="cursor:pointer;border:none;background:var(--accent,#0E3B2E);color:#fff;font-weight:700;padding:8px 14px;border-radius:10px;font-size:13px;white-space:nowrap;flex:0 0 auto;width:auto;" onclick="openTicketModal()">
         <i class="fas fa-plus"></i> Nouveau ticket
       </button>
     </div>
@@ -2039,7 +2039,7 @@ html[data-theme-v3="1"] #templatesList > div {
   <section class="card" style="margin-top:16px;">
     <div class="card-header">
       <div class="card-title"><i class="fas fa-address-book"></i> Carnet d'artisans</div>
-      <button style="cursor:pointer;border:none;background:#fff;color:var(--accent,#1A7A5E);border:1px solid var(--border);font-weight:700;padding:8px 14px;border-radius:10px;font-size:13px;white-space:nowrap;flex:0 0 auto;width:auto;" onclick="openArtisanModal()">
+      <button style="cursor:pointer;border:none;background:#fff;color:var(--accent,#0E3B2E);border:1px solid var(--border);font-weight:700;padding:8px 14px;border-radius:10px;font-size:13px;white-space:nowrap;flex:0 0 auto;width:auto;" onclick="openArtisanModal()">
         <i class="fas fa-plus"></i> Ajouter
       </button>
     </div>
@@ -2110,7 +2110,7 @@ html[data-theme-v3="1"] #templatesList > div {
         <select id="ticketArtisan" class="maint-input"><option value="">— Aucun —</option></select>
         <p class="text-secondary" style="font-size:12px;margin:5px 0 0;">L'artisan reçoit un email + SMS lors de l'assignation.</p>
       </div>
-      <button onclick="saveTicket()" style="margin-top:4px;cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:15px;">
+      <button onclick="saveTicket()" style="margin-top:4px;cursor:pointer;border:none;background:var(--accent,#0E3B2E);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:15px;">
         <i class="fas fa-check"></i> Enregistrer
       </button>
       <button id="ticketDeleteBtn" onclick="deleteTicket()" style="display:none;cursor:pointer;border:none;background:transparent;color:#dc2626;font-weight:600;padding:6px;font-size:13px;">
@@ -2179,7 +2179,7 @@ html[data-theme-v3="1"] #templatesList > div {
         <p class="text-secondary" style="font-size:12px;margin:5px 0 0;">Prévenu par email + SMS (au moins l'un des deux).</p>
       </div>
 
-      <button onclick="saveResponsible()" style="margin-top:4px;cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:15px;">
+      <button onclick="saveResponsible()" style="margin-top:4px;cursor:pointer;border:none;background:var(--accent,#0E3B2E);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:15px;">
         <i class="fas fa-check"></i> Enregistrer
       </button>
     </div>
@@ -2203,7 +2203,7 @@ html[data-theme-v3="1"] #templatesList > div {
         <div style="flex:1;"><label class="maint-label">Email</label><input id="artisanEmail" class="maint-input" type="email" maxlength="120" placeholder="email@…"></div>
       </div>
       <div><label class="maint-label">Notes (optionnel)</label><input id="artisanNotes" class="maint-input" type="text" maxlength="500" placeholder="Ex : Dispo le week-end"></div>
-      <button onclick="saveArtisan()" style="margin-top:4px;cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:15px;">
+      <button onclick="saveArtisan()" style="margin-top:4px;cursor:pointer;border:none;background:var(--accent,#0E3B2E);color:#fff;font-weight:700;padding:12px;border-radius:10px;font-size:15px;">
         <i class="fas fa-check"></i> Enregistrer
       </button>
       <button id="artisanDeleteBtn" onclick="deleteArtisan()" style="display:none;cursor:pointer;border:none;background:transparent;color:#dc2626;font-weight:600;padding:6px;font-size:13px;">
@@ -2559,16 +2559,16 @@ function formatDateFr(dateStr) {
           ouverte: { txt: 'Mission Hosterzz : proposée', color: '#7A8695' },
           acceptee: { txt: 'Mission Hosterzz : acceptée', color: '#E8A13A' },
           en_cours: { txt: 'Mission Hosterzz : en cours', color: '#E8A13A' },
-          terminee: { txt: 'Mission Hosterzz : terminée ✓', color: '#1A7A5E' }
+          terminee: { txt: 'Mission Hosterzz : terminée ✓', color: '#0E3B2E' }
         };
         const l = labels[m.statut] || { txt: 'Mission Hosterzz : ' + m.statut, color: '#7A8695' };
         // Prestataire connu : on l'affiche et on permet de le joindre.
         let presta = '';
         if (m.prestataire_nom) {
           const tel = m.prestataire_telephone ? String(m.prestataire_telephone).replace(/\s+/g, '') : '';
-          presta = '<div style="font-size:11px;margin-top:3px;color:#1A7A5E;font-weight:600;"><i class="fas fa-user" style="font-size:10px;"></i> ' + m.prestataire_nom
-            + (tel ? ' · <a href="tel:' + tel + '" style="color:#1A7A5E;">Appeler</a>'
-                   + ' · <a href="sms:' + tel + '" style="color:#1A7A5E;">SMS</a>' : '')
+          presta = '<div style="font-size:11px;margin-top:3px;color:#0E3B2E;font-weight:600;"><i class="fas fa-user" style="font-size:10px;"></i> ' + m.prestataire_nom
+            + (tel ? ' · <a href="tel:' + tel + '" style="color:#0E3B2E;">Appeler</a>'
+                   + ' · <a href="sms:' + tel + '" style="color:#0E3B2E;">SMS</a>' : '')
             + '</div>';
         }
         return `<div class="hz-mission-status" style="font-size:11px;margin-top:4px;color:${l.color};font-weight:600;">
@@ -2784,8 +2784,8 @@ function formatDateFr(dateStr) {
                 <div class="cleaner-tags">
                   ${c.email ? `<span class="cleaner-pill"><i class="fas fa-envelope"></i> ${c.email}</span>` : ''}
                   ${c.phone ? `<span class="cleaner-pill"><i class="fas fa-phone"></i> ${c.phone}</span>` : ''}
-                  ${c.pin_code ? `<span class="cleaner-pill" style="background: #d1fae5; color: #059669; font-weight: 600;"><i class="fas fa-key"></i> PIN: ${c.pin_code}</span>` : ''}
-                  ${c.phone ? `<span class="cleaner-pill cleaner-sms-pill ${c.sms_recap_enabled ? 'sms-on' : 'sms-off'}" data-id="${c.id}" data-enabled="${c.sms_recap_enabled ? '1' : '0'}" onclick="toggleCleanerSms(this)" title="${c.sms_recap_enabled ? 'SMS récap activé — cliquer pour désactiver' : 'Activer le SMS récap du soir'}" style="cursor:pointer;user-select:none;${c.sms_recap_enabled ? 'background:#d1fae5;color:#059669;' : 'background:#f3f4f6;color:#9ca3af;'}"><i class="fas fa-sms"></i> SMS recap ${c.sms_recap_enabled ? 'ON' : 'OFF'}</span>` : ''}
+                  ${c.pin_code ? `<span class="cleaner-pill" style="background: #DCE9E3; color: #0A2C22; font-weight: 600;"><i class="fas fa-key"></i> PIN: ${c.pin_code}</span>` : ''}
+                  ${c.phone ? `<span class="cleaner-pill cleaner-sms-pill ${c.sms_recap_enabled ? 'sms-on' : 'sms-off'}" data-id="${c.id}" data-enabled="${c.sms_recap_enabled ? '1' : '0'}" onclick="toggleCleanerSms(this)" title="${c.sms_recap_enabled ? 'SMS récap activé — cliquer pour désactiver' : 'Activer le SMS récap du soir'}" style="cursor:pointer;user-select:none;${c.sms_recap_enabled ? 'background:#DCE9E3;color:#0A2C22;' : 'background:#f3f4f6;color:#9ca3af;'}"><i class="fas fa-sms"></i> SMS recap ${c.sms_recap_enabled ? 'ON' : 'OFF'}</span>` : ''}
                 </div>
               </div>
               <div style="display:flex;gap:6px;">
@@ -2809,13 +2809,13 @@ function formatDateFr(dateStr) {
                   const assigned = Object.entries(defaultCleanersMap).filter(([pid, v]) => v.cleanerId === c.id);
                   if (!assigned.length) return '<span style="font-size:12px;color:var(--text-secondary);font-style:italic;">Aucun logement associé</span>';
                   return assigned.map(([pid]) => `
-                    <span style="display:inline-flex;align-items:center;gap:5px;background:#d1fae5;color:#065f46;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;">
+                    <span style="display:inline-flex;align-items:center;gap:5px;background:#DCE9E3;color:#0A2C22;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;">
                       ${getPropertyNameById(pid)}
-                      <button onclick="removeCleanerProperty('${c.id}','${pid}')" style="background:none;border:none;cursor:pointer;color:#065f46;padding:0;line-height:1;font-size:13px;" title="Retirer">&times;</button>
+                      <button onclick="removeCleanerProperty('${c.id}','${pid}')" style="background:none;border:none;cursor:pointer;color:#0A2C22;padding:0;line-height:1;font-size:13px;" title="Retirer">&times;</button>
                     </span>`).join('');
                 })()}
               </div>
-              <button onclick="openAddPropertyModal('${c.id}')" style="display:inline-flex;align-items:center;gap:6px;background:transparent;border:1.5px dashed rgba(26,122,94,.4);color:#1A7A5E;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
+              <button onclick="openAddPropertyModal('${c.id}')" style="display:inline-flex;align-items:center;gap:6px;background:transparent;border:1.5px dashed rgba(14,59,46,.4);color:#0E3B2E;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
                 <i class="fas fa-plus"></i> Associer un logement
               </button>
             </div>
@@ -2946,7 +2946,7 @@ function formatDateFr(dateStr) {
             )
             .join('')}
         </select>
-        ${(assignedId && !assignments[key] && defaultCleanersMap[propertyId]) ? '<div style="font-size:10px; color:#059669; margin-top:3px; font-weight:600;"><i class="fas fa-star" style="font-size:8px;"></i> Cleaner régulier</div>' : ''}
+        ${(assignedId && !assignments[key] && defaultCleanersMap[propertyId]) ? '<div style="font-size:10px; color:#0A2C22; margin-top:3px; font-weight:600;"><i class="fas fa-star" style="font-size:8px;"></i> Cleaner régulier</div>' : ''}
         <button type="button"
                 class="btn btn-ghost btn-sm hz-mission-btn"
                 data-reservation-id="${r.id != null ? r.id : ''}"
@@ -3264,7 +3264,7 @@ function formatDateFr(dateStr) {
 
           if (alerts.length === 0) {
             wrap.innerHTML = '<div style="text-align:center;padding:28px 12px;color:var(--text-secondary);">'
-              + '<i class="fas fa-circle-check" style="font-size:30px;color:#10b981;margin-bottom:10px;"></i>'
+              + '<i class="fas fa-circle-check" style="font-size:30px;color:#0E3B2E;margin-bottom:10px;"></i>'
               + '<p style="margin:0;font-weight:600;">Rien à racheter</p>'
               + '<p style="margin:4px 0 0;font-size:13px;">Les signalements des agents apparaîtront ici.</p></div>';
             return;
@@ -3282,8 +3282,8 @@ function formatDateFr(dateStr) {
             const name = getPropertyNameById(pid);
             html += '<div style="border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;">'
               + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
-              + '<span style="font-weight:700;font-size:15px;color:var(--accent,#1A7A5E);">' + _restockEsc(name) + '</span>'
-              + '<button onclick="clearRestockProperty(\'' + _restockEsc(pid).replace(/'/g,"\\'") + '\')" style="cursor:pointer;border:none;background:#ecfdf5;color:#059669;font-weight:700;font-size:12px;padding:6px 11px;border-radius:8px;">Tout racheté</button>'
+              + '<span style="font-weight:700;font-size:15px;color:var(--accent,#0E3B2E);">' + _restockEsc(name) + '</span>'
+              + '<button onclick="clearRestockProperty(\'' + _restockEsc(pid).replace(/'/g,"\\'") + '\')" style="cursor:pointer;border:none;background:#F1F6F3;color:#0A2C22;font-weight:700;font-size:12px;padding:6px 11px;border-radius:8px;">Tout racheté</button>'
               + '</div>';
             list.forEach(a => {
               const when = a.created_at ? new Date(a.created_at).toLocaleDateString('fr-FR', {day:'numeric',month:'short'}) : '';
@@ -3291,7 +3291,7 @@ function formatDateFr(dateStr) {
                 + '<div><div style="font-weight:600;font-size:14px;">' + _restockEsc(a.item_label) + '</div>'
                 + '<div style="font-size:12px;color:var(--text-secondary);">'
                 + (a.cleaner_name ? _restockEsc(a.cleaner_name) : 'Agent') + (when ? ' · ' + when : '') + '</div></div>'
-                + '<button onclick="markRestockDone(' + a.id + ')" style="cursor:pointer;border:1px solid var(--border);background:#fff;color:#059669;font-weight:600;font-size:12px;padding:6px 12px;border-radius:8px;"><i class="fas fa-check"></i> Racheté</button>'
+                + '<button onclick="markRestockDone(' + a.id + ')" style="cursor:pointer;border:1px solid var(--border);background:#fff;color:#0A2C22;font-weight:600;font-size:12px;padding:6px 12px;border-radius:8px;"><i class="fas fa-check"></i> Racheté</button>'
                 + '</div>';
             });
             html += '</div>';
@@ -3453,7 +3453,7 @@ function formatDateFr(dateStr) {
           d.innerHTML =
             '<div><div style="font-size:12px;color:var(--text-secondary);">Par défaut</div>'
             + '<div style="font-weight:600;color:var(--text-secondary);">Personne — c\'est vous qui recevez les alertes</div></div>'
-            + '<button onclick="openResponsibleModal(\'\')" style="cursor:pointer;border:none;background:var(--accent,#1A7A5E);color:#fff;border-radius:9px;padding:7px 13px;font-size:13px;font-weight:700;flex-shrink:0;">Désigner</button>';
+            + '<button onclick="openResponsibleModal(\'\')" style="cursor:pointer;border:none;background:var(--accent,#0E3B2E);color:#fff;border-radius:9px;padding:7px 13px;font-size:13px;font-weight:700;flex-shrink:0;">Désigner</button>';
         }
       }
 
@@ -3464,7 +3464,7 @@ function formatDateFr(dateStr) {
         wrap.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);margin:4px 0 6px;">Exceptions par logement</div>'
           + respOverrides.map(r =>
             '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--border);">'
-            + '<div><span style="font-weight:600;color:var(--accent,#1A7A5E);">' + _maintEsc(getPropertyNameById(r.property_id)) + '</span>'
+            + '<div><span style="font-weight:600;color:var(--accent,#0E3B2E);">' + _maintEsc(getPropertyNameById(r.property_id)) + '</span>'
             + ' <span class="text-secondary" style="font-size:13px;">→ ' + _maintEsc(respLabel(r)) + '</span></div>'
             + '<div style="display:flex;gap:6px;flex-shrink:0;">'
             + '<button onclick="openResponsibleModal(\'' + r.property_id + '\')" style="cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text);border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:600;">Modifier</button>'
@@ -3572,7 +3572,7 @@ function formatDateFr(dateStr) {
       let maintArtisans = [];
       let maintFilter = 'open';
       const MAINT_PRIO = { low:{l:'Faible',c:'#64748b'}, normal:{l:'Normale',c:'#0ea5e9'}, high:{l:'Haute',c:'#f59e0b'}, urgent:{l:'Urgente',c:'#dc2626'} };
-      const MAINT_ST = { open:{l:'À traiter',c:'#dc2626'}, in_progress:{l:'En cours',c:'#f59e0b'}, resolved:{l:'Résolu',c:'#10b981'}, closed:{l:'Clôturé',c:'#64748b'} };
+      const MAINT_ST = { open:{l:'À traiter',c:'#dc2626'}, in_progress:{l:'En cours',c:'#f59e0b'}, resolved:{l:'Résolu',c:'#0E3B2E'}, closed:{l:'Clôturé',c:'#64748b'} };
 
       function _maintHeaders() {
         const token = localStorage.getItem('lcc_token');
@@ -3614,7 +3614,7 @@ function formatDateFr(dateStr) {
         const list = maintFilter ? maintTickets.filter(t => t.status === maintFilter) : maintTickets;
         if (list.length === 0) {
           wrap.innerHTML = '<div style="text-align:center;padding:26px 12px;color:var(--text-secondary);">'
-            + '<i class="fas fa-clipboard-check" style="font-size:28px;color:#10b981;margin-bottom:10px;"></i>'
+            + '<i class="fas fa-clipboard-check" style="font-size:28px;color:#0E3B2E;margin-bottom:10px;"></i>'
             + '<p style="margin:0;font-weight:600;">Aucun ticket</p></div>';
           return;
         }
@@ -3646,7 +3646,7 @@ function formatDateFr(dateStr) {
             + '<span style="flex-shrink:0;font-size:11px;font-weight:700;padding:3px 9px;border-radius:14px;background:' + st.c + '1a;color:' + st.c + ';">' + st.l + '</span>'
             + '</div>'
             + '<div style="font-size:12.5px;color:var(--text-secondary);margin-top:5px;">'
-            + '<span style="color:var(--accent,#1A7A5E);font-weight:600;">' + _maintEsc(pname) + '</span>'
+            + '<span style="color:var(--accent,#0E3B2E);font-weight:600;">' + _maintEsc(pname) + '</span>'
             + ' · ' + byTxt + (when ? ' · ' + when : '')
             + (t.artisan_name ? ' · <i class="fas fa-screwdriver-wrench"></i> ' + _maintEsc(t.artisan_name) : '')
             + '</div>'
@@ -3724,7 +3724,7 @@ function formatDateFr(dateStr) {
           '<div style="text-align:center;padding:14px 6px;">'
           + '<i class="fas fa-circle-info" style="font-size:26px;color:var(--text-secondary);margin-bottom:10px;"></i>'
           + '<p style="margin:0 0 14px;font-weight:600;color:var(--text);">' + _maintEsc(msg) + '</p>'
-          + '<a href="deposits.html" style="display:inline-block;background:var(--accent,#1A7A5E);color:#fff;text-decoration:none;font-weight:700;padding:10px 16px;border-radius:9px;font-size:13px;">Ouvrir les cautions</a>'
+          + '<a href="deposits.html" style="display:inline-block;background:var(--accent,#0E3B2E);color:#fff;text-decoration:none;font-weight:700;padding:10px 16px;border-radius:9px;font-size:13px;">Ouvrir les cautions</a>'
           + '</div>';
       }
 
@@ -3985,9 +3985,9 @@ function formatDateFr(dateStr) {
             sigSection.style.display = 'block';
             var certDate = c.certified_at ? new Date(c.certified_at).toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
             sigContent.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:12px;">'
-              + '<span style="padding:4px 10px;background:rgba(16,185,129,.1);color:#059669;border-radius:8px;font-weight:600;"><i class="fas fa-clock" style="margin-right:4px;"></i>' + certDate + '</span>'
+              + '<span style="padding:4px 10px;background:rgba(14,59,46,.1);color:#0A2C22;border-radius:8px;font-weight:600;"><i class="fas fa-clock" style="margin-right:4px;"></i>' + certDate + '</span>'
               + '<span style="padding:4px 10px;background:rgba(59,130,246,.1);color:#2563EB;border-radius:8px;font-weight:600;"><i class="fas fa-network-wired" style="margin-right:4px;"></i>IP : ' + (c.signature_ip || '—') + '</span>'
-              + '<span style="padding:4px 10px;background:rgba(26,122,94,.1);color:#1A7A5E;border-radius:8px;font-weight:600;"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Certifié</span>'
+              + '<span style="padding:4px 10px;background:rgba(14,59,46,.1);color:#0E3B2E;border-radius:8px;font-weight:600;"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Certifié</span>'
               + '</div>'
               + '<img src="' + c.signature_data + '" style="width:100%;max-width:280px;border:1px solid rgba(200,184,154,.4);border-radius:10px;background:white;" />';
           } else {
@@ -4189,7 +4189,7 @@ function formatDateFr(dateStr) {
                 </div>
                 <div style="padding:16px 20px;">
                   <label style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);display:block;margin-bottom:8px;">Message pour la personne de ménage</label>
-                  <textarea id="complementText" rows="3" placeholder="Ex : Merci de repasser sur la salle de bain, quelques points sont à revoir." style="width:100%;box-sizing:border-box;padding:12px;border:1.5px solid rgba(200,184,154,.5);border-radius:12px;font-size:14px;font-family:inherit;resize:none;background:var(--bg-secondary,#f8f6f1);color:var(--text-primary);outline:none;transition:border-color .15s;" onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='rgba(200,184,154,.5)'"></textarea>
+                  <textarea id="complementText" rows="3" placeholder="Ex : Merci de repasser sur la salle de bain, quelques points sont à revoir." style="width:100%;box-sizing:border-box;padding:12px;border:1.5px solid rgba(200,184,154,.5);border-radius:12px;font-size:14px;font-family:inherit;resize:none;background:var(--bg-secondary,#f8f6f1);color:var(--text-primary);outline:none;transition:border-color .15s;" onfocus="this.style.borderColor='#0E3B2E'" onblur="this.style.borderColor='rgba(200,184,154,.5)'"></textarea>
                   <div style="display:flex;gap:8px;margin-top:12px;">
                     <button onclick="closeComplementModal()" style="flex:1;padding:12px;border:1.5px solid rgba(200,184,154,.5);border-radius:12px;background:transparent;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Annuler</button>
                     <button onclick="submitComplement()" style="flex:2;padding:12px;border:none;border-radius:12px;background:#b45309;color:white;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
@@ -4284,8 +4284,8 @@ function formatDateFr(dateStr) {
               const pname = p.name || p.title || p.label || pid;
               return `
                 <label style="display:flex;align-items:center;gap:12px;padding:11px 14px;border:1.5px solid rgba(200,184,154,.4);border-radius:12px;background:var(--bg-secondary,#f8f6f1);cursor:pointer;transition:background .15s;" onmouseover="this.style.background='#e8f5f0'" onmouseout="this.style.background='var(--bg-secondary,#f8f6f1)'">
-                  <input type="checkbox" class="prop-checkbox" data-pid="${pid}" data-pname="${pname.replace(/"/g,'&quot;')}" style="width:18px;height:18px;accent-color:#1A7A5E;cursor:pointer;flex-shrink:0;">
-                  <span style="font-size:13px;font-weight:600;color:var(--text-primary);"><i class="fas fa-home" style="color:#1A7A5E;margin-right:7px;"></i>${pname}</span>
+                  <input type="checkbox" class="prop-checkbox" data-pid="${pid}" data-pname="${pname.replace(/"/g,'&quot;')}" style="width:18px;height:18px;accent-color:#0E3B2E;cursor:pointer;flex-shrink:0;">
+                  <span style="font-size:13px;font-weight:600;color:var(--text-primary);"><i class="fas fa-home" style="color:#0E3B2E;margin-right:7px;"></i>${pname}</span>
                 </label>`;
             }).join('');
 
@@ -4296,8 +4296,8 @@ function formatDateFr(dateStr) {
 
               <!-- Header -->
               <div style="padding:18px 20px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(200,184,154,.3);flex-shrink:0;">
-                <div style="width:36px;height:36px;border-radius:10px;background:#d1fae5;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                  <i class="fas fa-home" style="color:#059669;font-size:15px;"></i>
+                <div style="width:36px;height:36px;border-radius:10px;background:#DCE9E3;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <i class="fas fa-home" style="color:#0A2C22;font-size:15px;"></i>
                 </div>
                 <div style="flex:1;">
                   <div style="font-weight:700;font-size:15px;color:var(--text-primary);">Associer des logements</div>
@@ -4309,8 +4309,8 @@ function formatDateFr(dateStr) {
               ${available.length ? `
               <!-- Tout sélectionner -->
               <div style="padding:10px 20px;border-bottom:1px solid rgba(200,184,154,.2);flex-shrink:0;">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#1A7A5E;">
-                  <input type="checkbox" id="selectAllProps" style="width:17px;height:17px;accent-color:#1A7A5E;cursor:pointer;" onchange="toggleSelectAllProps(this)">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:#0E3B2E;">
+                  <input type="checkbox" id="selectAllProps" style="width:17px;height:17px;accent-color:#0E3B2E;cursor:pointer;" onchange="toggleSelectAllProps(this)">
                   Tout sélectionner
                 </label>
               </div>
@@ -4325,7 +4325,7 @@ function formatDateFr(dateStr) {
               <!-- Footer -->
               <div style="padding:14px 20px;border-top:1px solid rgba(200,184,154,.3);flex-shrink:0;display:flex;gap:8px;">
                 <button onclick="closeAddPropertyModal()" style="flex:1;padding:12px;border:1.5px solid rgba(200,184,154,.5);border-radius:12px;background:transparent;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Annuler</button>
-                <button onclick="confirmAddProperties('${cleanerId}')" style="flex:2;padding:12px;border:none;border-radius:12px;background:#1A7A5E;color:white;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <button onclick="confirmAddProperties('${cleanerId}')" style="flex:2;padding:12px;border:none;border-radius:12px;background:#0E3B2E;color:white;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
                   <i class="fas fa-check"></i> <span id="confirmBtnLabel">Confirmer</span>
                 </button>
               </div>
@@ -4742,7 +4742,7 @@ function formatDateFr(dateStr) {
             <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
               <input type="checkbox" data-property-id="${p.id}" ${p.hz_auto_mission ? 'checked' : ''}
                      onchange="toggleHzAutoMission(this)" style="opacity:0;width:0;height:0;">
-              <span style="position:absolute;inset:0;background:${p.hz_auto_mission ? '#1A7A5E' : '#ccc'};border-radius:999px;transition:.2s;cursor:pointer;"
+              <span style="position:absolute;inset:0;background:${p.hz_auto_mission ? '#0E3B2E' : '#ccc'};border-radius:999px;transition:.2s;cursor:pointer;"
                     onclick="this.previousElementSibling.click()"></span>
               <span style="position:absolute;width:18px;height:18px;left:${p.hz_auto_mission ? '23px' : '3px'};top:3px;background:#fff;border-radius:50%;transition:.2s;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
             </label>
@@ -4766,7 +4766,7 @@ function formatDateFr(dateStr) {
           body: JSON.stringify({ enabled })
         });
         if (!res.ok) throw new Error('Erreur serveur');
-        if (track) track.style.background = enabled ? '#1A7A5E' : '#ccc';
+        if (track) track.style.background = enabled ? '#0E3B2E' : '#ccc';
         if (knob) knob.style.left = enabled ? '23px' : '3px';
       } catch (e) {
         checkboxEl.checked = !enabled; // rollback visuel
@@ -5014,9 +5014,9 @@ function formatDateFr(dateStr) {
 </script>
 
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/bh-layout.js?v=6aab0b85"></script>
-<script src="/js/mobile-native-experience.js?v=2594b603"></script>
-<script src="/js/mobile-tabs-handler.js?v=e901dd8d"></script>
+<script src="/js/bh-layout.js?v=2f884d1c"></script>
+<script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
+<script src="/js/mobile-tabs-handler.js?v=01e3d29a"></script>
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
 <!-- Socket.io pour le temps réel -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -5094,7 +5094,7 @@ function formatDateFr(dateStr) {
     font-weight: 600 !important;
   }
   html[data-theme-v3="1"] .cleaning-tab.active {
-    background: #1A7A5E !important;
+    background: #0E3B2E !important;
     color: white !important;
   }
   html[data-theme-v3="1"] .cleaning-tab:not(.active) {
@@ -5205,7 +5205,7 @@ function formatDateFr(dateStr) {
   <div style="background:var(--bg-primary,#fff);border-radius:16px;padding:24px;width:100%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.18);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
       <div style="font-size:16px;font-weight:700;color:var(--text-primary);">
-        <i class="fas fa-pen" style="color:#1A7A5E;margin-right:8px;"></i>Modifier le cleaner
+        <i class="fas fa-pen" style="color:#0E3B2E;margin-right:8px;"></i>Modifier le cleaner
       </div>
       <button onclick="closeEditCleaner()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-secondary);">&times;</button>
     </div>
@@ -5284,7 +5284,7 @@ function formatDateFr(dateStr) {
     </div>
   </div>
 </div>
-<script src="/js/bh-onboarding-pages.js?v=226650ec"></script>
+<script src="/js/bh-onboarding-pages.js?v=313cb8ca"></script>
 <style id="bh-luxe-cleaning">
 /* ════════════════════════════════════════════════════════════
    COUCHE LUXE MÉNAGE — cohérente v2
@@ -5298,7 +5298,7 @@ html[data-theme-v3="1"] .cleaning-tabs {
   box-shadow: 0 1px 3px rgba(13,17,23,.04);
 }
 html[data-theme-v3="1"] .cleaning-tab { border-radius: 999px !important; }
-html[data-theme-v3="1"] .cleaning-tab.active { box-shadow: 0 1px 3px rgba(26,122,94,.15) !important; }
+html[data-theme-v3="1"] .cleaning-tab.active { box-shadow: 0 1px 3px rgba(14,59,46,.15) !important; }
 
 /* ── Cartes : titres serif, headers crème ── */
 html[data-theme-v3="1"] .card {
@@ -5320,7 +5320,7 @@ html[data-theme-v3="1"] .card-title {
 
 /* ── Checklists : nom du logement en serif ── */
 .checklist-item { border-color: rgba(200,184,154,.45) !important; border-radius: 16px !important; }
-.checklist-item:hover { box-shadow: 0 6px 20px rgba(13,17,23,.08) !important; border-color: rgba(26,122,94,.3) !important; }
+.checklist-item:hover { box-shadow: 0 6px 20px rgba(13,17,23,.08) !important; border-color: rgba(14,59,46,.3) !important; }
 .checklist-item-property {
   font-family: 'Instrument Serif', serif !important;
   font-size: 17px !important;
@@ -5338,8 +5338,8 @@ html[data-theme-v3="1"] .cleaning-card { border-radius: 16px !important; }
   transition: border-color .15s, box-shadow .15s !important;
 }
 .maint-input:focus, .assign-select:focus {
-  border-color: #1A7A5E !important;
-  box-shadow: 0 0 0 3px rgba(26,122,94,.1) !important;
+  border-color: #0E3B2E !important;
+  box-shadow: 0 0 0 3px rgba(14,59,46,.1) !important;
   background: #fff !important;
   outline: none !important;
 }
@@ -5349,7 +5349,7 @@ html[data-theme-v3="1"] .cleaning-card { border-radius: 16px !important; }
 /* ── Boutons ── */
 html[data-theme-v3="1"] .btn-primary {
   border-radius: 999px !important;
-  box-shadow: 0 1px 4px rgba(26,122,94,.25) !important;
+  box-shadow: 0 1px 4px rgba(14,59,46,.25) !important;
 }
 
 /* ── Modales (panneaux checklist/artisan/QR/tickets/historique) ── */
@@ -5372,7 +5372,7 @@ html[data-theme-v3="1"] .btn-primary {
   letter-spacing: .015em !important;
 }
 .checklist-detail-section-title {
-  color: #1A7A5E !important;
+  color: #0E3B2E !important;
   border-bottom: 1px solid rgba(200,184,154,.4);
   padding-bottom: 6px;
 }
@@ -5397,16 +5397,16 @@ html[data-theme-v3="1"] .btn-primary {
 
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
 <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
-<script src="/js/bh-global-search.js?v=610ed2a6"></script>
+<script src="/js/bh-global-search.js?v=813e6615"></script>
 <script src="/js/bh-polish.js?v=1"></script>
-<script src="/js/bh-pull-refresh.js?v=5bb91f71"></script>
+<script src="/js/bh-pull-refresh.js?v=07bdb653"></script>
 
 <!-- ===== FIX UI : onglets + bouton retour (dernier calque) ===== -->
 <style>
 /* Onglet actif : vert plein, texte et icônes blancs, aucun double contour */
 .cleaning-tab.active,
 html[data-theme-v3="1"] .cleaning-tab.active {
-  background: #1A7A5E !important;
+  background: #0E3B2E !important;
   color: #FFFFFF !important;
   box-shadow: none !important;
   border: none !important;
@@ -5446,8 +5446,8 @@ html[data-theme-v3="1"] .cleaning-back-btn {
 .cleaning-back-btn:hover,
 html[data-theme-v3="1"] .cleaning-back-btn:hover {
   background: #FAF8F4 !important;
-  border-color: #1A7A5E !important;
-  color: #1A7A5E !important;
+  border-color: #0E3B2E !important;
+  color: #0E3B2E !important;
 }
 .cleaning-back-btn i { font-size: 13px !important; color: inherit !important; }
 </style>

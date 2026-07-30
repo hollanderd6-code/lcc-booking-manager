@@ -1035,18 +1035,18 @@
         font-family: 'DM Sans', sans-serif;
         pointer-events: all;
       }
-      .t-badge { font-size:11px;font-weight:700;color:#1A7A5E;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;opacity:.7; }
+      .t-badge { font-size:11px;font-weight:700;color:#0E3B2E;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;opacity:.7; }
       .t-title { font-size:15px;font-weight:700;color:#111827;margin-bottom:7px;line-height:1.3; }
       .t-text  { font-size:13px;color:#4B5563;line-height:1.55;margin-bottom:16px; }
       .t-footer{ display:flex;align-items:center;justify-content:space-between;gap:8px; }
       .t-dots  { display:flex;gap:4px;align-items:center;flex-wrap:wrap;max-width:110px; }
       .t-dot   { width:5px;height:5px;border-radius:50%;background:#E5E7EB;flex-shrink:0;transition:background .2s,transform .2s; }
-      .t-dot.on{ background:#1A7A5E;transform:scale(1.3); }
+      .t-dot.on{ background:#0E3B2E;transform:scale(1.3); }
       .t-actions{ display:flex;gap:8px;align-items:center;flex-shrink:0; }
       .t-skip { background:none;border:none;font-size:12px;color:#9CA3AF;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 8px;border-radius:6px; }
-      .t-next { background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:background .15s; }
+      .t-next { background:#0E3B2E;color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:background .15s; }
       .t-next:hover { background:#15624B; }
-      .t-finish { background:linear-gradient(135deg,#1A7A5E,#2AAE86) !important; }
+      .t-finish { background:linear-gradient(135deg,#0E3B2E,#1E6E52) !important; }
       .t-arrow { position:absolute;width:14px;height:14px;background:#fff;pointer-events:none; }
 
       @media (max-width: 1366px) {
@@ -1111,9 +1111,9 @@
       width: ${w}px;
       height: ${h}px;
       border-radius: ${radius}px;
-      outline: 3px solid #1A7A5E;
+      outline: 3px solid #0E3B2E;
       outline-offset: 0;
-      box-shadow: 0 0 0 4px rgba(26,122,94,0.25);
+      box-shadow: 0 0 0 4px rgba(14,59,46,0.25);
       background: transparent;
       pointer-events: none;
     `;

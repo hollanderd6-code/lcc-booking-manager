@@ -67,10 +67,10 @@
     if (_ciF && _coF) _rows.push(`<div style="display:flex;align-items:center;gap:7px;"><span>📅</span><span>${_ciF} → ${_coF}</span></div>`);
     if (_occBefore !== null) _rows.push(_occBefore
       ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span>🔴</span><span>Loué la veille — départ le jour de l'arrivée</span></div>`
-      : `<div style="display:flex;align-items:center;gap:7px;color:#1A7A5E;"><span>🟢</span><span>Libre la veille de l'arrivée</span></div>`);
+      : `<div style="display:flex;align-items:center;gap:7px;color:#0E3B2E;"><span>🟢</span><span>Libre la veille de l'arrivée</span></div>`);
     if (_occAfter !== null) _rows.push(_occAfter
       ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span>🔴</span><span>Reloué le jour du départ</span></div>`
-      : `<div style="display:flex;align-items:center;gap:7px;color:#1A7A5E;"><span>🟢</span><span>Libre le jour du départ</span></div>`);
+      : `<div style="display:flex;align-items:center;gap:7px;color:#0E3B2E;"><span>🟢</span><span>Libre le jour du départ</span></div>`);
     const infoHtml = _rows.length
       ? `<div style="background:#F0F4F2;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12.5px;line-height:1.7;color:#374151;">${_rows.join('')}</div>`
       : '';
@@ -84,7 +84,7 @@
         <div style="font-size:15px;color:#333;line-height:1.5;background:#F5F2EC;border-radius:10px;padding:14px 16px;margin-bottom:18px;text-align:center;">${q.question}</div>
         <div style="display:flex;gap:10px;margin-bottom:10px;">
           <button id="bhHQNo" style="flex:1;padding:13px;border-radius:10px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;font-weight:700;font-size:15px;cursor:pointer;">Non</button>
-          <button id="bhHQYes" style="flex:1;padding:13px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-weight:700;font-size:15px;cursor:pointer;">Oui</button>
+          <button id="bhHQYes" style="flex:1;padding:13px;border-radius:10px;border:none;background:#0E3B2E;color:white;font-weight:700;font-size:15px;cursor:pointer;">Oui</button>
         </div>
         <div id="bhHQTextWrap" style="display:none;margin-bottom:10px;">
           <textarea id="bhHQText" rows="2" placeholder="Précision (optionnel)…" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:inherit;box-sizing:border-box;resize:vertical;"></textarea>

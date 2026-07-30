@@ -34,9 +34,9 @@
       width: calc(100% - 48px);
       max-width: 680px;
       background: #FFFFFF;
-      border: 1.5px solid rgba(26,122,94,.18);
+      border: 1.5px solid rgba(14,59,46,.18);
       border-radius: 20px;
-      box-shadow: 0 8px 40px rgba(26,122,94,.12), 0 2px 8px rgba(0,0,0,.06);
+      box-shadow: 0 8px 40px rgba(14,59,46,.12), 0 2px 8px rgba(0,0,0,.06);
       padding: 20px 24px;
       display: flex;
       align-items: center;
@@ -57,7 +57,7 @@
       width: 44px;
       height: 44px;
       min-width: 44px;
-      background: rgba(26,122,94,.08);
+      background: rgba(14,59,46,.08);
       border-radius: 12px;
       display: flex;
       align-items: center;
@@ -81,7 +81,7 @@
       line-height: 1.5;
     }
     .bh-cookie-text a {
-      color: #1A7A5E;
+      color: #0E3B2E;
       text-decoration: underline;
       text-underline-offset: 2px;
     }
@@ -102,14 +102,14 @@
       transition: all .18s ease;
     }
     .bh-btn-accept {
-      background: #1A7A5E;
+      background: #0E3B2E;
       color: white;
-      box-shadow: 0 2px 8px rgba(26,122,94,.3);
+      box-shadow: 0 2px 8px rgba(14,59,46,.3);
     }
     .bh-btn-accept:hover {
       background: #15624B;
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(26,122,94,.35);
+      box-shadow: 0 4px 12px rgba(14,59,46,.35);
     }
     .bh-btn-refuse {
       background: #F3F4F6;
@@ -125,7 +125,7 @@
     @media (prefers-color-scheme: dark) {
       #bh-cookie-banner {
         background: #1C2333;
-        border-color: rgba(26,122,94,.25);
+        border-color: rgba(14,59,46,.25);
         box-shadow: 0 8px 40px rgba(0,0,0,.4);
       }
       .bh-cookie-title { color: #F9FAFB; }
@@ -159,11 +159,11 @@
     /* Support thème v3 Boostinghost */
     html[data-theme-v3="1"] #bh-cookie-banner {
       background: #FDFCFA;
-      border-color: rgba(26,122,94,.15);
+      border-color: rgba(14,59,46,.15);
     }
     html[data-theme="dark"] #bh-cookie-banner {
       background: #1C2333;
-      border-color: rgba(26,122,94,.25);
+      border-color: rgba(14,59,46,.25);
     }
     html[data-theme="dark"] .bh-cookie-title { color: #F9FAFB; }
     html[data-theme="dark"] .bh-cookie-text { color: #9CA3AF; }

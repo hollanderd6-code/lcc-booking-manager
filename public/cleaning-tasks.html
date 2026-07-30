@@ -21,8 +21,8 @@
   --text: #0D1117;
   --text-secondary: #7A8695;
   --text-tertiary: #A0AABA;
-  --accent: #1A7A5E;
-  --accent-light: rgba(26,122,94,.1);
+  --accent: #0E3B2E;
+  --accent-light: rgba(14,59,46,.1);
   --accent-dark: #15624B;
   --warning: #D97706;
   --warning-light: rgba(217,119,6,.1);
@@ -74,7 +74,7 @@ html, body {
   color: white;
   font-size: 32px;
   margin-bottom: 20px;
-  box-shadow: 0 8px 24px rgba(26,122,94,0.3);
+  box-shadow: 0 8px 24px rgba(14,59,46,0.3);
 }
 
 .login-title {
@@ -115,7 +115,7 @@ html, body {
 .pin-input-group input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(26,122,94,0.12);
+  box-shadow: 0 0 0 4px rgba(14,59,46,0.12);
 }
 
 .login-btn {
@@ -131,7 +131,7 @@ html, body {
   font-family: var(--font);
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 16px rgba(26,122,94,0.3);
+  box-shadow: 0 4px 16px rgba(14,59,46,0.3);
 }
 
 .login-btn:active {
@@ -646,7 +646,7 @@ html, body {
 }
 
 .task-row:last-child { border-bottom: none; }
-.task-row:active { background: #f0fdf4; }
+.task-row:active { background: #F1F6F3; }
 
 .task-checkbox {
   width: 26px;
@@ -817,7 +817,7 @@ html, body {
 .notes-section textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(26,122,94,0.1);
+  box-shadow: 0 0 0 3px rgba(14,59,46,0.1);
 }
 
 /* ===== RÉASSORT / CONSOMMABLES ===== */
@@ -871,7 +871,7 @@ html, body {
   font-family: var(--font); font-size: 13.5px; font-weight: 700; transition: all .15s;
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
 }
-.damage-btn.ras.on { border-color: #16a34a; background: #f0fdf4; color: #15803d; }
+.damage-btn.ras.on { border-color: #0E3B2E; background: #F1F6F3; color: #0A2C22; }
 .damage-btn.report.on { border-color: #dc2626; background: #fef2f2; color: #b91c1c; }
 #damageForm { margin-top: 12px; }
 .damage-photos-head {
@@ -941,7 +941,7 @@ html, body {
 .submit-btn.ready {
   background: var(--accent);
   color: white;
-  box-shadow: 0 4px 16px rgba(26,122,94,0.3);
+  box-shadow: 0 4px 16px rgba(14,59,46,0.3);
 }
 
 .submit-btn.not-ready {
@@ -989,7 +989,7 @@ html, body {
   justify-content: center;
   margin-bottom: 20px;
   animation: success-pop 0.5s cubic-bezier(0.4,0,0.2,1);
-  box-shadow: 0 8px 32px rgba(26,122,94,0.3);
+  box-shadow: 0 8px 32px rgba(14,59,46,0.3);
 }
 
 @keyframes success-pop {
@@ -1120,7 +1120,7 @@ html, body {
 }
 .sig-certify-row input[type="checkbox"] {
   width: 20px; height: 20px; flex-shrink: 0;
-  accent-color: #1A7A5E; cursor: pointer; margin-top: 1px;
+  accent-color: #0E3B2E; cursor: pointer; margin-top: 1px;
 }
 .sig-certify-label {
   font-size: 13px; color: #374151; line-height: 1.5; cursor: pointer;
@@ -1130,7 +1130,7 @@ html, body {
   border-radius: 14px; margin-bottom: 12px; position: relative;
   overflow: hidden;
 }
-.sig-canvas-wrap.signed { border-style: solid; border-color: #1A7A5E; }
+.sig-canvas-wrap.signed { border-style: solid; border-color: #0E3B2E; }
 #sigCanvas {
   display: block; width: 100%; height: 160px; cursor: crosshair; touch-action: none;
 }
@@ -1168,7 +1168,7 @@ html, body {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   transition: background .2s;
 }
-.sig-confirm-btn.ready { background: #1A7A5E; cursor: pointer; }
+.sig-confirm-btn.ready { background: #0E3B2E; cursor: pointer; }
 
 /* ===== NOTIFICATION TOAST ===== */
 .toast {
@@ -1363,14 +1363,14 @@ html[data-theme-v3="1"] .task-card:hover {
   background: #EDE8DF !important;
 }
 html[data-theme-v3="1"] .pin-input-group input:focus {
-  border-color: #1A7A5E !important;
-  box-shadow: 0 0 0 3px rgba(26,122,94,.1) !important;
+  border-color: #0E3B2E !important;
+  box-shadow: 0 0 0 3px rgba(14,59,46,.1) !important;
 }
 html[data-theme-v3="1"] .progress-bar-fill {
-  background: #1A7A5E !important;
+  background: #0E3B2E !important;
 }
 html[data-theme-v3="1"] .submit-btn.ready {
-  background: #1A7A5E !important;
+  background: #0E3B2E !important;
 }
 html[data-theme-v3="1"] .checklist-header {
   background: #F5F0E8 !important;
@@ -1382,8 +1382,8 @@ html[data-theme-v3="1"] .top-bar {
 }
 
 </style>
-<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
-  <link rel="stylesheet" href="/css/bh-brand.css?v=69892992">
+<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+  <link rel="stylesheet" href="/css/bh-brand.css?v=c0705a60">
 
   <!-- Marque Boostinghost — genere par outils/marque.js -->
   <link rel="icon" href="/img/brand/web/favicon.svg" type="image/svg+xml">
@@ -1523,7 +1523,7 @@ html[data-theme-v3="1"] .top-bar {
 <div class="sig-modal-overlay" id="sigModalOverlay">
   <div class="sig-modal">
     <div class="sig-modal-title">
-      <i class="fas fa-pen-nib" style="color:#1A7A5E;"></i> Certification du ménage
+      <i class="fas fa-pen-nib" style="color:#0E3B2E;"></i> Certification du ménage
     </div>
     <div class="sig-modal-sub">
       Cochez la case et apposez votre signature pour certifier que toutes les tâches ont été effectuées.
@@ -1799,7 +1799,7 @@ function renderTasks() {
   };
 
   if (activeFilter === 'today') {
-    html += section("<span style=\"display:inline-block;width:9px;height:9px;border-radius:50%;background:#16A34A;margin-right:2px;\"></span> Aujourd'hui", todayTasks, 'today');
+    html += section("<span style=\"display:inline-block;width:9px;height:9px;border-radius:50%;background:#0E3B2E;margin-right:2px;\"></span> Aujourd'hui", todayTasks, 'today');
     html += section('<i class="fas fa-exclamation-triangle" style="color:#D97706;"></i> Complément demandé', complementTasks, 'complement');
     if (!html) html = emptyState('coffee', 'Rien pour aujourd\'hui', 'Aucun ménage à faire aujourd\'hui. Consultez « Tous » pour les prochains.');
   } else if (activeFilter === 'tomorrow') {
@@ -1810,7 +1810,7 @@ function renderTasks() {
     if (!html) html = emptyState('check', 'Aucun ménage terminé', 'Les ménages validés apparaîtront ici.');
   } else {
     // 'all'
-    html += section("<span style=\"display:inline-block;width:9px;height:9px;border-radius:50%;background:#16A34A;margin-right:2px;\"></span> Aujourd'hui", todayTasks, 'today');
+    html += section("<span style=\"display:inline-block;width:9px;height:9px;border-radius:50%;background:#0E3B2E;margin-right:2px;\"></span> Aujourd'hui", todayTasks, 'today');
     html += section('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#F97316;margin-right:2px;"></span> Demain', tomorrowTasks, 'tomorrow');
     html += section('<i class="far fa-calendar-alt" style="color:#6B7280;"></i> À venir', upcomingTasks, 'upcoming');
     html += section('<i class="fas fa-exclamation-triangle" style="color:#D97706;"></i> Complément demandé', complementTasks, 'complement');
@@ -2844,7 +2844,7 @@ document.head.appendChild(style);
 
 /* ── Boutons de carte : pilules ── */
 .task-card-btn { border-radius: 999px !important; }
-.task-card-btn.btn-start { box-shadow: 0 1px 4px rgba(26,122,94,.25); }
+.task-card-btn.btn-start { box-shadow: 0 1px 4px rgba(14,59,46,.25); }
 
 /* ── Champs maintenance ── */
 .maint-field input, .maint-field textarea, .maint-field select {
@@ -2877,7 +2877,7 @@ document.head.appendChild(style);
 
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
 <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
-<script src="/js/bh-global-search.js?v=610ed2a6"></script>
+<script src="/js/bh-global-search.js?v=813e6615"></script>
 <script src="/js/bh-polish.js?v=1"></script>
 </body>
 </html>

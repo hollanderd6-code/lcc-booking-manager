@@ -86,11 +86,11 @@
 
     // Icônes Lucide colorées (Option 1)
     var IC = {
-      dashboard:  { c:'#1A7A5E', p:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>' },
-      welcome:    { c:'#1A7A5E', p:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>' },
+      dashboard:  { c:'#0E3B2E', p:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>' },
+      welcome:    { c:'#0E3B2E', p:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>' },
       contrat:    { c:'#3B82F6', p:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' },
       cleaning:   { c:'#06B6D4', p:'<path d="M19 11V4a1 1 0 0 0-1-1h-1a1 1 0 0 0-1 1v7"/><path d="M5 11l1.5-7h11L19 11"/><path d="M3 11h18v2a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/>' },
-      finances:   { c:'#10B981', p:'<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>' },
+      finances:   { c:'#0E3B2E', p:'<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>' },
       factures:   { c:'#8B5CF6', p:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>' },
       clients:    { c:'#EC4899', p:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>' },
       reporting:  { c:'#0EA5E9', p:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>' },
@@ -280,7 +280,7 @@
       : logoUrl;
     const avatarHtml = logoSrc
       ? `<div id="bhMenuAvatar" style="width:38px;height:38px;min-width:38px;border-radius:8px;background:white url('${logoSrc}') center/65% no-repeat;border:1px solid rgba(200,184,154,.4);flex-shrink:0;"></div>`
-      : `<div id="bhMenuAvatar" style="width:38px;height:38px;min-width:38px;border-radius:50%;background:linear-gradient(135deg,#1A7A5E,#2AAE86);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0;">${(user.firstName || 'U').charAt(0).toUpperCase()}</div>`;
+      : `<div id="bhMenuAvatar" style="width:38px;height:38px;min-width:38px;border-radius:50%;background:linear-gradient(135deg,#0E3B2E,#1E6E52);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0;">${(user.firstName || 'U').charAt(0).toUpperCase()}</div>`;
 
     // Si window.mobileApp existe, utiliser le bottom sheet natif
     if (window.mobileApp && window.mobileApp.createBottomSheet) {
@@ -360,10 +360,10 @@
       };
       var activeKey = pageToKey[page];
       if (!activeKey) return;
-      var IC_COLORS = { welcome:'#1A7A5E',contrat:'#3B82F6',properties:'#0891B2',finances:'#10B981',factures:'#8B5CF6',clients:'#EC4899',reporting:'#0EA5E9',pricing:'#F59E0B',locks:'#64748B',settings:'#475569',support:'#14B8A6' };
+      var IC_COLORS = { welcome:'#0E3B2E',contrat:'#3B82F6',properties:'#0891B2',finances:'#0E3B2E',factures:'#8B5CF6',clients:'#EC4899',reporting:'#0EA5E9',pricing:'#F59E0B',locks:'#64748B',settings:'#475569',support:'#14B8A6' };
       var el = sheet.querySelector('.bh-more-item[data-menu-key="' + activeKey + '"]');
       if (el) {
-        var col = IC_COLORS[activeKey] || '#1A7A5E';
+        var col = IC_COLORS[activeKey] || '#0E3B2E';
         // Fond teinte de la couleur de l'entree + liseré : l'icone coloree
         // reste lisible, contrairement a un aplat vert uniforme.
         el.style.setProperty('background', col + '16', 'important');
@@ -474,11 +474,11 @@
           'pointer-events:none',
           'z-index:0',
           'border-radius:16px',
-          'background:rgba(26,122,94,0.10)',
+          'background:rgba(14,59,46,0.10)',
           'backdrop-filter:blur(20px) saturate(180%)',
           '-webkit-backdrop-filter:blur(20px) saturate(180%)',
-          'border:1.5px solid rgba(26,122,94,0.20)',
-          'box-shadow:0 2px 12px rgba(26,122,94,0.12),inset 0 1px 0 rgba(255,255,255,0.5)',
+          'border:1.5px solid rgba(14,59,46,0.20)',
+          'box-shadow:0 2px 12px rgba(14,59,46,0.12),inset 0 1px 0 rgba(255,255,255,0.5)',
           'opacity:1',
           'transition:none'
         ].join(';');
@@ -542,7 +542,7 @@
 
   // ============================================
   // 🎨 LIQUID GLASS v4 — Icônes Lucide unifiées (actif vert, inactif gris)
-  var TAB_ACTIVE   = '#1A7A5E';
+  var TAB_ACTIVE   = '#0E3B2E';
   var TAB_INACTIVE = '#7A8695';
   var LUCIDE_TABS = {
     dashboard: { svg: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },

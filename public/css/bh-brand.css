@@ -8,17 +8,28 @@
 
 :root,
 html.bh-lux {
-  /* Marque — reserve au logo, aux fonds pleins et aux en-tetes */
-  --bh-vert:            #0E3B2E;   /* vert bouteille */
-  --bh-vert-fonce:      #0A2C22;
-  --bh-ivoire:          #F2EADA;   /* texte sur fond de marque */
-  --bh-filet:           rgba(242,234,218,.45);
+  /* ── Une seule echelle de vert, derivee du logo ──────────────────────────
+     Avant, le site melangeait une quinzaine de verts sans rapport (jade
+     #1A7A5E, emerald #10B981, green #16A34A, leurs variantes rgba...).
+     Desormais tout descend de #0E3B2E. */
+  --vert-900:  #0A2C22;   /* survol, etat presse */
+  --vert-800:  #0E3B2E;   /* MARQUE et action principale */
+  --vert-600:  #1E6E52;   /* accent, survol clair, dark mode */
+  --vert-400:  #4FA184;   /* sur fond sombre */
+  --vert-300:  #8FC7AF;   /* traces et courbes sur fond sombre */
+  --vert-200:  #A8CDBE;   /* filets, bordures */
+  --vert-100:  #E4EDE8;   /* fonds doux */
+  --vert-050:  #F1F6F3;   /* fonds tres doux */
 
-  /* Interface — le vert d'action, plus clair pour rester lisible en petit */
-  --bh-action:          #1E6E52;
-  --bh-action-survol:   #164F3B;
-  --bh-action-doux:     #E8F0EC;
-  --bh-action-filet:    rgba(30,110,82,.24);
+  /* Alias historiques, conserves pour ne rien casser */
+  --bh-vert:            var(--vert-800);
+  --bh-vert-fonce:      var(--vert-900);
+  --bh-action:          var(--vert-800);
+  --bh-action-survol:   var(--vert-900);
+  --bh-action-doux:     var(--vert-100);
+  --bh-action-filet:    rgba(14,59,46,.24);
+  --bh-ivoire:          #F2EADA;
+  --bh-filet:           rgba(242,234,218,.45);
 
   /* Neutres chauds */
   --bh-fond:            #FBFBFA;
@@ -31,7 +42,7 @@ html.bh-lux {
   --bh-ligne:           #EAE9E5;
   --bh-ligne-2:         #F1F0EC;
 
-  /* Sous-marque : BHGuest garde le terracotta, il ne bouge pas */
+  /* Sous-marque : BHGuest garde le terracotta */
   --bh-guest:           #B4470F;
   --bh-guest-doux:      #F7EDE6;
 }
@@ -43,9 +54,9 @@ html.bh-lux {
 html.bh-lux[data-theme-v3="1"] {
   --primary-color: var(--bh-action);
   --primary-dark:  var(--bh-action-survol);
-  --lux-green:      var(--bh-action);
-  --lux-green-deep: var(--bh-action-survol);
-  --lux-green-soft: var(--bh-action-doux);
+  --lux-green:      var(--vert-800);
+  --lux-green-deep: var(--vert-900);
+  --lux-green-soft: var(--vert-100);
   --lux-green-line: var(--bh-action-filet);
   --lux-ink:  var(--bh-encre);
   --lux-bg:   var(--bh-fond);

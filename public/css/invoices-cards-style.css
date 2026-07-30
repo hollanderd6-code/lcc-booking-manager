@@ -38,7 +38,7 @@
 .invoice-card {
   background: white;
   border: 1px solid #e5e7eb;
-  border-left: 3px solid #10B981;
+  border-left: 3px solid #0E3B2E;
   border-radius: 12px;
   padding: 14px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -66,7 +66,7 @@
 .invoice-card-number {
   font-size: 16px;
   font-weight: 700;
-  color: #10B981;
+  color: #0E3B2E;
   margin: 0;
 }
 
@@ -95,8 +95,8 @@
 }
 
 .invoice-badge-paid {
-  background: rgba(16, 185, 129, 0.15);
-  color: #059669;
+  background: rgba(14, 59, 46, 0.15);
+  color: #0A2C22;
 }
 
 .invoice-badge-credit {
@@ -140,7 +140,7 @@
 
 .invoice-info-value.amount {
   font-size: 16px;
-  color: #10B981;
+  color: #0E3B2E;
 }
 
 /* ============================================

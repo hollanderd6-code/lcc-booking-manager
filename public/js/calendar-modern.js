@@ -17,7 +17,7 @@
     PLATFORMS: {
       airbnb: { name: 'Airbnb', color: '#FF5A5F' },
       booking: { name: 'Booking.com', color: '#003580' },
-      direct: { name: 'Direct', color: '#10B981' }
+      direct: { name: 'Direct', color: '#0E3B2E' }
     }
   };
 

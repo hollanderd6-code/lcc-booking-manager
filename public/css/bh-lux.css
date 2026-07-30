@@ -10,7 +10,7 @@ html.bh-lux{
   --lux-bg:#FBFBFA;      --lux-panel:#FFFFFF;   --lux-side:#F7F7F5;
   --lux-ink:#1D1D1B;     --lux-t2:#5A5A54;      --lux-t3:#8B8B84;   --lux-t4:#B4B4AD;
   --lux-line:#EAE9E5;    --lux-line2:#F1F0EC;
-  --lux-green:#1E6E52;   --lux-green-deep:#164F3B; --lux-green-soft:#EAF1ED; --lux-green-line:rgba(30,110,82,.22);
+  --lux-green:#0E3B2E;   --lux-green-deep:#0A2C22; --lux-green-soft:#E4EDE8; --lux-green-line:rgba(14,59,46,.22);
   --lux-shadow:0 1px 2px rgba(29,29,27,.04);
   --lux-shadow-md:0 1px 2px rgba(29,29,27,.05),0 8px 24px rgba(29,29,27,.06);
   --lux-radius:12px;
@@ -85,7 +85,7 @@ html.bh-lux[data-theme-v3="1"] .day-header.weekend .day-name{ color:var(--lux-t2
 html.bh-lux[data-theme-v3="1"] .calendar-cell{ border-color:var(--lux-line) !important; }
 html.bh-lux[data-theme-v3="1"] .calendar-cell:hover{ background:var(--lux-green-soft) !important; }
 html.bh-lux[data-theme-v3="1"] .calendar-cell.weekend{ background:#F0EEE9 !important; }
-html.bh-lux[data-theme-v3="1"] .calendar-cell.today{ background:rgba(30,110,82,.07) !important; box-shadow:inset 1px 0 0 var(--lux-green-line), inset -1px 0 0 var(--lux-green-line) !important; }
+html.bh-lux[data-theme-v3="1"] .calendar-cell.today{ background:rgba(14,59,46,.07) !important; box-shadow:inset 1px 0 0 var(--lux-green-line), inset -1px 0 0 var(--lux-green-line) !important; }
 
 /* Colonne logements */
 html.bh-lux[data-theme-v3="1"] .property-item{ background:var(--lux-side) !important; color:var(--lux-t2) !important; border-color:var(--lux-line2) !important; }

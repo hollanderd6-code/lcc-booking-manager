@@ -6,7 +6,7 @@
 :root {
   --primary: #5BC6A3;
   --primary-dark: #4AB392;
-  --success: #10B981;
+  --success: #0E3B2E;
   --error: #EF4444;
   --warning: #F59E0B;
   --bg-primary: #FFFFFF;
@@ -627,7 +627,7 @@ select:focus {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: #1A7A5E;
+  background: #0E3B2E;
   animation: bh-bounce 1.2s infinite ease-in-out;
 }
 .loading-spinner .dot:nth-child(1) { animation-delay: 0s; }

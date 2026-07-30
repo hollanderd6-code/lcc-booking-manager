@@ -11,10 +11,10 @@
 <!-- Font Awesome -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <!-- CSS plateforme -->
-<link href="/css/style.css?v=9d18f851" rel="stylesheet"/>
-<link href="/css/bh-theme-v3.css?v=8d0e239f" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-brand.css?v=69892992"><link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=e8b22340">
-<link href="/css/deposits-cards-style.css?v=eb514d41" rel="stylesheet"/>
+<link href="/css/style.css?v=17204d03" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css?v=7d47a1eb" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/bh-brand.css?v=c0705a60"><link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
+<link href="/css/deposits-cards-style.css?v=8faadf31" rel="stylesheet"/>
 <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
 <style>
     /* ===== ONGLETS ===== */
@@ -48,8 +48,8 @@
     }
     
     .tab-button.active {
-      color: var(--primary-color, #059669);
-      border-bottom-color: var(--primary-color, #059669);
+      color: var(--primary-color, #0A2C22);
+      border-bottom-color: var(--primary-color, #0A2C22);
       background: transparent;
     }
     
@@ -121,8 +121,8 @@
     }
     
     .stripe-status-pill.connected {
-      background: rgba(16, 185, 129, 0.1);
-      color: #059669;
+      background: rgba(14, 59, 46, 0.1);
+      color: #0A2C22;
     }
     
     .stripe-status-pill.not-connected {
@@ -208,8 +208,8 @@
       color: #92400e;
     }
     .badge-paid {
-      background: rgba(22, 163, 74, .12);
-      color: #166534;
+      background: rgba(14, 59, 46, .12);
+      color: #0A2C22;
     }
     .badge-refunded {
       background: rgba(37, 99, 235, .12);
@@ -480,12 +480,12 @@
     }
 
     .btn-success {
-      background: #10b981;
+      background: #0E3B2E;
       color: white;
     }
 
     .btn-success:hover {
-      background: #059669;
+      background: #0A2C22;
     }
 
     .btn-sm {
@@ -621,7 +621,7 @@
 
     /* Badge compteur dans onglet */
     .tab-badge {
-      background: var(--primary-color, #059669);
+      background: var(--primary-color, #0A2C22);
       color: white;
       font-size: 10px;
       font-weight: 700;
@@ -741,9 +741,9 @@ html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
 }
 html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
-  background: #1A7A5E;
+  background: #0E3B2E;
   color: white;
-  border-color: #1A7A5E;
+  border-color: #0E3B2E;
 }
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
   margin-left: auto;
@@ -779,7 +779,7 @@ html[data-theme-v3="1"] .bh-theme-toggle::after {
   border-radius: 50%;
   transition: transform .2s;
 }
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #0E3B2E; }
 html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
 
 
@@ -827,7 +827,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .deposits-back-btn {
   display: inline-flex; align-items: center; gap: 8px;
   height: 40px; padding: 0 20px; border: none; border-radius: 12px;
-  background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif;
+  background: #0E3B2E; color: white; font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap; position: fixed; top: 52px; right: 24px; z-index: 200;
 }
@@ -882,10 +882,10 @@ html[data-theme-v3="1"] .tab-button {
   display: flex !important; align-items: center !important; gap: 7px !important;
 }
 html[data-theme-v3="1"] .tab-button.active {
-  background: #1A7A5E !important; color: white !important;
+  background: #0E3B2E !important; color: white !important;
 }
 html[data-theme-v3="1"] .tab-button:not(.active):hover {
-  background: rgba(26,122,94,.08) !important; color: #1A7A5E !important;
+  background: rgba(14,59,46,.08) !important; color: #0E3B2E !important;
 }
 html[data-theme-v3="1"] .tab-badge {
   background: rgba(255,255,255,.3) !important; color: inherit !important;
@@ -893,7 +893,7 @@ html[data-theme-v3="1"] .tab-badge {
   padding: 1px 7px !important;
 }
 html[data-theme-v3="1"] .tab-button:not(.active) .tab-badge {
-  background: rgba(26,122,94,.1) !important; color: #1A7A5E !important;
+  background: rgba(14,59,46,.1) !important; color: #0E3B2E !important;
 }
 
 /* Cards */
@@ -917,7 +917,7 @@ html[data-theme-v3="1"] .card-title {
 html[data-theme-v3="1"] .deposit-card {
   background: #F5F0E8 !important;
   border: 1px solid rgba(200,184,154,.4) !important;
-  border-left: 3px solid #1A7A5E !important;
+  border-left: 3px solid #0E3B2E !important;
   border-radius: 14px !important;
   box-shadow: none !important;
 }
@@ -953,16 +953,16 @@ html[data-theme-v3="1"] input:focus,
 html[data-theme-v3="1"] textarea:focus,
 html[data-theme-v3="1"] select:focus {
   background: white !important;
-  border-color: #1A7A5E !important;
-  box-shadow: 0 0 0 3px rgba(26,122,94,.08) !important;
+  border-color: #0E3B2E !important;
+  box-shadow: 0 0 0 3px rgba(14,59,46,.08) !important;
   outline: none !important;
 }
 
 /* Buttons */
 html[data-theme-v3="1"] .btn-primary,
 html[data-theme-v3="1"] .btn-card.btn-primary {
-  background: #1A7A5E !important;
-  border-color: #1A7A5E !important;
+  background: #0E3B2E !important;
+  border-color: #0E3B2E !important;
   border-radius: 10px !important;
   font-family: 'DM Sans', sans-serif !important;
   font-weight: 600 !important;
@@ -1081,7 +1081,7 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
 .wallet-amount {
   font-size: 15px;
   font-weight: 700;
-  color: #1A7A5E;
+  color: #0E3B2E;
   white-space: nowrap;
   font-family: 'DM Sans', sans-serif;
 }
@@ -1099,7 +1099,7 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: #1A7A5E;
+  background: #0E3B2E;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1208,10 +1208,10 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
   }
 }
 </style>
-<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=d9f1468e">
-<link rel="stylesheet" href="/css/menu-active-button.css?v=5206d90a">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=ec508074">
-<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
+<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=13677c32">
+<link rel="stylesheet" href="/css/menu-active-button.css?v=f21f319b">
+<link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
+<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
 
   <!-- Marque Boostinghost — genere par outils/marque.js -->
   <link rel="icon" href="/img/brand/web/favicon.svg" type="image/svg+xml">
@@ -1274,7 +1274,7 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
 </select>
 </div>
 <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;" id="depositStatusFilters">
-<button class="dep-filter-chip active" data-status="active" onclick="setDepositFilter('active')"><span style="width:8px;height:8px;border-radius:50%;background:#16A34A;display:inline-block;margin-right:5px;vertical-align:1px;"></span>Actives</button>
+<button class="dep-filter-chip active" data-status="active" onclick="setDepositFilter('active')"><span style="width:8px;height:8px;border-radius:50%;background:#0E3B2E;display:inline-block;margin-right:5px;vertical-align:1px;"></span>Actives</button>
 <button class="dep-filter-chip" data-status="captured" onclick="setDepositFilter('captured')"><i class="fas fa-euro-sign"></i> Débitées</button>
 <button class="dep-filter-chip" data-status="all" onclick="setDepositFilter('all')">Toutes</button>
 </div>
@@ -1286,8 +1286,8 @@ html[data-theme-v3="1"] .stripe-connect-notice p {
 </div>
 <style>
 .dep-filter-chip{padding:7px 14px;border-radius:999px;border:1.5px solid rgba(200,184,154,.35);background:white;font-size:12px;font-weight:600;color:#6b7280;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
-.dep-filter-chip.active{background:#1A7A5E;color:white;border-color:#1A7A5E;}
-.dep-filter-chip:not(.active):hover{background:rgba(26,122,94,.06);color:#1A7A5E;border-color:#1A7A5E;}
+.dep-filter-chip.active{background:#0E3B2E;color:white;border-color:#0E3B2E;}
+.dep-filter-chip:not(.active):hover{background:rgba(14,59,46,.06);color:#0E3B2E;border-color:#0E3B2E;}
 .month-filter-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
 </style>
 <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
@@ -1363,7 +1363,7 @@ Actualiser
 </select>
 </div>
 <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
-<button class="dep-filter-chip active" data-pstatus="active" onclick="setPaymentFilter('active')"><span style="width:8px;height:8px;border-radius:50%;background:#16A34A;display:inline-block;margin-right:5px;vertical-align:1px;"></span>Actifs</button>
+<button class="dep-filter-chip active" data-pstatus="active" onclick="setPaymentFilter('active')"><span style="width:8px;height:8px;border-radius:50%;background:#0E3B2E;display:inline-block;margin-right:5px;vertical-align:1px;"></span>Actifs</button>
 <button class="dep-filter-chip" data-pstatus="paid" onclick="setPaymentFilter('paid')"><i class="fas fa-euro-sign"></i> Payés</button>
 <button class="dep-filter-chip" data-pstatus="all" onclick="setPaymentFilter('all')">Tous</button>
 </div>
@@ -1442,7 +1442,7 @@ Actualiser
   background: var(--bg-primary, #fff);
 }
 .stripe-target-card:hover {
-  border-color: #1A7A5E;
+  border-color: #0E3B2E;
   background: #f0faf6;
 }
 .stripe-target-card input[type="radio"] {
@@ -1464,16 +1464,16 @@ Actualiser
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #1A7A5E;
+  background: #0E3B2E;
   opacity: 0;
   transition: opacity 0.15s;
 }
 .stripe-target-card.selected {
-  border-color: #1A7A5E;
+  border-color: #0E3B2E;
   background: #f0faf6;
 }
 .stripe-target-card.selected .radio-dot {
-  border-color: #1A7A5E;
+  border-color: #0E3B2E;
 }
 .stripe-target-card.selected .radio-dot::after {
   opacity: 1;
@@ -1488,7 +1488,7 @@ Actualiser
   font-size: 13px;
   flex-shrink: 0;
 }
-.stripe-target-card .card-icon.green { background: #d1fae5; color: #1A7A5E; }
+.stripe-target-card .card-icon.green { background: #DCE9E3; color: #0E3B2E; }
 .stripe-target-card .card-icon.purple { background: #ede9fe; color: #6772E5; }
 .stripe-target-card .card-label { flex: 1; }
 .stripe-target-card .card-label span { display: block; font-size: 11px; color: var(--text-secondary, #888); font-weight: 400; margin-top: 1px; }
@@ -1525,8 +1525,8 @@ Actualiser
 #freeDepositPropertyId:focus,
 #freeDepositOwnerId:focus {
   outline: none;
-  border-color: #1A7A5E;
-  box-shadow: 0 0 0 3px rgba(26,122,94,0.1);
+  border-color: #0E3B2E;
+  box-shadow: 0 0 0 3px rgba(14,59,46,0.1);
 }
 </style>
 
@@ -2851,7 +2851,7 @@ function showLinkModal(title, url) {
             Envoyez ce lien à votre voyageur pour qu'il puisse payer en ligne.
           </p>
           <div style="display:flex; gap:8px; align-items:center; background:#f3f4f6; border-radius:10px; padding:10px 14px; margin-bottom:16px; word-break:break-all;">
-            <i class="fas fa-link" style="color:#1A7A5E; flex-shrink:0;"></i>
+            <i class="fas fa-link" style="color:#0E3B2E; flex-shrink:0;"></i>
             <span id="linkResultUrl" style="font-size:13px; flex:1;"></span>
           </div>
           <div style="display:flex; gap:10px;">
@@ -2862,7 +2862,7 @@ function showLinkModal(title, url) {
               <i class="fas fa-external-link-alt"></i> Ouvrir
             </a>
           </div>
-          <div id="linkResultCopied" style="display:none; text-align:center; margin-top:10px; color:#1A7A5E; font-size:13px; font-weight:600;">
+          <div id="linkResultCopied" style="display:none; text-align:center; margin-top:10px; color:#0E3B2E; font-size:13px; font-weight:600;">
             ✅ Lien copié dans le presse-papiers !
           </div>
         </div>
@@ -3844,9 +3844,9 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/bh-layout.js?v=6aab0b85"></script>
-<script src="/js/mobile-native-experience.js?v=2594b603"></script>
-<script src="/js/mobile-tabs-handler.js?v=e901dd8d"></script>
+<script src="/js/bh-layout.js?v=2f884d1c"></script>
+<script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
+<script src="/js/mobile-tabs-handler.js?v=01e3d29a"></script>
 
 <!-- FORCE LE SCROLL HORIZONTAL AVEC JAVASCRIPT -->
 <script>
@@ -4113,7 +4113,7 @@ async function loadWalletBalance() {
   }
 }
 </script>
-<script src="/js/bh-onboarding-pages.js?v=226650ec"></script>
+<script src="/js/bh-onboarding-pages.js?v=313cb8ca"></script>
 <style id="bh-luxe-deposits">
 /* ════════════════════════════════════════════════════════════
    COUCHE LUXE CAUTIONS — cohérente v2
@@ -4127,7 +4127,7 @@ html[data-theme-v3="1"] .tabs-container {
   box-shadow: 0 1px 3px rgba(13,17,23,.04) !important;
 }
 html[data-theme-v3="1"] .tab-button { border-radius: 999px !important; }
-html[data-theme-v3="1"] .tab-button.active { box-shadow: 0 1px 4px rgba(26,122,94,.25) !important; }
+html[data-theme-v3="1"] .tab-button.active { box-shadow: 0 1px 4px rgba(14,59,46,.25) !important; }
 
 /* ── Cartes : titres serif ── */
 html[data-theme-v3="1"] .card { border-radius: 20px !important; }
@@ -4141,7 +4141,7 @@ html[data-theme-v3="1"] .card-title {
 
 /* ── Cartes caution : titre serif, hover signature ── */
 html[data-theme-v3="1"] .deposit-card { border-radius: 16px !important; }
-html[data-theme-v3="1"] .deposit-card.expandable:hover { border-color: rgba(26,122,94,.4) !important; }
+html[data-theme-v3="1"] .deposit-card.expandable:hover { border-color: rgba(14,59,46,.4) !important; }
 .deposit-card-title {
   font-family: 'Instrument Serif', serif !important;
   font-size: 17px !important;
@@ -4161,7 +4161,7 @@ html[data-theme-v3="1"] select {
 html[data-theme-v3="1"] .btn-primary,
 html[data-theme-v3="1"] .btn-card.btn-primary {
   border-radius: 999px !important;
-  box-shadow: 0 1px 4px rgba(26,122,94,.25) !important;
+  box-shadow: 0 1px 4px rgba(14,59,46,.25) !important;
 }
 html[data-theme-v3="1"] .btn-secondary,
 html[data-theme-v3="1"] .btn-ghost,
@@ -4178,8 +4178,8 @@ html[data-theme-v3="1"] .btn-ghost:hover,
 html[data-theme-v3="1"] #refreshBtn:hover,
 html[data-theme-v3="1"] #refreshHistoryBtn:hover,
 html[data-theme-v3="1"] .card-header a.btn:hover {
-  border-color: #1A7A5E !important;
-  color: #1A7A5E !important;
+  border-color: #0E3B2E !important;
+  color: #0E3B2E !important;
 }
 
 /* ── Modales : overlay flouté, panneau luxe, titres serif ── */
@@ -4207,7 +4207,7 @@ html[data-theme-v3="1"] .modal-close {
   border-radius: 50% !important;
   transition: all .15s !important;
 }
-html[data-theme-v3="1"] .modal-close:hover { border-color: #1A7A5E !important; color: #1A7A5E !important; }
+html[data-theme-v3="1"] .modal-close:hover { border-color: #0E3B2E !important; color: #0E3B2E !important; }
 
 /* ── Détails dans les cartes : valeurs montant en serif ── */
 .detail-value strong, .deposit-info-value {
@@ -4220,8 +4220,8 @@ html[data-theme-v3="1"] .modal-close:hover { border-color: #1A7A5E !important; c
 <script src="/js/bh-auto-refresh.js?v=a3ac1b53"></script>
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
 <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
-<script src="/js/bh-global-search.js?v=610ed2a6"></script>
+<script src="/js/bh-global-search.js?v=813e6615"></script>
 <script src="/js/bh-polish.js?v=1"></script>
-<script src="/js/bh-pull-refresh.js?v=5bb91f71"></script>
+<script src="/js/bh-pull-refresh.js?v=07bdb653"></script>
 </body>
 </html>

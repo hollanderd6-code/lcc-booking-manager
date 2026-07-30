@@ -17,7 +17,7 @@
 /* ─── BASE ─── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --primary: #1A7A5E; --primary-dark: #15624B; --primary-soft: rgba(26,122,94,.1);
+  --primary: #0E3B2E; --primary-dark: #15624B; --primary-soft: rgba(14,59,46,.1);
   --ink: #0D1117; --muted: #7A8695; --text: #374151;
   --border: rgba(200,184,154,.35); --cream: #F5F0E8; --white: #FAFAF8;
 }
@@ -30,8 +30,8 @@ a { color: var(--primary); text-decoration: none; }
 
 /* ─── BTN ─── */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 22px; border-radius: 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; border: none; text-decoration: none; transition: all .2s; width: 100%; }
-.btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 16px rgba(26,122,94,.3); }
-.btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,122,94,.35); color: white; }
+.btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 16px rgba(14,59,46,.3); }
+.btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(14,59,46,.35); color: white; }
 .btn-outline { background: white; color: var(--ink); border: 1.5px solid var(--border); }
 .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
 .btn-dark { background: var(--ink); color: white; }
@@ -54,7 +54,7 @@ a { color: var(--primary); text-decoration: none; }
 
 /* ─── HERO ─── */
 .pricing-hero { text-align: center; padding: 80px 0 60px; }
-.hero-kicker { display: inline-flex; align-items: center; gap: 7px; background: var(--primary-soft); color: var(--primary); border: 1px solid rgba(26,122,94,.15); padding: 5px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 20px; }
+.hero-kicker { display: inline-flex; align-items: center; gap: 7px; background: var(--primary-soft); color: var(--primary); border: 1px solid rgba(14,59,46,.15); padding: 5px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 20px; }
 .pricing-hero h1 { font-size: clamp(36px,5vw,58px); color: var(--ink); margin-bottom: 16px; line-height: 1.1; }
 .pricing-hero h1 em { color: var(--primary); }
 .pricing-hero p { font-size: 17px; color: var(--muted); margin-bottom: 0; }
@@ -75,7 +75,7 @@ a { color: var(--primary); text-decoration: none; }
   transition: all .2s; white-space: nowrap;
 }
 .billing-btn.active { background: var(--ink); color: white; box-shadow: 0 2px 8px rgba(13,17,23,.2); }
-.annual-badge { display: inline-flex; align-items: center; gap: 4px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; margin-left: 6px; }
+.annual-badge { display: inline-flex; align-items: center; gap: 4px; background: #F1F6F3; color: #0A2C22; border: 1px solid #C3DBD0; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; margin-left: 6px; }
 .billing-saving { margin-top: 14px; font-size: 13px; color: var(--muted); height: 20px; transition: opacity .3s; }
 .billing-saving strong { color: var(--primary); }
 
@@ -107,7 +107,7 @@ input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: 24px; height: 24px; border-radius: 50%;
   background: white; border: 2.5px solid var(--primary);
-  box-shadow: 0 2px 8px rgba(26,122,94,.3);
+  box-shadow: 0 2px 8px rgba(14,59,46,.3);
   cursor: pointer; transition: transform .15s;
 }
 input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
@@ -134,7 +134,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .plan-card:hover { box-shadow: 0 16px 48px rgba(13,17,23,.1); transform: translateY(-4px); }
 .plan-card.featured {
   border-color: var(--primary);
-  box-shadow: 0 8px 32px rgba(26,122,94,.15);
+  box-shadow: 0 8px 32px rgba(14,59,46,.15);
   overflow: hidden;
 }
 /* ─── BANDEAU "LE PLUS POPULAIRE" ─── */
@@ -160,11 +160,11 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   border-radius: 0 0 24px 24px !important;
   border-top-color: transparent !important;
 }
-.plan-card.featured:hover { transform: translateY(-4px); box-shadow: 0 20px 56px rgba(26,122,94,.2); }
-.plan-card.highlighted { border-color: rgba(26,122,94,.4); box-shadow: 0 4px 16px rgba(26,122,94,.1); }
+.plan-card.featured:hover { transform: translateY(-4px); box-shadow: 0 20px 56px rgba(14,59,46,.2); }
+.plan-card.highlighted { border-color: rgba(14,59,46,.4); box-shadow: 0 4px 16px rgba(14,59,46,.1); }
 .plan-card.active-recommendation {
   border-color: var(--primary) !important;
-  box-shadow: 0 8px 32px rgba(26,122,94,.25) !important;
+  box-shadow: 0 8px 32px rgba(14,59,46,.25) !important;
   transition: all .3s cubic-bezier(.34,1.56,.64,1);
 }
 .plan-card.active-recommendation .plan-badge {
@@ -177,7 +177,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 }
 .plan-recommended-tag {
   display:inline-flex;align-items:center;gap:5px;
-  background:#dcfce7;color:#166534;border:1px solid #bbf7d0;
+  background:#DCE9E3;color:#0A2C22;border:1px solid #bbf7d0;
   font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;
   margin-bottom:10px;animation:fadeInTag .3s ease;
 }
@@ -224,14 +224,14 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 /* ─── COMPARISON TABLE ─── */
 .comparison-section { padding: 80px 0; }
 .comparison-header { text-align: center; margin-bottom: 48px; }
-.section-kicker { display: inline-flex; align-items: center; gap: 7px; background: var(--primary-soft); color: var(--primary); border: 1px solid rgba(26,122,94,.15); padding: 5px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 16px; }
+.section-kicker { display: inline-flex; align-items: center; gap: 7px; background: var(--primary-soft); color: var(--primary); border: 1px solid rgba(14,59,46,.15); padding: 5px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 16px; }
 .comparison-header h2 { font-size: clamp(28px,4vw,42px); color: var(--ink); }
 
 .comparison-table { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); }
 .comparison-table th { padding: 20px 24px; font-family: 'DM Sans', sans-serif; font-size: 14px; text-align: left; background: white; border-bottom: 1px solid var(--border); }
 .comparison-table th:first-child { width: 35%; font-weight: 600; color: var(--ink); background: var(--cream); }
 .comparison-table th:not(:first-child) { text-align: center; font-weight: 700; color: var(--ink); }
-.th-featured { background: linear-gradient(135deg, rgba(26,122,94,.08), rgba(26,122,94,.04)) !important; position: relative; }
+.th-featured { background: linear-gradient(135deg, rgba(14,59,46,.08), rgba(14,59,46,.04)) !important; position: relative; }
 .th-featured::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--primary); }
 .th-name { font-family: 'Instrument Serif', serif; font-size: 20px; font-weight: 400; display: block; margin-bottom: 4px; }
 .th-price { font-size: 13px; color: var(--primary); font-weight: 600; }
@@ -240,12 +240,12 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .comparison-table tr:last-child td { border-bottom: none; }
 .comparison-table td:first-child { font-weight: 500; color: var(--ink); background: #FAFAF8; }
 .comparison-table td:not(:first-child) { text-align: center; }
-.td-featured { background: rgba(26,122,94,.03) !important; }
+.td-featured { background: rgba(14,59,46,.03) !important; }
 .comparison-table tr:hover td { background: rgba(245,240,232,.5); }
-.comparison-table tr:hover td.td-featured { background: rgba(26,122,94,.06) !important; }
+.comparison-table tr:hover td.td-featured { background: rgba(14,59,46,.06) !important; }
 
 .cat-row td { background: var(--cream) !important; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 10px 24px; }
-.cat-row td.td-featured { background: rgba(26,122,94,.05) !important; }
+.cat-row td.td-featured { background: rgba(14,59,46,.05) !important; }
 
 .check-yes { color: var(--primary); font-size: 16px; }
 .check-no { color: #D1D5DB; font-size: 14px; }
@@ -264,7 +264,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 /* ─── CTA ─── */
 .cta-section { padding: 80px 0 100px; }
 .cta-box { position: relative; overflow: hidden; border-radius: 28px; background: url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1400&q=80') center/cover; padding: 80px 60px; text-align: center; }
-.cta-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(13,17,23,.92) 0%, rgba(26,122,94,.7) 100%); }
+.cta-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(13,17,23,.92) 0%, rgba(14,59,46,.7) 100%); }
 .cta-content { position: relative; z-index: 1; }
 .cta-box h2 { font-size: clamp(28px,4vw,44px); color: white; margin-bottom: 14px; }
 .cta-box p { font-size: 17px; color: rgba(255,255,255,.7); margin-bottom: 36px; }
@@ -272,13 +272,13 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .cta-actions .btn { width: auto; }
 .cta-trust { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
 .cta-trust span { font-size: 13px; color: rgba(255,255,255,.45); display: flex; align-items: center; gap: 7px; }
-.cta-trust span i { color: #6ee7b7; }
+.cta-trust span i { color: #8FC7AF; }
 
 /* ─── FOOTER ─── */
 .site-footer { background: var(--ink); color: rgba(255,255,255,.5); padding: 60px 0 40px; }
 .footer-inner { max-width: 1200px; margin: 0 auto; padding: 0 28px; display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: start; }
 .footer-brand span { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 17px; color: white; }
-.footer-brand .brand-host { color: #6ee7b7; }
+.footer-brand .brand-host { color: #8FC7AF; }
 .footer-copy { font-size: 13px; margin: 8px 0; }
 .footer-copy a { color: rgba(255,255,255,.6); }
 .footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -286,7 +286,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .footer-links a:hover { color: rgba(255,255,255,.7); }
 .footer-badges { display: flex; flex-direction: column; gap: 10px; }
 .footer-badge { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 10px 16px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6); display: flex; align-items: center; gap: 7px; }
-.footer-badge i { color: #6ee7b7; }
+.footer-badge i { color: #8FC7AF; }
 
 
 /* ─── SCROLL ARROW ─── */
@@ -302,7 +302,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   color: white; font-size: 20px;
   animation: bounceDown 1.8s ease-in-out infinite;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(26,122,94,.35);
+  box-shadow: 0 4px 16px rgba(14,59,46,.35);
   border: none; text-decoration: none;
 }
 .scroll-arrow:hover { background: var(--primary-dark); color: white; }
@@ -463,7 +463,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .plan-title-banner::after {
   content: ''; display: block; width: 24px;
 }
-.plan-title-banner-starter { background: rgba(26,122,94,.12); color: var(--primary); }
+.plan-title-banner-starter { background: rgba(14,59,46,.12); color: var(--primary); }
 .plan-title-banner-pro     { background: rgba(13,17,23,.08);  color: var(--ink); }
 .plan-title-banner-agence  { background: rgba(124,58,237,.1); color: #7c3aed; }
 /* on retire l'ancien header-top */
@@ -605,8 +605,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 }
 
 </style>
-<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
-  <link rel="stylesheet" href="/css/bh-brand.css?v=69892992">
+<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+  <link rel="stylesheet" href="/css/bh-brand.css?v=c0705a60">
 
   <!-- Marque Boostinghost — genere par outils/marque.js -->
   <link rel="icon" href="/img/brand/web/favicon.svg" type="image/svg+xml">
@@ -976,7 +976,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
             <div class="feat-section-title"><i class="fas fa-users"></i> Équipe & support</div>
             <ul>
               <li class="fi-included"><i class="fas fa-check"></i> Sous-comptes équipe</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Droits par profil <span class="feat-tag" style="background:#ecfdf5;color:#065f46;border-color:#a7f3d0;">Inclus</span></li>
+              <li class="fi-included"><i class="fas fa-check"></i> Droits par profil <span class="feat-tag" style="background:#F1F6F3;color:#0A2C22;border-color:#C3DBD0;">Inclus</span></li>
               <li class="fi-included"><i class="fas fa-check"></i> Checklists avancées</li>
               <li class="fi-included"><i class="fas fa-check"></i> <strong>Support prioritaire</strong></li>
               <li class="fi-soon"><i class="fas fa-clock"></i> Pricing dynamique <span class="feat-tag">Bientôt</span></li>
@@ -1009,10 +1009,10 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
         <h2 style="font-family:'Instrument Serif',serif;font-size:clamp(26px,3vw,38px);color:white;font-weight:400;margin-bottom:16px;">Le Mode Agence, pour les pros du locatif</h2>
         <p style="color:rgba(255,255,255,.6);font-size:15px;line-height:1.7;margin-bottom:28px;">Accédez aux réservations, messages et finances de vos clients propriétaires depuis un seul compte. Recevez leurs notifications, basculez d'un portefeuille à l'autre, et facturez-les directement.</p>
         <ul style="list-style:none;display:flex;flex-direction:column;gap:12px;margin-bottom:32px;">
-          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#6ee7b7;font-size:11px;"></i> Calendrier, messages et ménage de chaque client</li>
-          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#6ee7b7;font-size:11px;"></i> Notifications en temps réel pour toutes les résas</li>
-          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#6ee7b7;font-size:11px;"></i> Facturation clients depuis votre espace</li>
-          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#6ee7b7;font-size:11px;"></i> Basculez d'un compte à l'autre en un clic</li>
+          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#8FC7AF;font-size:11px;"></i> Calendrier, messages et ménage de chaque client</li>
+          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#8FC7AF;font-size:11px;"></i> Notifications en temps réel pour toutes les résas</li>
+          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#8FC7AF;font-size:11px;"></i> Facturation clients depuis votre espace</li>
+          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#8FC7AF;font-size:11px;"></i> Basculez d'un compte à l'autre en un clic</li>
         </ul>
         <a href="/register.html" style="display:inline-flex;align-items:center;gap:8px;background:#7c3aed;color:white;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;transition:opacity .2s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Démarrer en Agence <i class="fas fa-arrow-right"></i></a>
       </div>
@@ -1020,7 +1020,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
         <div style="display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.08);">
           <div style="width:40px;height:40px;background:#7c3aed;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-building" style="color:white;font-size:16px;"></i></div>
           <div><div style="font-size:13px;font-weight:700;color:white;">Mode Agence actif</div><div style="font-size:11px;color:rgba(255,255,255,.4);">Compte client</div></div>
-          <div style="margin-left:auto;background:rgba(110,231,183,.15);color:#6ee7b7;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;">Connecté</div>
+          <div style="margin-left:auto;background:rgba(143,199,175,.15);color:#8FC7AF;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;">Connecté</div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:13px;color:rgba(255,255,255,.5);">Logements gérés</span>
@@ -1028,7 +1028,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:13px;color:rgba(255,255,255,.5);">CA mensuel client</span>
-          <span style="font-size:15px;font-weight:700;color:#6ee7b7;">12 450 €</span>
+          <span style="font-size:15px;font-weight:700;color:#8FC7AF;">12 450 €</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span style="font-size:13px;color:rgba(255,255,255,.5);">Nouvelles résas</span>
@@ -1371,6 +1371,6 @@ document.addEventListener('click', (e) => {
   }
 });
 </script>
-<script src="/js/cookies-banner.js?v=f5c42275"></script>  
+<script src="/js/cookies-banner.js?v=811063cf"></script>  
 </body>
 </html>

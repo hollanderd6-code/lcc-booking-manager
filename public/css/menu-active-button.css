@@ -19,11 +19,11 @@ body[data-page="welcome"] .bh-more-item[data-menu-key="welcome"],
 body[data-page="livrets"] .bh-more-item[data-menu-key="welcome"] {
   background: #1A7A5E16 !important;
   border: 1px solid #1A7A5E4D !important;
-  box-shadow: inset 3px 0 0 #1A7A5E !important;
+  box-shadow: inset 3px 0 0 #0E3B2E !important;
 }
 body[data-page="welcome"] .bh-more-item[data-menu-key="welcome"] span,
 body[data-page="livrets"] .bh-more-item[data-menu-key="welcome"] span {
-  color: #1A7A5E !important;
+  color: #0E3B2E !important;
   font-weight: 700 !important;
 }
 
@@ -60,11 +60,11 @@ body[data-page="deposits"] .bh-more-item[data-menu-key="finances"],
 body[data-page="cautions"] .bh-more-item[data-menu-key="finances"] {
   background: #10B98116 !important;
   border: 1px solid #10B9814D !important;
-  box-shadow: inset 3px 0 0 #10B981 !important;
+  box-shadow: inset 3px 0 0 #0E3B2E !important;
 }
 body[data-page="deposits"] .bh-more-item[data-menu-key="finances"] span,
 body[data-page="cautions"] .bh-more-item[data-menu-key="finances"] span {
-  color: #10B981 !important;
+  color: #0E3B2E !important;
   font-weight: 700 !important;
 }
 

@@ -6,7 +6,7 @@
    ================================================================ */
 :root{
   /* Jetons canoniques (source de vérité : bh-theme-v3 --jade) */
-  --bh-vert:#1A7A5E; --bh-vert-fonce:#125A45; --bh-vert-clair:#2A9474;
+  --bh-vert:#0E3B2E; --bh-vert-fonce:#125A45; --bh-vert-clair:#2A9474;
   --bh-vert-pale:#EAF3EF; --bh-creme:#F4F1E9; --bh-encre:#0D1117; --bh-or:#B7791F;
   --bh-violet:#7C3AED; --bh-violet-fonce:#5B21B6;
   --bh-radius:14px; --bh-radius-s:10px;
@@ -16,7 +16,7 @@
 
   /* Pont legacy : l'ancien vert emerald (style.css) rejoint le jade V3.
      Ne touche que les usages via var() ; les verts codés en dur restent. */
-  --primary-color:#1A7A5E;
+  --primary-color:#0E3B2E;
   --primary-hover:#125A45;
 }
 html{-webkit-text-size-adjust:100%}
@@ -51,7 +51,7 @@ html{ scroll-behavior: smooth; }
   *::-webkit-scrollbar{ width: 9px; height: 9px; }
   *::-webkit-scrollbar-track{ background: transparent; }
   *::-webkit-scrollbar-thumb{ background: rgba(122,134,149,.28); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
-  *::-webkit-scrollbar-thumb:hover{ background: rgba(26,122,94,.45); border: 2px solid transparent; background-clip: content-box; }
+  *::-webkit-scrollbar-thumb:hover{ background: rgba(14,59,46,.45); border: 2px solid transparent; background-clip: content-box; }
 }
 
 /* Entrée de page : cascade discrète des blocs principaux (une fois, au chargement) */
@@ -119,7 +119,7 @@ button:active:not(:disabled), .btn:active, [role="button"]:active,
 .bh-badge.err{    background:#FBEDE7; color:#B0431E; border-color:#F2D8CC; }
 .bh-badge.info{   background:#EEF1F6; color:#44546A; border-color:#DCE2EC; }
 .bh-badge.ota{    background:#F1EDFB; color:#5B3FA8; border-color:#E2DAF4; }
-.bh-badge.direct{ background:#EAF3EF; color:#1A7A5E; border-color:#D3E6DD; }
+.bh-badge.direct{ background:#EAF3EF; color:#0E3B2E; border-color:#D3E6DD; }
 
 /* ══ SKELETONS — chargement des listes (shimmer crème) ══ */
 .bh-skel{ position:relative; overflow:hidden; background:#EDE7DB; border-radius:12px; }

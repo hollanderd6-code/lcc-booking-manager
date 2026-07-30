@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const el = document.createElement('div');
       el.id = 'ptr-indicator';
       el.style.cssText = 'position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height .2s;z-index:100;background:#F5F2EC;';
-      el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#1A7A5E;"><i class="fas fa-sync-alt" id="ptr-icon"></i><span id="ptr-text">Tirer pour actualiser</span></div>';
+      el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#0E3B2E;"><i class="fas fa-sync-alt" id="ptr-icon"></i><span id="ptr-text">Tirer pour actualiser</span></div>';
       listContainer.style.position = 'relative';
       listContainer.insertBefore(el, listContainer.firstChild);
       return el;
@@ -537,7 +537,7 @@ function renderConversations() {
           <div class="conversation-avatar" style="background: ${getPlatformColor(conv.platform)};">
             ${guestInitial}
           </div>
-          ${isUnread ? `<div style="position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:#1A7A5E;border:2px solid white;"></div>` : ''}
+          ${isUnread ? `<div style="position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:#0E3B2E;border:2px solid white;"></div>` : ''}
         </div>
 
         <div class="conversation-content">
@@ -545,14 +545,14 @@ function renderConversations() {
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1px;">
             <h3 style="font-size:13.5px;font-weight:${isUnread ? '800' : '600'};color:${isUnread ? '#0D1117' : '#374151'};margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62%;font-family:'DM Sans',sans-serif;">${isCancelled ? '<span style="display:inline-block;font-size:9.5px;font-weight:800;color:#DC2626;background:#FEF2F2;border:1px solid #FECACA;border-radius:5px;padding:1px 5px;margin-right:5px;vertical-align:middle;">⊘ ANNULÉ</span>' : ''}${guestName}</h3>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
-              <span style="font-size:11px;color:${isUnread ? '#1A7A5E' : '#B0BAC5'};font-weight:${isUnread ? '600' : '400'};white-space:nowrap;">${lastMessageTime}</span>
-              ${unreadCount > 0 ? `<span style="min-width:18px;height:18px;padding:0 5px;background:#1A7A5E;color:#fff;font-size:10px;font-weight:700;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;">${unreadCount}</span>` : ''}
+              <span style="font-size:11px;color:${isUnread ? '#0E3B2E' : '#B0BAC5'};font-weight:${isUnread ? '600' : '400'};white-space:nowrap;">${lastMessageTime}</span>
+              ${unreadCount > 0 ? `<span style="min-width:18px;height:18px;padding:0 5px;background:#0E3B2E;color:#fff;font-size:10px;font-weight:700;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;">${unreadCount}</span>` : ''}
             </div>
           </div>
 
           <!-- Ligne 2 : Logement · Date · Plateforme -->
           <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;overflow:hidden;">
-            <span style="font-size:11px;font-weight:600;color:${conv.property_color || '#10B981'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;">${conv.property_name || 'Logement'}</span>
+            <span style="font-size:11px;font-weight:600;color:${conv.property_color || '#0E3B2E'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;">${conv.property_name || 'Logement'}</span>
             <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>
             <span style="font-size:11px;color:#94A3B8;white-space:nowrap;flex-shrink:0;">${checkinDate}</span>
             <span style="font-size:10px;color:#CBD5E1;flex-shrink:0;">·</span>
@@ -566,7 +566,7 @@ function renderConversations() {
           ${snippet ? `
           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
             <p style="font-size:12px;color:${isUnread ? '#374151' : '#94A3B8'};font-weight:${isUnread ? '500' : '400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0;flex:1;font-family:'DM Sans',sans-serif;">${snippet}</p>
-            ${isUnread ? `<div style="width:8px;height:8px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></div>` : ''}
+            ${isUnread ? `<div style="width:8px;height:8px;border-radius:50%;background:#0E3B2E;flex-shrink:0;"></div>` : ''}
           </div>` : ''}
 
           <!-- Éléments cachés pour compatibilité (delete, status, unread-badge, meta) -->
@@ -646,9 +646,9 @@ function getPlatformColor(platform) {
   // BHGuest
   if (p.includes('boostinghost') || p.includes('guest')) return '#7C3AED';
   // Direct / manuel
-  if (p.includes('direct') || p.includes('manual')) return '#1A7A5E';
+  if (p.includes('direct') || p.includes('manual')) return '#0E3B2E';
   // Fallback vert Boostinghost
-  return '#1A7A5E';
+  return '#0E3B2E';
 }
 
 function getStatusLabel(status) {
@@ -1570,7 +1570,7 @@ function showToast(message, type = 'info') {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+      background: ${type === 'success' ? '#0E3B2E' : type === 'error' ? '#ef4444' : '#3b82f6'};
       color: white;
       padding: 12px 24px;
       border-radius: 8px;
@@ -1640,7 +1640,7 @@ async function _checkChannexConversation(conversationId, conv) {
       // Adapter le sendBtn pour la plateforme
       const platform = (conv ? conv.platform || '' : '').toLowerCase();
       const platformLabel = platform.includes('airbnb') ? 'Airbnb' : platform.includes('booking') ? 'Booking.com' : 'Plateforme';
-      const platformColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#1A7A5E';
+      const platformColor = platform.includes('airbnb') ? '#FF5A5F' : platform.includes('booking') ? '#003580' : '#0E3B2E';
 
       const sendBtn = document.getElementById('sendBtn');
       if (sendBtn) {
@@ -1844,7 +1844,7 @@ function _checkShortcutTrigger(input) {
   popup.innerHTML = filtered.map((s, i) => `
     <div class="shortcut-item" data-key="${s.key}"
       style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;border-bottom:1px solid rgba(200,184,154,.2);transition:background .1s;"
-      onmouseenter="this.style.background='rgba(26,122,94,.06)'"
+      onmouseenter="this.style.background='rgba(14,59,46,.06)'"
       onmouseleave="this.style.background=''"
       onmousedown="event.preventDefault();_selectShortcut('${s.key}')">
       <span style="font-size:16px;">${s.icon}</span>

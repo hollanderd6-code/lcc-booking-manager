@@ -431,8 +431,8 @@
 }
 
 .conversation-status.active {
-  background: #dcfce7;
-  color: #16a34a;
+  background: #DCE9E3;
+  color: #0E3B2E;
 }
 
 .conversation-status.pending {

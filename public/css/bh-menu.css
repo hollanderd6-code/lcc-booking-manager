@@ -69,13 +69,13 @@ body[data-page="factures"] .tab-btn[data-tab="more"],
 body[data-page="clients"] .tab-btn[data-tab="more"],
 body[data-page="welcome"] .tab-btn[data-tab="more"],
 body[data-page="help"] .tab-btn[data-tab="more"] {
-  color: var(--primary-color, #1A7A5E) !important;
+  color: var(--primary-color, #0E3B2E) !important;
   opacity: 1;
 }
 
 /* Page réservations — onglet calendar actif */
 body[data-page="reservations"] .tab-btn[data-tab="calendar"] {
-  color: var(--primary-color, #1A7A5E) !important;
+  color: var(--primary-color, #0E3B2E) !important;
   opacity: 1;
 }
 
@@ -95,7 +95,7 @@ body[data-page="help"] .tab-btn[data-tab="more"]::before {
   transform: translateX(-50%);
   width: 4px;
   height: 4px;
-  background: #1A7A5E;
+  background: #0E3B2E;
   border-radius: 50%;
   animation: indicatorPulse 2s ease-in-out infinite;
 }
@@ -232,7 +232,7 @@ body[data-page="help"] .tab-btn[data-tab="more"] i {
   body[data-page="clients"] .mobile-tabs .tab-btn[data-tab="more"],
   body[data-page="welcome"] .mobile-tabs .tab-btn[data-tab="more"],
   body[data-page="help"] .mobile-tabs .tab-btn[data-tab="more"] {
-    color: #1A7A5E !important;
+    color: #0E3B2E !important;
     opacity: 1;
   }
 }
@@ -266,80 +266,80 @@ body[data-page="help"] .tab-btn[data-tab="more"] i {
 /* Paramètres du compte */
 body[data-page="settings-account"] .bottom-sheet .btn[onclick*="settings-account"],
 body[data-page="settings-account"] [class*="sheet"] .btn[onclick*="settings-account"] {
-  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3) !important;
   font-weight: 700 !important;
 }
 
 /* Notifications */
 body[data-page="notifications"] .bottom-sheet .btn[onclick*="notifications"],
 body[data-page="notifications"] [class*="sheet"] .btn[onclick*="notifications"] {
-  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3) !important;
   font-weight: 700 !important;
 }
 
 /* Ménages */
 body[data-page="cleaning"] .bottom-sheet .btn[onclick*="cleaning"],
 body[data-page="cleaning"] [class*="sheet"] .btn[onclick*="cleaning"] {
-  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3) !important;
   font-weight: 700 !important;
 }
 
 /* Cautions */
 body[data-page="deposits"] .bottom-sheet .btn[onclick*="deposits"],
 body[data-page="deposits"] [class*="sheet"] .btn[onclick*="deposits"] {
-  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3) !important;
   font-weight: 700 !important;
 }
 
 /* Factures */
 body[data-page="factures"] .bottom-sheet .btn[onclick*="factures.html"],
 body[data-page="factures"] [class*="sheet"] .btn[onclick*="factures.html"] {
-  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3) !important;
   font-weight: 700 !important;
 }
 
 /* Factures propriétaires */
 body[data-page="clients"] .bottom-sheet .btn[onclick*="clients"],
 body[data-page="clients"] [class*="sheet"] .btn[onclick*="clients"] {
-  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3) !important;
   font-weight: 700 !important;
 }
 
 /* Livrets d'accueil */
 body[data-page="welcome"] .bottom-sheet .btn[onclick*="welcome"],
 body[data-page="welcome"] [class*="sheet"] .btn[onclick*="welcome"] {
-  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3) !important;
   font-weight: 700 !important;
 }
 
 /* Aide */
 body[data-page="help"] .bottom-sheet .btn[onclick*="help"],
 body[data-page="help"] [class*="sheet"] .btn[onclick*="help"] {
-  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3) !important;
   font-weight: 700 !important;
 }
 
@@ -347,10 +347,10 @@ body[data-page="help"] [class*="sheet"] .btn[onclick*="help"] {
 /* Serrures connectées */
 body[data-page="smart-locks"] .bottom-sheet .btn[onclick*="smart-locks"],
 body[data-page="smart-locks"] [class*="sheet"] .btn[onclick*="smart-locks"] {
-  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3) !important;
   font-weight: 700 !important;
 }
 
@@ -388,8 +388,8 @@ body[data-page="factures"] .bottom-sheet .btn[onclick*="factures.html"],
 body[data-page="clients"] .bottom-sheet .btn[onclick*="clients"],
 body[data-page="welcome"] .bottom-sheet .btn[onclick*="welcome"],
 body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
-  background: rgba(26, 122, 94, 0.15) !important;
-  border-left: 4px solid #1A7A5E !important;
+  background: rgba(14, 59, 46, 0.15) !important;
+  border-left: 4px solid #0E3B2E !important;
   font-weight: 700 !important;
   padding-left: 12px !important;
 }
@@ -408,7 +408,7 @@ body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
 [data-theme="dark"] body[data-page="welcome"] .bottom-sheet .btn[onclick*="welcome"],
 [data-theme="dark"] body[data-page="smart-locks"] .bottom-sheet .btn[onclick*="smart-locks"],
 [data-theme="dark"] body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
-  background: linear-gradient(135deg, #2AAE86, #1A7A5E) !important;
+  background: linear-gradient(135deg, #1E6E52, #0E3B2E) !important;
 }
 
 /* ============================================
@@ -438,10 +438,10 @@ body[data-page="help"] .bottom-sheet .btn[onclick*="help"] {
 body[data-page="welcome"] [class*="sheet"] .btn[onclick*="welcome.html"],
 body[data-page="livrets"] [class*="sheet"] .btn[onclick*="welcome"],
 body[data-page="livrets"] .bottom-sheet .btn[onclick*="welcome"] {
-  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3) !important;
   font-weight: 700 !important;
 }
 
@@ -449,10 +449,10 @@ body[data-page="livrets"] .bottom-sheet .btn[onclick*="welcome"] {
 body[data-page="smart-locks"] [class*="sheet"] .btn[onclick*="smart-locks.html"],
 body[data-page="smart_locks"] [class*="sheet"] .btn[onclick*="smart-locks"],
 body[data-page="smart_locks"] .bottom-sheet .btn[onclick*="smart-locks"] {
-  background: linear-gradient(135deg, #1A7A5E, #145f4a) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
   border: none !important;
-  box-shadow: 0 4px 12px rgba(26, 122, 94, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3) !important;
   font-weight: 700 !important;
 }
 

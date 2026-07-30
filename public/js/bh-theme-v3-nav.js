@@ -98,7 +98,7 @@
     // 1. Titre "Calendrier" → "Calendrier des réservations"
     var calTitle = document.querySelector('.calendar-title-modern span');
     if (calTitle && calTitle.textContent.trim() === 'Calendrier') {
-      calTitle.innerHTML = 'Calendrier des <em style="font-style:italic;color:#2AAE86;font-family:\'Instrument Serif\',serif;">réservations</em>';
+      calTitle.innerHTML = 'Calendrier des <em style="font-style:italic;color:#1E6E52;font-family:\'Instrument Serif\',serif;">réservations</em>';
     }
 
     // 2. Sous-titre sous le titre (nb logements · vue)

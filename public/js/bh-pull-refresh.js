@@ -30,7 +30,7 @@
     + 'border:1px solid rgba(200,184,154,.5);box-shadow:0 6px 18px rgba(13,17,23,.16);'
     + 'display:flex;align-items:center;justify-content:center;z-index:100003;'
     + 'transform:translateY(-60px);transition:transform .18s ease,opacity .18s;opacity:0;';
-  ind.innerHTML = '<i class="fas fa-arrow-down" style="color:#1A7A5E;font-size:14px;transition:transform .2s;"></i>';
+  ind.innerHTML = '<i class="fas fa-arrow-down" style="color:#0E3B2E;font-size:14px;transition:transform .2s;"></i>';
   document.body.appendChild(ind);
   var fleche = ind.querySelector('i');
 
@@ -75,7 +75,7 @@
       var fn = refresher();
       refreshing = true; armed = false;
       fleche.className = 'fas fa-spinner fa-spin';
-      fleche.style.color = '#1A7A5E';
+      fleche.style.color = '#0E3B2E';
       ind.style.transform = 'translateY(52px)'; ind.style.opacity = '1';
       Promise.resolve().then(function () { if (fn) return fn(); })
         .catch(function () {})

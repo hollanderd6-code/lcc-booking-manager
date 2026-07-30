@@ -73,7 +73,7 @@
 
   html[data-theme-v3="1"] .mobile-logo-text .brand-boosting,
   html[data-theme-v3="1"] .mobile-logo-title .brand-boosting {
-    color: #1A7A5E !important;
+    color: #0E3B2E !important;
   }
 
   html[data-theme-v3="1"] .mobile-logo-subtitle {
@@ -129,17 +129,17 @@
 
   /* Onglet actif */
   html[data-theme-v3="1"] .mobile-tabs .tab-btn.active {
-    color: #1A7A5E !important;
+    color: #0E3B2E !important;
   }
 
   /* Indicateur point actif */
   html[data-theme-v3="1"] .mobile-tabs .tab-btn.active::before {
-    background: #1A7A5E !important;
+    background: #0E3B2E !important;
   }
 
   /* Ripple */
   html[data-theme-v3="1"] .mobile-tabs .tab-btn::after {
-    background: rgba(26, 122, 94, 0.15) !important;
+    background: rgba(14, 59, 46, 0.15) !important;
   }
 
   /* Badge notification */
@@ -228,8 +228,8 @@
   /* ── 13. BOUTON FAB (+ flottant) ── */
   html[data-theme-v3="1"] .fab-btn,
   html[data-theme-v3="1"] .btn-fab {
-    background: #1A7A5E !important;
-    box-shadow: 0 4px 16px rgba(26, 122, 94, 0.35) !important;
+    background: #0E3B2E !important;
+    box-shadow: 0 4px 16px rgba(14, 59, 46, 0.35) !important;
     bottom: calc(80px + env(safe-area-inset-bottom)) !important;
   }
 
@@ -350,7 +350,7 @@
 :root {
   --primary: #5BC6A3;
   --primary-dark: #4AB392;
-  --success: #10B981;
+  --success: #0E3B2E;
   --error: #EF4444;
   --warning: #F59E0B;
   --bg-primary: #FFFFFF;
@@ -971,7 +971,7 @@ select:focus {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: #1A7A5E;
+  background: #0E3B2E;
   animation: bh-bounce 1.2s infinite ease-in-out;
 }
 .loading-spinner .dot:nth-child(1) { animation-delay: 0s; }

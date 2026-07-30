@@ -16,12 +16,12 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <!-- FullCalendar CSS -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet"/>
-<link href="/css/style.css?v=9d18f851" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=e8b22340">
+<link href="/css/style.css?v=17204d03" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
 <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
-<link rel="stylesheet" href="/css/bh-theme-v3.css?v=8d0e239f">
-<link rel="stylesheet" href="/css/bh-brand.css?v=69892992">
-<link rel="stylesheet" href="/css/bh-lux.css?v=1a3d3ed7">
-<link rel="stylesheet" href="/css/bh-lux-app.css?v=340266b7">
+<link rel="stylesheet" href="/css/bh-theme-v3.css?v=7d47a1eb">
+<link rel="stylesheet" href="/css/bh-brand.css?v=c0705a60">
+<link rel="stylesheet" href="/css/bh-lux.css?v=d686b5ab">
+<link rel="stylesheet" href="/css/bh-lux-app.css?v=9af52e1b">
   
 <script>
   // Activation permanente du thème V3
@@ -133,9 +133,9 @@ html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
 }
 html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
-  background: #1A7A5E;
+  background: #0E3B2E;
   color: white;
-  border-color: #1A7A5E;
+  border-color: #0E3B2E;
 }
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
   margin-left: auto;
@@ -171,7 +171,7 @@ html[data-theme-v3="1"] .bh-theme-toggle::after {
   border-radius: 50%;
   transition: transform .2s;
 }
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #0E3B2E; }
 html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
 
 /* Masquer la barre dark sur mobile */
@@ -222,7 +222,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       font-size: 14px; font-family: 'DM Sans', sans-serif;
       color: #111827; outline: none; transition: border-color .15s;
     }
-    .bh-sheet-input:focus { border-color: #1A7A5E; background: #fff; }
+    .bh-sheet-input:focus { border-color: #0E3B2E; background: #fff; }
     .bh-sheet-input::placeholder { color: #9CA3AF; }
     /* iOS : empêcher input[type=date]/[time] de garder une largeur native et de déborder */
     .bh-sheet-input[type="date"], .bh-sheet-input[type="time"] {
@@ -453,13 +453,13 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 
 /* Bouton Sync - Vert */
 #syncBtn {
-  background: linear-gradient(135deg, #1A7A5E 0%, #145f4a 100%);
+  background: linear-gradient(135deg, #0E3B2E 0%, #0A2C22 100%);
   color: white;
 }
 
 #syncBtn:hover {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+  background: linear-gradient(135deg, #0A2C22 0%, #0A2C22 100%);
+  box-shadow: 0 6px 20px rgba(14, 59, 46, 0.35);
   transform: translateY(-2px);
 }
 
@@ -647,8 +647,8 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     
     /* Variables du calendrier */
     :root {
-      --calendar-header-bg: #10B981; /* Vert de votre thème */
-      --calendar-header-hover: #059669;
+      --calendar-header-bg: #0E3B2E; /* Vert de votre thème */
+      --calendar-header-hover: #0A2C22;
       --calendar-cell-height: 28px;
       --property-column-width: 210px;
       --day-header-height: 58px;
@@ -665,14 +665,14 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       --booking-color-gites: #2E7D32;
       --booking-color-bhguest: #C2410C;
       
-      --cell-hover-bg: rgba(16, 185, 129, 0.08);
+      --cell-hover-bg: rgba(14, 59, 46, 0.08);
     }
 
     /* Dark theme */
     [data-theme="dark"] {
-      --calendar-header-bg: #047857;
+      --calendar-header-bg: #0A2C22;
       --calendar-border: #374151;
-      --cell-hover-bg: rgba(16, 185, 129, 0.15);
+      --cell-hover-bg: rgba(14, 59, 46, 0.15);
     }
 
     /* Section Calendrier */
@@ -1032,11 +1032,11 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     }
 
     .calendar-cell.today {
-      background: rgba(16, 185, 129, 0.05);
+      background: rgba(14, 59, 46, 0.05);
     }
 
     .calendar-cell.selected {
-      background: rgba(16, 185, 129, 0.15);
+      background: rgba(14, 59, 46, 0.15);
     }
 /* Barre de recherche du calendrier */
 .calendar-search-panel {
@@ -1074,7 +1074,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 .calendar-search-panel input:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 0 1px rgba(14, 59, 46, 0.25);
 }
 
 /* Mise en avant de la carte filtres quand on clique sur l’icône filtre */
@@ -1231,7 +1231,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       justify-content: center;
       font-size: 13px;
       font-weight: 700;
-      color: #1A7A5E;
+      color: #0E3B2E;
       pointer-events: none;
       user-select: none;
     }
@@ -1724,8 +1724,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     .booking-form .form-group select:focus,
     .booking-form .form-group textarea:focus {
       outline: none;
-      border-color: #10B981;
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+      border-color: #0E3B2E;
+      box-shadow: 0 0 0 3px rgba(14, 59, 46, 0.1);
     }
 
     .booking-form .form-group textarea {
@@ -1774,12 +1774,12 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     }
 
     .modal-actions .btn-primary {
-      background: #10B981;
+      background: #0E3B2E;
       color: white;
     }
 
     .modal-actions .btn-primary:hover {
-      background: #059669;
+      background: #0A2C22;
     }
 
     .modal-actions .btn-ghost {
@@ -1820,8 +1820,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       width: 32px;
       height: 32px;
       border-radius: 8px;
-      background: rgba(16, 185, 129, 0.1);
-      color: #10B981;
+      background: rgba(14, 59, 46, 0.1);
+      color: #0E3B2E;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1831,7 +1831,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     }
 
     .property-item.selected .property-icon {
-      background: #10B981;
+      background: #0E3B2E;
       color: white;
     }
 
@@ -2074,8 +2074,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 
 .task-item-modal.checked {
-  border-color: #10B981;
-  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  border-color: #0E3B2E;
+  background: linear-gradient(135deg, #F1F6F3 0%, #DCE9E3 100%);
 }
 
 .task-item-modal .task-checkbox {
@@ -2090,8 +2090,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 
 .task-item-modal.checked .task-checkbox {
-  background: #10B981;
-  border-color: #10B981;
+  background: #0E3B2E;
+  border-color: #0E3B2E;
   color: white;
 }
 
@@ -2231,7 +2231,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 
 .checklist-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(26,122,94,.3);
+  border-color: rgba(14,59,46,.3);
   box-shadow: 0 8px 22px rgba(13,17,23,.07);
 }
 
@@ -2240,7 +2240,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 
 .checklist-card-completed {
-  border-left: 3px solid #1A7A5E;
+  border-left: 3px solid #0E3B2E;
 }
 
 .checklist-card-header {
@@ -2300,7 +2300,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 .checklist-info-row i {
   width: 14px;
   text-align: center;
-  color: #1A7A5E;
+  color: #0E3B2E;
   opacity: .55;
 }
 
@@ -2624,12 +2624,12 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     height: 52px;
     border-radius: 999px;
     border: none;
-    background: #1A7A5E;
+    background: #0E3B2E;
     color: #fff;
     font-size: 28px;
     font-weight: 800;
     line-height: 1;
-    box-shadow: 0 10px 24px rgba(26,122,94,.35);
+    box-shadow: 0 10px 24px rgba(14,59,46,.35);
     z-index: 2147483647;
     cursor: pointer;
     touch-action: manipulation;
@@ -2799,7 +2799,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   }
 
   /* 6. FAB */
-  .fab-add-resa { background: #1A7A5E !important; }
+  .fab-add-resa { background: #0E3B2E !important; }
 }
 
 /* ================================================================
@@ -2869,7 +2869,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     font-size: 26px !important;
     line-height: 1 !important;
     font-weight: 500 !important;
-    color: #1A7A5E !important;
+    color: #0E3B2E !important;
     letter-spacing: -0.02em !important;
   }
   .kpi-card .kpi-sub {
@@ -3097,7 +3097,7 @@ window.setAgencyView = async function setAgencyView(mode) {
       btnAll.style.background  = '#7c3aed'; btnAll.style.color  = 'white';
       btnMine.style.background = 'transparent'; btnMine.style.color = '#9CA3AF';
     } else {
-      btnMine.style.background = '#1A7A5E'; btnMine.style.color = 'white';
+      btnMine.style.background = '#0E3B2E'; btnMine.style.color = 'white';
       btnAll.style.background  = 'transparent'; btnAll.style.color = '#9CA3AF';
     }
   }
@@ -3275,7 +3275,7 @@ function _bhShowImpersonationModal(reqData) {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
   modal.innerHTML = `
     <div style="background:white;border-radius:16px;padding:28px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.25);">
-      <div style="margin-bottom:12px;"><i class="fas fa-lock" style="font-size:34px;color:#1A7A5E;"></i></div>
+      <div style="margin-bottom:12px;"><i class="fas fa-lock" style="font-size:34px;color:#0E3B2E;"></i></div>
       <div style="font-weight:700;font-size:17px;margin-bottom:8px;color:#1a1a1a;">Demande de connexion support</div>
       <div style="font-size:14px;color:#555;line-height:1.5;margin-bottom:6px;">
         L'équipe Boostinghost demande à se connecter temporairement à votre compte pour vous assister.
@@ -3284,7 +3284,7 @@ function _bhShowImpersonationModal(reqData) {
       <div style="font-size:12px;color:#999;margin-bottom:20px;">L'accès sera limité à 1 heure et toute action sera tracée. Vous pouvez refuser sans conséquence.</div>
       <div style="display:flex;gap:10px;">
         <button id="bhImpDeny" style="flex:1;padding:12px;border-radius:10px;border:1px solid #e0e0e0;background:white;color:#555;font-weight:600;font-size:14px;cursor:pointer;">Refuser</button>
-        <button id="bhImpApprove" style="flex:1;padding:12px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-weight:600;font-size:14px;cursor:pointer;">Autoriser</button>
+        <button id="bhImpApprove" style="flex:1;padding:12px;border-radius:10px;border:none;background:#0E3B2E;color:white;font-weight:600;font-size:14px;cursor:pointer;">Autoriser</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -3369,10 +3369,10 @@ function _bhShowHostQuestionModal(q) {
   if (_ciF && _coF) _rows.push(`<div style="display:flex;align-items:center;gap:7px;"><i class="far fa-calendar-alt" style="color:#6B7280;width:14px;text-align:center;"></i><span>${_ciF} → ${_coF}</span></div>`);
   if (_occBefore !== null) _rows.push(_occBefore
     ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span style="width:9px;height:9px;border-radius:50%;background:#DC2626;display:inline-block;flex-shrink:0;"></span><span>Loué la veille — départ le jour de l'arrivée</span></div>`
-    : `<div style="display:flex;align-items:center;gap:7px;color:#1A7A5E;"><span style="width:9px;height:9px;border-radius:50%;background:#1A7A5E;display:inline-block;flex-shrink:0;"></span><span>Libre la veille de l'arrivée</span></div>`);
+    : `<div style="display:flex;align-items:center;gap:7px;color:#0E3B2E;"><span style="width:9px;height:9px;border-radius:50%;background:#0E3B2E;display:inline-block;flex-shrink:0;"></span><span>Libre la veille de l'arrivée</span></div>`);
   if (_occAfter !== null) _rows.push(_occAfter
     ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span style="width:9px;height:9px;border-radius:50%;background:#DC2626;display:inline-block;flex-shrink:0;"></span><span>Reloué le jour du départ</span></div>`
-    : `<div style="display:flex;align-items:center;gap:7px;color:#1A7A5E;"><span style="width:9px;height:9px;border-radius:50%;background:#1A7A5E;display:inline-block;flex-shrink:0;"></span><span>Libre le jour du départ</span></div>`);
+    : `<div style="display:flex;align-items:center;gap:7px;color:#0E3B2E;"><span style="width:9px;height:9px;border-radius:50%;background:#0E3B2E;display:inline-block;flex-shrink:0;"></span><span>Libre le jour du départ</span></div>`);
   const infoHtml = _rows.length
     ? `<div style="background:#F0F4F2;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12.5px;line-height:1.7;color:#374151;">${_rows.join('')}</div>`
     : '';
@@ -3386,7 +3386,7 @@ function _bhShowHostQuestionModal(q) {
       <div style="font-size:15px;color:#333;line-height:1.5;background:#F5F2EC;border-radius:10px;padding:14px 16px;margin-bottom:18px;text-align:center;">${q.question}</div>
       <div style="display:flex;gap:10px;margin-bottom:10px;">
         <button id="bhHQNo" style="flex:1;padding:13px;border-radius:10px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;font-weight:700;font-size:15px;cursor:pointer;">Non</button>
-        <button id="bhHQYes" style="flex:1;padding:13px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-weight:700;font-size:15px;cursor:pointer;">Oui</button>
+        <button id="bhHQYes" style="flex:1;padding:13px;border-radius:10px;border:none;background:#0E3B2E;color:white;font-weight:700;font-size:15px;cursor:pointer;">Oui</button>
       </div>
       <div id="bhHQTextWrap" style="display:none;margin-bottom:10px;">
         <textarea id="bhHQText" rows="2" placeholder="Précision (optionnel)…" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:inherit;box-sizing:border-box;resize:vertical;"></textarea>
@@ -3529,19 +3529,19 @@ setTimeout(function() {
 }
 </style>
 
-<link rel="stylesheet" href="/css/bh-v3-mobile.css?v=e8172ecb">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=ec508074">
-<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
+<link rel="stylesheet" href="/css/bh-v3-mobile.css?v=2b3a5fdd">
+<link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
+<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
 <style>
 /* ══ BH MLIST — listes raffinées pour les modales KPI ══ */
 .bh-mlist{ display:flex; flex-direction:column; gap:9px; }
 .bh-mrow{ display:flex; align-items:flex-start; gap:13px; background:#fff;
   border:1px solid rgba(200,184,154,.38); border-radius:15px; padding:14px 15px;
   transition:border-color .15s, box-shadow .15s; }
-.bh-mrow:hover{ border-color:rgba(26,122,94,.3); box-shadow:0 6px 18px rgba(13,17,23,.06); }
+.bh-mrow:hover{ border-color:rgba(14,59,46,.3); box-shadow:0 6px 18px rgba(13,17,23,.06); }
 .bh-mrow-dot{ flex:none; width:34px; height:34px; border-radius:11px;
   display:flex; align-items:center; justify-content:center; font-size:13px;
-  background:rgba(26,122,94,.1); color:#166B52; }
+  background:rgba(14,59,46,.1); color:#166B52; }
 .bh-mrow-dot.warn{ background:#FBF3E2; color:#9A6514; }
 .bh-mrow-dot.err{ background:#FBEDE7; color:#B0431E; }
 .bh-mrow-dot.info{ background:#EEF1F6; color:#44546A; }
@@ -3550,7 +3550,7 @@ setTimeout(function() {
 .bh-mrow-t{ font:600 14.5px 'DM Sans',sans-serif; color:#0D1117;
   display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
 .bh-mrow-t .bh-mrow-when{ font:500 12px 'DM Sans',sans-serif; color:#9a958a; flex:none; }
-.bh-mrow-guest{ font:600 13px 'DM Sans',sans-serif; color:#1A7A5E; margin:3px 0 2px; }
+.bh-mrow-guest{ font:600 13px 'DM Sans',sans-serif; color:#0E3B2E; margin:3px 0 2px; }
 .bh-mrow-meta{ font:400 12.5px 'DM Sans',sans-serif; color:#8A8375; line-height:1.45;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .bh-mrow-note{ font:400 12.5px 'DM Sans',sans-serif; color:#7C2D12; line-height:1.45; margin-top:6px; }
@@ -3600,12 +3600,12 @@ setTimeout(function() {
 
   <!-- CENTRE : logo (flex-shrink:0, ne s'étire pas) -->
   <a class="mobile-logo" href="/app.html" style="flex-shrink:0;display:flex;align-items:center;gap:10px;text-decoration:none;">
-    <span class="mobile-logo-text"><span class="mobile-logo-title" style="font-size:16px;line-height:1.15;font-weight:700;"><span style="color:#1A7A5E;font-weight:700;">Boosting</span><span style="color:#111827;font-weight:700;">host</span></span><span class="mobile-logo-subtitle" style="font-size:7px;color:#6B7280;font-weight:700;letter-spacing:0.3px;text-transform:uppercase;display:block;margin-top:1px;">Smart Property Manager</span></span>
+    <span class="mobile-logo-text"><span class="mobile-logo-title" style="font-size:16px;line-height:1.15;font-weight:700;"><span style="color:#0E3B2E;font-weight:700;">Boosting</span><span style="color:#111827;font-weight:700;">host</span></span><span class="mobile-logo-subtitle" style="font-size:7px;color:#6B7280;font-weight:700;letter-spacing:0.3px;text-transform:uppercase;display:block;margin-top:1px;">Smart Property Manager</span></span>
   </a>
 
   <!-- DROITE : sync + notif (flex:1, aligné à droite) -->
   <div style="flex:1;display:flex;align-items:center;gap:2px;justify-content:flex-end;">
-    <button class="btn-icon" id="syncBtnMobile" title="Synchroniser" style="background:transparent;border:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#1A7A5E;font-size:15px;-webkit-tap-highlight-color:transparent;">
+    <button class="btn-icon" id="syncBtnMobile" title="Synchroniser" style="background:transparent;border:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#0E3B2E;font-size:15px;-webkit-tap-highlight-color:transparent;">
       <i class="fas fa-sync-alt"></i>
     </button>
     <button id="bh-mobile-notif-btn" title="Notifications" onclick="openNotifPanel()" style="background:transparent;border:none;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6B7280;font-size:15px;position:relative;padding:0;-webkit-tap-highlight-color:transparent;">
@@ -3642,7 +3642,7 @@ setTimeout(function() {
   <i class="fas fa-bell"></i>
   <span id="notifHistoryBadge" style="display:none;position:absolute;top:-6px;right:0px;min-width:18px;height:18px;background:#EF4444;color:#fff;border-radius:99px;font-size:11px;font-weight:700;line-height:normal;text-align:center;padding:0 4px;pointer-events:none;border:2px solid #fff;z-index:10;align-items:center;justify-content:center;"></span>
 </button>
-<button id="newReservationBtn" onclick="if(typeof openNewReservationModal==='function'){openNewReservationModal();}else{var m=document.getElementById('newReservationModal');if(m)m.style.display='flex';}" style="background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;">
+<button id="newReservationBtn" onclick="if(typeof openNewReservationModal==='function'){openNewReservationModal();}else{var m=document.getElementById('newReservationModal');if(m)m.style.display='flex';}" style="background:#0E3B2E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;">
   <i class="fas fa-plus"></i> Nouvelle réservation
 </button>
 </div>
@@ -3724,49 +3724,49 @@ window.closeChecklistsKpiModal = function() {
 .bh2-today{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:20px 22px;box-shadow:0 1px 3px rgba(13,17,23,.04);align-self:start}
 .bh2-today-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
 .bh2-today-head h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:20px;color:#0D1117;margin:0}
-.bh2-today-head h2 em{font-style:italic;color:#1A7A5E}
+.bh2-today-head h2 em{font-style:italic;color:#0E3B2E}
 .bh2-today-date{font-size:12px;color:#7A8695;font-weight:500}
 .bh2-ops{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:stretch}
 .bh2-op{position:relative;border:1px solid rgba(200,184,154,.4);border-radius:14px;padding:15px 15px 13px;cursor:pointer;transition:all .2s cubic-bezier(.3,.9,.4,1);background:linear-gradient(160deg,#FFFDF9,#FAF6EE)}
-.bh2-op:hover{border-color:rgba(26,122,94,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
+.bh2-op:hover{border-color:rgba(14,59,46,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
 .bh2-op-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .bh2-op-lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#7A8695}
 .bh2-op-ic{width:30px;height:30px;border-radius:9px;background:rgba(183,121,31,.13);color:#B7791F;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;box-shadow:0 1px 2px rgba(183,121,31,.12)}
 .bh2-op-num{font-family:'Instrument Serif',serif;font-weight:400;font-size:38px;line-height:1;color:#B7791F;margin-bottom:4px}
 .bh2-op-sub{font-size:11.5px;color:#7A8695}
-.bh2-op-go{position:absolute;right:12px;bottom:12px;font-size:10px;color:#1A7A5E;opacity:0;transition:opacity .18s}
+.bh2-op-go{position:absolute;right:12px;bottom:12px;font-size:10px;color:#0E3B2E;opacity:0;transition:opacity .18s}
 .bh2-op:hover .bh2-op-go{opacity:1}
 .bh2-feat{display:flex;flex-direction:column;gap:12px;min-width:0}
 .bh2-ca{background:#0D1117;border-radius:20px;padding:16px 20px;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:transform .18s;min-height:0;flex:1}
 .bh2-ca:hover{transform:translateY(-2px)}
-.bh2-ca::before{content:'';position:absolute;top:-120px;right:-80px;width:280px;height:280px;border-radius:50%;background:radial-gradient(closest-side,rgba(26,122,94,.45),transparent 70%);pointer-events:none}
+.bh2-ca::before{content:'';position:absolute;top:-120px;right:-80px;width:280px;height:280px;border-radius:50%;background:radial-gradient(closest-side,rgba(14,59,46,.45),transparent 70%);pointer-events:none}
 .bh2-ca-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.55);display:flex;justify-content:space-between;align-items:center;position:relative}
-.bh2-ca-lbl i{color:#6ee7b7;font-size:12px}
+.bh2-ca-lbl i{color:#8FC7AF;font-size:12px}
 .bh2-ca #kpiCaValue{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:36px;line-height:1.05;margin:8px 0 1px;position:relative;color:#fff !important;display:block}
 .bh2-ca #kpiCaSub{font-size:12px;color:rgba(255,255,255,.55);position:relative}
 .bh2-ca-subrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;position:relative}
 .bh2-ca-spark{margin-top:auto;position:relative;padding-top:14px}
 .bh2-ca-spark svg{display:block;width:100%;height:46px}
-.bh2-ca-delta{font-size:11px;font-weight:700;color:#6ee7b7;white-space:nowrap}
+.bh2-ca-delta{font-size:11px;font-weight:700;color:#8FC7AF;white-space:nowrap}
 /* Occupation — carte vedette claire, même rang que le CA */
 .bh2-occ{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:16px 20px;cursor:pointer;transition:all .18s;box-shadow:0 1px 3px rgba(13,17,23,.04)}
-.bh2-occ:hover{border-color:rgba(26,122,94,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
+.bh2-occ:hover{border-color:rgba(14,59,46,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
 .bh2-occ-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7A8695;display:flex;justify-content:space-between;align-items:center}
 .bh2-occ-lbl i{color:#B7791F;font-size:12px}
 .bh2-occ-ring{position:relative;width:96px;height:96px;margin:8px auto 0}
 .bh2-occ-legend{text-align:center;font:500 12px 'DM Sans',sans-serif;color:#8A8375;margin-top:8px;min-height:1.2em}
-.bh2-occ-legend b{color:#1A7A5E;font-weight:700}
+.bh2-occ-legend b{color:#0E3B2E;font-weight:700}
 .bh2-occ-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .occ-rbg{fill:none;stroke:rgba(183,121,31,.16);stroke-width:7}
 .occ-rfg{fill:none;stroke:#B7791F;stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.3,.9,.3,1)}
 .bh2-occ-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-weight:400;font-size:24px;line-height:1;color:#B7791F}
 .bh2-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
 .bh2-stat{background:#fff;border:1px solid rgba(200,184,154,.42);border-radius:16px;padding:15px 16px 14px;display:block;position:relative;cursor:pointer;transition:all .2s cubic-bezier(.3,.9,.4,1);min-width:0}
-.bh2-stat:hover{border-color:rgba(26,122,94,.35);box-shadow:0 10px 26px rgba(13,17,23,.08);transform:translateY(-2px)}
+.bh2-stat:hover{border-color:rgba(14,59,46,.35);box-shadow:0 10px 26px rgba(13,17,23,.08);transform:translateY(-2px)}
 .bh2-stat>div{display:flex;flex-direction:column-reverse;gap:5px;min-width:0}
 .bh2-stat-ic{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:9px;background:#F6EFE3;color:#B7791F;display:flex;align-items:center;justify-content:center;font-size:12px}
 .bh2-stat .bh2-lbl{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8A8375;padding-right:36px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bh2-stat:hover{border-color:rgba(26,122,94,.4);box-shadow:0 4px 14px rgba(13,17,23,.06)}
+.bh2-stat:hover{border-color:rgba(14,59,46,.4);box-shadow:0 4px 14px rgba(13,17,23,.06)}
 /* Neutralise tout style hérité (ancien highlight "Logements actifs" dans les CSS externes) */
 html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{background:#fff !important}
 </style>
@@ -3783,7 +3783,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 })();
 </script>
 <style>
-.bh2-stat-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:rgba(26,122,94,.10);color:#1A7A5E}
+.bh2-stat-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:rgba(14,59,46,.10);color:#0E3B2E}
 .bh2-stat-ic.n{background:rgba(107,114,128,.10);color:#6B7280}
 .bh2-num{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:29px;line-height:1;color:#B7791F}
 .bh2-lbl{font-size:10.5px;color:#7A8695;font-weight:500;margin-top:2px;line-height:1.25}
@@ -3913,7 +3913,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 <div class="calendar-header-top">
 <!-- Titre gauche -->
 <h3 class="calendar-title-modern">
-  <span style="background:#1A7A5E;width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+  <span style="background:#0E3B2E;width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
     <i class="fas fa-calendar-alt" style="font-size:16px;color:white;"></i>
   </span>
   <div>
@@ -3932,7 +3932,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
     <button class="view-tab" data-view="week" style="padding:5px 14px;border-radius:999px;border:none;background:transparent;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
       <i class="fas fa-calendar-week" style="font-size:11px;"></i><span>Semaine</span>
     </button>
-    <button class="view-tab active" data-view="month" style="padding:5px 14px;border-radius:999px;border:none;background:#1A7A5E;color:white;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
+    <button class="view-tab active" data-view="month" style="padding:5px 14px;border-radius:999px;border:none;background:#0E3B2E;color:white;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
       <i class="fas fa-calendar-alt" style="font-size:11px;"></i><span>Mois</span>
     </button>
     <button class="view-tab" data-view="year" style="padding:5px 14px;border-radius:999px;border:none;background:transparent;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;">
@@ -3964,7 +3964,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 </div>
 <!-- Period Navigation -->
 <div class="period-navigation" style="display:flex;align-items:center;gap:8px;">
-<button onclick="openBatchEditModal()" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:#1A7A5E;border:none;color:white;border-radius:8px;cursor:pointer;flex-shrink:0;" title="Édition groupée">
+<button onclick="openBatchEditModal()" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:#0E3B2E;border:none;color:white;border-radius:8px;cursor:pointer;flex-shrink:0;" title="Édition groupée">
   <i class="fas fa-layer-group" style="font-size:14px;"></i>
 </button>
 <button class="period-nav-btn" id="prevPeriod">
@@ -4188,7 +4188,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
     <!-- Footer -->
     <div style="padding:12px 16px calc(16px + env(safe-area-inset-bottom, 0px));display:flex;gap:8px;align-items:center;border-top:1px solid rgba(200,184,154,.35);background:#F5F0E8;flex-shrink:0;">
       <button class="btn btn-ghost" id="newReservationCancel" type="button" style="height:42px;padding:0 18px;border-radius:12px;font-size:13px;font-weight:600;">Annuler</button>
-      <button id="newReservationSubmit" type="button" style="flex:1;height:42px;border-radius:12px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#1A7A5E,#0f5c46);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+      <button id="newReservationSubmit" type="button" style="flex:1;height:42px;border-radius:12px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#0E3B2E,#0f5c46);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s;" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
         <i class="fas fa-check" style="font-size:13px;"></i> Enregistrer
       </button>
     </div>
@@ -4208,7 +4208,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 <!-- FullCalendar retiré : le dashboard utilise renderModernCalendar() (calendrier maison), pas la lib FullCalendar -->
 <!-- <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script> -->
 <!-- <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js"></script> -->
-<script src="/js/app.js?v=b135ab18"></script>
+<script src="/js/app.js?v=ce9b384d"></script>
 <style>
     /* Styles spécifiques calendrier & UI complémentaire */
     #calendar {
@@ -4228,7 +4228,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
     [data-theme="dark"] .fc {
       --fc-page-bg-color: var(--bg-primary);
       --fc-neutral-bg-color: var(--bg-secondary);
-      --fc-today-bg-color: rgba(16, 185, 129, 0.1);
+      --fc-today-bg-color: rgba(14, 59, 46, 0.1);
     }
     
     .fc .fc-button {
@@ -4440,7 +4440,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 }
 
 .activity-section-header i {
-  color: #10B981;
+  color: #0E3B2E;
   font-size: 16px;
 }
 
@@ -4470,7 +4470,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 
 .activity-item:hover {
   background: #f3f4f6;
-  border-color: #10B981;
+  border-color: #0E3B2E;
 }
 
 .activity-icon {
@@ -4500,8 +4500,8 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 }
 
 .activity-icon.new-booking {
-  background: #d1fae5;
-  color: #065f46;
+  background: #DCE9E3;
+  color: #0A2C22;
 }
 
 .activity-content {
@@ -4745,7 +4745,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
     }
 
     .overview-dot.arrival {
-      background: #22c55e;
+      background: #1E6E52;
     }
 
     .overview-dot.stay {
@@ -4812,7 +4812,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
       // Afficher un message de succès
       const successBanner = document.createElement('div');
       successBanner.innerHTML = `
-        <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 16px; text-align: center; position: fixed; top: 0; left: 0; right: 0; z-index: 10000;">
+        <div style="background: linear-gradient(135deg, #0E3B2E, #0A2C22); color: white; padding: 16px; text-align: center; position: fixed; top: 0; left: 0; right: 0; z-index: 10000;">
           <i class="fas fa-check-circle"></i>
           <strong>Paiement réussi !</strong> Votre abonnement est maintenant actif.
         </div>
@@ -5403,7 +5403,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           function statusRow(color, label) {
             var isOk = (color || '').indexOf('239') === -1 && (color || '').toLowerCase().indexOf('ef4444') === -1 && color !== '#6B7280';
             var txt = isOk ? 'Opérationnel' : (color === '#6B7280' ? 'Vérification…' : 'Indisponible');
-            var txtColor = isOk ? '#1A7A5E' : (color === '#6B7280' ? '#9CA3AF' : '#EF4444');
+            var txtColor = isOk ? '#0E3B2E' : (color === '#6B7280' ? '#9CA3AF' : '#EF4444');
             return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;">'
               + '<div style="display:flex;align-items:center;gap:10px;">'
               + '<span style="width:9px;height:9px;border-radius:50%;background:' + color + ';display:inline-block;flex-shrink:0;box-shadow:0 0 0 3px ' + color + '22;"></span>'
@@ -5770,16 +5770,16 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       ouverte: { txt: 'Mission Hosterzz : proposée', color: '#7A8695' },
       acceptee: { txt: 'Mission Hosterzz : acceptée', color: '#E8A13A' },
       en_cours: { txt: 'Mission Hosterzz : en cours', color: '#E8A13A' },
-      terminee: { txt: 'Mission Hosterzz : terminée ✓', color: '#1A7A5E' }
+      terminee: { txt: 'Mission Hosterzz : terminée ✓', color: '#0E3B2E' }
     };
     const l = labels[m.statut] || { txt: 'Mission Hosterzz : ' + m.statut, color: '#7A8695' };
     // Prestataire connu : on l'affiche et on permet de le joindre directement.
     let presta = '';
     if (m.prestataire_nom) {
       const tel = m.prestataire_telephone ? String(m.prestataire_telephone).replace(/\s+/g, '') : '';
-      presta = '<div style="font-size:12px;margin-top:5px;color:#1A7A5E;font-weight:600;"><i class="fas fa-user" style="font-size:11px;"></i> ' + m.prestataire_nom
-        + (tel ? ' · <a href="tel:' + tel + '" style="color:#1A7A5E;text-decoration:underline;">Appeler</a>'
-               + ' · <a href="sms:' + tel + '" style="color:#1A7A5E;text-decoration:underline;">SMS</a>' : '')
+      presta = '<div style="font-size:12px;margin-top:5px;color:#0E3B2E;font-weight:600;"><i class="fas fa-user" style="font-size:11px;"></i> ' + m.prestataire_nom
+        + (tel ? ' · <a href="tel:' + tel + '" style="color:#0E3B2E;text-decoration:underline;">Appeler</a>'
+               + ' · <a href="sms:' + tel + '" style="color:#0E3B2E;text-decoration:underline;">SMS</a>' : '')
         + '</div>';
     }
     return '<div style="font-size:11px;margin-top:4px;color:' + l.color + ';font-weight:600;"><img src="' + HZ_LOGO_DATAURI + '" alt="" style="width:11px;height:11px;vertical-align:-1px;object-fit:contain;"> ' + l.txt + '</div>' + presta;
@@ -5865,7 +5865,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     if (level === 'critical') return '#dc2626'; // Rouge foncé
     if (level === 'red') return '#ef4444';
     if (level === 'orange') return '#f59e0b';
-    return '#10b981';
+    return '#0E3B2E';
   };
 
   // Helper pour enrichir les réservations avec les vrais noms de logements
@@ -6069,19 +6069,19 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           break;
           
         case 'risks': // Risques à venir
-          if (value === 0) color = '#1A7A5E'; // Vert = tout va bien
+          if (value === 0) color = '#0E3B2E'; // Vert = tout va bien
           else if (value <= 2) color = '#0D1117'; // Neutre
           else color = '#B7791F'; // Ambre
           break;
           
         case 'deposits': // Cautions prises
-          color = value >= 1 ? '#1A7A5E' : '#0D1117';
+          color = value >= 1 ? '#0E3B2E' : '#0D1117';
           break;
           
         case 'occupancy': // Taux d\'occupation (en %)
           if (value <= 30) color = '#C2410C'; // Orange brûlé
           else if (value <= 50) color = '#B7791F'; // Ambre
-          else color = '#1A7A5E'; // Vert
+          else color = '#0E3B2E'; // Vert
           break;
       }
       
@@ -6239,7 +6239,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         if (prev > 0) {
           const pct = Math.round(((caTotal - prev) / prev) * 100);
           delta.innerHTML = '<i class="fas fa-arrow-trend-' + (pct >= 0 ? 'up' : 'down') + '"></i> ' + (pct >= 0 ? '+' : '') + pct + ' % vs ' + monthNames[(m + 11) % 12].toLowerCase();
-          delta.style.color = pct >= 0 ? '#6ee7b7' : '#F0B35B';
+          delta.style.color = pct >= 0 ? '#8FC7AF' : '#F0B35B';
         } else { delta.textContent = ''; }
       }
       if (spark) {
@@ -6250,8 +6250,8 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
           const yv = 34 - (v / max) * 30;
           return x.toFixed(1) + ',' + yv.toFixed(1);
         });
-        spark.innerHTML = '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#6ee7b7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
-          + '<polygon points="0,38 ' + pts.join(' ') + ' 300,38" fill="rgba(110,231,183,.09)"/>';
+        spark.innerHTML = '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#8FC7AF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
+          + '<polygon points="0,38 ' + pts.join(' ') + ' 300,38" fill="rgba(143,199,175,.09)"/>';
       }
     } catch(e) { console.warn('CA sparkline error', e); }
   }
@@ -6264,12 +6264,12 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;';
       m.innerHTML = '<div class="bh-sheet-panel" style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:calc(80vh - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden;">'
         + '<div class="bh-sheet-head" style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">'
-        + '<div><div style="font-size:16px;font-weight:700;color:#0D1117;"><i class="fas fa-chart-line" style="color:#1A7A5E;margin-right:8px;"></i>CA mensuel</div><div id="caKpiModalSubtitle" style="font-size:12px;color:#7A8695;margin-top:2px;"></div></div>'
+        + '<div><div style="font-size:16px;font-weight:700;color:#0D1117;"><i class="fas fa-chart-line" style="color:#0E3B2E;margin-right:8px;"></i>CA mensuel</div><div id="caKpiModalSubtitle" style="font-size:12px;color:#7A8695;margin-top:2px;"></div></div>'
         + '<button id="caKpiModalClose" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>'
         + '</div>'
         + '<div style="padding:14px 20px 6px;display:flex;justify-content:space-between;align-items:center;">'
         + '<span style="font-size:12px;color:#7A8695;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Total</span>'
-        + '<span id="caKpiModalTotal" style="font-size:20px;font-weight:700;color:#1A7A5E;"></span>'
+        + '<span id="caKpiModalTotal" style="font-size:20px;font-weight:700;color:#0E3B2E;"></span>'
         + '</div>'
         + '<div id="caKpiModalContent" style="overflow-y:auto;padding:8px 20px 40px;"></div>'
         + '</div>';
@@ -6303,13 +6303,13 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         var pct = caTotal2 > 0 ? Math.round((p.amount/caTotal2)*100) : 0;
         var occPct = Math.min(100, Math.round((p.nights / daysInMonth) * 100));
         return '<div style="background:rgba(255,255,255,.6);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">'
-          + '<div style="width:36px;height:36px;border-radius:9px;background:rgba(26,122,94,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="color:#1A7A5E;font-size:14px;"></i></div>'
+          + '<div style="width:36px;height:36px;border-radius:9px;background:rgba(14,59,46,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="color:#0E3B2E;font-size:14px;"></i></div>'
           + '<div style="flex:1;min-width:0;">'
           + '<div style="font-size:13px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.name+'</div>'
           + '<div style="font-size:11px;color:#7A8695;margin-top:2px;">'+p.count+' rés. · '+p.nights+' nuits · '+pct+'% du CA</div>'
-          + '<div style="margin-top:6px;height:4px;background:rgba(200,184,154,.3);border-radius:99px;"><div style="height:4px;width:'+occPct+'%;background:#1A7A5E;border-radius:99px;"></div></div>'
+          + '<div style="margin-top:6px;height:4px;background:rgba(200,184,154,.3);border-radius:99px;"><div style="height:4px;width:'+occPct+'%;background:#0E3B2E;border-radius:99px;"></div></div>'
           + '</div>'
-          + '<div style="font-size:16px;font-weight:700;color:#1A7A5E;flex-shrink:0;">'+fmtAmt(p.amount)+'</div>'
+          + '<div style="font-size:16px;font-weight:700;color:#0E3B2E;flex-shrink:0;">'+fmtAmt(p.amount)+'</div>'
           + '</div>';
       }).join('');
     }
@@ -6374,7 +6374,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       const statusCounts = allWithDeposit.reduce((acc, r) => { acc[r.deposit.status] = (acc[r.deposit.status]||0)+1; return acc; }, {});
       console.log('🛡️ Deposits présents par statut:', statusCounts, '| total avec deposit:', allWithDeposit.length);
 
-      depositsVal.style.color = count >= 1 ? '#1A7A5E' : '#0D1117';
+      depositsVal.style.color = count >= 1 ? '#0E3B2E' : '#0D1117';
       depositsVal.style.fontWeight = '700';
       if (window.bhAnimateValue) window.bhAnimateValue(depositsVal, count); else depositsVal.textContent = count;
 
@@ -6421,7 +6421,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     };
     var path = icons[icon] || icons.inbox;
     return '<div class="bh-empty">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + path + '</svg>' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="#0E3B2E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + path + '</svg>' +
       '<div class="bh-empty-title">' + title + '</div>' +
       (text ? '<div class="bh-empty-text">' + text + '</div>' : '') +
       '</div>';
@@ -6521,7 +6521,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         return `
           <div style="margin-bottom:18px;">
             <div style="font:700 12px 'DM Sans',sans-serif;letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;color:#7A8695;">
-              <i class="fas ${icon}" style="color:#1A7A5E;"></i> ${label}
+              <i class="fas ${icon}" style="color:#0E3B2E;"></i> ${label}
               <span style="margin-left:auto;background:#EAF3EF;color:#166B52;border-radius:99px;padding:2px 9px;font-size:12px;">${list.length}</span>
             </div>
             <div class="bh-mlist">${list.map(r => {
@@ -7049,8 +7049,8 @@ try {
     airbnb:            { bg:'#F2C9C6', fg:'#8A2E29', ac:'#C0433C', label:'Airbnb',       cls:'airbnb'   },
     booking:           { bg:'#C3D0E4', fg:'#1E3A5F', ac:'#2E5288', label:'Booking.com',   cls:'booking'  },
     bdc:               { bg:'#C3D0E4', fg:'#1E3A5F', ac:'#2E5288', label:'Booking.com',   cls:'booking'  },
-    direct:            { bg:'#BFD8CC', fg:'#0F4433', ac:'#1E6E52', label:'Direct',        cls:'direct'   },
-    manuel:            { bg:'#BFD8CC', fg:'#0F4433', ac:'#1E6E52', label:'Direct',        cls:'direct'   },
+    direct:            { bg:'#BFD8CC', fg:'#0F4433', ac:'#0E3B2E', label:'Direct',        cls:'direct'   },
+    manuel:            { bg:'#BFD8CC', fg:'#0F4433', ac:'#0E3B2E', label:'Direct',        cls:'direct'   },
     abritel:           { bg:'#BFDCEC', fg:'#134A63', ac:'#2E86B0', label:'Abritel',       cls:'abritel'  },
     expedia:           { bg:'#EDD9A4', fg:'#5F4609', ac:'#B88A22', label:'Expedia',       cls:'expedia'  },
     vrbo:              { bg:'#C4D3E8', fg:'#173E6B', ac:'#2E6BB0', label:'Vrbo',          cls:'vrbo'     },
@@ -7183,7 +7183,7 @@ try {
 
     // Left: logo + title
     var left = div('display:flex;align-items:center;gap:10px;padding:12px 0;');
-    left.innerHTML = '<div style="background:#1A7A5E;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-calendar-alt" style="font-size:14px;color:white;"></i></div>'
+    left.innerHTML = '<div style="background:#0E3B2E;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-calendar-alt" style="font-size:14px;color:white;"></i></div>'
       + '<div><div style="font-size:15px;font-weight:600;color:white;line-height:1.2;">Calendrier des <em style="color:#4ADE80;font-style:italic;">réservations</em></div>'
       + '<div id="bhCalSubtitle" style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">Vue mensuelle</div></div>';
 
@@ -7224,7 +7224,7 @@ try {
     var w = getWrap();
     w.querySelectorAll('.bh-view-tabs button').forEach(function(btn) {
       var active = btn.dataset.view === state.view;
-      btn.style.background = active ? '#1A7A5E' : 'transparent';
+      btn.style.background = active ? '#0E3B2E' : 'transparent';
       btn.style.color = active ? 'white' : 'rgba(255,255,255,.6)';
       btn.style.fontWeight = active ? '600' : '500';
     });
@@ -7245,12 +7245,12 @@ try {
     nav.className = 'bh-cal-nav';
 
     // Bouton Aujourd'hui — pilule verte token
-    var todayBtn = el('button','height:32px;padding:0 13px;border-radius:999px;border:none;background:#1A7A5E;color:white;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;transition:all .15s;font-family:inherit;box-shadow:0 1px 4px rgba(26,122,94,.25);');
+    var todayBtn = el('button','height:32px;padding:0 13px;border-radius:999px;border:none;background:#0E3B2E;color:white;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;transition:all .15s;font-family:inherit;box-shadow:0 1px 4px rgba(14,59,46,.25);');
     todayBtn.textContent = 'Aujourd\u2019hui';
     todayBtn.title = 'Revenir au mois courant';
     todayBtn.onclick = function() { state.date = new Date(); render(); };
     todayBtn.onmouseover = function(){ this.style.background='#15654E'; };
-    todayBtn.onmouseout  = function(){ this.style.background='#1A7A5E'; };
+    todayBtn.onmouseout  = function(){ this.style.background='#0E3B2E'; };
 
     var prev = el('button','width:32px;height:32px;border-radius:999px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
     prev.innerHTML = '<i class="fas fa-chevron-left" style="font-size:11px;"></i>';
@@ -7270,7 +7270,7 @@ try {
     if (state.view === 'month') {
       var isCompact = false;
       try { isCompact = localStorage.getItem('bhCalCompact') === '1'; } catch(e) {}
-      compactBtn = el('button','height:32px;padding:0 11px;border-radius:999px;border:1px solid '+(isCompact?'#1A7A5E':'rgba(0,0,0,.1)')+';background:'+(isCompact?'rgba(26,122,94,.1)':'white')+';color:'+(isCompact?'#1A7A5E':'#6B7280')+';font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0;display:flex;align-items:center;gap:5px;transition:all .15s;font-family:inherit;');
+      compactBtn = el('button','height:32px;padding:0 11px;border-radius:999px;border:1px solid '+(isCompact?'#0E3B2E':'rgba(0,0,0,.1)')+';background:'+(isCompact?'rgba(14,59,46,.1)':'white')+';color:'+(isCompact?'#0E3B2E':'#6B7280')+';font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0;display:flex;align-items:center;gap:5px;transition:all .15s;font-family:inherit;');
       compactBtn.innerHTML = '<i class="fas fa-compress-alt" style="font-size:10px;"></i><span>Compact</span>';
       compactBtn.title = isCompact ? 'Revenir à la vue confort' : 'Vue compacte (lignes réduites, prix masqués)';
       compactBtn.onclick = function() {
@@ -7405,7 +7405,7 @@ try {
     var selStr = ds(state.date);
 
     // Date scroller
-    var scroller = div('display:flex;align-items:center;padding:10px 12px;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;background:#F5F2EC;border-bottom:1px solid rgba(26,122,94,.1);');
+    var scroller = div('display:flex;align-items:center;padding:10px 12px;gap:4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;background:#F5F2EC;border-bottom:1px solid rgba(14,59,46,.1);');
     scroller.style.cssText += '-ms-overflow-style:none;';
     var dates = [];
     for (var i = -4; i <= 16; i++) {
@@ -7418,9 +7418,9 @@ try {
       var isTod = dstr === todayStr;
       var btn = el('button',
         'flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 10px;border-radius:12px;border:none;cursor:pointer;min-width:44px;font-family:inherit;transition:all .15s;'
-        +'background:'+(isSel?'#1A7A5E':isTod?'rgba(26,122,94,.1)':'white')
-        +';color:'+(isSel?'white':isTod?'#1A7A5E':'#374151')
-        +';box-shadow:'+(isSel?'0 2px 8px rgba(26,122,94,.28)':'0 1px 3px rgba(0,0,0,.06)')+';');
+        +'background:'+(isSel?'#0E3B2E':isTod?'rgba(14,59,46,.1)':'white')
+        +';color:'+(isSel?'white':isTod?'#0E3B2E':'#374151')
+        +';box-shadow:'+(isSel?'0 2px 8px rgba(14,59,46,.28)':'0 1px 3px rgba(0,0,0,.06)')+';');
       btn.innerHTML = '<span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;opacity:'+(isSel?1:.55)+'">'+DAYS_MIN[d2.getDay()]+'</span>'
         +'<span style="font-size:17px;font-weight:'+(isSel||isTod?800:600)+'">'+d2.getDate()+'</span>';
       (function(str){ btn.onclick = function(){ state.date = dFromStr(str); render(); }; })(dstr);
@@ -7471,7 +7471,7 @@ try {
     var stats = div('display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 14px 0;');
     var activeFilter = null;
     var cardIn = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border:2px solid transparent;cursor:pointer;transition:all .2s;');
-    cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #1A7A5E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
+    cardIn.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #0E3B2E;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E3B2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div><div style="font-size:32px;font-weight:800;color:#1A1F2E;line-height:1">'+checkins+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkins</div>';
     var cardOut = div('background:white;border-radius:16px;padding:18px 12px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);cursor:pointer;transition:all .2s;border:2px solid transparent;');
     cardOut.innerHTML = '<div style="width:44px;height:44px;border-radius:50%;background:white;border:2px solid #DC2626;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div><div style="font-size:32px;font-weight:800;color:#DC2626;line-height:1">'+checkouts+'</div><div style="font-size:11px;color:#9CA3AF;margin-top:4px;">Checkouts</div>';
     stats.appendChild(cardIn); stats.appendChild(cardOut);
@@ -7482,8 +7482,8 @@ try {
         var t = sec.dataset.type;
         sec.style.display = !activeFilter || (activeFilter==='checkins'&&t==='arrivees') || (activeFilter==='checkouts'&&t==='departs') ? '' : 'none';
       });
-      cardIn.style.border  = activeFilter==='checkins'  ? '2px solid #1A7A5E' : '2px solid transparent';
-      cardIn.style.background = activeFilter==='checkins' ? 'rgba(26,122,94,.08)' : 'white';
+      cardIn.style.border  = activeFilter==='checkins'  ? '2px solid #0E3B2E' : '2px solid transparent';
+      cardIn.style.background = activeFilter==='checkins' ? 'rgba(14,59,46,.08)' : 'white';
       cardIn.style.opacity = activeFilter==='checkouts' ? '0.45' : '1';
       cardOut.style.opacity = activeFilter==='checkins' ? '0.45' : '1';
       cardOut.style.border = activeFilter==='checkouts' ? '2px solid #DC2626' : '2px solid transparent';
@@ -7534,8 +7534,8 @@ try {
     } else {
       if (arrivees.length>0) {
         var secIn = div(''); secIn.className='bh-section-block'; secIn.dataset.type='arrivees';
-        secIn.appendChild(makeSectionLabel('Arrivées', '#1A7A5E'));
-        arrivees.forEach(function(r){ secIn.appendChild(makeBookingCard(r,'#1A7A5E','M5 12h14M12 5l7 7-7 7')); });
+        secIn.appendChild(makeSectionLabel('Arrivées', '#0E3B2E'));
+        arrivees.forEach(function(r){ secIn.appendChild(makeBookingCard(r,'#0E3B2E','M5 12h14M12 5l7 7-7 7')); });
         listDiv.appendChild(secIn);
       }
       if (departs.length>0) {
@@ -7557,11 +7557,11 @@ try {
     if (list.length>0) {
       var bot = div('display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 20px;');
       bot.innerHTML='<div style="background:white;border-radius:14px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
-        +'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="1.8" style="display:block;margin:0 auto 6px;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+        +'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E3B2E" stroke-width="1.8" style="display:block;margin:0 auto 6px;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
         +'<div style="font-size:24px;font-weight:800;color:#1A1F2E;">'+list.length+'</div>'
         +'<div style="font-size:11px;color:#9CA3AF;margin-top:2px;">Réservations</div></div>'
         +'<div style="background:white;border-radius:14px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
-        +'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A7A5E" stroke-width="1.8" style="display:block;margin:0 auto 6px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+        +'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E3B2E" stroke-width="1.8" style="display:block;margin:0 auto 6px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
         +'<div style="font-size:24px;font-weight:800;color:#1A1F2E;">'+totalG+'</div>'
         +'<div style="font-size:11px;color:#9CA3AF;margin-top:2px;">Voyageurs</div></div>';
       body.appendChild(bot);
@@ -7585,9 +7585,9 @@ try {
     days.forEach(function(d2) {
       var dstr = ds(d2);
       var isToday = dstr===today;
-      var cell = div('padding:8px 4px;text-align:center;border-right:1px solid #F5F2EC;'+(isToday?'background:rgba(26,122,94,.06);':''));
-      cell.innerHTML='<div style="font-size:10px;font-weight:600;color:'+(isToday?'#1A7A5E':'#9CA3AF')+';text-transform:uppercase;letter-spacing:.05em;">'+DAYS_MIN[d2.getDay()]+'</div>'
-        +'<div style="font-size:16px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'white':'#374151')+';'+(isToday?'background:#1A7A5E;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin:3px auto 0;':'margin-top:3px;')+'">'+d2.getDate()+'</div>';
+      var cell = div('padding:8px 4px;text-align:center;border-right:1px solid #F5F2EC;'+(isToday?'background:rgba(14,59,46,.06);':''));
+      cell.innerHTML='<div style="font-size:10px;font-weight:600;color:'+(isToday?'#0E3B2E':'#9CA3AF')+';text-transform:uppercase;letter-spacing:.05em;">'+DAYS_MIN[d2.getDay()]+'</div>'
+        +'<div style="font-size:16px;font-weight:'+(isToday?800:600)+';color:'+(isToday?'white':'#374151')+';'+(isToday?'background:#0E3B2E;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin:3px auto 0;':'margin-top:3px;')+'">'+d2.getDate()+'</div>';
       hrow.appendChild(cell);
     });
     container.appendChild(hrow);
@@ -7603,7 +7603,7 @@ try {
       days.forEach(function(d2) {
         var dstr = ds(d2);
         var isToday = dstr===today;
-        var cell = div('border-right:1px solid #F5F2EC;position:relative;min-height:56px;'+(isToday?'background:rgba(26,122,94,.03);':''));
+        var cell = div('border-right:1px solid #F5F2EC;position:relative;min-height:56px;'+(isToday?'background:rgba(14,59,46,.03);':''));
 
         // Find bookings for this cell
         state.bookings.forEach(function(r) {
@@ -7696,7 +7696,7 @@ try {
     corner.style.gridRow    = '1';
     corner.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">'
       +'<span style="font-size:9px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;">Logements</span>'
-      +'<button onclick="openReorderModal()" title="Réorganiser" style="background:none;border:none;cursor:pointer;padding:2px;color:#9CA3AF;display:flex;align-items:center;transition:color .15s;" onmouseover="this.style.color=\'#1A7A5E\'" onmouseout="this.style.color=\'#9CA3AF\'">'
+      +'<button onclick="openReorderModal()" title="Réorganiser" style="background:none;border:none;cursor:pointer;padding:2px;color:#9CA3AF;display:flex;align-items:center;transition:color .15s;" onmouseover="this.style.color=\'#0E3B2E\'" onmouseout="this.style.color=\'#9CA3AF\'">'
       +'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l4-4 4 4M7 5v14M21 15l-4 4-4-4M17 19V5"/></svg>'
       +'</button></div>';
     grid.appendChild(corner);
@@ -7729,13 +7729,13 @@ try {
       var isWknd  = dayDate.getDay()===5||dayDate.getDay()===6; // ven + sam = nuits premium
 
       var hcell = div('position:sticky;top:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #ECEAE6;cursor:pointer;user-select:none;'
-        +(isToday?'background:rgba(26,122,94,.08);border-bottom:2px solid #1A7A5E;':'background:white;border-bottom:2px solid #E8E4DF;'));
+        +(isToday?'background:rgba(14,59,46,.08);border-bottom:2px solid #0E3B2E;':'background:white;border-bottom:2px solid #E8E4DF;'));
       hcell.style.gridColumn = String(di+2);
       hcell.style.gridRow    = '1';
       hcell.className = 'bh-day-hcell';
       hcell.dataset.colIdx = String(di);
-      hcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(isToday?'#1A7A5E':isWknd?'#B7791F':'#9CA3AF')+';">'+DAYS_MIN[dayDate.getDay()]+'</span>'
-        +'<span style="font-size:12px;font-weight:'+(isToday?800:isWknd?700:600)+';color:'+(isToday?'#1A7A5E':inMonth?'#374151':'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
+      hcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(isToday?'#0E3B2E':isWknd?'#B7791F':'#9CA3AF')+';">'+DAYS_MIN[dayDate.getDay()]+'</span>'
+        +'<span style="font-size:12px;font-weight:'+(isToday?800:isWknd?700:600)+';color:'+(isToday?'#0E3B2E':inMonth?'#374151':'#C4C4C4')+';">'+dayDate.getDate()+'</span>';
 
       (function(idx5, el){ el.onclick = function(){
         var wasActive = el.classList.contains('bh-col-active');
@@ -7746,12 +7746,12 @@ try {
         // 3) On active la colonne idx5.
         el.dataset.bhPrevBg = el.style.background || '';
         el.classList.add('bh-col-active');
-        el.style.background = 'rgba(26,122,94,.13)';
+        el.style.background = 'rgba(14,59,46,.13)';
         // Léger surlignage de fond sur les cellules de la colonne active
         // (boxShadow inset = non destructif, on ne perd pas le fond d'origine).
         outer.querySelectorAll('.bh-day-cell[data-col-idx="'+idx5+'"]').forEach(function(c){
           c.dataset.bhColHi = '1';
-          c.style.boxShadow = 'inset 0 0 0 9999px rgba(26,122,94,.06)';
+          c.style.boxShadow = 'inset 0 0 0 9999px rgba(14,59,46,.06)';
         });
         // « Spotlight » : on pose un voile blanc sur TOUTE la grille SAUF la colonne
         // sélectionnée. Une barre de résa qui traverse plusieurs jours n'apparaît
@@ -7800,7 +7800,7 @@ try {
         var isToday2 = dstr3===today;
 
         var dcell = div('box-sizing:border-box;border-right:1px solid #F5F2EC;border-bottom:1px solid #EEEBE6;position:relative;overflow:hidden;'
-          +(isToday2?'background:rgba(26,122,94,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(183,121,31,.05);':''));
+          +(isToday2?'background:rgba(14,59,46,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(183,121,31,.05);':''));
         dcell.style.gridColumn = String(di2+2);
         dcell.style.gridRow    = gridRow;
         dcell.className = 'calendar-cell bh-day-cell'+(isWknd2?' weekend':'');
@@ -7810,7 +7810,7 @@ try {
         dcell.dataset.colIdx     = String(di2);
 
         if (inMonth2 && !compactMode) {
-          var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;pointer-events:none;color:'+(isWknd2?'#B7791F':'#1A7A5E')+';');
+          var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;pointer-events:none;color:'+(isWknd2?'#B7791F':'#0E3B2E')+';');
           priceEl.className = 'cell-price';
           if (prop.basePrice) priceEl.textContent = Math.round(isWknd2?(prop.weekendPrice||prop.basePrice):prop.basePrice);
           dcell.appendChild(priceEl);
@@ -7843,13 +7843,13 @@ try {
       var fIsWknd  = fDate.getDay()===5||fDate.getDay()===6;
 
       var fcell = div('display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-sizing:border-box;border-right:1px solid #ECEAE6;border-top:2px solid #E8E4DF;cursor:pointer;user-select:none;'
-        +(fIsToday?'background:rgba(26,122,94,.08);':'background:white;'));
+        +(fIsToday?'background:rgba(14,59,46,.08);':'background:white;'));
       fcell.style.gridColumn = String(fi+2);
       fcell.style.gridRow = String(footerRow);
       fcell.className = 'bh-day-hcell';
       fcell.dataset.colIdx = String(fi);
-      fcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(fIsToday?'#1A7A5E':fIsWknd?'#B7791F':'#9CA3AF')+';">'+DAYS_MIN[fDate.getDay()]+'</span>'
-        +'<span style="font-size:12px;font-weight:'+(fIsToday?800:fIsWknd?700:600)+';color:'+(fIsToday?'#1A7A5E':fInMonth?'#374151':'#C4C4C4')+';">'+fDate.getDate()+'</span>';
+      fcell.innerHTML = '<span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:'+(fIsToday?'#0E3B2E':fIsWknd?'#B7791F':'#9CA3AF')+';">'+DAYS_MIN[fDate.getDay()]+'</span>'
+        +'<span style="font-size:12px;font-weight:'+(fIsToday?800:fIsWknd?700:600)+';color:'+(fIsToday?'#0E3B2E':fInMonth?'#374151':'#C4C4C4')+';">'+fDate.getDate()+'</span>';
 
       // Même clic que le header : voile + highlight colonne
       (function(idx, el){ el.onclick = function(){
@@ -7858,9 +7858,9 @@ try {
         if (wasActive) return;
         // Activer aussi la cellule header correspondante
         var headerCell = outer.querySelector('.bh-day-hcell[data-col-idx="'+idx+'"]');
-        [el, headerCell].forEach(function(c){ if(c){ c.dataset.bhPrevBg = c.style.background||''; c.classList.add('bh-col-active'); c.style.background='rgba(26,122,94,.13)'; }});
+        [el, headerCell].forEach(function(c){ if(c){ c.dataset.bhPrevBg = c.style.background||''; c.classList.add('bh-col-active'); c.style.background='rgba(14,59,46,.13)'; }});
         outer.querySelectorAll('.bh-day-cell[data-col-idx="'+idx+'"]').forEach(function(c){
-          c.dataset.bhColHi='1'; c.style.boxShadow='inset 0 0 0 9999px rgba(26,122,94,.06)';
+          c.dataset.bhColHi='1'; c.style.boxShadow='inset 0 0 0 9999px rgba(14,59,46,.06)';
         });
         var bodyH=totalH-hdrH, slotX=propW+idx*colW, rightX=slotX+colW;
         function bhV(l,w){ if(w<=0)return; var v=div('position:absolute;pointer-events:none;background:rgba(248,245,239,.72);z-index:6;');v.className='bh-col-veil';v.style.left=l+'px';v.style.top=hdrH+'px';v.style.width=w+'px';v.style.height=bodyH+'px';grid.appendChild(v);}
@@ -8012,13 +8012,13 @@ try {
               return s<=dstr&&e>dstr;
             });
             cells+='<div style="font-size:8px;text-align:center;border-radius:3px;padding:1px 0;'
-              +(isT?'background:#1A7A5E;color:white;font-weight:800;':hasBk?'background:rgba(26,122,94,.15);color:#1A7A5E;font-weight:600;':'color:#6B7280;')+'">'
+              +(isT?'background:#0E3B2E;color:white;font-weight:800;':hasBk?'background:rgba(14,59,46,.15);color:#0E3B2E;font-weight:600;':'color:#6B7280;')+'">'
               +day+'</div>';
           }
           return cells;
         })()
         +'</div>'
-        +(count>0?'<div style="margin-top:8px;font-size:11px;color:#1A7A5E;font-weight:600;">'+count+' rés.</div>':'');
+        +(count>0?'<div style="margin-top:8px;font-size:11px;color:#0E3B2E;font-weight:600;">'+count+' rés.</div>':'');
       outer.appendChild(mcard);
     }
     body.appendChild(outer);
@@ -8033,7 +8033,7 @@ try {
     if (existing) { existing.remove(); return; }
     var panel = div('padding:10px 14px;background:#F5F2EC;border-bottom:1px solid rgba(0,0,0,.06);display:flex;align-items:center;gap:8px;');
     panel.className = 'bh-search-panel';
-    var input = el('input','flex:1;padding:9px 12px;border-radius:10px;border:1.5px solid rgba(26,122,94,.2);background:white;font-size:13px;color:#374151;outline:none;font-family:inherit;');
+    var input = el('input','flex:1;padding:9px 12px;border-radius:10px;border:1.5px solid rgba(14,59,46,.2);background:white;font-size:13px;color:#374151;outline:none;font-family:inherit;');
     input.placeholder = 'Rechercher un voyageur ou un logement…';
     input.oninput = function() {
       var q = input.value.toLowerCase().trim();
@@ -8095,7 +8095,7 @@ try {
     var row1 = div('display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#F9FAFB;border-radius:10px;cursor:pointer;');
     row1.innerHTML='<span style="font-size:13px;font-weight:500;color:#374151;">Afficher les prix</span>';
     var tog = div('width:40px;height:22px;border-radius:11px;position:relative;transition:background .2s;flex-shrink:0;');
-    tog.style.background = showPrices?'#1A7A5E':'#D1D5DB';
+    tog.style.background = showPrices?'#0E3B2E':'#D1D5DB';
     var knob = div('position:absolute;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);');
     knob.style.left = showPrices?'20px':'3px';
     tog.appendChild(knob);
@@ -8105,7 +8105,7 @@ try {
       if(p2.showPrices===undefined) p2.showPrices=true;
       p2.showPrices=!p2.showPrices;
       localStorage.setItem('bhCalPrefs',JSON.stringify(p2));
-      tog.style.background=p2.showPrices?'#1A7A5E':'#D1D5DB';
+      tog.style.background=p2.showPrices?'#0E3B2E':'#D1D5DB';
       knob.style.left=p2.showPrices?'20px':'3px';
       applyPrefs();
     };
@@ -8113,7 +8113,7 @@ try {
     bdy2.appendChild(sec1);
 
     var foot = div('padding:14px 18px;border-top:1px solid #F1F5F9;');
-    var applyBtn = el('button','width:100%;padding:11px;background:#1A7A5E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;');
+    var applyBtn = el('button','width:100%;padding:11px;background:#0E3B2E;color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;');
     applyBtn.textContent='Fermer';
     applyBtn.onclick=function(){panel.remove();ov.remove();};
     foot.appendChild(applyBtn);
@@ -8157,12 +8157,12 @@ try {
       // Normalize properties
       if (properties.length) {
         state.properties = properties.map(function(p,i) {
-          return { id: p.id!=null?String(p.id):String(i), name: p.internalName||p.internal_name||p.name||('Logement '+(i+1)), basePrice: p.basePrice||p.base_price||p.defaultPrice||null, weekendPrice: p.weekendPrice||p.weekend_price||null, color: p.color||'#1A7A5E' };
+          return { id: p.id!=null?String(p.id):String(i), name: p.internalName||p.internal_name||p.name||('Logement '+(i+1)), basePrice: p.basePrice||p.base_price||p.defaultPrice||null, weekendPrice: p.weekendPrice||p.weekend_price||null, color: p.color||'#0E3B2E' };
         });
       } else {
         var map={};
         state.bookings.forEach(function(r){
-          if(r.propertyId&&!map[r.propertyId]) map[r.propertyId]={id:r.propertyId,name:r.propertyName||('Logement '+r.propertyId),basePrice:null,weekendPrice:null,color:'#1A7A5E'};
+          if(r.propertyId&&!map[r.propertyId]) map[r.propertyId]={id:r.propertyId,name:r.propertyName||('Logement '+r.propertyId),basePrice:null,weekendPrice:null,color:'#0E3B2E'};
         });
         state.properties = Object.values(map);
       }
@@ -8205,11 +8205,11 @@ try {
 <div id="blockModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;">
 <div style="background:#F5F0E8;border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
   <div class="bh-sheet-head" style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(200,184,154,.4);">
-    <div style="font-size:16px;font-weight:700;color:#0D1117;display:flex;align-items:center;gap:8px;"><i class="fas fa-calendar-day" style="color:#1A7A5E;"></i> Action sur le calendrier</div>
+    <div style="font-size:16px;font-weight:700;color:#0D1117;display:flex;align-items:center;gap:8px;"><i class="fas fa-calendar-day" style="color:#0E3B2E;"></i> Action sur le calendrier</div>
     <button id="blockModalClose" style="background:rgba(0,0,0,.08);border:none;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
   </div>
   <div style="display:flex;gap:8px;padding:14px 20px 0;">
-    <button onclick="switchBlockTab('block')" id="tabBlock" style="flex:1;padding:10px 6px;border-radius:12px;border:2px solid #1A7A5E;background:#1A7A5E;color:white;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;"><i class="fas fa-lock" style="font-size:14px;"></i>Bloquer</button>
+    <button onclick="switchBlockTab('block')" id="tabBlock" style="flex:1;padding:10px 6px;border-radius:12px;border:2px solid #0E3B2E;background:#0E3B2E;color:white;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;"><i class="fas fa-lock" style="font-size:14px;"></i>Bloquer</button>
     <button onclick="switchBlockTab('unblock')" id="tabUnblock" style="flex:1;padding:10px 6px;border-radius:12px;border:2px solid #e5e7eb;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;display:none;flex-direction:column;align-items:center;gap:4px;transition:all .15s;"><i class="fas fa-lock-open" style="font-size:14px;"></i>Débloquer</button>
     <button onclick="switchBlockTab('price')" id="tabPrice" style="flex:1;padding:10px 6px;border-radius:12px;border:2px solid #e5e7eb;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;"><i class="fas fa-tag" style="font-size:14px;"></i>Prix</button>
     <button onclick="switchBlockTab('resa')" id="tabResa" style="flex:1;padding:10px 6px;border-radius:12px;border:2px solid #e5e7eb;background:white;color:#374151;font-size:12px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;"><i class="fas fa-plus" style="font-size:14px;"></i>Réservation</button>
@@ -8233,7 +8233,7 @@ try {
     <div class="form-group"><label for="dayMinStayValue">Nuitées minimum — vide = réglage par défaut</label><input class="form-control" id="dayMinStayValue" type="number" min="1" max="30" placeholder="ex: 2"/><small style="color:#6B7280;margin-top:4px;display:block">⚠️ Sur Booking.com, vérifiez que la case « Restrictions » est cochée dans le calendrier de l'extranet pour que le minimum de nuits soit appliqué.</small></div>
   </div>
   <div id="tabContentResa" style="display:none;overflow-y:auto;padding:24px 20px;text-align:center;">
-    <i class="fas fa-calendar-plus" style="font-size:40px;color:#1A7A5E;margin-bottom:12px;"></i>
+    <i class="fas fa-calendar-plus" style="font-size:40px;color:#0E3B2E;margin-bottom:12px;"></i>
     <p style="font-size:14px;font-weight:600;color:#111827;margin:0 0 6px;">Nouvelle réservation</p>
     <p style="font-size:13px;color:#6B7280;margin:0;">Ouvre le formulaire complet pré-rempli avec le logement et les dates sélectionnés.</p>
   </div>
@@ -8256,7 +8256,7 @@ try {
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 20px 14px;">
       <h2 id="detailsModalTitle" style="font-size:12px;font-weight:600;color:#8B8B84;margin:0;letter-spacing:.1em;text-transform:uppercase;">Détails de la réservation</h2>
-      <button id="closeDetailsModal" style="background:transparent;border:1px solid #EAE9E5;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#5A5A54;transition:.15s;" onmouseover="this.style.borderColor='#1E6E52';this.style.color='#1E6E52'" onmouseout="this.style.borderColor='#EAE9E5';this.style.color='#5A5A54'">×</button>
+      <button id="closeDetailsModal" style="background:transparent;border:1px solid #EAE9E5;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#5A5A54;transition:.15s;" onmouseover="this.style.borderColor='#0E3B2E';this.style.color='#0E3B2E'" onmouseout="this.style.borderColor='#EAE9E5';this.style.color='#5A5A54'">×</button>
     </div>
 
     <!-- Scrollable content -->
@@ -8267,7 +8267,7 @@ try {
     <div id="detailsModalActions" style="padding:14px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:7px;border-top:1px solid #F1F0EC;background:#FBFBFA;">
       <!-- Ligne 1 : Message + Modifier -->
       <div style="display:flex;gap:6px;">
-        <button id="footerMsgBtn" type="button" style="flex:1;height:40px;border-radius:9px;font-size:13px;font-weight:600;background:#1E6E52;border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s;" onmouseover="this.style.background='#164F3B'" onmouseout="this.style.background='#1E6E52'">
+        <button id="footerMsgBtn" type="button" style="flex:1;height:40px;border-radius:9px;font-size:13px;font-weight:600;background:#0E3B2E;border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s;" onmouseover="this.style.background='#0A2C22'" onmouseout="this.style.background='#0E3B2E'">
           <i class="fas fa-comment-dots" style="font-size:12px;"></i> Message
         </button>
         <button class="btn btn-primary" id="editBookingBtn" type="button" style="flex:1;height:38px;border-radius:10px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;">
@@ -8661,7 +8661,7 @@ try {
     ['block','price','resa','unblock'].forEach(function(t){
       var T=t.charAt(0).toUpperCase()+t.slice(1);
       var btn=document.getElementById('tab'+T), con=document.getElementById('tabContent'+T), on=t===tab;
-      if(btn){btn.style.background=on?(t==='unblock'?'#DC2626':'#1A7A5E'):'white';btn.style.color=on?'white':'#374151';btn.style.borderColor=on?(t==='unblock'?'#DC2626':'#1A7A5E'):'#e5e7eb';btn.style.display=(t==='unblock'&&!window._currentBlockId)?'none':'flex';}
+      if(btn){btn.style.background=on?(t==='unblock'?'#DC2626':'#0E3B2E'):'white';btn.style.color=on?'white':'#374151';btn.style.borderColor=on?(t==='unblock'?'#DC2626':'#0E3B2E'):'#e5e7eb';btn.style.display=(t==='unblock'&&!window._currentBlockId)?'none':'flex';}
       if(con)con.style.display=on?'block':'none';
     });
     var icons={block:'fa-lock',price:'fa-tag',resa:'fa-plus',unblock:'fa-lock-open'};
@@ -8851,7 +8851,7 @@ try {
 
     <!-- Boutons action -->
     <div style="display:flex;flex-direction:column;gap:8px;">
-      <button onclick="saveCellPrice()" style="width:100%;padding:12px;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
+      <button onclick="saveCellPrice()" style="width:100%;padding:12px;background:linear-gradient(135deg,#0E3B2E,#1E6E52);color:white;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">
         <i class="fas fa-save"></i> Enregistrer
       </button>
       <button onclick="openBlockFromCell()" style="width:100%;padding:12px;background:#fff;color:#374151;border:1.5px solid #E5E7EB;border-radius:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;">
@@ -9563,7 +9563,7 @@ console.log('👤 DEBUG GUEST:', {
       expedia: { label: 'Expedia',       bg: 'linear-gradient(135deg,#FFC72C,#FFB000)', color: '#1a1a1a', icon: 'fas fa-plane' },
       vrbo:    { label: 'Vrbo',          bg: 'linear-gradient(135deg,#1569C7,#0E4C99)', color: '#fff', icon: 'fas fa-home' },
       abritel: { label: 'Abritel',       bg: 'linear-gradient(135deg,#0096D6,#0077B3)', color: '#fff', icon: 'fas fa-house' },
-      direct:   { label: 'Direct',        bg: 'linear-gradient(135deg,#1A7A5E,#0f5c46)', color: '#fff', icon: 'fas fa-user' },
+      direct:   { label: 'Direct',        bg: 'linear-gradient(135deg,#0E3B2E,#0f5c46)', color: '#fff', icon: 'fas fa-user' },
       bhguest:  { label: 'BHGuest',       bg: 'linear-gradient(135deg,#C2410C,#9A3412)', color: '#fff', icon: 'fas fa-globe' },
     };
     const pc = PLATFORM_CONFIG[platformKey] || PLATFORM_CONFIG.direct;
@@ -9719,7 +9719,7 @@ console.log('👤 DEBUG GUEST:', {
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             ${occupancyAdults ? `<span style="font-size:12px;color:#6B7280;display:flex;align-items:center;gap:3px;"><i class="fas fa-user" style="font-size:10px;opacity:.7;"></i> ${occupancyAdults}${occupancyChildren ? '+'+occupancyChildren : ''}</span>` : ''}
             ${guestCountryFlag ? `<span style="font-size:13px;">${guestCountryFlag} <span style="font-size:12px;color:#6B7280;">${guestCountryName}</span></span>` : ''}
-            ${guestPhone && guestPhone !== 'Non renseigné' ? `<a href="tel:${telHref}" onclick="event.stopPropagation();" style="font-size:12px;color:#1A7A5E;text-decoration:none;display:flex;align-items:center;gap:3px;-webkit-touch-callout:default;"><i class="fas fa-phone" style="font-size:10px;"></i> ${guestPhone}</a>` : ''}
+            ${guestPhone && guestPhone !== 'Non renseigné' ? `<a href="tel:${telHref}" onclick="event.stopPropagation();" style="font-size:12px;color:#0E3B2E;text-decoration:none;display:flex;align-items:center;gap:3px;-webkit-touch-callout:default;"><i class="fas fa-phone" style="font-size:10px;"></i> ${guestPhone}</a>` : ''}
           </div>
         </div>
 
@@ -9807,7 +9807,7 @@ console.log('👤 DEBUG GUEST:', {
 
           <div style="display:flex;justify-content:space-between;padding:9px 0 2px;margin-top:2px;">
             <span style="font-size:13px;font-weight:700;color:#111827;">Total</span>
-            <span style="font-size:15px;font-weight:800;color:#1A7A5E;">${amountTotalFmt}</span>
+            <span style="font-size:15px;font-weight:800;color:#0E3B2E;">${amountTotalFmt}</span>
           </div>
 
           ${(() => {
@@ -9816,7 +9816,7 @@ console.log('👤 DEBUG GUEST:', {
             const hasPending = payments.some(p => p.status === 'pending' || p.status === 'created');
             const isBHGuestPaid = (booking.source === 'guest_app' || (booking.platform || '').toLowerCase().includes('boostinghost')) && hasPaid;
             if (hasPaid || isBHGuestPaid) {
-              return '<div style="display:flex;align-items:center;gap:6px;padding:6px 0 2px;font-size:12px;font-weight:600;color:#059669;"><i class=\"fas fa-check-circle\"></i> Paiement reçu</div>';
+              return '<div style="display:flex;align-items:center;gap:6px;padding:6px 0 2px;font-size:12px;font-weight:600;color:#0A2C22;"><i class=\"fas fa-check-circle\"></i> Paiement reçu</div>';
             } else if (hasPending) {
               return '<div style="display:flex;align-items:center;gap:6px;padding:6px 0 2px;font-size:12px;font-weight:600;color:#D97706;"><i class=\"fas fa-clock\"></i> Paiement en attente</div>';
             }
@@ -9829,7 +9829,7 @@ console.log('👤 DEBUG GUEST:', {
                 <i class="fas fa-wallet" style="width:12px;opacity:.5;"></i> Net hôte
                 ${hostNetIsEstimate ? '<span style="font-size:10px;font-weight:600;color:#9CA3AF;background:rgba(0,0,0,.04);padding:1px 6px;border-radius:6px;">estimé</span>' : ''}
               </span>
-              <span style="font-size:15px;font-weight:800;color:#1A7A5E;">${hostNetFmt}</span>
+              <span style="font-size:15px;font-weight:800;color:#0E3B2E;">${hostNetFmt}</span>
             </div>
             ${hostNetIsEstimate ? `<div style="font-size:11px;color:#9CA3AF;padding:1px 0 2px;text-align:right;">après commission${amountTaxes ? ', taxe séjour' : ''}${hostNetPayFee ? ' &amp; frais paiement ≈ ' + fmtAmount(hostNetPayFee) : ''}</div>` : ''}
           ` : ''}
@@ -9873,7 +9873,7 @@ try {
     }
 
     // Couleur adaptée au niveau de risque
-    const barColor = window.riskColor ? window.riskColor(riskLevel) : '#10b981';
+    const barColor = window.riskColor ? window.riskColor(riskLevel) : '#0E3B2E';
     
     const tagsHtml = riskTags.length
       ? `<div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:6px;">
@@ -10058,23 +10058,23 @@ try {
       }
 
       const isAssigned = statusText !== 'Pas encore assigné';
-      const iconColor  = isAssigned ? '#1A7A5E' : '#9CA3AF';
-      const bgColor    = isAssigned ? 'rgba(26,122,94,.08)' : 'rgba(255,255,255,.55)';
-      const borderStyle = isAssigned ? '1.5px solid rgba(26,122,94,.25)' : '1.5px solid transparent';
+      const iconColor  = isAssigned ? '#0E3B2E' : '#9CA3AF';
+      const bgColor    = isAssigned ? 'rgba(14,59,46,.08)' : 'rgba(255,255,255,.55)';
+      const borderStyle = isAssigned ? '1.5px solid rgba(14,59,46,.25)' : '1.5px solid transparent';
 
       group.innerHTML = `
         <div style="font-size:10px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:5px;">
           <i class="fas fa-broom" style="font-size:11px;"></i> Ménage
         </div>
         <div style="background:${bgColor};border:${borderStyle};border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;">
-          <div style="width:32px;height:32px;border-radius:10px;background:${isAssigned ? 'rgba(26,122,94,.15)' : 'rgba(0,0,0,.06)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <div style="width:32px;height:32px;border-radius:10px;background:${isAssigned ? 'rgba(14,59,46,.15)' : 'rgba(0,0,0,.06)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <i class="fas fa-broom" style="font-size:13px;color:${iconColor};"></i>
           </div>
           <div>
             <div style="font-size:13px;font-weight:${isAssigned ? '600' : '400'};color:${isAssigned ? '#111827' : '#9CA3AF'};">${statusText}</div>
             ${isAssigned ? '<div style="font-size:11px;color:#6B7280;margin-top:1px;">Ménage assigné</div>' : ''}
           </div>
-          ${isAssigned ? '<div style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:#1A7A5E;flex-shrink:0;"></div>' : ''}
+          ${isAssigned ? '<div style="margin-left:auto;width:8px;height:8px;border-radius:50%;background:#0E3B2E;flex-shrink:0;"></div>' : ''}
         </div>
       `;
     } catch (e) {
@@ -10123,7 +10123,7 @@ try {
           _bhCopyBtn.addEventListener('click', function() {
             var done = function() {
               _bhCopyBtn.innerHTML = '<i class="fas fa-check"></i> Copié !';
-              _bhCopyBtn.style.background = '#059669';
+              _bhCopyBtn.style.background = '#0A2C22';
               setTimeout(function(){ _bhCopyBtn.innerHTML = '<i class="fas fa-copy"></i> Copier le lien'; _bhCopyBtn.style.background = '#C2410C'; }, 2000);
             };
             var fallback = function(){ var ta=document.createElement('textarea');ta.value=_bhLink;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();done(); };
@@ -10167,9 +10167,9 @@ try {
               box.innerHTML = head + '<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:12px 14px;">'
                 + '<div style="font-size:13px;color:#9A6B00;font-weight:600;margin-bottom:8px;"><i class="far fa-clock"></i> Lien envoyé — en attente de la réponse du voyageur</div>'
                 + '<div style="font-size:11px;color:#9CA3AF;word-break:break-all;font-family:monospace;margin-bottom:8px;">' + c.shareUrl + '</div>'
-                + '<button type="button" data-arr-copy style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px;background:#1A7A5E;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;"><i class="fas fa-copy"></i> Copier le lien</button></div>';
+                + '<button type="button" data-arr-copy style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px;background:#0E3B2E;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;"><i class="fas fa-copy"></i> Copier le lien</button></div>';
             } else if (c.status === 'all_good') {
-              box.innerHTML = head + '<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:12px;padding:13px 15px;font-size:14px;color:#065F46;font-weight:600;"><i class="fas fa-check-circle"></i> Le voyageur a indiqué que tout est parfait</div>';
+              box.innerHTML = head + '<div style="background:#F1F6F3;border:1px solid #C3DBD0;border-radius:12px;padding:13px 15px;font-size:14px;color:#0A2C22;font-weight:600;"><i class="fas fa-check-circle"></i> Le voyageur a indiqué que tout est parfait</div>';
             } else if (c.status === 'issue') {
               const photos = Array.isArray(c.photos) ? c.photos : [];
               const photoHtml = photos.length
@@ -10310,7 +10310,7 @@ try {
                   style="width:100%;padding:11px 13px;border:1.5px solid var(--border-color,#d1d5db);border-radius:10px;font-size:15px;font-weight:600;background:var(--bg-primary,#fff);color:var(--text-primary,#111);box-sizing:border-box;margin-bottom:14px;"/>
                 <div style="display:flex;gap:8px;">
                   <button id="_quickAmountCancel" style="flex:1;padding:10px;border:1.5px solid var(--border-color,#d1d5db);border-radius:10px;background:transparent;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-primary,#111);">Annuler</button>
-                  <button id="_quickAmountConfirm" style="flex:2;padding:10px;border:none;border-radius:10px;background:#1A7A5E;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Générer le lien</button>
+                  <button id="_quickAmountConfirm" style="flex:2;padding:10px;border:none;border-radius:10px;background:#0E3B2E;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Générer le lien</button>
                 </div>
               </div>`;
             document.body.appendChild(overlay);
@@ -12041,7 +12041,7 @@ function renderCleaningChecklists() {
     if (checkoutDateStr === todayStr) {
       freshLabel = '<span style="font-size:10px; padding:2px 6px; border-radius:8px; background:#fee2e2; color:#dc2626; font-weight:700; margin-left:6px;">Aujourd\'hui</span>';
     } else if (checkoutDateStr === tomorrowStr) {
-      freshLabel = '<span style="font-size:10px; padding:2px 6px; border-radius:8px; background:#dcfce7; color:#16a34a; font-weight:700; margin-left:6px;">Demain</span>';
+      freshLabel = '<span style="font-size:10px; padding:2px 6px; border-radius:8px; background:#DCE9E3; color:#0E3B2E; font-weight:700; margin-left:6px;">Demain</span>';
     } else if (checkoutDateStr > tomorrowStr) {
       // date future (après demain) — pas de badge
     } else if (checkoutDateStr >= day1Str) {
@@ -12239,7 +12239,7 @@ function populateChecklistModal(checklist) {
     const validateBtn = document.createElement('button');
     validateBtn.id = 'btnValidateChecklist';
     validateBtn.className = 'btn btn-success';
-    validateBtn.style.cssText = 'background:#10b981;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;';
+    validateBtn.style.cssText = 'background:#0E3B2E;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;';
     validateBtn.innerHTML = '<i class="fas fa-check"></i> Valider le ménage';
     validateBtn.onclick = () => validateChecklist(checklist.id);
     footer.insertBefore(validateBtn, footer.firstChild);
@@ -12314,7 +12314,7 @@ function openComplementModal(id) {
           </div>
           <div style="padding:16px 20px;">
             <label style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);display:block;margin-bottom:8px;">Message pour la personne de ménage</label>
-            <textarea id="appComplementText" rows="3" placeholder="Ex : Merci de repasser sur la salle de bain, quelques points sont à revoir." style="width:100%;box-sizing:border-box;padding:12px;border:1.5px solid rgba(200,184,154,.5);border-radius:12px;font-size:14px;font-family:inherit;resize:none;background:var(--bg-secondary,#f8f6f1);color:var(--text-primary);outline:none;transition:border-color .15s;" onfocus="this.style.borderColor='#1A7A5E'" onblur="this.style.borderColor='rgba(200,184,154,.5)'"></textarea>
+            <textarea id="appComplementText" rows="3" placeholder="Ex : Merci de repasser sur la salle de bain, quelques points sont à revoir." style="width:100%;box-sizing:border-box;padding:12px;border:1.5px solid rgba(200,184,154,.5);border-radius:12px;font-size:14px;font-family:inherit;resize:none;background:var(--bg-secondary,#f8f6f1);color:var(--text-primary);outline:none;transition:border-color .15s;" onfocus="this.style.borderColor='#0E3B2E'" onblur="this.style.borderColor='rgba(200,184,154,.5)'"></textarea>
             <div style="display:flex;gap:8px;margin-top:12px;">
               <button onclick="closeComplementModal()" style="flex:1;padding:12px;border:1.5px solid rgba(200,184,154,.5);border-radius:12px;background:transparent;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Annuler</button>
               <button onclick="submitComplement()" style="flex:2;padding:12px;border:none;border-radius:12px;background:#B7791F;color:white;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
@@ -12635,7 +12635,7 @@ if (document.readyState === 'loading') {
       + 'font-family:DM Sans,sans-serif;font-size:11.5px;font-weight:500;'
       + 'display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;'
       + 'border:1px solid ' + (active ? 'transparent' : 'rgba(255,255,255,.15)') + ';'
-      + 'background:' + (active ? '#1A7A5E' : 'transparent') + ';'
+      + 'background:' + (active ? '#0E3B2E' : 'transparent') + ';'
       + 'color:' + (active ? '#fff' : 'rgba(255,255,255,.6)') + ';'
       + '"><i class="fas ' + p.i + '" style="font-size:10px;"></i> ' + p.l + '</a>';
   });
@@ -12643,7 +12643,7 @@ if (document.readyState === 'loading') {
   /* Toggle dark/light */
   html += '<div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">';
   html += '<span style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;">Mode</span>';
-  html += '<button id="bhModeToggle" style="width:40px;height:22px;border-radius:999px;border:none;cursor:pointer;position:relative;padding:0;background:#1A7A5E;">';
+  html += '<button id="bhModeToggle" style="width:40px;height:22px;border-radius:999px;border:none;cursor:pointer;position:relative;padding:0;background:#0E3B2E;">';
   html += '<span id="bhModeDot" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block;"></span>';
   html += '</button></div>';
   nav.innerHTML = html;
@@ -12654,7 +12654,7 @@ if (document.readyState === 'loading') {
     var dot = document.getElementById('bhModeDot');
     var btn = document.getElementById('bhModeToggle');
     if (dot) dot.style.transform = dark ? 'translateX(18px)' : 'translateX(0)';
-    if (btn) btn.style.background = dark ? '#1A7A5E' : 'rgba(255,255,255,.2)';
+    if (btn) btn.style.background = dark ? '#0E3B2E' : 'rgba(255,255,255,.2)';
   }
   applyTheme();
   document.getElementById('bhModeToggle').addEventListener('click', function(){
@@ -12684,12 +12684,12 @@ if (document.readyState === 'loading') {
 
     /* Titre page en Instrument Serif */
     var titles = {
-      app:      "Tableau de <em style='font-style:italic;color:#1A7A5E;font-family:&quot;Instrument Serif&quot;,serif;'>bord</em>",
-      messages: "Mes <em style='font-style:italic;color:#1A7A5E;font-family:&quot;Instrument Serif&quot;,serif;'>messages</em>",
-      settings: "Mes <em style='font-style:italic;color:#1A7A5E;font-family:&quot;Instrument Serif&quot;,serif;'>logements</em>",
-      deposits: "Gestion des <em style='font-style:italic;color:#1A7A5E;font-family:&quot;Instrument Serif&quot;,serif;'>cautions</em>",
-      factures: "Factures <em style='font-style:italic;color:#1A7A5E;font-family:&quot;Instrument Serif&quot;,serif;'>clients</em>",
-      welcome:  "Livret d'<em style='font-style:italic;color:#1A7A5E;font-family:&quot;Instrument Serif&quot;,serif;'>accueil</em>"
+      app:      "Tableau de <em style='font-style:italic;color:#0E3B2E;font-family:&quot;Instrument Serif&quot;,serif;'>bord</em>",
+      messages: "Mes <em style='font-style:italic;color:#0E3B2E;font-family:&quot;Instrument Serif&quot;,serif;'>messages</em>",
+      settings: "Mes <em style='font-style:italic;color:#0E3B2E;font-family:&quot;Instrument Serif&quot;,serif;'>logements</em>",
+      deposits: "Gestion des <em style='font-style:italic;color:#0E3B2E;font-family:&quot;Instrument Serif&quot;,serif;'>cautions</em>",
+      factures: "Factures <em style='font-style:italic;color:#0E3B2E;font-family:&quot;Instrument Serif&quot;,serif;'>clients</em>",
+      welcome:  "Livret d'<em style='font-style:italic;color:#0E3B2E;font-family:&quot;Instrument Serif&quot;,serif;'>accueil</em>"
     };
     var titleEl = document.querySelector('h1.page-title, .page-title');
     if (titleEl && titles[curPage] && !titleEl.querySelector('em')) {
@@ -12711,7 +12711,7 @@ if (document.readyState === 'loading') {
     if (actions && !document.getElementById('newReservationBtn') && curPage === 'app' && !_isCleanerRole) {
       var btn = document.createElement('button');
       btn.id = 'newReservationBtn';
-      btn.style.cssText = 'background:#1A7A5E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:DM Sans,sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;';
+      btn.style.cssText = 'background:#0E3B2E;color:#fff;border:none;border-radius:10px;padding:0 18px;height:38px;font-family:DM Sans,sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;';
       btn.innerHTML = '<i class="fas fa-plus"></i> Nouvelle réservation';
       btn.onclick = function(){ var m=document.getElementById('newReservationModal'); if(typeof openNewReservationModal==='function'){openNewReservationModal();}else if(m)m.style.display='flex'; };
       actions.appendChild(btn);
@@ -12758,8 +12758,8 @@ if (document.readyState === 'loading') {
   }
 </script>
 <!-- 📱 Expérience Mobile Native -->
-<script src="/js/mobile-native-experience.js?v=2594b603"></script>
-<script src="/js/mobile-tabs-handler.js?v=e901dd8d"></script>
+<script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
+<script src="/js/mobile-tabs-handler.js?v=01e3d29a"></script>
 
 <script id="calendar-horizontal-scroll-lock-fix-v2">
 (function() {
@@ -13038,7 +13038,7 @@ if (window.Capacitor) {
     toast.className = 'toast ' + (type || 'success');
     toast.style.cssText = 'cursor:pointer; max-width:400px;';
     var icons = { success: 'fa-check-circle', info: 'fa-info-circle', error: 'fa-exclamation-circle' };
-    var colors = { success: '#059669', info: '#3b82f6', error: '#ef4444' };
+    var colors = { success: '#0A2C22', info: '#3b82f6', error: '#ef4444' };
     toast.innerHTML = '<i class="fas ' + (icons[type]||icons.success) + '" style="font-size:20px; color:' + (colors[type]||colors.success) + ';"></i>' +
       '<div style="flex:1;"><div style="font-weight:600; font-size:14px;">' + message + '</div></div>' +
       '<button onclick="this.parentElement.remove()" style="background:none; border:none; cursor:pointer; color:#999; font-size:18px;">&times;</button>';
@@ -13242,7 +13242,7 @@ if (window.Capacitor) {
 <!-- Badge Messages -->
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/bh-layout.js?v=6aab0b85"></script>  
+<script src="/js/bh-layout.js?v=2f884d1c"></script>  
 
 <style id="final-overrides">
 /* Force view-selector hidden regardless of any external CSS */
@@ -13419,7 +13419,7 @@ if (window.Capacitor) {
   html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-value { color: #1e293b !important; }
 
   html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub--green,
-  html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub--green { color: #1A7A5E !important; font-weight: 600 !important; }
+  html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub--green { color: #0E3B2E !important; font-weight: 600 !important; }
 }
 /* Mobile : sous-texte même couleur que les autres */
 @media (max-width: 1366px) {
@@ -13468,7 +13468,7 @@ html[data-theme-v3="1"] .booking-block.gites,   .booking-block.gites   { backgro
       <button onclick="resetPropertyOrder()" style="flex:1;height:38px;border-radius:10px;border:1px solid var(--border-color,#e5e7eb);background:transparent;color:var(--text-secondary,#6B7280);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='var(--bg-hover,#f3f4f6)'" onmouseout="this.style.background='transparent'">
         Réinitialiser
       </button>
-      <button onclick="savePropertyOrder()" style="flex:2;height:38px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+      <button onclick="savePropertyOrder()" style="flex:2;height:38px;border-radius:10px;border:none;background:#0E3B2E;color:white;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
         Enregistrer
       </button>
     </div>
@@ -13669,7 +13669,7 @@ function openReorderModal() {
       row.addEventListener('drop', onDrop);
       row.addEventListener('dragend', onDragEnd);
     }
-    row.addEventListener('mouseenter', function(){ this.style.background='#f3f4f6'; this.style.borderColor='#1A7A5E'; });
+    row.addEventListener('mouseenter', function(){ this.style.background='#f3f4f6'; this.style.borderColor='#0E3B2E'; });
     row.addEventListener('mouseleave', function(){ this.style.background='#f9fafb'; this.style.borderColor='#e5e7eb'; });
     reorderList.appendChild(row);
   });
@@ -13819,7 +13819,7 @@ function onDragStart(e) {
 function onDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
-  this.style.borderColor = '#1A7A5E';
+  this.style.borderColor = '#0E3B2E';
   return false;
 }
 
@@ -14148,8 +14148,8 @@ function switchNotifTab(tab) {
   // Onglets styles
   var tA = document.getElementById('notifTabActivity');
   var tP = document.getElementById('notifTabPush');
-  if (tA) { tA.style.color = isActivity ? '#1A7A5E' : '#888'; tA.style.borderBottomColor = isActivity ? '#1A7A5E' : 'transparent'; tA.style.fontWeight = isActivity ? '600' : '500'; }
-  if (tP) { tP.style.color = !isActivity ? '#1A7A5E' : '#888'; tP.style.borderBottomColor = !isActivity ? '#1A7A5E' : 'transparent'; tP.style.fontWeight = !isActivity ? '600' : '500'; }
+  if (tA) { tA.style.color = isActivity ? '#0E3B2E' : '#888'; tA.style.borderBottomColor = isActivity ? '#0E3B2E' : 'transparent'; tA.style.fontWeight = isActivity ? '600' : '500'; }
+  if (tP) { tP.style.color = !isActivity ? '#0E3B2E' : '#888'; tP.style.borderBottomColor = !isActivity ? '#0E3B2E' : 'transparent'; tP.style.fontWeight = !isActivity ? '600' : '500'; }
   // Panels
   var pA = document.getElementById('notifPanelActivity');
   var pP = document.getElementById('notifPanelPush');
@@ -14307,7 +14307,7 @@ function bhConfirm(message) {
 <script src="/js/bh-auto-refresh.js?v=a3ac1b53"></script>
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
 <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
-<script src="/js/bh-global-search.js?v=610ed2a6"></script>
+<script src="/js/bh-global-search.js?v=813e6615"></script>
 <style>
 /* ══ BH SHEETS — habillage commun des modales KPI (bottom sheets) ══ */
 .bh-sheet-panel{
@@ -14364,8 +14364,8 @@ function bhConfirm(message) {
 })();
 </script>
 <script src="/js/bh-polish.js?v=1"></script>
-<script src="/js/bh-pull-refresh.js?v=5bb91f71"></script>
-<script src="/js/bh-today.js?v=912a597e"></script>
+<script src="/js/bh-pull-refresh.js?v=07bdb653"></script>
+<script src="/js/bh-today.js?v=5bfbc1a1"></script>
 
 
 
@@ -14426,7 +14426,7 @@ function bhConfirm(message) {
 }
 #invoiceModal .inv-section-title {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .5px; color: #1A7A5E; margin: 16px 0 8px;
+  letter-spacing: .5px; color: #0E3B2E; margin: 16px 0 8px;
   display: flex; align-items: center; gap: 6px;
 }
 #invoiceModal .inv-section-title:first-child { margin-top: 0; }
@@ -14439,7 +14439,7 @@ function bhConfirm(message) {
   background: #fafaf8; outline: none; box-sizing: border-box;
 }
 #invoiceModal .inv-row input:focus,
-#invoiceModal .inv-row select:focus { border-color: #1A7A5E; background: white; }
+#invoiceModal .inv-row select:focus { border-color: #0E3B2E; background: white; }
 #invoiceModal .inv-row-inline { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 #invoiceModal .inv-checkbox { display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13px;cursor:pointer; }
 #invoiceModal .inv-checkbox input { width:auto; }
@@ -14449,18 +14449,18 @@ function bhConfirm(message) {
   box-shadow: 0 2px 16px rgba(0,0,0,.08); font-family: 'DM Sans',sans-serif;
   font-size: 13px; color: #1a1a2e;
 }
-#invoiceModal .inv-paper h2 { font-size: 18px; font-weight: 800; color: #1A7A5E; margin: 0 0 4px; }
+#invoiceModal .inv-paper h2 { font-size: 18px; font-weight: 800; color: #0E3B2E; margin: 0 0 4px; }
 #invoiceModal .inv-paper .inv-num { font-size: 14px; font-weight: 700; margin: 12px 0 0; }
 #invoiceModal .inv-paper .inv-sec h3 {
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
   color: #9CA3AF; margin: 16px 0 6px; border-bottom: 1px solid #f0ede8; padding-bottom: 4px;
 }
 #invoiceModal .inv-line { display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f5f2ec;font-size:13px; }
-#invoiceModal .inv-line.inv-sub { font-weight:600; margin-top:8px; border-bottom:2px solid #1A7A5E; padding-bottom:6px; }
-#invoiceModal .inv-line.inv-tot { font-weight:800;font-size:15px;color:#1A7A5E;border:none;margin-top:4px; }
+#invoiceModal .inv-line.inv-sub { font-weight:600; margin-top:8px; border-bottom:2px solid #0E3B2E; padding-bottom:6px; }
+#invoiceModal .inv-line.inv-tot { font-weight:800;font-size:15px;color:#0E3B2E;border:none;margin-top:4px; }
 #invoiceModal .inv-stamp {
-  text-align:center;margin:16px 0 0;padding:10px;border:2px solid #1A7A5E;
-  border-radius:8px;color:#1A7A5E;font-weight:700;font-size:13px;
+  text-align:center;margin:16px 0 0;padding:10px;border:2px solid #0E3B2E;
+  border-radius:8px;color:#0E3B2E;font-weight:700;font-size:13px;
 }
 #invoiceModal .inv-footer-note { font-size:11px;color:#9CA3AF;margin-top:12px;text-align:center; }
 #invoiceModal .inv-empty {
@@ -14479,7 +14479,7 @@ function bhConfirm(message) {
   font-size:13px;font-weight:600;cursor:pointer;border:none;
   display:inline-flex;align-items:center;gap:7px;
 }
-#invoiceModal .inv-btn-primary { background:#1A7A5E;color:white; }
+#invoiceModal .inv-btn-primary { background:#0E3B2E;color:white; }
 #invoiceModal .inv-btn-primary:hover { background:#15624B; }
 #invoiceModal .inv-btn-primary:disabled { opacity:.5;cursor:not-allowed; }
 #invoiceModal .inv-btn-ghost { background:white;color:#374151;border:1px solid rgba(0,0,0,.12); }
@@ -14502,13 +14502,13 @@ function bhConfirm(message) {
 }
 .push-notif-item.unread {
   background: #f0faf5;
-  border-left-color: #1A7A5E;
+  border-left-color: #0E3B2E;
 }
 .push-notif-icon {
   width: 34px; height: 34px; border-radius: 50%;
-  background: rgba(26,122,94,.12);
+  background: rgba(14,59,46,.12);
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; color: #1A7A5E; font-size: 14px;
+  flex-shrink: 0; color: #0E3B2E; font-size: 14px;
 }
 .push-notif-title { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px; }
 .push-notif-body  { font-size: 12px; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -14535,7 +14535,7 @@ body.notif-panel-open {
 <div id="invoiceModal">
   <div class="inv-content">
     <div class="inv-header">
-      <h2><i class="fas fa-file-invoice" style="color:#1A7A5E;margin-right:8px;"></i>Générer une facture</h2>
+      <h2><i class="fas fa-file-invoice" style="color:#0E3B2E;margin-right:8px;"></i>Générer une facture</h2>
       <button class="inv-close" onclick="closeInvoiceModal()"><i class="fas fa-times"></i></button>
     </div>
     <div class="inv-body">
@@ -14905,7 +14905,7 @@ body.notif-panel-open {
     <!-- Header -->
     <div style="padding:20px 24px 16px;border-bottom:1px solid #f0ede7;display:flex;align-items:center;justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:36px;height:36px;background:#1A7A5E;border-radius:10px;display:flex;align-items:center;justify-content:center;">
+        <div style="width:36px;height:36px;background:#0E3B2E;border-radius:10px;display:flex;align-items:center;justify-content:center;">
           <i class="fas fa-layer-group" style="color:white;font-size:15px;"></i>
         </div>
         <div>
@@ -14923,7 +14923,7 @@ body.notif-panel-open {
       <div>
         <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Action</div>
         <div style="display:flex;gap:10px;">
-          <button id="batchActionPrice" onclick="setBatchAction('price')" style="flex:1;padding:12px;border-radius:12px;border:2px solid #1A7A5E;background:#e8f5f1;color:#1A7A5E;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <button id="batchActionPrice" onclick="setBatchAction('price')" style="flex:1;padding:12px;border-radius:12px;border:2px solid #0E3B2E;background:#e8f5f1;color:#0E3B2E;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
             <i class="fas fa-tag"></i> Changer le prix
           </button>
           <button id="batchActionBlock" onclick="setBatchAction('block')" style="flex:1;padding:12px;border-radius:12px;border:2px solid #e2e8f0;background:white;color:#374151;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
@@ -14955,7 +14955,7 @@ body.notif-panel-open {
       <div>
         <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
           <span>Jours de la semaine</span>
-          <button onclick="toggleAllBatchDays()" style="font-size:11px;color:#1A7A5E;background:none;border:none;cursor:pointer;font-weight:600;" id="batchDaysToggleBtn">Tous</button>
+          <button onclick="toggleAllBatchDays()" style="font-size:11px;color:#0E3B2E;background:none;border:none;cursor:pointer;font-weight:600;" id="batchDaysToggleBtn">Tous</button>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <label id="batchDay1" style="flex:1;min-width:36px;display:flex;align-items:center;justify-content:center;padding:8px 4px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;color:#374151;background:white;transition:all .15s;user-select:none;">
@@ -15003,7 +15003,7 @@ body.notif-panel-open {
       <div>
         <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
           <span>Logements</span>
-          <button onclick="toggleAllBatchProperties()" style="font-size:11px;color:#1A7A5E;background:none;border:none;cursor:pointer;font-weight:600;">Tout sélectionner</button>
+          <button onclick="toggleAllBatchProperties()" style="font-size:11px;color:#0E3B2E;background:none;border:none;cursor:pointer;font-weight:600;">Tout sélectionner</button>
         </div>
         <div id="batchPropertiesList" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto;">
           <!-- Rempli dynamiquement -->
@@ -15015,7 +15015,7 @@ body.notif-panel-open {
     <!-- Footer -->
     <div class="batch-modal-footer" style="padding:16px 24px;border-top:1px solid #f0ede7;display:flex;gap:10px;">
       <button onclick="closeBatchEditModal()" style="flex:1;padding:12px;border-radius:12px;border:1.5px solid #e2e8f0;background:white;color:#374151;font-size:14px;font-weight:600;cursor:pointer;">Annuler</button>
-      <button id="batchApplyBtn" onclick="applyBatchEdit()" style="flex:2;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#1A7A5E,#2AAE86);color:white;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <button id="batchApplyBtn" onclick="applyBatchEdit()" style="flex:2;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#0E3B2E,#1E6E52);color:white;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
         <i class="fas fa-check"></i> Appliquer
       </button>
     </div>
@@ -15047,8 +15047,8 @@ function openBatchEditModal() {
     ? '<div style="font-size:13px;color:#9ca3af;">Aucun logement disponible</div>'
     : props.map(p => {
         const name = p.internalName || p.internal_name || p.name || p.id;
-        return `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;background:white;transition:all .15s;" onmouseover="this.style.borderColor='#1A7A5E'" onmouseout="this.style.borderColor=this.querySelector('input').checked?'#1A7A5E':'#e2e8f0'">
-          <input type="checkbox" data-property-id="${p.id}" style="width:18px;height:18px;accent-color:#1A7A5E;cursor:pointer;" onchange="this.closest('label').style.borderColor=this.checked?'#1A7A5E':'#e2e8f0';this.closest('label').style.background=this.checked?'#e8f5f1':'white'" />
+        return `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;background:white;transition:all .15s;" onmouseover="this.style.borderColor='#0E3B2E'" onmouseout="this.style.borderColor=this.querySelector('input').checked?'#0E3B2E':'#e2e8f0'">
+          <input type="checkbox" data-property-id="${p.id}" style="width:18px;height:18px;accent-color:#0E3B2E;cursor:pointer;" onchange="this.closest('label').style.borderColor=this.checked?'#0E3B2E':'#e2e8f0';this.closest('label').style.background=this.checked?'#e8f5f1':'white'" />
           <span style="font-size:13px;font-weight:500;color:#0D1117;">${name}</span>
         </label>`;
       }).join('');
@@ -15073,9 +15073,9 @@ function setBatchAction(action) {
   Object.entries(btns).forEach(([key, id]) => {
     const btn = document.getElementById(id);
     const active = key === action;
-    btn.style.borderColor = active ? '#1A7A5E' : '#e2e8f0';
+    btn.style.borderColor = active ? '#0E3B2E' : '#e2e8f0';
     btn.style.background = active ? '#e8f5f1' : 'white';
-    btn.style.color = active ? '#1A7A5E' : '#374151';
+    btn.style.color = active ? '#0E3B2E' : '#374151';
   });
   document.getElementById('batchPriceSection').style.display = action === 'price' ? 'block' : 'none';
   document.getElementById('batchReasonSection').style.display = action === 'block' ? 'block' : 'none';
@@ -15088,7 +15088,7 @@ function toggleAllBatchProperties() {
     cb.checked = !allChecked;
     const label = cb.closest('label');
     if (label) {
-      label.style.borderColor = cb.checked ? '#1A7A5E' : '#e2e8f0';
+      label.style.borderColor = cb.checked ? '#0E3B2E' : '#e2e8f0';
       label.style.background = cb.checked ? '#e8f5f1' : 'white';
     }
   });
@@ -15108,9 +15108,9 @@ function _updateBatchDayLabel(cb) {
   const label = cb.closest('label');
   if (!label) return;
   if (cb.checked) {
-    label.style.borderColor = '#1A7A5E';
+    label.style.borderColor = '#0E3B2E';
     label.style.background = '#e8f5f1';
-    label.style.color = '#1A7A5E';
+    label.style.color = '#0E3B2E';
   } else {
     label.style.borderColor = '#e2e8f0';
     label.style.background = 'white';
@@ -15234,7 +15234,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
   if (e.target === this) closeBatchEditModal();
 });
 </script>
-<script src="/js/bh-onboarding.js?v=8414290c"></script>
+<script src="/js/bh-onboarding.js?v=9f39ef93"></script>
 
 <script>
 // ── Sticky calendar headers (mobile + desktop) ──────────────
@@ -15496,7 +15496,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
     return `
       <div style="background:white;border-radius:12px;padding:13px 14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;align-items:center;gap:12px;opacity:${active ? 1 : 0.55};">
-        <div style="width:48px;height:48px;background:${active ? '#ECFDF5' : '#F3F4F6'};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <div style="width:48px;height:48px;background:${active ? '#F1F6F3' : '#F3F4F6'};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <span style="font-size:13px;font-weight:800;color:${active ? '#C2410C' : '#9CA3AF'};">${badge}</span>
         </div>
         <div style="flex:1;min-width:0;">
@@ -15527,8 +15527,8 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     var msg = document.getElementById('bhPromoCreateMsg');
     function showMsg(text, color) {
       msg.style.display = 'block';
-      msg.style.background = color === 'green' ? '#ECFDF5' : '#FEF2F2';
-      msg.style.color = color === 'green' ? '#065F46' : '#991B1B';
+      msg.style.background = color === 'green' ? '#F1F6F3' : '#FEF2F2';
+      msg.style.color = color === 'green' ? '#0A2C22' : '#991B1B';
       msg.textContent = text;
     }
 
@@ -15815,7 +15815,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
     var reqLabel = (document.getElementById('bhUpReqLabel').value || '').trim();
     var msg = document.getElementById('bhUpMsg');
     var btn = document.getElementById('bhUpBtn');
-    function showMsg(txt, ok){ msg.style.display='block'; msg.textContent=txt; msg.style.background= ok?'#DCFCE7':'#FEE2E2'; msg.style.color= ok?'#166534':'#991B1B'; }
+    function showMsg(txt, ok){ msg.style.display='block'; msg.textContent=txt; msg.style.background= ok?'#DCE9E3':'#FEE2E2'; msg.style.color= ok?'#0A2C22':'#991B1B'; }
 
     if (!amount || parseFloat(amount) <= 0) { showMsg('Montant invalide', false); return; }
     var payload = { kind: kind, amountEuros: amount, reqLabel: reqLabel };
@@ -15958,9 +15958,9 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
       if (res.ok) {
         var exp = new Date(data.expires_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         btn.innerHTML = '<i class="fas fa-check"></i> Lien envoyé';
-        btn.style.background = '#059669';
+        btn.style.background = '#0A2C22';
         status.style.display = 'block';
-        status.style.color = '#059669';
+        status.style.color = '#0A2C22';
         var dest = [];
         if (email) dest.push('email');
         if (phone) dest.push('SMS');
@@ -16074,7 +16074,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
           window._bhHoldCreated = true;
           var exp = new Date(data.expires_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
           var statusEl = document.getElementById('bhHoldStatus');
-          if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = '#059669'; statusEl.innerHTML = '✅ Lien copié · Dates bloquées jusqu\'à ' + exp; }
+          if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = '#0A2C22'; statusEl.innerHTML = '✅ Lien copié · Dates bloquées jusqu\'à ' + exp; }
           if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
         } else {
           var d2 = await res.json().catch(function(){ return {}; });
@@ -16117,7 +16117,7 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
 
     btn.disabled = false;
     btn.innerHTML = _copied ? '<i class="fas fa-check"></i> Copié !' : '<i class="fas fa-copy"></i> Sélectionné — Cmd/Ctrl+C';
-    btn.style.background = _copied ? '#059669' : '#C2410C';
+    btn.style.background = _copied ? '#0A2C22' : '#C2410C';
     setTimeout(() => {
       btn.innerHTML = '<i class="fas fa-copy"></i> Copier le lien';
       btn.style.background = '#C2410C';
@@ -16160,7 +16160,7 @@ function openNotifPanel() {
   panel.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:100%;max-width:420px;background:#F5F2EC;z-index:9999;box-shadow:-4px 0 32px rgba(0,0,0,.18);display:flex;flex-direction:column;font-family:"DM Sans",system-ui,sans-serif;overflow:hidden;animation:bhPanelSlideIn .32s cubic-bezier(.22,1,.36,1);';
 
   panel.innerHTML = `
-    <div style="background:linear-gradient(135deg,#1A7A5E 0%,#145f4a 100%);padding:20px 18px 0;flex-shrink:0;padding-top:calc(20px + env(safe-area-inset-top));">
+    <div style="background:linear-gradient(135deg,#0E3B2E 0%,#0A2C22 100%);padding:20px 18px 0;flex-shrink:0;padding-top:calc(20px + env(safe-area-inset-top));">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <div style="display:flex;align-items:center;gap:9px;">
           <i class="fas fa-bell" style="color:rgba(255,255,255,.85);font-size:15px;"></i>
@@ -16280,7 +16280,7 @@ function notifSwitchTab(tab) {
 #reservationDetailsContent a[href^="mailto:"] + div,
 #reservationDetailsContent div[style*="Réservé le"]{ }
 /* Prix détaillé (total) : encre au lieu du jade vif */
-#reservationDetailsContent span[style*="color:#1A7A5E"]{ color:#1D1D1B !important; }
+#reservationDetailsContent span[style*="color:#0E3B2E"]{ color:#1D1D1B !important; }
 
 /* ═══ TOUTES LES MODALES BOTTOM-SHEET EN BLANC CASSÉ ═══ */
 .bh-sheet-panel,
@@ -16370,8 +16370,8 @@ function notifSwitchTab(tab) {
 #closeActivePropertiesModal:hover, #closeCleaningTodayModal:hover, #checklistsKpiModalClose:hover,
 #caKpiModalClose:hover, #closeOccupancyDetailsModal:hover, #closeDepositsModal:hover,
 #blockModalClose:hover, #closeDetailsModal:hover, #closeNewReservationModal:hover {
-  border-color: #1A7A5E !important;
-  color: #1A7A5E !important;
+  border-color: #0E3B2E !important;
+  color: #0E3B2E !important;
 }
 
 /* ── Desktop ≥ 720px : les bottom-sheets deviennent des cartes centrées ── */

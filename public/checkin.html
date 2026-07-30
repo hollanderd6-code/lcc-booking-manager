@@ -9,7 +9,7 @@
 <style>
 :root{
   --bg:#F5F2EC; --card:#FFFFFF; --text:#0D1117; --muted:#6B7280;
-  --accent:#1A7A5E; --accent-dark:#15624B; --border:rgba(200,184,154,.45);
+  --accent:#0E3B2E; --accent-dark:#15624B; --border:rgba(200,184,154,.45);
   --danger:#DC2626; --radius:16px; --font:'DM Sans',-apple-system,sans-serif;
   --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
 }
@@ -28,7 +28,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit
 .card .sub{font-size:12.5px;color:var(--muted);margin-bottom:14px;line-height:1.5}
 label{display:block;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 6px}
 input,textarea{width:100%;box-sizing:border-box;padding:12px 13px;border:1.5px solid var(--border);border-radius:11px;font-family:var(--font);font-size:16px;background:#FBFAF7;color:var(--text);transition:border-color .15s,box-shadow .15s}
-input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,122,94,.12)}
+input:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,59,46,.12)}
 input[readonly]{background:#F0EEE8;color:var(--muted)}
 .row{display:flex;gap:10px}.row>div{flex:1;min-width:0}
 @media (max-width:430px){ .row{flex-direction:column;gap:0} }
@@ -52,7 +52,7 @@ input[readonly]{background:#F0EEE8;color:var(--muted)}
 .sig-clear{position:absolute;top:8px;right:8px;background:rgba(13,17,23,.06);border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;display:none;font-family:var(--font)}
 .sig-wrap.signed .sig-clear{display:block}
 /* Submit */
-.submit{width:100%;padding:16px;border:none;border-radius:var(--radius);background:var(--accent);color:#fff;font-family:var(--font);font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(26,122,94,.3);transition:.15s;margin-top:6px}
+.submit{width:100%;padding:16px;border:none;border-radius:var(--radius);background:var(--accent);color:#fff;font-family:var(--font);font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(14,59,46,.3);transition:.15s;margin-top:6px}
 .submit:active{transform:scale(.98)}
 .submit:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
 .legal{font-size:11px;color:var(--muted);line-height:1.55;margin-top:14px;text-align:center}
@@ -67,8 +67,8 @@ input[readonly]{background:#F0EEE8;color:var(--muted)}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--danger);color:#fff;padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,.18);z-index:50;opacity:0;transition:opacity .2s;max-width:90vw}
 .toast.show{opacity:1}
 </style>
-<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
-  <link rel="stylesheet" href="/css/bh-brand.css?v=69892992">
+<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+  <link rel="stylesheet" href="/css/bh-brand.css?v=c0705a60">
 
   <!-- Marque Boostinghost — genere par outils/marque.js -->
   <link rel="icon" href="/img/brand/web/favicon.svg" type="image/svg+xml">
@@ -105,7 +105,7 @@ input[readonly]{background:#F0EEE8;color:var(--muted)}
 
   <!-- Succès -->
   <div id="successState" class="state hidden">
-    <div class="big"><i class="fas fa-check-circle" style="color:#16A34A;"></i></div>
+    <div class="big"><i class="fas fa-check-circle" style="color:#0E3B2E;"></i></div>
     <h2>C'est fait, merci !</h2>
     <p>Votre enregistrement est complété. Vos informations d'accès vous seront envoyées automatiquement. Excellent séjour !</p>
   </div>

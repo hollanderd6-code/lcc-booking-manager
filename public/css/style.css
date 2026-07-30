@@ -5,10 +5,10 @@
 
 :root {
   /* Primary - Modern Green */
-  --primary-color: #10B981;
-  --primary-hover: #059669;
-  --primary-light: #D1FAE5;
-  --primary-dark: #047857;
+  --primary-color: #0E3B2E;
+  --primary-hover: #0A2C22;
+  --primary-light: #DCE9E3;
+  --primary-dark: #0A2C22;
   
   /* Secondary - Blue */
   --secondary-color: #3B82F6;
@@ -33,7 +33,7 @@
   --border-hover: #D1D5DB;
   
   /* Status */
-  --success: #10B981;
+  --success: #0E3B2E;
   --warning: #F59E0B;
   --error: #EF4444;
   --info: #3B82F6;
@@ -153,7 +153,7 @@ body {
   justify-content: center;
   color: white;
   font-size: 18px;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.25);
 }
 
 .sidebar-logo-text {
@@ -234,7 +234,7 @@ body {
 .nav-item.active {
   background: var(--primary-color);
   color: white;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3);
 }
 
 .nav-item.active i {
@@ -282,7 +282,7 @@ body {
 .user-avatar {
   width: 36px;
   height: 36px;
-  background: #10B981;
+  background: #0E3B2E;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
@@ -557,7 +557,7 @@ body {
     font-size: 26px;
     font-weight: 500;
     letter-spacing: -0.02em;
-    color: #1A7A5E;
+    color: #0E3B2E;
   }
 
   .kpi-sub {
@@ -589,12 +589,12 @@ body {
 .btn-primary {
   background: var(--primary-color);
   color: white;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 2px 8px rgba(14, 59, 46, 0.25);
 }
 
 .btn-primary:hover {
   background: var(--primary-hover);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.35);
   transform: translateY(-1px);
 }
 
@@ -815,8 +815,8 @@ body {
 
 
 .status-icon-ai {
-  background: radial-gradient(circle at 30% 0%, #22C55E, #16A34A);
-  color: #ECFDF5;
+  background: radial-gradient(circle at 30% 0%, #1E6E52, #0E3B2E);
+  color: #F1F6F3;
 }
 
 .status-label {
@@ -827,7 +827,7 @@ body {
 }
 
 .status-ok {
-  background: rgba(22, 163, 74, 0.15);
+  background: rgba(14, 59, 46, 0.15);
   color: #4ade80;
 }
 
@@ -892,7 +892,7 @@ body {
 }
 
 .onboarding-step-icon.done {
-  background: rgba(22, 163, 74, 0.16);
+  background: rgba(14, 59, 46, 0.16);
   color: #4ade80;
 }
 
@@ -1092,7 +1092,7 @@ body {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: #1A7A5E;
+  background: #0E3B2E;
   animation: bh-bounce 1.2s infinite ease-in-out;
 }
 .loading-spinner .dot:nth-child(1) { animation-delay: 0s; }
@@ -1220,9 +1220,9 @@ html, body {
 
 /* ACTIVE : exactement le style "Factures clients" */
 .nav-item.active{
-  background:#10B981;
+  background:#0E3B2E;
   color:#ffffff;
-  box-shadow: 0 12px 25px rgba(16,185,129,.25);
+  box-shadow: 0 12px 25px rgba(14,59,46,.25);
 }
 
 /* petit effet optionnel */
@@ -1278,15 +1278,15 @@ html, body {
 
 /* Hover discret (tu peux retirer si tu veux 0 fond) */
 .nav-item:hover{
-  background: rgba(16,185,129,.08) !important;
+  background: rgba(14,59,46,.08) !important;
   color: #111827 !important;
 }
 
 /* ====== ACTIVE (le seul en pill vert + ombre, comme Factures clients) ====== */
 .nav-item.active{
-  background: #10B981 !important;
+  background: #0E3B2E !important;
   color: #ffffff !important;
-  box-shadow: 0 18px 30px rgba(16,185,129,.25) !important;
+  box-shadow: 0 18px 30px rgba(14,59,46,.25) !important;
 }
 
 .nav-item.active i{
@@ -1473,7 +1473,7 @@ html, body {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: #1A7A5E;
+  background: #0E3B2E;
   animation: bh-bounce 1.2s infinite ease-in-out;
   font-size: 0;
   flex-shrink: 0;

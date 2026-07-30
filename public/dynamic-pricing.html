@@ -7,11 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
-<link href="/css/style.css?v=9d18f851" rel="stylesheet"/>
-<link href="/css/bh-theme-v3.css?v=8d0e239f" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-brand.css?v=69892992">
+<link href="/css/style.css?v=17204d03" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css?v=7d47a1eb" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/bh-brand.css?v=c0705a60">
 <link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-bottom-bar.css?v=e8b22340">
+<link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
 <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
 <style>
 /* ============================================================
@@ -57,7 +57,7 @@ html[data-theme-v3="1"] .main-content {
   display: inline-flex; align-items: center; gap: 8px;
   height: 40px; padding: 0 20px;
   border: none; border-radius: 12px;
-  background: #1A7A5E; color: white;
+  background: #0E3B2E; color: white;
   font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600;
   cursor: pointer; transition: background .15s;
@@ -144,10 +144,10 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
    PRICING PAGE — Root vars & resets
 ══════════════════════════════════════════════════ */
 :root {
-  --pg:  #1A7A5E;
+  --pg:  #0E3B2E;
   --pg2: #15624B;
-  --pg-soft: rgba(26,122,94,.1);
-  --pg-soft2: rgba(26,122,94,.06);
+  --pg-soft: rgba(14,59,46,.1);
+  --pg-soft2: rgba(14,59,46,.06);
   --cream: #F5F2EC;
   --cream2: #FAFAF8;
   --border: rgba(200,184,154,.4);
@@ -156,7 +156,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   --muted: #7A8695;
   --warning: #F59E0B;
   --danger: #DC2626;
-  --success: #10b981;
+  --success: #0E3B2E;
   --r: 16px;
 }
 
@@ -322,7 +322,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 }
 .price-range-fill {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(90deg, var(--pg), #2AAE86);
+  background: linear-gradient(90deg, var(--pg), #1E6E52);
   border-radius: 999px;
   transition: all .3s;
 }
@@ -349,7 +349,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .mode-option:hover { border-color: var(--pg); background: var(--pg-soft2); }
 .mode-option.selected {
   border-color: var(--pg); background: var(--pg-soft);
-  box-shadow: 0 0 0 3px rgba(26,122,94,.08);
+  box-shadow: 0 0 0 3px rgba(14,59,46,.08);
 }
 .mode-option h4 {
   font-size: 13px; font-weight: 700; color: var(--ink);
@@ -446,7 +446,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   font-size: 11px; font-weight: 600;
   padding: 3px 10px; border-radius: 999px;
 }
-.mode-badge.auto { background: var(--pg-soft); color: var(--pg); border: 1px solid rgba(26,122,94,.2); }
+.mode-badge.auto { background: var(--pg-soft); color: var(--pg); border: 1px solid rgba(14,59,46,.2); }
 .mode-badge.manual { background: rgba(245,158,11,.1); color: #B45309; border: 1px solid rgba(245,158,11,.25); }
 
 .prop-pricing-body { padding: 16px 18px; }
@@ -493,7 +493,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   font-size: 11px; font-weight: 700;
   padding: 2px 6px; border-radius: 6px;
 }
-.price-delta.up { background: rgba(16,185,129,.12); color: #065F46; }
+.price-delta.up { background: rgba(14,59,46,.12); color: #0A2C22; }
 .price-delta.down { background: rgba(220,38,38,.1); color: #B91C1C; }
 .price-delta.stable { background: rgba(107,114,128,.1); color: var(--muted); }
 .price-arrow {
@@ -518,7 +518,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 }
 .day-bar.current { background: var(--pg); }
 .day-bar.recommended { background: rgba(245,158,11,.3); }
-.day-bar.weekend { background: rgba(26,122,94,.18); }
+.day-bar.weekend { background: rgba(14,59,46,.18); }
 .day-label { font-size: 9px; color: var(--muted); text-align: center; }
 .day-price { font-size: 8.5px; font-weight: 600; color: var(--muted); text-align: center; }
 
@@ -700,7 +700,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   margin-left: auto; font-size: 14px; font-weight: 700;
   padding: 2px 10px; border-radius: 8px;
 }
-.signal-factor.pos { background: rgba(16,185,129,.1); color: #065F46; }
+.signal-factor.pos { background: rgba(14,59,46,.1); color: #0A2C22; }
 .signal-factor.neg { background: rgba(220,38,38,.1); color: #B91C1C; }
 .signal-factor.neu { background: rgba(107,114,128,.1); color: var(--muted); }
 
@@ -764,7 +764,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:6px}
 .cal-cell{border:1px solid rgba(200,184,154,.35);border-radius:10px;padding:7px 5px;cursor:pointer;text-align:center;transition:transform .1s,box-shadow .1s}
 .cal-cell:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08)}
-.cal-cell.sel{outline:2px solid #1A7A5E;outline-offset:1px}
+.cal-cell.sel{outline:2px solid #0E3B2E;outline-offset:1px}
 .cal-dow{font-size:10px;color:var(--muted);text-transform:uppercase}
 .cal-date{font-size:11px;font-weight:600}
 .cal-price{font-size:15px;font-weight:800;margin-top:2px}
@@ -773,8 +773,8 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .cal-detail.show{display:block}
 .cal-formula{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 4px}
 .fchip{font-size:12px;padding:4px 9px;border-radius:8px;background:var(--cream);color:var(--text)}
-.fchip b{color:#1A7A5E}
-.fchip.up{background:rgba(26,122,94,.12)}
+.fchip b{color:#0E3B2E}
+.fchip.up{background:rgba(14,59,46,.12)}
 .fchip.down{background:rgba(239,68,68,.12)}
 /* ── Événements ── */
 .ev-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
@@ -783,18 +783,18 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .ev-table{width:100%;border-collapse:collapse;font-size:13px}
 .ev-table th{text-align:left;color:var(--muted);font-weight:600;padding:8px;border-bottom:1px solid var(--cream)}
 .ev-table td{padding:8px;border-bottom:1px solid rgba(200,184,154,.25)}
-.ev-mult{font-weight:700;color:#1A7A5E}
+.ev-mult{font-weight:700;color:#0E3B2E}
 .icon-btn{border:none;background:none;cursor:pointer;color:var(--muted);font-size:14px;padding:4px 6px}
-.icon-btn:hover{color:#1A7A5E}.icon-btn.del:hover{color:#EF4444}
+.icon-btn:hover{color:#0E3B2E}.icon-btn.del:hover{color:#EF4444}
 .mode-seg{display:inline-flex;background:var(--cream);border-radius:9px;padding:3px;gap:2px}
 .mode-seg button{border:none;background:none;font-size:12px;font-weight:600;color:var(--muted);padding:6px 11px;border-radius:7px;cursor:pointer;transition:background .15s,color .15s}
-.mode-seg button.on{background:#1A7A5E;color:#fff}
+.mode-seg button.on{background:#0E3B2E;color:#fff}
 </style>
-<link rel="stylesheet" href="/css/bh-v3-mobile.css?v=e8172ecb">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=ec508074">
-<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=d9f1468e">
-<link rel="stylesheet" href="/css/menu-active-button.css?v=5206d90a">
-<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
+<link rel="stylesheet" href="/css/bh-v3-mobile.css?v=2b3a5fdd">
+<link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
+<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=13677c32">
+<link rel="stylesheet" href="/css/menu-active-button.css?v=f21f319b">
+<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
 <style>
 /* ── Correctif espace fantôme sous le header mobile ──
    Neutralise tous les contributeurs possibles (padding body hérités,
@@ -1080,7 +1080,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
     <div class="cal-legend">
       <span><i style="background:#E7EFE9;"></i>Prix bas</span>
       <span><i style="background:#9CC4AE;"></i>Moyen</span>
-      <span><i style="background:#1A7A5E;"></i>Élevé</span>
+      <span><i style="background:#0E3B2E;"></i>Élevé</span>
       <span style="opacity:.8;">Clique une nuit pour voir « pourquoi ce prix »</span>
     </div>
     <div class="cal-grid" id="calGrid"></div>
@@ -1243,9 +1243,9 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 </script>
 
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/bh-layout.js?v=6aab0b85"></script>
-<script src="/js/mobile-native-experience.js?v=2594b603"></script>
-<script src="/js/mobile-tabs-handler.js?v=e901dd8d"></script>
+<script src="/js/bh-layout.js?v=2f884d1c"></script>
+<script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
+<script src="/js/mobile-tabs-handler.js?v=01e3d29a"></script>
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
 
 <script>
@@ -1362,9 +1362,9 @@ function renderPropCard(p) {
       </div>
     </div>` : `
     <div style="padding:12px;background:var(--cream2);border-radius:10px;font-size:12.5px;color:var(--muted);margin-bottom:12px;">
-      <div style="margin-bottom:6px;color:var(--ink);"><i class="fas fa-circle-check" style="color:var(--pg,#1A7A5E);"></i> Prix déjà actifs — calculés sur ton tarif de base, ta demande réelle, la saison et les événements.</div>
+      <div style="margin-bottom:6px;color:var(--ink);"><i class="fas fa-circle-check" style="color:var(--pg,#0E3B2E);"></i> Prix déjà actifs — calculés sur ton tarif de base, ta demande réelle, la saison et les événements.</div>
       <div style="margin-bottom:9px;font-size:12px;"><i class="fas fa-hourglass-half"></i> Données marché en attente — elles affineront les prix.</div>
-      <button onclick="runAnalysisNow('${p.propertyId}', this)" style="width:100%;padding:9px;background:var(--pg,#1A7A5E);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;">
+      <button onclick="runAnalysisNow('${p.propertyId}', this)" style="width:100%;padding:9px;background:var(--pg,#0E3B2E);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;">
         <i class="fas fa-bolt"></i> Lancer l'analyse maintenant
       </button>
     </div>`;
@@ -1643,11 +1643,11 @@ function renderConfigCard(cfg, idx) {
   const modeAuto = cfg.mode === 'auto';
   const pid = cfg.propertyId;
   return `
-  <div class="prop-config-row" id="pcfg-${pid}" style="border:1px solid ${isOn ? 'rgba(26,122,94,.25)' : 'rgba(200,184,154,.3)'};border-radius:14px;padding:16px;margin-bottom:12px;background:${isOn ? 'rgba(26,122,94,.03)' : 'white'};transition:all .2s;">
+  <div class="prop-config-row" id="pcfg-${pid}" style="border:1px solid ${isOn ? 'rgba(14,59,46,.25)' : 'rgba(200,184,154,.3)'};border-radius:14px;padding:16px;margin-bottom:12px;background:${isOn ? 'rgba(14,59,46,.03)' : 'white'};transition:all .2s;">
     <!-- Header : nom + toggle -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${isOn ? '14px' : '0'};">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:36px;height:36px;border-radius:10px;background:${isOn ? 'rgba(26,122,94,.1)' : '#f3f4f6'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <div style="width:36px;height:36px;border-radius:10px;background:${isOn ? 'rgba(14,59,46,.1)' : '#f3f4f6'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <i class="fas fa-home" style="font-size:14px;color:${isOn ? 'var(--pg)' : 'var(--muted)'};"></i>
         </div>
         <div>
@@ -2056,14 +2056,14 @@ function showNight(i){
   $('calDetail').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <strong>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</strong>
-      <span style="font-size:20px;font-weight:800;color:#1A7A5E;">${Math.round(r.price)}€</span>
+      <span style="font-size:20px;font-weight:800;color:#0E3B2E;">${Math.round(r.price)}€</span>
     </div>
     <div style="font-size:12px;color:var(--muted);margin-top:2px;">${r.reason||''} · min ${r.min_stay||1} nuit(s)</div>
     <div class="cal-formula">
       <span class="fchip">base <b>${ffmt(b.base)}€</b></span>
       ${chip('saison',b.season)}${chip('jour',b.dow)}${chip('lead',b.lead)}${chip('pacing',b.pacing)}${chip('marché',b.market)}${chip('événement',b.event)}${chip('gap',b.gap)}
     </div>
-    ${b.eventLabel?`<div style="font-size:12px;color:#1A7A5E;"><i class="fas fa-star" style="font-size:10px;"></i> ${b.eventLabel}</div>`:''}
+    ${b.eventLabel?`<div style="font-size:12px;color:#0E3B2E;"><i class="fas fa-star" style="font-size:10px;"></i> ${b.eventLabel}</div>`:''}
     ${(b.clampedToMin||b.clampedToMax)?`<div style="font-size:12px;color:var(--muted);"><i class="fas fa-exclamation-triangle" style="font-size:10px;"></i> borné au ${b.clampedToMin?'minimum':'maximum'} configuré</div>`:''}`;
   $('calDetail').classList.add('show');
 }
@@ -2174,7 +2174,7 @@ async function setCalMode(mode){
 /* ── Onglets : pilule ── */
 .ptabs { border-radius: 999px !important; border: 1px solid rgba(200,184,154,.5); box-shadow: 0 1px 3px rgba(13,17,23,.04); }
 .ptab { border-radius: 999px !important; }
-.ptab.active { box-shadow: 0 1px 4px rgba(26,122,94,.25) !important; }
+.ptab.active { box-shadow: 0 1px 4px rgba(14,59,46,.25) !important; }
 
 /* ── Cartes : titres serif, coins 20 ── */
 .pcard { border-radius: 20px !important; border-color: rgba(200,184,154,.45) !important; }
@@ -2199,8 +2199,8 @@ async function setCalMode(mode){
 }
 
 /* ── Boutons ── */
-.btn-accept { border-radius: 999px !important; box-shadow: 0 1px 4px rgba(26,122,94,.25); }
-.btn-accept:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,122,94,.3); }
+.btn-accept { border-radius: 999px !important; box-shadow: 0 1px 4px rgba(14,59,46,.25); }
+.btn-accept:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14,59,46,.3); }
 
 /* ── Réglages ── */
 .setting-row { border-bottom-color: rgba(200,184,154,.3) !important; }
@@ -2228,7 +2228,7 @@ async function setCalMode(mode){
   border-radius: 50% !important;
   transition: all .15s !important;
 }
-.modal-close:hover { border-color: #1A7A5E !important; color: #1A7A5E !important; }
+.modal-close:hover { border-color: #0E3B2E !important; color: #0E3B2E !important; }
 .formula-line { border-bottom-color: rgba(200,184,154,.3) !important; }
 @media (min-width: 720px) {
   .modal-overlay { align-items: center !important; padding: 28px; }
@@ -2238,7 +2238,7 @@ async function setCalMode(mode){
 
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
 <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
-<script src="/js/bh-global-search.js?v=610ed2a6"></script>
+<script src="/js/bh-global-search.js?v=813e6615"></script>
 <script src="/js/bh-polish.js?v=1"></script>
 </body>
 </html>

@@ -11,15 +11,15 @@
 <!-- Font Awesome -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <!-- CSS plateforme -->
-<link href="/css/style.css?v=9d18f851" rel="stylesheet"/>
-<link href="/css/bh-theme-v3.css?v=8d0e239f" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-brand.css?v=69892992"><link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=e8b22340">
+<link href="/css/style.css?v=17204d03" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css?v=7d47a1eb" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/bh-brand.css?v=c0705a60"><link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
 <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
 <style>
   /* DESIGN SYSTEM inspiré de factures-proprietaires */
   :root {
-    --primary: #10B981;
-    --primary-dark: #059669;
+    --primary: #0E3B2E;
+    --primary-dark: #0A2C22;
     --bg-body: #f3f4f6;
     --paper-shadow: 0 10px 15px -3px rgba(0,0,0,0.1),
                     0 4px 6px -2px rgba(0,0,0,0.05);
@@ -93,9 +93,9 @@
   }
 
   .nav-item.active {
-    background: #ecfdf5;
-    color: #10B981;
-    border-right-color: #10B981;
+    background: #F1F6F3;
+    color: #0E3B2E;
+    border-right-color: #0E3B2E;
   }
 
   .nav-item i {
@@ -230,7 +230,7 @@
   .form-row select:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+    box-shadow: 0 0 0 3px rgba(14,59,46,0.12);
   }
 
   .form-row-inline {
@@ -434,7 +434,7 @@
     text-align: center;
     margin: 32px 0;
     padding: 20px;
-    background: rgba(16,185,129,0.08);
+    background: rgba(14,59,46,0.08);
     border: 3px solid var(--primary);
     border-radius: 12px;
   }
@@ -482,7 +482,7 @@
   }
     /* Style pour le lien actif dans le sidebar */
 .nav-item.active {
-  background-color: #10B981;  /* couleur verte, comme pour 'Gestion du ménage' */
+  background-color: #0E3B2E;  /* couleur verte, comme pour 'Gestion du ménage' */
   color: white;
   border-radius: 20px;  /* bord arrondi comme sur l'image */
   padding: 6px 12px;  /* espacement interne pour plus de confort visuel */
@@ -490,7 +490,7 @@
 
 /* Survol de l'élément actif */
 .nav-item.active:hover {
-  background-color: #34d399;  /* une teinte plus claire en survol */
+  background-color: #4FA184;  /* une teinte plus claire en survol */
   transition: background-color 0.3s ease;
 }
   /* ============================================================
@@ -575,9 +575,9 @@ html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
 }
 html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
-  background: #1A7A5E;
+  background: #0E3B2E;
   color: white;
-  border-color: #1A7A5E;
+  border-color: #0E3B2E;
 }
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
   margin-left: auto;
@@ -613,7 +613,7 @@ html[data-theme-v3="1"] .bh-theme-toggle::after {
   border-radius: 50%;
   transition: transform .2s;
 }
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #0E3B2E; }
 html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
 
 
@@ -659,7 +659,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .factures-back-btn {
   display: inline-flex; align-items: center; gap: 8px;
   height: 40px; padding: 0 20px; border: none; border-radius: 12px;
-  background: #1A7A5E; color: white; font-family: 'DM Sans', sans-serif;
+  background: #0E3B2E; color: white; font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap; position: fixed; top: 52px; right: 24px; z-index: 200;
 }
@@ -747,16 +747,16 @@ html[data-theme-v3="1"] input:focus,
 html[data-theme-v3="1"] textarea:focus,
 html[data-theme-v3="1"] select:focus {
   background: white !important;
-  border-color: #1A7A5E !important;
-  box-shadow: 0 0 0 3px rgba(26,122,94,.08) !important;
+  border-color: #0E3B2E !important;
+  box-shadow: 0 0 0 3px rgba(14,59,46,.08) !important;
   outline: none !important;
 }
 
 /* Buttons */
 html[data-theme-v3="1"] .btn-primary,
 html[data-theme-v3="1"] button[type=submit] {
-  background: #1A7A5E !important;
-  border-color: #1A7A5E !important;
+  background: #0E3B2E !important;
+  border-color: #0E3B2E !important;
   border-radius: 10px !important;
   font-family: 'DM Sans', sans-serif !important;
   font-weight: 600 !important;
@@ -791,8 +791,8 @@ html[data-theme-v3="1"] .btn-ghost {
   transition: all .15s;
   white-space: nowrap;
 }
-.period-btn:hover { border-color: #1A7A5E; color: #1A7A5E; }
-.period-btn.active { background: #1A7A5E; color: white; border-color: #1A7A5E; }
+.period-btn:hover { border-color: #0E3B2E; color: #0E3B2E; }
+.period-btn.active { background: #0E3B2E; color: white; border-color: #0E3B2E; }
 .history-period-label {
   font-size: 12px;
   color: var(--text-secondary, #9ca3af);
@@ -802,17 +802,17 @@ html[data-theme-v3="1"] .btn-ghost {
 .history-section { margin-top: 32px; }
 .history-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
 .history-title { font-size:18px; font-weight:700; color:#1a2e1a; display:flex; align-items:center; gap:8px; }
-.history-title i { color:#1A7A5E; }
+.history-title i { color:#0E3B2E; }
 .history-empty { text-align:center; padding:40px 20px; color:#9ca3af; font-size:14px; }
 .history-empty i { font-size:32px; margin-bottom:10px; display:block; }
 .history-table { display:none !important; }
-.history-resend-btn { background:none; border:1px solid #1A7A5E; color:#1A7A5E; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer; transition:all 0.15s; }
-.history-resend-btn:hover { background:#1A7A5E; color:white; }
+.history-resend-btn { background:none; border:1px solid #0E3B2E; color:#0E3B2E; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer; transition:all 0.15s; }
+.history-resend-btn:hover { background:#0E3B2E; color:white; }
 /* Cartes mobile */
 .history-card { border-bottom:1px solid #f3f4f6; padding:14px 16px; }
 .history-card:last-child { border-bottom:none; }
 .history-card-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-.history-card-num { font-weight:700; color:#1A7A5E; font-size:14px; }
+.history-card-num { font-weight:700; color:#0E3B2E; font-size:14px; }
 .history-card-total { font-weight:700; color:#111827; font-size:15px; }
 .history-card-mid { font-size:13px; color:#374151; margin-bottom:4px; }
 .history-card-bottom { font-size:12px; color:#9ca3af; margin-bottom:10px; }
@@ -847,10 +847,10 @@ html[data-theme-v3="1"] .btn-ghost {
   background: rgba(15, 23, 42, 0.90) !important;
 }
 </style>
-<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=d9f1468e">
-<link rel="stylesheet" href="/css/menu-active-button.css?v=5206d90a">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=ec508074">
-<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
+<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=13677c32">
+<link rel="stylesheet" href="/css/menu-active-button.css?v=f21f319b">
+<link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
+<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
 
   <!-- Marque Boostinghost — genere par outils/marque.js -->
   <link rel="icon" href="/img/brand/web/favicon.svg" type="image/svg+xml">
@@ -1044,7 +1044,7 @@ html[data-theme-v3="1"] .btn-ghost {
 <div class="history-section">
   <div class="history-header">
     <div class="history-title"><i class="fas fa-history"></i> Historique des factures</div>
-    <button onclick="loadInvoiceHistory()" style="background:none;border:none;color:#1A7A5E;cursor:pointer;font-size:13px;"><i class="fas fa-sync-alt"></i> Actualiser</button>
+    <button onclick="loadInvoiceHistory()" style="background:none;border:none;color:#0E3B2E;cursor:pointer;font-size:13px;"><i class="fas fa-sync-alt"></i> Actualiser</button>
   </div>
   <div class="history-filters">
     <button class="period-btn active" onclick="setPeriod(30, this)">30 derniers jours</button>
@@ -1876,9 +1876,9 @@ html[data-theme-v3="1"] .btn-ghost {
 </script>
 
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/bh-layout.js?v=6aab0b85"></script>
-<script src="/js/mobile-native-experience.js?v=2594b603"></script>
-<script src="/js/mobile-tabs-handler.js?v=e901dd8d"></script>
+<script src="/js/bh-layout.js?v=2f884d1c"></script>
+<script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
+<script src="/js/mobile-tabs-handler.js?v=01e3d29a"></script>
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
 <!-- Socket.io pour le temps réel -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -2004,7 +2004,7 @@ html[data-theme-v3="1"] .btn-ghost {
   }
 }
 </style>
-<script src="/js/bh-onboarding-pages.js?v=226650ec"></script>
+<script src="/js/bh-onboarding-pages.js?v=313cb8ca"></script>
 <style id="bh-luxe-factures">
 /* ════════════════════════════════════════════════════════════
    COUCHE LUXE FACTURES — cohérente v2
@@ -2045,7 +2045,7 @@ html[data-theme-v3="1"] select {
 html[data-theme-v3="1"] .btn-primary,
 html[data-theme-v3="1"] button[type=submit] {
   border-radius: 999px !important;
-  box-shadow: 0 1px 4px rgba(26,122,94,.25) !important;
+  box-shadow: 0 1px 4px rgba(14,59,46,.25) !important;
 }
 html[data-theme-v3="1"] .btn-secondary,
 html[data-theme-v3="1"] .btn-ghost { border-radius: 999px !important; }
@@ -2068,13 +2068,13 @@ html[data-theme-v3="1"] .btn-ghost { border-radius: 999px !important; }
   font-family: 'Instrument Serif', serif !important;
   font-size: 17px !important;
   font-weight: 400 !important;
-  color: #1A7A5E !important;
+  color: #0E3B2E !important;
 }
 </style>
 
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
 <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
-<script src="/js/bh-global-search.js?v=610ed2a6"></script>
+<script src="/js/bh-global-search.js?v=813e6615"></script>
 <script src="/js/bh-polish.js?v=1"></script>
 </body>
 </html>

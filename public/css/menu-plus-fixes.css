@@ -60,13 +60,13 @@ body[data-page="factures"] .tab-btn[data-tab="more"],
 body[data-page="clients"] .tab-btn[data-tab="more"],
 body[data-page="welcome"] .tab-btn[data-tab="more"],
 body[data-page="help"] .tab-btn[data-tab="more"] {
-  color: var(--primary-color, #1A7A5E) !important;
+  color: var(--primary-color, #0E3B2E) !important;
   opacity: 1;
 }
 
 /* Page réservations — onglet calendar actif */
 body[data-page="reservations"] .tab-btn[data-tab="calendar"] {
-  color: var(--primary-color, #1A7A5E) !important;
+  color: var(--primary-color, #0E3B2E) !important;
   opacity: 1;
 }
 
@@ -85,7 +85,7 @@ body[data-page="help"] .tab-btn[data-tab="more"]::before {
   transform: translateX(-50%);
   width: 4px;
   height: 4px;
-  background: #1A7A5E;
+  background: #0E3B2E;
   border-radius: 50%;
   animation: indicatorPulse 2s ease-in-out infinite;
 }
@@ -220,7 +220,7 @@ body[data-page="help"] .tab-btn[data-tab="more"] i {
   body[data-page="clients"] .mobile-tabs .tab-btn[data-tab="more"],
   body[data-page="welcome"] .mobile-tabs .tab-btn[data-tab="more"],
   body[data-page="help"] .mobile-tabs .tab-btn[data-tab="more"] {
-    color: #1A7A5E !important;
+    color: #0E3B2E !important;
     opacity: 1;
   }
 }
@@ -242,12 +242,12 @@ body[data-page="help"] .tab-btn[data-tab="more"] i {
 /* Page « Mes logements » : c'est l'onglet Plus qui s'allume desormais */
 body[data-page="settings"] .tab-btn[data-tab="more"],
 body[data-page="settings"] .mobile-tabs .tab-btn[data-tab="more"] {
-  color: var(--primary-color, #1A7A5E) !important;
+  color: var(--primary-color, #0E3B2E) !important;
   opacity: 1;
 }
 /* Page menage : onglet dedie dans la barre */
 body[data-page="cleaning"] .tab-btn[data-tab="cleaning"],
 body[data-page="cleaning"] .mobile-tabs .tab-btn[data-tab="cleaning"] {
-  color: var(--primary-color, #1A7A5E) !important;
+  color: var(--primary-color, #0E3B2E) !important;
   opacity: 1;
 }

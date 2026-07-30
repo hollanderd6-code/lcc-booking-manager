@@ -10,10 +10,10 @@
    ============================================ */
 
 :root {
-  --chat-primary: #10B981;
-  --chat-primary-light: #D1FAE5;
+  --chat-primary: #0E3B2E;
+  --chat-primary-light: #DCE9E3;
   --chat-bg: #F9FAFB;
-  --chat-bubble-owner: #10B981;
+  --chat-bubble-owner: #0E3B2E;
   --chat-bubble-guest: #FFFFFF;
   --chat-bubble-bot: #EFF6FF;
   --chat-text-owner: #FFFFFF;
@@ -130,7 +130,7 @@
 
 /* Avatar propriétaire */
 .chat-message.owner .chat-avatar {
-  background: linear-gradient(135deg, #10B981, #059669) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
 }
 
@@ -213,7 +213,7 @@
 
 .chat-status {
   font-style: italic !important;
-  color: #10B981 !important;
+  color: #0E3B2E !important;
 }
 
 /* Meta à droite pour les messages du propriétaire */
@@ -276,7 +276,7 @@
   outline: none !important;
   border-color: var(--chat-primary) !important;
   background: white !important;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+  box-shadow: 0 0 0 3px rgba(14, 59, 46, 0.1) !important;
 }
 
 /* ============================================
@@ -321,7 +321,7 @@
   height: 42px !important;
   border-radius: 12px !important;
   border: none !important;
-  background: linear-gradient(135deg, #10B981, #059669) !important;
+  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
   color: white !important;
   cursor: pointer !important;
   display: flex !important;
@@ -330,12 +330,12 @@
   font-size: 18px !important;
   transition: all 0.2s ease !important;
   flex-shrink: 0 !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(14, 59, 46, 0.3) !important;
 }
 
 .send-btn:hover:not(:disabled) {
   transform: translateY(-2px) !important;
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 6px 16px rgba(14, 59, 46, 0.4) !important;
 }
 
 .send-btn:active {
@@ -486,7 +486,7 @@
 }
 
 .photo-send-btn:hover {
-  background: #059669 !important;
+  background: #0A2C22 !important;
 }
 
 /* ============================================

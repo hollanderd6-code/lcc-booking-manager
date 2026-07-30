@@ -17,10 +17,10 @@ html[data-theme-v3="1"] {
      Le jade sert d'accent d'interface (boutons, liens, etats actifs) ;
      le vert de marque #0E3B2E est reserve au logo et aux aplats pleins :
      il est trop sombre pour rester lisible sur un element de 12 px. */
-  --jade:           #1E6E52;
-  --jade-light:     #2E8A69;
-  --jade-glow:      rgba(30,110,82,.12);
-  --jade-subtle:    rgba(30,110,82,.07);
+  --jade:           #0E3B2E;
+  --jade-light:     #1E6E52;
+  --jade-glow:      rgba(14,59,46,.12);
+  --jade-subtle:    rgba(14,59,46,.07);
   --marque:         #0E3B2E;
   --ivoire:         #F2EADA;
   --obsidian:       #0E3B2E;
@@ -38,7 +38,7 @@ html[data-theme-v3="1"] {
   --border-warm-v3: rgba(200,184,154,.4);
   --shadow-card-v3:  0 2px 8px rgba(13,17,23,.06), 0 1px 2px rgba(13,17,23,.04);
   --shadow-float-v3: 0 12px 40px rgba(13,17,23,.12), 0 4px 12px rgba(13,17,23,.06);
-  --shadow-jade-v3:  0 8px 28px rgba(26,122,94,.22);
+  --shadow-jade-v3:  0 8px 28px rgba(14,59,46,.22);
   --sidebar-w-v3:   248px;
   --ease-out-v3:    cubic-bezier(0.16,1,0.3,1);
   --ease-in-out-v3: cubic-bezier(0.4,0,0.2,1);
@@ -676,7 +676,7 @@ html[data-theme-v3="1"] #newReservationBtn {
 html[data-theme-v3="1"] #newReservationBtn:hover {
   background: var(--jade-light) !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 10px 32px rgba(26,122,94,.3) !important;
+  box-shadow: 0 10px 32px rgba(14,59,46,.3) !important;
 }
 
 html[data-theme-v3="1"] #newReservationBtn i {
@@ -819,7 +819,7 @@ html[data-theme-v3="1"] .page-content {
 
   /* Couleurs par KPI via ID */
   html[data-theme-v3="1"] #kpiPropertiesCard .kpi-pill {
-    background: rgba(26,122,94,.15) !important;
+    background: rgba(14,59,46,.15) !important;
     color: var(--jade) !important;
   }
   html[data-theme-v3="1"] #kpiTodayMovesCard .kpi-pill {
@@ -839,16 +839,16 @@ html[data-theme-v3="1"] .page-content {
     color: #7C3AED !important;
   }
   html[data-theme-v3="1"] #kpiDepositsCard .kpi-pill {
-    background: rgba(26,122,94,.12) !important;
+    background: rgba(14,59,46,.12) !important;
     color: var(--jade) !important;
   }
   html[data-theme-v3="1"] #kpiChecklistsCard .kpi-pill {
-    background: rgba(26,122,94,.15) !important;
+    background: rgba(14,59,46,.15) !important;
     color: var(--jade) !important;
   }
 
   html[data-theme-v3="1"] #kpiCaCard .kpi-pill {
-    background: rgba(26,122,94,.15) !important;
+    background: rgba(14,59,46,.15) !important;
     color: var(--jade) !important;
   }
 
@@ -1054,7 +1054,7 @@ html[data-theme-v3="1"] .status-label {
   font-family: 'DM Sans', sans-serif !important;
 }
 
-html[data-theme-v3="1"] .status-label.status-ok { background: rgba(26,122,94,.1) !important; color: var(--jade) !important; }
+html[data-theme-v3="1"] .status-label.status-ok { background: rgba(14,59,46,.1) !important; color: var(--jade) !important; }
 html[data-theme-v3="1"] .status-label.status-warning { background: rgba(245,158,11,.1) !important; color: #D97706 !important; }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1133,7 +1133,7 @@ html[data-theme-v3="1"] .btn-primary {
 html[data-theme-v3="1"] .btn-primary:hover {
   background: var(--jade-light) !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 10px 32px rgba(26,122,94,.3) !important;
+  box-shadow: 0 10px 32px rgba(14,59,46,.3) !important;
 }
 
 html[data-theme-v3="1"] .btn-ghost,
@@ -1286,15 +1286,15 @@ html[data-theme-v3="1"] .calendar-cell.weekend {
 
 /* Cellule aujourd'hui */
 html[data-theme-v3="1"] .calendar-cell.today {
-  background: rgba(26,122,94,.06) !important;
+  background: rgba(14,59,46,.06) !important;
 }
 
 html[data-theme-v3="1"] .calendar-cell:hover {
-  background: rgba(26,122,94,.09) !important;
+  background: rgba(14,59,46,.09) !important;
 }
 
 html[data-theme-v3="1"] .calendar-cell.selected {
-  background: rgba(26,122,94,.15) !important;
+  background: rgba(14,59,46,.15) !important;
 }
 
 /* Colonne logements */
@@ -1335,7 +1335,7 @@ html[data-theme-v3="1"] .bh-cal-legend-dot {
 
 html[data-theme-v3="1"] .bh-cal-legend-dot.airbnb  { background: #FF5A5F; }
 html[data-theme-v3="1"] .bh-cal-legend-dot.booking { background: #4A90E2; }
-html[data-theme-v3="1"] .bh-cal-legend-dot.direct  { background: #2AAE86; }
+html[data-theme-v3="1"] .bh-cal-legend-dot.direct  { background: #1E6E52; }
 
 html[data-theme-v3="1"] .calendar-modern-header {
   background: var(--obsidian) !important;
@@ -1363,7 +1363,7 @@ html[data-theme-v3="1"] .calendar-title-modern {
 html[data-theme-v3="1"] .calendar-title-modern i {
   font-size: 16px !important;
   color: var(--jade-light) !important;
-  background: rgba(26,122,94,.25) !important;
+  background: rgba(14,59,46,.25) !important;
   width: 38px !important; height: 38px !important;
   display: flex !important;
   align-items: center !important;
@@ -1504,7 +1504,7 @@ html[data-theme-v3="1"] .calendar-cell {
 
 html[data-theme-v3="1"] .calendar-cell:hover { background: var(--jade-subtle) !important; }
 html[data-theme-v3="1"] .calendar-cell.weekend { background: rgba(239,68,68,.02) !important; }
-html[data-theme-v3="1"] .calendar-cell.today { background: rgba(26,122,94,.05) !important; }
+html[data-theme-v3="1"] .calendar-cell.today { background: rgba(14,59,46,.05) !important; }
 
 /* Booking blocks */
 html[data-theme-v3="1"] .booking-block {
@@ -1656,7 +1656,7 @@ html[data-theme-v3="1"][data-theme="dark"] .calendar-wrapper,
 html[data-theme-v3="1"][data-theme="dark"] .checklist-card { background: #111827 !important; border-color: rgba(255,255,255,.07) !important; }
 
 html[data-theme-v3="1"][data-theme="dark"] .kpi-grid .kpi-card:first-child,
-html[data-theme-v3="1"][data-theme="dark"] #kpiPropertiesCard { background: #1C2B3A !important; border-color: rgba(26,122,94,.3) !important; }
+html[data-theme-v3="1"][data-theme="dark"] #kpiPropertiesCard { background: #1C2B3A !important; border-color: rgba(14,59,46,.3) !important; }
 
 html[data-theme-v3="1"][data-theme="dark"] .calendar-modern-header { background: #060D16 !important; }
 html[data-theme-v3="1"][data-theme="dark"] .period-navigation,
@@ -1667,7 +1667,7 @@ html[data-theme-v3="1"][data-theme="dark"] .calendar-grid { background: #111827 
 html[data-theme-v3="1"][data-theme="dark"] .calendar-row,
 html[data-theme-v3="1"][data-theme="dark"] .calendar-cell,
 html[data-theme-v3="1"][data-theme="dark"] .day-header { border-color: rgba(255,255,255,.06) !important; }
-html[data-theme-v3="1"][data-theme="dark"] .calendar-cell:hover { background: rgba(26,122,94,.1) !important; }
+html[data-theme-v3="1"][data-theme="dark"] .calendar-cell:hover { background: rgba(14,59,46,.1) !important; }
 html[data-theme-v3="1"][data-theme="dark"] .period-nav-btn { background: #1C2333 !important; border-color: rgba(255,255,255,.1) !important; color: rgba(255,255,255,.6) !important; }
 
 html[data-theme-v3="1"][data-theme="dark"] input,
@@ -1850,7 +1850,7 @@ html[data-theme-v3="1"] .btn-primary {
 }
 html[data-theme-v3="1"] .btn-primary:hover {
   background: linear-gradient(180deg, #26A37E 0%, var(--jade-light) 55%, var(--jade) 100%) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 10px 32px rgba(26,122,94,.3) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 10px 32px rgba(14,59,46,.3) !important;
 }
 html[data-theme-v3="1"] .btn-ghost:active,
 html[data-theme-v3="1"] .btn-secondary:active { background: var(--cream-deep) !important; }
@@ -1883,7 +1883,7 @@ html[data-theme-v3="1"] .period-nav-btn:active { transform: scale(.94) !importan
 html[data-theme-v3="1"] .day-header.weekend { background: var(--cream-deep) !important; }
 html[data-theme-v3="1"] .day-header.today .day-name { color: var(--jade) !important; }
 html[data-theme-v3="1"] .day-header.today {
-  box-shadow: inset 0 0 0 100px rgba(26,122,94,.04) !important;
+  box-shadow: inset 0 0 0 100px rgba(14,59,46,.04) !important;
 }
 
 /* ── Colonne logements : marqueur jade sur l'actif ── */
@@ -1978,8 +1978,8 @@ html[data-theme-v3="1"] .calendar-cell { border-color: rgba(200,184,154,.32) !im
 
 /* ── 3. Colonne du jour : filet jade vertical, pas juste l'en-tête ── */
 html[data-theme-v3="1"] .calendar-cell.today {
-  background: rgba(26,122,94,.045) !important;
-  box-shadow: inset 1px 0 0 rgba(26,122,94,.28), inset -1px 0 0 rgba(26,122,94,.28) !important;
+  background: rgba(14,59,46,.045) !important;
+  box-shadow: inset 1px 0 0 rgba(14,59,46,.28), inset -1px 0 0 rgba(14,59,46,.28) !important;
 }
 
 /* ── 4. Colonne logements : ombre portée pendant le scroll horizontal ──
@@ -2050,8 +2050,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked .booking-letter {
 
 /* ── 8. Cellule libre : invite au clic, très légère ── */
 html[data-theme-v3="1"] .calendar-cell:hover {
-  background: rgba(26,122,94,.055) !important;
-  box-shadow: inset 0 0 0 1px rgba(26,122,94,.16) !important;
+  background: rgba(14,59,46,.055) !important;
+  box-shadow: inset 0 0 0 1px rgba(14,59,46,.16) !important;
 }
 
 /* ── 9. Dark mode ── */

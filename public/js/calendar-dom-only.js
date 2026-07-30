@@ -99,7 +99,7 @@
 
     // Détecter la plateforme depuis la classe
     let platform = 'direct';
-    let platformColor = '#10B981';
+    let platformColor = '#0E3B2E';
     
     if (bookingBlock.classList.contains('airbnb')) {
       platform = 'airbnb';
@@ -376,7 +376,7 @@
       position: fixed;
       top: 20px;
       right: 20px;
-      background: ${type === 'success' ? '#10B981' : '#ef4444'};
+      background: ${type === 'success' ? '#0E3B2E' : '#ef4444'};
       color: white;
       padding: 16px 24px;
       border-radius: 8px;

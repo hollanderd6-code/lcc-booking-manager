@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root { --primary:#1A7A5E; --primary-dark:#15624B; --primary-glow:rgba(26,122,94,.28); }
+:root { --primary:#0E3B2E; --primary-dark:#15624B; --primary-glow:rgba(14,59,46,.28); }
 html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased; overflow-x:hidden; background:#0D1117; }
 @keyframes fadeUp  { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:none} }
 @keyframes floatUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
@@ -26,21 +26,21 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
 .hero-logo-icon img { width:100%; height:100%; object-fit:cover; display:block; }
 .hero-logo-icon .fb { font-size:18px; font-weight:900; color:white; display:none; }
 .hero-logo-name { font-size:17px; font-weight:700; color:white; }
-.hero-logo-name em { color:#6ee7b7; font-style:normal; }
+.hero-logo-name em { color:#8FC7AF; font-style:normal; }
 .hero-content { position:relative; z-index:2; max-width:1160px; margin:0 auto; padding:100px 48px 80px; width:100%; display:grid; grid-template-columns:1fr 1fr; gap:72px; align-items:center; }
 .hero-left { animation:fadeUp .9s .1s both; }
-.hero-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(26,122,94,.25); color:#6ee7b7; border:1px solid rgba(110,231,183,.3); padding:6px 14px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; margin-bottom:22px; }
+.hero-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(14,59,46,.25); color:#8FC7AF; border:1px solid rgba(143,199,175,.3); padding:6px 14px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; margin-bottom:22px; }
 .hero h1 { font-family:'Instrument Serif',serif; font-size:clamp(34px,4.5vw,58px); line-height:1.06; color:white; margin-bottom:20px; font-weight:400; }
-.hero h1 em { color:#6ee7b7; font-style:normal; }
+.hero h1 em { color:#8FC7AF; font-style:normal; }
 .hero-sub { font-size:16px; color:rgba(255,255,255,.62); line-height:1.72; margin-bottom:36px; max-width:460px; }
 .hero-trust { display:flex; gap:20px; flex-wrap:wrap; }
 .hero-trust-item { display:flex; align-items:center; gap:7px; font-size:13px; color:rgba(255,255,255,.45); }
-.hero-trust-item i { color:#6ee7b7; font-size:11px; }
+.hero-trust-item i { color:#8FC7AF; font-size:11px; }
 .hero-right { animation:fadeUp .9s .3s both; }
 .form-card { background:rgba(255,255,255,.07); backdrop-filter:blur(28px); border:1px solid rgba(255,255,255,.13); border-radius:22px; overflow:hidden; }
 .form-card-header { background:rgba(255,255,255,.05); padding:18px 24px; border-bottom:1px solid rgba(255,255,255,.07); }
 .form-card-title { font-size:14px; font-weight:700; color:white; display:flex; align-items:center; gap:8px; }
-.form-card-title i { color:#6ee7b7; }
+.form-card-title i { color:#8FC7AF; }
 .form-card-body { padding:32px 24px; text-align:center; }
 
 /* States */
@@ -49,22 +49,22 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
 .spinner { width:64px; height:64px; border:3px solid rgba(255,255,255,.12); border-top-color:var(--primary); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 24px; }
 .icon-ring { width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; font-size:30px; position:relative; }
 .icon-ring::before { content:''; position:absolute; inset:-8px; border-radius:50%; border:1.5px dashed currentColor; opacity:.2; animation:rotate 12s linear infinite; }
-.icon-ring.success { background:rgba(110,231,183,.12); color:#6ee7b7; }
+.icon-ring.success { background:rgba(143,199,175,.12); color:#8FC7AF; }
 .icon-ring.error   { background:rgba(220,38,38,.12); color:#f87171; }
 .icon-ring.expired { background:rgba(251,191,36,.1); color:#fbbf24; }
 .state h1 { font-family:'Instrument Serif',serif; font-size:26px; font-weight:400; color:white; margin-bottom:8px; line-height:1.2; }
 .state p  { font-size:14px; color:rgba(255,255,255,.55); line-height:1.65; margin-bottom:4px; }
-.hl { color:#6ee7b7; font-weight:600; }
+.hl { color:#8FC7AF; font-weight:600; }
 .btn { display:inline-flex; align-items:center; gap:8px; margin-top:24px; padding:13px 26px; background:var(--primary); color:white; border:none; border-radius:13px; font-size:14px; font-weight:700; font-family:'DM Sans',sans-serif; cursor:pointer; text-decoration:none; transition:all .2s; box-shadow:0 4px 16px var(--primary-glow); }
-.btn:hover { background:var(--primary-dark); transform:translateY(-1px); box-shadow:0 8px 24px rgba(26,122,94,.45); }
+.btn:hover { background:var(--primary-dark); transform:translateY(-1px); box-shadow:0 8px 24px rgba(14,59,46,.45); }
 .countdown { font-size:12px; color:rgba(255,255,255,.35); margin-top:12px; }
-.form-notif { margin-top:20px; background:rgba(26,122,94,.18); border:1px solid rgba(26,122,94,.3); border-radius:11px; padding:11px 14px; display:flex; align-items:center; gap:10px; font-size:12px; color:#6ee7b7; opacity:0; animation:floatUp .6s 1.4s both; }
+.form-notif { margin-top:20px; background:rgba(14,59,46,.18); border:1px solid rgba(14,59,46,.3); border-radius:11px; padding:11px 14px; display:flex; align-items:center; gap:10px; font-size:12px; color:#8FC7AF; opacity:0; animation:floatUp .6s 1.4s both; }
 .form-notif .dot { width:7px; height:7px; border-radius:50%; background:#4ade80; flex-shrink:0; animation:pulse 2s 1.4s infinite; }
 @media(max-width:900px){.hero-content{grid-template-columns:1fr;gap:40px;padding:100px 24px 60px}.hero-right{order:-1}.hero h1{font-size:clamp(28px,8vw,40px)}}
 @media(max-width:560px){.hero-logo{left:24px}}
 </style>
-<link rel="stylesheet" href="/css/bh-core.css?v=b1b7fddb">
-  <link rel="stylesheet" href="/css/bh-brand.css?v=69892992">
+<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+  <link rel="stylesheet" href="/css/bh-brand.css?v=c0705a60">
 
   <!-- Marque Boostinghost — genere par outils/marque.js -->
   <link rel="icon" href="/img/brand/web/favicon.svg" type="image/svg+xml">
