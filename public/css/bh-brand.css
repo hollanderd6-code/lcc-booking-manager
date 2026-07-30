@@ -134,8 +134,7 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
    une image carree + du texte HTML a cote. Le texte est ici en Marcellus,
    tres espace, avec la baseline calee sur la meme largeur.
    ============================================================================ */
-.sidebar-logo .bh-mot,
-.mobile-logo .bh-mot {
+.bh-mot {
   font-family: 'Marcellus', 'Instrument Serif', Georgia, serif;
   font-size: 16px;
   line-height: 1.1;
@@ -145,8 +144,7 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
   white-space: nowrap;
   font-weight: 400;
 }
-.sidebar-logo .bh-baseline,
-.mobile-logo .bh-baseline {
+.bh-baseline {
   font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 7.5px;
   line-height: 1.2;
@@ -376,4 +374,45 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
   .mobile-header [class*="bhgs-trigger"] {
     margin: 0 0 0 4px !important;
   }
+}
+
+
+/* ============================================================================
+   PAGES PUBLIQUES — logo et mot-symbole
+
+   index, login, register, cgv, mentions legales, blog, tarifs... portaient
+   soit un PNG en base64, soit /images/logo.png, et un mot-symbole en texte
+   bicolore (« Boosting » + « host » en vert). Tout passe au monogramme carre
+   et aux capitales espacees de l'identite.
+   ============================================================================ */
+
+/* Les conteneurs de logo etaient prevus pour une image ronde recadree :
+   un cartouche carre ne doit etre ni rogne ni arrondi en cercle. */
+.logo-icon,
+.hero-logo-icon,
+.brand-logo,
+.logo-link .logo-icon {
+  border-radius: 9px !important;
+  overflow: visible !important;
+}
+.logo-icon img,
+.hero-logo-icon img,
+.brand-logo img,
+.brand-logo-img {
+  object-fit: contain !important;
+  border-radius: 9px !important;
+}
+
+/* Mot-symbole des en-tetes publics : meme graisse et meme approche que le
+   verrou, pour que le texte et l'image racontent la meme chose. */
+.logo-link .bh-mot,
+.brand .bh-mot,
+header .bh-mot {
+  font-size: 17px;
+  letter-spacing: .15em;
+}
+@media (max-width: 640px) {
+  .logo-link .bh-mot,
+  .brand .bh-mot,
+  header .bh-mot { font-size: 14px; letter-spacing: .12em; }
 }

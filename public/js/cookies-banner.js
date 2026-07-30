@@ -181,7 +181,7 @@
   banner.setAttribute('role', 'dialog');
   banner.setAttribute('aria-label', 'Gestion des cookies');
   banner.innerHTML = `
-    <div class="bh-cookie-icon"><img src="/images/logo.png" alt="Boostinghost" style="width:28px;height:28px;border-radius:6px;object-fit:cover;display:block;"></div>
+    <div class="bh-cookie-icon"><img src="/img/brand/web/mono-carre.svg?v=a3b57a36" alt="Boostinghost" style="width:28px;height:28px;border-radius:7px;object-fit:contain;display:block;"></div>
     <div class="bh-cookie-body">
       <div class="bh-cookie-title">Ce site utilise des cookies</div>
       <div class="bh-cookie-text">
