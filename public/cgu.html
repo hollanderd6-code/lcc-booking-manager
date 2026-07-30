@@ -29,9 +29,7 @@
     body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; }
     .top-header { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
     .header-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text-primary); }
-    .header-logo img { width: 32px; height: 32px; border-radius: 50%; }
-    .logo-wordmark { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
-    .brand-boosting { color: var(--green); }
+    .header-logo img { width: 34px; height: 34px; border-radius: 9px; object-fit: contain; }
     .btn-back { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; color: var(--text-secondary); background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 999px; padding: 7px 14px; text-decoration: none; transition: all 0.15s; }
     .btn-back:hover { background: #fff; color: var(--text-primary); box-shadow: 0 2px 8px rgba(15,23,42,0.08); }
     .btn-back i { font-size: 11px; }
@@ -72,8 +70,6 @@ html[data-theme-v3="1"] .top-header {
   background: rgba(245,242,236,.92) !important;
   border-bottom-color: rgba(200,184,154,.35) !important;
 }
-html[data-theme-v3="1"] .brand-boosting { color: #0E3B2E !important; }
-html[data-theme-v3="1"] .logo-wordmark { font-family: 'DM Sans', sans-serif !important; }
 html[data-theme-v3="1"] .btn-back {
   background: rgba(255,255,255,.6) !important;
   border-color: rgba(200,184,154,.4) !important;
@@ -149,7 +145,7 @@ html[data-theme-v3="1"] .highlight-box {
   <header class="top-header">
     <a href="/" class="header-logo">
       <img src="/img/brand/web/mono-carre.svg?v=a3b57a36" alt="Boostinghost"/>
-      <span class="logo-wordmark"><span class="brand-boosting">Boosting</span>host</span>
+      <span class="bh-mot">Boostinghost</span>
     </a>
     <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> Retour</a>
   </header>

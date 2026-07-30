@@ -26,8 +26,6 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
 .hero-logo-icon { width:34px; height:34px; border-radius:9px; overflow:hidden; flex-shrink:0; background:var(--primary); display:flex; align-items:center; justify-content:center; }
 .hero-logo-icon img { width:100%; height:100%; object-fit:cover; display:block; }
 .hero-logo-icon .fb { font-size:18px; font-weight:900; color:white; display:none; }
-.hero-logo-name { font-size:17px; font-weight:700; color:white; }
-.hero-logo-name em { color:#8FC7AF; font-style:normal; }
 .hero-nav { position:absolute; top:36px; right:48px; z-index:10; display:flex; align-items:center; gap:8px; }
 .hero-nav a { font-size:14px; color:rgba(255,255,255,.6); text-decoration:none; padding:7px 14px; border-radius:10px; transition:all .15s; }
 .hero-nav a:hover { color:white; background:rgba(255,255,255,.08); }
@@ -95,6 +93,11 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
 .form-footer-link a { color:#8FC7AF; font-weight:600; }
 @media(max-width:900px){.hero-content{grid-template-columns:1fr;gap:40px;padding:100px 24px 60px}.hero-right{order:-1}.hero h1{font-size:clamp(28px,8vw,40px)}.hero-nav{display:none}}
 @media(max-width:560px){.hero-logo{left:24px}}
+
+/* Verrou : cartouche carre + mot-symbole Marcellus, ivoire sur fond sombre */
+.hero-logo-icon { background: transparent !important; }
+.hero-logo-icon img { object-fit: contain !important; }
+.hero-logo .bh-mot { color: #F2EADA; font-size: 16px; }
 </style>
 <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
   <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
@@ -117,7 +120,7 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
       <img src="/img/brand/web/mono-carre.svg?v=a3b57a36" alt="Boostinghost" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
       <span class="fb">B</span>
     </div>
-    <div class="hero-logo-name"><em>Boosting</em>host</div>
+    <span class="bh-mot">Boostinghost</span>
   </a>
   <nav class="hero-nav">
     <a href="/pricing.html">Tarifs</a>

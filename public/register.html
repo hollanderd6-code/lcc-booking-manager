@@ -72,8 +72,6 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
 }
 .hero-logo-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .hero-logo-icon .fb { font-size:18px; font-weight:900; color:white; display:none; }
-.hero-logo-name { font-size: 17px; font-weight: 700; color: white; }
-.hero-logo-name em { color: #8FC7AF; font-style: normal; }
 
 /* Nav top right */
 .hero-nav {
@@ -295,6 +293,11 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
   .features-grid { grid-template-columns: 1fr; }
   .hero-logo { left: 24px; }
 }
+
+/* Verrou : cartouche carre + mot-symbole Marcellus, ivoire sur fond sombre */
+.hero-logo-icon { background: transparent !important; }
+.hero-logo-icon img { object-fit: contain !important; }
+.hero-logo .bh-mot { color: #F2EADA; font-size: 16px; }
 </style>
 <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
   <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
@@ -320,7 +323,7 @@ html, body { font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antiali
       <img src="/img/brand/web/mono-carre.svg?v=a3b57a36" alt="Boostinghost" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
       <span class="fb">B</span>
     </div>
-    <div class="hero-logo-name"><em>Boosting</em>host</div>
+    <span class="bh-mot">Boostinghost</span>
   </a>
 
   <!-- Nav -->

@@ -4,6 +4,7 @@ import WebKit
 import FirebaseCore
 import FirebaseMessaging
 import UserNotifications
+import LocalAuthentication
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -11,20 +12,163 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     var splashViewController: UIViewController?
     var isWebViewLoaded = false
-
-    // Couleur principale Boostinghost #1A7A5E
-    let brandColor = UIColor(red: 0.102, green: 0.478, blue: 0.369, alpha: 1.0)
-    
-    // ✅ Stocker le token FCM même si la WebView n'est pas encore prête
+    // Vert bouteille #0E3B2E — DOIT etre identique au backgroundColor du
+    // LaunchScreen.storyboard, sinon l'ecran change de teinte au demarrage.
+    let brandColor = UIColor(red: 0.0549, green: 0.2314, blue: 0.1804, alpha: 1.0)
+    // Ivoire #F2EADA — encre de la marque sur fond vert.
+    let inkColor = UIColor(red: 0.949, green: 0.918, blue: 0.855, alpha: 1.0)
     var pendingFCMToken: String? = nil
+    // 🔗 Deep link en attente (notif reçue avant que la WebView soit prête → cold start)
+    var pendingDeepLink: String? = nil
 
     private func disablePullToRefresh(on webView: WKWebView) {
         let sv = webView.scrollView
         sv.bounces = false
         sv.alwaysBounceVertical = false
         sv.refreshControl = nil
+        sv.isDirectionalLockEnabled = true
+        sv.delaysContentTouches = false
+        sv.decelerationRate = .normal
         if #available(iOS 11.0, *) {
             sv.contentInsetAdjustmentBehavior = .never
+        }
+    }
+
+    // ============================================
+    // AUTH PERSISTENCE — UserDefaults
+    // ============================================
+
+    func saveTokenToUserDefaults(_ token: String) {
+        UserDefaults.standard.set(token, forKey: "lcc_token")
+        UserDefaults.standard.synchronize()
+        print("💾 Token sauvegardé dans UserDefaults")
+    }
+
+    func clearTokenFromUserDefaults() {
+        UserDefaults.standard.removeObject(forKey: "lcc_token")
+        UserDefaults.standard.synchronize()
+        print("🗑️ Token supprimé de UserDefaults")
+    }
+
+    func restoreTokenIfNeeded(webView: WKWebView) {
+        guard let token = UserDefaults.standard.string(forKey: "lcc_token"),
+              !token.isEmpty else {
+            print("ℹ️ Pas de token sauvegardé dans UserDefaults")
+            return
+        }
+
+        let js = """
+        (function() {
+            var existing = localStorage.getItem('lcc_token');
+            if (!existing || existing === 'undefined' || existing === 'null') {
+                localStorage.setItem('lcc_token', '\(token)');
+                console.log('[Auth] ✅ Token restauré depuis UserDefaults');
+            } else {
+                window._syncTokenToNative && window._syncTokenToNative(existing);
+                console.log('[Auth] ℹ️ Token déjà dans localStorage');
+            }
+        })();
+        """
+
+        webView.evaluateJavaScript(js) { _, error in
+            if let error = error {
+                print("❌ Erreur restauration token: \(error)")
+            } else {
+                print("✅ Token restauré dans localStorage")
+            }
+        }
+    }
+
+    // ============================================
+    // 🔗 DEEP LINKING — table de routage centralisée
+    // ============================================
+
+    /// Renvoie le chemin de page pour un type de notification donné.
+    /// Défaut : app.html (aucune notif ne doit jamais ne « rien » faire).
+    static func pageForNotification(type: String, conversationId conv: String) -> String {
+        let messages: Set<String> = [
+            "new_message", "new_guest_message", "new_chat_message",
+            "chat_sms", "template_failed", "bhguest_notif", "property"
+        ]
+        let calendar: Set<String> = [
+            "new_reservation", "new_booking", "new_booking_channex", "new_booking_guest",
+            "reservation_cancelled", "cancelled_booking_channex", "reservation_modified",
+            "arrivals", "departures", "bhguest_hold", "reminder_j1"
+        ]
+        let cleaning: Set<String> = [
+            "cleaning_assigned", "cleaning_recap", "cleaning_completed", "cleaning_validated",
+            "cleaning_alert", "cleaning_lastminute", "cleaning_complement", "sms_reply"
+        ]
+        let deposits: Set<String> = ["deposit_paid", "deposit_captured", "payment_received"]
+        let invoices: Set<String> = ["new_invoice"]
+        let smartLocks: Set<String> = ["smart_lock_battery"]
+
+        if messages.contains(type) {
+            return conv.isEmpty ? "messages.html" : "messages.html?open=\(conv)"
+        }
+        if calendar.contains(type)   { return "app.html?view=calendar" }
+        if cleaning.contains(type)   { return "cleaning.html" }
+        if deposits.contains(type)   { return "deposits.html" }
+        if invoices.contains(type)   { return "clients.html" }
+        if smartLocks.contains(type) { return "smart-locks.html" }
+        // daily_summary, monthly_summary, account_onboarding, contract_signed, agency_access, inconnus…
+        return "app.html"
+    }
+
+    /// Calcule la cible depuis le payload et tente de l'appliquer.
+    func routeNotification(_ userInfo: [AnyHashable: Any]) {
+        let type = userInfo["type"] as? String ?? ""
+        // ⚠️ tolère snake_case ET camelCase (les payloads serveur mélangent les deux)
+        let conv = (userInfo["conversation_id"] as? String)
+            ?? (userInfo["conversationId"] as? String) ?? ""
+        let path = AppDelegate.pageForNotification(type: type, conversationId: conv)
+        print("📱 Notif type='\(type)' conv='\(conv)' → /\(path)")
+        pendingDeepLink = path
+        applyPendingDeepLinkIfReady()
+    }
+
+    /// Applique le deep link en attente si la WebView est prête,
+    /// sinon le laisse en attente (sera appliqué dans didFinish — cold start).
+    func applyPendingDeepLinkIfReady() {
+        guard let path = pendingDeepLink else { return }
+        guard isWebViewLoaded,
+              let rootVC = window?.rootViewController as? CAPBridgeViewController,
+              let webView = rootVC.webView else {
+            print("📱 WebView pas prête → deep link mis en attente (/\(path))")
+            return
+        }
+        pendingDeepLink = nil
+        // location.replace pour ne pas polluer l'historique
+        let js = "window.location.replace('/\(path)');"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            webView.evaluateJavaScript(js) { _, error in
+                if let error = error {
+                    print("❌ Deep link erreur: \(error)")
+                } else {
+                    print("✅ Deep link appliqué → /\(path)")
+                }
+            }
+        }
+    }
+
+    // ============================================
+    // FACE ID — LocalAuthentication natif
+    // ============================================
+
+    func evaluateBiometry(completion: @escaping (Bool, String?) -> Void) {
+        let context = LAContext()
+        var error: NSError?
+
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+            completion(false, error?.localizedDescription ?? "Biométrie indisponible")
+            return
+        }
+
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+                               localizedReason: "Accédez à votre espace Boostinghost") { success, error in
+            DispatchQueue.main.async {
+                completion(success, error?.localizedDescription)
+            }
         }
     }
 
@@ -58,8 +202,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             webView.scrollView.bounces = false
             webView.scrollView.alwaysBounceVertical = false
             webView.scrollView.refreshControl = nil
+            webView.scrollView.isDirectionalLockEnabled = true
+            webView.scrollView.delaysContentTouches = false
+            webView.scrollView.decelerationRate = .normal
             webView.alpha = 0
             webView.navigationDelegate = self
+
+            // Token sync handler
+            webView.configuration.userContentController
+                .add(TokenSyncHandler(appDelegate: self), name: "tokenSync")
+
+            // Face ID handlers
+            webView.configuration.userContentController
+                .add(FaceIDCheckHandler(appDelegate: self), name: "faceIDCheck")
+            webView.configuration.userContentController
+                .add(FaceIDAuthHandler(appDelegate: self), name: "faceIDAuth")
         }
 
         window.rootViewController = capVC
@@ -78,11 +235,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // Badge à 0 + supprimer toutes les notifications du centre de notifs
         application.applicationIconBadgeNumber = 0
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
-        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-        print("📱 Badge remis à 0 + notifications effacées (active)")
+        print("📱 Badge remis à 0 (active)")
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
@@ -95,47 +250,47 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         print("❌ Erreur APNs: \(error.localizedDescription)")
     }
 
-    // ✅ Injecter le FCM token dans la WebView (appelé depuis didFinish et depuis MessagingDelegate)
     func injectFCMToken(_ token: String) {
         guard let rootVC = window?.rootViewController as? CAPBridgeViewController,
               let webView = rootVC.webView else {
-            print("📱 WebView pas prête, token mis en attente")
+            print("📱 WebView pas prête, FCM token mis en attente")
             pendingFCMToken = token
             return
         }
-        
+
         let js = """
         window.fcmToken = '\(token)';
-        console.log('[FCM] Token reçu: \(token.prefix(20))...');
         if (typeof window.onFCMToken === 'function') {
             window.onFCMToken('\(token)');
         } else {
-            // Réessayer dans 1s si onFCMToken pas encore défini
-            setTimeout(function() {
-                if (typeof window.onFCMToken === 'function') {
-                    window.onFCMToken('\(token)');
-                }
-            }, 1000);
-            setTimeout(function() {
-                if (typeof window.onFCMToken === 'function') {
-                    window.onFCMToken('\(token)');
-                }
-            }, 3000);
+            setTimeout(function() { if (typeof window.onFCMToken === 'function') window.onFCMToken('\(token)'); }, 1000);
+            setTimeout(function() { if (typeof window.onFCMToken === 'function') window.onFCMToken('\(token)'); }, 3000);
         }
         """
-        
+
         webView.evaluateJavaScript(js) { _, error in
             if let error = error {
                 print("❌ Erreur injection FCM token: \(error)")
             } else {
-                print("✅ FCM token injecté dans WebView")
+                print("✅ FCM token injecté")
                 self.pendingFCMToken = nil
             }
         }
     }
 
     // ============================================
-    // SPLASH SCREEN — Boostinghost #1A7A5E
+    // SPLASH SCREEN — prolongement du LaunchScreen
+    //
+    // L'ancien splash dessinait sa propre marque : un « B » systeme .heavy dans
+    // un cercle blanc translucide, puis BOOSTINGHOST tape lettre par lettre en
+    // police systeme. Trois dessins differents se succedaient donc a
+    // l'ouverture : le verrou du storyboard, ce « B », puis le verrou du web.
+    //
+    // Ici on reprend le MEME asset et les MEMES contraintes que
+    // LaunchScreen.storyboard (62 % de largeur, plafond 260 pt, ratio 240x140,
+    // centre decale de -24). Le verrou est donc deja a l'ecran quand ce splash
+    // s'installe : il ne bouge pas d'un point, on n'ajoute qu'un indicateur de
+    // chargement. Aucune police n'est a embarquer.
     // ============================================
 
     func createAndShowSplashScreen() {
@@ -145,75 +300,36 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         splashView.backgroundColor = brandColor
         splashView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
-        let circleSize: CGFloat = 112
-        let circleView = UIView()
-        circleView.backgroundColor = UIColor.white.withAlphaComponent(0.15)
-        circleView.layer.cornerRadius = circleSize / 2
-        circleView.translatesAutoresizingMaskIntoConstraints = false
-
-        let logoLabel = UILabel()
-        logoLabel.text = "B"
-        logoLabel.textAlignment = .center
-        logoLabel.font = UIFont.systemFont(ofSize: 72, weight: .heavy)
-        logoLabel.textColor = .white
-        logoLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        let brandLabel = UILabel()
-        brandLabel.text = ""
-        brandLabel.textAlignment = .center
-        brandLabel.font = UIFont.systemFont(ofSize: 24, weight: .bold)
-        brandLabel.textColor = .white
-        brandLabel.alpha = 0
-        brandLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        let taglineLabel = UILabel()
-        taglineLabel.text = "SMART PROPERTY MANAGER"
-        taglineLabel.textAlignment = .center
-        taglineLabel.font = UIFont.systemFont(ofSize: 13, weight: .medium)
-        taglineLabel.textColor = UIColor.white.withAlphaComponent(0.70)
-        taglineLabel.alpha = 0
-        taglineLabel.translatesAutoresizingMaskIntoConstraints = false
+        let verrou = UIImageView(image: UIImage(named: "LaunchLogo"))
+        verrou.contentMode = .scaleAspectFit
+        verrou.isUserInteractionEnabled = false
+        verrou.translatesAutoresizingMaskIntoConstraints = false
 
         let spinner = UIActivityIndicatorView(style: .medium)
-        spinner.color = UIColor.white.withAlphaComponent(0.80)
+        spinner.color = inkColor.withAlphaComponent(0.80)
         spinner.alpha = 0
         spinner.translatesAutoresizingMaskIntoConstraints = false
 
-        splashView.addSubview(circleView)
-        splashView.addSubview(logoLabel)
-        splashView.addSubview(brandLabel)
-        splashView.addSubview(taglineLabel)
+        splashView.addSubview(verrou)
         splashView.addSubview(spinner)
 
+        // 62 % de la largeur d'ecran, mais jamais plus de 260 pt : sur iPad la
+        // proportion doit ceder au plafond, d'ou la priorite abaissee.
+        let largeur = verrou.widthAnchor.constraint(equalTo: splashView.widthAnchor, multiplier: 0.62)
+        largeur.priority = .defaultHigh
+
         NSLayoutConstraint.activate([
-            circleView.centerXAnchor.constraint(equalTo: splashView.centerXAnchor),
-            circleView.centerYAnchor.constraint(equalTo: splashView.centerYAnchor, constant: -80),
-            circleView.widthAnchor.constraint(equalToConstant: circleSize),
-            circleView.heightAnchor.constraint(equalToConstant: circleSize),
-
-            logoLabel.centerXAnchor.constraint(equalTo: splashView.centerXAnchor),
-            logoLabel.centerYAnchor.constraint(equalTo: splashView.centerYAnchor, constant: -80),
-            logoLabel.widthAnchor.constraint(equalToConstant: circleSize),
-            logoLabel.heightAnchor.constraint(equalToConstant: circleSize),
-
-            brandLabel.centerXAnchor.constraint(equalTo: splashView.centerXAnchor),
-            brandLabel.topAnchor.constraint(equalTo: logoLabel.bottomAnchor, constant: 28),
-            brandLabel.leadingAnchor.constraint(equalTo: splashView.leadingAnchor, constant: 40),
-            brandLabel.trailingAnchor.constraint(equalTo: splashView.trailingAnchor, constant: -40),
-
-            taglineLabel.centerXAnchor.constraint(equalTo: splashView.centerXAnchor),
-            taglineLabel.topAnchor.constraint(equalTo: brandLabel.bottomAnchor, constant: 8),
-            taglineLabel.leadingAnchor.constraint(equalTo: splashView.leadingAnchor, constant: 40),
-            taglineLabel.trailingAnchor.constraint(equalTo: splashView.trailingAnchor, constant: -40),
-
+            verrou.centerXAnchor.constraint(equalTo: splashView.centerXAnchor),
+            // Legerement au-dessus du centre geometrique : un bloc pose
+            // exactement au milieu parait toujours trop bas.
+            verrou.centerYAnchor.constraint(equalTo: splashView.centerYAnchor, constant: -24),
+            largeur,
+            verrou.widthAnchor.constraint(lessThanOrEqualToConstant: 260),
+            // Rapport du trace conserve : 240 x 140
+            verrou.heightAnchor.constraint(equalTo: verrou.widthAnchor, multiplier: 140.0 / 240.0),
             spinner.centerXAnchor.constraint(equalTo: splashView.centerXAnchor),
             spinner.bottomAnchor.constraint(equalTo: splashView.bottomAnchor, constant: -60),
         ])
-
-        logoLabel.alpha = 0
-        logoLabel.transform = CGAffineTransform(scaleX: 0.4, y: 0.4)
-        circleView.alpha = 0
-        circleView.transform = CGAffineTransform(scaleX: 0.4, y: 0.4)
 
         window.addSubview(splashView)
         window.bringSubviewToFront(splashView)
@@ -221,72 +337,24 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         splashViewController = UIViewController()
         splashViewController?.view = splashView
 
-        print("✅ Splash screen affiché (#1A7A5E)")
-
-        UIView.animate(
-            withDuration: 0.65,
-            delay: 0.15,
-            usingSpringWithDamping: 0.6,
-            initialSpringVelocity: 0.8,
-            options: .curveEaseOut
-        ) {
-            logoLabel.alpha = 1
-            logoLabel.transform = .identity
-            circleView.alpha = 1
-            circleView.transform = .identity
+        // Le verrou est deja visible depuis le storyboard : on ne le ré-anime
+        // pas, on annonce seulement le chargement.
+        UIView.animate(withDuration: 0.35, delay: 0.45, options: .curveEaseOut) {
+            spinner.alpha = 1
         } completion: { _ in
-
-            UIView.animate(withDuration: 0.3, delay: 0, options: [.autoreverse, .curveEaseInOut]) {
-                circleView.transform = CGAffineTransform(scaleX: 1.08, y: 1.08)
-            } completion: { _ in
-                circleView.transform = .identity
-            }
-
-            UIView.animate(withDuration: 0.2, delay: 0.15) {
-                brandLabel.alpha = 1
-            }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                let brandText = "BOOSTINGHOST"
-                var charIndex = 0
-                var timer: Timer?
-                timer = Timer.scheduledTimer(withTimeInterval: 0.07, repeats: true) { t in
-                    charIndex += 1
-                    brandLabel.text = String(brandText.prefix(charIndex))
-                    if charIndex >= brandText.count {
-                        t.invalidate()
-                        UIView.animate(withDuration: 0.4, delay: 0.1) {
-                            taglineLabel.alpha = 1
-                        }
-                        UIView.animate(withDuration: 0.4, delay: 0.25) {
-                            spinner.alpha = 1
-                        } completion: { _ in
-                            spinner.startAnimating()
-                        }
-                    }
-                }
-                _ = timer
-            }
+            spinner.startAnimating()
         }
     }
 
     func hideSplashScreen() {
         guard let splashView = splashViewController?.view else { return }
-        print("🎬 Masquage du splash")
-
         if let rootVC = window?.rootViewController as? CAPBridgeViewController {
-            UIView.animate(withDuration: 0.3) {
-                rootVC.webView?.alpha = 1
-            }
+            UIView.animate(withDuration: 0.3) { rootVC.webView?.alpha = 1 }
         }
-
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            UIView.animate(withDuration: 0.4, animations: {
-                splashView.alpha = 0
-            }) { _ in
+            UIView.animate(withDuration: 0.4, animations: { splashView.alpha = 0 }) { _ in
                 splashView.removeFromSuperview()
                 self.splashViewController = nil
-                print("✨ Splash masqué")
             }
         }
     }
@@ -296,20 +364,74 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 // WEBVIEW NAVIGATION
 // ============================================
 extension AppDelegate: WKNavigationDelegate {
+
+    func webView(_ webView: WKWebView,
+                 decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if let url = navigationAction.request.url,
+           let scheme = url.scheme?.lowercased() {
+            let externalSchemes = ["tel", "telprompt", "sms", "mailto", "facetime", "facetime-audio"]
+            if externalSchemes.contains(scheme) {
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                decisionHandler(.cancel)
+                return
+            }
+        }
+        decisionHandler(.allow)
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         disablePullToRefresh(on: webView)
-        guard !isWebViewLoaded else { return }
+
+        let bridgeJS = """
+        window._syncTokenToNative = function(token) {
+            window.webkit && window.webkit.messageHandlers &&
+            window.webkit.messageHandlers.tokenSync &&
+            window.webkit.messageHandlers.tokenSync.postMessage(token);
+        };
+
+        (function() {
+            var _originalSetItem = localStorage.setItem.bind(localStorage);
+            localStorage.setItem = function(key, value) {
+                _originalSetItem(key, value);
+                if (key === 'lcc_token' && value && value !== 'undefined' && value !== 'null') {
+                    window._syncTokenToNative && window._syncTokenToNative(value);
+                    console.log('[Auth] 🔄 Token intercepté et synchronisé vers UserDefaults');
+                }
+            };
+        })();
+
+        // Bridge Face ID natif
+        window._checkBiometryAvailable = function(callback) {
+            window.webkit.messageHandlers.faceIDCheck.postMessage('check');
+            window._faceIDCheckCallback = callback;
+        };
+        window._authenticateWithFaceID = function(callback) {
+            window.webkit.messageHandlers.faceIDAuth.postMessage('auth');
+            window._faceIDAuthCallback = callback;
+        };
+        """
+        webView.evaluateJavaScript(bridgeJS, completionHandler: nil)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.restoreTokenIfNeeded(webView: webView)
+        }
+
+        let firstLoad = !isWebViewLoaded
         isWebViewLoaded = true
-        print("📱 WebView chargée — masquage splash dans 1.5s")
-        
-        // ✅ Si un token FCM était en attente, l'injecter maintenant
+
+        // 🔗 Applique un éventuel deep link en attente (cas cold start : notif tapée app fermée)
+        applyPendingDeepLinkIfReady()
+
+        guard firstLoad else { return }
+        print("📱 WebView chargée")
+
         if let token = pendingFCMToken {
-            print("📱 Injection du token FCM en attente...")
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 self.injectFCMToken(token)
             }
         }
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.hideSplashScreen()
         }
@@ -318,23 +440,19 @@ extension AppDelegate: WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         disablePullToRefresh(on: webView)
         print("❌ Erreur WebView: \(error.localizedDescription)")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            self.hideSplashScreen()
-        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { self.hideSplashScreen() }
     }
 }
 
 // ============================================
-// NOTIFICATIONS
+// NOTIFICATIONS + DEEP LINKING
 // ============================================
 extension AppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        // Incrémenter le badge à chaque notification reçue
         let current = UIApplication.shared.applicationIconBadgeNumber
         UIApplication.shared.applicationIconBadgeNumber = current + 1
-        
         if #available(iOS 14.0, *) {
             completionHandler([.banner, .badge, .sound])
         } else {
@@ -345,11 +463,12 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
-        // Remettre le badge à 0 quand on tape sur une notification
         UIApplication.shared.applicationIconBadgeNumber = 0
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
-        let userInfo = response.notification.request.content.userInfo
-        print("📱 Notification tapée: \(userInfo)")
+
+        // 🔗 Route via la table centralisée (gère cold start + warm start)
+        routeNotification(response.notification.request.content.userInfo)
+
         completionHandler()
     }
 }
@@ -361,10 +480,65 @@ extension AppDelegate: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
         print("📱 FCM Token reçu: \(token.prefix(20))...")
-        
-        // ✅ Utiliser injectFCMToken qui gère le cas où la WebView n'est pas prête
-        DispatchQueue.main.async {
-            self.injectFCMToken(token)
+        DispatchQueue.main.async { self.injectFCMToken(token) }
+    }
+}
+
+// ============================================
+// TOKEN SYNC HANDLER
+// ============================================
+class TokenSyncHandler: NSObject, WKScriptMessageHandler {
+    weak var appDelegate: AppDelegate?
+
+    init(appDelegate: AppDelegate) {
+        self.appDelegate = appDelegate
+    }
+
+    func userContentController(_ userContentController: WKUserContentController,
+                                didReceive message: WKScriptMessage) {
+        if let token = message.body as? String, !token.isEmpty,
+           token != "undefined", token != "null" {
+            appDelegate?.saveTokenToUserDefaults(token)
+            print("✅ Token synchronisé JS → UserDefaults")
+        }
+    }
+}
+
+// ============================================
+// FACE ID HANDLERS
+// ============================================
+class FaceIDCheckHandler: NSObject, WKScriptMessageHandler {
+    weak var appDelegate: AppDelegate?
+    init(appDelegate: AppDelegate) { self.appDelegate = appDelegate }
+
+    func userContentController(_ userContentController: WKUserContentController,
+                                didReceive message: WKScriptMessage) {
+        let context = LAContext()
+        var error: NSError?
+        let available = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+        print("🔍 Face ID disponible: \(available)")
+
+        guard let rootVC = appDelegate?.window?.rootViewController as? CAPBridgeViewController,
+              let webView = rootVC.webView else { return }
+
+        let js = "if (window._faceIDCheckCallback) window._faceIDCheckCallback(\(available ? "true" : "false"));"
+        webView.evaluateJavaScript(js, completionHandler: nil)
+    }
+}
+
+class FaceIDAuthHandler: NSObject, WKScriptMessageHandler {
+    weak var appDelegate: AppDelegate?
+    init(appDelegate: AppDelegate) { self.appDelegate = appDelegate }
+
+    func userContentController(_ userContentController: WKUserContentController,
+                                didReceive message: WKScriptMessage) {
+        appDelegate?.evaluateBiometry { success, error in
+            print("🔐 Face ID résultat: \(success), erreur: \(error ?? "aucune")")
+            guard let rootVC = self.appDelegate?.window?.rootViewController as? CAPBridgeViewController,
+                  let webView = rootVC.webView else { return }
+
+            let js = "if (window._faceIDAuthCallback) window._faceIDAuthCallback(\(success ? "true" : "false"));"
+            webView.evaluateJavaScript(js, completionHandler: nil)
         }
     }
 }
