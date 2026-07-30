@@ -116,14 +116,14 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
    overflow:hidden, max-width et aspect-ratio suffisent a le faire rentrer :
    la hauteur suit la largeur, donc rien n'est jamais rogne. */
 .mobile-logo .bh-verrou {
-  width: 186px;
+  width: 189px;
   height: auto;
-  aspect-ratio: 186 / 42;
+  aspect-ratio: 189 / 42;
   max-width: 100%;
   min-width: 0;
   flex: 0 1 auto;
 }
-.sidebar-logo .bh-verrou { height: 38px !important; width: 144px !important; }
+.sidebar-logo .bh-verrou { height: 38px !important; width: 148px !important; }
 
 
 /* ============================================================================
@@ -204,9 +204,9 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
    la ou ils sont crees.
    ============================================================================ */
 .mobile-logo .bh-verrou {
-  width: 186px;
+  width: 189px;
   height: auto;
-  aspect-ratio: 186 / 42;
+  aspect-ratio: 189 / 42;
   max-width: 100%;
   min-width: 0;
   flex: 0 1 auto;

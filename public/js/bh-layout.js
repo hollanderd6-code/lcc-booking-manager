@@ -96,8 +96,8 @@ function verrouHTML(chemin, largeur, hauteur, texte) {
     + 'background:url(' + chemin + ') no-repeat center/contain;'
     + 'border-radius:0;"></span>';
 }
-const LOGO_SIDEBAR = verrouHTML('/img/brand/verrou/verrou-sidebar.svg?v=fb0cdd1d', 144, 38, 'Boostinghost — Smart Property Manager');
-const LOGO_MOBILE  = verrouHTML('/img/brand/verrou/verrou-mobile.svg?v=cb45d47d',  186, 42, 'Boostinghost — Smart Property Manager');
+const LOGO_SIDEBAR = verrouHTML('/img/brand/verrou/verrou-sidebar.svg?v=f332a05e', 144, 38, 'Boostinghost — Smart Property Manager');
+const LOGO_MOBILE  = verrouHTML('/img/brand/verrou/verrou-mobile.svg?v=e25a7b6f',  186, 42, 'Boostinghost — Smart Property Manager');
 const LOGO_MONO    = `<img src="/img/brand/web/mono-sidebar.svg?v=43278ecb" alt="Boostinghost" width="34" height="34" style="display:block;flex-shrink:0;">`;
 
 function getSidebarHTML() {
