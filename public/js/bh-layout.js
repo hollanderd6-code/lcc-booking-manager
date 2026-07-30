@@ -87,91 +87,107 @@ window.bhDiagLogo = function () {
 };
 
 /* ── Verrou adaptatif ──────────────────────────────────────────────────────
-   L'en-tete mobile centre le logo, tandis que les boutons (bascule agence,
-   informations, rafraichir, notifications, recherche) sont poses en absolu
-   de part et d'autre. Leur nombre varie selon la page et le type de compte :
-   une largeur fixe finit donc toujours par passer sous un bouton.
+   Le logo est centre tandis que les boutons de l'en-tete sont poses en
+   absolu : ils se chevauchent au lieu de se pousser. Leur nombre varie selon
+   la page et le type de compte, donc une largeur fixe finit toujours par
+   passer sous un bouton.
 
-   On mesure la place reellement libre entre le dernier element de gauche et
-   le premier de droite, puis :
-     - place suffisante        -> verrou complet, hauteur nominale
-     - place intermediaire     -> verrou reduit proportionnellement
-     - place insuffisante      -> monogramme seul
+   La mesure est GEOMETRIQUE, pas structurelle : on ne cherche pas les enfants
+   de l'en-tete, mais tout element cliquable du document qui recoupe
+   verticalement la bande du logo. Les boutons peuvent ainsi appartenir a
+   n'importe quel conteneur (barre du haut, en-tete, element flottant) sans
+   que le calcul cesse de fonctionner.
 
-   Rappele au redimensionnement et des que l'en-tete change.                */
-const VERROU_L = 191, VERROU_H = 42;   // dimensions nominales
-const VERROU_H_MIN = 26;               // en dessous, le texte n'est plus lisible
+   Rappele au redimensionnement, a la rotation, et des que le DOM bouge.     */
+const VERROU_L = 191, VERROU_H = 42;
+// En dessous de 33px de haut, le mot-symbole tombe sous 9px : illisible.
+// On prefere alors le monogramme seul, net et parfaitement lisible.
+const VERROU_H_MIN = 33;
+const MARGE = 10;
 
 function ajusterVerrou() {
-  const entete = document.querySelector('.mobile-header');
-  if (!entete) return;
-  const logo = entete.querySelector('.mobile-logo');
-  if (!logo) return;
-  const verrou = logo.querySelector('.bh-verrou');
-  const mono = logo.querySelector('img');
-  if (!verrou && !mono) return;
+  const logo = document.querySelector('.mobile-logo');
+  if (!logo || !logo.offsetParent) return;          // absent ou masque
+  const cible = logo.querySelector('.bh-verrou');
+  if (!cible) return;
 
-  const zone = entete.getBoundingClientRect();
-  if (!zone.width) return;
-  const milieu = zone.left + zone.width / 2;
+  const rl = logo.getBoundingClientRect();
+  if (!rl.height) return;
+  const hautLogo = rl.top, basLogo = rl.bottom;
+  const largeurEcran = window.innerWidth || document.documentElement.clientWidth;
+  const milieu = largeurEcran / 2;
 
-  // Bornes imposees par tout ce qui n'est pas le logo lui-meme
-  let borneG = zone.left + 8, borneD = zone.right - 8;
-  entete.querySelectorAll('button, a, .bh-icon-btn, [id$="Btn"]').forEach(function (el) {
-    if (el === logo || logo.contains(el) || el.contains(logo)) return;
-    const r = el.getBoundingClientRect();
-    if (!r.width || !r.height) return;                 // masque
-    if (getComputedStyle(el).display === 'none') return;
-    const centre = r.left + r.width / 2;
-    if (centre < milieu) borneG = Math.max(borneG, r.right + 10);
-    else borneD = Math.min(borneD, r.left - 10);
-  });
+  let borneG = MARGE, borneD = largeurEcran - MARGE;
+
+  document.querySelectorAll('button, a, [role="button"], .bh-icon-btn, svg.lucide, i.fas')
+    .forEach(function (el) {
+      if (el === logo || logo.contains(el) || el.contains(logo)) return;
+      const r = el.getBoundingClientRect();
+      if (r.width < 8 || r.height < 8) return;
+      // recouvrement vertical avec la bande du logo
+      if (r.bottom <= hautLogo || r.top >= basLogo) return;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return;
+      const centre = r.left + r.width / 2;
+      if (centre < milieu) borneG = Math.max(borneG, r.right + MARGE);
+      else borneD = Math.min(borneD, r.left - MARGE);
+    });
 
   const dispo = Math.max(0, borneD - borneG);
+  cible.dataset.dispo = Math.round(dispo);
 
-  if (verrou) {
-    if (dispo >= VERROU_L) {
-      verrou.style.setProperty('width', VERROU_L + 'px', 'important');
-      verrou.style.setProperty('height', VERROU_H + 'px', 'important');
-      return;
-    }
-    const hauteur = Math.round(dispo * VERROU_H / VERROU_L);
-    if (hauteur >= VERROU_H_MIN) {
-      verrou.style.setProperty('width', Math.floor(dispo) + 'px', 'important');
-      verrou.style.setProperty('height', hauteur + 'px', 'important');
-      return;
-    }
-    // Trop juste : on remplace le verrou par le monogramme seul
-    verrou.remove();
-    logo.insertAdjacentHTML('afterbegin', LOGO_MONO);
+  if (dispo >= VERROU_L) {
+    cible.style.setProperty('width', VERROU_L + 'px', 'important');
+    cible.style.setProperty('height', VERROU_H + 'px', 'important');
+    cible.style.removeProperty('background-image');
     return;
   }
-
-  // Un monogramme est en place : on repasse au verrou si la place revient
-  if (mono && dispo >= VERROU_L + 12 && !logo.querySelector('.bh-verrou')
-      && mono.getAttribute('src') === '/img/brand/web/mono-sidebar.svg'
-      && !logo.querySelector('.mobile-logo-title')) {
-    mono.remove();
-    logo.insertAdjacentHTML('afterbegin', LOGO_MOBILE);
+  const hauteur = Math.round(dispo * VERROU_H / VERROU_L);
+  if (hauteur >= VERROU_H_MIN) {
+    cible.style.setProperty('width', Math.floor(dispo) + 'px', 'important');
+    cible.style.setProperty('height', hauteur + 'px', 'important');
+    cible.style.removeProperty('background-image');
+    return;
   }
+  // Place insuffisante : on garde le meme element, on change juste son fond
+  // pour le monogramme carre (pas de retrait/reinsertion, donc pas de
+  // clignotement ni de conflit avec normalizeBranding).
+  const cote = Math.min(VERROU_H, Math.max(26, Math.floor(dispo)));
+  cible.style.setProperty('width', cote + 'px', 'important');
+  cible.style.setProperty('height', cote + 'px', 'important');
+  cible.style.setProperty('background-image', 'url(/img/brand/web/mono-sidebar.svg)', 'important');
 }
 
-let minuteurVerrou = null;
-function planifierAjustVerrou() {
-  clearTimeout(minuteurVerrou);
-  minuteurVerrou = setTimeout(ajusterVerrou, 60);
-}
-window.addEventListener('resize', planifierAjustVerrou);
-window.addEventListener('orientationchange', planifierAjustVerrou);
-if (window.ResizeObserver) {
-  const obs = new ResizeObserver(planifierAjustVerrou);
-  const brancher = function () {
-    const e = document.querySelector('.mobile-header');
-    if (e) obs.observe(e);
-  };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', brancher);
-  else brancher();
-}
+/* bhDiagVerrou() en console : indique la place calculee et QUELS elements la
+   limitent. A utiliser si le logo reste mal place. */
+window.bhDiagVerrou = function () {
+  const logo = document.querySelector('.mobile-logo');
+  if (!logo) return console.log('[BH] pas de .mobile-logo sur cette page');
+  const cible = logo.querySelector('.bh-verrou');
+  const rl = logo.getBoundingClientRect();
+  const largeur = window.innerWidth;
+  const milieu = largeur / 2;
+  console.log('[BH] ecran', largeur, '| logo', Math.round(rl.left) + '..' + Math.round(rl.right),
+              '| bande verticale', Math.round(rl.top) + '..' + Math.round(rl.bottom));
+  const gene = [];
+  document.querySelectorAll('button, a, [role="button"], .bh-icon-btn').forEach(function (el) {
+    if (el === logo || logo.contains(el) || el.contains(logo)) return;
+    const r = el.getBoundingClientRect();
+    if (r.width < 8 || r.height < 8) return;
+    if (r.bottom <= rl.top || r.top >= rl.bottom) return;
+    gene.push({
+      cote: (r.left + r.width / 2) < milieu ? 'gauche' : 'droite',
+      x: Math.round(r.left) + '..' + Math.round(r.right),
+      parent: el.parentElement ? (el.parentElement.className || el.parentElement.tagName) : '?',
+      texte: (el.textContent || '').trim().slice(0, 18)
+    });
+  });
+  console.table(gene);
+  console.log('[BH] cible :', cible ? cible.tagName + '.' + cible.className : 'AUCUNE (.bh-verrou absente)',
+              '| place calculee :', cible ? cible.dataset.dispo : '-',
+              '| version : verrou-geo-v4');
+  ajusterVerrou();
+};
 
 function verrouHTML(fichier, largeur, hauteur, texte) {
   return '<span class="bh-verrou" role="img" aria-label="' + texte + '" style="'
