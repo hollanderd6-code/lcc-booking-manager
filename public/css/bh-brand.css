@@ -112,14 +112,16 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
   border-radius: 0 !important;
 }
 .mobile-logo { overflow: visible !important; }
-/* Largeur nominale ; ajusterVerrou() (bh-layout.js) la reduit si les boutons
-   de l'en-tete ne laissent pas la place. aspect-ratio garantit que le trace
-   ne se deforme jamais, meme avant le premier calcul. */
+/* Largeur nominale du verrou. .mobile-logo etant en flex:1 1 auto avec
+   overflow:hidden, max-width et aspect-ratio suffisent a le faire rentrer :
+   la hauteur suit la largeur, donc rien n'est jamais rogne. */
 .mobile-logo .bh-verrou {
-  height: 42px;
   width: 187px;
-  max-width: 100%;
+  height: auto;
   aspect-ratio: 187 / 42;
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 1 auto;
 }
 .sidebar-logo .bh-verrou { height: 38px !important; width: 146px !important; }
 
@@ -187,145 +189,25 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
 .mobile-logo .mobile-logo-text { margin-left: 0 !important; padding-left: 0 !important; }
 
 /* ============================================================================
-   EN-TETE MOBILE FUSIONNE
+   VERROU DANS L'EN-TETE MOBILE
 
-   Avant : #bhTopBar et .mobile-header etaient deux barres « fixed » posees
-   toutes deux en haut, donc superposees. Dans la barre du haut, la bascule
-   agence etait en position:absolute a gauche et le bloc de statuts en
-   absolute centre : rien ne se poussait, tout se recouvrait, et le logo
-   passait sous les boutons.
+   L'en-tete mobile est deja une rangee flex : conteneur gauche (statuts,
+   informations, agence), logo, conteneur droit (synchro, notifications,
+   recherche). .mobile-logo y est en flex:1 1 auto avec overflow:hidden.
 
-   Maintenant : une seule rangee en grille a trois colonnes. Les zones
-   laterales prennent la place de leur contenu, le logo occupe le centre.
-   Aucun recouvrement n'est possible, quel que soit le nombre de boutons.
+   Il suffit donc que le verrou accepte de rétrecir : largeur nominale,
+   max-width a 100 % et aspect-ratio pour que la hauteur suive. Sans
+   aspect-ratio, la largeur se clampait mais la hauteur restait a 42 px et le
+   mot-symbole se faisait rogner.
+
+   Le gabarit des boutons est defini dans le bloc injecte par bh-layout.js,
+   la ou ils sont crees.
    ============================================================================ */
-@media (max-width: 920px) {
-  .mobile-header.bh-entete-fusionnee {
-    display: grid !important;
-    grid-template-columns: auto minmax(0, 1fr) auto !important;
-    align-items: center !important;
-    gap: 8px !important;
-    padding: 0 10px !important;
-  }
-  .bh-entete-fusionnee .bh-zone-gauche,
-  .bh-entete-fusionnee .bh-zone-droite {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-  }
-  .bh-entete-fusionnee .bh-zone-droite { justify-content: flex-end; }
-
-  /* Le logo occupe la colonne centrale et s'y centre */
-  .bh-entete-fusionnee .mobile-logo {
-    grid-column: 2;
-    justify-content: center !important;
-    min-width: 0 !important;
-  }
-
-  /* Les libelles de statut n'ont pas la place : on garde les pastilles.
-     « Fonctionnement du site » et « Connexion API » restent lisibles au
-     survol grace a l'attribut title deja present sur les pastilles. */
-  .bh-entete-fusionnee #svc-name-render,
-  .bh-entete-fusionnee #svc-name-channex,
-  .bh-entete-fusionnee #svc-label-render,
-  .bh-entete-fusionnee #svc-label-channex,
-  .bh-entete-fusionnee #svc-ago-render,
-  .bh-entete-fusionnee #svc-ago-channex,
-  .bh-entete-fusionnee .bh-demo-mode-label,
-  .bh-entete-fusionnee #bhAnnouncementsBtn span:not([id]) {
-    display: none !important;
-  }
-  .bh-entete-fusionnee #svc-status-render,
-  .bh-entete-fusionnee #svc-status-channex {
-    padding: 4px !important;
-    gap: 0 !important;
-    border: none !important;
-    background: transparent !important;
-  }
-  /* Les icones serveur et prise n'apportent rien a cote d'une pastille */
-  .bh-entete-fusionnee .bh-zone-gauche > div > i.fas { display: none !important; }
-  .bh-entete-fusionnee #bhAnnouncementsBtn { padding: 4px 6px !important; }
-  /* La bascule agence : icone seule, le libelle prendrait trop de place */
-  .bh-entete-fusionnee #agencySwitcherLabel { display: none !important; }
-  .bh-entete-fusionnee #agencySwitcherBtn { padding: 5px 8px !important; }
-
-  /* Les elements rapatries etaient prevus pour un fond sombre */
-  .bh-entete-fusionnee #bhAnnouncementsBtn,
-  .bh-entete-fusionnee .bh-demo-nav i { color: var(--bh-t2, #5A5A54) !important; }
-  .bh-entete-fusionnee .bh-zone-gauche i.fas { color: var(--bh-t3, #8B8B84) !important; }
-  .bh-entete-fusionnee .bh-zone-gauche > div[style*="width:1px"] {
-    background: var(--bh-ligne, #EAE9E5) !important;
-  }
-
-  /* ── Une seule recette pour TOUS les boutons de l'en-tete ────────────────
-     Les elements de gauche venaient de la barre du haut (paddings et rayons
-     propres a un fond sombre), ceux de droite des actions de page : ils
-     n'avaient ni la meme taille, ni le meme espacement, ni le meme rayon.
-     On les aligne sur une seule regle, appliquee aux deux zones. */
-  .bh-entete-fusionnee .bh-zone-gauche,
-  .bh-entete-fusionnee .bh-zone-droite,
-  .bh-entete-fusionnee .bh-zone-droite .header-actions,
-  .bh-entete-fusionnee .bh-zone-droite .mobile-header-actions {
-    gap: 6px !important;
-  }
-  .bh-entete-fusionnee .bh-zone-gauche > *,
-  .bh-entete-fusionnee .bh-zone-droite > *:not(.header-actions):not(.mobile-header-actions),
-  .bh-entete-fusionnee .bh-zone-droite .header-actions > *,
-  .bh-entete-fusionnee .bh-zone-droite .mobile-header-actions > * {
-    width: 34px !important;
-    height: 34px !important;
-    min-width: 34px !important;
-    max-width: 34px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border-radius: 11px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex: none !important;
-    box-sizing: border-box !important;
-  }
-  /* Les icones a l'interieur : meme corps de part et d'autre */
-  .bh-entete-fusionnee .bh-zone-gauche > * i,
-  .bh-entete-fusionnee .bh-zone-gauche > * svg,
-  .bh-entete-fusionnee .bh-zone-droite > * i,
-  .bh-entete-fusionnee .bh-zone-droite > * svg,
-  .bh-entete-fusionnee .bh-zone-droite .header-actions > * i,
-  .bh-entete-fusionnee .bh-zone-droite .header-actions > * svg {
-    font-size: 14px !important;
-    width: auto !important;
-    height: auto !important;
-    margin: 0 !important;
-  }
-  /* Le bloc de statuts : une seule pastille, au meme gabarit */
-  .bh-entete-fusionnee .bh-zone-gauche > div > * { margin: 0 !important; }
-  .bh-entete-fusionnee #svc-status-render,
-  .bh-entete-fusionnee #svc-status-channex {
-    padding: 0 !important;
-    gap: 3px !important;
-    border: none !important;
-    background: transparent !important;
-    width: auto !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    height: auto !important;
-  }
-  /* Le filet vertical herite de la barre sombre n'a plus de sens ici */
-  .bh-entete-fusionnee .bh-zone-gauche > div[style*="width:1px"],
-  .bh-entete-fusionnee .bh-zone-droite > div[style*="width:1px"],
-  .bh-entete-fusionnee .bh-zone-droite div[style*="width:1px"] {
-    display: none !important;
-  }
-  .bh-entete-fusionnee .bh-theme-toggle { transform: none !important; }
-
-  /* La barre du haut disparait : son contenu vit maintenant dans l'en-tete */
-  body.bh-entete-fusionnee #bhTopBar { display: none !important; }
-}
-
-@media (max-width: 400px) {
-  /* Tres petits ecrans : on sacrifie la bascule de theme, accessible
-     depuis les parametres, plutot que la lisibilite du logo. */
-  .bh-entete-fusionnee .bh-theme-toggle,
-  .bh-entete-fusionnee .bh-demo-mode-label { display: none !important; }
+.mobile-logo .bh-verrou {
+  width: 187px;
+  height: auto;
+  aspect-ratio: 187 / 42;
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 1 auto;
 }

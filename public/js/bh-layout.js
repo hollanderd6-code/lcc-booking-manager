@@ -86,228 +86,6 @@ window.bhDiagLogo = function () {
   console.log('[BH] version bh-layout : verrou-span-v3');
 };
 
-/* ── Fusion de l'en-tete mobile ────────────────────────────────────────────
-   Sur mobile, #bhTopBar (statuts, Informations, bascule agence) et
-   .mobile-header (logo, actions de page) sont DEUX barres « fixed » posees
-   toutes les deux en haut : elles se superposent. Dans la barre du haut, la
-   bascule agence est en position:absolute a gauche et le bloc de statuts en
-   absolute centre — donc rien ne se pousse, tout se recouvre.
-
-   On les fusionne en une seule rangee a trois zones (gauche / logo / droite),
-   en grille : le logo reste optiquement centre et les zones laterales
-   s'ajustent a leur contenu. Plus aucun recouvrement possible, quel que soit
-   le nombre de boutons presents.
-
-   Desktop inchange : la barre du haut y a la place de s'etaler.             */
-const SEUIL_MOBILE = 920;
-
-function fusionnerEnteteMobile() {
-  if (window.innerWidth > SEUIL_MOBILE) return defusionnerEnteteMobile();
-
-  const barre = document.getElementById('bhTopBar');
-  const entete = document.querySelector('.mobile-header');
-  if (!entete) return;
-
-  let zoneG = entete.querySelector('.bh-zone-gauche');
-  if (!zoneG) {
-    zoneG = document.createElement('div');
-    zoneG.className = 'bh-zone-gauche';
-    entete.insertBefore(zoneG, entete.firstChild);
-  }
-  let zoneD = entete.querySelector('.bh-zone-droite');
-  if (!zoneD) {
-    zoneD = document.createElement('div');
-    zoneD.className = 'bh-zone-droite';
-    entete.appendChild(zoneD);
-  }
-
-  if (barre) {
-    // On rapatrie les elements de la barre du haut, en les remettant dans le
-    // flux : sans cela ils resteraient en absolute et continueraient a
-    // recouvrir le logo. Ce qui etait a droite (Informations, bascule de
-    // theme) va dans la zone droite, le reste a gauche.
-    Array.prototype.slice.call(barre.children).forEach(function (el) {
-      el.style.position = 'static';
-      el.style.left = 'auto';
-      el.style.right = 'auto';
-      el.style.top = 'auto';
-      el.style.transform = 'none';
-      const aDroite = el.classList.contains('bh-demo-right');
-      (aDroite ? zoneD : zoneG).appendChild(el);
-    });
-    barre.style.display = 'none';
-    barre.dataset.fusionne = '1';
-  }
-
-  // Les actions de page (rafraichir, notifications, recherche) vont a droite
-  const actions = entete.querySelector('.header-actions, .mobile-header-actions');
-  if (actions && actions.parentElement !== zoneD) zoneD.appendChild(actions);
-
-  // Statuts : deux pastilles vertes en permanence, sans libelle, n'informent
-  // de rien et consomment la place du mot-symbole. On ne les montre donc que
-  // lorsqu'un service n'est pas au vert — c'est la seule information utile.
-  ['render', 'channex'].forEach(function (id) {
-    const pastille = document.getElementById('svc-status-' + id);
-    if (!pastille) return;
-    const bloc = pastille.parentElement;
-    if (!bloc) return;
-    const point = document.getElementById('svc-dot-' + id);
-    const couleur = point ? getComputedStyle(point).backgroundColor : '';
-    // vert = tout va bien -> on masque le bloc entier (icone comprise)
-    const auVert = /rgb\(\s*74,\s*222,\s*128\s*\)|rgb\(\s*34,\s*197,\s*94\s*\)/.test(couleur);
-    bloc.style.display = auVert ? 'none' : 'flex';
-    bloc.dataset.bhStatut = auVert ? 'ok' : 'alerte';
-    // le filet separateur suit le sort du bloc
-    const filet = bloc.previousElementSibling;
-    if (filet && /^\s*$/.test(filet.textContent || '')) {
-      filet.style.display = auVert ? 'none' : 'block';
-    }
-  });
-
-  entete.classList.add('bh-entete-fusionnee');
-  document.body.classList.add('bh-entete-fusionnee');
-}
-
-function defusionnerEnteteMobile() {
-  const entete = document.querySelector('.mobile-header');
-  const barre = document.getElementById('bhTopBar');
-  if (!entete || !entete.classList.contains('bh-entete-fusionnee')) return;
-  const zoneG = entete.querySelector('.bh-zone-gauche');
-  if (barre && zoneG) {
-    Array.prototype.slice.call(zoneG.children).forEach(function (el) {
-      el.style.position = '';
-      el.style.left = '';
-      el.style.right = '';
-      el.style.top = '';
-      el.style.transform = '';
-      barre.appendChild(el);
-    });
-    barre.style.display = '';
-    delete barre.dataset.fusionne;
-  }
-  entete.classList.remove('bh-entete-fusionnee');
-  document.body.classList.remove('bh-entete-fusionnee');
-}
-
-/* ── Verrou adaptatif ──────────────────────────────────────────────────────
-   Le logo est centre tandis que les boutons de l'en-tete sont poses en
-   absolu : ils se chevauchent au lieu de se pousser. Leur nombre varie selon
-   la page et le type de compte, donc une largeur fixe finit toujours par
-   passer sous un bouton.
-
-   La mesure est GEOMETRIQUE, pas structurelle : on ne cherche pas les enfants
-   de l'en-tete, mais tout element cliquable du document qui recoupe
-   verticalement la bande du logo. Les boutons peuvent ainsi appartenir a
-   n'importe quel conteneur (barre du haut, en-tete, element flottant) sans
-   que le calcul cesse de fonctionner.
-
-   Rappele au redimensionnement, a la rotation, et des que le DOM bouge.     */
-const VERROU_L = 187, VERROU_H = 42;
-// En dessous de 33px de haut, le mot-symbole tombe sous 9px : illisible.
-// On prefere alors le monogramme seul, net et parfaitement lisible.
-const VERROU_H_MIN = 33;
-const MARGE = 10;
-
-function ajusterVerrou() {
-  const logo = document.querySelector('.mobile-logo');
-  if (!logo || !logo.offsetParent) return;          // absent ou masque
-  const cible = logo.querySelector('.bh-verrou');
-  if (!cible) return;
-
-  const rl = logo.getBoundingClientRect();
-  if (!rl.height) return;
-
-  let dispo;
-  const entete = logo.closest('.mobile-header');
-  if (entete && entete.classList.contains('bh-entete-fusionnee')) {
-    // En-tete fusionne : la grille garantit deja l'absence de recouvrement.
-    // On deduit la colonne centrale de la largeur de l'en-tete moins les deux
-    // zones laterales. Mesurer .mobile-logo directement ne marche pas : sa
-    // largeur depend du verrou, dont la largeur depend d'elle.
-    const zg = entete.querySelector('.bh-zone-gauche');
-    const zd = entete.querySelector('.bh-zone-droite');
-    const cs = getComputedStyle(entete);
-    const marges = parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0);
-    const ecart = parseFloat(cs.columnGap || cs.gap || 0) || 0;
-    dispo = entete.clientWidth - marges - ecart * 2
-          - (zg ? zg.offsetWidth : 0) - (zd ? zd.offsetWidth : 0);
-    dispo = Math.max(0, dispo);
-  } else {
-    // En-tete non fusionne (desktop, ou page hors du gabarit) : mesure
-    // geometrique de ce qui recoupe la bande du logo.
-    const hautLogo = rl.top, basLogo = rl.bottom;
-    const largeurEcran = window.innerWidth || document.documentElement.clientWidth;
-    const milieu = largeurEcran / 2;
-    let borneG = MARGE, borneD = largeurEcran - MARGE;
-    document.querySelectorAll('button, a, [role="button"], .bh-icon-btn')
-      .forEach(function (el) {
-        if (el === logo || logo.contains(el) || el.contains(logo)) return;
-        const r = el.getBoundingClientRect();
-        if (r.width < 8 || r.height < 8) return;
-        if (r.bottom <= hautLogo || r.top >= basLogo) return;
-        const cs = getComputedStyle(el);
-        if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return;
-        const centre = r.left + r.width / 2;
-        if (centre < milieu) borneG = Math.max(borneG, r.right + MARGE);
-        else borneD = Math.min(borneD, r.left - MARGE);
-      });
-    dispo = Math.max(0, borneD - borneG);
-  }
-  cible.dataset.dispo = Math.round(dispo);
-
-  if (dispo >= VERROU_L) {
-    cible.style.setProperty('width', VERROU_L + 'px', 'important');
-    cible.style.setProperty('height', VERROU_H + 'px', 'important');
-    cible.style.removeProperty('background-image');
-    return;
-  }
-  const hauteur = Math.round(dispo * VERROU_H / VERROU_L);
-  if (hauteur >= VERROU_H_MIN) {
-    cible.style.setProperty('width', Math.floor(dispo) + 'px', 'important');
-    cible.style.setProperty('height', hauteur + 'px', 'important');
-    cible.style.removeProperty('background-image');
-    return;
-  }
-  // Place insuffisante : on garde le meme element, on change juste son fond
-  // pour le monogramme carre (pas de retrait/reinsertion, donc pas de
-  // clignotement ni de conflit avec normalizeBranding).
-  const cote = Math.max(28, Math.min(VERROU_H, Math.floor(dispo)));
-  cible.style.setProperty('width', cote + 'px', 'important');
-  cible.style.setProperty('height', cote + 'px', 'important');
-  cible.style.setProperty('background-image', 'url(/img/brand/web/mono-sidebar.svg)', 'important');
-}
-
-/* bhDiagVerrou() en console : indique la place calculee et QUELS elements la
-   limitent. A utiliser si le logo reste mal place. */
-window.bhDiagVerrou = function () {
-  const logo = document.querySelector('.mobile-logo');
-  if (!logo) return console.log('[BH] pas de .mobile-logo sur cette page');
-  const cible = logo.querySelector('.bh-verrou');
-  const rl = logo.getBoundingClientRect();
-  const largeur = window.innerWidth;
-  const milieu = largeur / 2;
-  console.log('[BH] ecran', largeur, '| logo', Math.round(rl.left) + '..' + Math.round(rl.right),
-              '| bande verticale', Math.round(rl.top) + '..' + Math.round(rl.bottom));
-  const gene = [];
-  document.querySelectorAll('button, a, [role="button"], .bh-icon-btn').forEach(function (el) {
-    if (el === logo || logo.contains(el) || el.contains(logo)) return;
-    const r = el.getBoundingClientRect();
-    if (r.width < 8 || r.height < 8) return;
-    if (r.bottom <= rl.top || r.top >= rl.bottom) return;
-    gene.push({
-      cote: (r.left + r.width / 2) < milieu ? 'gauche' : 'droite',
-      x: Math.round(r.left) + '..' + Math.round(r.right),
-      parent: el.parentElement ? (el.parentElement.className || el.parentElement.tagName) : '?',
-      texte: (el.textContent || '').trim().slice(0, 18)
-    });
-  });
-  console.table(gene);
-  console.log('[BH] cible :', cible ? cible.tagName + '.' + cible.className : 'AUCUNE (.bh-verrou absente)',
-              '| place calculee :', cible ? cible.dataset.dispo : '-',
-              '| version : verrou-geo-v4');
-  ajusterVerrou();
-};
-
 function verrouHTML(fichier, largeur, hauteur, texte) {
   return '<span class="bh-verrou" role="img" aria-label="' + texte + '" style="'
     + 'display:inline-block;flex:none;width:' + largeur + 'px;height:' + hauteur + 'px;'
@@ -817,11 +595,8 @@ function getSidebarHTML() {
     mobileHeader.appendChild(sentinel);
 
     normalizeBranding();
-    fusionnerEnteteMobile();
-    ajusterVerrou();
-    setTimeout(function(){ normalizeBranding(); forceUpdateSidebarLogo(); fusionnerEnteteMobile(); ajusterVerrou(); }, 100);
-    setTimeout(function(){ normalizeBranding(); ajusterVerrou(); }, 400);
-    setTimeout(ajusterVerrou, 900);   // apres l'apparition des boutons differes
+    setTimeout(function(){ normalizeBranding(); forceUpdateSidebarLogo(); }, 100);
+    setTimeout(function(){ normalizeBranding(); }, 400);
 
   }
 
@@ -2056,7 +1831,8 @@ var _bhNativeConfirm = window.confirm;
       // Le groupe de boutons à droite ne doit jamais se comprimer ni sortir de l'écran
       '.mobile-header>[style*="flex-end"]{flex-shrink:0!important;}' +
       '.mobile-header #bh-mobile-ann-btn{margin-right:6px!important;}' +
-      '.mobile-header>[style*="flex-end"]{gap:5px!important;margin-left:8px!important;}' +
+      '.mobile-header>[style*="flex-end"]{gap:6px!important;margin-left:8px!important;}' +
+      '.mobile-header>[style*="flex-start"]{gap:6px!important;margin-right:8px!important;}' +
       /* Sans bouton agence : le groupe droit (2 boutons) laisse un vide entre le logo
          et les boutons. On décolle le groupe du bord droit pour le ramener vers le
          centre, ce qui rééquilibre comme s'il y avait 3 boutons. */
@@ -2065,8 +1841,23 @@ var _bhNativeConfirm = window.confirm;
         'background:rgba(255,255,255,.5)!important;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);' +
         'border:1px solid rgba(14,59,46,.16)!important;border-radius:10px!important;height:32px!important;cursor:pointer;' +
         'transition:transform .18s cubic-bezier(.34,1.4,.5,1),background .2s,color .2s,border-color .2s!important;}' +
-      '.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,.mobile-header #bh-mobile-notif-btn{width:32px!important;}' +
-      '.mobile-header #bh-mobile-svc{border-radius:999px!important;padding:0 10px!important;gap:7px!important;}' +
+      /* Un seul gabarit pour TOUS les boutons de l'en-tete, des deux cotes du
+         logo. #bh-mobile-svc etait une pilule (border-radius:999px + padding
+         lateral) et le bouton agence n'avait pas de largeur : les trois
+         boutons de gauche paraissaient donc plus gros et plus espaces que
+         ceux de droite. */
+      '.mobile-header #bh-mobile-svc,.mobile-header #bh-mobile-ann-btn,.mobile-header #syncBtnMobile,' +
+      '.mobile-header #bh-mobile-notif-btn,.mobile-header #agencySwitcherBtnMobile,' +
+      '.mobile-header #bh-mobile-search-btn{' +
+        'width:32px!important;min-width:32px!important;max-width:32px!important;height:32px!important;' +
+        'padding:0!important;border-radius:10px!important;gap:0!important;flex:none!important;' +
+        'display:inline-flex!important;align-items:center!important;justify-content:center!important;' +
+        'box-sizing:border-box!important;}' +
+      /* Les deux pastilles de statut tiennent dans le carre : 6 px chacune,
+         4 px d'ecart. */
+      '.mobile-header #bh-mobile-svc .lg-hicon{display:none!important;}' +
+      '.mobile-header #bh-mobile-svc > *{margin:0!important;}' +
+      '.mobile-header #bh-mobile-svc span{gap:4px!important;}' +
       '.mobile-header #syncBtnMobile{color:#0E3B2E!important;}' +
       '.mobile-header #bh-mobile-ann-btn,.mobile-header #bh-mobile-notif-btn{color:#6B7280!important;}' +
       '.mobile-header #bh-mobile-svc .lg-hicon{color:#94a3b8!important;}' +
