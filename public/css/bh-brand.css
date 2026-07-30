@@ -300,3 +300,80 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
   /* Le verrou n'a pas besoin d'ecart : le mot-symbole est dans le trace */
   .mobile-header .mobile-logo { gap: 0 !important; }
 }
+
+
+/* ============================================================================
+   EN-TETE MOBILE — dernier calque, specificite a ID
+
+   Mesures relevees en console (fenetre 453 px) :
+
+     zone gauche  gap 4 px : svc 32x32, informations 32x32 + marge droite 6 px,
+                             agence 32x32   -> ecarts 4 px puis 10 px
+     zone droite  gap 0 px : synchro 32x32, notifications 32x32,
+                             recherche 30x32 -> ecarts 0 px
+
+   Trois causes :
+     1. #bh-mobile-ann-btn porte margin-right:6px, pose par une regle a ID
+        (specificite 1,1,0) qui battait mon .mobile-header > div > *.
+     2. gap valait 4 px a gauche et 0 a droite.
+     3. la recherche vient de bh-global-search.js, qui l'injecte a l'execution.
+
+   D'ou ce calque : on abandonne gap au profit de marges posees NOMMEMENT sur
+   chaque bouton, avec la meme specificite a ID que les regles adverses. Rien
+   ne peut plus l'emporter, quel que soit le fichier d'origine ou l'ordre
+   d'injection.
+   ============================================================================ */
+@media (max-width: 920px) {
+  /* Plus de gap : l'ecart est porte par les marges, seule maniere d'egaler
+     la specificite des regles a ID qui posent des marges. */
+  .mobile-header > div,
+  .mobile-header > div[style] {
+    gap: 0 !important;
+    align-items: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Gabarit : 32x32 pour les six, y compris la recherche */
+  .mobile-header #bh-mobile-svc,
+  .mobile-header #bh-mobile-ann-btn,
+  .mobile-header #agencySwitcherBtnMobile,
+  .mobile-header #syncBtnMobile,
+  .mobile-header #bh-mobile-notif-btn,
+  .mobile-header .bhgs-trigger-mobile,
+  .mobile-header .bhgs-trigger-mobile.haptic-enabled,
+  .mobile-header [class*="bhgs-trigger"] {
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    border-width: 1px !important;
+    box-sizing: border-box !important;
+    flex: 0 0 32px !important;
+    align-self: center !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transform: none !important;
+  }
+
+  /* Premier de chaque groupe : aucune marge a gauche */
+  .mobile-header #bh-mobile-svc,
+  .mobile-header #syncBtnMobile {
+    margin: 0 !important;
+  }
+
+  /* Suivants : le meme ecart de 4 px, des deux cotes */
+  .mobile-header #bh-mobile-ann-btn,
+  .mobile-header #agencySwitcherBtnMobile,
+  .mobile-header #bh-mobile-notif-btn,
+  .mobile-header .bhgs-trigger-mobile,
+  .mobile-header .bhgs-trigger-mobile.haptic-enabled,
+  .mobile-header [class*="bhgs-trigger"] {
+    margin: 0 0 0 4px !important;
+  }
+}
