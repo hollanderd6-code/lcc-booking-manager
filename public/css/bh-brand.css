@@ -79,6 +79,7 @@ html.bh-lux[data-theme-v3="1"] [style*="linear-gradient(135deg, #1A7A5E"] {
    Les aplats noirs deviennent vert bouteille : l'ecran gagne une couleur
    au lieu d'en avoir deux (un noir + un vert sans rapport). */
 html.bh-lux[data-theme-v3="1"] .calendar-header,
+html.bh-lux[data-theme-v3="1"] .calendar-modern-header,
 html.bh-lux[data-theme-v3="1"] .bh2-ca {
   background: var(--bh-vert) !important;
 }

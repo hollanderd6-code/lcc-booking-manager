@@ -23,7 +23,12 @@ html[data-theme-v3="1"] {
   --jade-subtle:    rgba(14,59,46,.07);
   --marque:         #0E3B2E;
   --ivoire:         #F2EADA;
-  --obsidian:       #0E3B2E;
+  /* --obsidian reste NOIR : c'est le token de la barre de navigation du haut
+     et des bandeaux sombres neutres. Le passer au vert de marque rendait la
+     barre verte sur les seules pages qui utilisent ce token (reservations,
+     dynamic-pricing), alors qu'elle est noire ailleurs. Les bandeaux qui
+     doivent porter la marque sont traites nommement dans bh-brand.css. */
+  --obsidian:       #0D1117;
   --slate:          #1C2333;
   /* Cremes ramenees vers des gris chauds neutres : les anciens beiges
      juraient avec les gris froids herites de Tailwind ailleurs dans l'app. */
