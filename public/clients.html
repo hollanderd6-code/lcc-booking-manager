@@ -4090,7 +4090,7 @@ function getSelectedProperties() {
     };
 
     try {
-      const url = editingInvoiceId ? `/api/owner-invoices/${editingInvoiceId}` : '/api/owner-invoices';
+      const url = editingInvoiceId ? API_BASE + `/api/owner-invoices/${editingInvoiceId}` : API_BASE + '/api/owner-invoices';
       const method = editingInvoiceId ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
@@ -4673,7 +4673,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     if (!editingClientId) return;
     showConfirm('Supprimer ce client ? Cette action est irréversible.', async function() {
       try {
-        const res = await fetch('/api/owner-clients/' + editingClientId, {
+        const res = await fetch(API_BASE + '/api/owner-clients/' + editingClientId, {
           method: 'DELETE',
           headers: { 'Authorization': 'Bearer ' + token }
         });
@@ -4797,7 +4797,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   // Auto-refresh token agence
   (async function() {
     try {
-      var res = await fetch('/api/agency/refresh', { method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'} });
+      var res = await fetch(API_BASE + '/api/agency/refresh', { method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'} });
       if (res.ok) { var d = await res.json(); localStorage.setItem('lcc_token', d.token); if (d.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(d.permissions)); }
       else if (res.status === 403 || res.status === 401) { exitAgencyMode(); }
     } catch(e) {}
