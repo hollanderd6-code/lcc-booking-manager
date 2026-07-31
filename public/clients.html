@@ -4092,11 +4092,28 @@ function getSelectedProperties() {
     try {
       const url = editingInvoiceId ? API_BASE + `/api/owner-invoices/${editingInvoiceId}` : API_BASE + '/api/owner-invoices';
       const method = editingInvoiceId ? 'PUT' : 'POST';
+      /* DEBUG-FACTURE */
+      var _dbg = 'URL      : ' + url
+               + '\nRESOLUE  : ' + new URL(url, document.baseURI).href
+               + '\nMETHODE  : ' + method
+               + '\nbaseURI  : ' + document.baseURI
+               + '\nAPI_BASE : ' + API_BASE
+               + '\neditId   : ' + editingInvoiceId;
+      console.log('[DEBUG-FACTURE]\n' + _dbg);
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify(data)
       });
+      /* DEBUG-FACTURE */
+      var _corps = '';
+      try { _corps = (await res.clone().text()).slice(0, 300); } catch (e) { _corps = '(illisible)'; }
+      _dbg += '\n\nSTATUT   : ' + res.status + ' ' + res.statusText
+            + '\nres.url  : ' + res.url
+            + '\nTYPE     : ' + (res.headers.get('content-type') || '?')
+            + '\n\nREPONSE  :\n' + _corps;
+      console.log('[DEBUG-FACTURE]\n' + _dbg);
+      alert(_dbg);
       if (res.ok) {
         alert('[OK] Facture enregistrée !');
         prestations = [];
