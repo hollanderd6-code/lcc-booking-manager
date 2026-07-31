@@ -2069,9 +2069,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const invStatsByClient = {};
         clients.forEach(c => {
           const cinvs = allInvs.filter(i => String(i.client_id) === String(c.id));
-          const total = cinvs.reduce((sum, i) => sum + (parseFloat(i.total_amount) || 0), 0);
+          // Total facture : ni brouillon, ni annulee, ni avoir — meme regle
+          // que le compteur du tableau de bord.
+          const cfact = cinvs.filter(i =>
+            i.status !== 'draft' && i.status !== 'cancelled' && !i.is_credit_note);
+          const total = cfact.reduce((sum, i) => sum + (parseFloat(i.total_ttc) || 0), 0);
           const last = cinvs.sort((a,b) => new Date(b.issue_date) - new Date(a.issue_date))[0];
-          invStatsByClient[c.id] = { total, last, count: cinvs.length };
+          invStatsByClient[c.id] = { total, last, count: cfact.length };
         });
 
         container.innerHTML = clients.map(c => {
@@ -2114,7 +2118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const stats = invStatsByClient[statsKey] || invStatsByClient[c.id] || { total: 0, last: null, count: 0 };
           const totalFormatted = stats.total.toFixed(2).replace('.', ',') + ' €';
           const lastInvHtml = stats.last
-            ? '<span style="font-size:12px;color:#6b7280;">Dernière : <strong>' + formatDate(stats.last.issue_date) + '</strong> — ' + (parseFloat(stats.last.total_amount)||0).toFixed(2).replace('.',',') + ' €</span>'
+            ? '<span style="font-size:12px;color:#6b7280;">Dernière : <strong>' + formatDate(stats.last.issue_date) + '</strong> — ' + (parseFloat(stats.last.total_ttc)||0).toFixed(2).replace('.',',') + ' €</span>'
             : '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucune facture</span>';
 
                     // Coordonnées
