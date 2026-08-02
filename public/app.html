@@ -6261,11 +6261,42 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       });
       const spark = document.getElementById('kpiCaSpark');
       const delta = document.getElementById('kpiCaDelta');
-      const prev = months[4].total;
+
+      // Periode equivalente : caTotal ne couvre que les jours ecoules du mois
+      // courant. Le comparer au mois precedent COMPLET mesurait l'ecart de
+      // duree, pas l'evolution. On borne donc la reference au meme jour.
+      const jourCourant = new Date().getDate();
+      const refDebut = new Date(y, m - 1, 1, 0, 0, 0, 0);
+      const refFin   = new Date(y, m - 1, jourCourant, 23, 59, 59, 999);
+      // Si le mois precedent est plus court que le jour courant (31 mars ->
+      // fevrier), refFin deborde sur le mois suivant : on le ramene a la fin
+      // reelle du mois de reference.
+      const finReelle = new Date(y, m, 0, 23, 59, 59, 999);
+      const refFinBornee = refFin > finReelle ? finReelle : refFin;
+
+      let prev = 0;
+      (reservations || []).forEach((r) => {
+        if (r.type === 'block' || r.source === 'BLOCK') return;
+        if (r.status === 'cancelled') return;
+        const pd = getPaymentDate(r);
+        if (!pd || pd < refDebut || pd > refFinBornee) return;
+        const amt = parseFloat(r.amount_total || r.amountTotal || r.host_payout || r.hostPayout || r.amount_rooms || r.amountRooms || 0);
+        if (amt) prev += amt;
+      });
+
       if (delta) {
+        // Reference vide : aucun pourcentage n'aurait de sens.
         if (prev > 0) {
           const pct = Math.round(((caTotal - prev) / prev) * 100);
-          delta.innerHTML = '<i class="fas fa-arrow-trend-' + (pct >= 0 ? 'up' : 'down') + '"></i> ' + (pct >= 0 ? '+' : '') + pct + ' % vs ' + monthNames[(m + 11) % 12].toLowerCase();
+          const moisRef = monthNames[(m + 11) % 12].toLowerCase();
+          // Tant que le mois n'est pas revolu, on dit sur quelle duree porte
+          // la comparaison : sans cela on croit lire deux mois entiers.
+          const finDuMois = new Date(y, m + 1, 0).getDate();
+          const mention = jourCourant < finDuMois
+            ? ' vs ' + moisRef + ' (' + jourCourant + ' j)'
+            : ' vs ' + moisRef;
+          delta.innerHTML = '<i class="fas fa-arrow-trend-' + (pct >= 0 ? 'up' : 'down') + '"></i> '
+            + (pct >= 0 ? '+' : '') + pct + ' %' + mention;
           delta.style.color = pct >= 0 ? '#8FC7AF' : '#F0B35B';
         } else { delta.textContent = ''; }
       }
