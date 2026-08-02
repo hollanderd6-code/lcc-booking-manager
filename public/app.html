@@ -3756,6 +3756,26 @@ window.closeChecklistsKpiModal = function() {
 .bh2-occ-ring{position:relative;width:96px;height:96px;margin:8px auto 0}
 .bh2-occ-legend{text-align:center;font:500 12px 'DM Sans',sans-serif;color:#8A8375;margin-top:8px;min-height:1.2em}
 .bh2-occ-legend b{color:#0E3B2E;font-weight:700}
+/* Bande « automatisation » — pleine largeur sous la grille des KPI.
+   Masquee par defaut : le JS ne la revele que si le mois precedent
+   compte au moins un message sortant. Un compte sans activite ne doit
+   pas lire « 0 sur 0 ». */
+.bh2-auto{display:none;align-items:center;gap:14px;background:#fff;
+  border:1px solid rgba(200,184,154,.45);border-radius:16px;
+  padding:14px 20px;margin-bottom:16px;
+  box-shadow:0 1px 3px rgba(13,17,23,.04)}
+.bh2-auto.is-ready{display:flex}
+.bh2-auto-ico{width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  background:rgba(14,59,46,.08);color:#0E3B2E;
+  display:flex;align-items:center;justify-content:center;font-size:14px}
+.bh2-auto-txt{font:400 14px 'DM Sans',sans-serif;color:#4A5568;min-width:0}
+.bh2-auto-txt b{color:#0E3B2E;font-weight:700}
+.bh2-auto-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:#7A8695;margin-bottom:2px}
+@media (max-width:768px){
+  .bh2-auto{padding:12px 14px;gap:10px;border-radius:14px}
+  .bh2-auto-txt{font-size:13px}
+}
 .bh2-occ-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .occ-rbg{fill:none;stroke:rgba(183,121,31,.16);stroke-width:7}
 .occ-rfg{fill:none;stroke:#B7791F;stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.3,.9,.3,1)}
@@ -3890,6 +3910,13 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 </section>
 </div>
 </div>
+<section class="bh2-auto" id="kpiAutoCard">
+  <div class="bh2-auto-ico"><i class="fas fa-wand-magic-sparkles"></i></div>
+  <div>
+    <div class="bh2-auto-lbl" id="kpiAutoLabel">Automatisation</div>
+    <div class="bh2-auto-txt" id="kpiAutoText"></div>
+  </div>
+</section>
 <script>
 (function(){
   var d=new Date();
@@ -12774,10 +12801,6 @@ if (document.readyState === 'loading') {
     var verticalLock = false;
     var frozenScrollY = 0;
     var bodyWasFixed = false;
-    // Minuteur de degel differe. Il DOIT etre annulable : sans cela, un geste
-    // qui reprend avant l'expiration voit le degel du geste precedent se
-    // declencher en plein milieu, avec un frozenScrollY perime.
-    var unfreezeTimer = null;
 
     function freezePageVerticalScroll() {
       if (bodyWasFixed) return;
@@ -12814,15 +12837,9 @@ if (document.readyState === 'loading') {
       verticalLock = false;
       wrapper.classList.remove('is-horizontal-scrolling');
 
-      // Un degel du geste precedent peut encore etre en attente : l'annuler,
-      // sinon il s'appliquera pendant ce geste-ci et bloquera le defilement.
-      if (unfreezeTimer) { clearTimeout(unfreezeTimer); unfreezeTimer = null; }
-
-      // Stoppe l'inertie verticale restante de la WebView. Inutile et nuisible
-      // si le body est deja fige : on ecrirait une position parasite.
-      if (!bodyWasFixed) {
-        window.scrollTo(window.scrollX || 0, window.scrollY || window.pageYOffset || 0);
-      }
+      // Stoppe l'inertie verticale restante de la WebView juste au moment où
+      // l'utilisateur reprend contact avec le calendrier.
+      window.scrollTo(window.scrollX || 0, window.scrollY || window.pageYOffset || 0);
     }, { passive: true });
 
     wrapper.addEventListener('touchmove', function(e) {
@@ -12843,7 +12860,7 @@ if (document.readyState === 'loading') {
 
       // Si le geste est clairement horizontal, on fige temporairement le scroll vertical
       // de la page pour que l'inertie verticale iOS ne vole plus le geste.
-      if (!horizontalLock && !verticalLock && absX > 10 && absX > absY * 1.25) {
+      if (!horizontalLock && !verticalLock && absX > 8 && absX > absY * 1.05) {
         horizontalLock = true;
         wrapper.classList.add('is-horizontal-scrolling');
         freezePageVerticalScroll();
@@ -12858,12 +12875,10 @@ if (document.readyState === 'loading') {
       wrapper.addEventListener(evtName, function() {
         horizontalLock = false;
         verticalLock = false;
-        wrapper.classList.remove('is-horizontal-scrolling');
-        // Degel immediat : le differe de 80 ms servait a laisser retomber
-        // l'inertie, mais ouvrait une fenetre pendant laquelle un nouveau
-        // geste partait sur un body encore fige.
-        if (unfreezeTimer) { clearTimeout(unfreezeTimer); unfreezeTimer = null; }
-        unfreezePageVerticalScroll();
+        setTimeout(function() {
+          wrapper.classList.remove('is-horizontal-scrolling');
+          unfreezePageVerticalScroll();
+        }, 80);
       }, { passive: true });
     });
   }
@@ -13958,6 +13973,42 @@ document.addEventListener('DOMContentLoaded', function() {
   // Le CA est toujours masqué sauf si can_view_finances ET kpi_ca=true
   const visibleKpis = _perms.visible_kpis || {};
 
+  // ── Bande « automatisation » ────────────────────────────────────────
+  // Mois PRECEDENT complet, jamais le mois courant : au 2 du mois, « ce
+  // mois-ci » ne porterait que deux jours de donnees et le chiffre serait
+  // trompeur. Le releve mensuel suit la meme fenetre, les deux concordent.
+  window.loadAutomationStat = async function () {
+    var card = document.getElementById('kpiAutoCard');
+    if (!card) return;
+    // Le menage n'a pas a voir cette statistique.
+    if (typeof _userRole !== 'undefined' && _userRole === 'cleaner') return;
+    try {
+      var token = localStorage.getItem('lcc_token');
+      if (!token) return;
+      var r = await fetch(API_URL + '/api/stats/automatisation', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      if (!r.ok) return;
+      var d = await r.json();
+      // Aucun message sortant le mois dernier : on laisse la bande masquee
+      // plutot que d'afficher « 0 sur 0 (0 %) » a un compte simplement calme.
+      if (!d || !d.sortants) return;
+
+      var lbl = document.getElementById('kpiAutoLabel');
+      var txt = document.getElementById('kpiAutoText');
+      if (lbl && d.moisLabel) lbl.textContent = 'Automatisation · ' + d.moisLabel;
+      if (txt) {
+        txt.innerHTML = '<b>' + d.autos + '</b> message' + (d.autos > 1 ? 's' : '')
+          + ' envoy' + (d.autos > 1 ? 'és' : 'é') + ' automatiquement sur <b>'
+          + d.sortants + '</b> (<b>' + d.pct + ' %</b>)';
+      }
+      card.classList.add('is-ready');
+    } catch (e) {
+      // Silencieux : une statistique d'agrement ne doit jamais gener la page.
+      console.warn('[auto-stat]', e && e.message);
+    }
+  };
+
   function applyKpiRestrictions() {
     Object.keys(KPI_MAP).forEach(function(cardId) {
       var key = KPI_MAP[cardId];
@@ -14061,10 +14112,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('DOMContentLoaded', function() {
       applyKpiRestrictions();
       applyCleanerRestrictions();
+      window.loadAutomationStat();
     });
   } else {
     applyKpiRestrictions();
     applyCleanerRestrictions();
+    window.loadAutomationStat();
   }
 })();
 </script>

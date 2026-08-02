@@ -23122,6 +23122,60 @@ const uploadAttachment = multer({
 // ============================================
 
 // 1. LISTE DES CLIENTS
+// ── GET /api/stats/automatisation ────────────────────────────────
+// Part des messages sortants partis sans intervention humaine, sur le mois
+// precedent complet. Alimente la bande du tableau de bord.
+app.get('/api/stats/automatisation', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorise' });
+
+    const userId = req.user && req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
+
+    const now      = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastDay  = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
+    const r = await pool.query(
+      `SELECT
+         COUNT(*) FILTER (
+           WHERE m.sender_type = 'property'
+             AND (
+                  m.is_bot_response = TRUE
+               OR m.sender_name LIKE 'tpl\\_%'
+               OR m.sender_name IN ('bot', 'system', 'auto', 'IA', 'Boostinghost', 'Assistant automatique')
+             )
+             AND (c.escalated IS NOT TRUE OR m.created_at < c.escalated_at)
+         ) AS autos,
+         COUNT(*) FILTER (
+           WHERE m.sender_type = 'property'
+             AND (c.escalated IS NOT TRUE OR m.created_at < c.escalated_at)
+         ) AS sortants
+       FROM messages m
+       JOIN conversations c ON c.id = m.conversation_id
+       WHERE c.user_id = ANY($1::text[]) AND m.created_at BETWEEN $2 AND $3`,
+      [agencyIds, firstDay, lastDay]
+    );
+
+    const autos    = parseInt(r.rows[0].autos)    || 0;
+    const sortants = parseInt(r.rows[0].sortants) || 0;
+    const pct      = sortants > 0 ? Math.round((autos / sortants) * 100) : 0;
+
+    res.json({
+      autos,
+      sortants,
+      pct,
+      moisLabel: firstDay.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    });
+  } catch (err) {
+    console.error('Erreur stats automatisation:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.get('/api/owner-clients', authenticateAny, requireFeature('facturation_proprietaires'), async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
