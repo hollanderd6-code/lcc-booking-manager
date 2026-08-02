@@ -6581,6 +6581,26 @@ html[data-theme-v3="1"] .invoice-item:hover {
     box-sizing: border-box !important;
   }
 }
+
+/* Empilement des modales au-dessus de l'en-tete mobile ─────────────────
+   .mobile-header est en position:fixed avec z-index 1100 ; les overlays
+   etaient a 1000 et passaient donc dessous, l'en-tete recouvrant le titre
+   et la croix de fermeture. */
+@media (max-width: 1366px) {
+  .modal-overlay,
+  #invoicePreviewModal,
+  #deboursModal,
+  #importDeboursModal {
+    z-index: 1200 !important;
+  }
+  /* #confirmModal est deja a 20000 : il doit rester au-dessus du reste. */
+
+  /* La carte ne colle plus au bord haut de l'ecran. */
+  .modal-overlay .modal-content {
+    margin-top: 12px !important;
+    margin-bottom: 12px !important;
+  }
+}
 </style>
 
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
