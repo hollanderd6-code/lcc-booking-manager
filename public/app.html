@@ -13973,42 +13973,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Le CA est toujours masqué sauf si can_view_finances ET kpi_ca=true
   const visibleKpis = _perms.visible_kpis || {};
 
-  // ── Bande « automatisation » ────────────────────────────────────────
-  // Mois PRECEDENT complet, jamais le mois courant : au 2 du mois, « ce
-  // mois-ci » ne porterait que deux jours de donnees et le chiffre serait
-  // trompeur. Le releve mensuel suit la meme fenetre, les deux concordent.
-  window.loadAutomationStat = async function () {
-    var card = document.getElementById('kpiAutoCard');
-    if (!card) return;
-    // Le menage n'a pas a voir cette statistique.
-    if (typeof _userRole !== 'undefined' && _userRole === 'cleaner') return;
-    try {
-      var token = localStorage.getItem('lcc_token');
-      if (!token) return;
-      var r = await fetch(API_URL + '/api/stats/automatisation', {
-        headers: { Authorization: 'Bearer ' + token }
-      });
-      if (!r.ok) return;
-      var d = await r.json();
-      // Aucun message sortant le mois dernier : on laisse la bande masquee
-      // plutot que d'afficher « 0 sur 0 (0 %) » a un compte simplement calme.
-      if (!d || !d.sortants) return;
-
-      var lbl = document.getElementById('kpiAutoLabel');
-      var txt = document.getElementById('kpiAutoText');
-      if (lbl && d.moisLabel) lbl.textContent = 'Automatisation · ' + d.moisLabel;
-      if (txt) {
-        txt.innerHTML = '<b>' + d.autos + '</b> message' + (d.autos > 1 ? 's' : '')
-          + ' envoy' + (d.autos > 1 ? 'és' : 'é') + ' automatiquement sur <b>'
-          + d.sortants + '</b> (<b>' + d.pct + ' %</b>)';
-      }
-      card.classList.add('is-ready');
-    } catch (e) {
-      // Silencieux : une statistique d'agrement ne doit jamais gener la page.
-      console.warn('[auto-stat]', e && e.message);
-    }
-  };
-
   function applyKpiRestrictions() {
     Object.keys(KPI_MAP).forEach(function(cardId) {
       var key = KPI_MAP[cardId];
@@ -14112,12 +14076,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('DOMContentLoaded', function() {
       applyKpiRestrictions();
       applyCleanerRestrictions();
-      window.loadAutomationStat();
     });
   } else {
     applyKpiRestrictions();
     applyCleanerRestrictions();
-    window.loadAutomationStat();
   }
 })();
 </script>
@@ -16770,5 +16732,62 @@ html.bh-lux .bh2-stats.bh2-stats-inside .bh2-num{
 </style>
 
 
+
+<script>
+/* Bande « automatisation » du tableau de bord.
+   Bloc autonome : la version precedente vivait dans une IIFE reservee aux
+   sous-comptes (if (_accountType !== 'sub') return), donc la fonction
+   n'existait pas sur un compte principal.
+
+   Fenetre : le mois PRECEDENT complet, comme le releve mensuel — au 2 du
+   mois, « ce mois-ci » ne porterait que deux jours de donnees. */
+(function () {
+  window.loadAutomationStat = async function () {
+    var card = document.getElementById('kpiAutoCard');
+    if (!card) return;
+
+    // Le menage n'a pas a voir cette statistique.
+    try {
+      var role = (window._userRole || localStorage.getItem('lcc_role') || '');
+      if (role === 'cleaner') return;
+    } catch (e) {}
+
+    try {
+      var token = localStorage.getItem('lcc_token');
+      if (!token) return;
+
+      // Chemin relatif : auth-fetch.js resout le domaine et ajoute agency=all.
+      var r = await fetch('/api/stats/automatisation', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      if (!r.ok) return;
+
+      var d = await r.json();
+      // Aucun message sortant le mois dernier : on laisse la bande masquee
+      // plutot que d'afficher « 0 sur 0 (0 %) » a un compte simplement calme.
+      if (!d || !d.sortants) return;
+
+      var lbl = document.getElementById('kpiAutoLabel');
+      var txt = document.getElementById('kpiAutoText');
+      if (lbl && d.moisLabel) lbl.textContent = 'Automatisation · ' + d.moisLabel;
+      if (txt) {
+        txt.innerHTML = '<b>' + d.autos + '</b> message' + (d.autos > 1 ? 's' : '')
+          + ' envoy' + (d.autos > 1 ? 'és' : 'é') + ' automatiquement sur <b>'
+          + d.sortants + '</b> (<b>' + d.pct + ' %</b>)';
+      }
+      card.classList.add('is-ready');
+    } catch (e) {
+      // Silencieux : une statistique d'agrement ne doit jamais gener la page.
+      console.warn('[auto-stat]', e && e.message);
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.loadAutomationStat);
+  } else {
+    window.loadAutomationStat();
+  }
+})();
+</script>
 </body>
 </html>
