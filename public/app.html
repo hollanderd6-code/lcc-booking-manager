@@ -12774,6 +12774,10 @@ if (document.readyState === 'loading') {
     var verticalLock = false;
     var frozenScrollY = 0;
     var bodyWasFixed = false;
+    // Minuteur de degel differe. Il DOIT etre annulable : sans cela, un geste
+    // qui reprend avant l'expiration voit le degel du geste precedent se
+    // declencher en plein milieu, avec un frozenScrollY perime.
+    var unfreezeTimer = null;
 
     function freezePageVerticalScroll() {
       if (bodyWasFixed) return;
@@ -12810,9 +12814,15 @@ if (document.readyState === 'loading') {
       verticalLock = false;
       wrapper.classList.remove('is-horizontal-scrolling');
 
-      // Stoppe l'inertie verticale restante de la WebView juste au moment où
-      // l'utilisateur reprend contact avec le calendrier.
-      window.scrollTo(window.scrollX || 0, window.scrollY || window.pageYOffset || 0);
+      // Un degel du geste precedent peut encore etre en attente : l'annuler,
+      // sinon il s'appliquera pendant ce geste-ci et bloquera le defilement.
+      if (unfreezeTimer) { clearTimeout(unfreezeTimer); unfreezeTimer = null; }
+
+      // Stoppe l'inertie verticale restante de la WebView. Inutile et nuisible
+      // si le body est deja fige : on ecrirait une position parasite.
+      if (!bodyWasFixed) {
+        window.scrollTo(window.scrollX || 0, window.scrollY || window.pageYOffset || 0);
+      }
     }, { passive: true });
 
     wrapper.addEventListener('touchmove', function(e) {
@@ -12833,7 +12843,7 @@ if (document.readyState === 'loading') {
 
       // Si le geste est clairement horizontal, on fige temporairement le scroll vertical
       // de la page pour que l'inertie verticale iOS ne vole plus le geste.
-      if (!horizontalLock && !verticalLock && absX > 8 && absX > absY * 1.05) {
+      if (!horizontalLock && !verticalLock && absX > 10 && absX > absY * 1.25) {
         horizontalLock = true;
         wrapper.classList.add('is-horizontal-scrolling');
         freezePageVerticalScroll();
@@ -12848,10 +12858,12 @@ if (document.readyState === 'loading') {
       wrapper.addEventListener(evtName, function() {
         horizontalLock = false;
         verticalLock = false;
-        setTimeout(function() {
-          wrapper.classList.remove('is-horizontal-scrolling');
-          unfreezePageVerticalScroll();
-        }, 80);
+        wrapper.classList.remove('is-horizontal-scrolling');
+        // Degel immediat : le differe de 80 ms servait a laisser retomber
+        // l'inertie, mais ouvrait une fenetre pendant laquelle un nouveau
+        // geste partait sur un body encore fige.
+        if (unfreezeTimer) { clearTimeout(unfreezeTimer); unfreezeTimer = null; }
+        unfreezePageVerticalScroll();
       }, { passive: true });
     });
   }
