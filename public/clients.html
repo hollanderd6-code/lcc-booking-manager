@@ -1756,11 +1756,11 @@ html[data-theme-v3="1"] .invoice-paper {
   </div>
 </div>
 
-<div class="modal-overlay" id="statsModal">
+<div class="modal-overlay" id="statsModal" onclick="if(event.target===this)closeStatsModal()">
 <div class="modal-content">
-<div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+<div class="modal-sticky-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
 <h3 id="statsModalTitle" style="margin:0;">Détails</h3>
-<button onclick="closeStatsModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
+<button class="modal-close-btn" onclick="closeStatsModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
 </div>
 <div id="statsModalBody" style="font-size:14px;">
 <!-- Contenu injecté en JS -->
@@ -6524,10 +6524,32 @@ html[data-theme-v3="1"] .invoice-item:hover {
 
 /* ── Éditeur de facture : sections ── */
 .editor-section { border-color: rgba(200,184,154,.45) !important; border-radius: 16px !important; }
+
+/* Ajout de client sur mobile : .fp-header-btns est masque sous 1367px
+   (position:fixed, il chevaucherait l'en-tete). Sans ce bouton flottant,
+   aucun moyen de creer un client depuis un telephone. */
+#fabAddClient {
+  display: none;
+  position: fixed;
+  right: 18px;
+  bottom: calc(74px + env(safe-area-inset-bottom, 0px) + 14px);
+  width: 56px; height: 56px;
+  border: none; border-radius: 50%;
+  background: #0E3B2E; color: #fff;
+  font-size: 22px; cursor: pointer;
+  box-shadow: 0 8px 24px rgba(13,17,23,.28);
+  z-index: 150;
+  align-items: center; justify-content: center;
+}
+#fabAddClient:active { transform: scale(.94); }
+@media (max-width: 1366px) {
+  #fabAddClient { display: flex; }
+}
 </style>
 
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
 <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
 <script src="/js/bh-global-search.js?v=813e6615"></script>
+<button id="fabAddClient" onclick="openClientModal()" aria-label="Nouveau client"><i class="fas fa-plus"></i></button>
 </body>
 </html>
