@@ -6545,6 +6545,42 @@ html[data-theme-v3="1"] .invoice-item:hover {
 @media (max-width: 1366px) {
   #fabAddClient { display: flex; }
 }
+
+/* Cadrage sous l'en-tete mobile ────────────────────────────────────────
+   L'en-tete de l'app est fixe en haut ; une modale centree sur 100vh
+   passe dessous et son titre se fait couper. On reserve sa hauteur dans
+   l'overlay, et le plafond de la carte suit. */
+@media (max-width: 1366px) {
+  :root { --bh-mobile-header-h: 64px; }
+
+  .modal-overlay {
+    padding-top: calc(var(--bh-mobile-header-h) + 12px) !important;
+    padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px) + 12px) !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    box-sizing: border-box !important;
+    align-items: flex-start !important;
+  }
+
+  .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - var(--bh-mobile-header-h) - 74px
+                     - env(safe-area-inset-bottom, 0px) - 24px) !important;
+    margin: 0 auto !important;
+  }
+
+  /* Le sticky se colle au haut de la carte, qui commence desormais sous
+     l'en-tete : plus de chevauchement. Le padding negatif compense celui
+     pose sur .modal-content pour que le bandeau aille bord a bord. */
+  .modal-content .modal-sticky-header {
+    top: 0 !important;
+    margin: -20px -20px 16px !important;
+    padding: 16px 20px !important;
+    width: calc(100% + 40px) !important;
+    box-sizing: border-box !important;
+  }
+}
 </style>
 
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
