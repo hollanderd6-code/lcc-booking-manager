@@ -31322,8 +31322,25 @@ cron.schedule('0 9 1 * *', async () => {
           // (on exclut les messages 'system' qui sont des notifs internes).
           pool.query(
             `SELECT
-               COUNT(*) FILTER (WHERE m.is_bot_response = TRUE)   AS bot,
-               COUNT(*) FILTER (WHERE m.sender_type <> 'system')  AS reels
+               COUNT(*) FILTER (
+                 WHERE m.sender_type = 'property'
+                   AND (
+                        m.is_bot_response = TRUE
+                     OR m.sender_name LIKE 'tpl\\_%'
+                     OR m.sender_name IN ('bot', 'system', 'auto', 'IA', 'Boostinghost', 'Assistant automatique')
+                   )
+                   AND (c.escalated IS NOT TRUE OR m.created_at < c.escalated_at)
+               ) AS autos,
+               COUNT(*) FILTER (
+                 WHERE m.sender_type = 'property'
+                   AND m.is_bot_response = TRUE
+                   AND (c.escalated IS NOT TRUE OR m.created_at < c.escalated_at)
+               ) AS ia,
+               COUNT(*) FILTER (
+                 WHERE m.sender_type = 'property'
+                   AND (c.escalated IS NOT TRUE OR m.created_at < c.escalated_at)
+               ) AS sortants,
+               COUNT(*) FILTER (WHERE m.sender_type = 'guest') AS entrants
              FROM messages m
              JOIN conversations c ON c.id = m.conversation_id
              WHERE c.user_id = $1 AND m.created_at BETWEEN $2 AND $3`,
@@ -31334,9 +31351,14 @@ cron.schedule('0 9 1 * *', async () => {
         const nSejours   = parseInt(sejours.rows[0].count)   || 0;
         const nMessages  = parseInt(messages.rows[0].count)  || 0;
         const nEscalades = parseInt(escalades.rows[0].count) || 0;
-        const nBotMsgs   = parseInt(autoMsgs.rows[0].bot)   || 0;
-        const nRealMsgs  = parseInt(autoMsgs.rows[0].reels) || 0;
-        const pctAuto    = nRealMsgs > 0 ? Math.round((nBotMsgs / nRealMsgs) * 100) : 0;
+        const nAutos     = parseInt(autoMsgs.rows[0].autos)    || 0;
+        const nIA        = parseInt(autoMsgs.rows[0].ia)       || 0;
+        const nSortants  = parseInt(autoMsgs.rows[0].sortants) || 0;
+        const nEntrants  = parseInt(autoMsgs.rows[0].entrants) || 0;
+        // Denominateur = sortants seuls : un message entrant ne peut pas etre
+        // « traite automatiquement ». Numerateur = IA + templates + envois
+        // systeme, c'est-a-dire tout ce qui part sans intervention humaine.
+        const pctAuto    = nSortants > 0 ? Math.round((nAutos / nSortants) * 100) : 0;
 
         if (nSejours === 0) continue; // rien à résumer
 
@@ -31346,7 +31368,7 @@ cron.schedule('0 9 1 * *', async () => {
         );
         const { sendNotification } = require('./services/notifications-service');
         const title = `📊 Résumé ${monthLabel}`;
-        const body  = `${nSejours} séjour${nSejours>1?'s':''} · ${nMessages} messages · ${pctAuto}% traités automatiquement · ${nEscalades} main${nEscalades>1?'s':''} passée${nEscalades>1?'s':''}`;
+        const body  = `${nSejours} séjour${nSejours>1?'s':''} · ${nEntrants} question${nEntrants>1?'s':''} voyageur${nEntrants>1?'s':''} · ${nAutos} réponse${nAutos>1?'s':''} automatique${nAutos>1?'s':''} (${pctAuto}%) · ${nEscalades} main${nEscalades>1?'s':''} passée${nEscalades>1?'s':''}`;
         await sendNotificationToDelegatesOf(user.id, title, body, { type: 'monthly_summary', month: monthLabel, screen: 'dashboard' });
         for (const tok of tokens.rows) {
           await sendNotificationLogged(tok.fcm_token, title, body,
