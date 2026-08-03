@@ -3371,22 +3371,140 @@ window.deleteOwnerInvoice = function (id) {
 };
 
 
+// Avoir total ou partiel : on ouvre une modale listant les lignes de la
+// facture. Cocher toutes les lignes revient a l'avoir total d'avant.
 window.createOwnerCreditNote = async function(id) {
-  showConfirm('Créer un avoir pour cette facture ?', async function() {
+  var lignes = [];
+  var facture = null;
   try {
-    const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/credit-note', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+    var r = await fetch(API_BASE + '/api/owner-invoices/' + id, {
+      headers: { Authorization: 'Bearer ' + token }
     });
-    const json = await res.json();
-    if (!res.ok) return alert(json.error || 'Erreur création avoir');
-    alert('Avoir créé avec succès');
-    loadInvoices();
-  } catch(e) {
+    var j = await r.json();
+    if (!r.ok) return alert(j.error || 'Erreur lors du chargement de la facture');
+    facture = j.invoice || {};
+    lignes = j.items || [];
+  } catch (e) {
     console.error(e);
+    return alert('Erreur serveur');
+  }
+
+  if (!lignes.length) return alert('Cette facture ne comporte aucune ligne.');
+
+  var m = document.getElementById('creditNoteModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'creditNoteModal';
+    m.className = 'modal-overlay';
+    m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(13,17,23,.5);z-index:20000;align-items:center;justify-content:center;padding:16px;';
+    m.onclick = function (e) { if (e.target === m) window.closeCreditNoteModal(); };
+    document.body.appendChild(m);
+  }
+
+  function euro(n) {
+    return (Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace('.', ',') + ' €';
+  }
+
+  var rows = lignes.map(function (it) {
+    var lib = it.description || (it.item_type || 'Prestation');
+    if (it.is_debours) lib += ' <span style="font-size:11px;color:#7A8695;">(débours)</span>';
+    return '<label style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid rgba(200,184,154,.35);cursor:pointer;">'
+      + '<input type="checkbox" class="cn-item" value="' + it.id + '" checked '
+      + 'style="width:18px;height:18px;accent-color:#0E3B2E;flex-shrink:0;">'
+      + '<span style="flex:1;min-width:0;font-size:14px;">' + lib + '</span>'
+      + '<b style="font-size:14px;white-space:nowrap;">' + euro(it.total) + '</b>'
+      + '</label>';
+  }).join('');
+
+  m.innerHTML = '<div class="modal-content" style="background:#FAF7F2;border:1px solid rgba(200,184,154,.55);border-radius:20px;padding:22px;width:100%;max-width:520px;max-height:82vh;overflow-y:auto;">'
+    + '<div class="modal-sticky-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+    +   '<h3 style="margin:0;font-family:\'Instrument Serif\',serif;font-weight:400;font-size:20px;">Créer un avoir</h3>'
+    +   '<button class="modal-close-btn" onclick="closeCreditNoteModal()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#6B7280;">&times;</button>'
+    + '</div>'
+    + '<p style="font-size:13px;color:#7A8695;margin:0 0 14px;">Décochez les lignes que vous ne souhaitez pas annuler. '
+    +   'Facture ' + (facture.invoice_number || '') + '.</p>'
+    + '<div style="display:flex;gap:14px;margin-bottom:6px;">'
+    +   '<button type="button" onclick="cnToggleAll(true)" style="border:none;background:none;padding:0;font-size:12px;color:#0E3B2E;text-decoration:underline;cursor:pointer;">Tout cocher</button>'
+    +   '<button type="button" onclick="cnToggleAll(false)" style="border:none;background:none;padding:0;font-size:12px;color:#0E3B2E;text-decoration:underline;cursor:pointer;">Tout décocher</button>'
+    + '</div>'
+    + '<div id="cnItems">' + rows + '</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 18px;font-size:15px;">'
+    +   '<span style="color:#7A8695;">Montant de l\'avoir</span>'
+    +   '<b id="cnTotal" style="font-size:18px;color:#0E3B2E;"></b>'
+    + '</div>'
+    + '<div style="display:flex;gap:10px;">'
+    +   '<button onclick="closeCreditNoteModal()" style="flex:1;padding:12px;border:1px solid rgba(200,184,154,.6);background:#fff;border-radius:12px;font-size:14px;cursor:pointer;">Annuler</button>'
+    +   '<button id="cnSubmit" onclick="submitCreditNote(\'' + id + '\')" style="flex:1;padding:12px;border:none;background:#0E3B2E;color:#fff;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">Créer l\'avoir</button>'
+    + '</div>'
+    + '</div>';
+
+  window._cnItems = lignes;
+
+  window.cnRecalc = function () {
+    var total = 0, n = 0;
+    document.querySelectorAll('#cnItems .cn-item').forEach(function (cb) {
+      if (!cb.checked) return;
+      var it = (window._cnItems || []).find(function (x) { return String(x.id) === cb.value; });
+      if (it) { total += Number(it.total) || 0; n++; }
+    });
+    var el = document.getElementById('cnTotal');
+    // Le total affiche reste HT : la TVA est recalculee par le serveur au
+    // taux de la facture, l'annoncer ici risquerait de diverger.
+    if (el) el.textContent = euro(total) + ' HT';
+    var btn = document.getElementById('cnSubmit');
+    if (btn) { btn.disabled = n === 0; btn.style.opacity = n === 0 ? '.45' : '1'; }
+  };
+
+  window.cnToggleAll = function (v) {
+    document.querySelectorAll('#cnItems .cn-item').forEach(function (cb) { cb.checked = v; });
+    window.cnRecalc();
+  };
+
+  m.querySelectorAll('.cn-item').forEach(function (cb) {
+    cb.addEventListener('change', function () { window.cnRecalc(); });
+  });
+
+  m.style.display = 'flex';
+  window.cnRecalc();
+};
+
+window.closeCreditNoteModal = function () {
+  var m = document.getElementById('creditNoteModal');
+  if (m) m.style.display = 'none';
+};
+
+window.submitCreditNote = async function (id) {
+  var ids = [];
+  document.querySelectorAll('#cnItems .cn-item').forEach(function (cb) {
+    if (cb.checked) ids.push(cb.value);
+  });
+  if (!ids.length) return alert('Sélectionnez au moins une ligne.');
+
+  var btn = document.getElementById('cnSubmit');
+  if (btn) { btn.disabled = true; btn.textContent = 'Création…'; }
+
+  try {
+    // Toutes les lignes cochees : on n'envoie pas itemIds, le serveur fait
+    // alors un avoir total — meme chemin qu'avant, totaux repris tels quels.
+    var tout = ids.length === (window._cnItems || []).length;
+    var res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/credit-note', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(tout ? {} : { itemIds: ids })
+    });
+    var json = await res.json();
+    if (!res.ok) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Créer l\'avoir'; }
+      return alert(json.error || 'Erreur création avoir');
+    }
+    window.closeCreditNoteModal();
+    alert('Avoir ' + (json.invoice && json.invoice.invoice_number ? json.invoice.invoice_number : '') + ' créé.');
+    loadInvoices();
+  } catch (e) {
+    console.error(e);
+    if (btn) { btn.disabled = false; btn.textContent = 'Créer l\'avoir'; }
     alert('Erreur serveur');
   }
-  }, 'Créer un avoir');
 };
 
 window.finalizeOwnerInvoice = function (id) {
