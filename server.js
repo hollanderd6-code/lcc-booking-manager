@@ -24371,7 +24371,7 @@ app.post('/api/owner-invoices/:id/credit-note',
     // d'une autre facture.
     const itemsRes = partiel
       ? await client.query(
-          'SELECT * FROM owner_invoice_items WHERE invoice_id = $1 AND id = ANY($2::uuid[])',
+          'SELECT * FROM owner_invoice_items WHERE invoice_id = $1 AND id = ANY($2::text[])',
           [invoiceId, itemIds]
         )
       : await client.query(
@@ -24523,7 +24523,7 @@ app.post('/api/owner-invoices/:id/credit-note',
         is_debours
       FROM owner_invoice_items
       WHERE invoice_id = $2
-        AND ($3::uuid[] IS NULL OR id = ANY($3::uuid[]))
+        AND ($3::text[] IS NULL OR id = ANY($3::text[]))
     `, [creditId, invoiceId, partiel ? itemIds : null]);
 
     await client.query('COMMIT');
