@@ -1009,6 +1009,33 @@ html[data-theme-v3="1"] .modal-content {
 }
 </style>
 <script>
+// ── Avoirs : montants plutot que tout ou rien ────────────────────────────
+// Une facture peut etre partiellement avoiree. On calcule donc le montant
+// avoire par facture, et non la simple existence d'un avoir.
+window.bhCreditedAmounts = function (invoices) {
+  var map = {};
+  (invoices || []).forEach(function (inv) {
+    if (inv.is_credit_note && inv.original_invoice_id) {
+      var k = String(inv.original_invoice_id);
+      map[k] = (map[k] || 0) + Math.abs(parseFloat(inv.total_ttc || 0) || 0);
+    }
+  });
+  return map;
+};
+// Montant restant du sur une facture, avoirs deduits. Jamais negatif.
+window.bhNetAmount = function (inv, map) {
+  var t = parseFloat(inv.total_ttc || 0) || 0;
+  var c = map[String(inv.id)] || 0;
+  return Math.max(0, t - c);
+};
+// Totalement avoiree ? Tolerance d'un centime pour les arrondis de TVA.
+window.bhFullyCredited = function (inv, map) {
+  var t = parseFloat(inv.total_ttc || 0) || 0;
+  var c = map[String(inv.id)] || 0;
+  return t > 0 && c >= t - 0.01;
+};
+
+
 // ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
 (function() {
   var _origFetch = window.fetch;
@@ -2391,19 +2418,15 @@ window.openStatsModal = function(type) {
 
   // Ensemble des IDs de factures annulées par un avoir : on collecte les
   // original_invoice_id de tous les avoirs (lignes is_credit_note=true).
-  const creditedIds = new Set();
-  invoices.forEach(function(inv) {
-    if (inv.is_credit_note && inv.original_invoice_id) {
-      creditedIds.add(inv.original_invoice_id);
-    }
-  });
+  const creditedAmounts = window.bhCreditedAmounts(invoices);
 
   if (type === 'billed') {
     titleEl.textContent = 'Factures facturées';
     const filtered = invoices.filter(function(inv) {
       const status = inv.status || '';
       // Exclut brouillons, avoirs, factures annulées (status cancelled ou ayant un avoir lié)
-      return !inv.is_credit_note && status !== 'draft' && status !== 'cancelled' && !creditedIds.has(inv.id);
+      return !inv.is_credit_note && status !== 'draft' && status !== 'cancelled'
+        && !window.bhFullyCredited(inv, creditedAmounts);
     });
     if (filtered.length === 0) {
       htmlContent = '<p>Aucune facture facturée.</p>';
@@ -2428,7 +2451,8 @@ window.openStatsModal = function(type) {
     const filtered = invoices.filter(function(inv) {
       const status = inv.status || '';
       // Exclut brouillons, avoirs, factures payées et factures annulées/avec avoir lié
-      return !inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled' && !creditedIds.has(inv.id);
+      return !inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled'
+        && !window.bhFullyCredited(inv, creditedAmounts);
     });
     if (filtered.length === 0) {
       htmlContent = '<p>Aucune facture en attente de paiement.</p>';
@@ -2709,25 +2733,22 @@ function renderFpGrid(invs) {
 
     // Ensemble des IDs de factures annulées par un avoir (collecté depuis les
     // avoirs eux-mêmes via leur original_invoice_id).
-    const creditedIds = new Set();
-    invs.forEach(function(inv) {
-      if (inv.is_credit_note && inv.original_invoice_id) {
-        creditedIds.add(inv.original_invoice_id);
-      }
-    });
+    const creditedAmounts = window.bhCreditedAmounts(invs);
 
     invs.forEach(function(inv) {
       const total = parseFloat(inv.total_ttc || 0) || 0;
       const status = inv.status || '';
 
       // Total facturé : toutes les factures non brouillon, non avoir, non annulées
-      if (!inv.is_credit_note && status !== 'draft' && status !== 'cancelled' && !creditedIds.has(inv.id)) {
-        totalRev += total;
+      // Montant NET : une facture partiellement avoiree compte pour ce
+      // qui reste du, pas pour zero.
+      if (!inv.is_credit_note && status !== 'draft' && status !== 'cancelled') {
+        totalRev += window.bhNetAmount(inv, creditedAmounts);
       }
 
       // En attente : factures non brouillon, non avoir, non payées, non annulées
-      if (!inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled' && !creditedIds.has(inv.id)) {
-        totalPending += total;
+      if (!inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled') {
+        totalPending += window.bhNetAmount(inv, creditedAmounts);
       }
 
       const rawNum = inv.invoice_number || '';
@@ -2738,9 +2759,13 @@ function renderFpGrid(invs) {
       if (inv.is_credit_note) {
         statusLabel = 'Avoir';
         statusClass = 'invoice-badge-credit';
-      } else if (status === 'cancelled' || creditedIds.has(inv.id)) {
+      } else if (status === 'cancelled' || window.bhFullyCredited(inv, creditedAmounts)) {
         statusLabel = 'Annulée';
         statusClass = 'invoice-badge-credit';
+      } else if (creditedAmounts[String(inv.id)]) {
+        // Avoir partiel : la facture reste due pour le solde.
+        statusLabel = 'Avoir partiel';
+        statusClass = 'invoice-badge-sent';
       } else if (status === 'draft') {
         statusLabel = 'Brouillon';
         statusClass = 'invoice-badge-draft';
