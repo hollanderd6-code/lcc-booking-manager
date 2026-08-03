@@ -24337,6 +24337,13 @@ app.post('/api/owner-invoices/:id/credit-note',
 
     const invoiceId = req.params.id;
 
+    // Selection de lignes pour un avoir partiel. Absente ou vide => avoir
+    // total, comportement historique inchange.
+    const itemIds = Array.isArray(req.body && req.body.itemIds)
+      ? req.body.itemIds.filter(Boolean).map(String)
+      : null;
+    const partiel = !!(itemIds && itemIds.length);
+
     // Récupérer la facture d'origine (périmètre agence inclus)
     const agencyIds = await getAgencyUserIds(req, userId);
     const origResult = await client.query(
@@ -24359,12 +24366,62 @@ app.post('/api/owner-invoices/:id/credit-note',
 
     await client.query('BEGIN');
 
-    // Totaux négatifs pour l'avoir
-    const creditSubtotalHt     = -Number(orig.subtotal_ht     || 0);
-    const creditSubtotalDebours = -Number(orig.subtotal_debours || 0);
-    const creditVatAmount      = -Number(orig.vat_amount      || 0);
-    const creditTotalTtc       = -Number(orig.total_ttc       || 0);
-    const creditDiscountAmount = -Number(orig.discount_amount || 0);
+    // Lignes concernees par l'avoir. En partiel on verifie que chaque id
+    // appartient bien a cette facture : un id etranger annulerait une ligne
+    // d'une autre facture.
+    const itemsRes = partiel
+      ? await client.query(
+          'SELECT * FROM owner_invoice_items WHERE invoice_id = $1 AND id = ANY($2::uuid[])',
+          [invoiceId, itemIds]
+        )
+      : await client.query(
+          'SELECT * FROM owner_invoice_items WHERE invoice_id = $1',
+          [invoiceId]
+        );
+
+    if (partiel && itemsRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Aucune ligne valide selectionnee pour cet avoir.' });
+    }
+
+    let creditSubtotalHt, creditSubtotalDebours, creditVatAmount,
+        creditTotalTtc, creditDiscountAmount;
+
+    if (!partiel) {
+      // Avoir total : on reprend les totaux de l'originale, changes de signe.
+      creditSubtotalHt      = -Number(orig.subtotal_ht      || 0);
+      creditSubtotalDebours = -Number(orig.subtotal_debours || 0);
+      creditVatAmount       = -Number(orig.vat_amount       || 0);
+      creditTotalTtc        = -Number(orig.total_ttc        || 0);
+      creditDiscountAmount  = -Number(orig.discount_amount  || 0);
+    } else {
+      // Avoir partiel : totaux RECALCULES sur les seules lignes retenues.
+      // Les debours sont isoles car ils ne portent pas de TVA.
+      let ht = 0, debours = 0;
+      itemsRes.rows.forEach(function (it) {
+        const t = Number(it.total || 0);
+        if (it.is_debours) debours += t; else ht += t;
+      });
+
+      // Remise au prorata du HT annule : sans cela, annuler une ligne d'une
+      // facture remisee rendrait plus que ce qui a ete encaisse.
+      const htOrig = Number(orig.subtotal_ht || 0);
+      const remiseOrig = Number(orig.discount_amount || 0);
+      const remise = (htOrig > 0 && remiseOrig)
+        ? remiseOrig * (ht / htOrig)
+        : 0;
+
+      const htNet = ht - remise;
+      const taux = orig.vat_applicable ? Number(orig.vat_rate || 0) / 100 : 0;
+      const tva = htNet * taux;
+
+      const r2 = function (n) { return Math.round(n * 100) / 100; };
+      creditSubtotalHt      = -r2(ht);
+      creditSubtotalDebours = -r2(debours);
+      creditDiscountAmount  = -r2(remise);
+      creditVatAmount       = -r2(tva);
+      creditTotalTtc        = -r2(htNet + tva + debours);
+    }
 
     // Créer la facture d'avoir (statut "invoiced" directement)
     const insertResult = await client.query(`
@@ -24466,7 +24523,8 @@ app.post('/api/owner-invoices/:id/credit-note',
         is_debours
       FROM owner_invoice_items
       WHERE invoice_id = $2
-    `, [creditId, invoiceId]);
+        AND ($3::uuid[] IS NULL OR id = ANY($3::uuid[]))
+    `, [creditId, invoiceId, partiel ? itemIds : null]);
 
     await client.query('COMMIT');
 
