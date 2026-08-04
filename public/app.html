@@ -12826,10 +12826,6 @@ if (document.readyState === 'loading') {
     if (!wrapper || wrapper._horizontalLockFixV2Installed) return;
     wrapper._horizontalLockFixV2Installed = true;
 
-    var startX = 0;
-    var startY = 0;
-    var horizontalLock = false;
-    var verticalLock = false;
 
     /* Le gel de la page a ete retire.
        Il posait position:fixed sur le body des 8 px de mouvement horizontal,
@@ -12862,57 +12858,35 @@ if (document.readyState === 'loading') {
       document.body.classList.remove('calendar-horizontal-active');
     }
 
-    wrapper.addEventListener('touchstart', function(e) {
-      if (!e.touches || e.touches.length !== 1) return;
-      var t = e.touches[0];
-      startX = t.clientX;
-      startY = t.clientY;
-      horizontalLock = false;
-      verticalLock = false;
-      wrapper.classList.remove('is-horizontal-scrolling');
-      // Plus de window.scrollTo ici : sur un body eventuellement fige il
-      // ecrivait une position parasite, et il n'a plus d'objet sans le gel.
-    }, { passive: true });
+    /* Plus aucun ecouteur tactile sur le calendrier.
 
-    wrapper.addEventListener('touchmove', function(e) {
-      if (!e.touches || e.touches.length !== 1) return;
+       Ce qui restait apres le retrait du gel de page faisait encore deux
+       choses nuisibles, toutes deux en PLEIN GESTE :
 
-      var t = e.touches[0];
-      var dx = t.clientX - startX;
-      var dy = t.clientY - startY;
-      var absX = Math.abs(dx);
-      var absY = Math.abs(dy);
+       1. e.stopPropagation() sur le touchmove. Le defilement natif du
+          conteneur s'appuie sur la remontee de ces evenements ; les bloquer
+          revenait a lui couper l'herbe sous le pied.
 
-      // Geste clairement vertical : on laisse la page defiler normalement.
-      if (!horizontalLock && !verticalLock && absY > 8 && absY > absX * 1.2) {
-        verticalLock = true;
-        wrapper.classList.remove('is-horizontal-scrolling');
-        return;
-      }
+       2. l'ajout de la classe is-horizontal-scrolling, qui pose
+          touch-action: pan-x. Or WebKit lit touch-action au DEBUT du
+          toucher : le changer ensuite invalide le geste en cours, qui ne
+          reprendra qu'au contact suivant. D'ou le symptome — on glisse une
+          ou deux fois sans effet, puis ca repart.
 
-      // Geste horizontal : seuil abaisse a 5 px et ratio symetrique. Le seul
-      // effet est desormais une classe CSS (transitions coupees, touch-action
-      // pan-x) — aucun recalcul de mise en page, donc rien qui puisse
-      // interrompre le defilement en cours.
-      if (!horizontalLock && !verticalLock && absX > 5 && absX > absY * 1.2) {
-        horizontalLock = true;
-        wrapper.classList.add('is-horizontal-scrolling');
-      }
+       Rien de tout cela n'est necessaire : .calendar-grid-wrapper porte
+       deja overflow-x: auto et touch-action: pan-x pan-y en permanence
+       (CSS calendar-horizontal-scroll-lock-css-v2). Le navigateur sait
+       faire defiler un conteneur, c'est d'ailleurs pourquoi le defilement
+       vertical n'a jamais pose probleme.
 
-      if (horizontalLock) {
-        e.stopPropagation();
-      }
-    }, { passive: true });
+       Les regles CSS .is-horizontal-scrolling sont conservees mais plus
+       personne ne pose la classe ; les retirer relevera d'un nettoyage
+       separe. */
 
-    ['touchend','touchcancel'].forEach(function(evtName) {
-      wrapper.addEventListener(evtName, function() {
-        horizontalLock = false;
-        verticalLock = false;
-        // Retrait immediat : le differe de 80 ms ouvrait une fenetre pendant
-        // laquelle un nouveau geste partait sur un etat encore incoherent.
-        wrapper.classList.remove('is-horizontal-scrolling');
-      }, { passive: true });
-    });
+    // Une version anterieure a pu laisser le body fige ou la classe posee :
+    // plus aucun touchend ne nettoie desormais, on le fait une fois ici.
+    unfreezePageVerticalScroll();
+    wrapper.classList.remove('is-horizontal-scrolling');
   }
 
   if (document.readyState === 'loading') {
