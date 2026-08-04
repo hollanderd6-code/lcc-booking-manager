@@ -657,6 +657,67 @@ function _errorFingerprint(method, route, message) {
   return crypto.createHash('sha256').update(base).digest('hex');
 }
 
+// ── Regroupement des alertes par cause ──────────────────────────────────
+// Fenetre pendant laquelle une meme cause ne redeclenche pas de push.
+const ALERT_WINDOW_MS = 5 * 60 * 1000;
+
+// cle de cause -> { routes:Set, count:int, timer, firstMessage }
+const _alertGroups = new Map();
+
+// La cause, c'est le message d'erreur — pas la route. Les identifiants et
+// les nombres sont remplaces par des jokers : « timeout apres 5012ms » et
+// « timeout apres 4998ms » sont la meme cause, pas deux.
+function _causeKey(message) {
+  return String(message || '')
+    .slice(0, 200)
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ':uuid')
+    .replace(/\b\d+\b/g, ':n')
+    .trim();
+}
+
+async function _sendAlert(title, body, data) {
+  const tokensRes = await pool.query(
+    `SELECT fcm_token FROM user_fcm_tokens WHERE user_id = ANY($1::text[]) AND fcm_token IS NOT NULL`,
+    [ADMIN_USER_IDS_FOR_ALERTS]
+  );
+  const tokens = tokensRes.rows.map(r => r.fcm_token).filter(Boolean);
+  if (tokens.length) {
+    await sendNotificationToMultipleLogged(tokens, title, body, data);
+  }
+}
+
+// Renvoie true si l'appelant doit notifier lui-meme (premiere occurrence de
+// cette cause dans la fenetre), false si l'alerte a ete absorbee.
+function _shouldAlertNow(cause, route) {
+  const g = _alertGroups.get(cause);
+
+  if (!g) {
+    // Premiere de la fenetre : on ouvre le groupe et on laisse passer.
+    const groupe = { routes: new Set([route || '?']), count: 0, timer: null };
+    groupe.timer = setTimeout(function () {
+      const fin = _alertGroups.get(cause);
+      _alertGroups.delete(cause);
+      // Rien n'a ete absorbe : pas de resume, la premiere alerte suffisait.
+      if (!fin || fin.count === 0) return;
+      const nRoutes = fin.routes.size;
+      _sendAlert(
+        `🐛 ${fin.count} autre${fin.count > 1 ? 's' : ''} erreur${fin.count > 1 ? 's' : ''}`,
+        `${cause.slice(0, 90)} · ${nRoutes} route${nRoutes > 1 ? 's' : ''} touchée${nRoutes > 1 ? 's' : ''}`,
+        { type: 'server_error_group' }
+      ).catch(function (e) { console.error('resume alerte:', e.message); });
+    }, ALERT_WINDOW_MS);
+    // Le minuteur ne doit pas retenir le process au moment de s'arreter.
+    if (groupe.timer.unref) groupe.timer.unref();
+    _alertGroups.set(cause, groupe);
+    return true;
+  }
+
+  // Fenetre deja ouverte : on absorbe.
+  g.routes.add(route || '?');
+  g.count++;
+  return false;
+}
+
 async function logServerError(err, req) {
   try {
     const method = req && req.method;
@@ -681,15 +742,11 @@ async function logServerError(err, req) {
 
     const occurrences = result.rows[0] ? result.rows[0].occurrences : 1;
 
-    // Alerte push uniquement à la 1ère occurrence (ou tous les x100 si ça continue de se répéter,
-    // pour ne pas perdre totalement la trace d'une erreur récurrente non corrigée)
+    // Alerte push a la 1ere occurrence de cette empreinte (ou tous les x100
+    // si l'erreur persiste), MAIS regroupee par cause : une panne qui touche
+    // dix routes ne doit pas produire dix notifications.
     if (occurrences === 1 || occurrences % 100 === 0) {
-      const tokensRes = await pool.query(
-        `SELECT fcm_token FROM user_fcm_tokens WHERE user_id = ANY($1::text[]) AND fcm_token IS NOT NULL`,
-        [ADMIN_USER_IDS_FOR_ALERTS]
-      );
-      const tokens = tokensRes.rows.map(r => r.fcm_token).filter(Boolean);
-      if (tokens.length) {
+      if (_shouldAlertNow(_causeKey(message), route)) {
         const push = bhPush({
           emoji: '🐛',
           event: occurrences === 1 ? 'Nouvelle erreur serveur' : `Erreur répétée (${occurrences}x)`,
@@ -697,7 +754,7 @@ async function logServerError(err, req) {
           parts: [message],
           data: { type: 'server_error', fingerprint }
         });
-        await sendNotificationToMultipleLogged(tokens, push.title, push.body, push.data);
+        await _sendAlert(push.title, push.body, push.data);
       }
     }
   } catch (logErr) {
