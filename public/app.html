@@ -12830,33 +12830,36 @@ if (document.readyState === 'loading') {
     var startY = 0;
     var horizontalLock = false;
     var verticalLock = false;
-    var frozenScrollY = 0;
-    var bodyWasFixed = false;
 
-    function freezePageVerticalScroll() {
-      if (bodyWasFixed) return;
-      frozenScrollY = window.scrollY || window.pageYOffset || 0;
-      bodyWasFixed = true;
-      document.documentElement.classList.add('calendar-horizontal-active');
-      document.body.classList.add('calendar-horizontal-active');
-      document.body.style.position = 'fixed';
-      document.body.style.top = (-frozenScrollY) + 'px';
-      document.body.style.left = '0';
-      document.body.style.right = '0';
-      document.body.style.width = '100%';
-    }
+    /* Le gel de la page a ete retire.
+       Il posait position:fixed sur le body des 8 px de mouvement horizontal,
+       ce qui declenche un recalcul de mise en page complet EN PLEIN GESTE :
+       dans la WebView, ou delaysContentTouches=false fait partir le toucher
+       plus tot que dans Safari, le defilement se derobait un coup sur deux.
+       D'ou l'impression de lenteur — le geste n'etait pas lent, il ne
+       prenait pas.
 
+       Ce gel servait a empecher l'inertie verticale de voler le geste. Le
+       cote natif fait deja ce travail sans recalcul : AppDelegate pose
+       bounces=false, alwaysBounceVertical=false et isDirectionalLockEnabled
+       sur la scrollview de la WebView.
+
+       Les fonctions sont conservees en no-op : deux appels subsistent
+       ailleurs dans la page (lignes ~5330 et ~11692) et les retirer
+       depasserait le cadre de cette correction. */
+    function freezePageVerticalScroll() {}
     function unfreezePageVerticalScroll() {
-      if (!bodyWasFixed) return;
-      bodyWasFixed = false;
+      // Filet de securite : si une version anterieure a laisse le body fige,
+      // on le libere au premier contact plutot que de laisser la page bloquee.
+      if (document.body.style.position === 'fixed') {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+      }
       document.documentElement.classList.remove('calendar-horizontal-active');
       document.body.classList.remove('calendar-horizontal-active');
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.left = '';
-      document.body.style.right = '';
-      document.body.style.width = '';
-      window.scrollTo(0, frozenScrollY);
     }
 
     wrapper.addEventListener('touchstart', function(e) {
@@ -12867,10 +12870,8 @@ if (document.readyState === 'loading') {
       horizontalLock = false;
       verticalLock = false;
       wrapper.classList.remove('is-horizontal-scrolling');
-
-      // Stoppe l'inertie verticale restante de la WebView juste au moment où
-      // l'utilisateur reprend contact avec le calendrier.
-      window.scrollTo(window.scrollX || 0, window.scrollY || window.pageYOffset || 0);
+      // Plus de window.scrollTo ici : sur un body eventuellement fige il
+      // ecrivait une position parasite, et il n'a plus d'objet sans le gel.
     }, { passive: true });
 
     wrapper.addEventListener('touchmove', function(e) {
@@ -12882,19 +12883,20 @@ if (document.readyState === 'loading') {
       var absX = Math.abs(dx);
       var absY = Math.abs(dy);
 
-      // Si le geste est clairement vertical, on laisse la page scroller normalement.
-      if (!horizontalLock && !verticalLock && absY > 10 && absY > absX * 1.25) {
+      // Geste clairement vertical : on laisse la page defiler normalement.
+      if (!horizontalLock && !verticalLock && absY > 8 && absY > absX * 1.2) {
         verticalLock = true;
         wrapper.classList.remove('is-horizontal-scrolling');
         return;
       }
 
-      // Si le geste est clairement horizontal, on fige temporairement le scroll vertical
-      // de la page pour que l'inertie verticale iOS ne vole plus le geste.
-      if (!horizontalLock && !verticalLock && absX > 8 && absX > absY * 1.05) {
+      // Geste horizontal : seuil abaisse a 5 px et ratio symetrique. Le seul
+      // effet est desormais une classe CSS (transitions coupees, touch-action
+      // pan-x) — aucun recalcul de mise en page, donc rien qui puisse
+      // interrompre le defilement en cours.
+      if (!horizontalLock && !verticalLock && absX > 5 && absX > absY * 1.2) {
         horizontalLock = true;
         wrapper.classList.add('is-horizontal-scrolling');
-        freezePageVerticalScroll();
       }
 
       if (horizontalLock) {
@@ -12906,10 +12908,9 @@ if (document.readyState === 'loading') {
       wrapper.addEventListener(evtName, function() {
         horizontalLock = false;
         verticalLock = false;
-        setTimeout(function() {
-          wrapper.classList.remove('is-horizontal-scrolling');
-          unfreezePageVerticalScroll();
-        }, 80);
+        // Retrait immediat : le differe de 80 ms ouvrait une fenetre pendant
+        // laquelle un nouveau geste partait sur un etat encore incoherent.
+        wrapper.classList.remove('is-horizontal-scrolling');
       }, { passive: true });
     });
   }
