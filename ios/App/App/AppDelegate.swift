@@ -23,11 +23,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     private func disablePullToRefresh(on webView: WKWebView) {
         let sv = webView.scrollView
-        sv.bounces = false
+        sv.alwaysBounceHorizontal = true
         sv.alwaysBounceVertical = false
         sv.refreshControl = nil
-        sv.isDirectionalLockEnabled = true
-        sv.delaysContentTouches = false
+        sv.isDirectionalLockEnabled = false
+        sv.delaysContentTouches = true
         sv.decelerationRate = .normal
         if #available(iOS 11.0, *) {
             sv.contentInsetAdjustmentBehavior = .never
@@ -199,11 +199,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             webView.backgroundColor = brandColor
             webView.isOpaque = true
             webView.scrollView.backgroundColor = brandColor
-            webView.scrollView.bounces = false
+            webView.scrollView.alwaysBounceHorizontal = true
             webView.scrollView.alwaysBounceVertical = false
             webView.scrollView.refreshControl = nil
-            webView.scrollView.isDirectionalLockEnabled = true
-            webView.scrollView.delaysContentTouches = false
+            webView.scrollView.isDirectionalLockEnabled = false
+            webView.scrollView.delaysContentTouches = true
             webView.scrollView.decelerationRate = .normal
             webView.alpha = 0
             webView.navigationDelegate = self
