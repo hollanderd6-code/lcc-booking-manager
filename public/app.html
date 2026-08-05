@@ -16804,16 +16804,12 @@ html.bh-lux .bh2-stats.bh2-stats-inside .bh2-num{
    Declencheur : appui long de 2 s dans les 90 premiers pixels de l'ecran.
    Aucun effet tant que personne ne le declenche. */
 (function () {
-  var minuteur = null;
-  document.addEventListener('touchstart', function (e) {
-    var t = e.touches && e.touches[0];
-    if (!t || t.clientY > 90) return;
-    clearTimeout(minuteur);
-    minuteur = setTimeout(demarrer, 2000);
-  }, { passive: true });
-  ['touchend', 'touchcancel', 'touchmove'].forEach(function (ev) {
-    document.addEventListener(ev, function () { clearTimeout(minuteur); }, { passive: true });
-  });
+  // Declencheur retire : le bandeau s'ouvre tout seul. TEMPORAIRE.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(demarrer, 1200); });
+  } else {
+    setTimeout(demarrer, 1200);
+  }
 
   function demarrer() {
     if (document.getElementById('trcBoite')) return;
