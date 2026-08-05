@@ -339,9 +339,8 @@ html.bh-lux[data-theme-v3="1"] .nav-item.active i{ color:var(--lux-green) !impor
 html.bh-lux[data-theme-v3="1"] .mobile-tabs,
 html.bh-lux[data-theme-v3="1"] .mobile-bottom-nav{
   background:rgba(251,251,250,.92) !important;
-  /* backdrop-filter retire pour test : la barre est fixed au-dessus du
-     calendrier, le flou force une recomposition a chaque image du
-     defilement. */
+  backdrop-filter:saturate(180%) blur(14px) !important;
+  -webkit-backdrop-filter:saturate(180%) blur(14px) !important;
   border-top:1px solid var(--lux-line) !important;
   box-shadow:none !important;
 }
