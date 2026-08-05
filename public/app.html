@@ -3563,6 +3563,19 @@ setTimeout(function() {
   <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
   <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
   <meta name="theme-color" content="#0E3B2E">
+<style id="bh-test-noselect">
+/* Test : la selection de texte fait apparaitre une
+   UIEditingOverlayGestureView au-dessus de la WebView (visible dans le
+   Capture View Hierarchy de Xcode). Elle intercepte les touchers pour
+   evaluer un debut de selection, et le geste n'atteint jamais le
+   defilement. Safari gere cette couche autrement, d'ou la difference. */
+.calendar-container, .calendar-container *,
+.calendar-grid-wrapper, .calendar-grid-wrapper * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+</style>
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none; position: sticky; top: 40px; z-index: 9998; width: 100%;">
