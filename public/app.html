@@ -16795,5 +16795,89 @@ html.bh-lux .bh2-stats.bh2-stats-inside .bh2-num{
   }
 })();
 </script>
+
+<script>
+/* TRACE-CALENDRIER */
+/* Diagnostic temporaire du defilement horizontal du calendrier.
+   Actif uniquement avec ?trace=1 dans l'URL. */
+(function () {
+  if (!/[?&]trace=1/.test(location.search)) return;
+
+  function demarrer() {
+    var w = document.querySelector('.calendar-grid-wrapper');
+    if (!w) { setTimeout(demarrer, 800); return; }
+    if (w.dataset.traceOn) return;
+    w.dataset.traceOn = '1';
+
+    var boite = document.createElement('div');
+    boite.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;'
+      + 'background:rgba(0,0,0,.88);color:#5f5;font:11px/1.45 ui-monospace,monospace;'
+      + 'padding:6px 8px;max-height:38vh;overflow:auto;white-space:pre;'
+      + '-webkit-user-select:text;user-select:text;';
+
+    var barre = document.createElement('div');
+    barre.style.cssText = 'display:flex;gap:8px;margin-bottom:4px;';
+    barre.innerHTML = '<button id="trcClr" style="font:11px monospace;padding:3px 8px;">vider</button>'
+      + '<button id="trcOff" style="font:11px monospace;padding:3px 8px;">fermer</button>'
+      + '<span style="color:#999;align-self:center;">trace calendrier</span>';
+    var corps = document.createElement('div');
+    boite.appendChild(barre);
+    boite.appendChild(corps);
+    document.body.appendChild(boite);
+
+    barre.querySelector('#trcClr').onclick = function () { corps.textContent = ''; };
+    barre.querySelector('#trcOff').onclick = function () { boite.remove(); };
+
+    function p(s) { corps.textContent = s + '\n' + corps.textContent.slice(0, 4000); }
+
+    var n = 0, moves = 0, scrolls = 0, t0 = 0, x0 = 0, y0 = 0, sl0 = 0, dxMax = 0, dyMax = 0;
+
+    w.addEventListener('touchstart', function (e) {
+      n++; moves = 0; scrolls = 0; dxMax = 0; dyMax = 0;
+      t0 = Date.now();
+      var t = e.touches[0];
+      x0 = t.clientX; y0 = t.clientY; sl0 = w.scrollLeft;
+      var c = e.target;
+      var desc = c.tagName + (c.className ? '.' + String(c.className).slice(0, 22) : '');
+      p('--- ' + n + ' start  scrollLeft=' + Math.round(sl0) + '  cible=' + desc);
+    }, { passive: true });
+
+    w.addEventListener('touchmove', function (e) {
+      moves++;
+      var t = e.touches[0];
+      var dx = Math.abs(t.clientX - x0), dy = Math.abs(t.clientY - y0);
+      if (dx > dxMax) dxMax = dx;
+      if (dy > dyMax) dyMax = dy;
+    }, { passive: true });
+
+    w.addEventListener('scroll', function () { scrolls++; }, { passive: true });
+
+    ['touchend', 'touchcancel'].forEach(function (ev) {
+      w.addEventListener(ev, function (e) {
+        var d = Math.round(w.scrollLeft - sl0);
+        var verdict = (moves === 0)   ? 'AUCUN touchmove -> geste capte ailleurs'
+                    : (scrolls === 0) ? 'touchmove OK mais AUCUN scroll -> defilement bloque'
+                    : 'ok';
+        p('    ' + ev.replace('touch', '') + '  moves=' + moves + ' scrolls=' + scrolls
+          + '  dx=' + Math.round(dxMax) + ' dy=' + Math.round(dyMax)
+          + '  deplacement=' + d + 'px  ' + (Date.now() - t0) + 'ms'
+          + '\n    ' + verdict);
+      }, { passive: true });
+    });
+
+    // Contexte fige une fois : ce qui ne change pas d'un geste a l'autre.
+    var cs = getComputedStyle(w);
+    p('touch-action=' + cs.touchAction + '  overflowX=' + cs.overflowX
+      + '  scrollWidth=' + w.scrollWidth + '  clientWidth=' + w.clientWidth
+      + '\n(scrollWidth doit depasser clientWidth, sinon rien a faire defiler)');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', demarrer);
+  } else {
+    demarrer();
+  }
+})();
+</script>
 </body>
 </html>
