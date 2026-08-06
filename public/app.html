@@ -13130,7 +13130,13 @@ if (window.Capacitor) {
     try { userId = JSON.parse(atob(token.split('.')[1])).id; } catch(e) { return; }
     if (!userId) return;
 
-    var url = (window.API_URL || '') || window.location.origin;
+    // --- BH FIX SOCKET NATIF : debut ---
+    // En app Capacitor, window.location.origin vaut capacitor://localhost,
+    // ce qui fait resoudre Socket.IO vers http://capacitor/ (hote inexistant).
+    // Meme logique que public/js/chat-owner.js.
+    var _bhNatif = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || false;
+    var url = window.API_URL || (_bhNatif ? 'https://lcc-booking-manager.onrender.com' : window.location.origin);
+    // --- BH FIX SOCKET NATIF : fin ---
     console.log('🧹 Socket.IO →', url, 'userId:', userId);
 
     var s = io(url, { transports: ['polling','websocket'], withCredentials: false, reconnection: true, reconnectionAttempts: 5, timeout: 10000 });
