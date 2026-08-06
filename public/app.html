@@ -7736,6 +7736,17 @@ try {
     // Un seul scroll container
     var outer = div('overflow:auto;-webkit-overflow-scrolling:touch;background:white;position:relative;');
     outer.id = 'bhMonthOuter';
+    // --- BH FIX APP CONTAINER : debut ---
+    // .app-container est un conteneur de defilement (overflow calcule
+    // "hidden auto") : son pan gesture recognizer vole les glissements
+    // lents destines au scroll horizontal du calendrier dans l'app iOS.
+    if (!document.getElementById('bh-fix-app-container')) {
+      var _bhFixAC = document.createElement('style');
+      _bhFixAC.id = 'bh-fix-app-container';
+      _bhFixAC.textContent = '.app-container{overflow:visible !important;height:auto !important}';
+      document.head.appendChild(_bhFixAC);
+    }
+    // --- BH FIX APP CONTAINER : fin ---
 
     // La grille interne a une largeur fixe
     var totalW = propW + numDays * colW;
