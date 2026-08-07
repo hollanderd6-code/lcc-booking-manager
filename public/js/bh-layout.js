@@ -520,6 +520,26 @@ function getSidebarHTML() {
     } else if (mobileLogoText.innerHTML !== '') {
       mobileLogoText.innerHTML = '';
     }
+
+    // --- BH FIX HEADER MOBILE ---
+    // Les trois zones du header se partageaient la largeur a parts egales
+    // (flex:1) sans regarder leur contenu, et le logo etait en position
+    // absolute donc hors du flux : sous ~380 px, les boutons s'ecrasaient et
+    // le verrou passait par-dessus. Applique en inline : la cascade de
+    // bh-brand.css est trop disputee pour qu'un !important suffise.
+    const entete = mobileLogo.parentElement;
+    if (entete && entete.classList.contains('mobile-header')) {
+      mobileLogo.style.setProperty('position', 'static', 'important');
+      mobileLogo.style.setProperty('transform', 'none', 'important');
+      mobileLogo.style.setProperty('flex', '1 1 auto', 'important');
+      mobileLogo.style.setProperty('min-width', '0', 'important');
+      mobileLogo.style.setProperty('justify-content', 'center', 'important');
+      [].forEach.call(entete.children, function (zone) {
+        if (zone === mobileLogo || zone.tagName !== 'DIV') return;
+        zone.style.setProperty('flex', '0 0 auto', 'important');
+        zone.style.setProperty('min-width', '0', 'important');
+      });
+    }
   }
 
   function forceUpdateSidebarLogo() {
