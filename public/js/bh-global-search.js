@@ -63,7 +63,10 @@
     '.bhgs-trigger-desktop:hover{background:rgba(255,255,255,.1);color:#fff;}',
     /* Pages au logo centr\u00e9 : loupe \u00e9pingl\u00e9e \u00e0 droite, le logo ne bouge pas */
 
-    '.mobile-header .bhgs-trigger-mobile.bhgs-abs{position:absolute;right:12px;top:calc(50% + env(safe-area-inset-top,0px)/2);transform:translateY(-50%);margin:0;z-index:5}',
+    // BH FIX LOUPE : centrage par top/bottom + margin auto, independant de
+    // tout transform (le translateY(-50%) precedent n'etait pas applique,
+    // le bouton depassait alors de 2 px sous le header).
+    '.mobile-header .bhgs-trigger-mobile.bhgs-abs{position:absolute;right:12px;top:env(safe-area-inset-top,0px);bottom:0;margin:auto 0;transform:none;z-index:5}',
     /* app.html : logo ABSOLUMENT centr\u00e9, c\u00f4t\u00e9s compact\u00e9s */
     '@media (max-width:700px){',
     '  .mobile-header.bhgs-app{position:relative!important}',

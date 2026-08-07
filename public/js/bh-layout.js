@@ -528,7 +528,11 @@ function getSidebarHTML() {
     // le verrou passait par-dessus. Applique en inline : la cascade de
     // bh-brand.css est trop disputee pour qu'un !important suffise.
     const entete = mobileLogo.parentElement;
-    if (entete && entete.classList.contains('mobile-header')) {
+    // Seuls les headers a trois zones sont concernes (div boutons / logo /
+    // div boutons), c.-a-d. app.html. Ailleurs le logo cotoie un bouton en
+    // position absolue : l'etirer le ferait passer par-dessus.
+    const zonesBoutons = entete ? entete.querySelectorAll(':scope > div') : [];
+    if (entete && entete.classList.contains('mobile-header') && zonesBoutons.length >= 2) {
       mobileLogo.style.setProperty('position', 'static', 'important');
       mobileLogo.style.setProperty('transform', 'none', 'important');
       mobileLogo.style.setProperty('flex', '1 1 auto', 'important');
