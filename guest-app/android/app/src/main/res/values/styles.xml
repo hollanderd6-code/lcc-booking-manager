@@ -2,15 +2,16 @@
 <resources>
 
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <item name="colorPrimary">#7C3AED</item>
-        <item name="colorPrimaryDark">#6D28D9</item>
-        <item name="colorAccent">#A78BFA</item>
+        <item name="colorPrimary">#C2410C</item>
+        <item name="colorPrimaryDark">#1C1917</item>
+        <item name="colorAccent">#C2410C</item>
     </style>
 
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:windowSplashScreenBackground">#1C1917</item>
     </style>
 
 </resources>
