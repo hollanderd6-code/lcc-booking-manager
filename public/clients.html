@@ -11,11 +11,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
-<link href="/css/style.css?v=17204d03" rel="stylesheet"/>
-<link href="/css/bh-theme-v3.css?v=cb75551e" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-brand.css?v=3140b004"><link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
-<link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
-<link href="/css/invoices-cards-style.css?v=cae6f272" rel="stylesheet"/>
+<link href="/css/style.css?v=11" rel="stylesheet"/>
+<link href="/css/bh-theme-v3.css?v=11" rel="stylesheet"/><link href="/css/bh-shared.css?v=1" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=1">
+<link rel="stylesheet" href="/css/bh-badges.css?v=1">
+<link href="/css/invoices-cards-style.css" rel="stylesheet"/>
 <style>
     /* FIX iOS POUR APP MOBILE */
     html, body {
@@ -31,7 +30,7 @@
     }
     
     /* DESIGN SYSTEM "FACTURE PRO" */
-    :root { --primary: #0E3B2E; --primary-dark: #15624B; --bg-body: #f3f4f6; --paper-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
+    :root { --primary: #1A7A5E; --primary-dark: #15624B; --bg-body: #f3f4f6; --paper-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
 
     html, body { margin: 0; padding: 0; background: var(--bg-body); font-family: 'Inter', sans-serif; height: 100%; overflow-x: hidden; }
     .app-container { display: flex; min-height: 100vh; }
@@ -43,7 +42,7 @@
     .nav-section-title { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin: 24px 24px 8px; }
     .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 24px; color: #4b5563; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s; border-right: 3px solid transparent; }
     .nav-item:hover { background: #f9fafb; color: #111827; }
-    .nav-item.active { background: #F1F6F3; color: #0E3B2E; border-right-color: #0E3B2E; }
+    .nav-item.active { background: #ecfdf5; color: #10B981; border-right-color: #10B981; }
     .nav-item i { width: 20px; text-align: center; }
 
     /* CONTENT */
@@ -78,7 +77,7 @@
     .form-group { margin-bottom: 12px; }
     .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #374151; }
     .form-control { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; box-sizing: border-box; }
-    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14,59,46,0.1); }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
     
     /* DROITE : Feuille A4 */
     .invoice-preview-container { display: flex; justify-content: center; padding-bottom: 40px; }
@@ -99,7 +98,7 @@
 .prestation-mini-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; padding-right: 80px; margin-bottom: 8px; position: relative; }  
     .prestation-mini-card:hover { border-color: #d1d5db; background: white; }
     .prestation-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
-    .badge-commission { background: #DCE9E3; color: #0A2C22; }
+    .badge-commission { background: #dcfce7; color: #166534; }
     .badge-cleaning { background: #dbeafe; color: #1e40af; }
     .badge-debours { background: #fef3c7; color: #92400e; }
     .badge-other { background: #f3f4f6; color: #374151; }
@@ -110,15 +109,15 @@
     .btn-primary { background: var(--primary); color: white; }
     .btn-secondary { background: white; border: 1px solid #d1d5db; color: #374151; }
     .btn-xs { padding: 4px 8px; font-size: 11px; transition: background .15s, border-color .15s, color .15s, box-shadow .15s, transform .1s; cursor: pointer; }
-    .btn-xs.btn-secondary:hover { background: #F1F6F3 !important; border-color: #0E3B2E !important; color: #0E3B2E !important; }
-    .btn-xs.btn-secondary:active { background: #DCE9E3 !important; border-color: #0A2C22 !important; color: #0A2C22 !important; transform: scale(.94); box-shadow: 0 0 0 2px rgba(14,59,46,.2) !important; }
-    .btn-xs.btn-secondary.just-clicked { background: #F1F6F3 !important; border-color: #0E3B2E !important; color: #0E3B2E !important; box-shadow: 0 0 0 3px rgba(14,59,46,.25) !important; transform: scale(.96); }
+    .btn-xs.btn-secondary:hover { background: #f0fdf4 !important; border-color: #1A7A5E !important; color: #1A7A5E !important; }
+    .btn-xs.btn-secondary:active { background: #dcfce7 !important; border-color: #15803d !important; color: #15803d !important; transform: scale(.94); box-shadow: 0 0 0 2px rgba(26,122,94,.2) !important; }
+    .btn-xs.btn-secondary.just-clicked { background: #ecfdf5 !important; border-color: #1A7A5E !important; color: #1A7A5E !important; box-shadow: 0 0 0 3px rgba(26,122,94,.25) !important; transform: scale(.96); }
     .prestation-mini-card { position: relative; }
     .drag-handle { cursor: grab; display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;background:#f3f4f6;border:1px solid #e5e7eb;color: #9CA3AF; font-size: 13px; transition: all .15s; user-select: none; flex-shrink:0; }
-    .drag-handle:hover { color: #0E3B2E; background:#F1F6F3; border-color:#0E3B2E; }
+    .drag-handle:hover { color: #1A7A5E; background:#ecfdf5; border-color:#1A7A5E; }
     .drag-handle:active { cursor: grabbing; }
-    .prestation-mini-card.dragging { opacity: .4; border: 2px dashed #0E3B2E !important; }
-    .prestation-mini-card.drag-over { border-top: 3px solid #0E3B2E !important; }
+    .prestation-mini-card.dragging { opacity: .4; border: 2px dashed #1A7A5E !important; }
+    .prestation-mini-card.drag-over { border-top: 3px solid #1A7A5E !important; }
 
     /* MODALS */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
@@ -252,8 +251,8 @@ input[type="number"] {
 /* badge */
 .nav-badge{
   margin-left:auto;
-  background:#DCE9E3;
-  color:#0A2C22;
+  background:#dcfce7;
+  color:#166534;
   font-size:12px;
   font-weight:700;
   padding:4px 10px;
@@ -274,7 +273,7 @@ input[type="number"] {
   width:36px;
   height:36px;
   border-radius:999px;
-  background: #0E3B2E;
+  background: #10B981;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -307,8 +306,8 @@ input[type="number"] {
 /* 3. Garder juste la bordure et la couleur du texte pour Messages actif */
 .nav-item[data-page="messages"].active,
 .nav-item[href="/messages.html"].active {
-  color: #0E3B2E; /* Texte vert */
-  border-right-color: #0E3B2E; /* Bordure verte */
+  color: #10B981; /* Texte vert */
+  border-right-color: #10B981; /* Bordure verte */
 }
 
 /* ============================================================
@@ -393,9 +392,9 @@ html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
 }
 html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
-  background: #0E3B2E;
+  background: #1A7A5E;
   color: white;
-  border-color: #0E3B2E;
+  border-color: #1A7A5E;
 }
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
   margin-left: auto;
@@ -431,7 +430,7 @@ html[data-theme-v3="1"] .bh-theme-toggle::after {
   border-radius: 50%;
   transition: transform .2s;
 }
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #0E3B2E; }
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #1A7A5E; }
 html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
 
 
@@ -485,7 +484,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .fp-btn-new {
   display: inline-flex; align-items: center; gap: 8px;
   height: 40px; padding: 0 18px; border: none;
-  border-radius: 12px; background: #0E3B2E;
+  border-radius: 12px; background: #1A7A5E;
   color: white; font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
 }
@@ -549,10 +548,10 @@ html[data-theme-v3="1"] .nav-tab {
   cursor: pointer !important; transition: all .15s !important;
 }
 html[data-theme-v3="1"] .nav-tab.active {
-  background: #0E3B2E !important; color: white !important;
+  background: #1A7A5E !important; color: white !important;
 }
 html[data-theme-v3="1"] .nav-tab:not(.active):hover {
-  background: rgba(14,59,46,.08) !important; color: #0E3B2E !important;
+  background: rgba(26,122,94,.08) !important; color: #1A7A5E !important;
 }
 
 /* Cards */
@@ -598,7 +597,7 @@ html[data-theme-v3="1"] .card,
   cursor: pointer;
   transition: all .15s;
 }
-.fp-filter-reset:hover { border-color: #0E3B2E; color: #0E3B2E; }
+.fp-filter-reset:hover { border-color: #1A7A5E; color: #1A7A5E; }
 .fp-filter-label {
   font-size: 12px;
   color: #9CA3AF;
@@ -618,16 +617,16 @@ html[data-theme-v3="1"] .invoice-card-header,
 html[data-theme-v3="1"] .invoice-card-footer {
   border-color: rgba(200,184,154,.2) !important;
 }
-html[data-theme-v3="1"] .invoice-card-number { color: #0E3B2E !important; }
-html[data-theme-v3="1"] .invoice-info-value.amount { color: #0E3B2E !important; }
+html[data-theme-v3="1"] .invoice-card-number { color: #1A7A5E !important; }
+html[data-theme-v3="1"] .invoice-info-value.amount { color: #1A7A5E !important; }
 html[data-theme-v3="1"] .invoice-actions-menu {
   background: #FDFCFA !important;
   border: 1.5px solid rgba(200,184,154,.4) !important;
   border-radius: 14px !important;
 }
 html[data-theme-v3="1"] .invoice-actions-menu button:hover {
-  background: rgba(14,59,46,.06) !important;
-  color: #0E3B2E !important;
+  background: rgba(26,122,94,.06) !important;
+  color: #1A7A5E !important;
 }
 html[data-theme-v3="1"] .invoice-card-actions-btn {
   background: rgba(245,242,236,.5) !important;
@@ -637,8 +636,8 @@ html[data-theme-v3="1"] .invoice-card-actions-btn {
 }
 html[data-theme-v3="1"] .invoice-card-actions-btn:hover {
   background: white !important;
-  border-color: #0E3B2E !important;
-  color: #0E3B2E !important;
+  border-color: #1A7A5E !important;
+  color: #1A7A5E !important;
 }
 
 
@@ -672,15 +671,15 @@ html[data-theme-v3="1"] input:not([type="checkbox"]):not([type="radio"]):not([ty
 html[data-theme-v3="1"] textarea:focus,
 html[data-theme-v3="1"] select:focus {
   background: #ffffff !important;
-  border-color: #0E3B2E !important;
-  box-shadow: 0 0 0 3px rgba(14,59,46,.1) !important;
+  border-color: #1A7A5E !important;
+  box-shadow: 0 0 0 3px rgba(26,122,94,.1) !important;
   outline: none !important;
 }
 
 html[data-theme-v3="1"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):hover:not(:focus),
 html[data-theme-v3="1"] textarea:hover:not(:focus),
 html[data-theme-v3="1"] select:hover:not(:focus) {
-  border-color: rgba(14,59,46,.4) !important;
+  border-color: rgba(26,122,94,.4) !important;
 }
 
 /* Placeholder */
@@ -737,7 +736,7 @@ html[data-theme-v3="1"] .fp-select {
 
 /* Buttons */
 html[data-theme-v3="1"] .btn-primary {
-  background: #0E3B2E !important; border-color: #0E3B2E !important;
+  background: #1A7A5E !important; border-color: #1A7A5E !important;
   border-radius: 10px !important; font-family: 'DM Sans', sans-serif !important;
   font-weight: 600 !important;
 }
@@ -1009,33 +1008,6 @@ html[data-theme-v3="1"] .modal-content {
 }
 </style>
 <script>
-// ── Avoirs : montants plutot que tout ou rien ────────────────────────────
-// Une facture peut etre partiellement avoiree. On calcule donc le montant
-// avoire par facture, et non la simple existence d'un avoir.
-window.bhCreditedAmounts = function (invoices) {
-  var map = {};
-  (invoices || []).forEach(function (inv) {
-    if (inv.is_credit_note && inv.original_invoice_id) {
-      var k = String(inv.original_invoice_id);
-      map[k] = (map[k] || 0) + Math.abs(parseFloat(inv.total_ttc || 0) || 0);
-    }
-  });
-  return map;
-};
-// Montant restant du sur une facture, avoirs deduits. Jamais negatif.
-window.bhNetAmount = function (inv, map) {
-  var t = parseFloat(inv.total_ttc || 0) || 0;
-  var c = map[String(inv.id)] || 0;
-  return Math.max(0, t - c);
-};
-// Totalement avoiree ? Tolerance d'un centime pour les arrondis de TVA.
-window.bhFullyCredited = function (inv, map) {
-  var t = parseFloat(inv.total_ttc || 0) || 0;
-  var c = map[String(inv.id)] || 0;
-  return t > 0 && c >= t - 0.01;
-};
-
-
 // ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
 (function() {
   var _origFetch = window.fetch;
@@ -1094,17 +1066,10 @@ function openAttestationModal() {
   }
 }
 </script>
-<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=13677c32">
-<link rel="stylesheet" href="/css/menu-active-button.css?v=f21f319b">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
-<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
-
-  <!-- Marque Boostinghost — genere par outils/marque.js -->
-  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
-  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
-  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
-  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
-  <meta name="theme-color" content="#0E3B2E">
+<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=10">
+<link rel="stylesheet" href="/css/menu-active-button.css?v=10">
+<link rel="stylesheet" href="/css/mobile-native-styles.css?v=10">
+<link rel="stylesheet" href="/css/bh-core.css?v=3">
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="clients" data-subtitle="Gérez vos propriétaires, leur Stripe et leurs logements." data-title="Mes clients">
 
@@ -1130,10 +1095,10 @@ function openAttestationModal() {
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background: #0E3B2E;
+    background: #10B981;
     color: white;
     border: none;
-    box-shadow: 0 4px 20px rgba(14, 59, 46, 0.5);
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
     z-index: 99999;
     cursor: pointer;
     font-size: 24px;
@@ -1141,7 +1106,7 @@ function openAttestationModal() {
   }
   #mobileFabButton:active {
     transform: scale(0.95);
-    box-shadow: 0 2px 10px rgba(14, 59, 46, 0.4);
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
   }
 }
 
@@ -1167,7 +1132,7 @@ function openAttestationModal() {
   display: flex; justify-content: space-between; align-items: center;
   padding: 16px 18px 12px; border-bottom: 1px solid rgba(200,184,154,.2);
 }
-.invoice-card-number { font-weight: 800; font-size: 15px; color: #0E3B2E; letter-spacing:-.01em; }
+.invoice-card-number { font-weight: 800; font-size: 15px; color: #1A7A5E; letter-spacing:-.01em; }
 .invoice-card-badge {
   display: inline-flex; align-items: center;
   padding: 4px 12px; border-radius: 999px;
@@ -1176,13 +1141,13 @@ function openAttestationModal() {
 .invoice-badge-draft    { background: rgba(107,114,128,.1); color: #4b5563; }
 .invoice-badge-sent     { background: rgba(59,130,246,.1);  color: #1d4ed8; }
 .invoice-badge-invoiced { background: rgba(245,158,11,.1);  color: #92400e; }
-.invoice-badge-paid     { background: rgba(14,59,46,.12); color: #0A2C22; }
+.invoice-badge-paid     { background: rgba(16,185,129,.12); color: #065f46; }
 .invoice-badge-credit   { background: rgba(236,72,153,.1);  color: #9d174d; }
 .invoice-card-body { padding: 14px 18px 10px; }
 .invoice-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .invoice-info-label { font-size: 10px; color: #9ca3af; font-weight: 700; text-transform: uppercase; letter-spacing:.07em; margin-bottom: 3px; }
 .invoice-info-value { font-size: 13px; color: #374151; font-weight: 500; }
-.invoice-info-value.amount { font-size: 17px; font-weight: 800; color: #0E3B2E; }
+.invoice-info-value.amount { font-size: 17px; font-weight: 800; color: #1A7A5E; }
 .invoice-card-footer {
   padding: 10px 18px 12px; border-top: 1px solid rgba(200,184,154,.2);
   display: flex; align-items: center; gap: 8px; position: relative;
@@ -1194,7 +1159,7 @@ function openAttestationModal() {
   cursor: pointer; color: #374151; font-family: 'DM Sans', sans-serif;
   transition: all .15s;
 }
-.invoice-card-actions-btn:hover { background: white; border-color: #0E3B2E; color: #0E3B2E; }
+.invoice-card-actions-btn:hover { background: white; border-color: #1A7A5E; color: #1A7A5E; }
 .invoice-actions-menu {
   position: absolute; bottom: calc(100% + 4px); left: 0; right: 0;
   background: #fff; border: 1.5px solid rgba(200,184,154,.4); border-radius: 14px;
@@ -1207,7 +1172,7 @@ function openAttestationModal() {
   border: none; text-align: left; font-size: 13px; font-weight: 500;
   border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; color: #374151;
 }
-.invoice-actions-menu button:hover { background: rgba(14,59,46,.06); color: #0E3B2E; }
+.invoice-actions-menu button:hover { background: rgba(26,122,94,.06); color: #1A7A5E; }
 
 /* ── Tout le blanc → beige ── */
 html[data-theme-v3="1"] .tab-content,
@@ -1230,8 +1195,8 @@ html[data-theme-v3="1"] .card-content {
 }
 /* Bouton Nouveau Client */
 html[data-theme-v3="1"] .btn-primary {
-  background: #0E3B2E !important;
-  border-color: #0E3B2E !important;
+  background: #1A7A5E !important;
+  border-color: #1A7A5E !important;
   border-radius: 10px !important;
 }
 
@@ -1382,14 +1347,14 @@ html[data-theme-v3="1"] .invoice-paper {
 <div class="tab-content" id="tab-dashboard">
 <div style="background:white; border-radius:12px; border:1px solid #e5e7eb; padding:16px; overflow:hidden;">
 <div class="fp-filter-bar">
-  <label><i class="fas fa-calendar-alt" style="margin-right:5px;color:#0E3B2E;"></i>Période</label>
+  <label><i class="fas fa-calendar-alt" style="margin-right:5px;color:#1A7A5E;"></i>Période</label>
   <select class="fp-select" id="fpMonthSelect" onchange="applyFpFilter()">
     <option value="">Tous les mois</option>
   </select>
   <select class="fp-select" id="fpYearSelect" onchange="applyFpFilter()">
     <option value="">Toutes les années</option>
   </select>
-  <label style="margin-left:8px;"><i class="fas fa-user" style="margin-right:5px;color:#0E3B2E;"></i>Client</label>
+  <label style="margin-left:8px;"><i class="fas fa-user" style="margin-right:5px;color:#1A7A5E;"></i>Client</label>
   <select class="fp-select" id="fpClientSelect" onchange="applyFpFilter()" style="min-width:160px;">
     <option value="">Tous les clients</option>
   </select>
@@ -1406,7 +1371,7 @@ html[data-theme-v3="1"] .invoice-paper {
 <div class="editor-sidebar" id="editorSidebar">
 <!-- Bannière READ-ONLY (masquée par défaut) -->
 <div class="readonly-banner" id="readonlyBanner" style="display:none;">
-  <i class="fas fa-exclamation-triangle"></i> Facture en lecture seule - Déjà émise
+  ⚠️ Facture en lecture seule - Déjà émise
 </div>
 <div class="editor-section">
 <div class="editor-section-title">Informations Facture</div>
@@ -1473,7 +1438,7 @@ html[data-theme-v3="1"] .invoice-paper {
 <div class="form-group">
 <label style="display:flex;align-items:center;justify-content:space-between;">
   <span>Champs perso</span>
-  <button type="button" onclick="addEmitterCustomField()" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px dashed #0E3B2E;background:transparent;color:#0A2C22;cursor:pointer;">+ Ajouter</button>
+  <button type="button" onclick="addEmitterCustomField()" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px dashed #10B981;background:transparent;color:#059669;cursor:pointer;">+ Ajouter</button>
 </label>
 <div id="emitterCustomFieldsList" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;"></div>
 </div>
@@ -1496,7 +1461,7 @@ html[data-theme-v3="1"] .invoice-paper {
 <button class="btn-xs btn-secondary" onclick="addPrestation('debours',this)">Débours</button>
 <button class="btn-xs btn-secondary" onclick="addPrestation('other',this)">Autre</button>
 <button class="btn-xs" onclick="openImportDebours()" style="background:#f59e0b;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;"><i class="fas fa-receipt" style="margin-right:4px;"></i>Importer débours</button>
-<button class="btn-xs" onclick="openImportReservations()" style="background:#0E3B2E;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;grid-column:1/-1;"><i class="fas fa-calendar-check" style="margin-right:4px;"></i>Importer depuis réservations</button>
+<button class="btn-xs" onclick="openImportReservations()" style="background:#1A7A5E;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;grid-column:1/-1;"><i class="fas fa-calendar-check" style="margin-right:4px;"></i>Importer depuis réservations</button>
 </div>
 <div id="prestationsListEditor"></div>
 </div>
@@ -1520,9 +1485,9 @@ html[data-theme-v3="1"] .invoice-paper {
 <div class="invoice-preview-container">
 <div class="invoice-paper">
 <!-- HEADER : titre vert à gauche, logo à droite (comme le PDF) -->
-<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #0E3B2E;">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #1A7A5E;">
   <div>
-    <div id="previewInvoiceNumber" style="font-size:22px;font-weight:700;color:#0E3B2E;letter-spacing:.01em;">FACTURE</div>
+    <div id="previewInvoiceNumber" style="font-size:22px;font-weight:700;color:#1A7A5E;letter-spacing:.01em;">FACTURE</div>
     <div style="font-size:13px;color:#6b7280;margin-top:3px;">Date : <span id="previewDate">-</span></div>
   </div>
   <div id="paperLogoContainer" style="max-width:140px;max-height:64px;display:flex;align-items:center;justify-content:flex-end;overflow:hidden;">
@@ -1534,12 +1499,12 @@ html[data-theme-v3="1"] .invoice-paper {
 <!-- DEUX COLONNES : Émetteur | Destinataire (encadrés, comme le PDF) -->
 <div style="display:flex;gap:16px;margin-bottom:24px;">
   <div style="flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:14px;">
-    <div style="font-size:11px;font-weight:700;color:#0E3B2E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Émetteur</div>
+    <div style="font-size:11px;font-weight:700;color:#1A7A5E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Émetteur</div>
     <strong id="previewSenderName" style="font-weight:700;font-size:13px;color:#111827;display:block;margin-bottom:4px;">Votre Entreprise</strong>
     <div id="previewSenderAddress" style="font-size:11px;color:#4b5563;line-height:1.6;">Adresse...</div>
   </div>
   <div style="flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:14px;">
-    <div style="font-size:11px;font-weight:700;color:#0E3B2E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Destinataire</div>
+    <div style="font-size:11px;font-weight:700;color:#1A7A5E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Destinataire</div>
     <div id="previewClientName" style="font-weight:700;font-size:13px;color:#111827;margin-bottom:4px;">Sélectionnez un client...</div>
     <div id="previewClientDetails" style="font-size:11px;color:#4b5563;line-height:1.6;"></div>
   </div>
@@ -1556,11 +1521,11 @@ html[data-theme-v3="1"] .invoice-paper {
   <col style="width:100px;"/>
   <col style="width:110px;"/>
 </colgroup>
-<thead><tr style="background:#0E3B2E;color:white;">
-  <th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;background:#0E3B2E !important;color:#fff !important;border:none !important;">Description</th>
-  <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;background:#0E3B2E !important;color:#fff !important;border:none !important;">Base</th>
-  <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;background:#0E3B2E !important;color:#fff !important;border:none !important;">Taux/Qté</th>
-  <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;background:#0E3B2E !important;color:#fff !important;border:none !important;">Total HT</th>
+<thead><tr style="background:#1A7A5E;color:white;">
+  <th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;background:#1A7A5E !important;color:#fff !important;border:none !important;">Description</th>
+  <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;background:#1A7A5E !important;color:#fff !important;border:none !important;">Base</th>
+  <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;background:#1A7A5E !important;color:#fff !important;border:none !important;">Taux/Qté</th>
+  <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;background:#1A7A5E !important;color:#fff !important;border:none !important;">Total HT</th>
 </tr></thead>
 <tbody id="previewBody"></tbody>
 </table>
@@ -1572,12 +1537,12 @@ html[data-theme-v3="1"] .invoice-paper {
 <div id="previewVatLegalMention" style="margin:2px 0 4px; font-size:10px; color:#6b7280; display:none;">
   TVA non applicable, art. 293 B du CGI
 </div>
-<div class="total-row final" style="display:flex;justify-content:space-between;padding:8px 0;font-size:15px;font-weight:700;color:#0E3B2E;border-top:2px solid #0E3B2E;margin-top:4px;"><span>Total</span><span id="previewTotalTTC">0,00 €</span></div>
+<div class="total-row final" style="display:flex;justify-content:space-between;padding:8px 0;font-size:15px;font-weight:700;color:#1A7A5E;border-top:2px solid #1A7A5E;margin-top:4px;"><span>Total</span><span id="previewTotalTTC">0,00 €</span></div>
 </div>
 </div>
 <!-- SECTION CONDITIONS APERÇU -->
-<div id="previewConditionsSection" style="margin-top:28px;padding:14px 18px;background:#f7faf8;border-radius:8px;border-top:2px solid #0E3B2E;display:none;">
-  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0E3B2E;margin-bottom:8px;">Conditions</div>
+<div id="previewConditionsSection" style="margin-top:28px;padding:14px 18px;background:#f7faf8;border-radius:8px;border-top:2px solid #1A7A5E;display:none;">
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#1A7A5E;margin-bottom:8px;">Conditions</div>
   <div id="previewConditionsContent" style="font-size:12px;color:#374151;line-height:1.8;"></div>
 </div>
 <!-- NOTES APERÇU -->
@@ -1586,7 +1551,7 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 <!-- FOOTER PAPER -->
 <div style="text-align:center;margin-top:28px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;">
-  Facture générée via <strong style="color:#0E3B2E;">boostinghost.fr</strong> — logiciel de gestion locative
+  Facture générée via <strong style="color:#1A7A5E;">boostinghost.fr</strong> — logiciel de gestion locative
 </div>
 </div>
 </div>
@@ -1636,7 +1601,7 @@ html[data-theme-v3="1"] .invoice-paper {
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <label style="font-size:12px;font-weight:600;color:#374151;">Prestations</label>
-          <button onclick="addAttLine()" style="font-size:11px;padding:4px 10px;border-radius:7px;border:1px dashed rgba(14,59,46,.4);background:rgba(14,59,46,.05);color:#0E3B2E;cursor:pointer;font-weight:600;font-family:'DM Sans',sans-serif;">
+          <button onclick="addAttLine()" style="font-size:11px;padding:4px 10px;border-radius:7px;border:1px dashed rgba(26,122,94,.4);background:rgba(26,122,94,.05);color:#1A7A5E;cursor:pointer;font-weight:600;font-family:'DM Sans',sans-serif;">
             <i class="fas fa-plus"></i> Ajouter
           </button>
         </div>
@@ -1644,16 +1609,16 @@ html[data-theme-v3="1"] .invoice-paper {
       </div>
 
       <!-- Total calculé -->
-      <div style="background:#F1F6F3;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:13px;font-weight:600;color:#0A2C22;">Total annuel</span>
-        <span id="attTotal" style="font-size:18px;font-weight:800;color:#0E3B2E;">0,00 €</span>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:600;color:#065f46;">Total annuel</span>
+        <span id="attTotal" style="font-size:18px;font-weight:800;color:#1A7A5E;">0,00 €</span>
       </div>
 
       <!-- Détail mensuel -->
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <label style="font-size:12px;font-weight:600;color:#374151;">Détail mensuel <span style="font-weight:400;color:#9CA3AF;">(optionnel)</span></label>
-          <button onclick="addMonthlyRow()" style="font-size:11px;padding:4px 10px;border-radius:7px;border:1px dashed rgba(14,59,46,.4);background:rgba(14,59,46,.05);color:#0E3B2E;cursor:pointer;font-weight:600;font-family:'DM Sans',sans-serif;">
+          <button onclick="addMonthlyRow()" style="font-size:11px;padding:4px 10px;border-radius:7px;border:1px dashed rgba(26,122,94,.4);background:rgba(26,122,94,.05);color:#1A7A5E;cursor:pointer;font-weight:600;font-family:'DM Sans',sans-serif;">
             <i class="fas fa-plus"></i> Ajouter un mois
           </button>
         </div>
@@ -1685,7 +1650,7 @@ html[data-theme-v3="1"] .invoice-paper {
 
     <!-- Footer -->
     <div style="padding:20px 0 0;border-top:1px solid #f1f5f9;margin-top:8px;display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;">
-      <button onclick="generateAttestationPDF(false)" style="height:40px;padding:0 20px;border-radius:10px;border:none;background:#0E3B2E;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;">
+      <button onclick="generateAttestationPDF(false)" style="height:40px;padding:0 20px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;">
         <i class="fas fa-download"></i> Télécharger
       </button>
       <button onclick="generateAttestationPDF(true)" style="height:40px;padding:0 20px;border-radius:10px;border:none;background:#0D5C3E;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;">
@@ -1758,7 +1723,7 @@ html[data-theme-v3="1"] .invoice-paper {
     <div style="position:sticky;top:0;z-index:10001;display:flex;justify-content:space-between;align-items:center;background:rgba(13,17,23,.85);backdrop-filter:blur(8px);padding:12px 16px;border-radius:12px;margin-bottom:16px;">
       <span style="color:white;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;" id="invoicePreviewModalTitle">Aperçu facture</span>
       <div style="display:flex;gap:8px;">
-        <button onclick="window.downloadOwnerInvoice(window._previewInvoiceId)" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;background:#0E3B2E;color:white;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">
+        <button onclick="window.downloadOwnerInvoice(window._previewInvoiceId)" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;background:#1A7A5E;color:white;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">
           <i class="fas fa-download"></i> Télécharger PDF
         </button>
         <button onclick="document.getElementById('invoicePreviewModal').style.display='none';document.body.style.overflow='';" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:transparent;color:white;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;">
@@ -1778,16 +1743,16 @@ html[data-theme-v3="1"] .invoice-paper {
     <div style="font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:24px;" id="confirmModalMessage"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button id="confirmModalCancel" style="padding:10px 20px;border-radius:10px;border:1px solid #e5e7eb;background:white;font-size:14px;font-weight:600;cursor:pointer;color:#374151;font-family:'DM Sans',sans-serif;">Annuler</button>
-      <button id="confirmModalOk" style="padding:10px 20px;border-radius:10px;border:none;background:#0E3B2E;color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Confirmer</button>
+      <button id="confirmModalOk" style="padding:10px 20px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Confirmer</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="statsModal" onclick="if(event.target===this)closeStatsModal()">
+<div class="modal-overlay" id="statsModal">
 <div class="modal-content">
-<div class="modal-sticky-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+<div style="display:flex; justify-content:space-between; margin-bottom:20px;">
 <h3 id="statsModalTitle" style="margin:0;">Détails</h3>
-<button class="modal-close-btn" onclick="closeStatsModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
+<button onclick="closeStatsModal()" style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
 </div>
 <div id="statsModalBody" style="font-size:14px;">
 <!-- Contenu injecté en JS -->
@@ -1840,7 +1805,7 @@ html[data-theme-v3="1"] .invoice-paper {
     </div>
     <div style="padding:16px 24px;border-top:1px solid #f3f4f6;display:flex;justify-content:flex-end;gap:8px;">
       <button onclick="document.getElementById('agencyClientModal').style.display='none'" style="padding:8px 16px;background:#f3f4f6;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Annuler</button>
-      <button onclick="saveAgencyClientOverride()" style="padding:8px 20px;background:#0E3B2E;border:none;border-radius:8px;font-size:13px;font-weight:600;color:white;cursor:pointer;">Enregistrer</button>
+      <button onclick="saveAgencyClientOverride()" style="padding:8px 20px;background:#1A7A5E;border:none;border-radius:8px;font-size:13px;font-weight:600;color:white;cursor:pointer;">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1880,13 +1845,13 @@ html[data-theme-v3="1"] .invoice-paper {
       <div><label style="font-size:12px;">Ville</label><input class="form-control" id="clientCity" type="text"/></div>
     </div>
     <div style="margin-bottom:12px;">
-      <label style="font-size:12px;font-weight:700;text-transform:uppercase;color:#6b7280;letter-spacing:0.05em;display:block;margin-bottom:8px;"><i class="fas fa-home" style="margin-right:5px;color:#0E3B2E;"></i>Logements associés</label>
+      <label style="font-size:12px;font-weight:700;text-transform:uppercase;color:#6b7280;letter-spacing:0.05em;display:block;margin-bottom:8px;"><i class="fas fa-home" style="margin-right:5px;color:#1A7A5E;"></i>Logements associés</label>
       <div id="clientPropertyList" style="display:flex;flex-direction:column;gap:6px;">
         <p style="font-size:12px;color:#9ca3af;font-style:italic;">Chargement des logements...</p>
       </div>
     </div>
     <div id="deleteClientSection" style="display:none;margin-top:8px;">
-      <button onclick="deleteClient()" style="width:100%;padding:12px;background:white;color:#ef4444;border:2px solid #ef4444;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;"><i class="far fa-trash-alt"></i> Supprimer ce client</button>
+      <button onclick="deleteClient()" style="width:100%;padding:12px;background:white;color:#ef4444;border:2px solid #ef4444;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">🗑️ Supprimer ce client</button>
     </div>
   </div>
   <!-- Footer sticky avec bouton Enregistrer -->
@@ -2096,13 +2061,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const invStatsByClient = {};
         clients.forEach(c => {
           const cinvs = allInvs.filter(i => String(i.client_id) === String(c.id));
-          // Total facture : ni brouillon, ni annulee, ni avoir — meme regle
-          // que le compteur du tableau de bord.
-          const cfact = cinvs.filter(i =>
-            i.status !== 'draft' && i.status !== 'cancelled' && !i.is_credit_note);
-          const total = cfact.reduce((sum, i) => sum + (parseFloat(i.total_ttc) || 0), 0);
+          const total = cinvs.reduce((sum, i) => sum + (parseFloat(i.total_amount) || 0), 0);
           const last = cinvs.sort((a,b) => new Date(b.issue_date) - new Date(a.issue_date))[0];
-          invStatsByClient[c.id] = { total, last, count: cfact.length };
+          invStatsByClient[c.id] = { total, last, count: cinvs.length };
         });
 
         container.innerHTML = clients.map(c => {
@@ -2112,14 +2073,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           const type = isAgency
             ? ('Via ' + (c.delegator_name || 'Agence'))
             : (c.client_type === 'business' ? 'Entreprise' : 'Particulier');
-          const typeColor = isAgency ? '#6d28d9' : (c.client_type === 'business' ? '#1e40af' : '#0A2C22');
-          const typeBg = isAgency ? '#ede9fe' : (c.client_type === 'business' ? '#dbeafe' : '#DCE9E3');
+          const typeColor = isAgency ? '#6d28d9' : (c.client_type === 'business' ? '#1e40af' : '#166534');
+          const typeBg = isAgency ? '#ede9fe' : (c.client_type === 'business' ? '#dbeafe' : '#dcfce7');
 
           // Stripe
           const stripeInfo = stripeMap[c.id] || {};
           const stripeConnected = stripeInfo.connected;
           const stripePillHtml = stripeConnected
-            ? `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#DCE9E3;color:#0A2C22;"><i class="fas fa-check-circle" style="margin-right:3px;"></i>Stripe connecté</span>`
+            ? `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#166534;"><i class="fas fa-check-circle" style="margin-right:3px;"></i>Stripe connecté</span>`
             : `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#f3f4f6;color:#9ca3af;"><i class="fas fa-plug" style="margin-right:3px;"></i>Stripe non connecté</span>`;
 
           // Logements
@@ -2136,7 +2097,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           } else {
             const props = (window.allProperties || []).filter(p => String(p.owner_id || p.ownerId || '') === String(c.id));
             propsHtml = props.length > 0
-              ? props.map(p => '<span style="display:inline-flex;align-items:center;gap:4px;background:#F1F6F3;color:#0A2C22;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;padding:2px 8px;font-weight:500;"><i class=\"fas fa-home\" style=\"font-size:10px;\"></i>' + p.name + '</span>').join('')
+              ? props.map(p => '<span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;padding:2px 8px;font-weight:500;"><i class=\"fas fa-home\" style=\"font-size:10px;\"></i>' + p.name + '</span>').join('')
               : '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucun logement associé</span>';
           }
 
@@ -2145,7 +2106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const stats = invStatsByClient[statsKey] || invStatsByClient[c.id] || { total: 0, last: null, count: 0 };
           const totalFormatted = stats.total.toFixed(2).replace('.', ',') + ' €';
           const lastInvHtml = stats.last
-            ? '<span style="font-size:12px;color:#6b7280;">Dernière : <strong>' + formatDate(stats.last.issue_date) + '</strong> — ' + (parseFloat(stats.last.total_ttc)||0).toFixed(2).replace('.',',') + ' €</span>'
+            ? '<span style="font-size:12px;color:#6b7280;">Dernière : <strong>' + formatDate(stats.last.issue_date) + '</strong> — ' + (parseFloat(stats.last.total_amount)||0).toFixed(2).replace('.',',') + ' €</span>'
             : '<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucune facture</span>';
 
                     // Coordonnées
@@ -2158,7 +2119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             <!-- Header carte -->
             <div style="padding:16px 16px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border-color,#f3f4f6);">
-              <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#0E3B2E,#0E3B2E);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:15px;flex-shrink:0;">${initials}</div>
+              <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#1A7A5E,#10B981);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:15px;flex-shrink:0;">${initials}</div>
               <div style="flex:1;min-width:0;">
                 <div style="font-weight:700;font-size:15px;color:var(--text-primary,#111827);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
                 <span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;background:${typeBg};color:${typeColor};">${type}</span>
@@ -2394,7 +2355,7 @@ function loadClientDefaults() {
     const label = document.createElement('label');
     label.style.cssText = 'display:flex !important;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;border-radius:6px;font-size:13px;transition:background 0.15s;margin:0;';
     label.innerHTML = `
-      <input type="checkbox" class="property-checkbox" value="${prop.id}" onchange="updatePreview()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;margin:0;accent-color:#0E3B2E;">
+      <input type="checkbox" class="property-checkbox" value="${prop.id}" onchange="updatePreview()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;margin:0;accent-color:#1A7A5E;">
       <span style="flex:1;font-weight:500;color:#111827;">${prop.name}</span>
     `;
     container.appendChild(label);
@@ -2418,15 +2379,19 @@ window.openStatsModal = function(type) {
 
   // Ensemble des IDs de factures annulées par un avoir : on collecte les
   // original_invoice_id de tous les avoirs (lignes is_credit_note=true).
-  const creditedAmounts = window.bhCreditedAmounts(invoices);
+  const creditedIds = new Set();
+  invoices.forEach(function(inv) {
+    if (inv.is_credit_note && inv.original_invoice_id) {
+      creditedIds.add(inv.original_invoice_id);
+    }
+  });
 
   if (type === 'billed') {
     titleEl.textContent = 'Factures facturées';
     const filtered = invoices.filter(function(inv) {
       const status = inv.status || '';
       // Exclut brouillons, avoirs, factures annulées (status cancelled ou ayant un avoir lié)
-      return !inv.is_credit_note && status !== 'draft' && status !== 'cancelled'
-        && !window.bhFullyCredited(inv, creditedAmounts);
+      return !inv.is_credit_note && status !== 'draft' && status !== 'cancelled' && !creditedIds.has(inv.id);
     });
     if (filtered.length === 0) {
       htmlContent = '<p>Aucune facture facturée.</p>';
@@ -2435,18 +2400,12 @@ window.openStatsModal = function(type) {
       filtered.forEach(function(inv) {
         const dateStr = formatDate(inv.issue_date);
         const num = inv.invoice_number || 'Brouillon';
-        const brut = parseFloat(inv.total_ttc || 0) || 0;
-        const av = creditedAmounts[String(inv.id)] || 0;
-        const total = (av ? (brut - av) : brut).toFixed(2) + ' €';
-        const detail = av
-          ? '<div style="font-size:11px;color:#7A8695;text-align:right;">'
-            + brut.toFixed(2) + ' € − ' + av.toFixed(2) + ' €</div>'
-          : '';
+        const total = (parseFloat(inv.total_ttc || 0) || 0).toFixed(2) + ' €';
         htmlContent += '<div style="background:#f9fafb;border-radius:8px;padding:12px;">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
-            '<span style="font-weight:700;font-size:13px;color:#0E3B2E;">' + num + '</span>' +
+            '<span style="font-weight:700;font-size:13px;color:#1A7A5E;">' + num + '</span>' +
             '<span style="font-weight:700;font-size:14px;">' + total + '</span>' +
-          '</div>' + detail +
+          '</div>' +
           '<div style="font-size:12px;color:#6b7280;">' + (inv.client_name || '') + ' · ' + dateStr + '</div>' +
         '</div>';
       });
@@ -2457,8 +2416,7 @@ window.openStatsModal = function(type) {
     const filtered = invoices.filter(function(inv) {
       const status = inv.status || '';
       // Exclut brouillons, avoirs, factures payées et factures annulées/avec avoir lié
-      return !inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled'
-        && !window.bhFullyCredited(inv, creditedAmounts);
+      return !inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled' && !creditedIds.has(inv.id);
     });
     if (filtered.length === 0) {
       htmlContent = '<p>Aucune facture en attente de paiement.</p>';
@@ -2466,21 +2424,15 @@ window.openStatsModal = function(type) {
       htmlContent = '<div style="display:flex;flex-direction:column;gap:8px;">';
       filtered.forEach(function(inv) {
         const num = inv.invoice_number || 'Brouillon';
-        const brut = parseFloat(inv.total_ttc || 0) || 0;
-        const av = creditedAmounts[String(inv.id)] || 0;
-        const total = (av ? (brut - av) : brut).toFixed(2) + ' €';
-        const detail = av
-          ? '<div style="font-size:11px;color:#7A8695;text-align:right;margin-bottom:4px;">'
-            + brut.toFixed(2) + ' € − ' + av.toFixed(2) + ' €</div>'
-          : '';
+        const total = (parseFloat(inv.total_ttc || 0) || 0).toFixed(2) + ' €';
         const status = inv.status || '';
         const statusLabel = status === 'sent' ? 'Envoyée' : status === 'invoiced' ? 'Facturée' : status === 'paid' ? 'Payée' : status;
         const statusColor = status === 'sent' ? '#2563eb' : status === 'invoiced' ? '#d97706' : '#6b7280';
         htmlContent += '<div style="background:#f9fafb;border-radius:8px;padding:12px;">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
-            '<span style="font-weight:700;font-size:13px;color:#0E3B2E;">' + num + '</span>' +
+            '<span style="font-weight:700;font-size:13px;color:#1A7A5E;">' + num + '</span>' +
             '<span style="font-weight:700;font-size:14px;">' + total + '</span>' +
-          '</div>' + detail +
+          '</div>' +
           '<div style="display:flex;justify-content:space-between;align-items:center;">' +
             '<span style="font-size:12px;color:#6b7280;">' + (inv.client_name || '') + '</span>' +
             '<span style="font-size:11px;font-weight:600;color:' + statusColor + ';">' + statusLabel + '</span>' +
@@ -2500,7 +2452,7 @@ clients.forEach(function(c) {
   htmlContent += 
     '<li style="padding:8px 0; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">' +
       '<span>' + name + '</span>' +
-      "<button onclick=\"editClient('" + c.id + "')\" style=\"padding:4px 12px; background:#0E3B2E; color:white; border:none; border-radius:999px; cursor:pointer; font-size:12px;\">✏️ Modifier</button>" +
+      "<button onclick=\"editClient('" + c.id + "')\" style=\"padding:4px 12px; background:#1A7A5E; color:white; border:none; border-radius:999px; cursor:pointer; font-size:12px;\">✏️ Modifier</button>" +
     '</li>';
 });
 htmlContent += '</ul>';
@@ -2671,7 +2623,7 @@ async function loadInvoices() {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
-    if (container) container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;"><p style="color:#dc2626;font-weight:600;">⏱ Délai dépassé</p><p style="color:#6b7280;font-size:13px;margin-top:8px;">Le serveur met du temps à démarrer. <a href="javascript:loadInvoices()" style="color:#0E3B2E;font-weight:600;">Réessayer</a></p></div>';
+    if (container) container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;"><p style="color:#dc2626;font-weight:600;">⏱ Délai dépassé</p><p style="color:#6b7280;font-size:13px;margin-top:8px;">Le serveur met du temps à démarrer. <a href="javascript:loadInvoices()" style="color:#1A7A5E;font-weight:600;">Réessayer</a></p></div>';
   }, 20000);
   
   try {
@@ -2709,7 +2661,7 @@ async function loadInvoices() {
     if (e.name === 'AbortError') return;
     console.error('[ERROR] loadInvoices() - Erreur:', e);
     if (container) {
-      container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;"><p style="color:#dc2626;font-weight:600;">Erreur de chargement</p><p style="font-size:13px;color:#6b7280;margin-top:8px;"><a href="javascript:loadInvoices()" style="color:#0E3B2E;font-weight:600;">Réessayer</a></p></div>';
+      container.innerHTML = '<div style="padding:40px;text-align:center;grid-column:1/-1;"><p style="color:#dc2626;font-weight:600;">Erreur de chargement</p><p style="font-size:13px;color:#6b7280;margin-top:8px;"><a href="javascript:loadInvoices()" style="color:#1A7A5E;font-weight:600;">Réessayer</a></p></div>';
     }
   }
 }
@@ -2745,22 +2697,25 @@ function renderFpGrid(invs) {
 
     // Ensemble des IDs de factures annulées par un avoir (collecté depuis les
     // avoirs eux-mêmes via leur original_invoice_id).
-    const creditedAmounts = window.bhCreditedAmounts(invs);
+    const creditedIds = new Set();
+    invs.forEach(function(inv) {
+      if (inv.is_credit_note && inv.original_invoice_id) {
+        creditedIds.add(inv.original_invoice_id);
+      }
+    });
 
     invs.forEach(function(inv) {
       const total = parseFloat(inv.total_ttc || 0) || 0;
       const status = inv.status || '';
 
       // Total facturé : toutes les factures non brouillon, non avoir, non annulées
-      // Montant NET : une facture partiellement avoiree compte pour ce
-      // qui reste du, pas pour zero.
-      if (!inv.is_credit_note && status !== 'draft' && status !== 'cancelled') {
-        totalRev += window.bhNetAmount(inv, creditedAmounts);
+      if (!inv.is_credit_note && status !== 'draft' && status !== 'cancelled' && !creditedIds.has(inv.id)) {
+        totalRev += total;
       }
 
       // En attente : factures non brouillon, non avoir, non payées, non annulées
-      if (!inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled') {
-        totalPending += window.bhNetAmount(inv, creditedAmounts);
+      if (!inv.is_credit_note && status !== 'draft' && status !== 'paid' && status !== 'cancelled' && !creditedIds.has(inv.id)) {
+        totalPending += total;
       }
 
       const rawNum = inv.invoice_number || '';
@@ -2771,13 +2726,9 @@ function renderFpGrid(invs) {
       if (inv.is_credit_note) {
         statusLabel = 'Avoir';
         statusClass = 'invoice-badge-credit';
-      } else if (status === 'cancelled' || window.bhFullyCredited(inv, creditedAmounts)) {
+      } else if (status === 'cancelled' || creditedIds.has(inv.id)) {
         statusLabel = 'Annulée';
         statusClass = 'invoice-badge-credit';
-      } else if (creditedAmounts[String(inv.id)]) {
-        // Avoir partiel : la facture reste due pour le solde.
-        statusLabel = 'Avoir partiel';
-        statusClass = 'invoice-badge-sent';
       } else if (status === 'draft') {
         statusLabel = 'Brouillon';
         statusClass = 'invoice-badge-draft';
@@ -2793,11 +2744,6 @@ function renderFpGrid(invs) {
       }
 
       const eid = inv.id;
-
-      // Solde reel apres avoirs. _avoire vaut 0 s'il n'y en a aucun, auquel
-      // cas l'affichage reste celui d'avant.
-      const _avoire = inv.is_credit_note ? 0 : (creditedAmounts[String(inv.id)] || 0);
-      const _net = window.bhNetAmount(inv, creditedAmounts);
 
       let actionsHtml = '';
       if (inv.is_credit_note) {
@@ -2842,7 +2788,7 @@ function renderFpGrid(invs) {
           const _mLabel = (MOIS_FR[_d.getMonth()] || '') + ' ' + _d.getFullYear();
           container.innerHTML += `
             <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:8px 0 2px;">
-              <span style="font-size:13px;font-weight:700;color:#0E3B2E;text-transform:capitalize;white-space:nowrap;">${_mLabel}</span>
+              <span style="font-size:13px;font-weight:700;color:#1A7A5E;text-transform:capitalize;white-space:nowrap;">${_mLabel}</span>
               <span style="flex:1;height:1px;background:linear-gradient(to right,rgba(200,184,154,.5),transparent);"></span>
             </div>`;
         }
@@ -2851,7 +2797,7 @@ function renderFpGrid(invs) {
       // Avatar initiales
       const clientName = inv.client_name || '';
       const initials = clientName.trim().split(/\s+/).map(w => w[0]?.toUpperCase() || '').slice(0,2).join('') || '?';
-      const avatarColors = ['#0E3B2E','#3B82F6','#8B5CF6','#F59E0B','#EF4444','#EC4899','#06B6D4'];
+      const avatarColors = ['#1A7A5E','#3B82F6','#8B5CF6','#F59E0B','#EF4444','#EC4899','#06B6D4'];
       const avatarColor = avatarColors[(clientName.charCodeAt(0) || 0) % avatarColors.length];
 
       const cardHtml = `
@@ -2874,9 +2820,7 @@ function renderFpGrid(invs) {
               </div>
               <div class="invoice-info-item" style="text-align:right;">
                 <div class="invoice-info-label">Montant TTC</div>
-                <div class="invoice-info-value amount">${formatMoney(_avoire ? _net : total)}</div>
-                ${_avoire ? '<div style="font-size:11px;color:#7A8695;margin-top:2px;white-space:nowrap;">'
-                    + formatMoney(total) + ' − ' + formatMoney(_avoire) + '</div>' : ''}
+                <div class="invoice-info-value amount">${formatMoney(total)}</div>
               </div>
             </div>
           </div>
@@ -2935,7 +2879,7 @@ window.toggleInvoiceActions = function (id, btn) {
   menu.querySelectorAll('button').forEach(b => {
     const isDelete = b.style.color && b.style.color.includes('185, 28');
     b.style.cssText = 'display:block;width:100%;padding:10px 14px;background:transparent;border:none;text-align:left;font-size:13px;font-weight:500;border-radius:8px;cursor:pointer;font-family:DM Sans,sans-serif;color:' + (isDelete ? '#dc2626' : '#374151') + ';';
-    b.onmouseenter = () => { b.style.background = isDelete ? 'rgba(220,38,38,.07)' : 'rgba(14,59,46,.07)'; b.style.color = isDelete ? '#dc2626' : '#0E3B2E'; };
+    b.onmouseenter = () => { b.style.background = isDelete ? 'rgba(220,38,38,.07)' : 'rgba(26,122,94,.07)'; b.style.color = isDelete ? '#dc2626' : '#1A7A5E'; };
     b.onmouseleave = () => { b.style.background = 'transparent'; b.style.color = isDelete ? '#dc2626' : '#374151'; };
   });
 
@@ -2979,7 +2923,7 @@ function showConfirm(message, onOk, title) {
   modal.style.display = 'flex';
   // Couleur du bouton OK selon le contexte (danger si "Supprimer")
   const isDanger = message.toLowerCase().includes('supprimer') || message.toLowerCase().includes('irréversible');
-  okBtn.style.background = isDanger ? '#dc2626' : '#0E3B2E';
+  okBtn.style.background = isDanger ? '#dc2626' : '#1A7A5E';
   okBtn.textContent = isDanger ? 'Supprimer' : 'Confirmer';
   // Nettoyer les anciens listeners
   const newOk = okBtn.cloneNode(true);
@@ -3174,9 +3118,9 @@ window.deleteOwnerInvoice = function (id) {
   <div id="tempInvoicePaper" style="background:white;width:210mm;min-height:297mm;padding:16mm 18mm;font-family:Arial,Helvetica,sans-serif;color:#1f2937;box-sizing:border-box;font-size:12px;line-height:1.5;">
 
     <!-- HEADER : titre gauche, logo droite -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6mm;padding-bottom:4mm;border-bottom:2px solid #0E3B2E;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6mm;padding-bottom:4mm;border-bottom:2px solid #1A7A5E;">
       <div>
-        <div style="font-size:22px;font-weight:700;color:#0E3B2E;letter-spacing:.01em;">${invTitle} ${invRef}</div>
+        <div style="font-size:22px;font-weight:700;color:#1A7A5E;letter-spacing:.01em;">${invTitle} ${invRef}</div>
         <div style="font-size:12px;color:#6b7280;margin-top:3px;">${issDate}</div>
       </div>
       <div style="text-align:right;">${logoHtml}</div>
@@ -3186,13 +3130,13 @@ window.deleteOwnerInvoice = function (id) {
     <div style="display:flex;gap:12mm;margin-bottom:8mm;">
       <!-- Émetteur -->
       <div style="flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:5mm;">
-        <div style="font-size:11px;font-weight:700;color:#0E3B2E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Émetteur</div>
+        <div style="font-size:11px;font-weight:700;color:#1A7A5E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Émetteur</div>
         <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${senderName}</div>
         <div style="color:#4b5563;font-size:11px;">${emitterLines}</div>
       </div>
       <!-- Destinataire -->
       <div style="flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:5mm;">
-        <div style="font-size:11px;font-weight:700;color:#0E3B2E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Destinataire</div>
+        <div style="font-size:11px;font-weight:700;color:#1A7A5E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Destinataire</div>
         <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${clientName}</div>
         <div style="color:#4b5563;font-size:11px;">${clientAddr}</div>
       </div>
@@ -3204,11 +3148,11 @@ window.deleteOwnerInvoice = function (id) {
     <!-- TABLEAU ITEMS -->
     <table style="width:100%;border-collapse:collapse;margin-bottom:6mm;">
       <thead>
-        <tr style="background:#0E3B2E;color:white;">
-          <th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;width:50%;background:#0E3B2E !important;color:#fff !important;border:none !important;">Description</th>
-          <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;width:17%;background:#0E3B2E !important;color:#fff !important;border:none !important;">Base</th>
-          <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;width:13%;background:#0E3B2E !important;color:#fff !important;border:none !important;">Taux/Qté</th>
-          <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;width:20%;background:#0E3B2E !important;color:#fff !important;border:none !important;">Total HT</th>
+        <tr style="background:#1A7A5E;color:white;">
+          <th style="text-align:left;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;width:50%;background:#1A7A5E !important;color:#fff !important;border:none !important;">Description</th>
+          <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;width:17%;background:#1A7A5E !important;color:#fff !important;border:none !important;">Base</th>
+          <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;width:13%;background:#1A7A5E !important;color:#fff !important;border:none !important;">Taux/Qté</th>
+          <th style="text-align:right;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;width:20%;background:#1A7A5E !important;color:#fff !important;border:none !important;">Total HT</th>
         </tr>
       </thead>
       <tbody>${itemsHtml}</tbody>
@@ -3219,7 +3163,7 @@ window.deleteOwnerInvoice = function (id) {
       <!-- Conditions -->
       <div style="flex:1;font-size:11px;color:#4b5563;">
         ${(inv.payment_delay || inv.payment_mode || inv.late_interest || inv.notes) ? `
-          <div style="font-weight:700;color:#0E3B2E;margin-bottom:6px;text-transform:uppercase;font-size:10px;letter-spacing:.06em;">Conditions</div>
+          <div style="font-weight:700;color:#1A7A5E;margin-bottom:6px;text-transform:uppercase;font-size:10px;letter-spacing:.06em;">Conditions</div>
           ${inv.payment_delay ? `<div style="margin-bottom:3px;"><strong>Délai de règlement :</strong> ${inv.payment_delay}</div>` : ''}
           ${inv.payment_mode  ? `<div style="margin-bottom:3px;"><strong>Mode de règlement :</strong> ${inv.payment_mode}</div>`  : ''}
           ${inv.late_interest ? `<div style="margin-bottom:3px;"><strong>Intérêts de retard :</strong> ${inv.late_interest}</div>` : ''}
@@ -3233,7 +3177,7 @@ window.deleteOwnerInvoice = function (id) {
           <span style="font-weight:600;">${subtotal.toFixed(2)} €</span>
         </div>
         ${vatAmount > 0 ? `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:#4b5563;"><span>TVA (${inv.vat_rate}%)</span><span style="font-weight:600;">${vatAmount.toFixed(2)} €</span></div>` : `<div style="font-size:10px;color:#6b7280;padding:4px 0;">TVA non applicable, art. 293 B du CGI</div>`}
-        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:15px;font-weight:700;color:#0E3B2E;border-top:2px solid #0E3B2E;margin-top:4px;">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:15px;font-weight:700;color:#1A7A5E;border-top:2px solid #1A7A5E;margin-top:4px;">
           <span>Total</span>
           <span>${totalTtc.toFixed(2)} €</span>
         </div>
@@ -3242,7 +3186,7 @@ window.deleteOwnerInvoice = function (id) {
 
     <!-- FOOTER -->
     <div style="text-align:center;padding-top:5mm;margin-top:5mm;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;letter-spacing:.02em;">
-      Facture générée via <strong style="color:#0E3B2E;">boostinghost.fr</strong> — logiciel de gestion locative
+      Facture générée via <strong style="color:#1A7A5E;">boostinghost.fr</strong> — logiciel de gestion locative
     </div>
   </div>
 `;
@@ -3254,7 +3198,7 @@ window.deleteOwnerInvoice = function (id) {
       if (paper) {
         let annexeHtml = `
           <div style="page-break-before:always;padding-top:10mm;">
-            <div style="font-size:16px;font-weight:700;color:#0E3B2E;margin-bottom:6mm;padding-bottom:4mm;border-bottom:2px solid #0E3B2E;">
+            <div style="font-size:16px;font-weight:700;color:#1A7A5E;margin-bottom:6mm;padding-bottom:4mm;border-bottom:2px solid #1A7A5E;">
               Annexe — Justificatifs de débours
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8mm;">
@@ -3415,140 +3359,22 @@ window.deleteOwnerInvoice = function (id) {
 };
 
 
-// Avoir total ou partiel : on ouvre une modale listant les lignes de la
-// facture. Cocher toutes les lignes revient a l'avoir total d'avant.
 window.createOwnerCreditNote = async function(id) {
-  var lignes = [];
-  var facture = null;
+  showConfirm('Créer un avoir pour cette facture ?', async function() {
   try {
-    var r = await fetch(API_BASE + '/api/owner-invoices/' + id, {
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    var j = await r.json();
-    if (!r.ok) return alert(j.error || 'Erreur lors du chargement de la facture');
-    facture = j.invoice || {};
-    lignes = j.items || [];
-  } catch (e) {
-    console.error(e);
-    return alert('Erreur serveur');
-  }
-
-  if (!lignes.length) return alert('Cette facture ne comporte aucune ligne.');
-
-  var m = document.getElementById('creditNoteModal');
-  if (!m) {
-    m = document.createElement('div');
-    m.id = 'creditNoteModal';
-    m.className = 'modal-overlay';
-    m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(13,17,23,.5);z-index:20000;align-items:center;justify-content:center;padding:16px;';
-    m.onclick = function (e) { if (e.target === m) window.closeCreditNoteModal(); };
-    document.body.appendChild(m);
-  }
-
-  function euro(n) {
-    return (Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace('.', ',') + ' €';
-  }
-
-  var rows = lignes.map(function (it) {
-    var lib = it.description || (it.item_type || 'Prestation');
-    if (it.is_debours) lib += ' <span style="font-size:11px;color:#7A8695;">(débours)</span>';
-    return '<label style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid rgba(200,184,154,.35);cursor:pointer;">'
-      + '<input type="checkbox" class="cn-item" value="' + it.id + '" checked '
-      + 'style="width:18px;height:18px;accent-color:#0E3B2E;flex-shrink:0;">'
-      + '<span style="flex:1;min-width:0;font-size:14px;">' + lib + '</span>'
-      + '<b style="font-size:14px;white-space:nowrap;">' + euro(it.total) + '</b>'
-      + '</label>';
-  }).join('');
-
-  m.innerHTML = '<div class="modal-content" style="background:#FAF7F2;border:1px solid rgba(200,184,154,.55);border-radius:20px;padding:22px;width:100%;max-width:520px;max-height:82vh;overflow-y:auto;">'
-    + '<div class="modal-sticky-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
-    +   '<h3 style="margin:0;font-family:\'Instrument Serif\',serif;font-weight:400;font-size:20px;">Créer un avoir</h3>'
-    +   '<button class="modal-close-btn" onclick="closeCreditNoteModal()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#6B7280;">&times;</button>'
-    + '</div>'
-    + '<p style="font-size:13px;color:#7A8695;margin:0 0 14px;">Décochez les lignes que vous ne souhaitez pas annuler. '
-    +   'Facture ' + (facture.invoice_number || '') + '.</p>'
-    + '<div style="display:flex;gap:14px;margin-bottom:6px;">'
-    +   '<button type="button" onclick="cnToggleAll(true)" style="border:none;background:none;padding:0;font-size:12px;color:#0E3B2E;text-decoration:underline;cursor:pointer;">Tout cocher</button>'
-    +   '<button type="button" onclick="cnToggleAll(false)" style="border:none;background:none;padding:0;font-size:12px;color:#0E3B2E;text-decoration:underline;cursor:pointer;">Tout décocher</button>'
-    + '</div>'
-    + '<div id="cnItems">' + rows + '</div>'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 18px;font-size:15px;">'
-    +   '<span style="color:#7A8695;">Montant de l\'avoir</span>'
-    +   '<b id="cnTotal" style="font-size:18px;color:#0E3B2E;"></b>'
-    + '</div>'
-    + '<div style="display:flex;gap:10px;">'
-    +   '<button onclick="closeCreditNoteModal()" style="flex:1;padding:12px;border:1px solid rgba(200,184,154,.6);background:#fff;border-radius:12px;font-size:14px;cursor:pointer;">Annuler</button>'
-    +   '<button id="cnSubmit" onclick="submitCreditNote(\'' + id + '\')" style="flex:1;padding:12px;border:none;background:#0E3B2E;color:#fff;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">Créer l\'avoir</button>'
-    + '</div>'
-    + '</div>';
-
-  window._cnItems = lignes;
-
-  window.cnRecalc = function () {
-    var total = 0, n = 0;
-    document.querySelectorAll('#cnItems .cn-item').forEach(function (cb) {
-      if (!cb.checked) return;
-      var it = (window._cnItems || []).find(function (x) { return String(x.id) === cb.value; });
-      if (it) { total += Number(it.total) || 0; n++; }
-    });
-    var el = document.getElementById('cnTotal');
-    // Le total affiche reste HT : la TVA est recalculee par le serveur au
-    // taux de la facture, l'annoncer ici risquerait de diverger.
-    if (el) el.textContent = euro(total) + ' HT';
-    var btn = document.getElementById('cnSubmit');
-    if (btn) { btn.disabled = n === 0; btn.style.opacity = n === 0 ? '.45' : '1'; }
-  };
-
-  window.cnToggleAll = function (v) {
-    document.querySelectorAll('#cnItems .cn-item').forEach(function (cb) { cb.checked = v; });
-    window.cnRecalc();
-  };
-
-  m.querySelectorAll('.cn-item').forEach(function (cb) {
-    cb.addEventListener('change', function () { window.cnRecalc(); });
-  });
-
-  m.style.display = 'flex';
-  window.cnRecalc();
-};
-
-window.closeCreditNoteModal = function () {
-  var m = document.getElementById('creditNoteModal');
-  if (m) m.style.display = 'none';
-};
-
-window.submitCreditNote = async function (id) {
-  var ids = [];
-  document.querySelectorAll('#cnItems .cn-item').forEach(function (cb) {
-    if (cb.checked) ids.push(cb.value);
-  });
-  if (!ids.length) return alert('Sélectionnez au moins une ligne.');
-
-  var btn = document.getElementById('cnSubmit');
-  if (btn) { btn.disabled = true; btn.textContent = 'Création…'; }
-
-  try {
-    // Toutes les lignes cochees : on n'envoie pas itemIds, le serveur fait
-    // alors un avoir total — meme chemin qu'avant, totaux repris tels quels.
-    var tout = ids.length === (window._cnItems || []).length;
-    var res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/credit-note', {
+    const res = await fetch(API_BASE + '/api/owner-invoices/' + id + '/credit-note', {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify(tout ? {} : { itemIds: ids })
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
     });
-    var json = await res.json();
-    if (!res.ok) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Créer l\'avoir'; }
-      return alert(json.error || 'Erreur création avoir');
-    }
-    window.closeCreditNoteModal();
-    alert('Avoir ' + (json.invoice && json.invoice.invoice_number ? json.invoice.invoice_number : '') + ' créé.');
+    const json = await res.json();
+    if (!res.ok) return alert(json.error || 'Erreur création avoir');
+    alert('Avoir créé avec succès');
     loadInvoices();
-  } catch (e) {
+  } catch(e) {
     console.error(e);
-    if (btn) { btn.disabled = false; btn.textContent = 'Créer l\'avoir'; }
     alert('Erreur serveur');
   }
+  }, 'Créer un avoir');
 };
 
 window.finalizeOwnerInvoice = function (id) {
@@ -3628,10 +3454,10 @@ window.markOwnerInvoicePaid = function (id) {
     // Feedback visuel APRÈS le render (sinon recrée le DOM et supprime la classe)
     if (btnEl) {
       btnEl.classList.add('just-clicked');
-      btnEl.style.background = '#F1F6F3';
-      btnEl.style.borderColor = '#0E3B2E';
-      btnEl.style.color = '#0E3B2E';
-      btnEl.style.boxShadow = '0 0 0 2px rgba(14,59,46,.2)';
+      btnEl.style.background = '#ecfdf5';
+      btnEl.style.borderColor = '#1A7A5E';
+      btnEl.style.color = '#1A7A5E';
+      btnEl.style.boxShadow = '0 0 0 2px rgba(26,122,94,.2)';
       setTimeout(function(){
         btnEl.classList.remove('just-clicked');
         btnEl.style.background = '';
@@ -3693,7 +3519,7 @@ window.markOwnerInvoicePaid = function (id) {
       }
 
       return `
-        <div class="prestation-mini-card" draggable="true" data-id="${p.id}"
+        <div class="prestation-mini-card" draggable="false" data-id="${p.id}"
              ondragstart="handleDragStart(event,'${p.id}')"
              ondragover="handleDragOver(event)"
              ondragenter="handleDragEnter(event)"
@@ -3701,8 +3527,8 @@ window.markOwnerInvoicePaid = function (id) {
              ondrop="handleDrop(event,'${p.id}')"
              ondragend="handleDragEnd(event)">
 <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;align-items:center;">
-  <span class="drag-handle" title="Déplacer"><i class="fas fa-grip-vertical"></i></span>
-  <button class="remove-line-btn" onclick="duplicatePrestation('${p.id}')" title="Dupliquer" style="background:#0E3B2E;">
+  <span class="drag-handle" title="Déplacer" onmousedown="armCardDrag(event)" ontouchstart="armCardDrag(event)"><i class="fas fa-grip-vertical"></i></span>
+  <button class="remove-line-btn" onclick="duplicatePrestation('${p.id}')" title="Dupliquer" style="background:#10b981;">
     <i class="fas fa-copy"></i>
   </button>
   <button class="remove-line-btn" onclick="removePrestation('${p.id}')" title="Supprimer">
@@ -3722,8 +3548,30 @@ window.markOwnerInvoicePaid = function (id) {
     }).join('');
   }
 // ── Drag & drop reorder ──
+  // BH FIX DRAG HANDLE : la carte n'est déplaçable QUE si le glissement part
+  // de la poignée. Sinon la sélection de texte dans les champs déclenchait un drag.
   var _dragSrcId = null;
+  var _dragArmed = false;
+
+  window.armCardDrag = function(e) {
+    var card = e.target.closest ? e.target.closest('.prestation-mini-card') : null;
+    if (!card) return;
+    _dragArmed = true;
+    card.setAttribute('draggable', 'true');
+  };
+
+  function disarmCardDrag() {
+    _dragArmed = false;
+    document.querySelectorAll('.prestation-mini-card[draggable="true"]').forEach(function(c){
+      c.setAttribute('draggable', 'false');
+    });
+  }
+  document.addEventListener('mouseup', disarmCardDrag, true);
+  document.addEventListener('touchend', disarmCardDrag, true);
+  document.addEventListener('touchcancel', disarmCardDrag, true);
+
   window.handleDragStart = function(e, id) {
+    if (!_dragArmed) { e.preventDefault(); return false; }
     _dragSrcId = id;
     e.dataTransfer.effectAllowed = 'move';
     setTimeout(function(){ e.target.classList.add('dragging'); }, 0);
@@ -3754,7 +3602,9 @@ window.markOwnerInvoicePaid = function (id) {
   window.handleDragEnd = function(e) {
     document.querySelectorAll('.prestation-mini-card').forEach(function(c){
       c.classList.remove('dragging','drag-over');
+      c.setAttribute('draggable', 'false');
     });
+    _dragArmed = false;
     _dragSrcId = null;
   };
 
@@ -4256,7 +4106,7 @@ function getSelectedProperties() {
     };
 
     try {
-      const url = editingInvoiceId ? API_BASE + `/api/owner-invoices/${editingInvoiceId}` : API_BASE + '/api/owner-invoices';
+      const url = editingInvoiceId ? `/api/owner-invoices/${editingInvoiceId}` : '/api/owner-invoices';
       const method = editingInvoiceId ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
@@ -4586,15 +4436,15 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     if (!container) return;
     const allProps = window.allProperties || [];
     if (allProps.length === 0) {
-      container.innerHTML = '<p style="font-size:12px;color:#9ca3af;font-style:italic;">Aucun logement enregistré. <a href="/settings.html" style="color:#0E3B2E;">Ajouter un logement</a></p>';
+      container.innerHTML = '<p style="font-size:12px;color:#9ca3af;font-style:italic;">Aucun logement enregistré. <a href="/settings.html" style="color:#1A7A5E;">Ajouter un logement</a></p>';
       return;
     }
     container.innerHTML = allProps.map(p => {
       const isChecked = clientId && String(p.owner_id || p.ownerId || '') === String(clientId);
       const managedBadge = p._isManaged && p._managedAccount ? `<span style="font-size:9px;background:#ede9fe;color:#6d28d9;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:auto;white-space:nowrap;">${p._managedAccount.name}</span>` : '';
       return `
-        <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid ${isChecked ? '#bbf7d0' : '#e5e7eb'};border-radius:8px;cursor:pointer;background:${isChecked ? '#F1F6F3' : 'white'};transition:all 0.15s;" onmouseover="this.style.borderColor='#0E3B2E'" onmouseout="this.style.borderColor='${isChecked ? '#bbf7d0' : '#e5e7eb'}'">
-          <input type="checkbox" data-property-id="${p.id}" data-managed-user-id="${p._managedAccount?.userId || ''}" ${isChecked ? 'checked' : ''} style="accent-color:#0E3B2E;width:16px;height:16px;cursor:pointer;">
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid ${isChecked ? '#bbf7d0' : '#e5e7eb'};border-radius:8px;cursor:pointer;background:${isChecked ? '#f0fdf4' : 'white'};transition:all 0.15s;" onmouseover="this.style.borderColor='#1A7A5E'" onmouseout="this.style.borderColor='${isChecked ? '#bbf7d0' : '#e5e7eb'}'">
+          <input type="checkbox" data-property-id="${p.id}" data-managed-user-id="${p._managedAccount?.userId || ''}" ${isChecked ? 'checked' : ''} style="accent-color:#1A7A5E;width:16px;height:16px;cursor:pointer;">
           <span style="font-size:13px;font-weight:500;color:#111827;">${p.name}</span>
           ${managedBadge}
           ${p.address && !managedBadge ? `<span style="font-size:11px;color:#9ca3af;margin-left:auto;">${p.address}</span>` : ''}
@@ -4628,8 +4478,8 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
         list.innerHTML = props.map(p => {
           const isChecked = String(p.owner_id || '') === String(clientRealId);
           return `
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 8px;border:1px solid ${isChecked ? '#bbf7d0' : '#e5e7eb'};border-radius:8px;background:${isChecked ? '#F1F6F3' : 'white'};">
-            <input type="checkbox" value="${p.id}" data-property-id="${p.id}" ${isChecked ? 'checked' : ''} style="width:14px;height:14px;accent-color:#0E3B2E;">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 8px;border:1px solid ${isChecked ? '#bbf7d0' : '#e5e7eb'};border-radius:8px;background:${isChecked ? '#f0fdf4' : 'white'};">
+            <input type="checkbox" value="${p.id}" data-property-id="${p.id}" ${isChecked ? 'checked' : ''} style="width:14px;height:14px;accent-color:#1A7A5E;">
             <span>${p.name}</span>
           </label>`;
         }).join('');
@@ -4839,7 +4689,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     if (!editingClientId) return;
     showConfirm('Supprimer ce client ? Cette action est irréversible.', async function() {
       try {
-        const res = await fetch(API_BASE + '/api/owner-clients/' + editingClientId, {
+        const res = await fetch('/api/owner-clients/' + editingClientId, {
           method: 'DELETE',
           headers: { 'Authorization': 'Bearer ' + token }
         });
@@ -4963,7 +4813,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   // Auto-refresh token agence
   (async function() {
     try {
-      var res = await fetch(API_BASE + '/api/agency/refresh', { method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'} });
+      var res = await fetch('/api/agency/refresh', { method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'} });
       if (res.ok) { var d = await res.json(); localStorage.setItem('lcc_token', d.token); if (d.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(d.permissions)); }
       else if (res.status === 403 || res.status === 401) { exitAgencyMode(); }
     } catch(e) {}
@@ -4985,11 +4835,10 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 })();
 </script>
 
-<script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/bh-layout.js?v=825295bd"></script>
-<script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
-<script src="/js/mobile-tabs-handler.js?v=01e3d29a"></script>
-<script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
+<script src="/js/bh-layout.js"></script>
+<script src="/js/mobile-native-experience.js"></script>
+<script src="/js/mobile-tabs-handler.js"></script>
+<script src="/js/messages-badge-desktop-mobile.js"></script>
 <!-- Socket.io pour le temps réel -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
@@ -5359,7 +5208,7 @@ function recalcMonthly() {
     indicator.style.cssText = 'display:block;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);color:#92400e;';
     indicator.innerHTML = `<i class="fas fa-info-circle"></i> Reste à ventiler : <strong>${fmtE(remaining)}</strong>`;
   } else if (Math.abs(remaining) <= 0.01) {
-    indicator.style.cssText = 'display:block;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:8px;background:rgba(14,59,46,.08);border:1px solid rgba(14,59,46,.3);color:#0A2C22;';
+    indicator.style.cssText = 'display:block;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:8px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);color:#065f46;';
     indicator.innerHTML = `<i class="fas fa-check-circle"></i> Total ventilé correctement — <strong>${fmtE(grandTotal)}</strong>`;
   } else {
     indicator.style.cssText = 'display:block;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:#991b1b;';
@@ -5910,7 +5759,7 @@ async function generateAttestationPDF(sendByEmail = false) {
     </div>
     <div style="padding:16px 24px;border-top:1px solid #f1f5f9;display:flex;gap:10px;justify-content:flex-end;">
       <button onclick="closeImportDeboursModal()" style="height:40px;padding:0 18px;border-radius:10px;border:1px solid #e5e7eb;background:white;color:#374151;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Annuler</button>
-      <button onclick="confirmImportDebours()" style="height:40px;padding:0 20px;border-radius:10px;border:none;background:#0E3B2E;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;">
+      <button onclick="confirmImportDebours()" style="height:40px;padding:0 20px;border-radius:10px;border:none;background:#1A7A5E;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;">
         <i class="fas fa-plus"></i> Ajouter à la facture
       </button>
     </div>
@@ -6004,7 +5853,7 @@ function _renderDeboursListLocal() {
     }
     const status = d.status || 'pending';
     const statusHtml = status === 'billed'
-      ? `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#DCE9E3;color:#0A2C22;">✓ Facturé</span>`
+      ? `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#166534;">✓ Facturé</span>`
       : `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#fef3c7;color:#92400e;">En attente</span>`;
 
     const dateStr = d.date ? new Date(d.date).toLocaleDateString('fr-FR') : '—';
@@ -6087,7 +5936,8 @@ window.openDeboursPhoto = function(id) {
   const d = deboursData.find(x => x.id === id);
   if (!d?.photoDataUrl) return;
   const w = window.open('', '_blank');
-  w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${d.photoDataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;"><script src="/js/bh-polish.js?v=1"><\/script>\n</body></html>`);
+  w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${d.photoDataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;"><script src="/js/bh-polish.js?v=1"></script>
+</body></html>`);
 };
 
 // ── Sauvegarder débours ──
@@ -6258,7 +6108,7 @@ window.confirmImportDebours = function() {
   <div style="background:white;border-radius:16px;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
     <div style="padding:20px 24px 16px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
       <div>
-        <div style="font-size:16px;font-weight:700;color:#111827;"><i class="far fa-calendar-alt" style="color:#6B7280;"></i> Importer depuis les réservations</div>
+        <div style="font-size:16px;font-weight:700;color:#111827;">📅 Importer depuis les réservations</div>
         <div id="importResaSubtitle" style="font-size:12px;color:#6B7280;margin-top:2px;"></div>
       </div>
       <button onclick="closeImportResaModal()" style="background:none;border:none;font-size:20px;color:#9ca3af;cursor:pointer;padding:4px;">✕</button>
@@ -6273,7 +6123,7 @@ window.confirmImportDebours = function() {
           <label style="font-size:11px;font-weight:600;color:#6b7280;display:block;margin-bottom:4px;">AU</label>
           <input type="date" id="importResaTo" class="form-control" style="font-size:13px;width:100%;"/>
         </div>
-        <button onclick="fetchInvoiceSummary()" style="background:#0E3B2E;color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;width:100%;">
+        <button onclick="fetchInvoiceSummary()" style="background:#1A7A5E;color:white;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;width:100%;">
           <i class="fas fa-search" style="margin-right:6px;"></i>Charger
         </button>
       </div>
@@ -6292,7 +6142,7 @@ window.confirmImportDebours = function() {
       <span id="importResaTotalLabel" style="font-size:13px;color:#6b7280;"></span>
       <div style="display:flex;gap:10px;">
         <button onclick="closeImportResaModal()" style="background:white;border:1px solid #e5e7eb;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;color:#374151;">Annuler</button>
-        <button id="importResaConfirmBtn" onclick="confirmImportReservations()" style="background:#0E3B2E;color:white;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;" disabled>
+        <button id="importResaConfirmBtn" onclick="confirmImportReservations()" style="background:#1A7A5E;color:white;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:600;cursor:pointer;" disabled>
           <i class="fas fa-plus" style="margin-right:6px;"></i>Ajouter les lignes
         </button>
       </div>
@@ -6339,9 +6189,9 @@ window.openImportReservations = function() {
         var name = p.internal_name || p.internalName || p.name || pid;
         // Coché si : explicitement coché dans l'éditeur, ou si aucun logement sélectionné dans l'éditeur (tout coché)
         var isChecked = checkedProps.length === 0 || checkedProps.indexOf(pid) !== -1;
-        var bg    = isChecked ? "#F1F6F3" : "white";
-        var color = isChecked ? "#0E3B2E" : "#374151";
-        return "<label style=\"display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid #e5e7eb;border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;flex:0 0 auto;white-space:nowrap;background:" + bg + ";color:" + color + ";\"><input type=\"checkbox\" value=\"" + pid + "\" " + (isChecked ? "checked" : "") + " onchange=\"var c=this.checked;this.parentElement.style.background=c?'#F1F6F3':'white';this.parentElement.style.color=c?'#0E3B2E':'#374151';\" style=\"accent-color:#0E3B2E;width:16px;height:16px;margin:0;flex:0 0 16px;\">" + name + "</label>";
+        var bg    = isChecked ? "#ecfdf5" : "white";
+        var color = isChecked ? "#1A7A5E" : "#374151";
+        return "<label style=\"display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid #e5e7eb;border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;flex:0 0 auto;white-space:nowrap;background:" + bg + ";color:" + color + ";\"><input type=\"checkbox\" value=\"" + pid + "\" " + (isChecked ? "checked" : "") + " onchange=\"var c=this.checked;this.parentElement.style.background=c?'#ecfdf5':'white';this.parentElement.style.color=c?'#1A7A5E':'#374151';\" style=\"accent-color:#1A7A5E;width:16px;height:16px;margin:0;flex:0 0 16px;\">" + name + "</label>";
       }).join("");
 
   window._importResaSummary = null;
@@ -6433,7 +6283,7 @@ function renderImportResaSummary(data) {
   var platColors = {
     "Airbnb":      { bg:"#fff0f0", border:"#fecaca", color:"#dc2626", icon:"fa-brands fa-airbnb" },
     "Booking.com": { bg:"#eff6ff", border:"#bfdbfe", color:"#2563eb", icon:"fas fa-hotel" },
-    "BHGuest":     { bg:"#F1F6F3", border:"#C3DBD0", color:"#0A2C22", icon:"fas fa-mobile-alt" },
+    "BHGuest":     { bg:"#ecfdf5", border:"#a7f3d0", color:"#059669", icon:"fas fa-mobile-alt" },
     "Direct":      { bg:"#f5f3ff", border:"#ddd6fe", color:"#7c3aed", icon:"fas fa-user" },
     "default":     { bg:"#f9fafb", border:"#e5e7eb", color:"#374151", icon:"fas fa-globe" }
   };
@@ -6447,7 +6297,7 @@ function renderImportResaSummary(data) {
         + "<td style=\"padding:6px 8px;font-size:12px;color:#374151;\">" + r.guestName + "</td>"
         + "<td style=\"padding:6px 8px;font-size:12px;color:#6b7280;\">" + r.propertyName + "</td>"
         + "<td style=\"padding:6px 8px;font-size:12px;color:#6b7280;\">" + (window.isoToFrDate ? window.isoToFrDate(r.startDate) : r.startDate) + " \u2192 " + (window.isoToFrDate ? window.isoToFrDate(r.endDate) : r.endDate) + "</td>"
-        + "<td style=\"padding:6px 8px;font-size:12px;font-weight:600;color:#0E3B2E;text-align:right;\">" + (r.bookingPayout != null ? r.bookingPayout : (r.netHote + (r.amountCleaning || 0))).toFixed(2) + " \u20ac</td>"
+        + "<td style=\"padding:6px 8px;font-size:12px;font-weight:600;color:#1A7A5E;text-align:right;\">" + (r.bookingPayout != null ? r.bookingPayout : (r.netHote + (r.amountCleaning || 0))).toFixed(2) + " \u20ac</td>"
         + "</tr>";
     }).join("");
 
@@ -6535,7 +6385,7 @@ window.confirmImportReservations = function() {
   }
 };
 </script>
-<script src="/js/bh-onboarding-pages.js?v=313cb8ca"></script>
+<script src="/js/bh-onboarding-pages.js"></script>
 
 <script>
 
@@ -6601,8 +6451,8 @@ window.addEventListener('DOMContentLoaded', async function() {
     const btnNewClient = document.querySelector('.fp-btn-new');
     // On ne bloque pas la création de client, juste la facturation
     // Section factures
-    bhLockSection('tab-dashboard', 'Facturation propriétaires', 'Créez et gérez les factures pour vos clients propriétaires. Disponible à partir du plan Pro.', 'Pro');
-    bhLockSection('tab-debours', 'Débours', 'Gérez les dépenses et débours associés à vos clients. Disponible à partir du plan Pro.', 'Pro');
+    bhLockSection('tab-dashboard', '🔒 Facturation propriétaires', 'Créez et gérez les factures pour vos clients propriétaires. Disponible à partir du plan Pro.', 'Pro');
+    bhLockSection('tab-debours', '🔒 Débours', 'Gérez les dépenses et débours associés à vos clients. Disponible à partir du plan Pro.', 'Pro');
   }
 });
 
@@ -6614,11 +6464,11 @@ window.addEventListener('DOMContentLoaded', async function() {
    ════════════════════════════════════════════════════════════ */
 
 /* ── Harmonisation des restes mint hardcodés ── */
-.nav-item.active { background: rgba(14,59,46,.08) !important; color: #0E3B2E !important; border-right-color: #0E3B2E !important; }
+.nav-item.active { background: rgba(26,122,94,.08) !important; color: #1A7A5E !important; border-right-color: #1A7A5E !important; }
 
 /* ── Stats : valeurs serif ── */
 html[data-theme-v3="1"] .stat-card { border-radius: 16px !important; transition: border-color .15s, box-shadow .15s; }
-html[data-theme-v3="1"] .stat-card:hover { border-color: rgba(14,59,46,.35) !important; box-shadow: 0 6px 20px rgba(13,17,23,.08) !important; }
+html[data-theme-v3="1"] .stat-card:hover { border-color: rgba(26,122,94,.35) !important; box-shadow: 0 6px 20px rgba(13,17,23,.08) !important; }
 .stat-value {
   font-family: 'Instrument Serif', serif !important;
   font-size: 26px !important;
@@ -6628,7 +6478,7 @@ html[data-theme-v3="1"] .stat-card:hover { border-color: rgba(14,59,46,.35) !imp
 /* ── Onglets : pilule ── */
 html[data-theme-v3="1"] .nav-tabs { border-radius: 999px !important; border-color: rgba(200,184,154,.5) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04) !important; }
 html[data-theme-v3="1"] .nav-tab { border-radius: 999px !important; }
-html[data-theme-v3="1"] .nav-tab.active { box-shadow: 0 1px 4px rgba(14,59,46,.25) !important; }
+html[data-theme-v3="1"] .nav-tab.active { box-shadow: 0 1px 4px rgba(26,122,94,.25) !important; }
 
 /* ── Cartes clients / factures ── */
 html[data-theme-v3="1"] .client-card,
@@ -6639,7 +6489,7 @@ html[data-theme-v3="1"] .invoice-item {
 }
 html[data-theme-v3="1"] .client-item:hover,
 html[data-theme-v3="1"] .invoice-item:hover {
-  border-color: rgba(14,59,46,.35) !important;
+  border-color: rgba(26,122,94,.35) !important;
   box-shadow: 0 6px 20px rgba(13,17,23,.08);
 }
 
@@ -6650,17 +6500,17 @@ html[data-theme-v3="1"] .invoice-item:hover {
   transition: border-color .15s, box-shadow .15s !important;
 }
 .form-control:focus {
-  border-color: #0E3B2E !important;
-  box-shadow: 0 0 0 3px rgba(14,59,46,.1) !important;
+  border-color: #1A7A5E !important;
+  box-shadow: 0 0 0 3px rgba(26,122,94,.1) !important;
   outline: none !important;
 }
 .fp-select { border-radius: 999px !important; border-color: rgba(200,184,154,.55) !important; }
 
 /* ── Boutons : pilules ── */
-.btn-primary { border-radius: 999px !important; box-shadow: 0 1px 4px rgba(14,59,46,.25) !important; }
+.btn-primary { border-radius: 999px !important; box-shadow: 0 1px 4px rgba(26,122,94,.25) !important; }
 .btn-secondary, .btn-xs { border-radius: 999px !important; }
 .btn-secondary { border-color: rgba(200,184,154,.6) !important; }
-.btn-secondary:hover { border-color: #0E3B2E !important; color: #0E3B2E !important; }
+.btn-secondary:hover { border-color: #1A7A5E !important; color: #1A7A5E !important; }
 
 /* ── Modales : traitement complet ── */
 .modal-overlay {
@@ -6686,88 +6536,10 @@ html[data-theme-v3="1"] .invoice-item:hover {
 
 /* ── Éditeur de facture : sections ── */
 .editor-section { border-color: rgba(200,184,154,.45) !important; border-radius: 16px !important; }
-
-/* Ajout de client sur mobile : .fp-header-btns est masque sous 1367px
-   (position:fixed, il chevaucherait l'en-tete). Sans ce bouton flottant,
-   aucun moyen de creer un client depuis un telephone. */
-#fabAddClient {
-  display: none;
-  position: fixed;
-  right: 18px;
-  bottom: calc(74px + env(safe-area-inset-bottom, 0px) + 14px);
-  width: 56px; height: 56px;
-  border: none; border-radius: 50%;
-  background: #0E3B2E; color: #fff;
-  font-size: 22px; cursor: pointer;
-  box-shadow: 0 8px 24px rgba(13,17,23,.28);
-  z-index: 150;
-  align-items: center; justify-content: center;
-}
-#fabAddClient:active { transform: scale(.94); }
-@media (max-width: 1366px) {
-  #fabAddClient { display: flex; }
-}
-
-/* Cadrage sous l'en-tete mobile ────────────────────────────────────────
-   L'en-tete de l'app est fixe en haut ; une modale centree sur 100vh
-   passe dessous et son titre se fait couper. On reserve sa hauteur dans
-   l'overlay, et le plafond de la carte suit. */
-@media (max-width: 1366px) {
-  :root { --bh-mobile-header-h: 64px; }
-
-  .modal-overlay {
-    padding-top: calc(var(--bh-mobile-header-h) + 12px) !important;
-    padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px) + 12px) !important;
-    padding-left: 12px !important;
-    padding-right: 12px !important;
-    box-sizing: border-box !important;
-    align-items: flex-start !important;
-  }
-
-  .modal-content {
-    width: 100% !important;
-    max-width: 100% !important;
-    max-height: calc(100dvh - var(--bh-mobile-header-h) - 74px
-                     - env(safe-area-inset-bottom, 0px) - 24px) !important;
-    margin: 0 auto !important;
-  }
-
-  /* Le sticky se colle au haut de la carte, qui commence desormais sous
-     l'en-tete : plus de chevauchement. Le padding negatif compense celui
-     pose sur .modal-content pour que le bandeau aille bord a bord. */
-  .modal-content .modal-sticky-header {
-    top: 0 !important;
-    margin: -20px -20px 16px !important;
-    padding: 16px 20px !important;
-    width: calc(100% + 40px) !important;
-    box-sizing: border-box !important;
-  }
-}
-
-/* Empilement des modales au-dessus de l'en-tete mobile ─────────────────
-   .mobile-header est en position:fixed avec z-index 1100 ; les overlays
-   etaient a 1000 et passaient donc dessous, l'en-tete recouvrant le titre
-   et la croix de fermeture. */
-@media (max-width: 1366px) {
-  .modal-overlay,
-  #invoicePreviewModal,
-  #deboursModal,
-  #importDeboursModal {
-    z-index: 1200 !important;
-  }
-  /* #confirmModal est deja a 20000 : il doit rester au-dessus du reste. */
-
-  /* La carte ne colle plus au bord haut de l'ecran. */
-  .modal-overlay .modal-content {
-    margin-top: 12px !important;
-    margin-bottom: 12px !important;
-  }
-}
 </style>
 
-<script src="/js/bh-haptics.js?v=41ebfc2f"></script>
-<script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
-<script src="/js/bh-global-search.js?v=813e6615"></script>
-<button id="fabAddClient" onclick="openClientModal()" aria-label="Nouveau client"><i class="fas fa-plus"></i></button>
+<script src="/js/bh-haptics.js?v=1"></script>
+<script src="/js/bh-page-transitions.js?v=1"></script>
+<script src="/js/bh-global-search.js?v=5"></script>
 </body>
 </html>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ecran de lancement du systeme, Android 12 et superieur.
+  Sans ce fichier, Android choisit seul le fond et l'icone : d'ou le
+  changement de teinte au demarrage. L'icone y est masquee en cercle,
+  on y met donc le monogramme et non le verrou complet.
+-->
+<resources>
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+    </style>
+</resources>
