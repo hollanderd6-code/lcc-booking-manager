@@ -5,7 +5,14 @@
   'use strict';
   console.log('🔔 [GUEST PUSH] Handler chargé');
 
-  const API_BASE = window.location.origin;
+  // En natif, window.location.origin vaut http://localhost (bundle local).
+  // On s'aligne sur API_URL d'app-guest.js, lu a l'appel car ce fichier
+  // est charge avant lui (index.html 1760 vs 1798).
+  function apiBase() {
+    if (typeof API_URL !== 'undefined' && API_URL) return API_URL;
+    const native = window.Capacitor?.isNativePlatform?.() || false;
+    return native ? 'https://www.boostinghost.fr' : window.location.origin;
+  }
 
   // ── Récupérer le JWT guest depuis localStorage ────────────────
   function getGuestToken() {
@@ -42,7 +49,7 @@
     const deviceType = platform === 'ios' ? 'ios' : platform === 'android' ? 'android' : 'web';
 
     try {
-      const res = await fetch(`${API_BASE}/api/chat/register-guest-token`, {
+      const res = await fetch(`${apiBase()}/api/chat/register-guest-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -66,7 +73,7 @@
     const jwt = getGuestToken();
     if (!jwt) return;
     try {
-      const res = await fetch(`${API_BASE}/api/guest/conversations`, {
+      const res = await fetch(`${apiBase()}/api/guest/conversations`, {
         headers: { 'Authorization': 'Bearer ' + jwt }
       });
       if (!res.ok) return;
