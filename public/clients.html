@@ -3693,7 +3693,7 @@ window.markOwnerInvoicePaid = function (id) {
       }
 
       return `
-        <div class="prestation-mini-card" draggable="true" data-id="${p.id}"
+        <div class="prestation-mini-card" draggable="false" data-id="${p.id}"
              ondragstart="handleDragStart(event,'${p.id}')"
              ondragover="handleDragOver(event)"
              ondragenter="handleDragEnter(event)"
@@ -3701,7 +3701,7 @@ window.markOwnerInvoicePaid = function (id) {
              ondrop="handleDrop(event,'${p.id}')"
              ondragend="handleDragEnd(event)">
 <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;align-items:center;">
-  <span class="drag-handle" title="Déplacer"><i class="fas fa-grip-vertical"></i></span>
+  <span class="drag-handle" title="Déplacer" onmousedown="enableCardDrag(event)"><i class="fas fa-grip-vertical"></i></span>
   <button class="remove-line-btn" onclick="duplicatePrestation('${p.id}')" title="Dupliquer" style="background:#0E3B2E;">
     <i class="fas fa-copy"></i>
   </button>
@@ -3756,7 +3756,22 @@ window.markOwnerInvoicePaid = function (id) {
       c.classList.remove('dragging','drag-over');
     });
     _dragSrcId = null;
+    window.disableCardDrag();
   };
+  // La carte n'est deplacable que pendant l'appui sur la poignee : sans cela,
+  // selectionner du texte dans un champ declenche un deplacement de carte.
+  window.enableCardDrag = function(e) {
+    var card = e.target.closest('.prestation-mini-card');
+    if (card) card.setAttribute('draggable', 'true');
+  };
+  window.disableCardDrag = function() {
+    document.querySelectorAll('.prestation-mini-card[draggable="true"]')
+      .forEach(function(c){ c.setAttribute('draggable', 'false'); });
+  };
+  if (!window.__dragHandleGuard) {
+    window.__dragHandleGuard = true;
+    document.addEventListener('mouseup', window.disableCardDrag);
+  }
 
 window.duplicatePrestation = function(id) {
   if (isReadOnlyMode) return;
