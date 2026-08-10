@@ -9710,11 +9710,11 @@ console.log('👤 DEBUG GUEST:', {
     })();
 
 
-    const amountTotalFmt    = fmtAmount(amountTotal);
+    let   amountTotalFmt    = fmtAmount(amountTotal);
     const amountRoomsFmt    = fmtAmount(amountRooms);
     const amountTaxesFmt    = fmtAmount(amountTaxes);
     const amountCleaningFmt = fmtAmount(amountCleaning);
-    const otaCommissionFmt  = fmtAmount(otaCommission);
+    let   otaCommissionFmt  = fmtAmount(otaCommission);
     const hostPayoutFmt     = fmtAmount(hostPayout);
 
     // Prix par nuit depuis days_breakdown
@@ -9739,7 +9739,51 @@ console.log('👤 DEBUG GUEST:', {
     }
     // "Nuits" affiché = somme réelle si dispo, sinon amount_rooms
     const roomsDisplay    = (nightsSum != null) ? nightsSum : amountRooms;
-    const roomsDisplayFmt = fmtAmount(roomsDisplay);
+    let   roomsDisplayFmt = fmtAmount(roomsDisplay);
+
+    // ── Airbnb via Channex : les montants stockes sont DEJA NETS ──────────
+    // amount_total == host_payout, et days_breakdown porte les nuits nettes ;
+    // seul amount_cleaning reste brut. Booking livre l'inverse — du brut, et
+    // jamais de host_payout. On distingue donc par la donnee et non par le nom
+    // de plateforme : verifie sur 189 reservations Airbnb sur 189, et faux sur
+    // les 435 Booking. Le brut se reconstitue par addition de la commission.
+    let isNetAmounts = false;
+    {
+      const _t = parseFloat(amountTotal);
+      const _p = parseFloat(hostPayout);
+      const _c = parseFloat(otaCommission);
+      isNetAmounts = !isNaN(_t) && !isNaN(_p) && !isNaN(_c)
+                     && _c > 0 && Math.abs(_p - _t) < 0.01;
+    }
+    if (isNetAmounts) {
+      const _comm  = parseFloat(otaCommission);
+      const _clean = parseFloat(amountCleaning) || 0;
+      const _tax   = parseFloat(amountTaxes)    || 0;
+      const _grossTotal = +(parseFloat(amountTotal) + _comm).toFixed(2);
+      const _grossRooms = +(_grossTotal - _clean - _tax).toFixed(2);
+
+      amountTotalFmt   = fmtAmount(_grossTotal);
+      roomsDisplayFmt  = fmtAmount(_grossRooms);
+      otaCommissionFmt = '\u2212 ' + fmtAmount(_comm);
+
+      // Les nuits du detail sont nettes : on les ramene au brut au prorata,
+      // en reportant l'arrondi sur la derniere pour que la somme tombe juste.
+      if (nightsSum && nightsSum > 0 && daysBreakdown) {
+        const _entries = Object.entries(daysBreakdown).sort(([a],[b]) => a.localeCompare(b));
+        const _ratio = _grossRooms / nightsSum;
+        let _acc = 0;
+        nightsBreakdownHTML = _entries.map(([date, price], i) => {
+          const _val = (i === _entries.length - 1)
+            ? +(_grossRooms - _acc).toFixed(2)
+            : +(parseFloat(price) * _ratio).toFixed(2);
+          _acc = +(_acc + _val).toFixed(2);
+          const d = new Date(date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' });
+          return '<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;padding:2px 0;">'
+            + '<span>' + d + '</span><span>' + fmtAmount(_val) + '</span>'
+            + '</div>';
+        }).join('');
+      }
+    }
 
     // ── Net hôte : vrai payout si fourni par le backend, sinon estimation ──
     let hostNet = null, hostNetIsEstimate = false, hostNetPayFee = 0;
@@ -9872,7 +9916,7 @@ console.log('👤 DEBUG GUEST:', {
           ` : ''}
 
           <div style="display:flex;justify-content:space-between;padding:9px 0 2px;margin-top:2px;">
-            <span style="font-size:13px;font-weight:700;color:#111827;">Total</span>
+            <span style="font-size:13px;font-weight:700;color:#111827;">${isNetAmounts ? 'Total voyageur' : 'Total'}</span>
             <span style="font-size:15px;font-weight:800;color:#0E3B2E;">${amountTotalFmt}</span>
           </div>
 
