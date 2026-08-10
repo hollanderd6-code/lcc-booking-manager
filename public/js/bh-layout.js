@@ -544,6 +544,16 @@ function getSidebarHTML() {
         zone.style.setProperty('min-width', '0', 'important');
       });
     }
+    // --- BH FIX TAILLE VERROU ---
+    // Hors app.html le conteneur du logo est large : rien ne bornait le
+    // verrou, qui restait a ses 186 px inline. On le plafonne, sans jamais
+    // depasser la largeur disponible.
+    const verrou = mobileLogo.querySelector('.bh-verrou');
+    if (verrou) {
+      verrou.style.setProperty('max-width', 'min(150px, 100%)', 'important');
+      verrou.style.setProperty('height', 'auto', 'important');
+      verrou.style.setProperty('aspect-ratio', '186 / 42', 'important');
+    }
   }
 
   function forceUpdateSidebarLogo() {
@@ -1858,7 +1868,6 @@ var _bhNativeConfirm = window.confirm;
       '.mobile-header{justify-content:space-between!important;overflow:hidden!important;max-width:100%!important;box-sizing:border-box!important;}' +
       // Le groupe de boutons à droite ne doit jamais se comprimer ni sortir de l'écran
       '.mobile-header>[style*="flex-end"]{flex-shrink:0!important;}' +
-      '.mobile-header #bh-mobile-ann-btn{margin-right:6px!important;}' +
       '.mobile-header>[style*="flex-end"]{gap:4px!important;margin:0!important;}' +
       '.mobile-header>[style*="flex-start"]{gap:4px!important;margin:0!important;}' +
       /* Sans bouton agence : le groupe droit (2 boutons) laisse un vide entre le logo
