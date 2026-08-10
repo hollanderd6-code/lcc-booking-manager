@@ -26538,10 +26538,22 @@ app.post('/api/sms/incoming', async (req, res) => {
       normalizedPhone = '0' + normalizedPhone.slice(3);
     }
     // Variantes : +33612345678, 0612345678, 33612345678
-    const phoneVariants = [from, normalizedPhone];
-    if (normalizedPhone.startsWith('0')) {
-      phoneVariants.push('+33' + normalizedPhone.slice(1));
-      phoneVariants.push('33' + normalizedPhone.slice(1));
+    // Le sens international -> national manquait : SMS Gateway transmet le
+    // numero en +33..., alors que les cleaners sont enregistres en 0... Aucune
+    // correspondance n'etait donc trouvee, et la notification ne partait jamais.
+    const phoneVariants = [];
+    {
+      const _add = v => { if (v && !phoneVariants.includes(v)) phoneVariants.push(v); };
+      for (const _src of [from, normalizedPhone]) {
+        if (!_src) continue;
+        _add(String(_src));
+        const _d = String(_src).replace(/[^\d+]/g, '');
+        if (!_d) continue;
+        _add(_d);
+        if (_d.startsWith('+33'))     { _add('0' + _d.slice(3));  _add('33' + _d.slice(3)); }
+        else if (_d.startsWith('33')) { _add('0' + _d.slice(2));  _add('+33' + _d.slice(2)); }
+        else if (_d.startsWith('0'))  { _add('+33' + _d.slice(1)); _add('33' + _d.slice(1)); }
+      }
     }
 
     let senderName = from;
