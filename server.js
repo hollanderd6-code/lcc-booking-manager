@@ -26623,10 +26623,33 @@ app.post('/api/sms/incoming', async (req, res) => {
 
     if (!targetUserId) return;
 
+    // Mode agence : un cleaner appartient au proprietaire des logements, mais
+    // c'est souvent un delegataire qui les gere au quotidien. Sans cela, la
+    // reponse d'une femme de menage rattachee a un compte delegue ne notifiait
+    // que le proprietaire — jamais le gestionnaire.
+    let notifyUserIds = [targetUserId];
+    try {
+      const deleg = await pool.query(
+        `SELECT delegate_user_id FROM account_delegations
+          WHERE delegator_user_id = $1 AND status = 'accepted'`,
+        [targetUserId]
+      );
+      for (const d of deleg.rows) {
+        if (d.delegate_user_id && !notifyUserIds.includes(d.delegate_user_id)) {
+          notifyUserIds.push(d.delegate_user_id);
+        }
+      }
+      if (notifyUserIds.length > 1) {
+        console.log(`📩 [SMS-IN] Destinataires : ${notifyUserIds.join(', ')} (delegation)`);
+      }
+    } catch (e) {
+      console.warn('⚠️ [SMS-IN] Delegations non lues:', e.message);
+    }
+
     // 3. Push notification
     const tokensResult = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-      [targetUserId]
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = ANY($1) AND fcm_token IS NOT NULL',
+      [notifyUserIds]
     );
 
     if (tokensResult.rows.length) {
