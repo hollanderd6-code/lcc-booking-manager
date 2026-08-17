@@ -13210,7 +13210,7 @@ app.put('/api/cleaners/:id/sms-toggle', authenticateAny, requirePermission(pool,
     );
     const sub = subRow.rows[0];
     const basePlan = getBasePlanName(sub?.plan_type || 'solo');
-    if (basePlan !== 'pro' && !sub?.sms_enabled) {
+    if (!['pro', 'agence'].includes(basePlan) && !sub?.sms_enabled) {
       return res.status(403).json({ error: 'option_required', message: 'Option SMS requise pour ce plan' });
     }
 
@@ -29957,7 +29957,7 @@ async function releaseHoldChannex(pool, hold) {
 
 async function sendSmsGateway(phoneNumber, message, userId = null, _logData = null, skipFooter = false) {
   try {
-    // ── Vérification plan : SMS uniquement pour Pro (inclus) ou option activée ──
+    // ── Vérification plan : SMS pour Pro et Agence (inclus) ou option activée ──
     if (userId) {
       try {
         const subRow = await pool.query(
@@ -29967,7 +29967,7 @@ async function sendSmsGateway(phoneNumber, message, userId = null, _logData = nu
         const sub = subRow.rows[0];
         const basePlan = getBasePlanName(sub?.plan_type || 'solo');
         const smsEnabled = sub?.sms_enabled === true;
-        if (basePlan !== 'pro' && !smsEnabled) {
+        if (!['pro', 'agence'].includes(basePlan) && !smsEnabled) {
           console.log(`ℹ️ [SMS] Plan ${basePlan} sans option SMS → envoi annulé`);
           return false;
         }
@@ -43911,7 +43911,9 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
     }
 
     // Envoyer le lien par SMS si fourni (sauf si skip_send)
+    let smsSent = null;
     if (guest_phone && !skip_send) {
+      smsSent = false;
       try {
         const propNameRes = await pool.query('SELECT name FROM properties WHERE id = $1', [property_id]);
         const propName = propNameRes.rows[0]?.name || property_id;
@@ -43923,14 +43925,15 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
         const bookingUrl = `${appUrl}/guest-app/public/index.html?${params.toString()}`;
         const fmtDate = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
         const smsMsg = `Boostinghost\nVotre lien de réservation pour ${propName} du ${fmtDate(checkin)} au ${fmtDate(checkout)}${fixed_price ? ` (${fixed_price}€)` : ''} :\n${bookingUrl}\n(Valable 4h)`;
-        await sendSmsGateway(guest_phone, smsMsg, userId, { trigger_type: 'bhguest_hold', property_id }, true);
-        console.log(`📱 [HOLD] SMS envoyé à ${guest_phone}`);
+        smsSent = await sendSmsGateway(guest_phone, smsMsg, userId, { trigger_type: 'bhguest_hold', property_id }, true);
+        if (smsSent) console.log(`📱 [HOLD] SMS envoyé à ${guest_phone}`);
+        else console.warn(`⚠️ [HOLD] SMS NON envoyé à ${guest_phone} — sendSmsGateway a renvoyé false (voir les lignes [SMS] au-dessus)`);
       } catch(smsErr) {
         console.warn('⚠️ [HOLD] SMS non envoyé:', smsErr.message);
       }
     }
 
-    res.json({ success: true, token: linkToken, expires_at: expiresAt });
+    res.json({ success: true, token: linkToken, expires_at: expiresAt, sms_sent: smsSent });
   } catch (err) {
     console.error('Erreur POST /api/guest/hold:', err);
     res.status(500).json({ error: 'Erreur serveur' });
