@@ -43923,8 +43923,12 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
         if (guest_email) params.set('guest_email', guest_email);
         params.set('hold_token', linkToken);
         const bookingUrl = `${appUrl}/guest-app/public/index.html?${params.toString()}`;
+        // Lien court : l'URL brute fait ~240 caractères et pousse le SMS à 3 segments.
+        // makeShortLink retombe sur l'URL brute en cas d'échec, donc jamais bloquant.
+        const smsUrl = await makeShortLink(pool, bookingUrl, ownerId);
         const fmtDate = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-        const smsMsg = `Boostinghost\nVotre lien de réservation pour ${propName} du ${fmtDate(checkin)} au ${fmtDate(checkout)}${fixed_price ? ` (${fixed_price}€)` : ''} :\n${bookingUrl}\n(Valable 4h)`;
+        const smsMsg = `Boostinghost\nVotre lien de réservation pour ${propName} du ${fmtDate(checkin)} au ${fmtDate(checkout)}${fixed_price ? ` (${fixed_price}€)` : ''} :\n${smsUrl}\n(Valable 4h)`;
+        console.log(`🔗 [HOLD] Lien SMS raccourci : ${smsUrl} (message ${smsMsg.length} car.)`);
         smsSent = await sendSmsGateway(guest_phone, smsMsg, userId, { trigger_type: 'bhguest_hold', property_id }, true);
         if (smsSent) console.log(`📱 [HOLD] SMS envoyé à ${guest_phone}`);
         else console.warn(`⚠️ [HOLD] SMS NON envoyé à ${guest_phone} — sendSmsGateway a renvoyé false (voir les lignes [SMS] au-dessus)`);
