@@ -13504,7 +13504,7 @@ if (window.Capacitor) {
 <!-- Badge Messages -->
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/bh-layout.js?v=825295bd"></script>  
+<script src="/js/bh-layout.js?v=65920d9d"></script>  
 
 <style id="final-overrides">
 /* Force view-selector hidden regardless of any external CSS */
@@ -14569,7 +14569,7 @@ function bhConfirm(message) {
 <script src="/js/bh-auto-refresh.js?v=a3ac1b53"></script>
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
 <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
-<script src="/js/bh-global-search.js?v=813e6615"></script>
+<script src="/js/bh-global-search.js?v=4f234cfd"></script>
 <style>
 /* ══ BH SHEETS — habillage commun des modales KPI (bottom sheets) ══ */
 .bh-sheet-panel{
@@ -16219,14 +16219,30 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
       const data = await res.json();
       if (res.ok) {
         var exp = new Date(data.expires_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        btn.innerHTML = '<i class="fas fa-check"></i> Lien envoyé';
-        btn.style.background = '#0A2C22';
+        // Le back renvoie sms_sent : true / false / null (pas de téléphone).
+        // undefined = ancien back → on garde l'ancien comportement.
+        var smsFailed = !!phone && data.sms_sent === false;
         status.style.display = 'block';
-        status.style.color = '#0A2C22';
         var dest = [];
         if (email) dest.push('email');
-        if (phone) dest.push('SMS');
-        status.innerHTML = '✅ Lien envoyé' + (dest.length ? ' par ' + dest.join(' et ') : '') + ' · Dates bloquées jusqu\'à ' + exp;
+        if (phone && !smsFailed) dest.push('SMS');
+        if (smsFailed && !email) {
+          btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le lien';
+          btn.style.background = '#3B82F6';
+          btn.disabled = false;
+          status.style.color = '#DC2626';
+          status.innerHTML = '❌ SMS non envoyé — vérifiez l\'option SMS de votre compte · Dates bloquées jusqu\'à ' + exp;
+        } else if (smsFailed) {
+          btn.innerHTML = '<i class="fas fa-check"></i> Lien envoyé';
+          btn.style.background = '#0A2C22';
+          status.style.color = '#B45309';
+          status.innerHTML = '⚠️ Lien envoyé par email · SMS non envoyé · Dates bloquées jusqu\'à ' + exp;
+        } else {
+          btn.innerHTML = '<i class="fas fa-check"></i> Lien envoyé';
+          btn.style.background = '#0A2C22';
+          status.style.color = '#0A2C22';
+          status.innerHTML = '✅ Lien envoyé' + (dest.length ? ' par ' + dest.join(' et ') : '') + ' · Dates bloquées jusqu\'à ' + exp;
+        }
         // 🔄 Rafraîchir le calendrier tout de suite (la pré-réservation doit apparaître sans F5)
         if (typeof window.loadCalendarData === 'function') window.loadCalendarData();
         else if (typeof window.renderCalendar === 'function') window.renderCalendar();
