@@ -682,13 +682,29 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   flex-shrink: 0;
 }
 .cancel-field .form-input {
-  width: 90px;
-  padding-right: 42px;
-  text-align: center;
+  width: 104px;
+  padding-right: 52px;
+  padding-left: 12px;
+  text-align: left;
+}
+.cancel-field.is-pct .form-input {
+  width: 82px;
+  padding-right: 28px;
+}
+/* Les fleches natives du champ number chevauchaient le suffixe (jours / %) */
+.cancel-field .form-input::-webkit-outer-spin-button,
+.cancel-field .form-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+.cancel-field .form-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 .cancel-suffix {
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   color: #7A8695;
@@ -709,7 +725,10 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
     flex-wrap: wrap;
   }
   .cancel-field .form-input {
-    width: 80px;
+    width: 96px;
+  }
+  .cancel-field.is-pct .form-input {
+    width: 76px;
   }
   .cancel-arrow {
     font-size: 12px;
@@ -1168,7 +1187,7 @@ html[data-theme-v3="1"] .include-toggle:has(input[type="checkbox"]:not(:checked)
                     <span class="cancel-suffix">jours</span>
                   </div>
                   <span class="cancel-arrow">→ remboursement de</span>
-                  <div class="cancel-field">
+                  <div class="cancel-field is-pct">
                     <input type="number" class="form-input" id="cancelPct1" value="50" min="0" max="100"/>
                     <span class="cancel-suffix">%</span>
                   </div>
@@ -1182,7 +1201,7 @@ html[data-theme-v3="1"] .include-toggle:has(input[type="checkbox"]:not(:checked)
                     <span class="cancel-suffix">jours</span>
                   </div>
                   <span class="cancel-arrow">→ remboursement de</span>
-                  <div class="cancel-field">
+                  <div class="cancel-field is-pct">
                     <input type="number" class="form-input" id="cancelPct2" value="0" min="0" max="100"/>
                     <span class="cancel-suffix">%</span>
                   </div>
