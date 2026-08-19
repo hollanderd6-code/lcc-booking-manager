@@ -719,15 +719,51 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   }
 }
 
-/* Masquer le texte "Inclure" sur mobile (le checkbox coché suffit) */
+/* Bascule « Inclure » des clauses legales — puce lisible, jamais rognee */
+.contrat-card-header { flex-wrap: wrap; row-gap: 8px; }
+.contrat-card-header > .include-toggle { margin-left: auto; }
+
+.include-toggle,
+html[data-theme-v3="1"] .include-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  max-width: 100%;
+  padding: 5px 12px 5px 10px;
+  border: 1px solid rgba(14,59,46,.20);
+  border-radius: 999px;
+  background: #FFFFFF;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-user-select: none; user-select: none;
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  color: #0E3B2E !important;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.include-toggle input[type="checkbox"] {
+  width: 16px; height: 16px; margin: 0;
+  flex-shrink: 0;
+  accent-color: #0E3B2E;
+  cursor: pointer;
+}
+.include-toggle:hover { background: rgba(14,59,46,.06); }
+/* Etat decoche : puce grisee (Safari 15.4+ / Chrome 105+) */
+.include-toggle:has(input[type="checkbox"]:not(:checked)),
+html[data-theme-v3="1"] .include-toggle:has(input[type="checkbox"]:not(:checked)) {
+  background: #F4F4F2;
+  border-color: rgba(13,17,23,.14);
+  color: #7A8695 !important;
+}
 @media(max-width:640px){
-  .contrat-card-header label.include-toggle {
-    font-size: 0 !important;
-    gap: 0 !important;
-  }
-  .contrat-card-header label.include-toggle input {
-    width: 18px;
-    height: 18px;
+  .include-toggle,
+  html[data-theme-v3="1"] .include-toggle {
+    font-size: 12px !important;
+    padding: 4px 10px 4px 8px;
+    gap: 6px;
   }
 }
 /* Desktop page header */
@@ -1118,8 +1154,8 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
           <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;gap:10px;">
             <i class="fas fa-calendar-xmark" style="color:#0E3B2E;font-size:15px;flex-shrink:0;"></i>
             <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;min-width:0;">Politique d'annulation</span>
-            <label class="include-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
-              <input type="checkbox" id="toggleAnnulation" checked style="accent-color:#0E3B2E;"/> Inclure
+            <label class="include-toggle">
+              <input type="checkbox" id="toggleAnnulation" checked/> <span>Inclure</span>
             </label>
           </div>
           <div class="contrat-card-body" id="annulationBody">
@@ -1161,8 +1197,8 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
           <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;gap:10px;">
             <i class="fas fa-handshake" style="color:#0E3B2E;font-size:15px;flex-shrink:0;"></i>
             <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;min-width:0;">Obligations du locataire</span>
-            <label class="include-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
-              <input type="checkbox" id="toggleObligations" checked style="accent-color:#0E3B2E;"/> Inclure
+            <label class="include-toggle">
+              <input type="checkbox" id="toggleObligations" checked/> <span>Inclure</span>
             </label>
           </div>
           <div class="contrat-card-body" id="obligationsBody">
@@ -1181,8 +1217,8 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
           <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;gap:10px;">
             <i class="fas fa-shield-halved" style="color:#0E3B2E;font-size:15px;flex-shrink:0;"></i>
             <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;min-width:0;">Assurance responsabilité civile</span>
-            <label class="include-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
-              <input type="checkbox" id="toggleAssurance" checked style="accent-color:#0E3B2E;"/> Inclure
+            <label class="include-toggle">
+              <input type="checkbox" id="toggleAssurance" checked/> <span>Inclure</span>
             </label>
           </div>
           <div class="contrat-card-body" id="assuranceBody">
@@ -1197,8 +1233,8 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
           <div class="contrat-card-header" style="background:#FAFAF8;padding:14px 18px;gap:10px;">
             <i class="fas fa-clipboard-list" style="color:#0E3B2E;font-size:15px;flex-shrink:0;"></i>
             <span style="font-weight:700;font-size:14px;color:#0D1117;flex:1;min-width:0;">État des lieux</span>
-            <label class="include-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#7A8695;flex-shrink:0;">
-              <input type="checkbox" id="toggleEDL" checked style="accent-color:#0E3B2E;"/> Inclure
+            <label class="include-toggle">
+              <input type="checkbox" id="toggleEDL" checked/> <span>Inclure</span>
             </label>
           </div>
           <div class="contrat-card-body" id="edlBody">
@@ -1840,7 +1876,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 <div class="toast" id="toast"></div>
 
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/bh-layout.js?v=825295bd"></script>
+<script src="/js/bh-layout.js?v=65920d9d"></script>
 <script src="/js/logout-fix.js?v=cb4a6950"></script>
 <script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
 <script src="/js/mobile-tabs-handler.js?v=01e3d29a"></script>
@@ -3226,7 +3262,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <script src="/js/auth-fetch.js?v=cd78753d"></script>
-<script src="/js/bh-layout.js?v=825295bd"></script>
+<script src="/js/bh-layout.js?v=65920d9d"></script>
 <script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
 <script src="/js/mobile-tabs-handler.js?v=01e3d29a"></script>
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
@@ -3364,7 +3400,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
 <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
-<script src="/js/bh-global-search.js?v=813e6615"></script>
+<script src="/js/bh-global-search.js?v=4f234cfd"></script>
 <script src="/js/bh-polish.js?v=1"></script>
 </body>
 </html>

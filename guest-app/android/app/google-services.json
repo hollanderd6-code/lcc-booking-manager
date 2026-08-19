@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "177135694872",
+    "project_id": "boostinghost-6ee7d",
+    "storage_bucket": "boostinghost-6ee7d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:177135694872:android:5cb3581c3074acb5387f6d",
+        "android_client_info": {
+          "package_name": "com.boostinghost.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "177135694872-gpp8p6j866ju0ftolhehjs56j9t73tfu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtVuNsgtY8B5l-qd9tqe9Mp_ztHqD4fXE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "177135694872-gpp8p6j866ju0ftolhehjs56j9t73tfu.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "177135694872-1cd8spfieqtmhapdumu9agr7ucfq7qg2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.boostinghost.app"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:177135694872:android:d9dddb5d5cf2b8ba387f6d",
+        "android_client_info": {
+          "package_name": "com.boostinghost.guest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "177135694872-gpp8p6j866ju0ftolhehjs56j9t73tfu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtVuNsgtY8B5l-qd9tqe9Mp_ztHqD4fXE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "177135694872-gpp8p6j866ju0ftolhehjs56j9t73tfu.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "177135694872-1cd8spfieqtmhapdumu9agr7ucfq7qg2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.boostinghost.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
