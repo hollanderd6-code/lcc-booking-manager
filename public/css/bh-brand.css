@@ -6,46 +6,9 @@
    Ne redefinit que des couleurs : aucune regle de mise en page.
    ============================================================================ */
 
-:root,
-html.bh-lux {
-  /* ── Une seule echelle de vert, derivee du logo ──────────────────────────
-     Avant, le site melangeait une quinzaine de verts sans rapport (jade
-     #1A7A5E, emerald #10B981, green #16A34A, leurs variantes rgba...).
-     Desormais tout descend de #0E3B2E. */
-  --vert-900:  #0A2C22;   /* survol, etat presse */
-  --vert-800:  #0E3B2E;   /* MARQUE et action principale */
-  --vert-600:  #1E6E52;   /* accent, survol clair, dark mode */
-  --vert-400:  #4FA184;   /* sur fond sombre */
-  --vert-300:  #8FC7AF;   /* traces et courbes sur fond sombre */
-  --vert-200:  #A8CDBE;   /* filets, bordures */
-  --vert-100:  #E4EDE8;   /* fonds doux */
-  --vert-050:  #F1F6F3;   /* fonds tres doux */
-
-  /* Alias historiques, conserves pour ne rien casser */
-  --bh-vert:            var(--vert-800);
-  --bh-vert-fonce:      var(--vert-900);
-  --bh-action:          var(--vert-800);
-  --bh-action-survol:   var(--vert-900);
-  --bh-action-doux:     var(--vert-100);
-  --bh-action-filet:    rgba(14,59,46,.24);
-  --bh-ivoire:          #F2EADA;
-  --bh-filet:           rgba(242,234,218,.45);
-
-  /* Neutres chauds */
-  --bh-fond:            #FBFBFA;
-  --bh-panneau:         #FFFFFF;
-  --bh-cote:            #F7F7F5;
-  --bh-encre:           #20221F;
-  --bh-t2:              #5A5A54;
-  --bh-t3:              #8B8B84;
-  --bh-t4:              #B4B4AD;
-  --bh-ligne:           #EAE9E5;
-  --bh-ligne-2:         #F1F0EC;
-
-  /* Sous-marque : BHGuest garde le terracotta */
-  --bh-guest:           #B4470F;
-  --bh-guest-doux:      #F7EDE6;
-}
+/* Les jetons de ce fichier vivent desormais dans bh-tokens.css.
+   bh-brand.css ne garde que ses overrides de mise en page.
+   (27 jetons deplaces, lot 2.) */
 
 /* ── Remplacement de l'ancien jade #1A7A5E ────────────────────────────────
    L'ancien vert etait utilise a la fois pour la marque et pour l'interface.
@@ -125,7 +88,6 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
 }
 .sidebar-logo .bh-verrou { height: 38px !important; width: 148px !important; }
 
-
 /* ============================================================================
    MOT-SYMBOLE EN TEXTE (sidebar desktop)
 
@@ -159,7 +121,6 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
 .sidebar-logo.sur-vert .bh-mot { color: #F2EADA; }
 .sidebar-logo.sur-vert .bh-baseline { color: rgba(242,234,218,.62); }
 
-
 /* ============================================================================
    MONOGRAMME — carre a coins adoucis, jamais un cercle
 
@@ -177,7 +138,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
   height: 38px !important;
   min-width: 38px !important;
 }
-
 
 /* ── Ecart monogramme / mot-symbole ───────────────────────────────────────
    Quand le logo est rendu en deux elements (monogramme + texte, cas des
@@ -209,7 +169,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
   min-width: 0;
   flex: 0 1 auto;
 }
-
 
 /* ============================================================================
    BOUTONS DE L'EN-TETE MOBILE — un seul gabarit
@@ -299,7 +258,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
   .mobile-header .mobile-logo { gap: 0 !important; }
 }
 
-
 /* ============================================================================
    EN-TETE MOBILE — dernier calque, specificite a ID
 
@@ -375,7 +333,6 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
     margin: 0 0 0 4px !important;
   }
 }
-
 
 /* ============================================================================
    PAGES PUBLIQUES — logo et mot-symbole
