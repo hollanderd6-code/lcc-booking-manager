@@ -707,9 +707,9 @@ html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
 }
 html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
-  background: #0E3B2E;
+  background: var(--bh-vert);
   color: white;
-  border-color: #0E3B2E;
+  border-color: var(--bh-vert);
 }
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
   margin-left: auto;
@@ -745,7 +745,7 @@ html[data-theme-v3="1"] .bh-theme-toggle::after {
   border-radius: 50%;
   transition: transform .2s;
 }
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: #0E3B2E; }
+html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: var(--bh-vert); }
 html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
 
 /* Masquer la barre dark sur mobile */
@@ -796,7 +796,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       font-size: 14px; font-family: 'DM Sans', sans-serif;
       color: #111827; outline: none; transition: border-color .15s;
     }
-    .bh-sheet-input:focus { border-color: #0E3B2E; background: #fff; }
+    .bh-sheet-input:focus { border-color: var(--bh-vert); background: #fff; }
     .bh-sheet-input::placeholder { color: #9CA3AF; }
     /* iOS : empêcher input[type=date]/[time] de garder une largeur native et de déborder */
     .bh-sheet-input[type="date"], .bh-sheet-input[type="time"] {
@@ -1028,12 +1028,12 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 
 /* Bouton Sync - Vert */
 #syncBtn {
-  background: linear-gradient(135deg, #0E3B2E 0%, #0A2C22 100%);
+  background: linear-gradient(135deg, var(--bh-vert) 0%, var(--bh-vert-fonce) 100%);
   color: white;
 }
 
 #syncBtn:hover {
-  background: linear-gradient(135deg, #0A2C22 0%, #0A2C22 100%);
+  background: linear-gradient(135deg, var(--bh-vert-fonce) 0%, var(--bh-vert-fonce) 100%);
   box-shadow: 0 6px 20px rgba(14, 59, 46, 0.35);
   transform: translateY(-2px);
 }
@@ -1078,12 +1078,12 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 
 /* Bouton Theme - Violet/Indigo */
 #themeToggle {
-  background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+  background: linear-gradient(135deg, #8B5CF6 0%, var(--bh-violet) 100%);
   color: white;
 }
 
 #themeToggle:hover {
-  background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+  background: linear-gradient(135deg, var(--bh-violet) 0%, #6D28D9 100%);
   box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
   transform: translateY(-2px);
 }
@@ -1223,8 +1223,8 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
     
     /* Variables du calendrier */
     :root {
-      --calendar-header-bg: #0E3B2E; /* Vert de votre thème */
-      --calendar-header-hover: #0A2C22;
+      --calendar-header-bg: var(--bh-vert); /* Vert de votre thème */
+      --calendar-header-hover: var(--bh-vert-fonce);
       --calendar-cell-height: 28px;
       --property-column-width: 210px;
       --day-header-height: 58px;
@@ -1246,7 +1246,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 
     /* Dark theme */
     [data-theme="dark"] {
-      --calendar-header-bg: #0A2C22;
+      --calendar-header-bg: var(--bh-vert-fonce);
       --calendar-border: #374151;
       --cell-hover-bg: rgba(14, 59, 46, 0.15);
     }
@@ -1807,13 +1807,13 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       justify-content: center;
       font-size: 13px;
       font-weight: 700;
-      color: #0E3B2E;
+      color: var(--bh-vert);
       pointer-events: none;
       user-select: none;
     }
     /* Vendredi (5) et Samedi (6) = ambre = nuits premium (le rouge est réservé à Airbnb) */
     .calendar-cell.weekend .cell-price {
-      color: #B7791F;
+      color: var(--bh-or);
     }
     .calendar-cell:has(.booking-block) .cell-price {
       display: none;
@@ -2300,7 +2300,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     .booking-form .form-group select:focus,
     .booking-form .form-group textarea:focus {
       outline: none;
-      border-color: #0E3B2E;
+      border-color: var(--bh-vert);
       box-shadow: 0 0 0 3px rgba(14, 59, 46, 0.1);
     }
 
@@ -2350,12 +2350,12 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     }
 
     .modal-actions .btn-primary {
-      background: #0E3B2E;
+      background: var(--bh-vert);
       color: white;
     }
 
     .modal-actions .btn-primary:hover {
-      background: #0A2C22;
+      background: var(--bh-vert-fonce);
     }
 
     .modal-actions .btn-ghost {
@@ -2397,7 +2397,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       height: 32px;
       border-radius: 8px;
       background: rgba(14, 59, 46, 0.1);
-      color: #0E3B2E;
+      color: var(--bh-vert);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -2407,7 +2407,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     }
 
     .property-item.selected .property-icon {
-      background: #0E3B2E;
+      background: var(--bh-vert);
       color: white;
     }
 
@@ -2561,7 +2561,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 
 .checklist-modal-status.status-completed {
-  background: #EAF3EF;
+  background: var(--bh-vert-pale);
   color: #166B52;
   border: 1px solid #D3E6DD;
 }
@@ -2651,8 +2651,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 
 .task-item-modal.checked {
-  border-color: #0E3B2E;
-  background: linear-gradient(135deg, #F1F6F3 0%, #DCE9E3 100%);
+  border-color: var(--bh-vert);
+  background: linear-gradient(135deg, var(--vert-050) 0%, #DCE9E3 100%);
 }
 
 .task-item-modal .task-checkbox {
@@ -2667,8 +2667,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 
 .task-item-modal.checked .task-checkbox {
-  background: #0E3B2E;
-  border-color: #0E3B2E;
+  background: var(--bh-vert);
+  border-color: var(--bh-vert);
   color: white;
 }
 
@@ -2813,11 +2813,11 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 
 .checklist-card-pending {
-  border-left: 3px solid #B7791F;
+  border-left: 3px solid var(--bh-or);
 }
 
 .checklist-card-completed {
-  border-left: 3px solid #0E3B2E;
+  border-left: 3px solid var(--bh-vert);
 }
 
 .checklist-card-header {
@@ -2854,7 +2854,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 
 .checklist-badge-completed {
-  background: #EAF3EF;
+  background: var(--bh-vert-pale);
   color: #166B52;
   border-color: #D3E6DD;
 }
@@ -2877,7 +2877,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 .checklist-info-row i {
   width: 14px;
   text-align: center;
-  color: #0E3B2E;
+  color: var(--bh-vert);
   opacity: .55;
 }
 
@@ -3201,7 +3201,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     height: 52px;
     border-radius: 999px;
     border: none;
-    background: #0E3B2E;
+    background: var(--bh-vert);
     color: #fff;
     font-size: 28px;
     font-weight: 800;
@@ -3374,7 +3374,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   }
 
   /* 6. FAB */
-  .fab-add-resa { background: #0E3B2E !important; }
+  .fab-add-resa { background: var(--bh-vert) !important; }
 }
 
 /* ================================================================
@@ -3444,7 +3444,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     font-size: 26px !important;
     line-height: 1 !important;
     font-weight: 500 !important;
-    color: #0E3B2E !important;
+    color: var(--bh-vert) !important;
     letter-spacing: -0.02em !important;
   }
   .kpi-card .kpi-sub {
@@ -3589,11 +3589,11 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 .bh-mrow-t{ font:600 14.5px 'DM Sans',sans-serif; color:#0D1117;
   display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
 .bh-mrow-t .bh-mrow-when{ font:500 12px 'DM Sans',sans-serif; color:#9a958a; flex:none; }
-.bh-mrow-guest{ font:600 13px 'DM Sans',sans-serif; color:#0E3B2E; margin:3px 0 2px; }
+.bh-mrow-guest{ font:600 13px 'DM Sans',sans-serif; color:var(--bh-vert); margin:3px 0 2px; }
 .bh-mrow-meta{ font:400 12.5px 'DM Sans',sans-serif; color:#8A8375; line-height:1.45;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .bh-mrow-note{ font:400 12.5px 'DM Sans',sans-serif; color:#7C2D12; line-height:1.45; margin-top:6px; }
-.bh-mrow-score{ font:700 12px 'DM Sans',sans-serif; color:#B7791F; flex:none; }
+.bh-mrow-score{ font:700 12px 'DM Sans',sans-serif; color:var(--bh-or); flex:none; }
 </style>
 </head>
 <body data-page="app">
@@ -3756,38 +3756,38 @@ window.closeChecklistsKpiModal = function() {
 .bh2-today{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:20px 22px;box-shadow:0 1px 3px rgba(13,17,23,.04);align-self:start}
 .bh2-today-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
 .bh2-today-head h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:20px;color:#0D1117;margin:0}
-.bh2-today-head h2 em{font-style:italic;color:#0E3B2E}
+.bh2-today-head h2 em{font-style:italic;color:var(--bh-vert)}
 .bh2-today-date{font-size:12px;color:#7A8695;font-weight:500}
 .bh2-ops{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:stretch}
 .bh2-op{position:relative;border:1px solid rgba(200,184,154,.4);border-radius:14px;padding:15px 15px 13px;cursor:pointer;transition:all .2s cubic-bezier(.3,.9,.4,1);background:linear-gradient(160deg,#FFFDF9,#FAF6EE)}
 .bh2-op:hover{border-color:rgba(14,59,46,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
 .bh2-op-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .bh2-op-lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#7A8695}
-.bh2-op-ic{width:30px;height:30px;border-radius:9px;background:rgba(183,121,31,.13);color:#B7791F;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;box-shadow:0 1px 2px rgba(183,121,31,.12)}
-.bh2-op-num{font-family:'Instrument Serif',serif;font-weight:400;font-size:38px;line-height:1;color:#B7791F;margin-bottom:4px}
+.bh2-op-ic{width:30px;height:30px;border-radius:9px;background:rgba(183,121,31,.13);color:var(--bh-or);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;box-shadow:0 1px 2px rgba(183,121,31,.12)}
+.bh2-op-num{font-family:'Instrument Serif',serif;font-weight:400;font-size:38px;line-height:1;color:var(--bh-or);margin-bottom:4px}
 .bh2-op-sub{font-size:11.5px;color:#7A8695}
-.bh2-op-go{position:absolute;right:12px;bottom:12px;font-size:10px;color:#0E3B2E;opacity:0;transition:opacity .18s}
+.bh2-op-go{position:absolute;right:12px;bottom:12px;font-size:10px;color:var(--bh-vert);opacity:0;transition:opacity .18s}
 .bh2-op:hover .bh2-op-go{opacity:1}
 .bh2-feat{display:flex;flex-direction:column;gap:12px;min-width:0}
 .bh2-ca{background:#0D1117;border-radius:20px;padding:16px 20px;color:#fff;position:relative;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:transform .18s;min-height:0;flex:1}
 .bh2-ca:hover{transform:translateY(-2px)}
 .bh2-ca::before{content:'';position:absolute;top:-120px;right:-80px;width:280px;height:280px;border-radius:50%;background:radial-gradient(closest-side,rgba(14,59,46,.45),transparent 70%);pointer-events:none}
 .bh2-ca-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.55);display:flex;justify-content:space-between;align-items:center;position:relative}
-.bh2-ca-lbl i{color:#8FC7AF;font-size:12px}
+.bh2-ca-lbl i{color:var(--vert-300);font-size:12px}
 .bh2-ca #kpiCaValue{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:36px;line-height:1.05;margin:8px 0 1px;position:relative;color:#fff !important;display:block}
 .bh2-ca #kpiCaSub{font-size:12px;color:rgba(255,255,255,.55);position:relative}
 .bh2-ca-subrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;position:relative}
 .bh2-ca-spark{margin-top:auto;position:relative;padding-top:14px}
 .bh2-ca-spark svg{display:block;width:100%;height:46px}
-.bh2-ca-delta{font-size:11px;font-weight:700;color:#8FC7AF;white-space:nowrap}
+.bh2-ca-delta{font-size:11px;font-weight:700;color:var(--vert-300);white-space:nowrap}
 /* Occupation — carte vedette claire, même rang que le CA */
 .bh2-occ{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:16px 20px;cursor:pointer;transition:all .18s;box-shadow:0 1px 3px rgba(13,17,23,.04)}
 .bh2-occ:hover{border-color:rgba(14,59,46,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
 .bh2-occ-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7A8695;display:flex;justify-content:space-between;align-items:center}
-.bh2-occ-lbl i{color:#B7791F;font-size:12px}
+.bh2-occ-lbl i{color:var(--bh-or);font-size:12px}
 .bh2-occ-ring{position:relative;width:96px;height:96px;margin:8px auto 0}
 .bh2-occ-legend{text-align:center;font:500 12px 'DM Sans',sans-serif;color:#8A8375;margin-top:8px;min-height:1.2em}
-.bh2-occ-legend b{color:#0E3B2E;font-weight:700}
+.bh2-occ-legend b{color:var(--bh-vert);font-weight:700}
 /* Bande « automatisation » — pleine largeur sous la grille des KPI.
    Masquee par defaut : le JS ne la revele que si le mois precedent
    compte au moins un message sortant. Un compte sans activite ne doit
@@ -3798,10 +3798,10 @@ window.closeChecklistsKpiModal = function() {
   box-shadow:0 1px 3px rgba(13,17,23,.04)}
 .bh2-auto.is-ready{display:flex}
 .bh2-auto-ico{width:34px;height:34px;border-radius:10px;flex-shrink:0;
-  background:rgba(14,59,46,.08);color:#0E3B2E;
+  background:rgba(14,59,46,.08);color:var(--bh-vert);
   display:flex;align-items:center;justify-content:center;font-size:14px}
 .bh2-auto-txt{font:400 14px 'DM Sans',sans-serif;color:#4A5568;min-width:0}
-.bh2-auto-txt b{color:#0E3B2E;font-weight:700}
+.bh2-auto-txt b{color:var(--bh-vert);font-weight:700}
 .bh2-auto-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;
   text-transform:uppercase;color:#7A8695;margin-bottom:2px}
 @media (max-width:768px){
@@ -3810,13 +3810,13 @@ window.closeChecklistsKpiModal = function() {
 }
 .bh2-occ-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .occ-rbg{fill:none;stroke:rgba(183,121,31,.16);stroke-width:7}
-.occ-rfg{fill:none;stroke:#B7791F;stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.3,.9,.3,1)}
-.bh2-occ-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-weight:400;font-size:24px;line-height:1;color:#B7791F}
+.occ-rfg{fill:none;stroke:var(--bh-or);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.3,.9,.3,1)}
+.bh2-occ-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-weight:400;font-size:24px;line-height:1;color:var(--bh-or)}
 .bh2-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
 .bh2-stat{background:#fff;border:1px solid rgba(200,184,154,.42);border-radius:16px;padding:15px 16px 14px;display:block;position:relative;cursor:pointer;transition:all .2s cubic-bezier(.3,.9,.4,1);min-width:0}
 .bh2-stat:hover{border-color:rgba(14,59,46,.35);box-shadow:0 10px 26px rgba(13,17,23,.08);transform:translateY(-2px)}
 .bh2-stat>div{display:flex;flex-direction:column-reverse;gap:5px;min-width:0}
-.bh2-stat-ic{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:9px;background:#F6EFE3;color:#B7791F;display:flex;align-items:center;justify-content:center;font-size:12px}
+.bh2-stat-ic{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:9px;background:#F6EFE3;color:var(--bh-or);display:flex;align-items:center;justify-content:center;font-size:12px}
 .bh2-stat .bh2-lbl{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8A8375;padding-right:36px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bh2-stat:hover{border-color:rgba(14,59,46,.4);box-shadow:0 4px 14px rgba(13,17,23,.06)}
 /* Neutralise tout style hérité (ancien highlight "Logements actifs" dans les CSS externes) */
@@ -3835,9 +3835,9 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 })();
 </script>
 <style>
-.bh2-stat-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:rgba(14,59,46,.10);color:#0E3B2E}
+.bh2-stat-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:rgba(14,59,46,.10);color:var(--bh-vert)}
 .bh2-stat-ic.n{background:rgba(107,114,128,.10);color:#6B7280}
-.bh2-num{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:29px;line-height:1;color:#B7791F}
+.bh2-num{font-family:'Instrument Serif',serif;font-weight:400 !important;font-size:29px;line-height:1;color:var(--bh-or)}
 .bh2-lbl{font-size:10.5px;color:#7A8695;font-weight:500;margin-top:2px;line-height:1.25}
 @media(max-width:920px){
   .bh2-hero{grid-template-columns:1fr;gap:10px;margin-bottom:10px}
@@ -4499,7 +4499,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 }
 
 .activity-section-header i {
-  color: #0E3B2E;
+  color: var(--bh-vert);
   font-size: 16px;
 }
 
@@ -4529,7 +4529,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 
 .activity-item:hover {
   background: #f3f4f6;
-  border-color: #0E3B2E;
+  border-color: var(--bh-vert);
 }
 
 .activity-icon {
@@ -4560,7 +4560,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 
 .activity-icon.new-booking {
   background: #DCE9E3;
-  color: #0A2C22;
+  color: var(--bh-vert-fonce);
 }
 
 .activity-content {
@@ -4804,7 +4804,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
     }
 
     .overview-dot.arrival {
-      background: #1E6E52;
+      background: var(--vert-600);
     }
 
     .overview-dot.stay {
@@ -13713,7 +13713,7 @@ if (window.Capacitor) {
   html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-value { color: #1e293b !important; }
 
   html[data-theme-v3="1"] .kpi-grid .kpi-card:first-child .kpi-sub--green,
-  html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub--green { color: #0E3B2E !important; font-weight: 600 !important; }
+  html[data-theme-v3="1"] #kpiPropertiesCard .kpi-sub--green { color: var(--bh-vert) !important; font-weight: 600 !important; }
 }
 /* Mobile : sous-texte même couleur que les autres */
 @media (max-width: 1366px) {
@@ -14720,7 +14720,7 @@ function bhConfirm(message) {
 }
 #invoiceModal .inv-section-title {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .5px; color: #0E3B2E; margin: 16px 0 8px;
+  letter-spacing: .5px; color: var(--bh-vert); margin: 16px 0 8px;
   display: flex; align-items: center; gap: 6px;
 }
 #invoiceModal .inv-section-title:first-child { margin-top: 0; }
@@ -14733,7 +14733,7 @@ function bhConfirm(message) {
   background: #fafaf8; outline: none; box-sizing: border-box;
 }
 #invoiceModal .inv-row input:focus,
-#invoiceModal .inv-row select:focus { border-color: #0E3B2E; background: white; }
+#invoiceModal .inv-row select:focus { border-color: var(--bh-vert); background: white; }
 #invoiceModal .inv-row-inline { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 #invoiceModal .inv-checkbox { display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13px;cursor:pointer; }
 #invoiceModal .inv-checkbox input { width:auto; }
@@ -14743,18 +14743,18 @@ function bhConfirm(message) {
   box-shadow: 0 2px 16px rgba(0,0,0,.08); font-family: 'DM Sans',sans-serif;
   font-size: 13px; color: #1a1a2e;
 }
-#invoiceModal .inv-paper h2 { font-size: 18px; font-weight: 800; color: #0E3B2E; margin: 0 0 4px; }
+#invoiceModal .inv-paper h2 { font-size: 18px; font-weight: 800; color: var(--bh-vert); margin: 0 0 4px; }
 #invoiceModal .inv-paper .inv-num { font-size: 14px; font-weight: 700; margin: 12px 0 0; }
 #invoiceModal .inv-paper .inv-sec h3 {
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
   color: #9CA3AF; margin: 16px 0 6px; border-bottom: 1px solid #f0ede8; padding-bottom: 4px;
 }
 #invoiceModal .inv-line { display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f5f2ec;font-size:13px; }
-#invoiceModal .inv-line.inv-sub { font-weight:600; margin-top:8px; border-bottom:2px solid #0E3B2E; padding-bottom:6px; }
-#invoiceModal .inv-line.inv-tot { font-weight:800;font-size:15px;color:#0E3B2E;border:none;margin-top:4px; }
+#invoiceModal .inv-line.inv-sub { font-weight:600; margin-top:8px; border-bottom:2px solid var(--bh-vert); padding-bottom:6px; }
+#invoiceModal .inv-line.inv-tot { font-weight:800;font-size:15px;color:var(--bh-vert);border:none;margin-top:4px; }
 #invoiceModal .inv-stamp {
-  text-align:center;margin:16px 0 0;padding:10px;border:2px solid #0E3B2E;
-  border-radius:8px;color:#0E3B2E;font-weight:700;font-size:13px;
+  text-align:center;margin:16px 0 0;padding:10px;border:2px solid var(--bh-vert);
+  border-radius:8px;color:var(--bh-vert);font-weight:700;font-size:13px;
 }
 #invoiceModal .inv-footer-note { font-size:11px;color:#9CA3AF;margin-top:12px;text-align:center; }
 #invoiceModal .inv-empty {
@@ -14773,7 +14773,7 @@ function bhConfirm(message) {
   font-size:13px;font-weight:600;cursor:pointer;border:none;
   display:inline-flex;align-items:center;gap:7px;
 }
-#invoiceModal .inv-btn-primary { background:#0E3B2E;color:white; }
+#invoiceModal .inv-btn-primary { background:var(--bh-vert);color:white; }
 #invoiceModal .inv-btn-primary:hover { background:#15624B; }
 #invoiceModal .inv-btn-primary:disabled { opacity:.5;cursor:not-allowed; }
 #invoiceModal .inv-btn-ghost { background:white;color:#374151;border:1px solid rgba(0,0,0,.12); }
@@ -14796,13 +14796,13 @@ function bhConfirm(message) {
 }
 .push-notif-item.unread {
   background: #f0faf5;
-  border-left-color: #0E3B2E;
+  border-left-color: var(--bh-vert);
 }
 .push-notif-icon {
   width: 34px; height: 34px; border-radius: 50%;
   background: rgba(14,59,46,.12);
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; color: #0E3B2E; font-size: 14px;
+  flex-shrink: 0; color: var(--bh-vert); font-size: 14px;
 }
 .push-notif-title { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px; }
 .push-notif-body  { font-size: 12px; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -16560,30 +16560,30 @@ function notifSwitchTab(tab) {
 <style id="bh-modal-details-lux">
 /* Modale Détails réservation — finitions sobres (boutons footer) */
 #detailsModalActions #editBookingBtn.btn.btn-primary{
-  background:#fff !important; border:1px solid #EAE9E5 !important; color:#1D1D1B !important;
+  background:#fff !important; border:1px solid var(--bh-ligne) !important; color:#1D1D1B !important;
   border-radius:9px !important; height:40px !important; box-shadow:none !important; font-weight:600 !important;
 }
-#detailsModalActions #editBookingBtn.btn.btn-primary:hover{ background:#F7F7F5 !important; }
+#detailsModalActions #editBookingBtn.btn.btn-primary:hover{ background:var(--bh-cote) !important; }
 #detailsModalActions #invoiceBookingBtn.btn,
 #detailsModalActions #closeDetailsBtn.btn,
 #detailsModalActions #hzMissionBtnFromDetails.btn{
-  background:#fff !important; border:1px solid #EAE9E5 !important; color:#5A5A54 !important;
+  background:#fff !important; border:1px solid var(--bh-ligne) !important; color:var(--bh-t2) !important;
   border-radius:9px !important; box-shadow:none !important;
 }
 #detailsModalActions #invoiceBookingBtn.btn:hover,
 #detailsModalActions #closeDetailsBtn.btn:hover,
-#detailsModalActions #hzMissionBtnFromDetails.btn:hover{ background:#F7F7F5 !important; }
+#detailsModalActions #hzMissionBtnFromDetails.btn:hover{ background:var(--bh-cote) !important; }
 #detailsModalActions #deleteBookingBtn.btn.btn-danger{
   background:#fff !important; border:1px solid #EAD9D7 !important; color:#B23B36 !important;
   border-radius:9px !important; box-shadow:none !important;
 }
 #detailsModalActions #deleteBookingBtn.btn.btn-danger:hover{ background:#FCEBEA !important; }
 /* Fond de la modale : blanc cassé net (surcharge le #FAF7F2 de bh-luxe-modals) */
-#reservationDetailsModal > div#reservationDetailsSheet{ background:#FBFBFA !important; }
-#detailsModalActions{ background:#FBFBFA !important; }
+#reservationDetailsModal > div#reservationDetailsSheet{ background:var(--bh-fond) !important; }
+#detailsModalActions{ background:var(--bh-fond) !important; }
 /* Cartes internes Logement/Arrivée/Départ : blanc pur bordé pour contraster sur le fond */
 #reservationDetailsContent [data-info-cards] > div{
-  background:#fff !important; border:1px solid #EAE9E5 !important; border-radius:11px !important;
+  background:#fff !important; border:1px solid var(--bh-ligne) !important; border-radius:11px !important;
 }
 /* Chips email / date : blanc bordé */
 #reservationDetailsContent a[href^="mailto:"],
@@ -16604,14 +16604,14 @@ function notifSwitchTab(tab) {
 #kpiOccupancyModal > div,
 #kpiDepositsModal > div,
 #kpiActivePropertiesModal > div{
-  background:#FBFBFA !important; border:1px solid #EAE9E5 !important;
+  background:var(--bh-fond) !important; border:1px solid var(--bh-ligne) !important;
 }
 /* Sous-cartes internes translucides -> blanc pur bordé */
 .bh-sheet-panel div[style*="rgba(255,255,255,.55)"],
 #blockModal div[style*="rgba(255,255,255,.55)"],
 #newReservationModal div[style*="rgba(255,255,255,.55)"],
 #cleaningTodayModal div[style*="rgba(255,255,255,.55)"]{
-  background:#fff !important; border:1px solid #EAE9E5 !important;
+  background:#fff !important; border:1px solid var(--bh-ligne) !important;
 }
 /* Barres de progression laiton -> gris clair */
 .bh-sheet-panel div[style*="background:rgba(200,184,154"]{ background:#EAE9E5 !important; }
@@ -16680,8 +16680,8 @@ function notifSwitchTab(tab) {
 #closeActivePropertiesModal:hover, #closeCleaningTodayModal:hover, #checklistsKpiModalClose:hover,
 #caKpiModalClose:hover, #closeOccupancyDetailsModal:hover, #closeDepositsModal:hover,
 #blockModalClose:hover, #closeDetailsModal:hover, #closeNewReservationModal:hover {
-  border-color: #0E3B2E !important;
-  color: #0E3B2E !important;
+  border-color: var(--bh-vert) !important;
+  color: var(--bh-vert) !important;
 }
 
 /* ── Desktop ≥ 720px : les bottom-sheets deviennent des cartes centrées ── */
@@ -16915,7 +16915,7 @@ html.bh-lux .bh2-stats.bh2-stats-inside{
   grid-template-columns:1fr 1fr !important;
   gap:0 !important;
   margin:16px 0 -4px !important;
-  border-top:1px solid #EAE9E5 !important;
+  border-top:1px solid var(--bh-ligne) !important;
   background:transparent !important;
 }
 html.bh-lux .bh2-stats.bh2-stats-inside > .bh2-stat,
@@ -16944,21 +16944,21 @@ html.bh-lux #kpiTopRisksCard.bh2-stat{
 /* Separateurs : poses via les memes selecteurs a ID, sinon le border:none
    de la regle ID ci-dessus l'emporte sur un :nth-child(). */
 html.bh-lux #kpiPropertiesCard.bh2-stat{
-  border-right:1px solid #EAE9E5 !important;
-  border-bottom:1px solid #EAE9E5 !important;
+  border-right:1px solid var(--bh-ligne) !important;
+  border-bottom:1px solid var(--bh-ligne) !important;
 }
 html.bh-lux #kpiDepositsCard.bh2-stat{
-  border-bottom:1px solid #EAE9E5 !important;
+  border-bottom:1px solid var(--bh-ligne) !important;
   padding-left:22px !important;
 }
 html.bh-lux #kpiChecklistsCard.bh2-stat{
-  border-right:1px solid #EAE9E5 !important;
+  border-right:1px solid var(--bh-ligne) !important;
 }
 html.bh-lux #kpiTopRisksCard.bh2-stat{
   padding-left:22px !important;
 }
 html.bh-lux .bh2-stats.bh2-stats-inside > .bh2-stat:hover{
-  background:#F7F7F5 !important;
+  background:var(--bh-cote) !important;
   box-shadow:none !important;
   transform:none !important;
 }
@@ -16970,7 +16970,7 @@ html.bh-lux .bh2-stats.bh2-stats-inside .bh2-lbl{
   font-weight:600 !important;
   letter-spacing:.05em !important;
   text-transform:uppercase !important;
-  color:#8B8B84 !important;
+  color:var(--bh-t3) !important;
   padding-right:0 !important;
   margin:0 !important;
   white-space:normal !important;

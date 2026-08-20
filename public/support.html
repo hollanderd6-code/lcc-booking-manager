@@ -30,7 +30,7 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --primary: #0E3B2E;
+      --primary: var(--bh-vert);
       --primary-dark: #15624B;
       --primary-soft: rgba(14,59,46,.08);
       --cream: #F5F0E8;
@@ -225,7 +225,7 @@
       pointer-events: none;
     }
     .cta-box h2 { color: white; font-size: clamp(26px, 3.4vw, 36px); margin-bottom: 10px; position: relative; }
-    .cta-box h2 em { color: #8FC7AF; font-style: italic; }
+    .cta-box h2 em { color: var(--vert-300); font-style: italic; }
     .cta-box p { color: rgba(255,255,255,.6); font-size: 15px; margin-bottom: 28px; position: relative; }
     .cta-box a {
       display: inline-flex; align-items: center; gap: 9px;

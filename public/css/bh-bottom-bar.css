@@ -87,7 +87,7 @@
      ============================================ */
   
   .mobile-tabs .tab-btn.active {
-    color: #0E3B2E;
+    color: var(--bh-vert);
   }
   
   .mobile-tabs .tab-btn.active i {
@@ -108,7 +108,7 @@
     transform: translateX(-50%);
     width: 4px;
     height: 4px;
-    background: #0E3B2E;
+    background: var(--bh-vert);
     border-radius: 50%;
     animation: indicatorPulse 2s ease-in-out infinite;
   }
@@ -272,7 +272,7 @@
   
   /* Focus visible pour navigation clavier */
   .mobile-tabs .tab-btn:focus {
-    outline: 2px solid #0E3B2E;
+    outline: 2px solid var(--bh-vert);
     outline-offset: 2px;
   }
   
@@ -311,7 +311,7 @@
     transform: translateX(-50%);
     width: 40px;
     height: 3px;
-    background: #0E3B2E;
+    background: var(--bh-vert);
     border-radius: 0 0 3px 3px;
     animation: none;
   }
@@ -451,7 +451,7 @@
   
   /* État actif */
   .mobile-tabs .tab-btn.active {
-    color: #0E3B2E;
+    color: var(--bh-vert);
   }
   
   .mobile-tabs .tab-btn.active i {
@@ -472,7 +472,7 @@
     transform: translateX(-50%);
     width: 4px;
     height: 4px;
-    background: #0E3B2E;
+    background: var(--bh-vert);
     border-radius: 50%;
   }
   

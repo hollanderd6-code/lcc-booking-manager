@@ -65,7 +65,7 @@
 
   html[data-theme-v3="1"] .mobile-logo-text .brand-boosting,
   html[data-theme-v3="1"] .mobile-logo-title .brand-boosting {
-    color: #0E3B2E !important;
+    color: var(--bh-vert) !important;
   }
 
   html[data-theme-v3="1"] .mobile-logo-subtitle {
@@ -121,12 +121,12 @@
 
   /* Onglet actif */
   html[data-theme-v3="1"] .mobile-tabs .tab-btn.active {
-    color: #0E3B2E !important;
+    color: var(--bh-vert) !important;
   }
 
   /* Indicateur point actif */
   html[data-theme-v3="1"] .mobile-tabs .tab-btn.active::before {
-    background: #0E3B2E !important;
+    background: var(--bh-vert) !important;
   }
 
   /* Ripple */
@@ -220,7 +220,7 @@
   /* ── 13. BOUTON FAB (+ flottant) ── */
   html[data-theme-v3="1"] .fab-btn,
   html[data-theme-v3="1"] .btn-fab {
-    background: #0E3B2E !important;
+    background: var(--bh-vert) !important;
     box-shadow: 0 4px 16px rgba(14, 59, 46, 0.35) !important;
     bottom: calc(80px + env(safe-area-inset-bottom)) !important;
   }

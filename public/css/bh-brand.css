@@ -53,7 +53,7 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-lbl { color: rgba(242,234,218,.55) !impor
 html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !important; }
 
 /* ── Barre de statut mobile / theme du navigateur ─────────────────────────
-   A completer par <meta name="theme-color" content="#0E3B2E"> dans le head. */
+   A completer par <meta name="theme-color" content="var(--bh-vert)"> dans le head. */
 
 /* ============================================================================
    VERROU — rendu en <span> avec image de fond
@@ -102,7 +102,7 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
   line-height: 1.1;
   letter-spacing: .16em;
   text-transform: uppercase;
-  color: #20221F;
+  color: var(--bh-encre);
   white-space: nowrap;
   font-weight: 400;
 }
@@ -112,13 +112,13 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
   line-height: 1.2;
   letter-spacing: .21em;
   text-transform: uppercase;
-  color: #8B8B84;
+  color: var(--bh-t3);
   white-space: nowrap;
   margin-top: 3px;
   font-weight: 500;
 }
 /* Fond vert : on inverse */
-.sidebar-logo.sur-vert .bh-mot { color: #F2EADA; }
+.sidebar-logo.sur-vert .bh-mot { color: var(--bh-ivoire); }
 .sidebar-logo.sur-vert .bh-baseline { color: rgba(242,234,218,.62); }
 
 /* ============================================================================

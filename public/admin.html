@@ -34,7 +34,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --green: #0E3B2E;
+    --green: var(--bh-vert);
     --green-light: rgba(14,59,46,.1);
     --green-mid: rgba(14,59,46,.2);
     --bg: #F5F2EC;
@@ -48,7 +48,7 @@
     --amber-bg: rgba(245,158,11,.1);
     --blue: #2563EB;
     --blue-bg: rgba(59,130,246,.1);
-    --emerald: #0A2C22;
+    --emerald: var(--bh-vert-fonce);
     --emerald-bg: rgba(14,59,46,.1);
   }
 
@@ -77,7 +77,7 @@
     color: white;
     margin-bottom: 6px;
   }
-  .login-logo span { color: #0E3B2E; }
+  .login-logo span { color: var(--bh-vert); }
   .login-sub { font-size: 13px; color: rgba(255,255,255,.4); margin-bottom: 28px; }
   .login-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: rgba(255,255,255,.4); margin-bottom: 6px; display: block; }
   .login-input {
@@ -92,7 +92,7 @@
     margin-bottom: 14px;
     font-size: 16px;
   }
-  .login-input:focus { outline: none; border-color: #0E3B2E; }
+  .login-input:focus { outline: none; border-color: var(--bh-vert); }
   .login-btn {
     width: 100%;
     padding: 12px;
@@ -127,10 +127,10 @@
   }
   .admin-header-left { display: flex; align-items: center; gap: 12px; }
   .admin-logo { font-family: 'Instrument Serif', serif; font-size: 18px; color: white; }
-  .admin-logo span { color: #0E3B2E; }
+  .admin-logo span { color: var(--bh-vert); }
   .admin-badge {
     font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
-    background: rgba(14,59,46,.25); color: #1E6E52;
+    background: rgba(14,59,46,.25); color: var(--vert-600);
     padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(14,59,46,.3);
   }
   .admin-logout {
@@ -166,7 +166,7 @@
     transition: all .15s;
   }
   .nav-tab:hover { color: rgba(255,255,255,.7); }
-  .nav-tab.active { color: #1E6E52; border-bottom-color: #0E3B2E; }
+  .nav-tab.active { color: var(--vert-600); border-bottom-color: var(--bh-vert); }
 
   /* ── Body ── */
   .admin-body { max-width: 1200px; margin: 0 auto; padding: 32px 24px 80px; }
@@ -297,7 +297,7 @@
   .user-info { display: flex; align-items: center; gap: 10px; }
   .user-avatar {
     width: 34px; height: 34px; border-radius: 50%;
-    background: linear-gradient(135deg, #0E3B2E, #1E6E52);
+    background: linear-gradient(135deg, var(--bh-vert), var(--vert-600));
     display: flex; align-items: center; justify-content: center;
     color: white; font-size: 12px; font-weight: 700; flex-shrink: 0;
   }
@@ -388,7 +388,7 @@
   /* ── Toast ── */
   .toast { position: fixed; bottom: 24px; right: 24px; background: #0D1117; color: white; padding: 12px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; z-index: 9999; display: flex; align-items: center; gap: 8px; transform: translateY(80px); opacity: 0; transition: all .25s; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
   .toast.show { transform: translateY(0); opacity: 1; }
-  .toast.success i { color: #0E3B2E; }
+  .toast.success i { color: var(--bh-vert); }
   .toast.error i { color: #EF4444; }
 
   /* ── Section panels ── */
@@ -436,7 +436,7 @@
   .drawer-row-value { font-weight: 600; text-align: right; max-width: 60%; word-break: break-all; }
   .drawer-avatar {
     width: 56px; height: 56px; border-radius: 50%;
-    background: linear-gradient(135deg, #0E3B2E, #1E6E52);
+    background: linear-gradient(135deg, var(--bh-vert), var(--vert-600));
     display: flex; align-items: center; justify-content: center;
     color: white; font-size: 20px; font-weight: 700; margin: 0 auto 12px;
   }
@@ -447,7 +447,7 @@
 
   /* ── Stat total inscriptions ── */
   .inscriptions-total {
-    background: linear-gradient(135deg, #0E3B2E, #1E6E52);
+    background: linear-gradient(135deg, var(--bh-vert), var(--vert-600));
     color: white; border-radius: 14px; padding: 18px 20px;
     display: flex; align-items: center; gap: 14px;
     margin-bottom: 16px;
@@ -494,12 +494,12 @@
   .support-conv-item:hover { background: rgba(14,59,46,.04); }
   .support-conv-item.active { background: rgba(14,59,46,.08); border-left: 3px solid var(--green); }
   .support-conv-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .support-conv-dot.open { background: #0E3B2E; }
+  .support-conv-dot.open { background: var(--bh-vert); }
   .support-conv-dot.waiting { background: #F59E0B; }
   .support-conv-dot.closed { background: #D1D5DB; }
   .support-conv-avatar {
     width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
-    background: linear-gradient(135deg, #0E3B2E, #1E6E52);
+    background: linear-gradient(135deg, var(--bh-vert), var(--vert-600));
     display: flex; align-items: center; justify-content: center;
     color: white; font-size: 13px; font-weight: 700;
   }
@@ -517,7 +517,7 @@
   }
   .support-chat-avatar {
     width: 36px; height: 36px; border-radius: 50%;
-    background: linear-gradient(135deg, #0E3B2E, #1E6E52);
+    background: linear-gradient(135deg, var(--bh-vert), var(--vert-600));
     display: flex; align-items: center; justify-content: center;
     color: white; font-size: 14px; font-weight: 700; flex-shrink: 0;
   }
@@ -531,14 +531,14 @@
   .support-msg.admin { align-self: flex-start; }
   .support-msg.user { align-self: flex-end; flex-direction: row-reverse; }
   .support-msg-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
-  .support-msg.admin .support-msg-avatar { background: linear-gradient(135deg,#0E3B2E,#1E6E52); color: white; }
+  .support-msg.admin .support-msg-avatar { background: linear-gradient(135deg,var(--bh-vert),var(--vert-600)); color: white; }
   .support-msg.user .support-msg-avatar { background: linear-gradient(135deg,#3B82F6,#6366F1); color: white; }
   .support-msg-content { display: flex; flex-direction: column; gap: 3px; }
   .support-msg-sender { font-size: 10px; font-weight: 600; color: var(--muted); }
   .support-msg.user .support-msg-sender { text-align: right; }
   .support-msg-bubble { padding: 10px 13px; border-radius: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
   .support-msg.admin .support-msg-bubble { background: white; border: 1px solid var(--border); color: var(--text); border-bottom-left-radius: 3px; }
-  .support-msg.user .support-msg-bubble { background: linear-gradient(135deg,#0E3B2E,#1E6E52); color: white; border-bottom-right-radius: 3px; }
+  .support-msg.user .support-msg-bubble { background: linear-gradient(135deg,var(--bh-vert),var(--vert-600)); color: white; border-bottom-right-radius: 3px; }
   .support-msg-bubble img { max-width: 200px; border-radius: 8px; margin-top: 6px; cursor: pointer; display: block; }
   .support-msg-time { font-size: 10px; color: var(--muted); }
   .support-msg.user .support-msg-time { text-align: right; }

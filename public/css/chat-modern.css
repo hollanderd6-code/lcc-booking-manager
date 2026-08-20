@@ -10,10 +10,10 @@
    ============================================ */
 
 :root {
-  --chat-primary: #0E3B2E;
+  --chat-primary: var(--bh-vert);
   --chat-primary-light: #DCE9E3;
   --chat-bg: #F9FAFB;
-  --chat-bubble-owner: #0E3B2E;
+  --chat-bubble-owner: var(--bh-vert);
   --chat-bubble-guest: #FFFFFF;
   --chat-bubble-bot: #EFF6FF;
   --chat-text-owner: #FFFFFF;
@@ -130,7 +130,7 @@
 
 /* Avatar propriétaire */
 .chat-message.owner .chat-avatar {
-  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
+  background: linear-gradient(135deg, var(--bh-vert), var(--bh-vert-fonce)) !important;
   color: white !important;
 }
 
@@ -142,7 +142,7 @@
 
 /* Avatar bot */
 .chat-message.bot .chat-avatar {
-  background: linear-gradient(135deg, #8B5CF6, #7C3AED) !important;
+  background: linear-gradient(135deg, #8B5CF6, var(--bh-violet)) !important;
   color: white !important;
   font-size: 18px !important;
 }
@@ -213,7 +213,7 @@
 
 .chat-status {
   font-style: italic !important;
-  color: #0E3B2E !important;
+  color: var(--bh-vert) !important;
 }
 
 /* Meta à droite pour les messages du propriétaire */
@@ -321,7 +321,7 @@
   height: 42px !important;
   border-radius: 12px !important;
   border: none !important;
-  background: linear-gradient(135deg, #0E3B2E, #0A2C22) !important;
+  background: linear-gradient(135deg, var(--bh-vert), var(--bh-vert-fonce)) !important;
   color: white !important;
   cursor: pointer !important;
   display: flex !important;
@@ -486,7 +486,7 @@
 }
 
 .photo-send-btn:hover {
-  background: #0A2C22 !important;
+  background: var(--bh-vert-fonce) !important;
 }
 
 /* ============================================

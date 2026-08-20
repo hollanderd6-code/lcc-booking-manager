@@ -5,10 +5,10 @@
    ============================================================================ */
 
 html.bh-lux{
-  --lux-bg:#FBFBFA;      --lux-panel:#FFFFFF;   --lux-side:#F7F7F5;
-  --lux-ink:#1D1D1B;     --lux-t2:#5A5A54;      --lux-t3:#8B8B84;   --lux-t4:#B4B4AD;
-  --lux-line:#EAE9E5;    --lux-line2:#F1F0EC;
-  --lux-green:#0E3B2E;   --lux-green-deep:#0A2C22; --lux-green-soft:#E4EDE8; --lux-green-line:rgba(14,59,46,.22);
+  --lux-bg:var(--bh-fond);      --lux-panel:#FFFFFF;   --lux-side:var(--bh-cote);
+  --lux-ink:#1D1D1B;     --lux-t2:var(--bh-t2);      --lux-t3:var(--bh-t3);   --lux-t4:var(--bh-t4);
+  --lux-line:var(--bh-ligne);    --lux-line2:var(--bh-ligne-2);
+  --lux-green:var(--bh-vert);   --lux-green-deep:var(--bh-vert-fonce); --lux-green-soft:var(--bh-action-doux); --lux-green-line:rgba(14,59,46,.22);
   --lux-shadow:0 1px 2px rgba(29,29,27,.04);
   --lux-shadow-md:0 1px 2px rgba(29,29,27,.05),0 8px 24px rgba(29,29,27,.06);
 }

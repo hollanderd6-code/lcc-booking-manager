@@ -94,7 +94,7 @@
       width: 34px;
       height: 34px;
       border-radius: 999px;
-      background: radial-gradient(circle at 30% 0%, #0E3B2E, #0A2C22);
+      background: radial-gradient(circle at 30% 0%, var(--bh-vert), var(--bh-vert-fonce));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -105,19 +105,19 @@
     }
 
     .logo-title { font-weight: 700; font-size: 15px; }
-    .brand-boosting { color: #0E3B2E; }
+    .brand-boosting { color: var(--bh-vert); }
 
     .header-nav { display: flex; align-items: center; gap: 16px; }
     .nav-link { font-size: 13px; text-decoration: none; color: #7A8695; font-weight: 500; font-family: 'DM Sans', sans-serif; }
     .nav-link:hover { color: #0D1117; }
-    .nav-link.active { color: #0E3B2E; font-weight: 600; }
+    .nav-link.active { color: var(--bh-vert); font-weight: 600; }
 
     .header-actions { display: flex; align-items: center; gap: 8px; }
 
     .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; transition: all .15s ease; font-family: 'DM Sans', sans-serif; }
     .btn-ghost { border-radius: 12px; border: 1.5px solid rgba(13,17,23,.12); color: #374151; background: rgba(255,255,255,.6); font-weight: 600; }
     .btn-ghost:hover { background: #fff; }
-    .btn-primary { border-radius: 12px; background: #0E3B2E; color: #fff; box-shadow: 0 4px 12px rgba(14,59,46,.25); font-weight: 600; }
+    .btn-primary { border-radius: 12px; background: var(--bh-vert); color: #fff; box-shadow: 0 4px 12px rgba(14,59,46,.25); font-weight: 600; }
     .btn-primary:hover { background: #15624B; transform: translateY(-1px); }
 
     /* ── Hero Blog ── */
@@ -133,7 +133,7 @@
       padding: 5px 12px;
       border-radius: 999px;
       background: rgba(14,59,46,.08);
-      color: #0E3B2E;
+      color: var(--bh-vert);
       font-size: 12px;
       font-weight: 600;
       margin-bottom: 16px;
@@ -155,7 +155,7 @@
 
     .blog-hero h1 em {
       font-style: italic;
-      color: #0E3B2E;
+      color: var(--bh-vert);
     }
 
     .blog-hero-sub {
@@ -188,8 +188,8 @@
     }
 
     .filter-btn:hover, .filter-btn.active {
-      background: #0A2C22;
-      border-color: #0E3B2E;
+      background: var(--bh-vert-fonce);
+      border-color: var(--bh-vert);
       color: #fff;
     }
 
@@ -282,10 +282,10 @@
       text-transform: uppercase;
     }
 
-    .tag-green  { background: #d1fae8; color: #0E3B2E; }
+    .tag-green  { background: #d1fae8; color: var(--bh-vert); }
     .tag-blue   { background: #dbeafe; color: #1e40af; }
     .tag-amber  { background: #fef3c7; color: #92400e; }
-    .tag-violet { background: #ede9fe; color: #5b21b6; }
+    .tag-violet { background: #ede9fe; color: var(--bh-violet-fonce); }
 
     .article-date {
       font-size: 12px;
@@ -328,7 +328,7 @@
     .article-cta {
       font-size: 12px;
       font-weight: 600;
-      color: #0E3B2E;
+      color: var(--bh-vert);
       display: flex;
       align-items: center;
       gap: 4px;
@@ -336,7 +336,7 @@
 
     /* ── CTA Banner ── */
     .blog-cta {
-      background: linear-gradient(135deg, #0E3B2E 0%, #0A2C22 100%);
+      background: linear-gradient(135deg, var(--bh-vert) 0%, var(--bh-vert-fonce) 100%);
       border-radius: 20px;
       padding: 48px 40px;
       text-align: center;
@@ -381,7 +381,7 @@
 
     .blog-cta .btn-white {
       background: #fff;
-      color: #0E3B2E;
+      color: var(--bh-vert);
       font-weight: 700;
       padding: 12px 28px;
       font-size: 14px;
@@ -523,12 +523,12 @@
 
     .modal-body .highlight-box {
       background: #edf7f3;
-      border-left: 3px solid #0E3B2E;
+      border-left: 3px solid var(--bh-vert);
       padding: 14px 18px;
       border-radius: 0 8px 8px 0;
       margin: 20px 0;
       font-size: 14px;
-      color: #0A2C22;
+      color: var(--bh-vert-fonce);
     }
 
     .modal-footer {

@@ -42,7 +42,7 @@
     --text-muted: #94a3b8;
     --accent: #3b82f6;
     --accent-hover: #2563eb;
-    --green: #0E3B2E;
+    --green: var(--bh-vert);
     --orange: #f59e0b;
     --red: #ef4444;
   }
@@ -242,7 +242,7 @@
     font-size: 11px; font-weight: 700; color: white;
   }
   .chat-msg.user .chat-msg-avatar { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
-  .chat-msg.admin .chat-msg-avatar { background: linear-gradient(135deg, #0A2C22, #0E3B2E); }
+  .chat-msg.admin .chat-msg-avatar { background: linear-gradient(135deg, var(--bh-vert-fonce), var(--bh-vert)); }
 
   .chat-msg-content { display: flex; flex-direction: column; gap: 3px; }
   .chat-msg-sender { font-size: 11px; font-weight: 600; color: var(--text-secondary); }

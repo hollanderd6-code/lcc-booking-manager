@@ -49,7 +49,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost {
   padding: 0 20px;
   border: none;
   border-radius: 12px;
-  background: #0E3B2E;
+  background: var(--bh-vert);
   color: white;
   font-family: 'DM Sans', sans-serif;
   font-size: 14px;
@@ -69,7 +69,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost {
 @media (max-width: 1366px) { .resa-back-btn { display: none !important; } }
 
 :root {
-  --green: #0E3B2E;
+  --green: var(--bh-vert);
   --green-light: rgba(14,59,46,.08);
   --cream: #F5F2EC;
   --cream-dark: #EDE9E1;
@@ -185,9 +185,9 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 }
 .plt-airbnb  { background: #fff0f0; color: #E00B41; }
 .plt-booking { background: #f0f4ff; color: #003580; }
-.plt-direct  { background: #F1F6F3; color: #0E3B2E; }
+.plt-direct  { background: var(--vert-050); color: var(--bh-vert); }
 .plt-abritel { background: #fff7ed; color: #C2410C; }
-.plt-guest   { background: #F3E8FF; color: #7C3AED; font-weight: 700; }
+.plt-guest   { background: #F3E8FF; color: var(--bh-violet); font-weight: 700; }
 .plt-other   { background: #f3f4f6; color: #374151; }
 
 /* Badges : alignés sur le système unifié .bh-badge (bh-core.css) */
@@ -198,7 +198,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
   border: 1px solid transparent;
 }
 .status-badge::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.85; }
-.status-confirmed    { background:#EAF3EF; color:#166B52; border-color:#D3E6DD; }
+.status-confirmed    { background:var(--bh-vert-pale); color:#166B52; border-color:#D3E6DD; }
 .status-cancelled    { background:#FBEDE7; color:#B0431E; border-color:#F2D8CC; }
 .status-modified     { background:#FBF3E2; color:#9A6514; border-color:#F0E2C2; }
 .status-no_show      { background:#F1EDFB; color:#5B3FA8; border-color:#E2DAF4; }
@@ -246,8 +246,8 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 .resa-swipe-actions{position:absolute;top:0;right:0;bottom:0;z-index:1;display:flex;align-items:stretch;}
 .resa-swipe-actions button{border:none;width:76px;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:5px;font:600 11px 'DM Sans',sans-serif;color:#fff;cursor:pointer;}
-.resa-swipe-actions .sw-msg{background:#0E3B2E;}
-.resa-swipe-actions .sw-fac{background:#B7791F;}
+.resa-swipe-actions .sw-msg{background:var(--bh-vert);}
+.resa-swipe-actions .sw-fac{background:var(--bh-or);}
 .resa-swipe-actions button i{font-size:16px;}
 .resa-swipe-actions button:active{filter:brightness(.94);}
 .resa-card {
@@ -400,7 +400,7 @@ html[data-theme-v3="1"] header.main-header {
 html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 /* Onglet Réservations actif en vert */
 body[data-page="reservations"] .tab-btn[data-tab="calendar"] {
-  color: #0E3B2E !important;
+  color: var(--bh-vert) !important;
   opacity: 1 !important;
 }
 /* Accueil ne doit PAS être actif sur cette page */
@@ -1439,7 +1439,7 @@ loadData();
 }
 #invoiceModal .inv-section-title {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .5px; color: #0E3B2E; margin: 16px 0 8px;
+  letter-spacing: .5px; color: var(--bh-vert); margin: 16px 0 8px;
   display: flex; align-items: center; gap: 6px;
 }
 #invoiceModal .inv-section-title:first-child { margin-top: 0; }
@@ -1452,7 +1452,7 @@ loadData();
   background: #fafaf8; outline: none; box-sizing: border-box;
 }
 #invoiceModal .inv-row input:focus,
-#invoiceModal .inv-row select:focus { border-color: #0E3B2E; background: white; }
+#invoiceModal .inv-row select:focus { border-color: var(--bh-vert); background: white; }
 #invoiceModal .inv-row-inline { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 #invoiceModal .inv-checkbox { display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13px;cursor:pointer; }
 #invoiceModal .inv-checkbox input { width:auto; }
@@ -1462,18 +1462,18 @@ loadData();
   box-shadow: 0 2px 16px rgba(0,0,0,.08); font-family: 'DM Sans',sans-serif;
   font-size: 13px; color: #1a1a2e;
 }
-#invoiceModal .inv-paper h2 { font-size: 18px; font-weight: 800; color: #0E3B2E; margin: 0 0 4px; }
+#invoiceModal .inv-paper h2 { font-size: 18px; font-weight: 800; color: var(--bh-vert); margin: 0 0 4px; }
 #invoiceModal .inv-paper .inv-num { font-size: 14px; font-weight: 700; margin: 12px 0 0; }
 #invoiceModal .inv-paper .inv-sec h3 {
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
   color: #9CA3AF; margin: 16px 0 6px; border-bottom: 1px solid #f0ede8; padding-bottom: 4px;
 }
 #invoiceModal .inv-line { display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f5f2ec;font-size:13px; }
-#invoiceModal .inv-line.inv-sub { font-weight:600; margin-top:8px; border-bottom:2px solid #0E3B2E; padding-bottom:6px; }
-#invoiceModal .inv-line.inv-tot { font-weight:800;font-size:15px;color:#0E3B2E;border:none;margin-top:4px; }
+#invoiceModal .inv-line.inv-sub { font-weight:600; margin-top:8px; border-bottom:2px solid var(--bh-vert); padding-bottom:6px; }
+#invoiceModal .inv-line.inv-tot { font-weight:800;font-size:15px;color:var(--bh-vert);border:none;margin-top:4px; }
 #invoiceModal .inv-stamp {
-  text-align:center;margin:16px 0 0;padding:10px;border:2px solid #0E3B2E;
-  border-radius:8px;color:#0E3B2E;font-weight:700;font-size:13px;
+  text-align:center;margin:16px 0 0;padding:10px;border:2px solid var(--bh-vert);
+  border-radius:8px;color:var(--bh-vert);font-weight:700;font-size:13px;
 }
 #invoiceModal .inv-footer-note { font-size:11px;color:#9CA3AF;margin-top:12px;text-align:center; }
 #invoiceModal .inv-empty {
@@ -1492,7 +1492,7 @@ loadData();
   font-size:13px;font-weight:600;cursor:pointer;border:none;
   display:inline-flex;align-items:center;gap:7px;
 }
-#invoiceModal .inv-btn-primary { background:#0E3B2E;color:white; }
+#invoiceModal .inv-btn-primary { background:var(--bh-vert);color:white; }
 #invoiceModal .inv-btn-primary:hover { background:#15624B; }
 #invoiceModal .inv-btn-primary:disabled { opacity:.5;cursor:not-allowed; }
 #invoiceModal .inv-btn-ghost { background:white;color:#374151;border:1px solid rgba(0,0,0,.12); }
@@ -1532,13 +1532,13 @@ loadData();
 }
 .push-notif-item.unread {
   background: #f0faf5;
-  border-left-color: #0E3B2E;
+  border-left-color: var(--bh-vert);
 }
 .push-notif-icon {
   width: 34px; height: 34px; border-radius: 50%;
   background: rgba(14,59,46,.12);
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; color: #0E3B2E; font-size: 14px;
+  flex-shrink: 0; color: var(--bh-vert); font-size: 14px;
 }
 .push-notif-title { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px; }
 .push-notif-body  { font-size: 12px; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1953,7 +1953,7 @@ body.notif-panel-open {
     padding: 13px 14px;
     color: #7A8695;
   }
-  .reservations-table thead th.sorted { color: #0E3B2E; }
+  .reservations-table thead th.sorted { color: var(--bh-vert); }
   .reservations-table tbody td {
     padding: 13px 14px;
     border-bottom: 1px solid rgba(200,184,154,.25);
@@ -1965,7 +1965,7 @@ body.notif-panel-open {
   }
   .reservations-table tbody tr:hover {
     background: rgba(14,59,46,.04);
-    box-shadow: inset 3px 0 0 #0E3B2E;
+    box-shadow: inset 3px 0 0 var(--bh-vert);
   }
   /* Voyageur en serif — la signature */
   .reservations-table tbody td:nth-child(2) {
@@ -1978,18 +1978,18 @@ body.notif-panel-open {
     font-family: 'Instrument Serif', serif !important;
     font-size: 15px;
     font-weight: 400 !important;
-    color: #0E3B2E;
+    color: var(--bh-vert);
   }
   /* Filtres : hauteur homogène, focus vert */
   .search-wrap input, .filter-select { height: 42px; border-radius: 10px; border-color: rgba(200,184,154,.5); transition: border-color .15s, box-shadow .15s; }
-  .search-wrap input:focus { border-color: #0E3B2E; box-shadow: 0 0 0 3px rgba(14,59,46,.1); }
+  .search-wrap input:focus { border-color: var(--bh-vert); box-shadow: 0 0 0 3px rgba(14,59,46,.1); }
   .filter-select:hover { border-color: rgba(14,59,46,.4) !important; }
 }
 
 /* ── Pagination pilules ── */
 .page-btn { border-radius: 999px; border-color: rgba(200,184,154,.5); }
-.page-btn.active { background: #0E3B2E; border-color: #0E3B2E; box-shadow: 0 1px 4px rgba(14,59,46,.3); }
-.page-btn:hover:not(.active):not(:disabled) { background: #fff; border-color: #0E3B2E; color: #0E3B2E; }
+.page-btn.active { background: var(--bh-vert); border-color: var(--bh-vert); box-shadow: 0 1px 4px rgba(14,59,46,.3); }
+.page-btn:hover:not(.active):not(:disabled) { background: #fff; border-color: var(--bh-vert); color: var(--bh-vert); }
 
 /* ── Mobile : cartes raffinées ── */
 .resa-card {
@@ -2028,7 +2028,7 @@ body.notif-panel-open {
   color: #4B5563;
   transition: all .15s;
 }
-.bh-resa-close:hover { border-color: #0E3B2E !important; color: #0E3B2E; }
+.bh-resa-close:hover { border-color: var(--bh-vert) !important; color: var(--bh-vert); }
 .bh-modal-card { border: 1px solid rgba(200,184,154,.35); border-radius: 12px; }
 .bh-modal-row { border-bottom-color: rgba(200,184,154,.25); }
 .bh-modal-amount-total {

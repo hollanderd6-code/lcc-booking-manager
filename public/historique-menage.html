@@ -160,7 +160,7 @@
       border-radius: 18px;
       box-shadow: var(--shadow-sm);
       padding: 16px 18px;
-      border-left: 4px solid var(--primary-color, #0A2C22);
+      border-left: 4px solid var(--primary-color, var(--bh-vert-fonce));
       transition: var(--transition, all .15s ease);
     }
 
@@ -227,11 +227,11 @@
 
     .btn-edit {
       background: var(--bg-secondary, #f3f4f6);
-      color: var(--primary-color, #0A2C22);
+      color: var(--primary-color, var(--bh-vert-fonce));
     }
 
     .btn-edit:hover {
-      background: var(--primary-color, #0A2C22);
+      background: var(--primary-color, var(--bh-vert-fonce));
       color: #fff;
     }
 
@@ -261,7 +261,7 @@
     }
 
     .ical-url-item i {
-      color: var(--primary-color, #0A2C22);
+      color: var(--primary-color, var(--bh-vert-fonce));
       font-size: 12px;
     }
 
@@ -285,7 +285,7 @@
     .btn-test-url {
       background: transparent;
       border: none;
-      color: var(--primary-color, #0A2C22);
+      color: var(--primary-color, var(--bh-vert-fonce));
       cursor: pointer;
       padding: 4px 8px;
       border-radius: 999px;
@@ -297,11 +297,11 @@
 
     .btn-test-url:hover {
       background: rgba(10,44,34,.08);
-      color: var(--primary-color, #0A2C22);
+      color: var(--primary-color, var(--bh-vert-fonce));
     }
 
     .btn-add-property {
-      background: linear-gradient(135deg, var(--primary-color, #0A2C22) 0%, var(--accent-color, #0ea5e9) 100%);
+      background: linear-gradient(135deg, var(--primary-color, var(--bh-vert-fonce)) 0%, var(--accent-color, #0ea5e9) 100%);
       color: white;
       border: none;
       padding: 10px 16px;
@@ -426,7 +426,7 @@
     .form-group input:focus,
     .form-group textarea:focus {
       outline: none;
-      border-color: var(--primary-color, #0A2C22);
+      border-color: var(--primary-color, var(--bh-vert-fonce));
       box-shadow: 0 0 0 1px rgba(10,44,34,.12);
       background: #ffffff;
     }
@@ -493,7 +493,7 @@
 
     .btn-add-url {
       background: var(--bg-secondary, #f3f4f6);
-      color: var(--primary-color, #0A2C22);
+      color: var(--primary-color, var(--bh-vert-fonce));
       border: none;
       padding: 7px 10px;
       border-radius: 999px;
@@ -508,7 +508,7 @@
     }
 
     .btn-add-url:hover {
-      background: var(--primary-color, #0A2C22);
+      background: var(--primary-color, var(--bh-vert-fonce));
       color: #ffffff;
     }
 
@@ -536,7 +536,7 @@
     }
 
     .btn-save {
-      background: var(--primary-color, #0A2C22);
+      background: var(--primary-color, var(--bh-vert-fonce));
       color: white;
       border: none;
       padding: 8px 16px;
@@ -551,7 +551,7 @@
     }
 
     .btn-save:hover {
-      background: #0A2C22;
+      background: var(--bh-vert-fonce);
     }
 
     .empty-state {
@@ -576,8 +576,8 @@
 
     .test-result.success {
       background: #DCE9E3;
-      color: #0A2C22;
-      border: 1px solid #1E6E52;
+      color: var(--bh-vert-fonce);
+      border: 1px solid var(--vert-600);
     }
 
     .test-result.error {

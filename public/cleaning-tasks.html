@@ -38,7 +38,7 @@
   --text: #0D1117;
   --text-secondary: #7A8695;
   --text-tertiary: #A0AABA;
-  --accent: #0E3B2E;
+  --accent: var(--bh-vert);
   --accent-light: rgba(14,59,46,.1);
   --accent-dark: #15624B;
   --warning: #D97706;
@@ -663,7 +663,7 @@ html, body {
 }
 
 .task-row:last-child { border-bottom: none; }
-.task-row:active { background: #F1F6F3; }
+.task-row:active { background: var(--vert-050); }
 
 .task-checkbox {
   width: 26px;
@@ -888,7 +888,7 @@ html, body {
   font-family: var(--font); font-size: 13.5px; font-weight: 700; transition: all .15s;
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
 }
-.damage-btn.ras.on { border-color: #0E3B2E; background: #F1F6F3; color: #0A2C22; }
+.damage-btn.ras.on { border-color: var(--bh-vert); background: var(--vert-050); color: var(--bh-vert-fonce); }
 .damage-btn.report.on { border-color: #dc2626; background: #fef2f2; color: #b91c1c; }
 #damageForm { margin-top: 12px; }
 .damage-photos-head {
@@ -1137,7 +1137,7 @@ html, body {
 }
 .sig-certify-row input[type="checkbox"] {
   width: 20px; height: 20px; flex-shrink: 0;
-  accent-color: #0E3B2E; cursor: pointer; margin-top: 1px;
+  accent-color: var(--bh-vert); cursor: pointer; margin-top: 1px;
 }
 .sig-certify-label {
   font-size: 13px; color: #374151; line-height: 1.5; cursor: pointer;
@@ -1147,7 +1147,7 @@ html, body {
   border-radius: 14px; margin-bottom: 12px; position: relative;
   overflow: hidden;
 }
-.sig-canvas-wrap.signed { border-style: solid; border-color: #0E3B2E; }
+.sig-canvas-wrap.signed { border-style: solid; border-color: var(--bh-vert); }
 #sigCanvas {
   display: block; width: 100%; height: 160px; cursor: crosshair; touch-action: none;
 }
@@ -1185,7 +1185,7 @@ html, body {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   transition: background .2s;
 }
-.sig-confirm-btn.ready { background: #0E3B2E; cursor: pointer; }
+.sig-confirm-btn.ready { background: var(--bh-vert); cursor: pointer; }
 
 /* ===== NOTIFICATION TOAST ===== */
 .toast {
@@ -1380,14 +1380,14 @@ html[data-theme-v3="1"] .task-card:hover {
   background: #EDE8DF !important;
 }
 html[data-theme-v3="1"] .pin-input-group input:focus {
-  border-color: #0E3B2E !important;
+  border-color: var(--bh-vert) !important;
   box-shadow: 0 0 0 3px rgba(14,59,46,.1) !important;
 }
 html[data-theme-v3="1"] .progress-bar-fill {
-  background: #0E3B2E !important;
+  background: var(--bh-vert) !important;
 }
 html[data-theme-v3="1"] .submit-btn.ready {
-  background: #0E3B2E !important;
+  background: var(--bh-vert) !important;
 }
 html[data-theme-v3="1"] .checklist-header {
   background: #F5F0E8 !important;

@@ -432,7 +432,7 @@
 
 .conversation-status.active {
   background: #DCE9E3;
-  color: #0E3B2E;
+  color: var(--bh-vert);
 }
 
 .conversation-status.pending {
@@ -551,7 +551,7 @@
 
 [data-theme="dark"] .guest-avatar,
 [data-theme="dark"] .conversation-avatar {
-  background: linear-gradient(135deg, #7c3aed 0%, #c026d3 100%);
+  background: linear-gradient(135deg, var(--bh-violet) 0%, #c026d3 100%);
 }
 
 [data-theme="dark"] .guest-section,

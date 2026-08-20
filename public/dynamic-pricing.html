@@ -73,7 +73,7 @@ html[data-theme-v3="1"] .main-content {
   display: inline-flex; align-items: center; gap: 8px;
   height: 40px; padding: 0 20px;
   border: none; border-radius: 12px;
-  background: #0E3B2E; color: white;
+  background: var(--bh-vert); color: white;
   font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600;
   cursor: pointer; transition: background .15s;
@@ -160,7 +160,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
    PRICING PAGE — Root vars & resets
 ══════════════════════════════════════════════════ */
 :root {
-  --pg:  #0E3B2E;
+  --pg:  var(--bh-vert);
   --pg2: #15624B;
   --pg-soft: rgba(14,59,46,.1);
   --pg-soft2: rgba(14,59,46,.06);
@@ -172,7 +172,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   --muted: #7A8695;
   --warning: #F59E0B;
   --danger: #DC2626;
-  --success: #0E3B2E;
+  --success: var(--bh-vert);
   --r: 16px;
 }
 
@@ -338,7 +338,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 }
 .price-range-fill {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(90deg, var(--pg), #1E6E52);
+  background: linear-gradient(90deg, var(--pg), var(--vert-600));
   border-radius: 999px;
   transition: all .3s;
 }
@@ -509,7 +509,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   font-size: 11px; font-weight: 700;
   padding: 2px 6px; border-radius: 6px;
 }
-.price-delta.up { background: rgba(14,59,46,.12); color: #0A2C22; }
+.price-delta.up { background: rgba(14,59,46,.12); color: var(--bh-vert-fonce); }
 .price-delta.down { background: rgba(220,38,38,.1); color: #B91C1C; }
 .price-delta.stable { background: rgba(107,114,128,.1); color: var(--muted); }
 .price-arrow {
@@ -716,7 +716,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   margin-left: auto; font-size: 14px; font-weight: 700;
   padding: 2px 10px; border-radius: 8px;
 }
-.signal-factor.pos { background: rgba(14,59,46,.1); color: #0A2C22; }
+.signal-factor.pos { background: rgba(14,59,46,.1); color: var(--bh-vert-fonce); }
 .signal-factor.neg { background: rgba(220,38,38,.1); color: #B91C1C; }
 .signal-factor.neu { background: rgba(107,114,128,.1); color: var(--muted); }
 
@@ -780,7 +780,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .cal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:6px}
 .cal-cell{border:1px solid rgba(200,184,154,.35);border-radius:10px;padding:7px 5px;cursor:pointer;text-align:center;transition:transform .1s,box-shadow .1s}
 .cal-cell:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08)}
-.cal-cell.sel{outline:2px solid #0E3B2E;outline-offset:1px}
+.cal-cell.sel{outline:2px solid var(--bh-vert);outline-offset:1px}
 .cal-dow{font-size:10px;color:var(--muted);text-transform:uppercase}
 .cal-date{font-size:11px;font-weight:600}
 .cal-price{font-size:15px;font-weight:800;margin-top:2px}
@@ -789,7 +789,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .cal-detail.show{display:block}
 .cal-formula{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 4px}
 .fchip{font-size:12px;padding:4px 9px;border-radius:8px;background:var(--cream);color:var(--text)}
-.fchip b{color:#0E3B2E}
+.fchip b{color:var(--bh-vert)}
 .fchip.up{background:rgba(14,59,46,.12)}
 .fchip.down{background:rgba(239,68,68,.12)}
 /* ── Événements ── */
@@ -799,12 +799,12 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .ev-table{width:100%;border-collapse:collapse;font-size:13px}
 .ev-table th{text-align:left;color:var(--muted);font-weight:600;padding:8px;border-bottom:1px solid var(--cream)}
 .ev-table td{padding:8px;border-bottom:1px solid rgba(200,184,154,.25)}
-.ev-mult{font-weight:700;color:#0E3B2E}
+.ev-mult{font-weight:700;color:var(--bh-vert)}
 .icon-btn{border:none;background:none;cursor:pointer;color:var(--muted);font-size:14px;padding:4px 6px}
-.icon-btn:hover{color:#0E3B2E}.icon-btn.del:hover{color:#EF4444}
+.icon-btn:hover{color:var(--bh-vert)}.icon-btn.del:hover{color:#EF4444}
 .mode-seg{display:inline-flex;background:var(--cream);border-radius:9px;padding:3px;gap:2px}
 .mode-seg button{border:none;background:none;font-size:12px;font-weight:600;color:var(--muted);padding:6px 11px;border-radius:7px;cursor:pointer;transition:background .15s,color .15s}
-.mode-seg button.on{background:#0E3B2E;color:#fff}
+.mode-seg button.on{background:var(--bh-vert);color:#fff}
 </style>
 
   <!-- Calques tardifs — mobile et correctifs empiles. Ils surchargent
@@ -2245,7 +2245,7 @@ async function setCalMode(mode){
   border-radius: 50% !important;
   transition: all .15s !important;
 }
-.modal-close:hover { border-color: #0E3B2E !important; color: #0E3B2E !important; }
+.modal-close:hover { border-color: var(--bh-vert) !important; color: var(--bh-vert) !important; }
 .formula-line { border-bottom-color: rgba(200,184,154,.3) !important; }
 @media (min-width: 720px) {
   .modal-overlay { align-items: center !important; padding: 28px; }

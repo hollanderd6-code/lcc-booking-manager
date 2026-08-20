@@ -15,14 +15,14 @@
 html[data-theme-v3="1"] {
   /* Palette « Maison Vert » — voir css/bh-brand.css.
      Le jade sert d'accent d'interface (boutons, liens, etats actifs) ;
-     le vert de marque #0E3B2E est reserve au logo et aux aplats pleins :
+     le vert de marque var(--bh-vert) est reserve au logo et aux aplats pleins :
      il est trop sombre pour rester lisible sur un element de 12 px. */
-  --jade:           #0E3B2E;
-  --jade-light:     #1E6E52;
+  --jade:           var(--bh-vert);
+  --jade-light:     var(--vert-600);
   --jade-glow:      rgba(14,59,46,.12);
   --jade-subtle:    rgba(14,59,46,.07);
-  --marque:         #0E3B2E;
-  --ivoire:         #F2EADA;
+  --marque:         var(--bh-vert);
+  --ivoire:         var(--bh-ivoire);
   /* --obsidian reste NOIR : c'est le token de la barre de navigation du haut
      et des bandeaux sombres neutres. Le passer au vert de marque rendait la
      barre verte sur les seules pages qui utilisent ce token (reservations,
@@ -32,9 +32,9 @@ html[data-theme-v3="1"] {
   --slate:          #1C2333;
   /* Cremes ramenees vers des gris chauds neutres : les anciens beiges
      juraient avec les gris froids herites de Tailwind ailleurs dans l'app. */
-  --cream:          #FBFBFA;
-  --cream-warm:     #F7F7F5;
-  --cream-deep:     #EAE9E5;
+  --cream:          var(--bh-fond);
+  --cream-warm:     var(--bh-cote);
+  --cream-deep:     var(--bh-ligne);
   --sand:           #C8B89A;
   --text-1:         #0D1117;
   --text-2:         #3D4A5C;
@@ -841,7 +841,7 @@ html[data-theme-v3="1"] .page-content {
   }
   html[data-theme-v3="1"] #kpiOccupancyCard .kpi-pill {
     background: rgba(139,92,246,.12) !important;
-    color: #7C3AED !important;
+    color: var(--bh-violet) !important;
   }
   html[data-theme-v3="1"] #kpiDepositsCard .kpi-pill {
     background: rgba(14,59,46,.12) !important;
@@ -1340,7 +1340,7 @@ html[data-theme-v3="1"] .bh-cal-legend-dot {
 
 html[data-theme-v3="1"] .bh-cal-legend-dot.airbnb  { background: #FF5A5F; }
 html[data-theme-v3="1"] .bh-cal-legend-dot.booking { background: #4A90E2; }
-html[data-theme-v3="1"] .bh-cal-legend-dot.direct  { background: #1E6E52; }
+html[data-theme-v3="1"] .bh-cal-legend-dot.direct  { background: var(--vert-600); }
 
 html[data-theme-v3="1"] .calendar-modern-header {
   background: var(--obsidian) !important;

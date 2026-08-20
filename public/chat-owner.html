@@ -267,7 +267,7 @@
 
     .status-badge.active {
       background: #DCE9E3;
-      color: #0A2C22;
+      color: var(--bh-vert-fonce);
     }
 
     .status-badge.pending {
@@ -573,8 +573,8 @@
       padding: 6px 13px;
       border-radius: 20px;
       border: 1.5px solid #DCE9E3;
-      background: #F1F6F3;
-      color: #0A2C22;
+      background: var(--vert-050);
+      color: var(--bh-vert-fonce);
       font-size: 12.5px;
       font-weight: 500;
       font-family: 'DM Sans', sans-serif;
@@ -585,7 +585,7 @@
       text-overflow: ellipsis;
       transition: all .15s;
     }
-    .qr-chip:hover { background: #0E3B2E; color: white; border-color: #0E3B2E; }
+    .qr-chip:hover { background: var(--bh-vert); color: white; border-color: var(--bh-vert); }
     .qr-chip.deposit { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
     .qr-chip.deposit:hover { background: #f97316; color: white; border-color: #f97316; }
 
@@ -1291,9 +1291,9 @@ const bookingMessageModalStyles = `
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
-.tx-chip:hover { background: #e8f5f0; color: #0E3B2E; }
+.tx-chip:hover { background: #e8f5f0; color: var(--bh-vert); }
 .tx-chip:focus { outline: none; box-shadow: none; }
-.tx-chip.translated { background: #e8f5f0; color: #0E3B2E; }
+.tx-chip.translated { background: #e8f5f0; color: var(--bh-vert); }
 .tx-chip:disabled { opacity: 0.4; cursor: wait; }
 .tx-chip .tx-flags { font-size: 13px; line-height: 1; }
 .tx-chip .tx-label { font-size: 10.5px; }

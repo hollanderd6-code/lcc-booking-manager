@@ -23,10 +23,10 @@
 /* ── 1. La couleur de chaque entree ──────────────────────────────────────
    Ces teintes ne sont pas des couleurs de marque : elles identifient une
    rubrique, et reprennent la couleur de son icone. */
-.bh-more-item[data-menu-key="welcome"]   { --k: #0E3B2E; }  /* Livrets d'accueil */
+.bh-more-item[data-menu-key="welcome"]   { --k: var(--bh-vert); }  /* Livrets d'accueil */
 .bh-more-item[data-menu-key="contrat"]   { --k: #3B82F6; }  /* Contrats */
 .bh-more-item[data-menu-key="properties"]{ --k: #0891B2; }  /* Mes logements */
-.bh-more-item[data-menu-key="finances"]  { --k: #0E3B2E; }  /* Cautions */
+.bh-more-item[data-menu-key="finances"]  { --k: var(--bh-vert); }  /* Cautions */
 .bh-more-item[data-menu-key="factures"]  { --k: #8B5CF6; }  /* Factures sejours */
 .bh-more-item[data-menu-key="clients"]   { --k: #EC4899; }  /* Mes clients */
 .bh-more-item[data-menu-key="reporting"] { --k: #0EA5E9; }  /* Revenus */
