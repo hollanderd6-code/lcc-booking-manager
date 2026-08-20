@@ -118,6 +118,119 @@
 }
 
 /* ============================================================================
-   Les valeurs de la palette sont actives (voir ARBITRAGE RENDU en tete de
-   fichier). Aucun bloc en attente.
+   MODE SOMBRE — valeurs des jetons  (lot 6a)
+   ============================================================================
+   Ce bloc ne s'active que si <html> porte data-theme="dark". Les 49 pages
+   ecrivent aujourd'hui data-theme="light" en dur : il est donc INERTE et ne
+   change rien a l'ecran. C'est voulu.
+
+   POURQUOI LE BOUTON DE THEME RESTE MASQUE
+   bh-core.css masque .bh-theme-toggle avec ce commentaire : « la couverture
+   est incomplete ». La mesure lui donne raison :
+
+     style.css        205 regles,  0 sombre   (28 pages en dependent)
+     bh-theme-v3.css  320 regles, 39 sombres  (12 %)
+     bh-core.css       58 regles,  0 sombre
+     bh-lux.css        42 regles,  7 sombres  (2 pages seulement)
+
+   S'y ajoutent 829 Ko de CSS ecrits dans les pages elles-memes.
+   Rendre le bouton visible aujourd'hui donnerait un theme a moitie sombre :
+   des blocs blancs eblouissants au milieu, du texte fonce sur fond fonce.
+   Le masquage n'est pas un oubli, c'est la bonne decision — jusqu'a ce que la
+   couverture soit faite.
+
+   A QUOI SERT CE BLOC ALORS
+   Il pose le socle. Tout ce qui passe deja par un jeton — la moitie des
+   couleurs des feuilles — suivra le theme sans une ligne de plus. Le travail
+   restant se mesure avec outils/lot6-audit-sombre.js et se fait par etapes
+   verifiables, au lieu d'un grand basculement risque.
+
+   POUR ESSAYER : dans la console du navigateur,
+       document.documentElement.dataset.theme = 'dark'
+   Vous verrez exactement ce qui suit le theme et ce qui ne le suit pas.
+
+   ── LES CHOIX DE VALEUR ──────────────────────────────────────────────────
+   Un vert-noir profond plutot qu'un gris neutre : la marque est chaude, un
+   sombre neutre la ferait paraitre eteinte. Le vert et l'or sont ECLAIRCIS,
+   parce qu'une couleur juste sur du creme devient illisible sur du sombre —
+   c'est l'erreur la plus courante d'un mode sombre pose trop vite.
    ============================================================================ */
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Echelle de vert inversee : les crans clairs deviennent les crans utiles,
+     les fonces servent aux fonds. */
+  --vert-900: #7FBBA3;   /* etats presses : le plus clair sur fond sombre */
+  --vert-800: #4FA184;   /* MARQUE et action principale */
+  --vert-600: #3FA79A;
+  --vert-400: #2A6B57;
+  --vert-300: #1E5544;
+  --vert-200: #1A473A;
+  --vert-100: #16342B;   /* fonds doux */
+  --vert-050: #12261F;
+
+  /* Neutres : vert-noir, jamais gris */
+  --bh-fond:    #0F1A17;
+  --bh-panneau: #16221F;
+  --bh-cote:    #131E1B;
+  --bh-creme:   #1A2622;
+  --bh-ivoire:  #1E2B26;
+  --bh-filet:   rgba(232,239,236,.06);
+
+  /* Texte : jamais du blanc pur, qui vibre sur fond sombre */
+  --bh-encre: #E8EFEC;
+  --bh-t2:    #A8B8B2;
+  --bh-t3:    #7E8F89;
+  --bh-t4:    #5A6B65;
+
+  --bh-ligne:   #26403B;
+  --bh-ligne-2: #1E332F;
+
+  /* Accents eclaircis pour rester lisibles */
+  --bh-or:           #E0A94A;
+  --bh-violet:       #A78BFA;
+  --bh-violet-fonce: #8B6CF0;
+  --bh-guest:        #E8823C;
+  --bh-guest-doux:   #2A1F18;
+
+  --bh-vert:        var(--vert-800);
+  --bh-vert-fonce:  var(--vert-900);
+  --bh-vert-clair:  #6FB89C;
+  --bh-vert-pale:   var(--vert-100);
+
+  --bh-action:        var(--vert-800);
+  --bh-action-survol: var(--vert-900);
+  --bh-action-doux:   var(--vert-100);
+  --bh-action-filet:  rgba(79,161,132,.32);
+
+  /* Une ombre portee ne se voit pas sur du sombre : on l'assombrit et on
+     l'etale, sinon les cartes paraissent collees au fond. */
+  --bh-ombre: 0 2px 14px rgba(0,0,0,.45);
+
+  /* Les ponts suivent automatiquement, puisqu'ils pointent sur l'echelle. */
+  --text-1:   var(--bh-encre);
+  --obsidian: var(--bh-encre);
+}
+
+/* Suivi du reglage systeme, uniquement si la page n'impose pas de theme.
+   Aujourd'hui les 49 pages ecrivent data-theme="light" : cette regle est donc
+   inerte elle aussi. Elle servira le jour ou l'attribut sera retire. */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    color-scheme: dark;
+    --bh-fond:    #0F1A17;
+    --bh-panneau: #16221F;
+    --bh-cote:    #131E1B;
+    --bh-encre:   #E8EFEC;
+    --bh-t2:      #A8B8B2;
+    --bh-t3:      #7E8F89;
+    --bh-ligne:   #26403B;
+    --bh-ligne-2: #1E332F;
+    --vert-800:   #4FA184;
+    --vert-900:   #7FBBA3;
+    --vert-100:   #16342B;
+    --text-1:     var(--bh-encre);
+    --obsidian:   var(--bh-encre);
+  }
+}
