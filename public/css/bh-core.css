@@ -250,3 +250,74 @@ button:active:not(:disabled), .btn:active, [role="button"]:active,
     font-size: 14px !important;
   }
 }
+/* ============================================================================
+   ANIMATION D'ENTREE — exclure les surcouches
+   ============================================================================
+   A COLLER A LA FIN DE public/css/bh-core.css
+
+   ── LE PROBLEME ─────────────────────────────────────────────────────────
+   La ligne 48 de bh-core.css anime tous les enfants directs du contenu :
+
+       main.main-content > *{ animation: bhPageIn .32s ... both; }
+
+   « both » veut dire que l'animation MAINTIENT son etat final apres la fin.
+   L'etat final de bhPageIn est opacity:1. Et en CSS, une animation l'emporte
+   sur une declaration ordinaire.
+
+   Consequence : tout element cache par « opacity: 0 » et place en enfant
+   direct du contenu devient VISIBLE en permanence. Sur la page Livret
+   d'accueil, le toast « Brouillon enregistre ! » s'affichait des l'ouverture,
+   avec le texte ecrit en dur dans le HTML — personne ne l'avait declenche.
+
+   Ce n'etait donc pas un bug de la page : la page etait correcte
+   (opacity:0, pointer-events:none). C'est l'animation qui la contredisait.
+
+   ── LE CORRECTIF ────────────────────────────────────────────────────────
+   Une surcouche en position fixe n'a rien a faire dans une animation
+   d'entree de page : elle n'entre pas avec la page, elle apparait quand on
+   la demande. On lui retire donc l'animation, ce qui rend leur effet aux
+   regles de la page.
+
+   Pas de !important : ces regles arrivent apres la ligne 48 dans le meme
+   fichier, a specificite egale ou superieure — elles gagnent naturellement.
+   ============================================================================ */
+
+main.main-content > .toast,
+main.main-content > [id*="oast"],
+main.main-content > .modal,
+main.main-content > .modal-overlay,
+main.main-content > .bottom-sheet,
+main.main-content > .bottom-sheet-overlay,
+main.main-content > [class*="sheet"],
+main.main-content > [class*="overlay"],
+main.main-content > dialog,
+main.main-content > .bh-no-page-in {
+  animation: none !important;
+}
+
+/* Echappatoire pour la suite : poser la classe bh-no-page-in sur tout
+   nouvel element qui ne doit pas participer a l'animation d'entree. */
+
+
+/* ============================================================================
+   A SAVOIR POUR PLUS TARD — trois animations d'entree coexistent
+   ============================================================================
+   bhPageIn est defini TROIS fois, dans trois fichiers, avec des durees et
+   des cibles differentes :
+
+     css/bh-core.css:48         main.main-content > *      .32s   both
+     js/bh-layout.js:1943       body.bh-page-ready         .28s
+     js/bh-page-transitions.js  body                       .26s   both
+
+   Les trois se cumulent sur les pages qui chargent tout : le contenu est
+   anime en tant qu'enfant, la page en tant que body, deux fois. D'ou une
+   entree legerement molle et desynchronisee.
+
+   Une seule devrait survivre — celle de bh-page-transitions.js, qui anime la
+   page entiere une fois, plutot que chaque enfant separement. La regle de
+   bh-core.css est aussi celle qui a cause le bug ci-dessus : animer « tous
+   les enfants » atteint fatalement des elements qui ne le demandaient pas.
+
+   Je ne le fais pas ici : cela change la sensation de chaque navigation dans
+   le produit, et cela se decide en le voyant.
+   ============================================================================ */
