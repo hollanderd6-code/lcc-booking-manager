@@ -1180,7 +1180,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 }
 
 .sidebar-footer{
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--bh-ligne);
   padding: 14px 16px;
 }
 /* Sidebar en colonne pleine hauteur */
@@ -1201,7 +1201,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 /* Footer toujours visible en bas */
 .sidebar-footer{
   flex-shrink: 0;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--bh-ligne);
   padding: 14px 16px;
 }
 
@@ -1372,7 +1372,7 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       align-items: center;
       justify-content: space-between;
       padding: 16px 20px;
-      background: #F5F2EC;
+      background: var(--bh-creme);
       border-bottom: 1px solid rgba(0,0,0,.08);
     }
 
@@ -2154,7 +2154,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       align-items: center;
       justify-content: space-between;
       padding: 24px;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid var(--bh-ligne);
       flex-shrink: 0;
     }
 
@@ -2170,7 +2170,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     }
 
     [data-theme="dark"] .booking-modal .modal-header h2 {
-      color: #f9fafb;
+      color: var(--bh-fond);
     }
 
     .booking-modal .modal-close {
@@ -2180,7 +2180,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       min-height: 36px !important;
       border-radius: 8px;
       border: none;
-      background: #f3f4f6;
+      background: var(--bh-cote);
       color: #6b7280;
       cursor: pointer;
       display: flex;
@@ -2192,7 +2192,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     }
 
     .booking-modal .modal-close:hover {
-      background: #e5e7eb;
+      background: var(--bh-ligne);
       color: #111827;
     }
 
@@ -2203,7 +2203,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 
     [data-theme="dark"] .booking-modal .modal-close:hover {
       background: #4b5563;
-      color: #f9fafb;
+      color: var(--bh-fond);
     }
 
     .booking-modal .modal-close i {
@@ -2250,7 +2250,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     }
 
     [data-theme="dark"] .detail-value {
-      color: #f9fafb;
+      color: var(--bh-fond);
     }
 
     /* Booking Form */
@@ -2271,7 +2271,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     }
 
     [data-theme="dark"] .booking-form .form-group label {
-      color: #e5e7eb;
+      color: var(--bh-ligne);
     }
 
     .booking-form .form-group input,
@@ -2293,7 +2293,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     [data-theme="dark"] .booking-form .form-group textarea {
       background: #374151;
       border-color: #4b5563;
-      color: #f9fafb;
+      color: var(--bh-fond);
     }
 
     .booking-form .form-group input:focus,
@@ -2328,7 +2328,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
       justify-content: flex-end;
       gap: 12px;
       padding: 20px 24px;
-      border-top: 1px solid #e5e7eb;
+      border-top: 1px solid var(--bh-ligne);
       flex-shrink: 0;
     }
 
@@ -2365,7 +2365,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     }
 
     .modal-actions .btn-ghost:hover {
-      background: #f3f4f6;
+      background: var(--bh-cote);
       color: #111827;
     }
 
@@ -2376,7 +2376,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 
     [data-theme="dark"] .modal-actions .btn-ghost:hover {
       background: #374151;
-      color: #f9fafb;
+      color: var(--bh-fond);
     }
 
     .modal-actions .btn-danger {
@@ -2652,7 +2652,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 
 .task-item-modal.checked {
   border-color: var(--bh-vert);
-  background: linear-gradient(135deg, var(--vert-050) 0%, #DCE9E3 100%);
+  background: linear-gradient(135deg, var(--vert-050) 0%, var(--vert-100) 100%);
 }
 
 .task-item-modal .task-checkbox {
@@ -3009,7 +3009,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 .calendar-cell {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid var(--bh-ligne);
 }
 
 /* --- 2. CONFIGURATION SPÉCIALE MOBILE (< 768px) --- */
@@ -3029,7 +3029,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     width: 100% !important;
     max-width: 100vw !important;
     overflow: hidden !important; /* Le scroll se fera DANS le wrapper */
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--bh-ligne);
     border-radius: 12px;
     background: #fff;
   }
@@ -3045,7 +3045,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     background: #fff !important;
     z-index: 20 !important;      
     box-shadow: 4px 0 8px rgba(0,0,0,0.05); 
-    border-right: 1px solid #e5e7eb !important;
+    border-right: 1px solid var(--bh-ligne) !important;
   }
 
   /* D. Partie Droite (Grille) : Scroll Horizontal */
@@ -3067,7 +3067,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   .days-header {
     height: 50px !important; 
     min-height: 50px !important;
-    border-bottom: 2px solid #e5e7eb !important;
+    border-bottom: 2px solid var(--bh-ligne) !important;
     box-sizing: border-box !important;
   }
   
@@ -3077,7 +3077,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     justify-content: center !important;
     padding: 0 !important;
     text-align: center;
-    background: #f9fafb !important;
+    background: var(--bh-fond) !important;
     display: flex !important;
     align-items: center !important;
   }
@@ -3096,7 +3096,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     height: 48px !important; 
     min-height: 48px !important;
     box-sizing: border-box !important;
-    border-bottom: 1px solid #f3f4f6 !important;
+    border-bottom: 1px solid var(--bh-cote) !important;
   }
 
   /* Cellule Logement */
@@ -4484,7 +4484,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 .activity-section {
   margin-bottom: 24px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--bh-ligne);
 }
 
 .activity-section:last-child {
@@ -4521,14 +4521,14 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
   align-items: flex-start;
   gap: 12px;
   padding: 12px;
-  background: #f9fafb;
+  background: var(--bh-fond);
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--bh-ligne);
   transition: all 0.2s;
 }
 
 .activity-item:hover {
-  background: #f3f4f6;
+  background: var(--bh-cote);
   border-color: var(--bh-vert);
 }
 
@@ -4559,7 +4559,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 }
 
 .activity-icon.new-booking {
-  background: #DCE9E3;
+  background: var(--vert-100);
   color: var(--bh-vert-fonce);
 }
 
@@ -4651,7 +4651,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
       height: 100%;
       height: 100dvh;
       padding-top: env(safe-area-inset-top);
-      background: var(--bg-primary, #F5F2EC);
+      background: var(--bg-primary, var(--bh-creme));
       box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
       z-index: 9990;
       display: flex;
@@ -4779,7 +4779,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
     .overview-timeline {
       margin-top: 4px;
       background: #020617;
-      color: #e5e7eb;
+      color: var(--bh-ligne);
       border-radius: 18px;
       padding: 10px 14px;
       font-size: 13px;
@@ -13544,7 +13544,7 @@ if (window.Capacitor) {
 .view-selector { display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }
 
 /* Force period-navigation to cream color */
-.period-navigation { background: #F5F2EC !important; border-bottom: 1px solid rgba(0,0,0,.08) !important; }
+.period-navigation { background: var(--bh-creme) !important; border-bottom: 1px solid rgba(0,0,0,.08) !important; }
 </style>
 
 <script id="final-js-overrides">
@@ -14606,7 +14606,7 @@ function bhConfirm(message) {
 <style>
 /* ══ BH SHEETS — habillage commun des modales KPI (bottom sheets) ══ */
 .bh-sheet-panel{
-  background:#FAF7F2 !important;
+  background:var(--bh-cote) !important;
   border-radius:22px 22px 0 0 !important;
   box-shadow:0 -18px 60px rgba(32,34,31,.28) !important;
   animation:bhSheetSlide .34s cubic-bezier(.22,1.1,.36,1);
@@ -14692,7 +14692,7 @@ function bhConfirm(message) {
 }
 #invoiceModal.active { display: flex; }
 #invoiceModal .inv-content {
-  background: #F5F2EC; border-radius: 20px; width: 100%; max-width: 960px;
+  background: var(--bh-creme); border-radius: 20px; width: 100%; max-width: 960px;
   max-height: 92vh; display: flex; flex-direction: column;
   box-shadow: 0 24px 64px rgba(0,0,0,.2); overflow: hidden;
 }
@@ -14707,7 +14707,7 @@ function bhConfirm(message) {
   background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;
   font-size:14px; color:#6b7280;
 }
-#invoiceModal .inv-close:hover { background:#f5f2ec; }
+#invoiceModal .inv-close:hover { background:var(--bh-creme); }
 #invoiceModal .inv-body {
   display: grid; grid-template-columns: 380px 1fr; flex: 1; overflow: hidden;
 }
@@ -14716,7 +14716,7 @@ function bhConfirm(message) {
   background: white;
 }
 #invoiceModal .inv-preview-panel {
-  padding: 20px; overflow-y: auto; background: #F5F2EC;
+  padding: 20px; overflow-y: auto; background: var(--bh-creme);
   display: flex; flex-direction: column; gap: 12px;
 }
 #invoiceModal .inv-section-title {
@@ -14731,7 +14731,7 @@ function bhConfirm(message) {
 #invoiceModal .inv-row select {
   width: 100%; padding: 8px 11px; border: 1px solid rgba(0,0,0,.12);
   border-radius: 8px; font-size: 13px; font-family: 'DM Sans',sans-serif;
-  background: #fafaf8; outline: none; box-sizing: border-box;
+  background: var(--bh-fond); outline: none; box-sizing: border-box;
 }
 #invoiceModal .inv-row input:focus,
 #invoiceModal .inv-row select:focus { border-color: var(--bh-vert); background: white; }
@@ -14750,7 +14750,7 @@ function bhConfirm(message) {
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
   color: #9CA3AF; margin: 16px 0 6px; border-bottom: 1px solid #f0ede8; padding-bottom: 4px;
 }
-#invoiceModal .inv-line { display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f5f2ec;font-size:13px; }
+#invoiceModal .inv-line { display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bh-creme);font-size:13px; }
 #invoiceModal .inv-line.inv-sub { font-weight:600; margin-top:8px; border-bottom:2px solid var(--bh-vert); padding-bottom:6px; }
 #invoiceModal .inv-line.inv-tot { font-weight:800;font-size:15px;color:var(--bh-vert);border:none;margin-top:4px; }
 #invoiceModal .inv-stamp {
@@ -14775,10 +14775,10 @@ function bhConfirm(message) {
   display:inline-flex;align-items:center;gap:7px;
 }
 #invoiceModal .inv-btn-primary { background:var(--bh-vert);color:white; }
-#invoiceModal .inv-btn-primary:hover { background:#15624B; }
+#invoiceModal .inv-btn-primary:hover { background:var(--vert-600); }
 #invoiceModal .inv-btn-primary:disabled { opacity:.5;cursor:not-allowed; }
 #invoiceModal .inv-btn-ghost { background:white;color:#374151;border:1px solid rgba(0,0,0,.12); }
-#invoiceModal .inv-btn-ghost:hover { background:#f5f2ec; }
+#invoiceModal .inv-btn-ghost:hover { background:var(--bh-creme); }
 @media (max-width: 768px) {
   #invoiceModal .inv-body { grid-template-columns: 1fr; }
   #invoiceModal .inv-preview-panel { display: none; }
@@ -16642,7 +16642,7 @@ function notifSwitchTab(tab) {
 #activePropertiesModal > div, #cleaningTodayModal > div, #checklistsKpiModal > div,
 #caKpiModal > div, #occupancyDetailsModal > div, #depositsModal > div,
 #newReservationModal > div, #blockModal > div, #reservationDetailsModal > div {
-  background: #FAF7F2 !important;
+  background: var(--bh-cote) !important;
   box-shadow: 0 -18px 60px rgba(32,34,31,.25), inset 0 1px 0 rgba(255,255,255,.9) !important;
   border: 1px solid rgba(200,184,154,.55) !important;
   border-bottom: none !important;
@@ -16711,7 +16711,7 @@ function notifSwitchTab(tab) {
   -webkit-backdrop-filter: blur(7px);
 }
 #bhConfirmModal > div, #cellModal > div {
-  background: #FAF7F2 !important;
+  background: var(--bh-cote) !important;
   border: 1px solid rgba(200,184,154,.55) !important;
   border-radius: 22px !important;
   box-shadow: 0 24px 70px rgba(32,34,31,.28) !important;
@@ -16721,7 +16721,7 @@ function notifSwitchTab(tab) {
 /* ── Famille C : modales à classes (booking, checklist, facture, résa) ── */
 .booking-modal .modal-overlay { background: rgba(32,34,31,.5) !important; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
 .booking-modal .modal-content, #reservationModal .modal-content {
-  background: #FAF7F2 !important;
+  background: var(--bh-cote) !important;
   border: 1px solid rgba(200,184,154,.55) !important;
   border-radius: 24px !important;
   box-shadow: 0 24px 70px rgba(32,34,31,.3) !important;
@@ -16733,8 +16733,8 @@ function notifSwitchTab(tab) {
   font-weight: 600 !important;
   letter-spacing: .01em;
 }
-.checklist-modal { background: #FAF7F2 !important; border: 1px solid rgba(200,184,154,.55) !important; border-radius: 24px !important; }
-#invoiceModal .inv-content { background: #FAF7F2 !important; border: 1px solid rgba(200,184,154,.55) !important; border-radius: 24px !important; }
+.checklist-modal { background: var(--bh-cote) !important; border: 1px solid rgba(200,184,154,.55) !important; border-radius: 24px !important; }
+#invoiceModal .inv-content { background: var(--bh-cote) !important; border: 1px solid rgba(200,184,154,.55) !important; border-radius: 24px !important; }
 
 /* ── Détails communs : séparateurs plus doux dans les listes KPI ── */
 #todayMovesModalContent > div, #cleaning48hModalContent > div {

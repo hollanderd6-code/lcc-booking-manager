@@ -39,7 +39,7 @@
 
 /* Header épuré */
 .chat-modal-header {
-  background: linear-gradient(135deg, #F9FAFB, #FFFFFF) !important;
+  background: linear-gradient(135deg, var(--bh-fond), #FFFFFF) !important;
   border-bottom: 1px solid var(--chat-border) !important;
   padding: 16px 20px !important;
   display: flex !important;
@@ -269,7 +269,7 @@
   font-family: 'Inter', sans-serif !important;
   resize: none !important;
   transition: all 0.2s ease !important;
-  background: #F9FAFB !important;
+  background: var(--bh-fond) !important;
 }
 
 .chat-input:focus {
@@ -294,7 +294,7 @@
   height: 38px !important;
   border-radius: 10px !important;
   border: none !important;
-  background: #F3F4F6 !important;
+  background: var(--bh-cote) !important;
   color: #6B7280 !important;
   cursor: pointer !important;
   display: flex !important;
@@ -306,7 +306,7 @@
 }
 
 .chat-action-btn:hover {
-  background: #E5E7EB !important;
+  background: var(--bh-ligne) !important;
   color: #374151 !important;
   transform: scale(1.05) !important;
 }
@@ -386,7 +386,7 @@
   height: 24px !important;
   border-radius: 6px !important;
   border: none !important;
-  background: #F3F4F6 !important;
+  background: var(--bh-cote) !important;
   color: #6B7280 !important;
   cursor: pointer !important;
   display: flex !important;
@@ -396,7 +396,7 @@
 }
 
 .emoji-picker-close:hover {
-  background: #E5E7EB !important;
+  background: var(--bh-ligne) !important;
 }
 
 .emoji-picker-grid {
@@ -423,7 +423,7 @@
 }
 
 .emoji-btn:hover {
-  background: #F3F4F6 !important;
+  background: var(--bh-cote) !important;
   transform: scale(1.2) !important;
 }
 
@@ -472,12 +472,12 @@
 }
 
 .photo-cancel-btn {
-  background: #F3F4F6 !important;
+  background: var(--bh-cote) !important;
   color: #6B7280 !important;
 }
 
 .photo-cancel-btn:hover {
-  background: #E5E7EB !important;
+  background: var(--bh-ligne) !important;
 }
 
 .photo-send-btn {
@@ -540,14 +540,14 @@
 
 [data-theme="dark"] .chat-bubble.guest {
   background: #374151 !important;
-  color: #F9FAFB !important;
+  color: var(--bh-fond) !important;
   border-color: #4B5563 !important;
 }
 
 [data-theme="dark"] .chat-input {
   background: #374151 !important;
   border-color: #4B5563 !important;
-  color: #F9FAFB !important;
+  color: var(--bh-fond) !important;
 }
 
 [data-theme="dark"] .emoji-picker {

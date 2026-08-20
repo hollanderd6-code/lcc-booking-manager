@@ -114,14 +114,14 @@ html[data-theme-v3="1"],
 html[data-theme-v3="1"] body {
   overflow: hidden !important; height: 100% !important;
   font-family: 'DM Sans', sans-serif !important;
-  background: #F5F2EC !important;
+  background: var(--bh-creme) !important;
 }
 html[data-theme-v3="1"] .app-container {
   height: calc(100vh - 40px) !important; overflow: hidden !important;
 }
 html[data-theme-v3="1"] main.main-content {
   overflow-y: auto !important; height: 100% !important;
-  background: #F5F2EC !important;
+  background: var(--bh-creme) !important;
   padding-left: 0 !important; padding-right: 0 !important;
 }
 @media (min-width: 1367px) {
@@ -152,7 +152,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap; position: fixed; top: 52px; right: 24px; z-index: 200;
 }
-.contrat-back-btn:hover { background: #15624B; }
+.contrat-back-btn:hover { background: var(--vert-600); }
 
 /* Container — wrappé dans .page-content comme deposits */
 .page-content {
@@ -208,7 +208,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 }
 .contrat-card-header {
   padding: 20px 24px; border-bottom: 1px solid rgba(32,34,31,.06);
-  background: #FAFAF8; display: flex; align-items: center; gap: 12px;
+  background: var(--bh-fond); display: flex; align-items: center; gap: 12px;
 }
 .contrat-card-icon {
   width: 40px; height: 40px; border-radius: 10px;
@@ -230,7 +230,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .form-hint { font-size: 12px; color: #9CA3AF; font-weight: 400; display: block; margin-top: 2px; }
 .form-input, .form-textarea, .form-select {
   width: 100%; padding: 10px 14px;
-  background: #FAFAF8; border: 1.5px solid rgba(32,34,31,.12);
+  background: var(--bh-fond); border: 1.5px solid rgba(32,34,31,.12);
   border-radius: 10px; font-size: 14px; font-family: 'DM Sans', sans-serif;
   color: var(--bh-encre); transition: border-color .15s; outline: none;
   box-sizing: border-box;
@@ -270,7 +270,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 /* Signature */
 .signature-zone {
   border: 2px dashed rgba(32,34,31,.15); border-radius: 14px;
-  background: #FAFAF8; overflow: hidden; position: relative;
+  background: var(--bh-fond); overflow: hidden; position: relative;
 }
 .signature-zone canvas {
   display: block; width: 100%; height: 180px; cursor: crosshair;
@@ -361,7 +361,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
   display: inline-flex; align-items: center; gap: 8px; transition: all .15s;
 }
-.btn-next:hover { background: #15624B; }
+.btn-next:hover { background: var(--vert-600); }
 .btn-next:disabled { background: #9CA3AF; cursor: not-allowed; }
 
 /* Actions finales */
@@ -373,7 +373,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   transition: all .15s; min-width: 180px;
 }
-.btn-download:hover { background: #15624B; }
+.btn-download:hover { background: var(--vert-600); }
 .btn-email {
   flex: 1; height: 48px; padding: 0 24px; border-radius: 12px;
   background: white; color: #0D1117;
@@ -494,7 +494,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700;
   cursor: pointer; transition: background .15s;
 }
-.wiz-btn-next:hover { background: #15624B; }
+.wiz-btn-next:hover { background: var(--vert-600); }
 .wiz-btn-back {
   display: inline-flex; align-items: center; gap: 8px;
   height: 44px; padding: 0 20px; border-radius: 12px;
@@ -515,7 +515,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 #mandatView .signature-area {
   border: 2px dashed rgba(32,34,31,.15);
   border-radius: 12px;
-  background: #FAFAF8;
+  background: var(--bh-fond);
   overflow: hidden;
   min-height: 160px;
 }
@@ -3369,7 +3369,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ── Cartes d'étape : titres serif, header crème ── */
 .contrat-card { border-radius: 20px; border-color: rgba(200,184,154,.45) !important; box-shadow: 0 1px 3px rgba(32,34,31,.04); }
-.contrat-card-header { background: #FBF8F3 !important; border-bottom-color: rgba(200,184,154,.4) !important; }
+.contrat-card-header { background: var(--bh-cote) !important; border-bottom-color: rgba(200,184,154,.4) !important; }
 .contrat-card-title {
   font-family: 'Instrument Serif', serif !important;
   font-size: 18.5px !important;
@@ -3380,7 +3380,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ── Champs : bordures beiges, fond crème ── */
 .form-input, .form-textarea, .form-select {
   border-color: rgba(200,184,154,.55) !important;
-  background: #FBF8F3;
+  background: var(--bh-cote);
 }
 .form-input:focus, .form-textarea:focus, .form-select:focus { background: #fff; }
 
@@ -3390,7 +3390,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ── Règles & signature ── */
 .regles-list li { border-bottom-color: rgba(200,184,154,.3); }
-.signature-zone { border-color: rgba(200,184,154,.6); background: #FBF8F3; }
+.signature-zone { border-color: rgba(200,184,154,.6); background: var(--bh-cote); }
 .signature-actions { border-top-color: rgba(200,184,154,.35); }
 .btn-add-regle { border-radius: 999px; }
 

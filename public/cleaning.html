@@ -439,7 +439,7 @@
     }
 
     .status-validated {
-      background: #DCE9E3;
+      background: var(--vert-100);
       color: var(--bh-vert-fonce);
     }
 
@@ -679,7 +679,7 @@
     }
 
     .task-check-icon.checked {
-      background: #DCE9E3;
+      background: var(--vert-100);
       color: var(--bh-vert-fonce);
     }
 
@@ -909,7 +909,7 @@
       line-height: 1.5 !important;
       color: var(--text-primary) !important;
       background-color: #ffffff !important;
-      border: 1.5px solid #e5e7eb !important;
+      border: 1.5px solid var(--bh-ligne) !important;
       border-radius: 8px !important;
       transition: all 0.15s ease !important;
       font-family: 'Inter', sans-serif !important;
@@ -986,7 +986,7 @@
     input:disabled,
     textarea:disabled,
     select:disabled {
-      background-color: #f3f4f6 !important;
+      background-color: var(--bh-cote) !important;
       color: #9ca3af !important;
       cursor: not-allowed !important;
       opacity: 0.6 !important;
@@ -1280,7 +1280,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap; position: fixed; top: 52px; right: 24px; z-index: 200;
 }
-.cleaning-back-btn:hover { background: #15624B; }
+.cleaning-back-btn:hover { background: var(--vert-600); }
 
 /* Desktop page header */
 @media (min-width: 1367px) {
@@ -1426,7 +1426,7 @@ html[data-theme-v3="1"] .btn-primary {
   border-radius: 10px !important; font-family: 'DM Sans', sans-serif !important;
   font-weight: 600 !important;
 }
-html[data-theme-v3="1"] .btn-primary:hover { background: #15624B !important; }
+html[data-theme-v3="1"] .btn-primary:hover { background: var(--vert-600) !important; }
 
 /* Cleaning cards modernization */
 html[data-theme-v3="1"] .cleaning-card {

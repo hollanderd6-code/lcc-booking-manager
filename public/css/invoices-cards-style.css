@@ -37,7 +37,7 @@
 
 .invoice-card {
   background: white;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--bh-ligne);
   border-left: 3px solid var(--bh-vert);
   border-radius: 12px;
   padding: 14px;
@@ -57,7 +57,7 @@
 .invoice-card-header {
   margin-bottom: 10px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--bh-ligne);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -149,7 +149,7 @@
 
 .invoice-card-footer {
   padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--bh-ligne);
   position: relative;
 }
 
@@ -159,8 +159,8 @@
   font-size: 13px;
   font-weight: 600;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
+  border: 1px solid var(--bh-ligne);
+  background: var(--bh-fond);
   color: #111827;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -171,7 +171,7 @@
 }
 
 .invoice-card-actions-btn:hover {
-  background: #f3f4f6;
+  background: var(--bh-cote);
   border-color: #d1d5db;
 }
 
@@ -187,7 +187,7 @@
   left: 0;
   right: 0;
   background: white;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--bh-ligne);
   border-radius: 8px;
   padding: 8px;
   margin-bottom: 4px;
@@ -229,7 +229,7 @@
 }
 
 .invoice-actions-menu button:hover {
-  background: #f3f4f6;
+  background: var(--bh-cote);
 }
 
 .invoice-actions-menu button:last-child {

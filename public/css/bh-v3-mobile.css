@@ -271,7 +271,7 @@
     flex-shrink: 0 !important;
     padding: 14px 16px !important;
     background: var(--cream-warm, #F5F2EC) !important;
-    border-bottom: 1px solid var(--border-v3, #e5e7eb) !important;
+    border-bottom: 1px solid var(--border-v3, var(--bh-ligne)) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
@@ -298,7 +298,7 @@
     padding: 12px 16px !important;
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 70px) !important; /* 70px = bottom tab bar */
     margin: 0 !important;
-    border-top: 1px solid var(--border-v3, #e5e7eb) !important;
+    border-top: 1px solid var(--border-v3, var(--bh-ligne)) !important;
     background: var(--cream-warm, #F5F2EC) !important;
     display: flex !important;
     gap: 8px !important;

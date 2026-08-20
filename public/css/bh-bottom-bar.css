@@ -344,13 +344,13 @@
 /* ── Menu "Plus" — fond beige cohérent ── */
 @media (max-width: 1366px) {
   .bottom-sheet-content {
-    background: #F5F0E8 !important;
-    background-color: #F5F0E8 !important;
+    background: var(--bh-creme) !important;
+    background-color: var(--bh-creme) !important;
     border-top: 1px solid rgba(200, 184, 154, 0.4) !important;
   }
   #moreMenuSheet {
-    background: #F5F0E8 !important;
-    background-color: #F5F0E8 !important;
+    background: var(--bh-creme) !important;
+    background-color: var(--bh-creme) !important;
   }
 }
 

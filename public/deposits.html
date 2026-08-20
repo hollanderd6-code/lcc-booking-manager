@@ -602,7 +602,7 @@
     }
 
     [data-theme="light"] .main-header {
-      background: linear-gradient(135deg, #f9fafb, #eff6ff);
+      background: linear-gradient(135deg, var(--bh-fond), #eff6ff);
       border-color: rgba(148, 163, 184, 0.4);
       box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
     }
@@ -920,7 +920,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap; position: fixed; top: 52px; right: 24px; z-index: 200;
 }
-.deposits-back-btn:hover { background: #15624B; }
+.deposits-back-btn:hover { background: var(--vert-600); }
 
 /* Desktop page header */
 @media (min-width: 1367px) {
@@ -1057,7 +1057,7 @@ html[data-theme-v3="1"] .btn-card.btn-primary {
   font-weight: 600 !important;
   box-shadow: none !important;
 }
-html[data-theme-v3="1"] .btn-primary:hover { background: #15624B !important; }
+html[data-theme-v3="1"] .btn-primary:hover { background: var(--vert-600) !important; }
 html[data-theme-v3="1"] .btn-secondary,
 html[data-theme-v3="1"] .btn-ghost,
 html[data-theme-v3="1"] .btn-card.btn-secondary {
@@ -1507,7 +1507,7 @@ Actualiser
   font-size: 13px;
   flex-shrink: 0;
 }
-.stripe-target-card .card-icon.green { background: #DCE9E3; color: var(--bh-vert); }
+.stripe-target-card .card-icon.green { background: var(--vert-100); color: var(--bh-vert); }
 .stripe-target-card .card-icon.purple { background: #ede9fe; color: #6772E5; }
 .stripe-target-card .card-label { flex: 1; }
 .stripe-target-card .card-label span { display: block; font-size: 11px; color: var(--text-secondary, #888); font-weight: 400; margin-top: 1px; }
@@ -4209,7 +4209,7 @@ html[data-theme-v3="1"] .modal {
   -webkit-backdrop-filter: blur(7px);
 }
 html[data-theme-v3="1"] .modal-content {
-  background: #FAF7F2 !important;
+  background: var(--bh-cote) !important;
   border-radius: 24px !important;
   border-color: rgba(200,184,154,.55) !important;
   box-shadow: 0 24px 70px rgba(32,34,31,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;

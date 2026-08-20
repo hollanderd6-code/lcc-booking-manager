@@ -226,7 +226,7 @@
     }
 
     .btn-edit {
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       color: var(--primary-color, var(--bh-vert-fonce));
     }
 
@@ -236,7 +236,7 @@
     }
 
     .btn-delete {
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       color: #e11d48;
     }
 
@@ -254,7 +254,7 @@
       align-items: center;
       gap: 10px;
       padding: 8px 10px;
-      background: var(--bg-secondary, #f9fafb);
+      background: var(--bg-secondary, var(--bh-fond));
       border-radius: 12px;
       margin-bottom: 6px;
       font-size: 12px;
@@ -353,7 +353,7 @@
 
     .modal-header {
       padding: 14px 18px;
-      border-bottom: 1px solid var(--border-color, #e5e7eb);
+      border-bottom: 1px solid var(--border-color, var(--bh-ligne));
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -415,12 +415,12 @@
     .form-group input,
     .form-group textarea {
       padding: 8px 10px;
-      border: 1px solid var(--border-color, #e5e7eb);
+      border: 1px solid var(--border-color, var(--bh-ligne));
       border-radius: 10px;
       font-size: 13px;
       font-family: inherit;
       transition: var(--transition, all .15s ease);
-      background: var(--bg-secondary, #f9fafb);
+      background: var(--bg-secondary, var(--bh-fond));
     }
 
     .form-group input:focus,
@@ -440,7 +440,7 @@
     .color-picker {
       width: 52px;
       height: 32px;
-      border: 1px solid var(--border-color, #e5e7eb);
+      border: 1px solid var(--border-color, var(--bh-ligne));
       border-radius: 10px;
       cursor: pointer;
       padding: 0;
@@ -449,7 +449,7 @@
     .color-preview {
       flex: 1;
       padding: 8px 10px;
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       border-radius: 10px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: 12px;
@@ -492,7 +492,7 @@
     }
 
     .btn-add-url {
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       color: var(--primary-color, var(--bh-vert-fonce));
       border: none;
       padding: 7px 10px;
@@ -520,7 +520,7 @@
     }
 
     .btn-cancel {
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       color: var(--text-primary);
       border: none;
       padding: 8px 14px;
@@ -532,7 +532,7 @@
     }
 
     .btn-cancel:hover {
-      background: var(--border-color, #e5e7eb);
+      background: var(--border-color, var(--bh-ligne));
     }
 
     .btn-save {
@@ -575,7 +575,7 @@
     }
 
     .test-result.success {
-      background: #DCE9E3;
+      background: var(--vert-100);
       color: var(--bh-vert-fonce);
       border: 1px solid var(--vert-600);
     }

@@ -289,7 +289,7 @@ html[data-theme-v3="1"] header.main-header .page-kicker {
   right: 24px;
   z-index: 200;
 }
-.settings-back-btn:hover { background: #15624B; }
+.settings-back-btn:hover { background: var(--vert-600); }
 .settings-back-btn i { font-size: 13px; }
 /* Sidebar z-index fix */
 html[data-theme-v3="1"] .sidebar {
@@ -392,7 +392,7 @@ html[data-theme-v3="1"] .sidebar {
       font-size: 11px;
       padding: 4px 8px;
       border-radius: 999px;
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       color: var(--text-secondary);
       white-space: nowrap;
     }
@@ -422,7 +422,7 @@ html[data-theme-v3="1"] .sidebar {
     }
 
     .btn-edit {
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       color: var(--primary-color, var(--bh-vert-fonce));
     }
 
@@ -432,7 +432,7 @@ html[data-theme-v3="1"] .sidebar {
     }
 
     .btn-delete {
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       color: #e11d48;
     }
 
@@ -446,7 +446,7 @@ html[data-theme-v3="1"] .sidebar {
       height: 100px;
       border-radius: 14px;
       overflow: hidden;
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -577,12 +577,12 @@ html[data-theme-v3="1"] .sidebar {
     .form-group input,
     .form-group textarea {
       padding: 8px 10px;
-      border: 1px solid var(--border-color, #e5e7eb);
+      border: 1px solid var(--border-color, var(--bh-ligne));
       border-radius: 10px;
       font-size: 13px;
       font-family: inherit;
       transition: var(--transition, all .15s ease);
-      background: var(--bg-secondary, #f9fafb);
+      background: var(--bg-secondary, var(--bh-fond));
     }
 
     .form-group input:focus,
@@ -602,7 +602,7 @@ html[data-theme-v3="1"] .sidebar {
     .color-picker {
       width: 52px;
       height: 32px;
-      border: 1px solid var(--border-color, #e5e7eb);
+      border: 1px solid var(--border-color, var(--bh-ligne));
       border-radius: 10px;
       cursor: pointer;
       padding: 0;
@@ -611,7 +611,7 @@ html[data-theme-v3="1"] .sidebar {
     .color-preview {
       flex: 1;
       padding: 8px 10px;
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       border-radius: 10px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: 12px;
@@ -629,7 +629,7 @@ html[data-theme-v3="1"] .sidebar {
       height: 72px;
       border-radius: 14px;
       overflow: hidden;
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -658,9 +658,9 @@ html[data-theme-v3="1"] .sidebar {
       display: flex;
       align-items: center;
       border-radius: 10px;
-      border: 1px solid var(--border-color, #e5e7eb);
+      border: 1px solid var(--border-color, var(--bh-ligne));
       overflow: hidden;
-      background: var(--bg-secondary, #f9fafb);
+      background: var(--bg-secondary, var(--bh-fond));
     }
 
     .input-with-suffix input {
@@ -674,8 +674,8 @@ html[data-theme-v3="1"] .sidebar {
       padding: 8px 10px;
       font-size: 12px;
       color: var(--text-secondary);
-      border-left: 1px solid var(--border-color, #e5e7eb);
-      background: #f3f4f6;
+      border-left: 1px solid var(--border-color, var(--bh-ligne));
+      background: var(--bh-cote);
     }
 
     .url-list {
@@ -716,7 +716,7 @@ html[data-theme-v3="1"] .sidebar {
     }
 
     .btn-add-url {
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       color: var(--primary-color, var(--bh-vert-fonce));
       border: none;
       padding: 7px 10px;
@@ -742,7 +742,7 @@ html[data-theme-v3="1"] .sidebar {
       justify-content: flex-end;
       margin-top: 10px;
       padding-top: 16px;
-      border-top: 1px solid var(--border-color, #e5e7eb);
+      border-top: 1px solid var(--border-color, var(--bh-ligne));
       background: var(--bg-primary, #ffffff);
       position: sticky;
       bottom: 0;
@@ -755,7 +755,7 @@ html[data-theme-v3="1"] .sidebar {
     }
 
     .btn-cancel {
-      background: var(--bg-secondary, #f3f4f6);
+      background: var(--bg-secondary, var(--bh-cote));
       color: var(--text-primary);
       border: none;
       padding: 8px 14px;
@@ -767,7 +767,7 @@ html[data-theme-v3="1"] .sidebar {
     }
 
     .btn-cancel:hover {
-      background: var(--border-color, #e5e7eb);
+      background: var(--border-color, var(--bh-ligne));
     }
 
     .btn-save {
@@ -786,7 +786,7 @@ html[data-theme-v3="1"] .sidebar {
     }
 
     .btn-save:hover {
-      background: #15624B;
+      background: var(--vert-600);
     }
 
     .empty-state {
@@ -1180,7 +1180,7 @@ html[data-theme-v3="1"] .sidebar {
     .toggle-slider { display: none; } /* masqué, on utilise le CSS natif ci-dessus */
 
   /* ── AVIS OTA ── */
-  .review-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px; transition:box-shadow .15s; }
+  .review-card { background:#fff; border:1px solid var(--bh-ligne); border-radius:12px; padding:14px; transition:box-shadow .15s; }
   .review-card:hover { box-shadow:0 2px 12px rgba(0,0,0,.06); }
   .review-card.unreplied { border-left:3px solid #f59e0b; }
   .review-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:8px; }
@@ -1195,23 +1195,23 @@ html[data-theme-v3="1"] .sidebar {
   .platform-expedia { background:#fff8f0; color:#FF8000; border:1px solid #FFD9B0; }
   .review-stars { display:flex; align-items:center; gap:2px; margin-bottom:6px; }
   .review-stars i { font-size:11px; color:#f59e0b; }
-  .review-stars .star-empty { color:#e5e7eb; }
+  .review-stars .star-empty { color:var(--bh-ligne); }
   .review-text { font-size:12.5px; color:#374151; line-height:1.55; margin-bottom:10px; }
   .review-reply-existing { background:var(--vert-050); border:1px solid #bbf7d0; border-radius:8px; padding:10px 12px; font-size:12px; color:var(--bh-vert-fonce); margin-bottom:8px; display:flex; gap:8px; align-items:flex-start; }
   .review-reply-form { display:none; flex-direction:column; gap:8px; margin-top:8px; }
   .review-reply-form.open { display:flex; }
-  .review-reply-textarea { width:100%; border:1px solid #e5e7eb; border-radius:8px; padding:10px 12px; font-size:12.5px; font-family:'DM Sans',sans-serif; resize:vertical; min-height:80px; color:#111827; background:#fafafa; box-sizing:border-box; transition:border-color .15s; }
+  .review-reply-textarea { width:100%; border:1px solid var(--bh-ligne); border-radius:8px; padding:10px 12px; font-size:12.5px; font-family:'DM Sans',sans-serif; resize:vertical; min-height:80px; color:#111827; background:#fafafa; box-sizing:border-box; transition:border-color .15s; }
   .review-reply-textarea:focus { outline:none; border-color:var(--bh-vert); background:#fff; }
   .review-actions { display:flex; align-items:center; gap:8px; }
-  .btn-reply-toggle { font-size:12px; padding:5px 12px; border-radius:8px; border:1px solid #e5e7eb; background:white; color:#374151; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:5px; transition:all .15s; }
+  .btn-reply-toggle { font-size:12px; padding:5px 12px; border-radius:8px; border:1px solid var(--bh-ligne); background:white; color:#374151; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:5px; transition:all .15s; }
   .btn-reply-toggle:hover { border-color:var(--bh-vert); color:var(--bh-vert); }
   .btn-reply-send { font-size:12px; padding:5px 14px; border-radius:8px; border:none; background:var(--bh-vert); color:white; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:5px; transition:background .15s; }
   .btn-reply-send:hover { background:var(--bh-vert-fonce); }
   .btn-reply-send:disabled { opacity:.6; cursor:not-allowed; }
-  .btn-reply-cancel { font-size:12px; padding:5px 10px; border-radius:8px; border:1px solid #e5e7eb; background:white; color:#9ca3af; cursor:pointer; }
+  .btn-reply-cancel { font-size:12px; padding:5px 10px; border-radius:8px; border:1px solid var(--bh-ligne); background:white; color:#9ca3af; cursor:pointer; }
   .score-bar-wrap { display:flex; align-items:center; gap:8px; }
   .score-bar-label { font-size:11px; color:#6b7280; width:90px; flex-shrink:0; }
-  .score-bar-track { flex:1; height:4px; background:#e5e7eb; border-radius:2px; overflow:hidden; }
+  .score-bar-track { flex:1; height:4px; background:var(--bh-ligne); border-radius:2px; overflow:hidden; }
   .score-bar-fill { height:100%; background:linear-gradient(90deg,var(--bh-vert),var(--vert-600)); border-radius:2px; transition:width .4s ease; }
   .score-bar-value { font-size:11px; font-weight:600; color:#374151; width:24px; text-align:right; }
   .hidden-badge { font-size:10px; background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:2px 7px; border-radius:999px; font-weight:600; }
@@ -2010,7 +2010,7 @@ html[data-theme-v3="1"] .sidebar {
 .property-actions .btn-jade {
   background: var(--bh-vert); color: white; border: none;
 }
-.property-actions .btn-jade:hover { background: #15624B; }
+.property-actions .btn-jade:hover { background: var(--vert-600); }
 
 /* Section header */
 .properties-section-header {
@@ -2034,7 +2034,7 @@ html[data-theme-v3="1"] .sidebar {
   border-radius: 12px; font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
 }
-.btn-add-property:hover { background: #15624B; }
+.btn-add-property:hover { background: var(--vert-600); }
 
 /* Dashed "Ajouter un logement" card */
 .property-card-add {
@@ -3450,7 +3450,7 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
 .ical-platform-chip {
   display: flex; align-items: center; gap: 6px;
   padding: 6px 12px; border-radius: 20px;
-  border: 1.5px solid #e5e7eb; background: white;
+  border: 1.5px solid var(--bh-ligne); background: white;
   font-size: 12px; font-weight: 600; cursor: pointer;
   transition: all .15s; font-family: 'DM Sans', sans-serif;
   color: #374151;
@@ -3463,7 +3463,7 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
 .ical-url-row {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 14px; background: white;
-  border: 1px solid #e5e7eb; border-radius: 10px;
+  border: 1px solid var(--bh-ligne); border-radius: 10px;
 }
 .ical-url-row .ical-plat-badge {
   display: flex; align-items: center; gap: 6px;
@@ -3736,7 +3736,7 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
 
 /* ── Conteneur ── */
 #editPropertyModal .modal-content {
-  background: #FAFAF8 !important;
+  background: var(--bh-fond) !important;
   border-radius: 20px !important;
   max-width: 640px !important;
   box-shadow: 0 32px 80px rgba(10,14,23,.28), 0 0 0 1px rgba(255,255,255,.6) inset !important;
@@ -3788,13 +3788,13 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
 /* ── Body ── */
 #editPropertyModal .modal-body {
   padding: 20px 24px 0 !important;
-  background: #FAFAF8 !important;
+  background: var(--bh-fond) !important;
 }
 #editPropertyModal .modal-form {
-  background: #FAFAF8 !important;
+  background: var(--bh-fond) !important;
 }
 #editPropertyModal .modal-content {
-  background: #FAFAF8 !important;
+  background: var(--bh-fond) !important;
   border-radius: 20px !important;
   max-width: 640px !important;
   box-shadow: 0 32px 80px rgba(10,14,23,.28), 0 0 0 1px rgba(255,255,255,.6) inset !important;
@@ -3860,7 +3860,7 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
 #editPropertyModal select.form-input,
 #editPropertyModal input.form-input {
   background: #FFFFFF !important;
-  border: 1px solid #E5E7EB !important;
+  border: 1px solid var(--bh-ligne) !important;
   border-radius: 10px !important;
   padding: 10px 12px !important;
   font-size: 13px !important;
@@ -3898,9 +3898,9 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
   margin: 0 -0px !important;
 }
 #editPropertyModal .btn-cancel {
-  background: #F3F4F6 !important;
+  background: var(--bh-cote) !important;
   color: #374151 !important;
-  border: 1px solid #E5E7EB !important;
+  border: 1px solid var(--bh-ligne) !important;
   border-radius: 10px !important;
   padding: 9px 18px !important;
   font-size: 13px !important;
@@ -3972,12 +3972,12 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
 }
 #editPropertyModal .ical-url-row {
   background: #FFFFFF !important;
-  border: 1px solid #E5E7EB !important;
+  border: 1px solid var(--bh-ligne) !important;
   border-radius: 10px !important;
 }
 #editPropertyModal #icalAddBlock {
   background: #FAFAFA !important;
-  border: 1.5px dashed #E5E7EB !important;
+  border: 1.5px dashed var(--bh-ligne) !important;
   border-radius: 12px !important;
 }
 

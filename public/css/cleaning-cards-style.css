@@ -37,7 +37,7 @@
 
 .cleaning-card {
   background: var(--bg-primary, #fff);
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color, var(--bh-ligne));
   border-left: 3px solid #3B82F6;
   border-radius: 12px;
   padding: 14px;
@@ -57,7 +57,7 @@
 .cleaning-card-header {
   margin-bottom: 10px;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  border-bottom: 1px solid var(--border-color, var(--bh-ligne));
 }
 
 .cleaning-card-title {
@@ -123,7 +123,7 @@
 
 .cleaning-card-footer {
   padding-top: 12px;
-  border-top: 1px solid var(--border-color, #e5e7eb);
+  border-top: 1px solid var(--border-color, var(--bh-ligne));
 }
 
 /* Select dans la carte */
@@ -133,8 +133,8 @@
   font-size: 14px;
   font-weight: 500;
   border-radius: 8px;
-  border: 1px solid var(--border-color, #e5e7eb);
-  background: var(--bg-secondary, #f9fafb);
+  border: 1px solid var(--border-color, var(--bh-ligne));
+  background: var(--bg-secondary, var(--bh-fond));
   color: var(--text-primary, #111827);
   cursor: pointer;
   transition: all 0.2s ease;

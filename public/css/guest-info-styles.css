@@ -431,7 +431,7 @@
 }
 
 .conversation-status.active {
-  background: #DCE9E3;
+  background: var(--vert-100);
   color: var(--bh-vert);
 }
 
@@ -441,7 +441,7 @@
 }
 
 .conversation-status.closed {
-  background: #f3f4f6;
+  background: var(--bh-cote);
   color: #6b7280;
 }
 

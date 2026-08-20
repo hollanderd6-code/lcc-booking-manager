@@ -975,7 +975,7 @@ body {
   font-size: 12px;
   border: 1px solid rgba(148,163,184,0.6);
   background: rgba(15,23,42,0.8);
-  color: #e5e7eb;
+  color: var(--bh-ligne);
   cursor: pointer;
 }
 /* ===== Correction clics bloqués sur mobile ===== */
@@ -1215,7 +1215,7 @@ html, body {
 
 /* hover (sur tous) */
 .nav-item:hover{
-  background:#f3f4f6;
+  background:var(--bh-cote);
 }
 
 /* ACTIVE : exactement le style "Factures clients" */

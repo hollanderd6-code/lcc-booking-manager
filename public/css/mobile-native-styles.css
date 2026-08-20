@@ -823,7 +823,7 @@ select:focus {
     padding: 14px 16px 14px !important;
     padding-top: calc(env(safe-area-inset-top, 0px) + 14px) !important;
     background: var(--bg-primary, #fff) !important;
-    border-bottom: 1px solid var(--border-color, #e5e7eb) !important;
+    border-bottom: 1px solid var(--border-color, var(--bh-ligne)) !important;
     z-index: 10 !important;
     display: flex !important;
     align-items: center !important;
@@ -852,7 +852,7 @@ select:focus {
     padding: 12px 16px !important;
     padding-bottom: max(12px, env(safe-area-inset-bottom, 12px)) !important;
     margin: 0 !important;
-    border-top: 1px solid var(--border-color, #e5e7eb) !important;
+    border-top: 1px solid var(--border-color, var(--bh-ligne)) !important;
     background: var(--bg-primary, #fff) !important;
     display: flex !important;
     gap: 8px !important;

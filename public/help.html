@@ -152,7 +152,7 @@
   /* ── Historique conversations ── */
   .conv-history-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
   .conv-history-item {
-    padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color, #e5e7eb);
+    padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color, var(--bh-ligne));
     background: var(--bg-secondary, #fff); cursor: pointer; transition: all .15s;
     display: flex; align-items: center; gap: 12px;
   }
@@ -285,7 +285,7 @@
     /* ── Historique conversations ── */
   .conv-history-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
   .conv-history-item {
-    padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color, #e5e7eb);
+    padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color, var(--bh-ligne));
     background: var(--bg-secondary, #fff); cursor: pointer; transition: all .15s;
     display: flex; align-items: center; gap: 12px;
   }
@@ -478,7 +478,7 @@ html[data-theme-v3="1"] .main-header .header-actions { display: none !important;
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap; position: fixed; top: 52px; right: 24px; z-index: 200;
 }
-.help-back-btn:hover { background: #15624B; }
+.help-back-btn:hover { background: var(--vert-600); }
 
 /* Desktop page header */
 @media (min-width: 1367px) {
@@ -584,7 +584,7 @@ html[data-theme-v3="1"] .support-btn-send {
   background: var(--bh-vert) !important;
   border-radius: 10px !important;
 }
-html[data-theme-v3="1"] .support-btn-send:hover { background: #15624B !important; }
+html[data-theme-v3="1"] .support-btn-send:hover { background: var(--vert-600) !important; }
 html[data-theme-v3="1"] .support-btn-attach {
   color: #7A8695 !important;
   border-radius: 8px !important;
@@ -2065,7 +2065,7 @@ html[data-theme-v3="1"] input[type=search] {
 
 /* ── Chat support : même langage que la messagerie ── */
 html[data-theme-v3="1"] .support-msg-bubble.user {
-  background: linear-gradient(135deg, #1E8A6B, #15624B) !important;
+  background: linear-gradient(135deg, #1E8A6B, var(--vert-600)) !important;
   box-shadow: 0 3px 10px rgba(14,59,46,.25), inset 0 1px 0 rgba(255,255,255,.18) !important;
   border-radius: 18px 18px 6px 18px !important;
 }
@@ -2073,8 +2073,8 @@ html[data-theme-v3="1"] .support-msg-bubble.support {
   border-radius: 18px 18px 18px 6px !important;
   box-shadow: 0 1px 3px rgba(32,34,31,.05) !important;
 }
-.support-msg.admin .support-msg-avatar { background: linear-gradient(135deg, #15624B, var(--bh-vert)) !important; }
-html[data-theme-v3="1"] .support-input { border-color: rgba(200,184,154,.55) !important; border-radius: 22px !important; background: #FBF8F3 !important; }
+.support-msg.admin .support-msg-avatar { background: linear-gradient(135deg, var(--vert-600), var(--bh-vert)) !important; }
+html[data-theme-v3="1"] .support-input { border-color: rgba(200,184,154,.55) !important; border-radius: 22px !important; background: var(--bh-cote) !important; }
 html[data-theme-v3="1"] .support-btn-send {
   border-radius: 50% !important;
   box-shadow: 0 2px 8px rgba(14,59,46,.3) !important;

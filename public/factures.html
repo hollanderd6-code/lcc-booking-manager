@@ -63,7 +63,7 @@
   .sidebar {
     width: 260px;
     background: #ffffff;
-    border-right: 1px solid #e5e7eb;
+    border-right: 1px solid var(--bh-ligne);
     position: fixed;
     top: 0;
     bottom: 0;
@@ -109,7 +109,7 @@
   }
 
   .nav-item:hover {
-    background: #f9fafb;
+    background: var(--bh-fond);
     color: #111827;
   }
 
@@ -180,13 +180,13 @@
   .card {
     background: #ffffff;
     border-radius: 16px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--bh-ligne);
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
 
   .card-header {
     padding: 16px 20px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--bh-ligne);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -281,7 +281,7 @@
 
   .form-divider {
     height: 1px;
-    background: #e5e7eb;
+    background: var(--bh-ligne);
     margin: 24px 0;
   }
 
@@ -423,7 +423,7 @@
     display: flex;
     justify-content: space-between;
     padding: 10px 0;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--bh-cote);
     font-size: 14px;
   }
 
@@ -437,7 +437,7 @@
     padding: 12px 0;
     font-weight: 600;
     margin-top: 12px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--bh-ligne);
   }
 
   .invoice-total {
@@ -477,7 +477,7 @@
     color: #6b7280;
     margin-top: 32px;
     padding-top: 20px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--bh-ligne);
   }
 
   @media print {
@@ -684,7 +684,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap; position: fixed; top: 52px; right: 24px; z-index: 200;
 }
-.factures-back-btn:hover { background: #15624B; }
+.factures-back-btn:hover { background: var(--vert-600); }
 
 /* Desktop page header */
 @media (min-width: 1367px) {
@@ -782,7 +782,7 @@ html[data-theme-v3="1"] button[type=submit] {
   font-family: 'DM Sans', sans-serif !important;
   font-weight: 600 !important;
 }
-html[data-theme-v3="1"] .btn-primary:hover { background: #15624B !important; }
+html[data-theme-v3="1"] .btn-primary:hover { background: var(--vert-600) !important; }
 html[data-theme-v3="1"] .btn-secondary,
 html[data-theme-v3="1"] .btn-ghost {
   border-radius: 10px !important;
@@ -830,7 +830,7 @@ html[data-theme-v3="1"] .btn-ghost {
 .history-resend-btn { background:none; border:1px solid var(--bh-vert); color:var(--bh-vert); padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer; transition:all 0.15s; }
 .history-resend-btn:hover { background:var(--bh-vert); color:white; }
 /* Cartes mobile */
-.history-card { border-bottom:1px solid #f3f4f6; padding:14px 16px; }
+.history-card { border-bottom:1px solid var(--bh-cote); padding:14px 16px; }
 .history-card:last-child { border-bottom:none; }
 .history-card-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
 .history-card-num { font-weight:700; color:var(--bh-vert); font-size:14px; }

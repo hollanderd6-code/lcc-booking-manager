@@ -54,10 +54,10 @@ html[data-theme-v3="1"] main.main-content > header.main-header {
   margin-top: 0 !important; padding-top: 0 !important;
 }
 html[data-theme-v3="1"] body {
-  background: #F5F2EC !important;
+  background: var(--bh-creme) !important;
   font-family: 'DM Sans', sans-serif !important;
 }
-html[data-theme-v3="1"] .main-content { background: #F5F2EC !important; }
+html[data-theme-v3="1"] .main-content { background: var(--bh-creme) !important; }
 html[data-theme-v3="1"], html[data-theme-v3="1"] body {
   overflow: hidden !important; height: 100% !important;
 }
@@ -81,7 +81,7 @@ html[data-theme-v3="1"] .main-content {
   position: fixed; top: 52px; right: 24px;
   z-index: 200;
 }
-.settings-back-btn:hover { background: #15624B; }
+.settings-back-btn:hover { background: var(--vert-600); }
 .settings-back-btn i { font-size: 13px; }
 
 /* Cacher le btn-ghost généré automatiquement par bh-layout (on a notre propre bouton) */
@@ -289,7 +289,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
-  background: #FAFAF8;
+  background: var(--bh-fond);
 }
 .pcard-title {
   display: flex; align-items: center; gap: 8px;
@@ -448,7 +448,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 18px;
   border-bottom: 1px solid var(--border);
-  background: #FAFAF8;
+  background: var(--bh-fond);
 }
 .prop-pricing-name {
   font-size: 14px; font-weight: 700; color: var(--ink);
@@ -589,7 +589,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
   text-transform: uppercase; letter-spacing: .05em;
   padding: 10px 12px; text-align: left;
   border-bottom: 1px solid var(--border);
-  background: #FAFAF8;
+  background: var(--bh-fond);
 }
 .history-table td {
   padding: 12px 12px; font-size: 13px; color: var(--text);

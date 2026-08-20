@@ -64,7 +64,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost {
   max-width: calc(100vw - 280px - 48px);
   overflow: hidden;
 }
-.resa-back-btn:hover { background: #15624B; }
+.resa-back-btn:hover { background: var(--vert-600); }
 .resa-back-btn i { font-size: 13px; flex-shrink: 0; }
 @media (max-width: 1366px) { .resa-back-btn { display: none !important; } }
 
@@ -188,7 +188,7 @@ html, body { margin: 0; background: var(--cream); font-family: 'DM Sans', sans-s
 .plt-direct  { background: var(--vert-050); color: var(--bh-vert); }
 .plt-abritel { background: #fff7ed; color: #C2410C; }
 .plt-guest   { background: #F3E8FF; color: var(--bh-violet); font-weight: 700; }
-.plt-other   { background: #f3f4f6; color: #374151; }
+.plt-other   { background: var(--bh-cote); color: #374151; }
 
 /* Badges : alignés sur le système unifié .bh-badge (bh-core.css) */
 .status-badge {
@@ -364,7 +364,7 @@ html[data-theme-v3="1"] .app-container {
 html[data-theme-v3="1"] main.main-content {
   overflow-y: visible !important;
   height: 100% !important;
-  background: #F5F2EC !important;
+  background: var(--bh-creme) !important;
   padding-left: 0 !important;
   padding-right: 0 !important;
 }
@@ -1406,7 +1406,7 @@ loadData();
 }
 #invoiceModal.active { display: flex; }
 #invoiceModal .inv-content {
-  background: #F5F2EC; border-radius: 20px; width: 100%; max-width: 960px;
+  background: var(--bh-creme); border-radius: 20px; width: 100%; max-width: 960px;
   max-height: 92vh; display: flex; flex-direction: column;
   box-shadow: 0 24px 64px rgba(0,0,0,.2); overflow: hidden;
 }
@@ -1421,7 +1421,7 @@ loadData();
   background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;
   font-size:14px; color:#6b7280;
 }
-#invoiceModal .inv-close:hover { background:#f5f2ec; }
+#invoiceModal .inv-close:hover { background:var(--bh-creme); }
 #invoiceModal .inv-body {
   display: grid; grid-template-columns: 380px 1fr; flex: 1; overflow: hidden;
   max-width: 100%;
@@ -1435,7 +1435,7 @@ loadData();
   -webkit-overflow-scrolling: touch;
 }
 #invoiceModal .inv-preview-panel {
-  padding: 20px; overflow-y: auto; background: #F5F2EC;
+  padding: 20px; overflow-y: auto; background: var(--bh-creme);
   display: flex; flex-direction: column; gap: 12px;
 }
 #invoiceModal .inv-section-title {
@@ -1450,7 +1450,7 @@ loadData();
 #invoiceModal .inv-row select {
   width: 100%; padding: 8px 11px; border: 1px solid rgba(0,0,0,.12);
   border-radius: 8px; font-size: 13px; font-family: 'DM Sans',sans-serif;
-  background: #fafaf8; outline: none; box-sizing: border-box;
+  background: var(--bh-fond); outline: none; box-sizing: border-box;
 }
 #invoiceModal .inv-row input:focus,
 #invoiceModal .inv-row select:focus { border-color: var(--bh-vert); background: white; }
@@ -1469,7 +1469,7 @@ loadData();
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
   color: #9CA3AF; margin: 16px 0 6px; border-bottom: 1px solid #f0ede8; padding-bottom: 4px;
 }
-#invoiceModal .inv-line { display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f5f2ec;font-size:13px; }
+#invoiceModal .inv-line { display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bh-creme);font-size:13px; }
 #invoiceModal .inv-line.inv-sub { font-weight:600; margin-top:8px; border-bottom:2px solid var(--bh-vert); padding-bottom:6px; }
 #invoiceModal .inv-line.inv-tot { font-weight:800;font-size:15px;color:var(--bh-vert);border:none;margin-top:4px; }
 #invoiceModal .inv-stamp {
@@ -1494,10 +1494,10 @@ loadData();
   display:inline-flex;align-items:center;gap:7px;
 }
 #invoiceModal .inv-btn-primary { background:var(--bh-vert);color:white; }
-#invoiceModal .inv-btn-primary:hover { background:#15624B; }
+#invoiceModal .inv-btn-primary:hover { background:var(--vert-600); }
 #invoiceModal .inv-btn-primary:disabled { opacity:.5;cursor:not-allowed; }
 #invoiceModal .inv-btn-ghost { background:white;color:#374151;border:1px solid rgba(0,0,0,.12); }
-#invoiceModal .inv-btn-ghost:hover { background:#f5f2ec; }
+#invoiceModal .inv-btn-ghost:hover { background:var(--bh-creme); }
 @media (max-width: 768px) {
   /* Le modal facture est centré ; en webview le 100vh inclut la zone derrière
      la bottom-bar (74px) → le pied (.inv-actions) passait dessous. On réserve

@@ -268,7 +268,7 @@
     .referral-url-row { display: flex; gap: 6px; margin-top: 10px; }
     .referral-url-row input {
       flex: 1; padding: 9px 12px; border-radius: 10px;
-      border: 1.5px solid var(--border-color, #e5e7eb); font-size: 12px;
+      border: 1.5px solid var(--border-color, var(--bh-ligne)); font-size: 12px;
       outline: none; background: white; color: var(--text-color, #1e293b); font-family: monospace;
     }
     .referral-url-row button, .share-btn {
@@ -283,7 +283,7 @@
     .referral-stat-value.accent { color: var(--accent-color, var(--bh-vert)); }
     .referral-stat-label { font-size: 11px; color: var(--text-secondary, #6b7280); margin-top: 2px; }
     .referral-list { margin-top: 14px; }
-    .referral-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color, #e5e7eb); font-size: 13px; }
+    .referral-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color, var(--bh-ligne)); font-size: 13px; }
     .referral-item:last-child { border-bottom: none; }
     .share-btns { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
     .share-btn { display: inline-flex; align-items: center; gap: 6px; color: white; text-decoration: none; }
@@ -377,7 +377,7 @@
       line-height: 1.5 !important;
       color: var(--text-primary) !important;
       background-color: #ffffff !important;
-      border: 1.5px solid #e5e7eb !important;
+      border: 1.5px solid var(--bh-ligne) !important;
       border-radius: 8px !important;
       transition: all 0.15s ease !important;
       font-family: 'Inter', sans-serif !important;
@@ -449,7 +449,7 @@
     input[type="file"] {
       padding: 10px !important;
       border: 2px dashed #d1d5db !important;
-      background: #f9fafb !important;
+      background: var(--bh-fond) !important;
       cursor: pointer !important;
     }
 
@@ -477,7 +477,7 @@
     input:disabled,
     textarea:disabled,
     select:disabled {
-      background-color: #f3f4f6 !important;
+      background-color: var(--bh-cote) !important;
       color: #9ca3af !important;
       cursor: not-allowed !important;
       opacity: 0.6 !important;
@@ -615,7 +615,7 @@
       html[data-theme-v3="1"] #addTeamMemberModal .modal-actions {
         flex-shrink: 0 !important;
         padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 70px) !important;
-        border-top: 1px solid #e5e7eb;
+        border-top: 1px solid var(--bh-ligne);
       }
     }
 
@@ -624,7 +624,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 20px 24px;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid var(--bh-ligne);
     }
 
     .booking-modal .modal-header h2 {
@@ -650,7 +650,7 @@
     }
 
     .booking-modal .modal-close:hover {
-      background: #f3f4f6;
+      background: var(--bh-cote);
       color: #111827;
     }
 
@@ -663,8 +663,8 @@
       gap: 12px;
       justify-content: flex-end;
       padding: 16px 24px;
-      border-top: 1px solid #e5e7eb;
-      background: #f9fafb;
+      border-top: 1px solid var(--bh-ligne);
+      background: var(--bh-fond);
       border-radius: 0 0 12px 12px;
     }
   /* ============================================================
@@ -845,7 +845,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap; position: fixed; top: 52px; right: 24px; z-index: 200;
 }
-.settings-back-btn:hover { background: #15624B; }
+.settings-back-btn:hover { background: var(--vert-600); }
 
 /* Desktop page header */
 @media (min-width: 1367px) {
@@ -947,7 +947,7 @@ html[data-theme-v3="1"] .btn-primary {
   border-radius: 10px !important; font-family: 'DM Sans', sans-serif !important;
   font-weight: 600 !important;
 }
-html[data-theme-v3="1"] .btn-primary:hover { background: #15624B !important; }
+html[data-theme-v3="1"] .btn-primary:hover { background: var(--vert-600) !important; }
 html[data-theme-v3="1"] .btn-secondary,
 html[data-theme-v3="1"] .btn-ghost {
   background: rgba(255,255,255,.6) !important;
@@ -999,7 +999,7 @@ html[data-theme-v3="1"] .plan-card.current {
 }
 
 .team-member-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--bh-ligne);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 16px;
@@ -1056,7 +1056,7 @@ html[data-theme-v3="1"] .plan-card.current {
   align-items: center;
   gap: 4px;
   padding: 4px 12px;
-  background: #f3f4f6;
+  background: var(--bh-cote);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
@@ -1094,7 +1094,7 @@ html[data-theme-v3="1"] .plan-card.current {
 
 .team-member-inactive {
   opacity: 0.6;
-  background: #f9fafb;
+  background: var(--bh-fond);
 }
 
 .team-member-inactive .team-member-avatar {
@@ -5147,7 +5147,7 @@ html[data-theme-v3="1"] .btn-danger { border-radius: 999px !important; }
   -webkit-backdrop-filter: blur(7px);
 }
 .booking-modal .modal-content {
-  background: #FAF7F2 !important;
+  background: var(--bh-cote) !important;
   border: 1px solid rgba(200,184,154,.55) !important;
   border-radius: 24px !important;
   box-shadow: 0 24px 70px rgba(32,34,31,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
@@ -5167,7 +5167,7 @@ html[data-theme-v3="1"] .btn-danger { border-radius: 999px !important; }
   -webkit-backdrop-filter: blur(7px);
 }
 #inviteAgencyModal > div {
-  background: #FAF7F2 !important;
+  background: var(--bh-cote) !important;
   border: 1px solid rgba(200,184,154,.55) !important;
   border-radius: 22px !important;
   box-shadow: 0 24px 70px rgba(32,34,31,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
@@ -5183,7 +5183,7 @@ html[data-theme-v3="1"] .btn-danger { border-radius: 999px !important; }
   -webkit-backdrop-filter: blur(7px) !important;
 }
 #deleteSubModal > div {
-  background: #FAF7F2 !important;
+  background: var(--bh-cote) !important;
   border: 1px solid rgba(200,184,154,.55) !important;
   border-radius: 22px !important;
   box-shadow: 0 24px 70px rgba(32,34,31,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;

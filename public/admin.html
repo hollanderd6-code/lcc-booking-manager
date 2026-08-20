@@ -107,7 +107,7 @@
     margin-top: 4px;
     transition: background .15s;
   }
-  .login-btn:hover { background: #15624B; }
+  .login-btn:hover { background: var(--vert-600); }
   .login-error { font-size: 13px; color: #EF4444; margin-top: 10px; text-align: center; display: none; }
 
   /* ── App (après login) ── */
@@ -291,7 +291,7 @@
   .action-btn.danger { color: var(--danger); border-color: rgba(220,38,38,.2); }
   .action-btn.danger:hover { background: var(--danger-bg); }
   .action-btn.success { background: var(--green); color: white; border-color: var(--green); }
-  .action-btn.success:hover { background: #15624B; }
+  .action-btn.success:hover { background: var(--vert-600); }
 
   /* ── User row ── */
   .user-info { display: flex; align-items: center; gap: 10px; }
@@ -379,7 +379,7 @@
   .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
   .btn-cancel { padding: 9px 18px; border-radius: 10px; border: 1px solid var(--border); background: transparent; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; }
   .btn-save { padding: 9px 20px; border-radius: 10px; border: none; background: var(--green); color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 7px; }
-  .btn-save:hover { background: #15624B; }
+  .btn-save:hover { background: var(--vert-600); }
 
   /* ── Empty / loading ── */
   .empty-state { text-align: center; padding: 48px; color: var(--muted); font-size: 14px; }
@@ -466,7 +466,7 @@
     width: 320px; min-width: 320px;
     border-right: 1px solid var(--border);
     display: flex; flex-direction: column;
-    background: #FAFAF8;
+    background: var(--bh-fond);
   }
   .support-sidebar-header {
     padding: 16px; border-bottom: 1px solid var(--border);
@@ -526,7 +526,7 @@
   .support-chat-sub { font-size: 11px; color: var(--muted); }
   .support-chat-actions { display: flex; gap: 6px; }
 
-  .support-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #F5F2EC; }
+  .support-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--bh-creme); }
   .support-msg { display: flex; gap: 8px; max-width: 80%; }
   .support-msg.admin { align-self: flex-start; }
   .support-msg.user { align-self: flex-end; flex-direction: row-reverse; }
@@ -560,7 +560,7 @@
     background: var(--green); color: white; cursor: pointer;
     font-size: 14px; flex-shrink: 0; transition: background .15s;
   }
-  .support-send-btn:hover { background: #15624B; }
+  .support-send-btn:hover { background: var(--vert-600); }
 
   .support-empty { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: var(--muted); }
   .support-empty i { font-size: 40px; color: #D1D5DB; }

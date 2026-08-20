@@ -37,7 +37,7 @@
 
 .deposit-card {
   background: var(--bg-primary, #fff);
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color, var(--bh-ligne));
   border-left: 3px solid var(--primary-color, var(--bh-vert));
   border-radius: 12px;
   padding: 14px;
@@ -57,7 +57,7 @@
 .deposit-card-header {
   margin-bottom: 10px;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  border-bottom: 1px solid var(--border-color, var(--bh-ligne));
 }
 
 .deposit-card-title {
@@ -138,7 +138,7 @@
 
 .deposit-card-footer {
   padding-top: 12px;
-  border-top: 1px solid var(--border-color, #e5e7eb);
+  border-top: 1px solid var(--border-color, var(--bh-ligne));
 }
 
 /* Bouton dans la carte */
@@ -179,13 +179,13 @@
 }
 
 .btn-secondary.btn-card {
-  background: var(--bg-secondary, #f9fafb);
+  background: var(--bg-secondary, var(--bh-fond));
   color: var(--text-primary, #111827);
-  border: 1px solid var(--border-color, #e5e7eb);
+  border: 1px solid var(--border-color, var(--bh-ligne));
 }
 
 .btn-secondary.btn-card:hover {
-  background: var(--bg-tertiary, #f3f4f6);
+  background: var(--bg-tertiary, var(--bh-cote));
 }
 
 /* Texte d'info */

@@ -56,7 +56,7 @@ html, body { margin: 0 !important; }
    LAYOUT GLOBAL
 ══════════════════════════════════════════ */
 html[data-theme-v3="1"] .main-content {
-  background: #F5F2EC !important;
+  background: var(--bh-creme) !important;
   padding: 24px !important;
   max-width: 1400px !important;
   margin: 0 auto !important;
@@ -64,12 +64,12 @@ html[data-theme-v3="1"] .main-content {
   box-sizing: border-box !important;
 }
 .app-container { display: flex; min-height: 100vh; }
-.sidebar { width: 260px; background: white; border-right: 1px solid #e5e7eb; position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; display: flex; flex-direction: column; }
+.sidebar { width: 260px; background: white; border-right: 1px solid var(--bh-ligne); position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; display: flex; flex-direction: column; }
 .main-wrapper { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-width: 0; }
-.top-bar { background: #F5F2EC; height: 64px; border-bottom: 1px solid rgba(200,184,154,.35); display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
-html[data-theme-v3="1"] .app-container { height: calc(100vh - 40px) !important; overflow: hidden !important; margin-top: 40px !important; background: #F5F2EC !important; }
+.top-bar { background: var(--bh-creme); height: 64px; border-bottom: 1px solid rgba(200,184,154,.35); display: flex; align-items: center; justify-content: flex-end; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
+html[data-theme-v3="1"] .app-container { height: calc(100vh - 40px) !important; overflow: hidden !important; margin-top: 40px !important; background: var(--bh-creme) !important; }
 html[data-theme-v3="1"] .main-wrapper { height: 100% !important; overflow: hidden !important; }
-html[data-theme-v3="1"] main.main-content { overflow-y: auto !important; height: 100% !important; background: #F5F2EC !important; }
+html[data-theme-v3="1"] main.main-content { overflow-y: auto !important; height: 100% !important; background: var(--bh-creme) !important; }
 @media (min-width: 1367px) { html[data-theme-v3="1"] main.main-content { padding-top: 70px !important; } }
 @media(max-width:1366px){ .main-wrapper { margin-left: 0 !important; } .rp-header-btns { display: none; } }
 
@@ -94,7 +94,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 ══════════════════════════════════════════ */
 .rp-header-btns { position: fixed; top: 52px; right: 24px; z-index: 200; display: flex; gap: 10px; align-items: center; }
 .rp-btn-back { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 20px; border: none; border-radius: 12px; background: var(--bh-vert); color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; white-space: nowrap; }
-.rp-btn-back:hover { background: #15624B; }
+.rp-btn-back:hover { background: var(--vert-600); }
 
 /* ══════════════════════════════════════════
    CONTRÔLES GLOBAUX
@@ -373,7 +373,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .compare-metric-value.winner { color: var(--bh-vert); }
 .compare-metric-value.loser  { color: #EF4444; }
 .score-circle { width: 72px; height: 72px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; font-size: 22px; color: white; flex-shrink: 0; }
-.score-detail-bar { height: 6px; border-radius: 999px; background: #E5E7EB; overflow: hidden; flex: 1; }
+.score-detail-bar { height: 6px; border-radius: 999px; background: var(--bh-ligne); overflow: hidden; flex: 1; }
 .score-detail-bar-fill { height: 100%; border-radius: 999px; transition: width .4s; }
 
 /* ══════════════════════════════════════════
@@ -394,8 +394,8 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .rentab-marge-pct.warn { background: #F59E0B; }
 .rentab-marge-pct.danger { background: #EF4444; }
 .rentab-table th { background: var(--bh-vert); color: white; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing:.05em; padding: 9px 12px; text-align: left; }
-.rentab-table td { padding: 9px 12px; font-size: 12px; border-bottom: 1px solid #f3f4f6; color: #374151; }
-.rentab-table tr:nth-child(even) td { background: #fafaf8; }
+.rentab-table td { padding: 9px 12px; font-size: 12px; border-bottom: 1px solid var(--bh-cote); color: #374151; }
+.rentab-table tr:nth-child(even) td { background: var(--bh-fond); }
 .rentab-table tr:hover td { background: var(--vert-050); }
 .rentab-table td.neg { color: #dc2626; font-weight: 600; }
 .rentab-table td.pos { color: var(--bh-vert); font-weight: 700; }
@@ -1707,7 +1707,7 @@ function renderComparator() {
     padding: 0 12px 90px !important;
     padding-top: calc(60px + env(safe-area-inset-top, 0px) + 12px) !important;
     overflow-y: auto !important; height: 100% !important;
-    background: #F5F2EC !important; box-sizing: border-box !important;
+    background: var(--bh-creme) !important; box-sizing: border-box !important;
   }
   .rp-header-btns, header.main-header, .top-bar { display: none !important; }
 
@@ -1815,7 +1815,7 @@ function renderComparator() {
 }
 .ctrl-select:focus { border-color: var(--bh-vert) !important; box-shadow: 0 0 0 3px rgba(14,59,46,.1); }
 .btn-export { border-radius: 999px !important; box-shadow: 0 1px 4px rgba(14,59,46,.25); }
-.btn-export:hover { opacity: 1 !important; background: #15624B !important; }
+.btn-export:hover { opacity: 1 !important; background: var(--vert-600) !important; }
 .btn-csv { border-radius: 999px !important; border-color: rgba(200,184,154,.6) !important; }
 .btn-csv:hover { border-color: var(--bh-vert) !important; color: var(--bh-vert) !important; }
 .view-tab { border-radius: 999px !important; }
@@ -1826,7 +1826,7 @@ function renderComparator() {
   -webkit-backdrop-filter: blur(7px) !important;
 }
 #exportComptaModal > div {
-  background: #FAF7F2 !important;
+  background: var(--bh-cote) !important;
   border: 1px solid rgba(200,184,154,.55) !important;
   border-radius: 22px !important;
   box-shadow: 0 24px 70px rgba(32,34,31,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;

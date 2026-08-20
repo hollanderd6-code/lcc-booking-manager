@@ -198,7 +198,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap; position: fixed; top: 52px; right: 24px; z-index: 200;
 }
-.welcome-back-btn:hover { background: #15624B; }
+.welcome-back-btn:hover { background: var(--vert-600); }
 
 /* Page container */
 .welcome-container {
@@ -376,7 +376,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .btn-lv-edit { background: white; color: #0D1117; border: 1px solid rgba(0,0,0,.12) !important; }
 .btn-lv-edit:hover { background: #f0ede7; }
 .btn-lv-view { background: var(--bh-vert); color: white; }
-.btn-lv-view:hover { background: #15624B; }
+.btn-lv-view:hover { background: var(--vert-600); }
 .btn-lv-delete {
   flex: 0 0 34px !important; width: 34px;
   background: #FEF2F2; color: #DC2626;
@@ -443,7 +443,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 }
 .wiz-card-header {
   padding: 20px 24px; border-bottom: 1px solid rgba(32,34,31,.06);
-  background: #FAFAF8; display: flex; align-items: center; gap: 12px;
+  background: var(--bh-fond); display: flex; align-items: center; gap: 12px;
 }
 .wiz-card-icon {
   width: 40px; height: 40px; border-radius: 10px;
@@ -465,7 +465,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .wiz-required { color: #EF4444; }
 .wiz-input, .wiz-textarea, .wiz-select {
   width: 100%; padding: 10px 14px;
-  background: #FAFAF8; border: 1.5px solid rgba(32,34,31,.12);
+  background: var(--bh-fond); border: 1.5px solid rgba(32,34,31,.12);
   border-radius: 10px; font-size: 14px; font-family: 'DM Sans', sans-serif;
   color: var(--bh-encre); transition: border-color .15s;
   outline: none;
@@ -493,7 +493,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .wiz-upload {
   border: 2px dashed rgba(32,34,31,.12); border-radius: 12px;
   padding: 24px; text-align: center; cursor: pointer;
-  background: #FAFAF8; transition: all .15s;
+  background: var(--bh-fond); transition: all .15s;
 }
 .wiz-upload:hover { border-color: var(--bh-vert); background: rgba(14,59,46,.03); }
 .wiz-upload i { font-size: 28px; color: #9CA3AF; margin-bottom: 8px; display: block; }
@@ -507,7 +507,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 
 /* Repeat blocks */
 .wiz-repeat-block {
-  background: #FAFAF8; border: 1px solid rgba(32,34,31,.08);
+  background: var(--bh-fond); border: 1px solid rgba(32,34,31,.08);
   border-radius: 12px; padding: 16px; margin-bottom: 12px; position: relative;
 }
 .wiz-repeat-header {
@@ -549,7 +549,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   background: var(--bh-vert); color: white; font-family: 'DM Sans', sans-serif;
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
 }
-.wiz-btn-next:hover { background: #15624B; }
+.wiz-btn-next:hover { background: var(--vert-600); }
 .wiz-btn-submit {
   display: inline-flex; align-items: center; gap: 8px; height: 42px;
   padding: 0 24px; border: none; border-radius: 12px;
@@ -606,7 +606,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 .wiz-success p { color: #7A8695; font-size: 14px; margin-bottom: 24px; }
 .wiz-success-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
 .wiz-qr-box {
-  background: #FAFAF8; border: 1px solid rgba(32,34,31,.08);
+  background: var(--bh-fond); border: 1px solid rgba(32,34,31,.08);
   border-radius: 14px; padding: 24px; max-width: 340px; margin: 24px auto 0;
 }
 .wiz-qr-box h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--bh-encre); }
@@ -671,7 +671,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
   white-space: nowrap;
 }
-.welcome-tip-cta:hover { background: #15624B; }
+.welcome-tip-cta:hover { background: var(--vert-600); }
 
 /* QR button on card */
 .btn-lv-qr {
@@ -2942,7 +2942,7 @@ document.addEventListener('DOMContentLoaded', function() {
 /* ── Cartes du wizard : titres serif, header crème ── */
 .wiz-card { border-radius: 20px; border-color: rgba(200,184,154,.45) !important; box-shadow: 0 1px 3px rgba(32,34,31,.04); }
 .wiz-card-header {
-  background: #FBF8F3 !important;
+  background: var(--bh-cote) !important;
   border-bottom-color: rgba(200,184,154,.4) !important;
 }
 .wiz-card-title {
@@ -2955,13 +2955,13 @@ document.addEventListener('DOMContentLoaded', function() {
 /* ── Champs : bordures beiges (focus vert déjà en place) ── */
 .wiz-input, .wiz-textarea, .wiz-select {
   border-color: rgba(200,184,154,.55) !important;
-  background: #FBF8F3;
+  background: var(--bh-cote);
 }
 .wiz-input:focus, .wiz-textarea:focus, .wiz-select:focus { background: #fff; }
-.wiz-upload { border-color: rgba(200,184,154,.6); background: #FBF8F3; }
-.wiz-repeat-block { border-color: rgba(200,184,154,.4) !important; background: #FBF8F3 !important; border-radius: 14px; }
+.wiz-upload { border-color: rgba(200,184,154,.6); background: var(--bh-cote); }
+.wiz-repeat-block { border-color: rgba(200,184,154,.4) !important; background: var(--bh-cote) !important; border-radius: 14px; }
 .wiz-divider { border-top-color: rgba(200,184,154,.4) !important; }
-.wiz-qr-box { border-color: rgba(200,184,154,.4) !important; background: #FBF8F3 !important; }
+.wiz-qr-box { border-color: rgba(200,184,154,.4) !important; background: var(--bh-cote) !important; }
 
 /* ── Navigation wizard : pilules ── */
 .wiz-btn-back, .wiz-btn-next, .wiz-btn-submit, .wiz-btn-draft, .wiz-add-btn { border-radius: 999px !important; }
