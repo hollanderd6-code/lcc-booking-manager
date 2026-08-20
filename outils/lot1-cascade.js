@@ -84,6 +84,7 @@ const ORDRE = [
   'bh-theme-v3.css',
 
   // 2. Jetons de marque
+  'bh-tokens.css',
   'bh-brand.css',
 
   // 3. Calques "luxe", du general au particulier
