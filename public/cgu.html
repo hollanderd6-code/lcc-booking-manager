@@ -19,10 +19,25 @@
   <meta property="og:site_name" content="Boostinghost">
   <meta property="og:locale" content="fr_FR">
 
-
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+
+  <!-- Marque Boostinghost — genere par outils/marque.js -->
+  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
+  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
+  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
+  <meta name="theme-color" content="#0E3B2E">
+  <meta property="og:image" content="/img/brand/social/og-image.png">
+
+  <!-- Feuilles globales — ordre unique sur toutes les pages (lot 1).
+       Du general au particulier : tiers, theme, jetons, calques,
+       structure, habillages. N'ajoutez aucun <link> ailleurs dans le
+       document ; la place d'une nouvelle feuille se decide dans
+       outils/lot1-cascade.js. -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+
+  <!-- CSS propre a cette page. -->
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --bg: #f0f4f8; --bg-card: #ffffff; --bg-secondary: #f8fafc; --text-primary: #0f172a; --text-secondary: #64748b; --border: rgba(148,163,184,0.35); --green: #0E3B2E; --blue: #3b82f6; --radius: 18px; --shadow: 0 4px 24px rgba(15,23,42,0.08); }
@@ -129,16 +144,13 @@ html[data-theme-v3="1"] .highlight-box {
 }
 
   </style>
-<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
-  <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
 
-  <!-- Marque Boostinghost — genere par outils/marque.js -->
-  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
-  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
-  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
-  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
-  <meta name="theme-color" content="#0E3B2E">
-  <meta property="og:image" content="/img/brand/social/og-image.png">
+  <!-- Calques tardifs — mobile et correctifs empiles. Ils surchargent
+       volontairement le CSS de la page et n'ont presque pas de
+       !important : leur position finale est ce qui les fait tenir.
+       A resorber au lot 4, pas a deplacer maintenant. -->
+  <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
+  <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
 </head>
 <script src="/js/cookies-banner.js?v=162047c0"></script>  
 <body>

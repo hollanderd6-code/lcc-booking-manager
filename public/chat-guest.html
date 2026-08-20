@@ -10,8 +10,28 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
   
+
+  <!-- ✅ Chat moderne - CSS -->
+
+  <!-- Marque Boostinghost — genere par outils/marque.js -->
+  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
+  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
+  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
+  <meta name="theme-color" content="#0E3B2E">
+  <meta property="og:image" content="/img/brand/social/og-image.png">
+  <meta property="og:type" content="website">
+
+  <!-- Feuilles globales — ordre unique sur toutes les pages (lot 1).
+       Du general au particulier : tiers, theme, jetons, calques,
+       structure, habillages. N'ajoutez aucun <link> ailleurs dans le
+       document ; la place d'une nouvelle feuille se decide dans
+       outils/lot1-cascade.js. -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- CSS propre a cette page. -->
   <style>
     * {
       margin: 0;
@@ -668,19 +688,14 @@
   font-size: 12px;
 }
 </style>
-  <!-- ✅ Chat moderne - CSS -->
-  <link href="/css/chat-modern.css?v=65351488" rel="stylesheet">
-<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
-  <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
 
-  <!-- Marque Boostinghost — genere par outils/marque.js -->
-  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
-  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
-  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
-  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
-  <meta name="theme-color" content="#0E3B2E">
-  <meta property="og:image" content="/img/brand/social/og-image.png">
-  <meta property="og:type" content="website">
+  <!-- Calques tardifs — mobile et correctifs empiles. Ils surchargent
+       volontairement le CSS de la page et n'ont presque pas de
+       !important : leur position finale est ce qui les fait tenir.
+       A resorber au lot 4, pas a deplacer maintenant. -->
+  <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
+  <link href="/css/chat-modern.css?v=65351488" rel="stylesheet">
+  <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
 </head>
 <body>
   <div class="container">

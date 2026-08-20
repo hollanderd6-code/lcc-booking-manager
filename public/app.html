@@ -13,15 +13,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&amp;display=swap" rel="stylesheet"/>
 <!-- Font Awesome -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+
 <!-- FullCalendar CSS -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css" rel="stylesheet"/>
-<link href="/css/style.css?v=17204d03" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
-<link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
-<link rel="stylesheet" href="/css/bh-theme-v3.css?v=cb75551e">
-<link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
-<link rel="stylesheet" href="/css/bh-lux.css?v=d686b5ab">
-<link rel="stylesheet" href="/css/bh-lux-app.css?v=9af52e1b">
+
   
 <script>
   // Activation permanente du thème V3
@@ -52,7 +47,585 @@
     };
   })();
 </script>
-<style id="v3-critical">
+    
+
+<!-- Simplification mobile : KPI + calendrier uniquement -->
+
+<script src="/js/auth-fetch.js?v=cd78753d"></script>
+
+    <!-- 📱 Styles Mobile Natifs -->
+
+<script>
+</script>
+
+ <!-- Protection sous-comptes -->
+<script src="/js/sub-account-guard.js?v=3558a1b3"></script>
+
+</style>
+<!-- jsPDF retiré du chargement initial : chargé à la demande via ensureJsPDF() dans downloadChecklistPDF() -->
+<!-- html2canvas retiré : aucun appel html2canvas() dans cette page -->
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> -->
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script> -->
+<script>
+// Masquage immédiat selon le rôle (avant rendu)
+(function() {
+  try {
+    var isSubAccount = localStorage.getItem('lcc_is_sub_account') === 'true' 
+                    || localStorage.getItem('lcc_account_type') === 'sub';
+    // Compte principal : s'assurer que showPrices est true par défaut
+    if (!isSubAccount) {
+      try {
+        var _mainPrefs = {};
+        try { _mainPrefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+        if (_mainPrefs.showPrices === undefined || _mainPrefs.showPrices === null) {
+          _mainPrefs.showPrices = true;
+          localStorage.setItem('bhCalPrefs', JSON.stringify(_mainPrefs));
+        }
+      } catch(e) {}
+      return;
+    }
+
+    var role = 'custom';
+    var visibleKpis = null;
+    try {
+      var subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+      role = subData.role || 'custom';
+      // Permissions : d'abord lcc_permissions, sinon lcc_sub_account.permissions
+      var _subPerms = {};
+      try { _subPerms = JSON.parse(localStorage.getItem('lcc_permissions') || '{}'); } catch(e) {}
+      if (Object.keys(_subPerms).length === 0) _subPerms = subData.permissions || {};
+      if (_subPerms.visible_kpis) visibleKpis = _subPerms.visible_kpis;
+    } catch(e) {}
+
+    var style = document.createElement('style');
+    style.id = 'role-restrictions-css';
+
+    if (role === 'cleaner') {
+      // Cleaner : masquer CA, cautions, taux d'occupation, checklists, bouton nouvelle resa
+      // Garder : logements actifs, check-in/out, ménages, notes
+      style.textContent = '#kpiOccupancyCard, #kpiDepositsCard, #kpiChecklistsCard, #kpiCaCard, #newReservationBtn, #fabAddResa { display: none !important; }';
+    } else if (role === 'comptable') {
+      style.textContent = '#newReservationBtn, #fabAddResa { display: none !important; }';
+    } else if (role === 'proprietaire') {
+      style.textContent = '#newReservationBtn, #fabAddResa { display: none !important; }';
+    } else if (role === 'custom' && visibleKpis) {
+      var hide = ['#newReservationBtn', '#fabAddResa']; // toujours caché pour custom
+      if (!visibleKpis.kpi_properties)  hide.push('#kpiPropertiesCard');
+      if (!visibleKpis.kpi_checkins)    hide.push('#kpiTodayMovesCard');
+      if (!visibleKpis.kpi_cleaning)    hide.push('#kpiCleaning48hCard');
+      if (!visibleKpis.kpi_notes)       hide.push('#kpiTopRisksCard');
+      if (!visibleKpis.kpi_occupancy)   hide.push('#kpiOccupancyCard');
+      if (!visibleKpis.kpi_deposits)    hide.push('#kpiDepositsCard');
+      if (!visibleKpis.kpi_checklists)  hide.push('#kpiChecklistsCard');
+      if (!visibleKpis.kpi_ca)          hide.push('#kpiCaCard');
+      if (hide.length) style.textContent = hide.join(', ') + ' { display: none !important; }';
+    }
+
+    if (style.textContent) document.head.appendChild(style);
+
+    if (role === 'cleaner') {
+      try {
+        var _calPrefs = {};
+        try { _calPrefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+        _calPrefs.showPrices = false;
+        localStorage.setItem('bhCalPrefs', JSON.stringify(_calPrefs));
+        var _priceStyle = document.createElement('style');
+        _priceStyle.id = 'cleaner-no-price';
+        _priceStyle.textContent = '.cell-price { display: none !important; }';
+        document.head.appendChild(_priceStyle);
+      } catch(e) {}
+    }
+
+    // ── Cleaner : masquer les prix du calendrier ──
+    // Forcer showPrices=false dans bhCalPrefs dès le chargement
+    if (role === 'cleaner') {
+      try {
+        var _calPrefs = {};
+        try { _calPrefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
+        _calPrefs.showPrices = false;
+        localStorage.setItem('bhCalPrefs', JSON.stringify(_calPrefs));
+        // Injecter le style immédiatement sans attendre applyPrefs()
+        var _priceStyle = document.createElement('style');
+        _priceStyle.id = 'cleaner-no-price';
+        _priceStyle.textContent = '.cell-price { display: none !important; }';
+        document.head.appendChild(_priceStyle);
+      } catch(e) {}
+    }
+
+    // Forcer via JS après rendu (override inline styles + subtitle)
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var btn = document.getElementById('newReservationBtn');
+      var fab = document.getElementById('fabAddResa');
+      if (role === 'cleaner' || role === 'comptable' || role === 'proprietaire' || role === 'custom') {
+        if (btn) btn.style.setProperty('display', 'none', 'important');
+        if (fab) fab.style.setProperty('display', 'none', 'important');
+      }
+      var subtitleEl = document.getElementById('mobileSubtitleLabel');
+      if (subtitleEl && isSubAccount) subtitleEl.textContent = 'Espace collaborateur';
+    });
+  } catch(e) {}
+})();
+</script>
+
+<script>
+// ── Mode Agence ───────────────────────────────────────────────
+function initAgencyBanner() {
+  const managedUser = localStorage.getItem('lcc_managed_user');
+  if (!managedUser) return;
+  try {
+    const user = JSON.parse(managedUser);
+    // Show the agency button with managed user name
+    var btn = document.getElementById('agencySwitcherBtn');
+    if (btn) {
+      btn.style.display = 'inline-flex';
+      var label = document.getElementById('agencySwitcherLabel');
+      if (label) label.textContent = user.name || user.email || 'Compte géré';
+    }
+    // Load accounts for the modal
+    var token = localStorage.getItem('lcc_agency_token') || localStorage.getItem('lcc_token');
+    fetch('/api/agency/delegations', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.iManage && data.iManage.length) {
+          window._agencyAccounts = data.iManage;
+        }
+      }).catch(function(){});
+  } catch(e) { console.error('[AGENCY] Banner error:', e); }
+}
+window.exitAgencyMode = function(redirectTo) {
+  var orig = localStorage.getItem('lcc_agency_token');
+  if (orig) localStorage.setItem('lcc_token', orig);
+  ['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache','lcc_agency_permissions'].forEach(function(k){ localStorage.removeItem(k); });
+  if (redirectTo) window.location.href = redirectTo;
+  else window.location.reload();
+};
+
+// ── Switcher compte agence ────────────────────────────────────
+window._agencyAccounts = null;
+
+// ── Sprint 3 : Vue Agence Globale ────────────────────────────
+window._agencyViewActive = false;
+window._agencyAccounts = null;
+window._agencyAllReservations = [];
+window._agencyAllProperties = [];
+
+window.loadAgencyAccountsForSwitcher = async function loadAgencyAccountsForSwitcher() {
+  const token = localStorage.getItem('lcc_token');
+  if (!token) return;
+
+  // En mode switché : le bandeau agencyBanner (via initAgencyBanner) suffit
+  if (localStorage.getItem('lcc_managed_user')) {
+    return;
+  }
+  try {
+    const res = await fetch('/api/agency/delegations', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.iManage || !data.iManage.length) return;
+    // L'agent doit avoir le plan Agence pour switcher
+    if (!data.canActAsAgent) {
+      console.log('ℹ️ [AGENCY] Délégations trouvées mais plan Agence requis pour switcher');
+      return;
+    }
+    window._agencyAccounts = data.iManage;
+    // Afficher le toggle automatiquement
+    renderAgencyToggle(data.iManage);
+    // Restaurer le mode sauvegardé
+    var savedView = localStorage.getItem('bh_agency_view');
+    if (savedView === 'all') {
+      setAgencyView('all');
+    }
+  } catch(e) {}
+}
+
+window.renderAgencyToggle = function renderAgencyToggle(accounts) {
+  if (!accounts || !accounts.length) return;
+  // bh-layout.js handles the button display
+  var btn = document.getElementById('agencySwitcherBtn');
+  if (btn) { btn.style.display = 'inline-flex'; }
+  var oldBar = document.getElementById('agencyToggleBar');
+  if (oldBar) oldBar.remove();
+}
+
+window.setAgencyView = async function setAgencyView(mode) {
+  window._agencyViewActive = (mode === 'all');
+  localStorage.setItem('bh_agency_view', mode);
+  // Mettre à jour les boutons toggle (legacy)
+  const btnMine = document.getElementById('agencyToggleMine');
+  const btnAll  = document.getElementById('agencyToggleAll');
+  if (btnMine && btnAll) {
+    if (mode === 'all') {
+      btnAll.style.background  = '#7c3aed'; btnAll.style.color  = 'white';
+      btnMine.style.background = 'transparent'; btnMine.style.color = '#9CA3AF';
+    } else {
+      btnMine.style.background = '#0E3B2E'; btnMine.style.color = 'white';
+      btnAll.style.background  = 'transparent'; btnAll.style.color = '#9CA3AF';
+    }
+  }
+  updateAgencySwitcherLabel();
+  // Recharger les données
+  await loadDataAndUpdateKpis();
+}
+
+window.switchAgencyAccount = async function(targetUserId, name, color) {
+  const token = localStorage.getItem('lcc_token');
+  const myToken = localStorage.getItem('lcc_agency_token') || token;
+  try {
+    const res = await fetch('/api/agency/switch', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + myToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetUserId })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      localStorage.setItem('lcc_agency_token', myToken);
+      localStorage.setItem('lcc_token', data.token);
+      localStorage.setItem('lcc_managed_user', JSON.stringify(data.managedUser));
+      if (data.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(data.permissions));
+      localStorage.removeItem('lcc_settings_profile');
+      localStorage.removeItem('lcc_properties_cache');
+      window.location.reload();
+    } else {
+      alert(data.error || 'Erreur switch');
+    }
+  } catch(e) { alert('Erreur réseau'); }
+};
+
+// (loadAgencyUnifiedReservations remplacé par setAgencyView dans Sprint 3)
+// Gérer invitation agence dans URL
+(function() {
+  const p = new URLSearchParams(window.location.search);
+  const at = p.get('agency_token');
+  if (at) {
+    const t = localStorage.getItem('lcc_token');
+    if (t) fetch('/api/agency/accept', { method:'POST', headers:{'Authorization':'Bearer '+t,'Content-Type':'application/json'}, body:JSON.stringify({token:at}) })
+      .then(r=>r.json()).then(d=>{ alert(d.success ? '✅ Invitation acceptée !' : d.error||'Erreur'); window.history.replaceState({},'','/app.html'); });
+  }
+  // initAgencyBanner appelé dans DOMContentLoaded ci-dessous
+
+  // ── Auto-refresh token agence toutes les 6h ──
+  if (localStorage.getItem('lcc_managed_user')) {
+    agencyRefreshToken(); // refresh immédiat au chargement (vérifie validité)
+    setInterval(agencyRefreshToken, 6 * 60 * 60 * 1000);
+  }
+})();
+
+// ── Refresh token agence ──
+window.agencyRefreshToken = async function() {
+  const managed = localStorage.getItem('lcc_managed_user');
+  if (!managed) return;
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch('/api/agency/refresh', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      localStorage.setItem('lcc_token', data.token);
+      if (data.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(data.permissions));
+      console.log('🔄 [AGENCY] Token refreshed');
+    } else if (res.status === 403 || res.status === 401) {
+      console.warn('⚠️ [AGENCY] Token expiré ou délégation révoquée — retour au compte principal');
+      exitAgencyMode();
+    }
+  } catch(e) {
+    console.warn('⚠️ [AGENCY] Refresh échoué:', e.message);
+  }
+};
+
+// ── Masquer les pages non autorisées selon permissions agence ──
+window.applyAgencyPermissions = function() {
+  const managed = localStorage.getItem('lcc_managed_user');
+  if (!managed) return;
+  const perms = JSON.parse(localStorage.getItem('lcc_agency_permissions') || '{}');
+  // Mapping permission → pages à masquer
+  const permPageMap = {
+    can_view_messages:  ['/messages.html'],
+    can_view_cleaning:  ['/cleaning.html'],
+    can_view_reporting: ['/reporting.html', '/kpis.html'],
+    can_view_finances:  ['/deposits.html', '/factures.html', '/owner-invoices.html'],
+    can_view_calendar:  ['/app.html']
+  };
+  // Collecter les pages interdites
+  var blockedPages = [];
+  Object.keys(permPageMap).forEach(function(perm) {
+    if (perms[perm] === false) {
+      blockedPages = blockedPages.concat(permPageMap[perm]);
+    }
+  });
+  // Masquer dans la nav desktop (bhDemoNav)
+  document.querySelectorAll('#bhDemoNav a[href]').forEach(function(a) {
+    var href = (a.getAttribute('href') || '').split('?')[0];
+    if (blockedPages.includes(href)) {
+      a.style.display = 'none';
+    }
+  });
+  // Masquer dans la sidebar desktop
+  document.querySelectorAll('aside.sidebar a[href], .sidebar a.nav-item[href]').forEach(function(a) {
+    var href = (a.getAttribute('href') || '').split('?')[0];
+    if (blockedPages.includes(href)) {
+      a.style.display = 'none';
+    }
+  });
+  // Masquer dans le bottom tab bar mobile
+  document.querySelectorAll('.mobile-tabs a[href], .tab-bar a[href], [data-mobile-tab]').forEach(function(a) {
+    var href = (a.getAttribute('href') || '').split('?')[0];
+    if (blockedPages.includes(href)) {
+      a.style.display = 'none';
+    }
+  });
+  // Bloquer l'accès à la page courante si pas autorisée
+  var curPath = location.pathname.toLowerCase();
+  if (blockedPages.includes(curPath)) {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;font-family:DM Sans,sans-serif;">'
+      + '<div><div style="margin-bottom:16px;"><i class="fas fa-lock" style="font-size:42px;color:#9CA3AF;"></i></div>'
+      + '<h2 style="margin:0 0 8px;">Accès non autorisé</h2>'
+      + '<p style="color:#6b7280;margin:0 0 24px;">Le propriétaire n\'a pas activé cette permission pour votre accès agence.</p>'
+      + '<button onclick="exitAgencyMode()" style="padding:10px 24px;background:#7c3aed;color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer;">← Retour à mon compte</button>'
+      + '</div></div>';
+  }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadAgencyAccountsForSwitcher();
+  setTimeout(applyAgencyPermissions, 300);
+});
+
+// ══════════════════════════════════════
+// Demande d'autorisation de connexion support (type AnyDesk)
+// L'équipe Boostinghost peut demander à se connecter sur ce compte pour assister
+// l'utilisateur ; cette popup ne s'affiche QUE si une demande explicite a été faite,
+// et l'accès ne s'ouvre que si l'utilisateur clique "Autoriser".
+// ══════════════════════════════════════
+let _bhImpersonationPollTimer = null;
+let _bhImpersonationCurrentRequestId = null;
+
+function _bhStartImpersonationPolling() {
+  if (_bhImpersonationPollTimer) return; // déjà en cours
+  _bhImpersonationPollTimer = setInterval(_bhCheckImpersonationPending, 8000);
+  _bhCheckImpersonationPending(); // premier check immédiat
+}
+
+async function _bhCheckImpersonationPending() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return;
+    const res = await fetch('/api/impersonation/pending', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.request && data.request.id !== _bhImpersonationCurrentRequestId) {
+      _bhImpersonationCurrentRequestId = data.request.id;
+      _bhShowImpersonationModal(data.request);
+    } else if (!data.request) {
+      _bhImpersonationCurrentRequestId = null;
+      const modal = document.getElementById('bhImpersonationModal');
+      if (modal) modal.remove();
+    }
+  } catch(e) { /* silencieux : ne pas gêner l'utilisateur pour un souci réseau ponctuel */ }
+}
+
+function _bhShowImpersonationModal(reqData) {
+  let modal = document.getElementById('bhImpersonationModal');
+  if (modal) modal.remove();
+
+  modal = document.createElement('div');
+  modal.id = 'bhImpersonationModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:28px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.25);">
+      <div style="margin-bottom:12px;"><i class="fas fa-lock" style="font-size:34px;color:#0E3B2E;"></i></div>
+      <div style="font-weight:700;font-size:17px;margin-bottom:8px;color:#1a1a1a;">Demande de connexion support</div>
+      <div style="font-size:14px;color:#555;line-height:1.5;margin-bottom:6px;">
+        L'équipe Boostinghost demande à se connecter temporairement à votre compte pour vous assister.
+      </div>
+      ${reqData.reason ? `<div style="font-size:13px;color:#888;background:#F5F5F0;border-radius:8px;padding:8px 12px;margin:10px 0;">Motif : ${reqData.reason}</div>` : ''}
+      <div style="font-size:12px;color:#999;margin-bottom:20px;">L'accès sera limité à 1 heure et toute action sera tracée. Vous pouvez refuser sans conséquence.</div>
+      <div style="display:flex;gap:10px;">
+        <button id="bhImpDeny" style="flex:1;padding:12px;border-radius:10px;border:1px solid #e0e0e0;background:white;color:#555;font-weight:600;font-size:14px;cursor:pointer;">Refuser</button>
+        <button id="bhImpApprove" style="flex:1;padding:12px;border-radius:10px;border:none;background:#0E3B2E;color:white;font-weight:600;font-size:14px;cursor:pointer;">Autoriser</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  document.getElementById('bhImpApprove').onclick = () => _bhRespondImpersonation(reqData.id, true);
+  document.getElementById('bhImpDeny').onclick = () => _bhRespondImpersonation(reqData.id, false);
+}
+
+async function _bhRespondImpersonation(requestId, approve) {
+  const modal = document.getElementById('bhImpersonationModal');
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch(`/api/impersonation/${requestId}/respond`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ approve })
+    });
+  } catch(e) { /* la demande expirera côté serveur si l'appel échoue */ }
+  _bhImpersonationCurrentRequestId = null;
+  if (modal) modal.remove();
+}
+
+_bhStartImpersonationPolling();
+
+// ══════════════════════════════════════
+// ❓ Questions factuelles de l'IA à l'hôte (réponse 1 clic)
+// ══════════════════════════════════════
+let _bhHostQPollTimer = null;
+let _bhHostQCurrentId = null;
+
+function _bhStartHostQuestionPolling() {
+  if (_bhHostQPollTimer) return;
+  _bhHostQPollTimer = setInterval(_bhCheckHostQuestions, 10000);
+  _bhCheckHostQuestions();
+}
+
+async function _bhCheckHostQuestions() {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    if (!token) return;
+    const res = await fetch('/api/host-questions/pending', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const q = (data.questions || [])[0];
+    if (q && q.id !== _bhHostQCurrentId && !document.getElementById('bhHostQModal')) {
+      _bhHostQCurrentId = q.id;
+      _bhShowHostQuestionModal(q);
+    }
+  } catch(e) { /* silencieux */ }
+}
+
+function _bhShowHostQuestionModal(q) {
+  let modal = document.getElementById('bhHostQModal');
+  if (modal) modal.remove();
+
+  modal = document.createElement('div');
+  modal.id = 'bhHostQModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
+
+  // ── Bloc contexte séjour : logement, dates, occupation avant/après ──
+  // (utile pour juger une arrivée anticipée / un départ tardif)
+  const _fmtD = (d) => { try { return d ? new Date(d).toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) : null; } catch(e){ return null; } };
+  const _dPart = (d) => { try { return d ? new Date(d).toISOString().split('T')[0] : null; } catch(e){ return null; } };
+  const _meta = q.meta || {};
+  const _ci = _dPart(q.stay_checkin || _meta.checkin);
+  const _co = _dPart(q.stay_checkout || _meta.checkout);
+  const _prevCo = _dPart(q.prev_checkout);
+  const _nextCi = _dPart(q.next_checkin);
+  // occupé avant = résa précédente qui finit le jour de l'arrivée (enchaînement)
+  let _occBefore = (_prevCo && _ci) ? (_prevCo === _ci) : null;
+  let _occAfter  = (_nextCi && _co) ? (_nextCi === _co) : null;
+  // fallback meta (free_before / free_after) si l'API n'a pas de dates voisines
+  if (_occBefore === null && typeof _meta.free_before === 'boolean') _occBefore = !_meta.free_before;
+  if (_occAfter  === null && typeof _meta.free_after  === 'boolean') _occAfter  = !_meta.free_after;
+  const _propName = q.property_name || _meta.property_name || null;
+  const _ciF = _fmtD(q.stay_checkin || _meta.checkin);
+  const _coF = _fmtD(q.stay_checkout || _meta.checkout);
+  const _rows = [];
+  if (_propName) _rows.push(`<div style="display:flex;align-items:center;gap:7px;"><i class="fas fa-home" style="color:#6B7280;width:14px;text-align:center;"></i><strong style="color:#1f2937;">${_propName}</strong></div>`);
+  if (_ciF && _coF) _rows.push(`<div style="display:flex;align-items:center;gap:7px;"><i class="far fa-calendar-alt" style="color:#6B7280;width:14px;text-align:center;"></i><span>${_ciF} → ${_coF}</span></div>`);
+  if (_occBefore !== null) _rows.push(_occBefore
+    ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span style="width:9px;height:9px;border-radius:50%;background:#DC2626;display:inline-block;flex-shrink:0;"></span><span>Loué la veille — départ le jour de l'arrivée</span></div>`
+    : `<div style="display:flex;align-items:center;gap:7px;color:#0E3B2E;"><span style="width:9px;height:9px;border-radius:50%;background:#0E3B2E;display:inline-block;flex-shrink:0;"></span><span>Libre la veille de l'arrivée</span></div>`);
+  if (_occAfter !== null) _rows.push(_occAfter
+    ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span style="width:9px;height:9px;border-radius:50%;background:#DC2626;display:inline-block;flex-shrink:0;"></span><span>Reloué le jour du départ</span></div>`
+    : `<div style="display:flex;align-items:center;gap:7px;color:#0E3B2E;"><span style="width:9px;height:9px;border-radius:50%;background:#0E3B2E;display:inline-block;flex-shrink:0;"></span><span>Libre le jour du départ</span></div>`);
+  const infoHtml = _rows.length
+    ? `<div style="background:#F0F4F2;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12.5px;line-height:1.7;color:#374151;">${_rows.join('')}</div>`
+    : '';
+
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:26px;max-width:400px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.25);">
+      <div style="font-size:34px;text-align:center;margin-bottom:10px;">❓</div>
+      <div style="font-weight:700;font-size:16px;text-align:center;margin-bottom:4px;color:#1a1a1a;">Question d'un voyageur</div>
+      <div style="font-size:12px;color:#999;text-align:center;margin-bottom:14px;">${q.guest_name || 'Voyageur'}</div>
+      ${infoHtml}
+      <div style="font-size:15px;color:#333;line-height:1.5;background:#F5F2EC;border-radius:10px;padding:14px 16px;margin-bottom:18px;text-align:center;">${q.question}</div>
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <button id="bhHQNo" style="flex:1;padding:13px;border-radius:10px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;font-weight:700;font-size:15px;cursor:pointer;">Non</button>
+        <button id="bhHQYes" style="flex:1;padding:13px;border-radius:10px;border:none;background:#0E3B2E;color:white;font-weight:700;font-size:15px;cursor:pointer;">Oui</button>
+      </div>
+      <div id="bhHQTextWrap" style="display:none;margin-bottom:10px;">
+        <textarea id="bhHQText" rows="2" placeholder="Précision (optionnel)…" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:inherit;box-sizing:border-box;resize:vertical;"></textarea>
+        <button id="bhHQSendText" style="width:100%;margin-top:8px;padding:11px;border-radius:10px;border:none;background:#2C3E35;color:white;font-weight:600;font-size:14px;cursor:pointer;">Envoyer cette précision au voyageur</button>
+      </div>
+      <button id="bhHQSelf" style="width:100%;padding:11px;border-radius:10px;border:1px solid #e0e0e0;background:white;color:#555;font-weight:600;font-size:13px;cursor:pointer;">Je réponds moi-même</button>
+      <div style="font-size:11px;color:#aaa;text-align:center;margin-top:12px;">L'IA transmettra votre réponse au voyageur dans sa langue.</div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  const text = () => (document.getElementById('bhHQText')?.value || '').trim();
+  document.getElementById('bhHQYes').onclick = () => _bhAnswerHostQuestion(q.id, 'yes', text());
+  document.getElementById('bhHQNo').onclick  = () => {
+    const wrap = document.getElementById('bhHQTextWrap');
+    if (wrap.style.display === 'none') {
+      wrap.style.display = 'block';
+      document.getElementById('bhHQSendText').onclick = () => _bhAnswerHostQuestion(q.id, 'no', text());
+      document.getElementById('bhHQNo').textContent = 'Non, sans précision';
+      document.getElementById('bhHQNo').onclick = () => _bhAnswerHostQuestion(q.id, 'no', '');
+    }
+  };
+  document.getElementById('bhHQSelf').onclick = () => _bhAnswerHostQuestion(q.id, 'self', '');
+}
+
+async function _bhAnswerHostQuestion(questionId, answer, text) {
+  const modal = document.getElementById('bhHostQModal');
+  try {
+    const token = localStorage.getItem('lcc_token');
+    await fetch(`/api/host-questions/${questionId}/answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ answer, text: text || '' })
+    });
+    if (answer === 'self' && typeof window.showBHToast === 'function') {
+      showBHToast('À vous de répondre dans la conversation', 'info');
+    } else if (typeof window.showBHToast === 'function') {
+      showBHToast('Réponse transmise au voyageur ✅', 'success');
+    }
+  } catch(e) { /* la question reste pending si échec, repoll plus tard */ }
+  _bhHostQCurrentId = null;
+  if (modal) modal.remove();
+}
+
+_bhStartHostQuestionPolling();
+
+// Banner agence : exécuté via window.load + setTimeout pour garantir qu'il s'affiche APRÈS tout le reste
+window.addEventListener('load', function() {
+  initAgencyBanner();
+});
+setTimeout(function() {
+  initAgencyBanner();
+}, 1500);
+</script>
+
+  <!-- Marque Boostinghost — genere par outils/marque.js -->
+  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
+  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
+  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
+  <meta name="theme-color" content="#0E3B2E">
+
+  <!-- Feuilles globales — ordre unique sur toutes les pages (lot 1).
+       Du general au particulier : tiers, theme, jetons, calques,
+       structure, habillages. N'ajoutez aucun <link> ailleurs dans le
+       document ; la place d'une nouvelle feuille se decide dans
+       outils/lot1-cascade.js. -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css?v=17204d03" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/bh-theme-v3.css?v=cb75551e">
+  <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
+  <link rel="stylesheet" href="/css/bh-lux.css?v=d686b5ab">
+  <link rel="stylesheet" href="/css/bh-lux-app.css?v=9af52e1b">
+  <link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
+  <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
+
+  <!-- CSS propre a cette page. -->
+  <style id="v3-critical">
 /* ── LAYOUT V3 ── */
 html[data-theme-v3="1"] body { padding-top: 0 !important; }
 html[data-theme-v3="1"] .sidebar {
@@ -365,8 +938,9 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
   }
 }
 
-</style>    
-<style>
+</style>
+
+  <style>
     html, body {
       margin: 0 !important;
       }
@@ -639,7 +1213,8 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
 }
 
   </style>
-<style>
+
+  <style>
 
 /* ============================================
        NOUVEAU CALENDRIER MODERNE
@@ -1874,7 +2449,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 
   </style>
-<style>
+
+  <style>
     .status-icon .status-logo {
       width: 18px;
       height: 18px;
@@ -2194,8 +2770,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   }
 }
   </style>
-<!-- Simplification mobile : KPI + calendrier uniquement -->
-<style>
+
+  <style>
   
 
 .widget-kicker {
@@ -2367,7 +2943,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   }
 }
   </style>
-<style>
+
+  <style>
     /* Spécial dashboard mobile : on garde KPI + calendrier seulement */
     
 
@@ -2415,7 +2992,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     }
   }
 </style>
-<style>
+
+  <style>
 /* =================================================================
    FIX CALENDRIER ULTRA-ROBUSTE (Mobile + Desktop)
    ================================================================= */
@@ -2545,14 +3123,14 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   }
 }
 </style>
-<script src="/js/auth-fetch.js?v=cd78753d"></script>
-<style>
+
+  <style>
 /* UI fixes */
 #todayMovesModal .modal-footer,
 #cleaning48hModal .modal-footer { display: none !important; }
 </style>
-    <!-- 📱 Styles Mobile Natifs -->
-    <style>
+
+  <style>
 /* Correction scroll horizontal calendrier mobile */
 @media (max-width: 1366px) {
   
@@ -2578,10 +3156,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 </style>
 
-<script>
-</script>
-
-<style id="mobile-scroll-fix">
+  <style id="mobile-scroll-fix">
 /* ✅ FIX FINAL : 1 seul scroll horizontal (mobile friendly) */
 @media (max-width: 1366px) {
   .calendar-container .calendar-grid-wrapper{
@@ -2613,7 +3188,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   }
 }
 </style>
-<style>
+
+  <style>
 /* FAB Nouvelle réservation - mobile only */
 @media (max-width: 900px) {
   .fab-add-resa{
@@ -2638,10 +3214,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   .fab-add-resa:active { transform: scale(0.98); }
 }
 </style>
- <!-- Protection sous-comptes -->
-<script src="/js/sub-account-guard.js?v=3558a1b3"></script>
 
-<style id="ios-calendar-scroll-fix">
+  <style id="ios-calendar-scroll-fix">
 /* ✅ FIX iOS Capacitor : scroll vertical liste logements */
 @media (max-width: 1366px) {
   /* La page entière doit pouvoir scroller sur iOS */
@@ -2686,7 +3260,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 }
 </style>
 
-<style id="bh-mobile-master">
+  <style id="bh-mobile-master">
 /* ================================================================
    MOBILE MASTER — source unique, injectée directement dans le HTML
    Appliquée EN DERNIER dans le <head> pour écraser tout le reste
@@ -2898,550 +3472,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   width: 90px; height: 12px; margin-top: 4px;
 }
 </style>
-</style>
-<!-- jsPDF retiré du chargement initial : chargé à la demande via ensureJsPDF() dans downloadChecklistPDF() -->
-<!-- html2canvas retiré : aucun appel html2canvas() dans cette page -->
-<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> -->
-<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script> -->
-<script>
-// Masquage immédiat selon le rôle (avant rendu)
-(function() {
-  try {
-    var isSubAccount = localStorage.getItem('lcc_is_sub_account') === 'true' 
-                    || localStorage.getItem('lcc_account_type') === 'sub';
-    // Compte principal : s'assurer que showPrices est true par défaut
-    if (!isSubAccount) {
-      try {
-        var _mainPrefs = {};
-        try { _mainPrefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
-        if (_mainPrefs.showPrices === undefined || _mainPrefs.showPrices === null) {
-          _mainPrefs.showPrices = true;
-          localStorage.setItem('bhCalPrefs', JSON.stringify(_mainPrefs));
-        }
-      } catch(e) {}
-      return;
-    }
 
-    var role = 'custom';
-    var visibleKpis = null;
-    try {
-      var subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
-      role = subData.role || 'custom';
-      // Permissions : d'abord lcc_permissions, sinon lcc_sub_account.permissions
-      var _subPerms = {};
-      try { _subPerms = JSON.parse(localStorage.getItem('lcc_permissions') || '{}'); } catch(e) {}
-      if (Object.keys(_subPerms).length === 0) _subPerms = subData.permissions || {};
-      if (_subPerms.visible_kpis) visibleKpis = _subPerms.visible_kpis;
-    } catch(e) {}
-
-    var style = document.createElement('style');
-    style.id = 'role-restrictions-css';
-
-    if (role === 'cleaner') {
-      // Cleaner : masquer CA, cautions, taux d'occupation, checklists, bouton nouvelle resa
-      // Garder : logements actifs, check-in/out, ménages, notes
-      style.textContent = '#kpiOccupancyCard, #kpiDepositsCard, #kpiChecklistsCard, #kpiCaCard, #newReservationBtn, #fabAddResa { display: none !important; }';
-    } else if (role === 'comptable') {
-      style.textContent = '#newReservationBtn, #fabAddResa { display: none !important; }';
-    } else if (role === 'proprietaire') {
-      style.textContent = '#newReservationBtn, #fabAddResa { display: none !important; }';
-    } else if (role === 'custom' && visibleKpis) {
-      var hide = ['#newReservationBtn', '#fabAddResa']; // toujours caché pour custom
-      if (!visibleKpis.kpi_properties)  hide.push('#kpiPropertiesCard');
-      if (!visibleKpis.kpi_checkins)    hide.push('#kpiTodayMovesCard');
-      if (!visibleKpis.kpi_cleaning)    hide.push('#kpiCleaning48hCard');
-      if (!visibleKpis.kpi_notes)       hide.push('#kpiTopRisksCard');
-      if (!visibleKpis.kpi_occupancy)   hide.push('#kpiOccupancyCard');
-      if (!visibleKpis.kpi_deposits)    hide.push('#kpiDepositsCard');
-      if (!visibleKpis.kpi_checklists)  hide.push('#kpiChecklistsCard');
-      if (!visibleKpis.kpi_ca)          hide.push('#kpiCaCard');
-      if (hide.length) style.textContent = hide.join(', ') + ' { display: none !important; }';
-    }
-
-    if (style.textContent) document.head.appendChild(style);
-
-    if (role === 'cleaner') {
-      try {
-        var _calPrefs = {};
-        try { _calPrefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
-        _calPrefs.showPrices = false;
-        localStorage.setItem('bhCalPrefs', JSON.stringify(_calPrefs));
-        var _priceStyle = document.createElement('style');
-        _priceStyle.id = 'cleaner-no-price';
-        _priceStyle.textContent = '.cell-price { display: none !important; }';
-        document.head.appendChild(_priceStyle);
-      } catch(e) {}
-    }
-
-    // ── Cleaner : masquer les prix du calendrier ──
-    // Forcer showPrices=false dans bhCalPrefs dès le chargement
-    if (role === 'cleaner') {
-      try {
-        var _calPrefs = {};
-        try { _calPrefs = JSON.parse(localStorage.getItem('bhCalPrefs') || '{}'); } catch(e) {}
-        _calPrefs.showPrices = false;
-        localStorage.setItem('bhCalPrefs', JSON.stringify(_calPrefs));
-        // Injecter le style immédiatement sans attendre applyPrefs()
-        var _priceStyle = document.createElement('style');
-        _priceStyle.id = 'cleaner-no-price';
-        _priceStyle.textContent = '.cell-price { display: none !important; }';
-        document.head.appendChild(_priceStyle);
-      } catch(e) {}
-    }
-
-    // Forcer via JS après rendu (override inline styles + subtitle)
-
-
-    document.addEventListener('DOMContentLoaded', function() {
-      var btn = document.getElementById('newReservationBtn');
-      var fab = document.getElementById('fabAddResa');
-      if (role === 'cleaner' || role === 'comptable' || role === 'proprietaire' || role === 'custom') {
-        if (btn) btn.style.setProperty('display', 'none', 'important');
-        if (fab) fab.style.setProperty('display', 'none', 'important');
-      }
-      var subtitleEl = document.getElementById('mobileSubtitleLabel');
-      if (subtitleEl && isSubAccount) subtitleEl.textContent = 'Espace collaborateur';
-    });
-  } catch(e) {}
-})();
-</script>
-
-<script>
-// ── Mode Agence ───────────────────────────────────────────────
-function initAgencyBanner() {
-  const managedUser = localStorage.getItem('lcc_managed_user');
-  if (!managedUser) return;
-  try {
-    const user = JSON.parse(managedUser);
-    // Show the agency button with managed user name
-    var btn = document.getElementById('agencySwitcherBtn');
-    if (btn) {
-      btn.style.display = 'inline-flex';
-      var label = document.getElementById('agencySwitcherLabel');
-      if (label) label.textContent = user.name || user.email || 'Compte géré';
-    }
-    // Load accounts for the modal
-    var token = localStorage.getItem('lcc_agency_token') || localStorage.getItem('lcc_token');
-    fetch('/api/agency/delegations', { headers: { 'Authorization': 'Bearer ' + token } })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.iManage && data.iManage.length) {
-          window._agencyAccounts = data.iManage;
-        }
-      }).catch(function(){});
-  } catch(e) { console.error('[AGENCY] Banner error:', e); }
-}
-window.exitAgencyMode = function(redirectTo) {
-  var orig = localStorage.getItem('lcc_agency_token');
-  if (orig) localStorage.setItem('lcc_token', orig);
-  ['lcc_agency_token','lcc_managed_user','lcc_settings_profile','lcc_properties_cache','lcc_agency_permissions'].forEach(function(k){ localStorage.removeItem(k); });
-  if (redirectTo) window.location.href = redirectTo;
-  else window.location.reload();
-};
-
-// ── Switcher compte agence ────────────────────────────────────
-window._agencyAccounts = null;
-
-// ── Sprint 3 : Vue Agence Globale ────────────────────────────
-window._agencyViewActive = false;
-window._agencyAccounts = null;
-window._agencyAllReservations = [];
-window._agencyAllProperties = [];
-
-window.loadAgencyAccountsForSwitcher = async function loadAgencyAccountsForSwitcher() {
-  const token = localStorage.getItem('lcc_token');
-  if (!token) return;
-
-  // En mode switché : le bandeau agencyBanner (via initAgencyBanner) suffit
-  if (localStorage.getItem('lcc_managed_user')) {
-    return;
-  }
-  try {
-    const res = await fetch('/api/agency/delegations', { headers: { 'Authorization': 'Bearer ' + token } });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data.iManage || !data.iManage.length) return;
-    // L'agent doit avoir le plan Agence pour switcher
-    if (!data.canActAsAgent) {
-      console.log('ℹ️ [AGENCY] Délégations trouvées mais plan Agence requis pour switcher');
-      return;
-    }
-    window._agencyAccounts = data.iManage;
-    // Afficher le toggle automatiquement
-    renderAgencyToggle(data.iManage);
-    // Restaurer le mode sauvegardé
-    var savedView = localStorage.getItem('bh_agency_view');
-    if (savedView === 'all') {
-      setAgencyView('all');
-    }
-  } catch(e) {}
-}
-
-window.renderAgencyToggle = function renderAgencyToggle(accounts) {
-  if (!accounts || !accounts.length) return;
-  // bh-layout.js handles the button display
-  var btn = document.getElementById('agencySwitcherBtn');
-  if (btn) { btn.style.display = 'inline-flex'; }
-  var oldBar = document.getElementById('agencyToggleBar');
-  if (oldBar) oldBar.remove();
-}
-
-window.setAgencyView = async function setAgencyView(mode) {
-  window._agencyViewActive = (mode === 'all');
-  localStorage.setItem('bh_agency_view', mode);
-  // Mettre à jour les boutons toggle (legacy)
-  const btnMine = document.getElementById('agencyToggleMine');
-  const btnAll  = document.getElementById('agencyToggleAll');
-  if (btnMine && btnAll) {
-    if (mode === 'all') {
-      btnAll.style.background  = '#7c3aed'; btnAll.style.color  = 'white';
-      btnMine.style.background = 'transparent'; btnMine.style.color = '#9CA3AF';
-    } else {
-      btnMine.style.background = '#0E3B2E'; btnMine.style.color = 'white';
-      btnAll.style.background  = 'transparent'; btnAll.style.color = '#9CA3AF';
-    }
-  }
-  updateAgencySwitcherLabel();
-  // Recharger les données
-  await loadDataAndUpdateKpis();
-}
-
-window.switchAgencyAccount = async function(targetUserId, name, color) {
-  const token = localStorage.getItem('lcc_token');
-  const myToken = localStorage.getItem('lcc_agency_token') || token;
-  try {
-    const res = await fetch('/api/agency/switch', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + myToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetUserId })
-    });
-    const data = await res.json();
-    if (res.ok) {
-      localStorage.setItem('lcc_agency_token', myToken);
-      localStorage.setItem('lcc_token', data.token);
-      localStorage.setItem('lcc_managed_user', JSON.stringify(data.managedUser));
-      if (data.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(data.permissions));
-      localStorage.removeItem('lcc_settings_profile');
-      localStorage.removeItem('lcc_properties_cache');
-      window.location.reload();
-    } else {
-      alert(data.error || 'Erreur switch');
-    }
-  } catch(e) { alert('Erreur réseau'); }
-};
-
-// (loadAgencyUnifiedReservations remplacé par setAgencyView dans Sprint 3)
-// Gérer invitation agence dans URL
-(function() {
-  const p = new URLSearchParams(window.location.search);
-  const at = p.get('agency_token');
-  if (at) {
-    const t = localStorage.getItem('lcc_token');
-    if (t) fetch('/api/agency/accept', { method:'POST', headers:{'Authorization':'Bearer '+t,'Content-Type':'application/json'}, body:JSON.stringify({token:at}) })
-      .then(r=>r.json()).then(d=>{ alert(d.success ? '✅ Invitation acceptée !' : d.error||'Erreur'); window.history.replaceState({},'','/app.html'); });
-  }
-  // initAgencyBanner appelé dans DOMContentLoaded ci-dessous
-
-  // ── Auto-refresh token agence toutes les 6h ──
-  if (localStorage.getItem('lcc_managed_user')) {
-    agencyRefreshToken(); // refresh immédiat au chargement (vérifie validité)
-    setInterval(agencyRefreshToken, 6 * 60 * 60 * 1000);
-  }
-})();
-
-// ── Refresh token agence ──
-window.agencyRefreshToken = async function() {
-  const managed = localStorage.getItem('lcc_managed_user');
-  if (!managed) return;
-  try {
-    const token = localStorage.getItem('lcc_token');
-    const res = await fetch('/api/agency/refresh', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      localStorage.setItem('lcc_token', data.token);
-      if (data.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(data.permissions));
-      console.log('🔄 [AGENCY] Token refreshed');
-    } else if (res.status === 403 || res.status === 401) {
-      console.warn('⚠️ [AGENCY] Token expiré ou délégation révoquée — retour au compte principal');
-      exitAgencyMode();
-    }
-  } catch(e) {
-    console.warn('⚠️ [AGENCY] Refresh échoué:', e.message);
-  }
-};
-
-// ── Masquer les pages non autorisées selon permissions agence ──
-window.applyAgencyPermissions = function() {
-  const managed = localStorage.getItem('lcc_managed_user');
-  if (!managed) return;
-  const perms = JSON.parse(localStorage.getItem('lcc_agency_permissions') || '{}');
-  // Mapping permission → pages à masquer
-  const permPageMap = {
-    can_view_messages:  ['/messages.html'],
-    can_view_cleaning:  ['/cleaning.html'],
-    can_view_reporting: ['/reporting.html', '/kpis.html'],
-    can_view_finances:  ['/deposits.html', '/factures.html', '/owner-invoices.html'],
-    can_view_calendar:  ['/app.html']
-  };
-  // Collecter les pages interdites
-  var blockedPages = [];
-  Object.keys(permPageMap).forEach(function(perm) {
-    if (perms[perm] === false) {
-      blockedPages = blockedPages.concat(permPageMap[perm]);
-    }
-  });
-  // Masquer dans la nav desktop (bhDemoNav)
-  document.querySelectorAll('#bhDemoNav a[href]').forEach(function(a) {
-    var href = (a.getAttribute('href') || '').split('?')[0];
-    if (blockedPages.includes(href)) {
-      a.style.display = 'none';
-    }
-  });
-  // Masquer dans la sidebar desktop
-  document.querySelectorAll('aside.sidebar a[href], .sidebar a.nav-item[href]').forEach(function(a) {
-    var href = (a.getAttribute('href') || '').split('?')[0];
-    if (blockedPages.includes(href)) {
-      a.style.display = 'none';
-    }
-  });
-  // Masquer dans le bottom tab bar mobile
-  document.querySelectorAll('.mobile-tabs a[href], .tab-bar a[href], [data-mobile-tab]').forEach(function(a) {
-    var href = (a.getAttribute('href') || '').split('?')[0];
-    if (blockedPages.includes(href)) {
-      a.style.display = 'none';
-    }
-  });
-  // Bloquer l'accès à la page courante si pas autorisée
-  var curPath = location.pathname.toLowerCase();
-  if (blockedPages.includes(curPath)) {
-    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;font-family:DM Sans,sans-serif;">'
-      + '<div><div style="margin-bottom:16px;"><i class="fas fa-lock" style="font-size:42px;color:#9CA3AF;"></i></div>'
-      + '<h2 style="margin:0 0 8px;">Accès non autorisé</h2>'
-      + '<p style="color:#6b7280;margin:0 0 24px;">Le propriétaire n\'a pas activé cette permission pour votre accès agence.</p>'
-      + '<button onclick="exitAgencyMode()" style="padding:10px 24px;background:#7c3aed;color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer;">← Retour à mon compte</button>'
-      + '</div></div>';
-  }
-};
-
-document.addEventListener('DOMContentLoaded', function() {
-  loadAgencyAccountsForSwitcher();
-  setTimeout(applyAgencyPermissions, 300);
-});
-
-// ══════════════════════════════════════
-// Demande d'autorisation de connexion support (type AnyDesk)
-// L'équipe Boostinghost peut demander à se connecter sur ce compte pour assister
-// l'utilisateur ; cette popup ne s'affiche QUE si une demande explicite a été faite,
-// et l'accès ne s'ouvre que si l'utilisateur clique "Autoriser".
-// ══════════════════════════════════════
-let _bhImpersonationPollTimer = null;
-let _bhImpersonationCurrentRequestId = null;
-
-function _bhStartImpersonationPolling() {
-  if (_bhImpersonationPollTimer) return; // déjà en cours
-  _bhImpersonationPollTimer = setInterval(_bhCheckImpersonationPending, 8000);
-  _bhCheckImpersonationPending(); // premier check immédiat
-}
-
-async function _bhCheckImpersonationPending() {
-  try {
-    const token = localStorage.getItem('lcc_token');
-    if (!token) return;
-    const res = await fetch('/api/impersonation/pending', {
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (data.request && data.request.id !== _bhImpersonationCurrentRequestId) {
-      _bhImpersonationCurrentRequestId = data.request.id;
-      _bhShowImpersonationModal(data.request);
-    } else if (!data.request) {
-      _bhImpersonationCurrentRequestId = null;
-      const modal = document.getElementById('bhImpersonationModal');
-      if (modal) modal.remove();
-    }
-  } catch(e) { /* silencieux : ne pas gêner l'utilisateur pour un souci réseau ponctuel */ }
-}
-
-function _bhShowImpersonationModal(reqData) {
-  let modal = document.getElementById('bhImpersonationModal');
-  if (modal) modal.remove();
-
-  modal = document.createElement('div');
-  modal.id = 'bhImpersonationModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
-  modal.innerHTML = `
-    <div style="background:white;border-radius:16px;padding:28px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.25);">
-      <div style="margin-bottom:12px;"><i class="fas fa-lock" style="font-size:34px;color:#0E3B2E;"></i></div>
-      <div style="font-weight:700;font-size:17px;margin-bottom:8px;color:#1a1a1a;">Demande de connexion support</div>
-      <div style="font-size:14px;color:#555;line-height:1.5;margin-bottom:6px;">
-        L'équipe Boostinghost demande à se connecter temporairement à votre compte pour vous assister.
-      </div>
-      ${reqData.reason ? `<div style="font-size:13px;color:#888;background:#F5F5F0;border-radius:8px;padding:8px 12px;margin:10px 0;">Motif : ${reqData.reason}</div>` : ''}
-      <div style="font-size:12px;color:#999;margin-bottom:20px;">L'accès sera limité à 1 heure et toute action sera tracée. Vous pouvez refuser sans conséquence.</div>
-      <div style="display:flex;gap:10px;">
-        <button id="bhImpDeny" style="flex:1;padding:12px;border-radius:10px;border:1px solid #e0e0e0;background:white;color:#555;font-weight:600;font-size:14px;cursor:pointer;">Refuser</button>
-        <button id="bhImpApprove" style="flex:1;padding:12px;border-radius:10px;border:none;background:#0E3B2E;color:white;font-weight:600;font-size:14px;cursor:pointer;">Autoriser</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-
-  document.getElementById('bhImpApprove').onclick = () => _bhRespondImpersonation(reqData.id, true);
-  document.getElementById('bhImpDeny').onclick = () => _bhRespondImpersonation(reqData.id, false);
-}
-
-async function _bhRespondImpersonation(requestId, approve) {
-  const modal = document.getElementById('bhImpersonationModal');
-  try {
-    const token = localStorage.getItem('lcc_token');
-    await fetch(`/api/impersonation/${requestId}/respond`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ approve })
-    });
-  } catch(e) { /* la demande expirera côté serveur si l'appel échoue */ }
-  _bhImpersonationCurrentRequestId = null;
-  if (modal) modal.remove();
-}
-
-_bhStartImpersonationPolling();
-
-// ══════════════════════════════════════
-// ❓ Questions factuelles de l'IA à l'hôte (réponse 1 clic)
-// ══════════════════════════════════════
-let _bhHostQPollTimer = null;
-let _bhHostQCurrentId = null;
-
-function _bhStartHostQuestionPolling() {
-  if (_bhHostQPollTimer) return;
-  _bhHostQPollTimer = setInterval(_bhCheckHostQuestions, 10000);
-  _bhCheckHostQuestions();
-}
-
-async function _bhCheckHostQuestions() {
-  try {
-    const token = localStorage.getItem('lcc_token');
-    if (!token) return;
-    const res = await fetch('/api/host-questions/pending', {
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    const q = (data.questions || [])[0];
-    if (q && q.id !== _bhHostQCurrentId && !document.getElementById('bhHostQModal')) {
-      _bhHostQCurrentId = q.id;
-      _bhShowHostQuestionModal(q);
-    }
-  } catch(e) { /* silencieux */ }
-}
-
-function _bhShowHostQuestionModal(q) {
-  let modal = document.getElementById('bhHostQModal');
-  if (modal) modal.remove();
-
-  modal = document.createElement('div');
-  modal.id = 'bhHostQModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px;';
-
-  // ── Bloc contexte séjour : logement, dates, occupation avant/après ──
-  // (utile pour juger une arrivée anticipée / un départ tardif)
-  const _fmtD = (d) => { try { return d ? new Date(d).toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) : null; } catch(e){ return null; } };
-  const _dPart = (d) => { try { return d ? new Date(d).toISOString().split('T')[0] : null; } catch(e){ return null; } };
-  const _meta = q.meta || {};
-  const _ci = _dPart(q.stay_checkin || _meta.checkin);
-  const _co = _dPart(q.stay_checkout || _meta.checkout);
-  const _prevCo = _dPart(q.prev_checkout);
-  const _nextCi = _dPart(q.next_checkin);
-  // occupé avant = résa précédente qui finit le jour de l'arrivée (enchaînement)
-  let _occBefore = (_prevCo && _ci) ? (_prevCo === _ci) : null;
-  let _occAfter  = (_nextCi && _co) ? (_nextCi === _co) : null;
-  // fallback meta (free_before / free_after) si l'API n'a pas de dates voisines
-  if (_occBefore === null && typeof _meta.free_before === 'boolean') _occBefore = !_meta.free_before;
-  if (_occAfter  === null && typeof _meta.free_after  === 'boolean') _occAfter  = !_meta.free_after;
-  const _propName = q.property_name || _meta.property_name || null;
-  const _ciF = _fmtD(q.stay_checkin || _meta.checkin);
-  const _coF = _fmtD(q.stay_checkout || _meta.checkout);
-  const _rows = [];
-  if (_propName) _rows.push(`<div style="display:flex;align-items:center;gap:7px;"><i class="fas fa-home" style="color:#6B7280;width:14px;text-align:center;"></i><strong style="color:#1f2937;">${_propName}</strong></div>`);
-  if (_ciF && _coF) _rows.push(`<div style="display:flex;align-items:center;gap:7px;"><i class="far fa-calendar-alt" style="color:#6B7280;width:14px;text-align:center;"></i><span>${_ciF} → ${_coF}</span></div>`);
-  if (_occBefore !== null) _rows.push(_occBefore
-    ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span style="width:9px;height:9px;border-radius:50%;background:#DC2626;display:inline-block;flex-shrink:0;"></span><span>Loué la veille — départ le jour de l'arrivée</span></div>`
-    : `<div style="display:flex;align-items:center;gap:7px;color:#0E3B2E;"><span style="width:9px;height:9px;border-radius:50%;background:#0E3B2E;display:inline-block;flex-shrink:0;"></span><span>Libre la veille de l'arrivée</span></div>`);
-  if (_occAfter !== null) _rows.push(_occAfter
-    ? `<div style="display:flex;align-items:center;gap:7px;color:#B45309;"><span style="width:9px;height:9px;border-radius:50%;background:#DC2626;display:inline-block;flex-shrink:0;"></span><span>Reloué le jour du départ</span></div>`
-    : `<div style="display:flex;align-items:center;gap:7px;color:#0E3B2E;"><span style="width:9px;height:9px;border-radius:50%;background:#0E3B2E;display:inline-block;flex-shrink:0;"></span><span>Libre le jour du départ</span></div>`);
-  const infoHtml = _rows.length
-    ? `<div style="background:#F0F4F2;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:12.5px;line-height:1.7;color:#374151;">${_rows.join('')}</div>`
-    : '';
-
-  modal.innerHTML = `
-    <div style="background:white;border-radius:16px;padding:26px;max-width:400px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.25);">
-      <div style="font-size:34px;text-align:center;margin-bottom:10px;">❓</div>
-      <div style="font-weight:700;font-size:16px;text-align:center;margin-bottom:4px;color:#1a1a1a;">Question d'un voyageur</div>
-      <div style="font-size:12px;color:#999;text-align:center;margin-bottom:14px;">${q.guest_name || 'Voyageur'}</div>
-      ${infoHtml}
-      <div style="font-size:15px;color:#333;line-height:1.5;background:#F5F2EC;border-radius:10px;padding:14px 16px;margin-bottom:18px;text-align:center;">${q.question}</div>
-      <div style="display:flex;gap:10px;margin-bottom:10px;">
-        <button id="bhHQNo" style="flex:1;padding:13px;border-radius:10px;border:1px solid #FCA5A5;background:#FEF2F2;color:#DC2626;font-weight:700;font-size:15px;cursor:pointer;">Non</button>
-        <button id="bhHQYes" style="flex:1;padding:13px;border-radius:10px;border:none;background:#0E3B2E;color:white;font-weight:700;font-size:15px;cursor:pointer;">Oui</button>
-      </div>
-      <div id="bhHQTextWrap" style="display:none;margin-bottom:10px;">
-        <textarea id="bhHQText" rows="2" placeholder="Précision (optionnel)…" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:inherit;box-sizing:border-box;resize:vertical;"></textarea>
-        <button id="bhHQSendText" style="width:100%;margin-top:8px;padding:11px;border-radius:10px;border:none;background:#2C3E35;color:white;font-weight:600;font-size:14px;cursor:pointer;">Envoyer cette précision au voyageur</button>
-      </div>
-      <button id="bhHQSelf" style="width:100%;padding:11px;border-radius:10px;border:1px solid #e0e0e0;background:white;color:#555;font-weight:600;font-size:13px;cursor:pointer;">Je réponds moi-même</button>
-      <div style="font-size:11px;color:#aaa;text-align:center;margin-top:12px;">L'IA transmettra votre réponse au voyageur dans sa langue.</div>
-    </div>`;
-  document.body.appendChild(modal);
-
-  const text = () => (document.getElementById('bhHQText')?.value || '').trim();
-  document.getElementById('bhHQYes').onclick = () => _bhAnswerHostQuestion(q.id, 'yes', text());
-  document.getElementById('bhHQNo').onclick  = () => {
-    const wrap = document.getElementById('bhHQTextWrap');
-    if (wrap.style.display === 'none') {
-      wrap.style.display = 'block';
-      document.getElementById('bhHQSendText').onclick = () => _bhAnswerHostQuestion(q.id, 'no', text());
-      document.getElementById('bhHQNo').textContent = 'Non, sans précision';
-      document.getElementById('bhHQNo').onclick = () => _bhAnswerHostQuestion(q.id, 'no', '');
-    }
-  };
-  document.getElementById('bhHQSelf').onclick = () => _bhAnswerHostQuestion(q.id, 'self', '');
-}
-
-async function _bhAnswerHostQuestion(questionId, answer, text) {
-  const modal = document.getElementById('bhHostQModal');
-  try {
-    const token = localStorage.getItem('lcc_token');
-    await fetch(`/api/host-questions/${questionId}/answer`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ answer, text: text || '' })
-    });
-    if (answer === 'self' && typeof window.showBHToast === 'function') {
-      showBHToast('À vous de répondre dans la conversation', 'info');
-    } else if (typeof window.showBHToast === 'function') {
-      showBHToast('Réponse transmise au voyageur ✅', 'success');
-    }
-  } catch(e) { /* la question reste pending si échec, repoll plus tard */ }
-  _bhHostQCurrentId = null;
-  if (modal) modal.remove();
-}
-
-_bhStartHostQuestionPolling();
-
-// Banner agence : exécuté via window.load + setTimeout pour garantir qu'il s'affiche APRÈS tout le reste
-window.addEventListener('load', function() {
-  initAgencyBanner();
-});
-setTimeout(function() {
-  initAgencyBanner();
-}, 1500);
-</script>
-
-<style id="bh-cal-v4">
+  <style id="bh-cal-v4">
 /* BH Calendar V4 */
 #bhCalRoot { font-family: 'DM Sans', 'Inter', sans-serif; }
 .bh-cal-header { flex-wrap: wrap; }
@@ -3463,7 +3495,7 @@ setTimeout(function() {
 .cell-price { pointer-events: none; user-select: none; }
 </style>
 
-<style id="calendar-horizontal-after-vertical-fix-css">
+  <style id="calendar-horizontal-after-vertical-fix-css">
 /* Test ciblé WebView iOS : après un scroll vertical, le calendrier garde la priorité au geste horizontal. */
 @media (max-width: 1366px) {
   .calendar-container .calendar-grid-wrapper {
@@ -3498,8 +3530,7 @@ setTimeout(function() {
 }
 </style>
 
-
-<style id="calendar-horizontal-scroll-lock-css-v2">
+  <style id="calendar-horizontal-scroll-lock-css-v2">
 @media (max-width: 1366px) {
   .calendar-grid-wrapper {
     overflow-x: auto !important;
@@ -3529,10 +3560,17 @@ setTimeout(function() {
 }
 </style>
 
-<link rel="stylesheet" href="/css/bh-v3-mobile.css?v=2b3a5fdd">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
-<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
-<style>
+  <!-- Calques tardifs — mobile et correctifs empiles. Ils surchargent
+       volontairement le CSS de la page et n'ont presque pas de
+       !important : leur position finale est ce qui les fait tenir.
+       A resorber au lot 4, pas a deplacer maintenant. -->
+  <link rel="stylesheet" href="/css/bh-v3-mobile.css?v=2b3a5fdd">
+  <link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
+  <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+
+  <!-- CSS de page pose apres les calques tardifs : il les surcharge
+       volontairement, sa position est conservee telle quelle. -->
+  <style>
 /* ══ BH MLIST — listes raffinées pour les modales KPI ══ */
 .bh-mlist{ display:flex; flex-direction:column; gap:9px; }
 .bh-mrow{ display:flex; align-items:flex-start; gap:13px; background:#fff;
@@ -3556,13 +3594,6 @@ setTimeout(function() {
 .bh-mrow-note{ font:400 12.5px 'DM Sans',sans-serif; color:#7C2D12; line-height:1.45; margin-top:6px; }
 .bh-mrow-score{ font:700 12px 'DM Sans',sans-serif; color:#B7791F; flex:none; }
 </style>
-
-  <!-- Marque Boostinghost — genere par outils/marque.js -->
-  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
-  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
-  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
-  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
-  <meta name="theme-color" content="#0E3B2E">
 </head>
 <body data-page="app">
 <div id="subscriptionAlert" style="display: none; position: sticky; top: 40px; z-index: 9998; width: 100%;">

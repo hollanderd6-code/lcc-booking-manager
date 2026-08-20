@@ -6,7 +6,18 @@
 <title>Tuto — Messagerie & Templates automatiques | Boostinghost</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-<style>
+
+  <!-- Marque Boostinghost — genere par outils/marque.js -->
+  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
+  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
+  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
+  <meta name="theme-color" content="#0E3B2E">
+  <meta property="og:image" content="/img/brand/social/og-image.png">
+  <meta property="og:type" content="website">
+
+  <!-- CSS propre a cette page. -->
+  <style>
 :root {
   --primary: #0E3B2E;
   --primary-light: #e8f5f0;
@@ -68,7 +79,8 @@ body { font-family: "DM Sans", sans-serif; background: #f8f7f4; color: var(--ink
   .tuto-intro { flex-direction: column; padding: 20px; }
 }
 </style>
-<style>
+
+  <style>
 /* === Correctifs responsive + navigation (ajout BH) === */
 .tuto-topbar{position:sticky;top:0;z-index:50;background:#0D1117;display:flex;align-items:center;padding:12px 20px}
 .tuto-topbar .tuto-back{display:inline-flex;align-items:center;gap:8px;color:#fff;text-decoration:none;font-family:"DM Sans",sans-serif;font-size:14px;font-weight:600;padding:8px 16px;border:1px solid rgba(255,255,255,.18);border-radius:100px;transition:background .15s}
@@ -97,17 +109,13 @@ body { font-family: "DM Sans", sans-serif; background: #f8f7f4; color: var(--ink
   .tuto-cta{padding:28px 20px}
 }
 </style>
-<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
-  <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
 
-  <!-- Marque Boostinghost — genere par outils/marque.js -->
-  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
-  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
-  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
-  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
-  <meta name="theme-color" content="#0E3B2E">
-  <meta property="og:image" content="/img/brand/social/og-image.png">
-  <meta property="og:type" content="website">
+  <!-- Calques tardifs — mobile et correctifs empiles. Ils surchargent
+       volontairement le CSS de la page et n'ont presque pas de
+       !important : leur position finale est ce qui les fait tenir.
+       A resorber au lot 4, pas a deplacer maintenant. -->
+  <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
+  <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
 </head>
 <body>
 <div class="tuto-topbar">

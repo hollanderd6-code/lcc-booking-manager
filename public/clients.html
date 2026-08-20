@@ -10,13 +10,116 @@
 <title>Boostinghost – Mes Clients</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
-<link href="/css/style.css?v=17204d03" rel="stylesheet"/>
-<link href="/css/bh-theme-v3.css?v=cb75551e" rel="stylesheet"/>
-<link rel="stylesheet" href="/css/bh-brand.css?v=3140b004"><link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/><link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
-<link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
-<link href="/css/invoices-cards-style.css?v=cae6f272" rel="stylesheet"/>
-<style>
+
+<script>
+// ── Avoirs : montants plutot que tout ou rien ────────────────────────────
+// Une facture peut etre partiellement avoiree. On calcule donc le montant
+// avoire par facture, et non la simple existence d'un avoir.
+window.bhCreditedAmounts = function (invoices) {
+  var map = {};
+  (invoices || []).forEach(function (inv) {
+    if (inv.is_credit_note && inv.original_invoice_id) {
+      var k = String(inv.original_invoice_id);
+      map[k] = (map[k] || 0) + Math.abs(parseFloat(inv.total_ttc || 0) || 0);
+    }
+  });
+  return map;
+};
+// Montant restant du sur une facture, avoirs deduits. Jamais negatif.
+window.bhNetAmount = function (inv, map) {
+  var t = parseFloat(inv.total_ttc || 0) || 0;
+  var c = map[String(inv.id)] || 0;
+  return Math.max(0, t - c);
+};
+// Totalement avoiree ? Tolerance d'un centime pour les arrondis de TVA.
+window.bhFullyCredited = function (inv, map) {
+  var t = parseFloat(inv.total_ttc || 0) || 0;
+  var c = map[String(inv.id)] || 0;
+  return t > 0 && c >= t - 0.01;
+};
+
+// ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
+(function() {
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    if (typeof url === 'string' && localStorage.getItem('bh_agency_view') === 'all' && url.includes('/api/') && !url.includes('agency=')) {
+      url += (url.includes('?') ? '&' : '?') + 'agency=all';
+    }
+    return _origFetch.call(this, url, opts);
+  };
+})();
+</script>
+<script>
+// Script pour désactiver pull-to-refresh sur iOS
+(function() {
+  if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+    let lastTouchY = 0;
+    let preventPullToRefresh = false;
+    
+    document.addEventListener("touchstart", function(e) {
+      if (e.touches.length !== 1) return;
+      lastTouchY = e.touches[0].clientY;
+      
+      // Vérifier si on est en haut de la page
+      preventPullToRefresh = window.pageYOffset === 0;
+    }, { passive: false });
+    
+    document.addEventListener("touchmove", function(e) {
+      const touchY = e.touches[0].clientY;
+      const touchYDelta = touchY - lastTouchY;
+      lastTouchY = touchY;
+      
+      // Si on scroll vers le bas ET qu on est en haut de la page
+      if (preventPullToRefresh && touchYDelta > 0) {
+        // Empêcher le pull-to-refresh
+        e.preventDefault();
+        return false;
+      }
+    }, { passive: false });
+    
+    console.log("[OK] Pull-to-refresh désactivé sur iOS");
+  }
+})();
+</script>
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// Stub déclaré tôt pour que le onclick soit résolu même si le script principal n'est pas encore parsé
+function openAttestationModal() {
+  if (window._openAttestationModalReady) {
+    window._openAttestationModalReady();
+  } else {
+    // Attendre que la vraie fonction soit prête
+    document.addEventListener('attestationReady', function() {
+      window._openAttestationModalReady();
+    });
+  }
+}
+</script>
+
+  <!-- Marque Boostinghost — genere par outils/marque.js -->
+  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
+  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
+  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
+  <meta name="theme-color" content="#0E3B2E">
+
+  <!-- Feuilles globales — ordre unique sur toutes les pages (lot 1).
+       Du general au particulier : tiers, theme, jetons, calques,
+       structure, habillages. N'ajoutez aucun <link> ailleurs dans le
+       document ; la place d'une nouvelle feuille se decide dans
+       outils/lot1-cascade.js. -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css?v=17204d03" rel="stylesheet"/>
+  <link href="/css/bh-theme-v3.css?v=cb75551e" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
+  <link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
+  <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
+  <link href="/css/invoices-cards-style.css?v=cae6f272" rel="stylesheet"/>
+
+  <!-- CSS propre a cette page. -->
+  <style>
     /* FIX iOS POUR APP MOBILE */
     html, body {
       margin: 0 !important;
@@ -793,7 +896,8 @@ html[data-theme-v3="1"] .modal-content {
 .tab-lock-icon { margin-left: 5px; font-size: 10px; opacity: .65; }
 
 </style>
-<style>
+
+  <style>
 /* [OK] Uniformisation du bouton "Retour au dashboard" (header) */
 .main-header .header-actions .btn.btn-ghost{
   border-radius: 999px !important;
@@ -818,7 +922,8 @@ html[data-theme-v3="1"] .modal-content {
   background: rgba(15, 23, 42, 0.90) !important;
 }
 </style>
-<style>
+
+  <style>
 /* RESPONSIVE MOBILE ÉDITEUR - AUTO-INCLUS */
 @media (max-width: 1366px) {
   .invoice-editor-layout { display: flex !important; flex-direction: column !important; gap: 16px !important; }
@@ -831,7 +936,8 @@ html[data-theme-v3="1"] .modal-content {
   .nav-tab { flex: 1 !important; font-size: 13px !important; }
 }
 </style>
-<style>
+
+  <style>
 
 /* ============================================================
    MOBILE OPTIMIZATIONS — factures-proprietaires
@@ -1008,103 +1114,15 @@ html[data-theme-v3="1"] .modal-content {
   }
 }
 </style>
-<script>
-// ── Avoirs : montants plutot que tout ou rien ────────────────────────────
-// Une facture peut etre partiellement avoiree. On calcule donc le montant
-// avoire par facture, et non la simple existence d'un avoir.
-window.bhCreditedAmounts = function (invoices) {
-  var map = {};
-  (invoices || []).forEach(function (inv) {
-    if (inv.is_credit_note && inv.original_invoice_id) {
-      var k = String(inv.original_invoice_id);
-      map[k] = (map[k] || 0) + Math.abs(parseFloat(inv.total_ttc || 0) || 0);
-    }
-  });
-  return map;
-};
-// Montant restant du sur une facture, avoirs deduits. Jamais negatif.
-window.bhNetAmount = function (inv, map) {
-  var t = parseFloat(inv.total_ttc || 0) || 0;
-  var c = map[String(inv.id)] || 0;
-  return Math.max(0, t - c);
-};
-// Totalement avoiree ? Tolerance d'un centime pour les arrondis de TVA.
-window.bhFullyCredited = function (inv, map) {
-  var t = parseFloat(inv.total_ttc || 0) || 0;
-  var c = map[String(inv.id)] || 0;
-  return t > 0 && c >= t - 0.01;
-};
 
-
-// ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
-(function() {
-  var _origFetch = window.fetch;
-  window.fetch = function(url, opts) {
-    if (typeof url === 'string' && localStorage.getItem('bh_agency_view') === 'all' && url.includes('/api/') && !url.includes('agency=')) {
-      url += (url.includes('?') ? '&' : '?') + 'agency=all';
-    }
-    return _origFetch.call(this, url, opts);
-  };
-})();
-</script>
-<script>
-// Script pour désactiver pull-to-refresh sur iOS
-(function() {
-  if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-    let lastTouchY = 0;
-    let preventPullToRefresh = false;
-    
-    document.addEventListener("touchstart", function(e) {
-      if (e.touches.length !== 1) return;
-      lastTouchY = e.touches[0].clientY;
-      
-      // Vérifier si on est en haut de la page
-      preventPullToRefresh = window.pageYOffset === 0;
-    }, { passive: false });
-    
-    document.addEventListener("touchmove", function(e) {
-      const touchY = e.touches[0].clientY;
-      const touchYDelta = touchY - lastTouchY;
-      lastTouchY = touchY;
-      
-      // Si on scroll vers le bas ET qu on est en haut de la page
-      if (preventPullToRefresh && touchYDelta > 0) {
-        // Empêcher le pull-to-refresh
-        e.preventDefault();
-        return false;
-      }
-    }, { passive: false });
-    
-    console.log("[OK] Pull-to-refresh désactivé sur iOS");
-  }
-})();
-</script>
-<!-- jsPDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script>
-// Stub déclaré tôt pour que le onclick soit résolu même si le script principal n'est pas encore parsé
-function openAttestationModal() {
-  if (window._openAttestationModalReady) {
-    window._openAttestationModalReady();
-  } else {
-    // Attendre que la vraie fonction soit prête
-    document.addEventListener('attestationReady', function() {
-      window._openAttestationModalReady();
-    });
-  }
-}
-</script>
-<link rel="stylesheet" href="/css/menu-plus-fixes.css?v=13677c32">
-<link rel="stylesheet" href="/css/menu-active-button.css?v=f21f319b">
-<link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
-<link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
-
-  <!-- Marque Boostinghost — genere par outils/marque.js -->
-  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
-  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
-  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
-  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
-  <meta name="theme-color" content="#0E3B2E">
+  <!-- Calques tardifs — mobile et correctifs empiles. Ils surchargent
+       volontairement le CSS de la page et n'ont presque pas de
+       !important : leur position finale est ce qui les fait tenir.
+       A resorber au lot 4, pas a deplacer maintenant. -->
+  <link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
+  <link rel="stylesheet" href="/css/menu-plus-fixes.css?v=13677c32">
+  <link rel="stylesheet" href="/css/menu-active-button.css?v=f21f319b">
+  <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
 </head>
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="clients" data-subtitle="Gérez vos propriétaires, leur Stripe et leurs logements." data-title="Mes clients">
 
