@@ -1654,8 +1654,20 @@ let startedAt = null;
     });
   });
   
-  // Check if PIN in URL
+  // ── Lien unique (recommandé) : ?t=<jeton> ──
+  // Le jeton est retiré de l'URL juste après lecture pour qu'il ne traîne pas
+  // dans l'historique du navigateur ni dans le referer.
   const urlParams = new URLSearchParams(window.location.search);
+  const tokenParam = urlParams.get('t');
+  if (tokenParam) {
+    currentPin = tokenParam;
+    sessionStorage.setItem('cleaning_pin', tokenParam);
+    window.history.replaceState({}, '', window.location.pathname);
+    loadTasks(tokenParam);
+    return;
+  }
+
+  // Check if PIN in URL (legacy)
   const pinParam = urlParams.get('pin');
   if (pinParam && pinParam.length === 4) {
     const digits = pinParam.split('');
@@ -2782,7 +2794,16 @@ async function loadTasks(pin) {
       
       renderTasks();
     } else {
+      // Lien révoqué, fiche désactivée ou trop de tentatives : on le dit,
+      // sinon l'agent reste devant un écran muet sans comprendre pourquoi.
       sessionStorage.removeItem('cleaning_pin');
+      currentPin = null;
+      let msg = 'Accès refusé. Demandez un nouveau lien.';
+      try {
+        const d = await res.json();
+        if (d && d.error) msg = d.error;
+      } catch (e) {}
+      if (typeof showLoginError === 'function') showLoginError(msg);
     }
   } catch (err) {
     console.error(err);

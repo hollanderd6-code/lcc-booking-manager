@@ -2677,6 +2677,29 @@ ON invoice_download_tokens(token);
     } catch (e) {
       console.log('ℹ️ sms_recap_enabled cleaners déjà existante:', e.message);
     }
+
+    // ✅ Migration : lien unique d'accès aux tâches ménage.
+    // Le PIN à 4 chiffres (9 000 combinaisons, sans expiration ni limitation
+    // de tentatives) restait devinable par force brute. On lui adjoint un
+    // jeton long, révocable, propre à chaque agent.
+    try {
+      await pool.query(`ALTER TABLE cleaners ADD COLUMN IF NOT EXISTS access_token TEXT`);
+      await pool.query(`ALTER TABLE cleaners ADD COLUMN IF NOT EXISTS access_token_created_at TIMESTAMPTZ`);
+      await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_cleaners_access_token ON cleaners(access_token) WHERE access_token IS NOT NULL`);
+      // Backfill : un jeton pour chaque fiche existante
+      const sansJeton = await pool.query(`SELECT id FROM cleaners WHERE access_token IS NULL`);
+      for (const row of sansJeton.rows) {
+        await pool.query(
+          `UPDATE cleaners SET access_token = $2, access_token_created_at = NOW() WHERE id = $1`,
+          [row.id, crypto.randomBytes(32).toString('base64url')]
+        );
+      }
+      if (sansJeton.rows.length) {
+        console.log(`✅ access_token généré pour ${sansJeton.rows.length} fiche(s) ménage`);
+      }
+    } catch (e) {
+      console.log('ℹ️ Migration access_token cleaners:', e.message);
+    }
     try {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS bhguest_holds (
@@ -13060,7 +13083,7 @@ app.get('/api/cleaners', authenticateAny, checkSubscription, requirePermission(p
     const agencyIds = await getAgencyUserIds(req, userId);
 
     const result = await pool.query(
-      `SELECT id, name, phone, email, notes, pin_code, is_active, sub_account_id, sms_recap_enabled, created_at
+      `SELECT id, name, phone, email, notes, pin_code, is_active, sub_account_id, sms_recap_enabled, access_token, created_at
        FROM cleaners
        WHERE user_id = ANY($1::text[])
        ORDER BY name ASC`,
@@ -13122,10 +13145,11 @@ app.post('/api/cleaners', authenticateAny, requirePermission(pool, 'can_manage_c
     }
 
     const result = await pool.query(
-      `INSERT INTO cleaners (id, user_id, name, phone, email, notes, pin_code, is_active, sub_account_id, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, TRUE), $9, NOW())
-       RETURNING id, name, phone, email, notes, pin_code, is_active, sub_account_id, created_at`,
-      [id, userId, name, phone || null, email || null, notes || null, pinCode, isActive, subAccountId || null]
+      `INSERT INTO cleaners (id, user_id, name, phone, email, notes, pin_code, is_active, sub_account_id, access_token, access_token_created_at, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, TRUE), $9, $10, NOW(), NOW())
+       RETURNING id, name, phone, email, notes, pin_code, is_active, sub_account_id, access_token, created_at`,
+      [id, userId, name, phone || null, email || null, notes || null, pinCode, isActive, subAccountId || null,
+       crypto.randomBytes(32).toString('base64url')]
     );
 
     res.status(201).json({
@@ -13134,6 +13158,37 @@ app.post('/api/cleaners', authenticateAny, requirePermission(pool, 'can_manage_c
     });
   } catch (err) {
     console.error('Erreur POST /api/cleaners :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST - Régénérer le lien d'accès d'une personne de ménage (révoque l'ancien)
+app.post('/api/cleaners/:id/regenerate-link', authenticateAny, requirePermission(pool, 'can_manage_cleaning'), async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `UPDATE cleaners
+       SET access_token = $2, access_token_created_at = NOW()
+       WHERE id = $1 AND user_id = ANY($3::text[])
+       RETURNING id, name, access_token`,
+      [id, crypto.randomBytes(32).toString('base64url'), agencyIds]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Personne de ménage introuvable' });
+    }
+
+    console.log(`🔑 Lien d'accès régénéré pour ${result.rows[0].name} — l'ancien est révoqué`);
+    res.json({ success: true, cleaner: result.rows[0] });
+  } catch (err) {
+    console.error('Erreur POST /api/cleaners/:id/regenerate-link :', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -13479,22 +13534,96 @@ function cleanReservationNote(raw) {
   return note;
 }
 
-// GET - Liste des tâches pour une personne de ménage (accès via PIN)
+// ============================================
+// 🔐 ACCÈS AGENT DE MÉNAGE — jeton unique ou PIN (legacy)
+// ============================================
+// Le PIN à 4 chiffres est conservé pour ne casser aucun usage en cours, mais
+// il est désormais protégé par une limitation de tentatives par IP. Le lien
+// unique (access_token) est le chemin recommandé : long, révocable, et non
+// devinable. `credential` arrive là où le PIN arrivait déjà (path, query ou
+// body), ce qui évite de toucher à la forme des appels existants.
+
+const _tentativesPin = new Map(); // ip -> { count, resetAt }
+const PIN_MAX_TENTATIVES = 10;
+const PIN_FENETRE_MS = 15 * 60 * 1000;
+
+function _ipDe(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+      || req.socket?.remoteAddress
+      || 'unknown';
+}
+
+function _pinBloque(ip) {
+  const e = _tentativesPin.get(ip);
+  if (!e) return false;
+  if (Date.now() > e.resetAt) { _tentativesPin.delete(ip); return false; }
+  return e.count >= PIN_MAX_TENTATIVES;
+}
+
+function _pinEchec(ip) {
+  const e = _tentativesPin.get(ip);
+  if (!e || Date.now() > e.resetAt) {
+    _tentativesPin.set(ip, { count: 1, resetAt: Date.now() + PIN_FENETRE_MS });
+  } else {
+    e.count++;
+  }
+}
+
+// Purge périodique pour éviter que la Map ne grossisse indéfiniment
+setInterval(() => {
+  const maintenant = Date.now();
+  for (const [ip, e] of _tentativesPin) if (maintenant > e.resetAt) _tentativesPin.delete(ip);
+}, 30 * 60 * 1000).unref?.();
+
+/**
+ * Résout un agent de ménage depuis un jeton d'accès OU un PIN.
+ * @returns {Promise<{ok:true, cleaner:object} | {ok:false, status:number, error:string}>}
+ */
+async function resoudreAgentMenage(credential, req, colonnes = 'id, user_id, name') {
+  const valeur = String(credential || '').trim();
+  if (!valeur) return { ok: false, status: 400, error: 'Identifiant manquant' };
+
+  const champs = colonnes.includes('access_token') ? colonnes : colonnes + ', access_token';
+
+  // Un PIN fait exactement 4 chiffres : tout le reste est traité comme un jeton.
+  const estPin = /^\d{4}$/.test(valeur);
+
+  if (!estPin) {
+    const r = await pool.query(
+      `SELECT ${champs} FROM cleaners WHERE access_token = $1 AND is_active = TRUE`,
+      [valeur]
+    );
+    if (r.rows.length === 0) {
+      return { ok: false, status: 401, error: 'Lien invalide ou révoqué' };
+    }
+    return { ok: true, cleaner: r.rows[0] };
+  }
+
+  const ip = _ipDe(req);
+  if (_pinBloque(ip)) {
+    console.warn(`🚫 [MENAGE] Trop de tentatives PIN depuis ${ip}`);
+    return { ok: false, status: 429, error: 'Trop de tentatives. Réessayez dans 15 minutes.' };
+  }
+
+  const r = await pool.query(
+    `SELECT ${champs} FROM cleaners WHERE pin_code = $1 AND is_active = TRUE`,
+    [valeur]
+  );
+  if (r.rows.length === 0) {
+    _pinEchec(ip);
+    return { ok: false, status: 401, error: 'Code PIN invalide' };
+  }
+  return { ok: true, cleaner: r.rows[0] };
+}
+
+// GET - Liste des tâches pour une personne de ménage (lien unique ou PIN)
 app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
   try {
     const { pinCode } = req.params;
-    
-    // Vérifier le PIN et récupérer le cleaner
-    const cleanerResult = await pool.query(
-      'SELECT id, user_id, name FROM cleaners WHERE pin_code = $1 AND is_active = TRUE',
-      [pinCode]
-    );
-    
-    if (cleanerResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Code PIN invalide' });
-    }
-    
-    const cleaner = cleanerResult.rows[0];
+
+    const acces = await resoudreAgentMenage(pinCode, req);
+    if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
+    const cleaner = acces.cleaner;
     
     // Récupérer les assignations PAR RÉSERVATION de ce cleaner
     const assignmentsResult = await pool.query(
@@ -13502,10 +13631,12 @@ app.get('/api/cleaning/tasks/:pinCode', async (req, res) => {
       [cleaner.id]
     );
     
-    // Récupérer aussi les logements où ce cleaner est le cleaner par défaut
+    // Récupérer aussi les logements où ce cleaner est le cleaner par défaut.
+    // cleaner_id est unique : pas de filtre user_id, sinon en mode agence les
+    // lignes écrites par le délégué ne remontent pas.
     const defaultPropertiesResult = await pool.query(
-      'SELECT property_id FROM property_default_cleaners WHERE cleaner_id = $1 AND user_id = $2',
-      [cleaner.id, cleaner.user_id]
+      'SELECT DISTINCT property_id FROM property_default_cleaners WHERE cleaner_id = $1',
+      [cleaner.id]
     );
 
     const now = new Date();
@@ -13770,14 +13901,9 @@ app.get('/api/cleaning/consumables/:pinCode', async (req, res) => {
     if (!pinCode || !propertyId) {
       return res.status(400).json({ error: 'Données manquantes' });
     }
-    const cleanerResult = await pool.query(
-      'SELECT id, user_id FROM cleaners WHERE pin_code = $1 AND is_active = TRUE',
-      [pinCode]
-    );
-    if (cleanerResult.rows.length === 0) {
-      return res.status(401).json({ error: 'Code PIN invalide' });
-    }
-    const ownerId = cleanerResult.rows[0].user_id;
+    const acces = await resoudreAgentMenage(pinCode, req, 'id, user_id');
+    if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
+    const ownerId = acces.cleaner.user_id;
 
     await ensureDefaultConsumables(ownerId);
 
@@ -13803,14 +13929,9 @@ app.post('/api/cleaning/maintenance/:pinCode', async (req, res) => {
     if (!pinCode || !propertyId || !title || !title.trim()) {
       return res.status(400).json({ error: 'Données manquantes' });
     }
-    const cleanerResult = await pool.query(
-      'SELECT id, user_id, name FROM cleaners WHERE pin_code = $1 AND is_active = TRUE',
-      [pinCode]
-    );
-    if (cleanerResult.rows.length === 0) {
-      return res.status(401).json({ error: 'Code PIN invalide' });
-    }
-    const cleaner = cleanerResult.rows[0];
+    const acces = await resoudreAgentMenage(pinCode, req);
+    if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
+    const cleaner = acces.cleaner;
     const prio = ['low','normal','high','urgent'].includes(priority) ? priority : 'normal';
     const ticketKind = (kind === 'damage') ? 'damage' : 'maintenance';
     const photoArr = Array.isArray(photos) ? photos.slice(0, 10) : [];
@@ -13864,15 +13985,10 @@ app.post('/api/cleaning/photo-upload', async (req, res) => {
     if (!pinCode || !dataUrl) {
       return res.status(400).json({ error: 'Données manquantes' });
     }
-    // Vérifier le PIN (on récupère aussi user_id + nom pour le certificat)
-    const cleanerResult = await pool.query(
-      'SELECT id, user_id, name FROM cleaners WHERE pin_code = $1 AND is_active = TRUE',
-      [pinCode]
-    );
-    if (cleanerResult.rows.length === 0) {
-      return res.status(401).json({ error: 'Code PIN invalide' });
-    }
-    const cleaner = cleanerResult.rows[0];
+    // Vérifier l'accès (jeton ou PIN) — on récupère aussi user_id + nom pour le certificat
+    const acces = await resoudreAgentMenage(pinCode, req);
+    if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
+    const cleaner = acces.cleaner;
 
     // Convertir base64 en buffer
     const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
@@ -14120,17 +14236,10 @@ app.post('/api/cleaning/checklist', async (req, res) => {
       return res.status(400).json({ error: 'Données manquantes' });
     }
     
-    // Vérifier le PIN
-    const cleanerResult = await pool.query(
-      'SELECT id, user_id, name FROM cleaners WHERE pin_code = $1 AND is_active = TRUE',
-      [pinCode]
-    );
-    
-    if (cleanerResult.rows.length === 0) {
-      return res.status(401).json({ error: 'Code PIN invalide' });
-    }
-    
-    const cleaner = cleanerResult.rows[0];
+    // Vérifier l'accès (jeton ou PIN)
+    const acces = await resoudreAgentMenage(pinCode, req);
+    if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
+    const cleaner = acces.cleaner;
     
     // Vérifier les photos (minimum 5)
     if (!photos || photos.length < 5) {
@@ -14666,32 +14775,34 @@ app.get('/api/cleaning/template/:propertyId', async (req, res) => {
       return res.status(400).json({ error: 'PIN requis' });
     }
 
-    const cleanerResult = await pool.query(
-      'SELECT user_id FROM cleaners WHERE pin_code = $1 AND is_active = TRUE',
-      [pin]
-    );
+    const acces = await resoudreAgentMenage(pin, req, 'id, user_id');
+    if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
 
-    if (cleanerResult.rows.length === 0) {
-      return res.status(404).json({ error: 'PIN invalide' });
-    }
-
-    const userId = cleanerResult.rows[0].user_id;
+    // IDs candidats : le compte de la fiche ménage + le propriétaire réel du
+    // logement. En mode agence les deux diffèrent, et le template n'était
+    // alors jamais trouvé → 404 à l'ouverture de la checklist.
+    const idsProprio = new Set([acces.cleaner.user_id]);
+    try {
+      const po = await pool.query('SELECT user_id FROM properties WHERE id = $1', [propertyId]);
+      if (po.rows[0]?.user_id) idsProprio.add(po.rows[0].user_id);
+    } catch (e) { /* table indisponible : on garde le compte de la fiche */ }
+    const userIds = [...idsProprio];
 
     // 1) Template spécifique au logement
     let template = await pool.query(
       `SELECT * FROM cleaning_templates 
-       WHERE user_id = $1 AND property_id = $2 
+       WHERE user_id = ANY($1::text[]) AND property_id = $2 
        ORDER BY updated_at DESC LIMIT 1`,
-      [userId, propertyId]
+      [userIds, propertyId]
     );
 
     // 2) Template par défaut
     if (template.rows.length === 0) {
       template = await pool.query(
         `SELECT * FROM cleaning_templates 
-         WHERE user_id = $1 AND is_default = TRUE 
+         WHERE user_id = ANY($1::text[]) AND is_default = TRUE 
          ORDER BY updated_at DESC LIMIT 1`,
-        [userId]
+        [userIds]
       );
     }
 
@@ -14699,9 +14810,9 @@ app.get('/api/cleaning/template/:propertyId', async (req, res) => {
     if (template.rows.length === 0) {
       template = await pool.query(
         `SELECT * FROM cleaning_templates 
-         WHERE user_id = $1 AND property_id IS NULL 
+         WHERE user_id = ANY($1::text[]) AND property_id IS NULL 
          ORDER BY updated_at DESC LIMIT 1`,
-        [userId]
+        [userIds]
       );
     }
 
@@ -15191,13 +15302,14 @@ app.get('/api/consumables/responsibles',
       const global = rows.find(r => r.property_id === null) || null;
       const byProperty = rows.filter(r => r.property_id !== null);
 
-      // Sous-comptes disponibles (du compte courant uniquement)
+      // Sous-comptes disponibles (agency-aware : en mode agence, ceux des
+      // comptes délégués doivent aussi pouvoir être désignés responsables)
       let subAccounts = [];
       try {
         subAccounts = (await pool.query(
           `SELECT id, first_name, last_name FROM sub_accounts
-           WHERE parent_user_id = $1 AND is_active = TRUE ORDER BY first_name ASC`,
-          [userId]
+           WHERE parent_user_id = ANY($1::text[]) AND is_active = TRUE ORDER BY first_name ASC`,
+          [await getAgencyUserIds(req, userId)]
         )).rows;
       } catch (_) {}
 
@@ -15222,8 +15334,11 @@ app.put('/api/consumables/responsibles',
 
       if (assigneeType === 'sub') {
         if (!subAccountId) return res.status(400).json({ error: 'Sous-compte requis' });
-        // Vérifier que le sous-compte appartient bien à l'utilisateur
-        const ok = await pool.query('SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = $2', [subAccountId, userId]);
+        // Vérifier que le sous-compte est accessible (agency-aware)
+        const ok = await pool.query(
+          'SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = ANY($2::text[])',
+          [subAccountId, await getAgencyUserIds(req, userId)]
+        );
         if (ok.rows.length === 0) return res.status(403).json({ error: 'Sous-compte invalide' });
       } else if (assigneeType === 'contact') {
         if (!contactName || !contactName.trim()) return res.status(400).json({ error: 'Nom du contact requis' });

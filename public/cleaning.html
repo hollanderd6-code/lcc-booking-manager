@@ -2797,7 +2797,11 @@ function formatDateFr(dateStr) {
           const div = document.createElement('div');
           div.className = 'cleaner-item';
           
-          const taskUrl = c.pin_code ? 'https://www.boostinghost.fr/cleaning-tasks.html' : '';
+          // Le lien unique porte le jeton : c'est lui qu'on distribue à l'agent.
+          // On retombe sur l'URL nue si la fiche n'a pas encore de jeton.
+          const taskUrl = c.access_token
+            ? 'https://www.boostinghost.fr/cleaning-tasks.html?t=' + encodeURIComponent(c.access_token)
+            : (c.pin_code ? 'https://www.boostinghost.fr/cleaning-tasks.html' : '');
           
           div.innerHTML = `
             <div class="cleaner-item-header">
@@ -2820,7 +2824,7 @@ function formatDateFr(dateStr) {
               </div>
             </div>
             ${c.notes ? `<div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">${c.notes}</div>` : ''}
-            ${taskUrl ? `<div style="margin-top:10px;"><a href="${taskUrl}" target="_self" style="display:inline-flex; align-items:center; gap:6px; background:#ede9fe; color:#7c3aed; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; text-decoration:none; -webkit-tap-highlight-color:transparent; cursor:pointer;"><i class="fas fa-external-link-alt"></i> Accéder aux tâches</a></div>` : ''}
+            ${taskUrl ? `<div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;"><a href="${taskUrl}" target="_self" style="display:inline-flex; align-items:center; gap:6px; background:#ede9fe; color:#7c3aed; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; text-decoration:none; -webkit-tap-highlight-color:transparent; cursor:pointer;"><i class="fas fa-external-link-alt"></i> Accéder aux tâches</a>${c.access_token ? `<button class="btn btn-ghost btn-xs" data-url="${taskUrl}" data-action="copyCleanerLink" title="Copier le lien à envoyer à l'agent" style="display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-link"></i> Copier le lien</button><button class="btn btn-ghost btn-xs" data-id="${c.id}" data-action="regenCleanerLink" title="Révoquer l'ancien lien et en générer un nouveau" style="display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-rotate"></i> Régénérer</button>` : ''}</div>` : ''}
             ${c.pin_code ? `<div style="font-size:12px; margin-top:4px; display:flex; gap:8px; flex-wrap:wrap;">
               <span style="color:var(--text-secondary);"><i class="fas fa-qrcode"></i> PIN: <strong>${c.pin_code}</strong></span>
             </div>` : ''}
@@ -3166,6 +3170,55 @@ function formatDateFr(dateStr) {
           const btn = e.target.closest('[data-action="editCleaner"]');
           if (!btn) return;
           openEditCleaner(btn.getAttribute('data-id'));
+        });
+      }
+
+      // Copier le lien unique d'accès aux tâches
+      if (cleanerList) {
+        cleanerList.addEventListener('click', async (e) => {
+          const btn = e.target.closest('[data-action="copyCleanerLink"]');
+          if (!btn) return;
+          const url = btn.getAttribute('data-url');
+          try {
+            await navigator.clipboard.writeText(url);
+            (typeof showToast === 'function') ? showToast('Lien copié') : alert('Lien copié');
+          } catch (err) {
+            // clipboard indisponible (http, vieux Safari) : on montre le lien
+            prompt('Copiez ce lien :', url);
+          }
+        });
+      }
+
+      // Régénérer le lien : l'ancien cesse immédiatement de fonctionner
+      if (cleanerList) {
+        cleanerList.addEventListener('click', async (e) => {
+          const btn = e.target.closest('[data-action="regenCleanerLink"]');
+          if (!btn) return;
+
+          const confirmed = await bhConfirm(
+            'Régénérer le lien ?',
+            "L'ancien lien cessera immédiatement de fonctionner. Il faudra envoyer le nouveau lien à cette personne.",
+            'Régénérer',
+            'Annuler',
+            'danger'
+          );
+          if (!confirmed) return;
+
+          const token = localStorage.getItem('lcc_token');
+          if (!token) { alert('Session expirée, veuillez vous reconnecter'); return; }
+
+          try {
+            const res = await fetch(`${API_URL}/api/cleaners/${btn.getAttribute('data-id')}/regenerate-link`, {
+              method: 'POST',
+              headers: { Authorization: 'Bearer ' + token }
+            });
+            if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Erreur');
+            await loadRemoteData();
+            renderCleaners();
+            (typeof showToast === 'function') ? showToast('Nouveau lien généré') : alert('Nouveau lien généré');
+          } catch (err) {
+            alert('Erreur : ' + err.message);
+          }
         });
       }
 
