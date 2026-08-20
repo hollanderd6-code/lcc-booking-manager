@@ -349,3 +349,40 @@ html[data-theme-v3="1"] .calendar-title-modern em {
   font-style: italic;
   color: var(--vert-300);
 }
+/* ============================================================================
+   BOUTON « ← Tableau de bord » — correction mobile
+   ============================================================================
+   A COLLER A LA FIN DE public/css/bh-core.css, APRES le bloc precedent.
+
+   ── CE QUE J'AI CASSE ───────────────────────────────────────────────────
+   Le bloc qui unifie les dix classes de ce bouton declare
+   « display: inline-flex !important ». Ce !important ecrase aussi les regles
+   par lesquelles certaines pages le MASQUAIENT en mobile — d'ou son
+   apparition sur Reservations et Serrures connectees, ou il flottait
+   par-dessus le contenu.
+
+   ── POURQUOI IL DOIT DISPARAITRE EN MOBILE ──────────────────────────────
+   En dessous de 1366px, bh-v3-mobile.css masque .main-header et affiche a la
+   place l'en-tete mobile fixe et la barre d'onglets du bas. Le retour au
+   tableau de bord y passe par l'onglet dedie : un second bouton flottant fait
+   doublon, et masque une partie de la page.
+
+   Le seuil de 1366px n'est pas choisi ici : c'est celui de bh-v3-mobile.css.
+   Les deux doivent rester d'accord, sinon le bouton reapparaitrait dans la
+   bande de largeurs ou l'en-tete mobile est deja actif.
+   ============================================================================ */
+
+@media (max-width: 1366px) {
+  .welcome-back-btn,
+  .cleaning-back-btn,
+  .settings-back-btn,
+  .deposits-back-btn,
+  .factures-back-btn,
+  .help-back-btn,
+  .locks-back-btn,
+  .resa-back-btn,
+  .rp-btn-back,
+  .fp-btn-back {
+    display: none !important;
+  }
+}
