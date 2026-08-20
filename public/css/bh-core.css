@@ -120,3 +120,133 @@ button:active:not(:disabled), .btn:active, [role="button"]:active,
 .bh-skel-ligne{ height:14px; margin-bottom:10px; }
 .bh-skel-ligne.l60{ width:60% } .bh-skel-ligne.l80{ width:80% }
 @media (prefers-reduced-motion:reduce){ .bh-skel::after{ animation:none } }
+/* ============================================================================
+   BOUTON « ← Tableau de bord » — un seul rendu
+   ============================================================================
+   A COLLER A LA FIN DE public/css/bh-core.css
+
+   Pourquoi bh-core.css : il charge en DERNIER sur les 54 pages qui l'incluent,
+   donc apres le CSS interne de chaque page. C'est le seul endroit d'ou l'on
+   peut unifier ces boutons sans reecrire dix blocs de style disperses.
+
+   ── LE PROBLEME ─────────────────────────────────────────────────────────
+   Un meme bouton, dix classes differentes, chacune stylee dans le CSS de sa
+   propre page :
+
+     .welcome-back-btn     livret d'accueil    vert plein   (le bon rendu)
+     .cleaning-back-btn    gestion du menage   blanc
+     .settings-back-btn    mes logements       blanc
+     .fp-btn-back          clients, factures proprietaires
+     .deposits-back-btn    cautions
+     .factures-back-btn    factures
+     .help-back-btn        support
+     .rp-btn-back          revenus
+     .resa-back-btn        reservations
+     .locks-back-btn       serrures connectees
+
+   Personne n'a decide que ce bouton serait blanc ici et vert la : ces styles
+   ont ete ecrits page par page, a des moments differents. Le rendu retenu est
+   celui du livret d'accueil, le plus lisible : vert plein, texte blanc.
+
+   ── LE !important, ASSUME ───────────────────────────────────────────────
+   Les dix regles d'origine vivent dans le CSS interne des pages. Les
+   surcharger depuis une feuille demande soit de les supprimer une a une dans
+   dix fichiers, soit ce !important. Le second est reversible et tient en un
+   bloc ; le premier viendra quand ces pages seront reprises.
+
+   ── LA SUITE ────────────────────────────────────────────────────────────
+   bh-layout.js sait deja construire ce bouton a partir de data-back-href et
+   data-back-label — dynamic-pricing.html et reservations.html l'utilisent
+   ainsi. La vraie cible est de supprimer les dix boutons ecrits a la main et
+   de laisser bh-layout.js les poser : un seul bouton, un seul style, plus
+   aucune classe a retenir.
+   ============================================================================ */
+
+.welcome-back-btn,
+.cleaning-back-btn,
+.settings-back-btn,
+.deposits-back-btn,
+.factures-back-btn,
+.help-back-btn,
+.locks-back-btn,
+.resa-back-btn,
+.rp-btn-back,
+.fp-btn-back {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 12px 20px !important;
+  border: none !important;
+  border-radius: 12px !important;
+  background: var(--bh-vert) !important;
+  color: #fff !important;
+  font-family: var(--bh-sans) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: background .18s ease, transform .18s ease !important;
+}
+
+.welcome-back-btn:hover,
+.cleaning-back-btn:hover,
+.settings-back-btn:hover,
+.deposits-back-btn:hover,
+.factures-back-btn:hover,
+.help-back-btn:hover,
+.locks-back-btn:hover,
+.resa-back-btn:hover,
+.rp-btn-back:hover,
+.fp-btn-back:hover {
+  background: var(--bh-vert-fonce) !important;
+}
+
+.welcome-back-btn:active,
+.cleaning-back-btn:active,
+.settings-back-btn:active,
+.deposits-back-btn:active,
+.factures-back-btn:active,
+.help-back-btn:active,
+.locks-back-btn:active,
+.resa-back-btn:active,
+.rp-btn-back:active,
+.fp-btn-back:active {
+  transform: translateY(1px) !important;
+}
+
+/* La fleche suit la couleur du texte : sur la page Messages elle etait
+   grisee par une regle de page, ce qui donnait ce vert delave. */
+.welcome-back-btn i,
+.cleaning-back-btn i,
+.settings-back-btn i,
+.deposits-back-btn i,
+.factures-back-btn i,
+.help-back-btn i,
+.locks-back-btn i,
+.resa-back-btn i,
+.rp-btn-back i,
+.fp-btn-back i {
+  color: currentColor !important;
+  font-size: 14px !important;
+  margin: 0 !important;
+}
+
+/* Sur petit ecran l'en-tete passe en colonne : le bouton garde une hauteur
+   de touche confortable sans devenir pleine largeur. */
+@media (max-width: 620px) {
+  .welcome-back-btn,
+  .cleaning-back-btn,
+  .settings-back-btn,
+  .deposits-back-btn,
+  .factures-back-btn,
+  .help-back-btn,
+  .locks-back-btn,
+  .resa-back-btn,
+  .rp-btn-back,
+  .fp-btn-back {
+    padding: 11px 16px !important;
+    font-size: 14px !important;
+  }
+}
