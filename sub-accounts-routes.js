@@ -13,6 +13,26 @@ const {
 
 function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
 
+  // ── Mode agence ─────────────────────────────────────────────────────────
+  // getAgencyUserIds() vit dans server.js et n'est pas dans le scope de ce
+  // module : on reproduit sa logique ici. Sans cela, les 4 routes de gestion
+  // d'equipe filtrent sur le seul req.user.id, donc un delegue ne voit pas
+  // (et ne peut pas modifier) les sous-comptes du compte qu'il gere.
+  async function agencyIdsFor(req) {
+    if (req.query.agency !== 'all') return [req.user.id];
+    try {
+      const d = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations
+         WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [req.user.id]
+      );
+      return [req.user.id, ...d.rows.map(r => r.delegator_user_id)];
+    } catch (e) {
+      console.error('⚠️ agencyIdsFor:', e.message);
+      return [req.user.id];
+    }
+  }
+
   // ── Template email sous-compte ──────────────────────────────────────────
   const EMAIL_FROM = process.env.EMAIL_FROM || '"Boostinghost" <no-reply@boostinghost.fr>';
   const APP_URL = process.env.APP_URL || 'https://boostinghost.fr';
@@ -492,8 +512,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
       console.log('🔄 Modification sous-compte:', { subAccountId, role });
       
       const checkOwnership = await pool.query(
-        'SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = $2',
-        [subAccountId, parentUserId]
+        'SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = ANY($2::text[])',
+        [subAccountId, await agencyIdsFor(req)]
       );
       
       if (checkOwnership.rows.length === 0) {
@@ -846,9 +866,9 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           
         FROM sub_accounts sa
         LEFT JOIN sub_account_permissions sp ON sa.id = sp.sub_account_id
-        WHERE sa.parent_user_id = $1
+        WHERE sa.parent_user_id = ANY($1::text[])
         ORDER BY sa.created_at DESC
-      `, [req.user.id]);
+      `, [await agencyIdsFor(req)]);
 
       // MAPPING: DB -> Frontend (pour compatibilité)
       const mappedResults = result.rows.map(row => ({
@@ -896,8 +916,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
       const { id } = req.params;
 
       const check = await pool.query(
-        'SELECT email FROM sub_accounts WHERE id = $1 AND parent_user_id = $2',
-        [id, req.user.id]
+        'SELECT email FROM sub_accounts WHERE id = $1 AND parent_user_id = ANY($2::text[])',
+        [id, await agencyIdsFor(req)]
       );
 
       if (check.rows.length === 0) {
@@ -927,9 +947,9 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
       const result = await pool.query(`
         UPDATE sub_accounts 
         SET is_active = NOT is_active, updated_at = NOW()
-        WHERE id = $1 AND parent_user_id = $2
+        WHERE id = $1 AND parent_user_id = ANY($2::text[])
         RETURNING is_active
-      `, [id, req.user.id]);
+      `, [id, await agencyIdsFor(req)]);
 
       if (result.rows.length === 0) {
         return res.status(404).json({ success: false, error: 'Sous-compte introuvable' });

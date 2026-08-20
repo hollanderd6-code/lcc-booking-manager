@@ -13093,10 +13093,12 @@ app.post('/api/cleaners', authenticateAny, requirePermission(pool, 'can_manage_c
     }
 
     // Vérifier que le sous-compte appartient bien à cet utilisateur si fourni
+    // (agency-aware : un délégué doit pouvoir lier une fiche ménage à un
+    // sous-compte du compte qu'il gère)
     if (subAccountId) {
       const saCheck = await pool.query(
-        'SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = $2',
-        [subAccountId, userId]
+        'SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = ANY($2::text[])',
+        [subAccountId, await getAgencyUserIds(req, userId)]
       );
       if (saCheck.rows.length === 0) {
         return res.status(404).json({ error: 'Sous-compte introuvable' });
@@ -13151,11 +13153,11 @@ app.put('/api/cleaners/:id', authenticateAny, requirePermission(pool, 'can_manag
     const { id } = req.params;
     const { name, phone, email, notes, isActive, subAccountId } = req.body || {};
 
-    // Vérifier sous-compte si fourni
+    // Vérifier sous-compte si fourni (agency-aware, cf. POST /api/cleaners)
     if (subAccountId) {
       const saCheck = await pool.query(
-        'SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = $2',
-        [subAccountId, userId]
+        'SELECT id FROM sub_accounts WHERE id = $1 AND parent_user_id = ANY($2::text[])',
+        [subAccountId, agencyIds]
       );
       if (saCheck.rows.length === 0) {
         return res.status(404).json({ error: 'Sous-compte introuvable' });
