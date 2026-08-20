@@ -22,7 +22,7 @@
    Mais ce n'etaient pas les valeurs voulues par la palette « Maison Vert » :
 
      --bh-vert-fonce   #125A45 (affiche)  vs  #0A2C22 (voulu, --vert-900)
-     --bh-encre        #0D1117 (affiche)  vs  #20221F (voulu, encre chaude)
+     --bh-encre        var(--bh-encre) (affiche)  vs  #20221F (voulu, encre chaude)
 
    Le premier est un vert moyen la ou la palette prevoyait un vert bouteille
    profond pour les etats presses. Le second est un bleu-noir froid la ou la
@@ -109,7 +109,7 @@
   --jade-light:    var(--vert-600);
 
   /* bh-theme-v3.css declare son propre noir de texte, --text-1 / --obsidian,
-     a l'ancienne valeur froide #0D1117. Sans ce pont, le produit afficherait
+     a l'ancienne valeur froide var(--bh-encre). Sans ce pont, le produit afficherait
      DEUX noirs : brun-noir chaud partout ou --bh-encre est utilise, bleu-noir
      froid partout ou --text-1 l'est. Les deux pointent donc sur l'encre.
      (bh-tokens.css charge apres bh-theme-v3.css : cette valeur gagne.) */

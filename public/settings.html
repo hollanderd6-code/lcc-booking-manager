@@ -264,7 +264,7 @@ html[data-theme-v3="1"] header.main-header .page-kicker {
   font-size: 10.5px !important;
   letter-spacing: .1em !important;
   text-transform: uppercase !important;
-  color: rgba(13,17,23,.38) !important;
+  color: rgba(32,34,31,.38) !important;
   font-weight: 600 !important;
 }
 /* Back button */
@@ -1226,12 +1226,12 @@ html[data-theme-v3="1"] .sidebar {
   .bh-desktop-header .bh-dh-kicker {
     font-family: 'DM Sans', sans-serif;
     font-size: 10.5px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: .1em; color: rgba(13,17,23,.38);
+    letter-spacing: .1em; color: rgba(32,34,31,.38);
     margin-bottom: 2px;
   }
   .bh-desktop-header .bh-dh-title {
     font-family: 'Instrument Serif', serif;
-    font-size: 22px; font-weight: 400; color: #0D1117;
+    font-size: 22px; font-weight: 400; color: var(--bh-encre);
     line-height: 1.1;
   }
 }
@@ -1851,7 +1851,7 @@ html[data-theme-v3="1"] .sidebar {
   transition: box-shadow .15s;
 }
 .property-list-item:active {
-  box-shadow: 0 2px 8px rgba(13,17,23,.08);
+  box-shadow: 0 2px 8px rgba(32,34,31,.08);
 }
 .property-list-thumb {
   width: 52px; height: 52px;
@@ -1870,7 +1870,7 @@ html[data-theme-v3="1"] .sidebar {
 }
 .property-list-name {
   font-size: 14px; font-weight: 700;
-  color: #0D1117;
+  color: var(--bh-encre);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   margin-bottom: 2px;
 }
@@ -1910,7 +1910,7 @@ html[data-theme-v3="1"] .sidebar {
   flex-shrink: 0;
   width: 24px; height: 32px;
   display: flex; align-items: center; justify-content: center;
-  color: rgba(13,17,23,.3); font-size: 13px;
+  color: rgba(32,34,31,.3); font-size: 13px;
   cursor: grab; touch-action: none;
   transition: color .15s;
 }
@@ -1937,7 +1937,7 @@ html[data-theme-v3="1"] .sidebar {
 }
 .property-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(13,17,23,.12), 0 4px 12px rgba(13,17,23,.06);
+  box-shadow: 0 12px 40px rgba(32,34,31,.12), 0 4px 12px rgba(32,34,31,.06);
   border-color: #C8B89A;
 }
 .property-img {
@@ -1953,11 +1953,11 @@ html[data-theme-v3="1"] .sidebar {
 .property-card:hover .property-img-bg { transform: scale(1.04); }
 .property-img-overlay {
   position: absolute; inset: 0;
-  background: linear-gradient(to bottom, transparent 40%, rgba(13,17,23,.45));
+  background: linear-gradient(to bottom, transparent 40%, rgba(32,34,31,.45));
 }
 .property-img-badge {
   position: absolute; top: 10px; right: 10px;
-  background: rgba(13,17,23,.7);
+  background: rgba(32,34,31,.7);
   backdrop-filter: blur(8px);
   color: white; font-size: 11px; font-weight: 600;
   padding: 4px 10px; border-radius: 999px;
@@ -1972,7 +1972,7 @@ html[data-theme-v3="1"] .sidebar {
 .property-info { padding: 16px; }
 .property-name {
   font-size: 15px; font-weight: 700;
-  color: #0D1117; margin-bottom: 4px;
+  color: var(--bh-encre); margin-bottom: 4px;
   font-family: 'DM Sans', sans-serif;
 }
 .property-address {
@@ -1982,10 +1982,10 @@ html[data-theme-v3="1"] .sidebar {
 .property-stats {
   display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 8px; padding: 10px 0;
-  border-top: 1px solid rgba(13,17,23,.08);
+  border-top: 1px solid rgba(32,34,31,.08);
 }
 .prop-stat { text-align: center; }
-.prop-stat-val { font-size: 15px; font-weight: 700; color: #0D1117; }
+.prop-stat-val { font-size: 15px; font-weight: 700; color: var(--bh-encre); }
 .prop-stat-label {
   font-size: 10px; color: #7A8695;
   text-transform: uppercase; letter-spacing: .06em;
@@ -1994,7 +1994,7 @@ html[data-theme-v3="1"] .sidebar {
 .property-actions {
   display: flex; gap: 8px;
   padding: 12px 0 0;
-  border-top: 1px solid rgba(13,17,23,.08);
+  border-top: 1px solid rgba(32,34,31,.08);
   margin-top: 8px;
 }
 .property-actions .btn {
@@ -2019,12 +2019,12 @@ html[data-theme-v3="1"] .sidebar {
 }
 .properties-count {
   font-size: 11px; font-weight: 600; letter-spacing: .1em;
-  text-transform: uppercase; color: rgba(13,17,23,.38);
+  text-transform: uppercase; color: rgba(32,34,31,.38);
   margin-bottom: 4px;
 }
 .properties-title {
   font-family: 'Instrument Serif', serif;
-  font-size: 28px; font-weight: 400; color: #0D1117; margin: 0;
+  font-size: 28px; font-weight: 400; color: var(--bh-encre); margin: 0;
 }
 .properties-title em { font-style: italic; color: var(--bh-vert); }
 .btn-add-property {
@@ -2067,7 +2067,7 @@ html[data-theme-v3="1"] .sidebar {
   font-size: 22px; color: var(--bh-vert);
 }
 .property-card-add-label {
-  font-size: 15px; font-weight: 700; color: #0D1117;
+  font-size: 15px; font-weight: 700; color: var(--bh-encre);
   font-family: 'DM Sans', sans-serif;
 }
 .property-card-add-sub {
@@ -2154,9 +2154,9 @@ function insertVariable(textareaId, variable, event) {
   gap: 7px;
   padding: 8px 14px;
   border-radius: 999px;
-  border: 1.5px solid rgba(13,17,23,0.15);
+  border: 1.5px solid rgba(32,34,31,0.15);
   background: #fff;
-  color: rgba(13,17,23,0.55);
+  color: rgba(32,34,31,0.55);
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
   font-weight: 500;
@@ -3511,7 +3511,7 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
     background: rgba(245, 242, 236, 0.97) !important;
     backdrop-filter: blur(12px) !important;
     border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
-    box-shadow: 0 1px 8px rgba(13, 17, 23, 0.06) !important;
+    box-shadow: 0 1px 8px rgba(32,34,31, 0.06) !important;
     padding-top: env(safe-area-inset-top, 0px) !important;
   }
   .mobile-header .mobile-logo {
@@ -3915,7 +3915,7 @@ html[data-theme-v3="1"] #editPropertyModal .text-green-600 {
   font-size: 13px !important;
   font-weight: 600 !important;
   letter-spacing: -0.01em !important;
-  box-shadow: 0 2px 8px rgba(13,17,23,.2) !important;
+  box-shadow: 0 2px 8px rgba(32,34,31,.2) !important;
   transition: background .15s !important;
 }
 #editPropertyModal .btn-save:hover { background: var(--bh-vert) !important; }
@@ -4482,7 +4482,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* ── Modal logement supplémentaire : traitement luxe ── */
 #extraPropertyModal {
-  background: rgba(13,17,23,.5) !important;
+  background: rgba(32,34,31,.5) !important;
   backdrop-filter: blur(7px);
   -webkit-backdrop-filter: blur(7px);
 }
@@ -4490,7 +4490,7 @@ document.addEventListener('DOMContentLoaded', function() {
   background: #FAF7F2 !important;
   border: 1px solid rgba(200,184,154,.55) !important;
   border-radius: 22px !important;
-  box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+  box-shadow: 0 24px 70px rgba(32,34,31,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
 }
 #extraPropertyModal h3 {
   font-family: 'Instrument Serif', serif !important;

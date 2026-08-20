@@ -761,7 +761,7 @@ html[data-theme-v3="1"] #themeToggle,
 html[data-theme-v3="1"] .header-actions .btn-icon {
   background: transparent !important;
   background-image: none !important;
-  border: 1px solid rgba(13,17,23,.1) !important;
+  border: 1px solid rgba(32,34,31,.1) !important;
   color: #3D4A5C !important;
   box-shadow: none !important;
   transform: none !important;
@@ -2809,7 +2809,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 .checklist-card:hover {
   transform: translateY(-2px);
   border-color: rgba(14,59,46,.3);
-  box-shadow: 0 8px 22px rgba(13,17,23,.07);
+  box-shadow: 0 8px 22px rgba(32,34,31,.07);
 }
 
 .checklist-card-pending {
@@ -2830,7 +2830,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 .checklist-property {
   font-weight: 600;
   font-size: 14.5px;
-  color: #0D1117;
+  color: var(--bh-encre);
   line-height: 1.3;
 }
 
@@ -3577,7 +3577,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 .bh-mrow{ display:flex; align-items:flex-start; gap:13px; background:#fff;
   border:1px solid rgba(200,184,154,.38); border-radius:15px; padding:14px 15px;
   transition:border-color .15s, box-shadow .15s; }
-.bh-mrow:hover{ border-color:rgba(14,59,46,.3); box-shadow:0 6px 18px rgba(13,17,23,.06); }
+.bh-mrow:hover{ border-color:rgba(14,59,46,.3); box-shadow:0 6px 18px rgba(32,34,31,.06); }
 .bh-mrow-dot{ flex:none; width:34px; height:34px; border-radius:11px;
   display:flex; align-items:center; justify-content:center; font-size:13px;
   background:rgba(14,59,46,.1); color:#166B52; }
@@ -3586,7 +3586,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 .bh-mrow-dot.info{ background:#EEF1F6; color:#44546A; }
 .bh-mrow-dot{ font-size:11px; font-weight:700; }
 .bh-mrow-body{ flex:1; min-width:0; }
-.bh-mrow-t{ font:600 14.5px 'DM Sans',sans-serif; color:#0D1117;
+.bh-mrow-t{ font:600 14.5px 'DM Sans',sans-serif; color:var(--bh-encre);
   display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
 .bh-mrow-t .bh-mrow-when{ font:500 12px 'DM Sans',sans-serif; color:#9a958a; flex:none; }
 .bh-mrow-guest{ font:600 13px 'DM Sans',sans-serif; color:var(--bh-vert); margin:3px 0 2px; }
@@ -3753,14 +3753,14 @@ window.closeChecklistsKpiModal = function() {
 <style>
 /* ══ Dashboard v2 : héros "Votre journée" + CA + bandeau compact ══ */
 .bh2-hero{display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:14px}
-.bh2-today{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:20px 22px;box-shadow:0 1px 3px rgba(13,17,23,.04);align-self:start}
+.bh2-today{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:20px 22px;box-shadow:0 1px 3px rgba(32,34,31,.04);align-self:start}
 .bh2-today-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
-.bh2-today-head h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:20px;color:#0D1117;margin:0}
+.bh2-today-head h2{font-family:'Instrument Serif',serif;font-weight:400;font-size:20px;color:var(--bh-encre);margin:0}
 .bh2-today-head h2 em{font-style:italic;color:var(--bh-vert)}
 .bh2-today-date{font-size:12px;color:#7A8695;font-weight:500}
 .bh2-ops{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:stretch}
 .bh2-op{position:relative;border:1px solid rgba(200,184,154,.4);border-radius:14px;padding:15px 15px 13px;cursor:pointer;transition:all .2s cubic-bezier(.3,.9,.4,1);background:linear-gradient(160deg,#FFFDF9,#FAF6EE)}
-.bh2-op:hover{border-color:rgba(14,59,46,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
+.bh2-op:hover{border-color:rgba(14,59,46,.4);box-shadow:0 12px 28px rgba(32,34,31,.09);transform:translateY(-2px)}
 .bh2-op-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .bh2-op-lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#7A8695}
 .bh2-op-ic{width:30px;height:30px;border-radius:9px;background:rgba(183,121,31,.13);color:var(--bh-or);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;box-shadow:0 1px 2px rgba(183,121,31,.12)}
@@ -3781,8 +3781,8 @@ window.closeChecklistsKpiModal = function() {
 .bh2-ca-spark svg{display:block;width:100%;height:46px}
 .bh2-ca-delta{font-size:11px;font-weight:700;color:var(--vert-300);white-space:nowrap}
 /* Occupation — carte vedette claire, même rang que le CA */
-.bh2-occ{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:16px 20px;cursor:pointer;transition:all .18s;box-shadow:0 1px 3px rgba(13,17,23,.04)}
-.bh2-occ:hover{border-color:rgba(14,59,46,.4);box-shadow:0 12px 28px rgba(13,17,23,.09);transform:translateY(-2px)}
+.bh2-occ{background:#fff;border:1px solid rgba(200,184,154,.45);border-radius:20px;padding:16px 20px;cursor:pointer;transition:all .18s;box-shadow:0 1px 3px rgba(32,34,31,.04)}
+.bh2-occ:hover{border-color:rgba(14,59,46,.4);box-shadow:0 12px 28px rgba(32,34,31,.09);transform:translateY(-2px)}
 .bh2-occ-lbl{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7A8695;display:flex;justify-content:space-between;align-items:center}
 .bh2-occ-lbl i{color:var(--bh-or);font-size:12px}
 .bh2-occ-ring{position:relative;width:96px;height:96px;margin:8px auto 0}
@@ -3795,7 +3795,7 @@ window.closeChecklistsKpiModal = function() {
 .bh2-auto{display:none;align-items:center;gap:14px;background:#fff;
   border:1px solid rgba(200,184,154,.45);border-radius:16px;
   padding:14px 20px;margin-bottom:16px;
-  box-shadow:0 1px 3px rgba(13,17,23,.04)}
+  box-shadow:0 1px 3px rgba(32,34,31,.04)}
 .bh2-auto.is-ready{display:flex}
 .bh2-auto-ico{width:34px;height:34px;border-radius:10px;flex-shrink:0;
   background:rgba(14,59,46,.08);color:var(--bh-vert);
@@ -3814,11 +3814,11 @@ window.closeChecklistsKpiModal = function() {
 .bh2-occ-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-weight:400;font-size:24px;line-height:1;color:var(--bh-or)}
 .bh2-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
 .bh2-stat{background:#fff;border:1px solid rgba(200,184,154,.42);border-radius:16px;padding:15px 16px 14px;display:block;position:relative;cursor:pointer;transition:all .2s cubic-bezier(.3,.9,.4,1);min-width:0}
-.bh2-stat:hover{border-color:rgba(14,59,46,.35);box-shadow:0 10px 26px rgba(13,17,23,.08);transform:translateY(-2px)}
+.bh2-stat:hover{border-color:rgba(14,59,46,.35);box-shadow:0 10px 26px rgba(32,34,31,.08);transform:translateY(-2px)}
 .bh2-stat>div{display:flex;flex-direction:column-reverse;gap:5px;min-width:0}
 .bh2-stat-ic{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:9px;background:#F6EFE3;color:var(--bh-or);display:flex;align-items:center;justify-content:center;font-size:12px}
 .bh2-stat .bh2-lbl{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8A8375;padding-right:36px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bh2-stat:hover{border-color:rgba(14,59,46,.4);box-shadow:0 4px 14px rgba(13,17,23,.06)}
+.bh2-stat:hover{border-color:rgba(14,59,46,.4);box-shadow:0 4px 14px rgba(32,34,31,.06)}
 /* Neutralise tout style hérité (ancien highlight "Logements actifs" dans les CSS externes) */
 html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{background:#fff !important}
 </style>
@@ -11546,8 +11546,8 @@ html[data-theme-v3="1"] main.main-content {
     border-top: none !important;
     border-left: none !important;
     border-right: none !important;
-    border-bottom: 1px solid rgba(13,17,23,.09) !important;
-    box-shadow: 0 1px 0 rgba(13,17,23,.04) !important;
+    border-bottom: 1px solid rgba(32,34,31,.09) !important;
+    box-shadow: 0 1px 0 rgba(32,34,31,.04) !important;
     margin-bottom: 0 !important;
   }
 
@@ -14607,7 +14607,7 @@ function bhConfirm(message) {
 .bh-sheet-panel{
   background:#FAF7F2 !important;
   border-radius:22px 22px 0 0 !important;
-  box-shadow:0 -18px 60px rgba(13,17,23,.28) !important;
+  box-shadow:0 -18px 60px rgba(32,34,31,.28) !important;
   animation:bhSheetSlide .34s cubic-bezier(.22,1.1,.36,1);
   position:relative;
 }
@@ -16633,7 +16633,7 @@ function notifSwitchTab(tab) {
 #todayMovesModal, #cleaning48hModal, #kpiNotesModal, #activePropertiesModal,
 #cleaningTodayModal, #checklistsKpiModal, #caKpiModal, #occupancyDetailsModal,
 #depositsModal, #newReservationModal, #blockModal, #reservationDetailsModal {
-  background: rgba(13,17,23,.5) !important;
+  background: rgba(32,34,31,.5) !important;
   backdrop-filter: blur(7px);
   -webkit-backdrop-filter: blur(7px);
 }
@@ -16642,7 +16642,7 @@ function notifSwitchTab(tab) {
 #caKpiModal > div, #occupancyDetailsModal > div, #depositsModal > div,
 #newReservationModal > div, #blockModal > div, #reservationDetailsModal > div {
   background: #FAF7F2 !important;
-  box-shadow: 0 -18px 60px rgba(13,17,23,.25), inset 0 1px 0 rgba(255,255,255,.9) !important;
+  box-shadow: 0 -18px 60px rgba(32,34,31,.25), inset 0 1px 0 rgba(255,255,255,.9) !important;
   border: 1px solid rgba(200,184,154,.55) !important;
   border-bottom: none !important;
 }
@@ -16699,13 +16699,13 @@ function notifSwitchTab(tab) {
     border-radius: 24px !important;
     border-bottom: 1px solid rgba(200,184,154,.55) !important;
     max-height: 84vh !important;
-    box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+    box-shadow: 0 24px 70px rgba(32,34,31,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
   }
 }
 
 /* ── Famille B : modales centrées (confirm, cellule, réorganiser, édition groupée) ── */
 #bhConfirmModal, #cellModal, #reorderModal, #batchEditModal {
-  background: rgba(13,17,23,.5) !important;
+  background: rgba(32,34,31,.5) !important;
   backdrop-filter: blur(7px);
   -webkit-backdrop-filter: blur(7px);
 }
@@ -16713,17 +16713,17 @@ function notifSwitchTab(tab) {
   background: #FAF7F2 !important;
   border: 1px solid rgba(200,184,154,.55) !important;
   border-radius: 22px !important;
-  box-shadow: 0 24px 70px rgba(13,17,23,.28) !important;
+  box-shadow: 0 24px 70px rgba(32,34,31,.28) !important;
 }
 #cellModalTitle { font-family: Georgia, 'Times New Roman', serif !important; font-weight: 600 !important; }
 
 /* ── Famille C : modales à classes (booking, checklist, facture, résa) ── */
-.booking-modal .modal-overlay { background: rgba(13,17,23,.5) !important; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+.booking-modal .modal-overlay { background: rgba(32,34,31,.5) !important; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
 .booking-modal .modal-content, #reservationModal .modal-content {
   background: #FAF7F2 !important;
   border: 1px solid rgba(200,184,154,.55) !important;
   border-radius: 24px !important;
-  box-shadow: 0 24px 70px rgba(13,17,23,.3) !important;
+  box-shadow: 0 24px 70px rgba(32,34,31,.3) !important;
 }
 .booking-modal .modal-header h2, .booking-modal .modal-header h3,
 #reservationModal .modal-header h2, #reservationModal .modal-header h3,

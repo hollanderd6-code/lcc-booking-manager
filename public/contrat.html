@@ -167,11 +167,11 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 }
 .contrat-kicker {
   font-size: 11px; font-weight: 600; letter-spacing: .1em;
-  text-transform: uppercase; color: rgba(13,17,23,.38); margin-bottom: 4px;
+  text-transform: uppercase; color: rgba(32,34,31,.38); margin-bottom: 4px;
 }
 .contrat-title {
   font-family: 'Instrument Serif', serif;
-  font-size: 28px; font-weight: 400; color: #0D1117; margin: 0;
+  font-size: 28px; font-weight: 400; color: var(--bh-encre); margin: 0;
 }
 .contrat-title em { font-style: italic; color: var(--bh-vert); }
 
@@ -189,7 +189,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 }
 .contrat-step-num {
   width: 26px; height: 26px; border-radius: 50%;
-  background: rgba(13,17,23,.08); color: #7A8695;
+  background: rgba(32,34,31,.08); color: #7A8695;
   display: flex; align-items: center; justify-content: center;
   font-size: 12px; font-weight: 700; flex-shrink: 0;
 }
@@ -199,7 +199,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .contrat-step.active .contrat-step-label { color: var(--bh-vert); }
 .contrat-step.done { cursor: pointer; }
 .contrat-step.done:hover { background: rgba(14,59,46,.06); border-radius: 10px; }
-.contrat-sep { width: 24px; height: 2px; background: rgba(13,17,23,.08); flex-shrink: 0; }
+.contrat-sep { width: 24px; height: 2px; background: rgba(32,34,31,.08); flex-shrink: 0; }
 
 /* Cards */
 .contrat-card {
@@ -207,7 +207,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   border-radius: 16px; overflow: hidden; margin-bottom: 16px;
 }
 .contrat-card-header {
-  padding: 20px 24px; border-bottom: 1px solid rgba(13,17,23,.06);
+  padding: 20px 24px; border-bottom: 1px solid rgba(32,34,31,.06);
   background: #FAFAF8; display: flex; align-items: center; gap: 12px;
 }
 .contrat-card-icon {
@@ -215,7 +215,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   background: rgba(14,59,46,.1); display: flex; align-items: center;
   justify-content: center; color: var(--bh-vert); font-size: 16px; flex-shrink: 0;
 }
-.contrat-card-title { font-size: 16px; font-weight: 700; color: #0D1117; margin: 0; }
+.contrat-card-title { font-size: 16px; font-weight: 700; color: var(--bh-encre); margin: 0; }
 .contrat-card-sub { font-size: 13px; color: #7A8695; margin: 2px 0 0; }
 .contrat-card-body { padding: 24px; }
 
@@ -230,9 +230,9 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .form-hint { font-size: 12px; color: #9CA3AF; font-weight: 400; display: block; margin-top: 2px; }
 .form-input, .form-textarea, .form-select {
   width: 100%; padding: 10px 14px;
-  background: #FAFAF8; border: 1.5px solid rgba(13,17,23,.12);
+  background: #FAFAF8; border: 1.5px solid rgba(32,34,31,.12);
   border-radius: 10px; font-size: 14px; font-family: 'DM Sans', sans-serif;
-  color: #0D1117; transition: border-color .15s; outline: none;
+  color: var(--bh-encre); transition: border-color .15s; outline: none;
   box-sizing: border-box;
 }
 .form-input:focus, .form-textarea:focus, .form-select:focus {
@@ -249,7 +249,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .regles-list { list-style: none; padding: 0; margin: 0; }
 .regles-list li {
   display: flex; align-items: flex-start; gap: 10px;
-  padding: 10px 0; border-bottom: 1px solid rgba(13,17,23,.06);
+  padding: 10px 0; border-bottom: 1px solid rgba(32,34,31,.06);
   font-size: 14px; color: #374151;
 }
 .regles-list li:last-child { border-bottom: none; }
@@ -269,7 +269,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 
 /* Signature */
 .signature-zone {
-  border: 2px dashed rgba(13,17,23,.15); border-radius: 14px;
+  border: 2px dashed rgba(32,34,31,.15); border-radius: 14px;
   background: #FAFAF8; overflow: hidden; position: relative;
 }
 .signature-zone canvas {
@@ -278,7 +278,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 }
 .signature-actions {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 14px; border-top: 1px solid rgba(13,17,23,.08);
+  padding: 10px 14px; border-top: 1px solid rgba(32,34,31,.08);
   background: white;
 }
 .signature-hint { font-size: 12px; color: #9CA3AF; }
@@ -304,13 +304,13 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .accept-box label {
   font-size: 14px; color: #374151; cursor: pointer; line-height: 1.5;
 }
-.accept-box label strong { color: #0D1117; }
+.accept-box label strong { color: var(--bh-encre); }
 
 /* Aperçu contrat */
 .contrat-preview {
   background: white; border: 1px solid rgba(200,184,154,.35);
   border-radius: 16px; padding: 32px; font-family: 'DM Sans', sans-serif;
-  line-height: 1.7; color: #0D1117;
+  line-height: 1.7; color: var(--bh-encre);
 }
 .contrat-preview h2 {
   font-family: 'Instrument Serif', serif; font-size: 22px;
@@ -338,7 +338,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   font-size: 12px; color: #7A8695; margin-bottom: 8px;
 }
 .contrat-preview .preview-sig-img {
-  border-top: 1px solid #0D1117; padding-top: 8px;
+  border-top: 1px solid var(--bh-encre); padding-top: 8px;
   min-height: 60px; display: flex; align-items: center;
 }
 
@@ -350,7 +350,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .btn-prev {
   height: 44px; padding: 0 20px; border-radius: 12px;
   background: white; color: #0D1117;
-  border: 1.5px solid rgba(13,17,23,.12); cursor: pointer;
+  border: 1.5px solid rgba(32,34,31,.12); cursor: pointer;
   font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
   display: inline-flex; align-items: center; gap: 8px; transition: all .15s;
 }
@@ -377,7 +377,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .btn-email {
   flex: 1; height: 48px; padding: 0 24px; border-radius: 12px;
   background: white; color: #0D1117;
-  border: 1.5px solid rgba(13,17,23,.12); cursor: pointer;
+  border: 1.5px solid rgba(32,34,31,.12); cursor: pointer;
   font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   transition: all .15s; min-width: 180px;
@@ -436,10 +436,10 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   gap: 10px;
   font-size: 14px;
   font-weight: 500;
-  color: #0D1117;
+  color: var(--bh-encre);
   padding-bottom: 14px;
   margin-bottom: 16px;
-  border-bottom: 0.5px solid rgba(13,17,23,.1);
+  border-bottom: 0.5px solid rgba(32,34,31,.1);
   background: none;
 }
 #mandatView .form-card-title::before {
@@ -458,7 +458,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 /* Missions checkboxes */
 .missions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 @media(max-width:600px){ .missions-grid { grid-template-columns: 1fr; } }
-.mission-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1.5px solid rgba(13,17,23,.08); border-radius: 10px; cursor: pointer; transition: all .15s; background: white; }
+.mission-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1.5px solid rgba(32,34,31,.08); border-radius: 10px; cursor: pointer; transition: all .15s; background: white; }
 .mission-item:hover { border-color: rgba(14,59,46,.3); background: rgba(14,59,46,.03); }
 .mission-item input[type="checkbox"] { accent-color: var(--bh-vert); width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; cursor: pointer; }
 .mission-item label { font-size: 13.5px; color: #374151; cursor: pointer; line-height: 1.4; }
@@ -470,7 +470,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .remu-cards { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .remu-card {
   flex: 1; min-width: 90px; max-width: 130px;
-  border: 2px solid rgba(13,17,23,.1); border-radius: 12px;
+  border: 2px solid rgba(32,34,31,.1); border-radius: 12px;
   padding: 14px 10px; text-align: center; cursor: pointer;
   background: white; transition: all .15s;
 }
@@ -499,11 +499,11 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   display: inline-flex; align-items: center; gap: 8px;
   height: 44px; padding: 0 20px; border-radius: 12px;
   background: white; color: #374151;
-  border: 1.5px solid rgba(13,17,23,.15);
+  border: 1.5px solid rgba(32,34,31,.15);
   font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
   cursor: pointer; transition: all .15s;
 }
-.wiz-btn-back:hover { border-color: rgba(13,17,23,.3); }
+.wiz-btn-back:hover { border-color: rgba(32,34,31,.3); }
 
 /* Clauses libres */
 .clauses-list { list-style: none; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
@@ -513,7 +513,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 
 /* Zone signature mandat */
 #mandatView .signature-area {
-  border: 2px dashed rgba(13,17,23,.15);
+  border: 2px dashed rgba(32,34,31,.15);
   border-radius: 12px;
   background: #FAFAF8;
   overflow: hidden;
@@ -525,7 +525,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 }
 .history-filter-btn {
   height: 34px; padding: 0 14px; border-radius: 8px;
-  border: 1.5px solid rgba(13,17,23,.12); background: white;
+  border: 1.5px solid rgba(32,34,31,.12); background: white;
   color: #7A8695; font-size: 13px; font-weight: 600;
   font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .15s;
 }
@@ -538,7 +538,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 }
 .history-period-btn {
   height: 30px; padding: 0 12px; border-radius: 999px;
-  border: 1px solid rgba(13,17,23,.12); background: transparent;
+  border: 1px solid rgba(32,34,31,.12); background: transparent;
   color: #7A8695; font-size: 12px; font-weight: 600;
   font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .15s;
 }
@@ -554,7 +554,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
   display: flex; align-items: center; gap: 16px;
   transition: box-shadow .15s;
 }
-.history-card:hover { box-shadow: 0 4px 16px rgba(13,17,23,.08); }
+.history-card:hover { box-shadow: 0 4px 16px rgba(32,34,31,.08); }
 .history-card-icon {
   width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center; font-size: 16px;
@@ -564,7 +564,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 .history-card-icon.expired { background: rgba(156,163,175,.1); color: #9CA3AF; }
 
 .history-card-info { flex: 1; min-width: 0; }
-.history-card-name { font-size: 15px; font-weight: 700; color: #0D1117; }
+.history-card-name { font-size: 15px; font-weight: 700; color: var(--bh-encre); }
 .history-card-meta { font-size: 13px; color: #7A8695; margin-top: 3px; }
 .history-card-meta span { margin-right: 14px; }
 
@@ -592,7 +592,7 @@ html[data-theme-v3="1"] .sidebar { z-index: 30 !important; }
 }
 .history-col-title {
   font-size: 11px; font-weight: 700; letter-spacing: .1em;
-  text-transform: uppercase; color: rgba(13,17,23,.38);
+  text-transform: uppercase; color: rgba(32,34,31,.38);
   margin-bottom: 12px; display: flex; align-items: center; gap: 7px;
 }
 .history-col-title i { font-size: 13px; }
@@ -790,7 +790,7 @@ html[data-theme-v3="1"] .include-toggle {
 .include-toggle:has(input[type="checkbox"]:not(:checked)),
 html[data-theme-v3="1"] .include-toggle:has(input[type="checkbox"]:not(:checked)) {
   background: #F4F4F2;
-  border-color: rgba(13,17,23,.14);
+  border-color: rgba(32,34,31,.14);
   color: #7A8695 !important;
 }
 @media(max-width:640px){
@@ -812,12 +812,12 @@ html[data-theme-v3="1"] .include-toggle:has(input[type="checkbox"]:not(:checked)
   .bh-desktop-header .bh-dh-kicker {
     font-family: 'DM Sans', sans-serif;
     font-size: 10.5px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: .1em; color: rgba(13,17,23,.38);
+    letter-spacing: .1em; color: rgba(32,34,31,.38);
     margin-bottom: 2px;
   }
   .bh-desktop-header .bh-dh-title {
     font-family: 'Instrument Serif', serif;
-    font-size: 22px; font-weight: 400; color: #0D1117;
+    font-size: 22px; font-weight: 400; color: var(--bh-encre);
     line-height: 1.1;
   }
 }
@@ -3360,16 +3360,16 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 /* ── Onglets ── */
-.contrat-tabs { border-radius: 999px; border-color: rgba(200,184,154,.5) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04); }
+.contrat-tabs { border-radius: 999px; border-color: rgba(200,184,154,.5) !important; box-shadow: 0 1px 3px rgba(32,34,31,.04); }
 .contrat-tab-btn { border-radius: 999px !important; }
 .contrat-tab-btn.active { box-shadow: 0 1px 3px rgba(14,59,46,.15); }
 
 /* ── Stepper ── */
-.contrat-steps { border-radius: 18px; border-color: rgba(200,184,154,.45) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04); }
+.contrat-steps { border-radius: 18px; border-color: rgba(200,184,154,.45) !important; box-shadow: 0 1px 3px rgba(32,34,31,.04); }
 .contrat-sep { background: rgba(200,184,154,.45) !important; }
 
 /* ── Cartes d'étape : titres serif, header crème ── */
-.contrat-card { border-radius: 20px; border-color: rgba(200,184,154,.45) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04); }
+.contrat-card { border-radius: 20px; border-color: rgba(200,184,154,.45) !important; box-shadow: 0 1px 3px rgba(32,34,31,.04); }
 .contrat-card-header { background: #FBF8F3 !important; border-bottom-color: rgba(200,184,154,.4) !important; }
 .contrat-card-title {
   font-family: 'Instrument Serif', serif !important;
@@ -3403,7 +3403,7 @@ document.addEventListener('DOMContentLoaded', () => {
 .btn-next:not(:disabled):hover, .btn-download:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14,59,46,.3); }
 
 /* ── Aperçu contrat : document soigné ── */
-.contrat-preview { border-radius: 20px; border-color: rgba(200,184,154,.5) !important; box-shadow: 0 1px 3px rgba(13,17,23,.04); }
+.contrat-preview { border-radius: 20px; border-color: rgba(200,184,154,.5) !important; box-shadow: 0 1px 3px rgba(32,34,31,.04); }
 .contrat-preview .preview-section-title { border-bottom-color: rgba(200,184,154,.45); }
 
 /* ── Historique ── */
@@ -3418,7 +3418,7 @@ document.addEventListener('DOMContentLoaded', () => {
 .history-card:hover {
   transform: translateY(-2px);
   border-color: rgba(14,59,46,.35) !important;
-  box-shadow: 0 8px 24px rgba(13,17,23,.09);
+  box-shadow: 0 8px 24px rgba(32,34,31,.09);
 }
 .history-card-name {
   font-family: 'Instrument Serif', serif !important;

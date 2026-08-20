@@ -191,7 +191,7 @@ html[data-theme-v3="1"] .page-back-btn {
   font-weight: 600;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: rgba(13,17,23,.38);
+  color: rgba(32,34,31,.38);
   margin-bottom: 2px;
 }
 
@@ -199,7 +199,7 @@ html[data-theme-v3="1"] .page-back-btn {
   font-family: 'Instrument Serif', serif;
   font-size: 26px;
   font-weight: 400;
-  color: #0D1117;
+  color: var(--bh-encre);
   margin: 0;
   line-height: 1.1;
 }
@@ -298,7 +298,7 @@ html[data-theme-v3="1"] .page-back-btn {
   background: transparent;
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
-  color: #0D1117;
+  color: var(--bh-encre);
   outline: none;
 }
 
@@ -355,7 +355,7 @@ html[data-theme-v3="1"] .page-back-btn {
 
 /* Name */
 #conversationsList .conversation-info h3 {
-  font-size: 13.5px !important; font-weight: 700 !important; color: #0D1117 !important;
+  font-size: 13.5px !important; font-weight: 700 !important; color: var(--bh-encre) !important;
   margin: 0 !important; white-space: nowrap !important; overflow: hidden !important;
   text-overflow: ellipsis !important; max-width: 160px !important;
   font-family: 'DM Sans', sans-serif !important;
@@ -457,7 +457,7 @@ html[data-theme-v3="1"] .page-back-btn {
 .msgs-chat-info { flex: 1; min-width: 0; }
 
 .msgs-chat-name {
-  font-size: 15px; font-weight: 700; color: #0D1117;
+  font-size: 15px; font-weight: 700; color: var(--bh-encre);
   font-family: 'DM Sans', sans-serif;
   margin-bottom: 2px;
 }
@@ -546,7 +546,7 @@ html[data-theme-v3="1"] .page-back-btn {
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
   font-size: 14px;
   line-height: 1.5;
-  color: #0D1117;
+  color: var(--bh-encre);
   word-wrap: break-word;
   white-space: pre-wrap;
 }
@@ -589,7 +589,7 @@ html[data-theme-v3="1"] .page-back-btn {
   max-height: 100px;
   background: #F5F2EC;
   outline: none;
-  color: #0D1117;
+  color: var(--bh-encre);
 }
 .chat-input:focus { border-color: rgba(14,59,46,.4); background: white; }
 
@@ -723,12 +723,12 @@ html[data-theme-v3="1"] .conversations-section {
   .bh-desktop-header .bh-dh-kicker {
     font-family: 'DM Sans', sans-serif;
     font-size: 10.5px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: .1em; color: rgba(13,17,23,.38);
+    letter-spacing: .1em; color: rgba(32,34,31,.38);
     margin-bottom: 2px;
   }
   .bh-desktop-header .bh-dh-title {
     font-family: 'Instrument Serif', serif;
-    font-size: 22px; font-weight: 400; color: #0D1117;
+    font-size: 22px; font-weight: 400; color: var(--bh-encre);
     line-height: 1.1;
   }
 }
@@ -766,7 +766,7 @@ html[data-theme-v3="1"] header.main-header .page-kicker {
   font-size: 10.5px !important;
   letter-spacing: .1em !important;
   text-transform: uppercase !important;
-  color: rgba(13,17,23,.38) !important;
+  color: rgba(32,34,31,.38) !important;
   font-weight: 600 !important;
 }
 
@@ -3012,7 +3012,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     background: rgba(245, 242, 236, 0.97) !important;
     backdrop-filter: blur(12px) !important;
     border-bottom: 1px solid rgba(200, 184, 154, 0.4) !important;
-    box-shadow: 0 1px 8px rgba(13, 17, 23, 0.06) !important;
+    box-shadow: 0 1px 8px rgba(32,34,31, 0.06) !important;
     padding-top: env(safe-area-inset-top, 0px) !important;
     height: calc(60px + env(safe-area-inset-top, 0px)) !important;
   }
@@ -5968,7 +5968,7 @@ document.addEventListener('click', function(e) {
 .msgs-split {
   border: 1px solid rgba(200,184,154,.5) !important;
   border-radius: 22px !important;
-  box-shadow: 0 4px 28px rgba(13,17,23,.07) !important;
+  box-shadow: 0 4px 28px rgba(32,34,31,.07) !important;
 }
 
 /* ── Panneau gauche : crème chaud ── */
@@ -6009,7 +6009,7 @@ document.addEventListener('click', function(e) {
 #conversationsList .conversation-item.conv-unread h3 { font-weight: 400 !important; text-shadow: 0 0 .4px currentColor; }
 /* Avatar : anneau blanc + ombre douce */
 #conversationsList .conversation-avatar {
-  box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(13,17,23,.12) !important;
+  box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(32,34,31,.12) !important;
 }
 #conversationsList .conversation-time { color: #A89680 !important; }
 #conversationsList .conversation-preview { color: #8A8375 !important; }
@@ -6028,12 +6028,12 @@ document.addEventListener('click', function(e) {
 .msgs-chat-avatar { box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(14,59,46,.25); }
 
 /* ── Zone messages : crème + bulles raffinées ── */
-.chat-message .chat-avatar { box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(13,17,23,.12); }
+.chat-message .chat-avatar { box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(32,34,31,.12); }
 
 .chat-bubble {
   border-radius: 18px 18px 18px 6px !important;
   border: 1px solid rgba(200,184,154,.35);
-  box-shadow: 0 1px 3px rgba(13,17,23,.05) !important;
+  box-shadow: 0 1px 3px rgba(32,34,31,.05) !important;
   font-size: 14px;
   line-height: 1.55;
 }
@@ -6190,14 +6190,14 @@ document.addEventListener('click', function(e) {
 
 /* ── Modales de la page ── */
 #templateModal, #smsConfirmModal {
-  background: rgba(13,17,23,.5) !important;
+  background: rgba(32,34,31,.5) !important;
   backdrop-filter: blur(7px);
   -webkit-backdrop-filter: blur(7px);
 }
 #templateModal > div, #smsConfirmModal > div {
   background: #FAF7F2 !important;
   border: 1px solid rgba(200,184,154,.55) !important;
-  box-shadow: 0 24px 70px rgba(13,17,23,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
+  box-shadow: 0 24px 70px rgba(32,34,31,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
 }
 #tplModalTitle {
   font-family: 'Instrument Serif', serif !important;
