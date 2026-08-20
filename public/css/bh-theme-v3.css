@@ -39,10 +39,10 @@ html[data-theme-v3="1"] {
   --text-1:         #0D1117;
   --text-2:         #3D4A5C;
   --text-3:         #7A8695;
-  --border-v3:      rgba(13,17,23,.09);
+  --border-v3:      rgba(32,34,31,.09);
   --border-warm-v3: rgba(200,184,154,.4);
-  --shadow-card-v3:  0 2px 8px rgba(13,17,23,.06), 0 1px 2px rgba(13,17,23,.04);
-  --shadow-float-v3: 0 12px 40px rgba(13,17,23,.12), 0 4px 12px rgba(13,17,23,.06);
+  --shadow-card-v3:  0 2px 8px rgba(32,34,31,.06), 0 1px 2px rgba(32,34,31,.04);
+  --shadow-float-v3: 0 12px 40px rgba(32,34,31,.12), 0 4px 12px rgba(32,34,31,.06);
   --shadow-jade-v3:  0 8px 28px rgba(14,59,46,.22);
   --sidebar-w-v3:   248px;
   --ease-out-v3:    cubic-bezier(0.16,1,0.3,1);
@@ -1644,11 +1644,11 @@ html[data-theme-v3="1"][data-theme="dark"] .sidebar .user-name,
 html[data-theme-v3="1"][data-theme="dark"] .sidebar #sidebarUserName { color: var(--text-1) !important; }
 /* Sidebar footer reste clair même en dark — fond --cream-warm */
 html[data-theme-v3="1"] .sidebar .sidebar-footer .user-name,
-html[data-theme-v3="1"] .sidebar .sidebar-footer #sidebarUserName { color: #0D1117 !important; font-weight: 600 !important; }
+html[data-theme-v3="1"] .sidebar .sidebar-footer #sidebarUserName { color: var(--bh-encre) !important; font-weight: 600 !important; }
 html[data-theme-v3="1"] .sidebar .sidebar-footer .user-email,
 html[data-theme-v3="1"] .sidebar .sidebar-footer #sidebarUserCompany { color: #3D4A5C !important; }
 html[data-theme-v3="1"][data-theme="dark"] .sidebar .sidebar-footer .user-name,
-html[data-theme-v3="1"][data-theme="dark"] .sidebar .sidebar-footer #sidebarUserName { color: #0D1117 !important; }
+html[data-theme-v3="1"][data-theme="dark"] .sidebar .sidebar-footer #sidebarUserName { color: var(--bh-encre) !important; }
 html[data-theme-v3="1"][data-theme="dark"] .sidebar .sidebar-footer .user-email,
 html[data-theme-v3="1"][data-theme="dark"] .sidebar .sidebar-footer #sidebarUserCompany { color: #3D4A5C !important; }
 
@@ -1904,17 +1904,17 @@ html[data-theme-v3="1"] .property-item.active::before {
 
 /* ── Barres de réservation : relief, liseré lumière, hover lift ── */
 html[data-theme-v3="1"] .booking-block {
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 1px 3px rgba(13,17,23,.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 1px 3px rgba(32,34,31,.18) !important;
   transition: transform .15s var(--ease-out-v3), box-shadow .15s, filter .15s !important;
 }
 html[data-theme-v3="1"] .booking-block:hover {
   filter: brightness(1.05) !important;
   transform: translateY(-1px) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.26), 0 5px 14px rgba(13,17,23,.22) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.26), 0 5px 14px rgba(32,34,31,.22) !important;
   z-index: 5 !important;
 }
 html[data-theme-v3="1"] .booking-block.expedia {
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 3px rgba(13,17,23,.14) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 3px rgba(32,34,31,.14) !important;
 }
 
 /* ── Scrollbars fines assorties (zone calendrier + modales) ── */
@@ -1990,7 +1990,7 @@ html[data-theme-v3="1"] .calendar-cell.today {
 /* ── 4. Colonne logements : ombre portée pendant le scroll horizontal ──
    Détail qui sépare franchement une grille "tableur" d'une grille produit. */
 html[data-theme-v3="1"] .property-list-column {
-  box-shadow: 6px 0 16px -8px rgba(13,17,23,.16) !important;
+  box-shadow: 6px 0 16px -8px rgba(32,34,31,.16) !important;
   border-right: 1px solid rgba(200,184,154,.55) !important;
   z-index: 6 !important;
 }

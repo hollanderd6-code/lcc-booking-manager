@@ -61,7 +61,7 @@ html{ scroll-behavior: smooth; }
 .bh-toast{ display: flex; align-items: center; gap: 11px;
   background: #12211C; color: #F2EEE3; border-radius: 13px;
   padding: 11px 18px 11px 12px; font: 500 13.5px/1.45 'DM Sans', sans-serif;
-  border-left: 3px solid #B7791F; box-shadow: 0 14px 44px rgba(13,17,23,.35);
+  border-left: 3px solid #B7791F; box-shadow: 0 14px 44px rgba(32,34,31,.35);
   max-width: 92vw; pointer-events: auto;
   animation: bhToastIn .3s cubic-bezier(.22,1.1,.36,1); }
 .bh-toast.sortie{ animation: bhToastOut .25s ease forwards; }
