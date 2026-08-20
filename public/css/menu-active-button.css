@@ -1,162 +1,107 @@
 /* ============================================================================
    ETAT ACTIF DANS LE MENU « PLUS »
-
+   ============================================================================
    L'entree correspondant a la page courante est teintee de la couleur de sa
-   propre icone : fond a ~9 %, liseré vertical, libelle colore. L'icone reste
-   donc lisible — l'ancien aplat vert uniforme rendait invisible une icone
-   verte (Livrets d'accueil) et ne correspondait pas a l'entree.
+   propre icone : fond a ~9 %, lisere vertical, libelle colore. L'icone reste
+   donc lisible — un aplat vert uniforme rendait invisible une icone verte.
 
    Le ciblage se fait sur data-menu-key, pose par mobile-tabs-handler.js, et
    non sur [onclick*="..."] : une URL modifiee ne casse plus la regle.
+   mobile-tabs-handler.js applique le meme rendu en JS ; la redondance est
+   voulue (si le JS est servi depuis un cache ancien, le CSS tient).
 
-   mobile-tabs-handler.js applique le meme rendu en JS. Les deux sont
-   volontairement redondants : si le JS est servi depuis le cache, le CSS
-   assure quand meme l'etat actif.
+   ── CE QUI A CHANGE (lot 4) ─────────────────────────────────────────────
+   Le fichier repetait onze fois le meme bloc de cinq declarations, en ne
+   changeant que la couleur : 163 lignes pour un seul comportement, et deux
+   blocs a ecrire pour ajouter une page.
+
+   La couleur est maintenant portee par une variable, --k, declaree une fois
+   par entree. Le rendu est ecrit UNE fois et vaut pour toutes.
+   Ajouter une entree = une ligne.
    ============================================================================ */
 
-/* Livrets d'accueil */
-body[data-page="welcome"] .bh-more-item[data-menu-key="welcome"],
-body[data-page="livrets"] .bh-more-item[data-menu-key="welcome"] {
-  background: #1A7A5E16 !important;
-  border: 1px solid #1A7A5E4D !important;
-  box-shadow: inset 3px 0 0 #0E3B2E !important;
-}
-body[data-page="welcome"] .bh-more-item[data-menu-key="welcome"] span,
-body[data-page="livrets"] .bh-more-item[data-menu-key="welcome"] span {
-  color: #0E3B2E !important;
-  font-weight: 700 !important;
-}
+/* ── 1. La couleur de chaque entree ──────────────────────────────────────
+   Ces teintes ne sont pas des couleurs de marque : elles identifient une
+   rubrique, et reprennent la couleur de son icone. */
+.bh-more-item[data-menu-key="welcome"]   { --k: #0E3B2E; }  /* Livrets d'accueil */
+.bh-more-item[data-menu-key="contrat"]   { --k: #3B82F6; }  /* Contrats */
+.bh-more-item[data-menu-key="properties"]{ --k: #0891B2; }  /* Mes logements */
+.bh-more-item[data-menu-key="finances"]  { --k: #0E3B2E; }  /* Cautions */
+.bh-more-item[data-menu-key="factures"]  { --k: #8B5CF6; }  /* Factures sejours */
+.bh-more-item[data-menu-key="clients"]   { --k: #EC4899; }  /* Mes clients */
+.bh-more-item[data-menu-key="reporting"] { --k: #0EA5E9; }  /* Revenus */
+.bh-more-item[data-menu-key="pricing"]   { --k: #F59E0B; }  /* BoostPrice */
+.bh-more-item[data-menu-key="locks"]     { --k: #64748B; }  /* Serrures connectees */
+.bh-more-item[data-menu-key="settings"]  { --k: #475569; }  /* Parametres */
+.bh-more-item[data-menu-key="support"]   { --k: #14B8A6; }  /* Support */
 
-/* Contrats */
-body[data-page="contrat"] .bh-more-item[data-menu-key="contrat"],
-body[data-page="contrats"] .bh-more-item[data-menu-key="contrat"] {
-  background: #3B82F616 !important;
-  border: 1px solid #3B82F64D !important;
-  box-shadow: inset 3px 0 0 #3B82F6 !important;
-}
-body[data-page="contrat"] .bh-more-item[data-menu-key="contrat"] span,
-body[data-page="contrats"] .bh-more-item[data-menu-key="contrat"] span {
-  color: #3B82F6 !important;
-  font-weight: 700 !important;
-}
-
-/* Mes logements */
-body[data-page="settings"] .bh-more-item[data-menu-key="properties"],
-body[data-page="logements"] .bh-more-item[data-menu-key="properties"],
-body[data-page="properties"] .bh-more-item[data-menu-key="properties"] {
-  background: #0891B216 !important;
-  border: 1px solid #0891B24D !important;
-  box-shadow: inset 3px 0 0 #0891B2 !important;
-}
-body[data-page="settings"] .bh-more-item[data-menu-key="properties"] span,
-body[data-page="logements"] .bh-more-item[data-menu-key="properties"] span,
-body[data-page="properties"] .bh-more-item[data-menu-key="properties"] span {
-  color: #0891B2 !important;
-  font-weight: 700 !important;
-}
-
-/* Cautions / Finances */
-body[data-page="deposits"] .bh-more-item[data-menu-key="finances"],
-body[data-page="cautions"] .bh-more-item[data-menu-key="finances"] {
-  background: #10B98116 !important;
-  border: 1px solid #10B9814D !important;
-  box-shadow: inset 3px 0 0 #0E3B2E !important;
-}
-body[data-page="deposits"] .bh-more-item[data-menu-key="finances"] span,
-body[data-page="cautions"] .bh-more-item[data-menu-key="finances"] span {
-  color: #0E3B2E !important;
-  font-weight: 700 !important;
-}
-
-/* Factures sejours */
-body[data-page="factures"] .bh-more-item[data-menu-key="factures"] {
-  background: #8B5CF616 !important;
-  border: 1px solid #8B5CF64D !important;
-  box-shadow: inset 3px 0 0 #8B5CF6 !important;
-}
-body[data-page="factures"] .bh-more-item[data-menu-key="factures"] span {
-  color: #8B5CF6 !important;
-  font-weight: 700 !important;
-}
-
-/* Mes Clients */
-body[data-page="clients"] .bh-more-item[data-menu-key="clients"] {
-  background: #EC489916 !important;
-  border: 1px solid #EC48994D !important;
-  box-shadow: inset 3px 0 0 #EC4899 !important;
-}
-body[data-page="clients"] .bh-more-item[data-menu-key="clients"] span {
-  color: #EC4899 !important;
-  font-weight: 700 !important;
-}
-
-/* Revenus */
-body[data-page="reporting"] .bh-more-item[data-menu-key="reporting"],
-body[data-page="revenus"] .bh-more-item[data-menu-key="reporting"] {
-  background: #0EA5E916 !important;
-  border: 1px solid #0EA5E94D !important;
-  box-shadow: inset 3px 0 0 #0EA5E9 !important;
-}
-body[data-page="reporting"] .bh-more-item[data-menu-key="reporting"] span,
-body[data-page="revenus"] .bh-more-item[data-menu-key="reporting"] span {
-  color: #0EA5E9 !important;
-  font-weight: 700 !important;
-}
-
-/* BoostPrice */
-body[data-page="dynamic-pricing"] .bh-more-item[data-menu-key="pricing"],
-body[data-page="pricing"] .bh-more-item[data-menu-key="pricing"] {
-  background: #F59E0B16 !important;
-  border: 1px solid #F59E0B4D !important;
-  box-shadow: inset 3px 0 0 #F59E0B !important;
-}
-body[data-page="dynamic-pricing"] .bh-more-item[data-menu-key="pricing"] span,
-body[data-page="pricing"] .bh-more-item[data-menu-key="pricing"] span {
-  color: #F59E0B !important;
-  font-weight: 700 !important;
-}
-
-/* Serrures connectees */
-body[data-page="smart-locks"] .bh-more-item[data-menu-key="locks"],
-body[data-page="smart_locks"] .bh-more-item[data-menu-key="locks"] {
-  background: #64748B16 !important;
-  border: 1px solid #64748B4D !important;
-  box-shadow: inset 3px 0 0 #64748B !important;
-}
-body[data-page="smart-locks"] .bh-more-item[data-menu-key="locks"] span,
-body[data-page="smart_locks"] .bh-more-item[data-menu-key="locks"] span {
-  color: #64748B !important;
-  font-weight: 700 !important;
-}
-
-/* Parametres */
+/* ── 2. Quelle page allume quelle entree ─────────────────────────────────
+   Un nom de page peut differer de la cle de menu (« logements » pour la cle
+   « properties »), et plusieurs noms peuvent viser la meme entree. Cette
+   correspondance est la seule chose irreductible du fichier. */
+body[data-page="welcome"]          .bh-more-item[data-menu-key="welcome"],
+body[data-page="livrets"]          .bh-more-item[data-menu-key="welcome"],
+body[data-page="contrat"]          .bh-more-item[data-menu-key="contrat"],
+body[data-page="contrats"]         .bh-more-item[data-menu-key="contrat"],
+body[data-page="settings"]         .bh-more-item[data-menu-key="properties"],
+body[data-page="logements"]        .bh-more-item[data-menu-key="properties"],
+body[data-page="properties"]       .bh-more-item[data-menu-key="properties"],
+body[data-page="deposits"]         .bh-more-item[data-menu-key="finances"],
+body[data-page="cautions"]         .bh-more-item[data-menu-key="finances"],
+body[data-page="factures"]         .bh-more-item[data-menu-key="factures"],
+body[data-page="clients"]          .bh-more-item[data-menu-key="clients"],
+body[data-page="reporting"]        .bh-more-item[data-menu-key="reporting"],
+body[data-page="revenus"]          .bh-more-item[data-menu-key="reporting"],
+body[data-page="dynamic-pricing"]  .bh-more-item[data-menu-key="pricing"],
+body[data-page="pricing"]          .bh-more-item[data-menu-key="pricing"],
+body[data-page="smart-locks"]      .bh-more-item[data-menu-key="locks"],
+body[data-page="smart_locks"]      .bh-more-item[data-menu-key="locks"],
 body[data-page="settings-account"] .bh-more-item[data-menu-key="settings"],
-body[data-page="notifications"] .bh-more-item[data-menu-key="settings"] {
-  background: #47556916 !important;
-  border: 1px solid #4755694D !important;
-  box-shadow: inset 3px 0 0 #475569 !important;
+body[data-page="notifications"]    .bh-more-item[data-menu-key="settings"],
+body[data-page="help"]             .bh-more-item[data-menu-key="support"],
+body[data-page="support"]          .bh-more-item[data-menu-key="support"] {
+  /* Repli pour les WebViews anterieures a iOS 16.2, ou color-mix() n'existe
+     pas : un fond neutre tres clair plutot qu'aucun fond. La declaration
+     suivante l'ecrase partout ailleurs. */
+  background: var(--bh-cote) !important;
+  border: 1px solid var(--bh-ligne) !important;
+  /* color-mix remplace les anciens hex a alpha concatene (#1A7A5E16), qui
+     obligeaient a recalculer la teinte a la main pour chaque rubrique. */
+  background: color-mix(in srgb, var(--k) 9%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--k) 30%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--k) !important;
 }
+
+/* Le libelle prend la meme teinte. Selecteur descendant du precedent :
+   `.bh-more-item[style]` n'existe pas, on cible donc via l'etat porte par
+   le fond — d'ou la repetition de la liste, inevitable en CSS pur. */
+body[data-page="welcome"]          .bh-more-item[data-menu-key="welcome"] span,
+body[data-page="livrets"]          .bh-more-item[data-menu-key="welcome"] span,
+body[data-page="contrat"]          .bh-more-item[data-menu-key="contrat"] span,
+body[data-page="contrats"]         .bh-more-item[data-menu-key="contrat"] span,
+body[data-page="settings"]         .bh-more-item[data-menu-key="properties"] span,
+body[data-page="logements"]        .bh-more-item[data-menu-key="properties"] span,
+body[data-page="properties"]       .bh-more-item[data-menu-key="properties"] span,
+body[data-page="deposits"]         .bh-more-item[data-menu-key="finances"] span,
+body[data-page="cautions"]         .bh-more-item[data-menu-key="finances"] span,
+body[data-page="factures"]         .bh-more-item[data-menu-key="factures"] span,
+body[data-page="clients"]          .bh-more-item[data-menu-key="clients"] span,
+body[data-page="reporting"]        .bh-more-item[data-menu-key="reporting"] span,
+body[data-page="revenus"]          .bh-more-item[data-menu-key="reporting"] span,
+body[data-page="dynamic-pricing"]  .bh-more-item[data-menu-key="pricing"] span,
+body[data-page="pricing"]          .bh-more-item[data-menu-key="pricing"] span,
+body[data-page="smart-locks"]      .bh-more-item[data-menu-key="locks"] span,
+body[data-page="smart_locks"]      .bh-more-item[data-menu-key="locks"] span,
 body[data-page="settings-account"] .bh-more-item[data-menu-key="settings"] span,
-body[data-page="notifications"] .bh-more-item[data-menu-key="settings"] span {
-  color: #475569 !important;
+body[data-page="notifications"]    .bh-more-item[data-menu-key="settings"] span,
+body[data-page="help"]             .bh-more-item[data-menu-key="support"] span,
+body[data-page="support"]          .bh-more-item[data-menu-key="support"] span {
+  color: var(--k) !important;
   font-weight: 700 !important;
 }
 
-/* Support */
-body[data-page="help"] .bh-more-item[data-menu-key="support"],
-body[data-page="support"] .bh-more-item[data-menu-key="support"] {
-  background: #14B8A616 !important;
-  border: 1px solid #14B8A64D !important;
-  box-shadow: inset 3px 0 0 #14B8A6 !important;
-}
-body[data-page="help"] .bh-more-item[data-menu-key="support"] span,
-body[data-page="support"] .bh-more-item[data-menu-key="support"] span {
-  color: #14B8A6 !important;
-  font-weight: 700 !important;
-}
-
-/* Pastille de fin de ligne, commune a toutes les entrees actives */
+/* Pastille de fin de ligne, commune a toutes les entrees. */
 .bh-more-item .bh-more-dot { margin-left: auto; }
 
-/* Neutralise l'ancien effet de translation au survol sur l'entree active */
+/* Neutralise la translation au survol sur une entree du menu. */
 .bh-more-item[data-menu-key]:hover { transform: none !important; }
