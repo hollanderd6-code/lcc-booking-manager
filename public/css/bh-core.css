@@ -321,3 +321,31 @@ main.main-content > .bh-no-page-in {
    Je ne le fais pas ici : cela change la sensation de chaque navigation dans
    le produit, et cela se decide en le voyant.
    ============================================================================ */
+/* ============================================================================
+   SOUS-TITRE DU CALENDRIER
+   ============================================================================
+   A COLLER A LA FIN DE public/css/bh-core.css
+
+   bh-theme-v3.css style deja .bh-cal-legend et ses pastilles. Il manquait le
+   sous-titre, que l'ancien code posait en style en ligne dans le JavaScript —
+   d'ou une couleur en dur impossible a reprendre depuis une feuille.
+   ============================================================================ */
+
+html[data-theme-v3="1"] .bh-cal-subtitle {
+  margin: 3px 0 0 50px;
+  font-family: var(--bh-sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: .01em;
+  /* L'en-tete du calendrier est sombre dans les deux themes : un blanc
+     translucide y tient mieux qu'un jeton de texte. */
+  color: rgba(255,255,255,.45);
+}
+
+/* Le mot en italique des titres de page et du titre du calendrier. */
+html[data-theme-v3="1"] .calendar-title-modern em {
+  font-family: var(--bh-serif);
+  font-style: italic;
+  color: var(--vert-300);
+}
