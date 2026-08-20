@@ -30,3 +30,4 @@ boostinghost-poc/node_modules/
 # ── Environnement ──
 .env
 .env.local
+.corbeille-lot5/
