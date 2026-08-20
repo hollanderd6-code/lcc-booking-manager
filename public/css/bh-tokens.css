@@ -64,15 +64,15 @@
   /* ── Texte ──────────────────────────────────────────────────────────── */
   --bh-encre: #20221F;   /* brun-noir chaud, accorde au creme et au vert */
   --bh-t2:    #5A5A54;   /* secondaire */
-  --bh-t3:    #8B8B84;   /* tertiaire, legendes */
-  --bh-t4:    #B4B4AD;   /* desactive */
+  --bh-t3:    #6A6A64;   /* tertiaire, legendes */
+  --bh-t4:    #878782;   /* desactive */
 
   /* ── Filets ─────────────────────────────────────────────────────────── */
   --bh-ligne:   #EAE9E5;
   --bh-ligne-2: #F1F0EC;
 
   /* ── Accents ────────────────────────────────────────────────────────── */
-  --bh-or:            #B7791F;
+  --bh-or:            #916018;
   --bh-violet:        #7C3AED;
   --bh-violet-fonce:  #5B21B6;
   --bh-guest:         #B4470F;   /* sous-marque BHGuest : terracotta */
