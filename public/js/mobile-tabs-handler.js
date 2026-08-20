@@ -71,6 +71,7 @@
       cleaning: 'can_view_cleaning', deposits: 'can_view_deposits',
       factures: 'can_view_invoices', clients: 'can_view_invoices',
       reporting: 'can_view_reporting',
+      'smart-locks': 'can_view_smart_locks',
     };
     const perm = permMap[page];
     return perm ? permissions[perm] === true : false;
@@ -142,7 +143,11 @@
       buttons += hr;
     }
 
-    buttons += item('locks', 'Serrures connectées', "window.location.href='/smart-locks.html'");
+    // ⚠️ Cette entrée était la seule du menu sans garde-fou : un sous-compte
+    // ménage voyait "Serrures connectées" alors que can_view_smart_locks = false.
+    if (canSeePage('smart-locks')) {
+      buttons += item('locks', 'Serrures connectées', "window.location.href='/smart-locks.html'");
+    }
 
     buttons += hr;
 

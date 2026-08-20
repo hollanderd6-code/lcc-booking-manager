@@ -132,16 +132,48 @@
       }
 
       // ── Filtrage par permissions (même logique que bh-layout.js) ──
-      const _accountType = localStorage.getItem('lcc_account_type');
-      const _isSubAccount = (_accountType === 'sub');
+      // ⚠️ Ne PAS lire uniquement lcc_account_type / lcc_permissions : login.html
+      // n'écrit que lcc_is_sub_account + lcc_sub_account, et sub-account-guard.js
+      // pose lcc_account_type='sub' SANS jamais écrire lcc_permissions. Résultat :
+      // _permissions restait vide → tous les onglets (dont Ménage) étaient masqués.
+      const _isSubAccount = localStorage.getItem('lcc_is_sub_account') === 'true'
+                         || localStorage.getItem('lcc_account_type') === 'sub';
       let _permissions = {};
+      let _role = 'main';
       if (_isSubAccount) {
+        // Nouveau système (prioritaire)
         try {
-          const _pd = localStorage.getItem('lcc_permissions');
-          if (_pd) _permissions = JSON.parse(_pd);
+          const _sd = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+          if (_sd.role) _role = _sd.role;
+          if (_sd.permissions) _permissions = _sd.permissions;
         } catch(e) {}
+        // Fallback ancien système
+        if (!Object.keys(_permissions).length) {
+          try {
+            const _pd = localStorage.getItem('lcc_permissions');
+            if (_pd) _permissions = JSON.parse(_pd);
+          } catch(e) {}
+        }
       }
+
+      // Rôles prédéfinis : liste de pages autorisées (identique à bh-layout.js
+      // et mobile-tabs-handler.js). null = on retombe sur les permissions DB.
+      const _ROLE_PAGES = {
+        cleaner:      ['calendar', 'cleaning'],
+        proprietaire: ['dashboard', 'calendar', 'messages', 'cleaning'],
+        manager:      ['dashboard', 'calendar', 'messages', 'cleaning'],
+        comptable:    [],
+        custom:       null
+      };
+      const _allowedPages = _isSubAccount ? (_ROLE_PAGES[_role] || null) : null;
+
       const _hasPerm = (perm) => !_isSubAccount || _permissions[perm] === true;
+      const _canSeeTab = (tabId, perm) => {
+        if (!_isSubAccount) return true;
+        if (tabId === 'dashboard') return true;
+        if (_allowedPages) return _allowedPages.includes(tabId);
+        return _hasPerm(perm);
+      };
 
       // Onglets de base — toujours visibles si permission
       const allTabs = [
@@ -152,8 +184,8 @@
         { id: 'more',        icon: 'fa-ellipsis-h', label: 'Plus',       perm: null }
       ];
 
-      // Filtrer selon permissions
-      const tabs = allTabs.filter(tab => tab.perm === null || _hasPerm(tab.perm));
+      // Filtrer selon rôle + permissions
+      const tabs = allTabs.filter(tab => tab.perm === null || _canSeeTab(tab.id, tab.perm));
 
       // Onglet réellement actif pour la page courante (calculé par mobile-tabs-handler).
       // On démarre la barre dessus → la capsule glass se pose directement au bon

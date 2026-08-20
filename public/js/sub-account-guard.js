@@ -14,7 +14,9 @@
     'cleaning.html': { view: 'can_view_cleaning', edit: 'can_manage_cleaning' },
     'messages.html': { view: 'can_view_messages', edit: 'can_send_messages' },
     'deposits.html': { view: 'can_view_deposits', edit: null },
-    'smart-locks.html': { view: 'can_manage_locks', edit: 'can_manage_locks' },
+    // 'can_manage_locks' n'existe ni en base ni dans le payload de login :
+    // les vraies colonnes sont can_view_smart_locks / can_manage_smart_locks.
+    'smart-locks.html': { view: 'can_view_smart_locks', edit: 'can_manage_smart_locks' },
     'contrat.html': { view: 'can_view_contracts', edit: null }
   };
 
