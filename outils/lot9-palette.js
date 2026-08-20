@@ -27,7 +27,7 @@
        #6b7280   92x   dE 15.7 de --bh-t2
        #111827   63x   dE 14.3 de --bh-encre
        #7a8695   87x   dE 13.4 de --bh-t3
-       #9ca3af   81x   dE 12.4 de --bh-t4
+       #9ca3af   81x   dE 12.4 de --bh-t4 -> reoriente vers --bh-t3
        #d1d5db   41x   dE  9.0 de --bh-ligne
      468 occurrences. Ces gris sont FROIDS, les jetons sont CHAUDS :
      l'ecart est surtout une affaire de teinte. Les ramener a la marque
@@ -76,7 +76,7 @@ const GRIS_FROIDS = {
   '#374151': '--bh-t2',
   '#6b7280': '--bh-t2',
   '#7a8695': '--bh-t3',
-  '#9ca3af': '--bh-t4',
+  '#9ca3af': '--bh-t3',
   '#d1d5db': '--bh-ligne'
 };
 
