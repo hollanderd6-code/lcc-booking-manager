@@ -96,10 +96,10 @@
     return m;
   }
 
-  function carte(largeur, contenu) {
+  function carte(largeur, contenu, extra) {
     return '<div style="background:#fff;border-radius:16px;max-width:' + largeur + 'px;width:100%;' +
-      'box-shadow:0 24px 60px rgba(32,34,31,.28);overflow:hidden;font-family:' + V.sans + ';color:' + V.encre + ';">' +
-      contenu + '</div>';
+      'box-shadow:0 24px 60px rgba(32,34,31,.28);overflow:hidden;font-family:' + V.sans + ';color:' + V.encre + ';' +
+      (extra || '') + '">' + contenu + '</div>';
   }
 
   function entete(surtitre, titre, sous) {
@@ -275,18 +275,18 @@
         : 'Dans la fenêtre ci-dessous, cliquez sur <strong style="font-weight:500;">Create</strong>, puis renseignez votre Property ID.';
 
     var cadre = function (interieur) {
-      return carte(860,
+      return carte(720,
         entete(p.prep ? 'Étape 2 sur 2' : 'Dernière étape', p.label, pname) +
-        '<div style="padding:14px 24px;background:' + V.creme + ';border-bottom:1px solid ' + V.ligne2 + ';font-size:13px;' +
+        '<div style="padding:12px 24px;background:' + V.creme + ';border-bottom:1px solid ' + V.ligne2 + ';font-size:12.5px;' +
         'color:' + V.t2 + ';line-height:1.5;">' + aide +
         ' <span style="color:' + V.t4 + ';">Cette fenêtre est celle de notre partenaire : elle est en anglais, c\'est normal.</span></div>' +
-        '<div style="padding:16px 24px 24px;">' + interieur + '</div>' +
+        '<div style="padding:14px 20px 18px;">' + interieur + '</div>' +
         pied('<button type="button" onclick="window._bhRetour()" style="border:0;background:transparent;color:' + V.vert +
           ';font-family:' + V.sans + ';font-size:13.5px;font-weight:500;cursor:pointer;padding:8px 0;">← Retour aux plateformes</button>',
-          btnFantome('Fermer', "window._bhFinir()")));
+          btnFantome('Fermer', "window._bhFinir()")), 'max-height:90vh;overflow:auto;');
     };
 
-    modal.innerHTML = cadre('<div style="height:520px;display:flex;flex-direction:column;align-items:center;' +
+    modal.innerHTML = cadre('<div style="height:clamp(280px,46vh,420px);display:flex;flex-direction:column;align-items:center;' +
       'justify-content:center;gap:12px;border:1px solid ' + V.ligne + ';border-radius:12px;">' +
       '<div style="width:22px;height:22px;border:2px solid ' + V.ligne + ';border-top-color:' + p.couleur +
 
@@ -308,7 +308,7 @@
       var data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erreur serveur');
       modal.innerHTML = cadre('<div style="border:1px solid ' + V.ligne + ';border-radius:12px;overflow:hidden;">' +
-        '<iframe src="' + esc(data.iframe_url) + '" style="width:100%;height:520px;border:none;display:block;" allow="same-origin"></iframe></div>');
+        '<iframe src="' + esc(data.iframe_url) + '" style="width:100%;height:clamp(280px,46vh,420px);border:none;display:block;" allow="same-origin"></iframe></div>');
     } catch (e) {
       modal.innerHTML = cadre('<div style="padding:30px;text-align:center;border:1px solid ' + V.ligne +
         ';border-radius:12px;font-size:14px;color:' + V.encre + ';">' + esc(e.message) + '</div>');
