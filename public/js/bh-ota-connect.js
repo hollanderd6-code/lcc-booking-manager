@@ -436,7 +436,11 @@
       ? ['Cliquez sur ' + g('Create') + '.',
          'Dans ' + g('Channel') + ', choisissez ' + g('Airbnb') + '.',
          'Dans ' + g('Title') + ', donnez un nom à votre logement — idéalement le même que sur BoostingHost.',
-         'Cliquez sur ' + g('Save') + ', puis descendez et cliquez sur le bouton rouge ' + g('Connect with Airbnb') + '.']
+         'Cliquez sur ' + g('Save') + ', puis descendez et cliquez sur le bouton rouge ' + g('Connect with Airbnb') + '.',
+         'Autorisez la connexion sur Airbnb, puis revenez sur cette fenêtre.',
+         'Fermez la fiche avec la croix ' + g('✕') + ' en haut à gauche, puis cliquez sur ' + g('Refresh') + ' : votre compte Airbnb apparaît dans la liste.',
+         'Ouvrez la ligne, allez dans l\'onglet ' + g('Mapping') + ', choisissez votre logement en face de ' + g('Not mapped') + ', puis ' + g('Save') + '.',
+         'À la question ' + g('Activate Channel') + ', répondez ' + g('Save &amp; Activate') + ' — sans cette activation, rien ne se synchronise.']
       : code === 'BDC'
         ? ['Cliquez sur ' + g('Create') + '.',
            'Dans ' + g('Channel') + ', choisissez ' + g('Booking.com') + '.',
@@ -468,11 +472,31 @@
         'padding:7px 12px;border-radius:8px;cursor:pointer;flex:none;">Copier</button></div>'
       : '';
 
+    /* Airbnb refuse l'autorisation si le profil du compte est incomplet :
+       une photo de profil est obligatoire. Sans elle, « Connect with Airbnb »
+       renvoie sur l'onboarding Airbnb et n'y revient jamais — le client croit
+       a une panne. On le dit ici, juste avant le clic concerne, et seulement
+       pour Airbnb : les autres plateformes n'ont pas cette contrainte. */
+    var bandeauPhoto = code === 'ABB'
+      ? '<div style="display:flex;align-items:flex-start;gap:11px;background:' + V.orFond +
+        ';border:1px solid ' + V.orFilet + ';border-radius:10px;padding:11px 13px;margin-top:10px;">' +
+        '<i class="fas fa-circle-exclamation" style="color:' + V.or + ';font-size:14px;margin-top:2px;flex:none;"></i>' +
+        '<span style="flex:1;color:' + V.or + ';line-height:1.5;">' +
+        '<strong style="font-weight:600;">Votre compte Airbnb doit avoir une photo de profil.</strong> ' +
+        'Sans elle, Airbnb affiche « Complétez votre profil » au lieu de l\'écran d\'autorisation, ' +
+        'et la connexion ne peut pas aboutir — même avec des annonces publiées.' +
+        '</span>' +
+        '<a href="https://www.airbnb.fr/account-settings/personal-info" target="_blank" rel="noopener" ' +
+        'style="border:1px solid ' + V.orFilet + ';background:#fff;color:' + V.or + ';font-family:' + V.sans +
+        ';font-size:12.5px;font-weight:500;padding:7px 12px;border-radius:8px;text-decoration:none;' +
+        'white-space:nowrap;flex:none;">Vérifier mon profil</a></div>'
+      : '';
+
     var cadre = function (interieur) {
       return carte(720,
         entete(p.prep ? 'Étape 2 sur 2' : 'Dernière étape', p.label, pname) +
         '<div style="padding:12px 24px;background:' + V.creme + ';border-bottom:1px solid ' + V.ligne2 + ';font-size:12.5px;' +
-        'color:' + V.t2 + ';line-height:1.5;">' + aide + bandeauNom +
+        'color:' + V.t2 + ';line-height:1.5;">' + aide + bandeauNom + bandeauPhoto +
         '<div style="margin-top:8px;color:' + V.t4 + ';">Cette fenêtre est celle de notre partenaire : elle est en anglais, c\'est normal.</div></div>' +
         '<div style="padding:14px 20px 18px;">' + interieur + '</div>' +
         pied('<button type="button" onclick="window._bhRetour()" style="border:0;background:transparent;color:' + V.vert +
