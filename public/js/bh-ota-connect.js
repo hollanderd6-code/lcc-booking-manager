@@ -279,7 +279,7 @@
         entete(p.prep ? 'Étape 2 sur 2' : 'Dernière étape', p.label, pname) +
         '<div style="padding:14px 24px;background:' + V.creme + ';border-bottom:1px solid ' + V.ligne2 + ';font-size:13px;' +
         'color:' + V.t2 + ';line-height:1.5;">' + aide +
-        ' <span style="color:' + V.t4 + ';">Cette fenêtre est celle de notre partenaire Channex : elle est en anglais, c\'est normal.</span></div>' +
+        ' <span style="color:' + V.t4 + ';">Cette fenêtre est celle de notre partenaire : elle est en anglais, c\'est normal.</span></div>' +
         '<div style="padding:16px 24px 24px;">' + interieur + '</div>' +
         pied('<button type="button" onclick="window._bhRetour()" style="border:0;background:transparent;color:' + V.vert +
           ';font-family:' + V.sans + ';font-size:13.5px;font-weight:500;cursor:pointer;padding:8px 0;">← Retour aux plateformes</button>',
