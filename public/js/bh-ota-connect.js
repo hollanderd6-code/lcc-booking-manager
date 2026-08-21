@@ -230,9 +230,53 @@
         'border-radius:8px;cursor:pointer;white-space:nowrap;flex:none;">Ajouter l\'adresse</button></div>'
       : '';
 
+    /* Meme adresse qu'un autre logement, mais etablissement different chez le
+       partenaire : Booking.com refusera le second. On le detecte et on propose
+       le rattachement, au lieu de laisser deviner qu'une deconnexion est la
+       solution. La route sert aussi de test de disponibilite. */
+    var noteRegroupement = '';
+    try {
+      var rReg = await fetch(API_URL + '/api/properties/' + pid + '/regroupement',
+        { headers: { Authorization: 'Bearer ' + token() } });
+      if (rReg.ok) {
+        var dReg = await rReg.json();
+        if (!dReg.deja_groupe && dReg.candidats && dReg.candidats.length) {
+          var c0 = dReg.candidats[0];
+          window._bhRegCible = c0.id;
+
+          // Ce qui sera casse. null = la liste n'a pas pu etre lue : on le dit,
+          // plutot que de laisser croire qu'il n'y a rien a refaire.
+          var coutRemap = dReg.a_remapper === null
+            ? 'Les plateformes déjà connectées sur ce logement devront être remappées (liste indisponible).'
+            : (dReg.a_remapper.length
+                ? 'À remapper ensuite : ' + dReg.a_remapper.map(function (x) { return esc(x.titre); }).join(', ') + '.'
+                : 'Aucune plateforme n\'est encore mappée sur ce logement : rien à refaire.');
+
+          var coutResa = dReg.reservations_a_venir > 0
+            ? '<span style="display:block;margin-top:6px;color:' + V.or + ';font-weight:500;">' +
+              dReg.reservations_a_venir + ' réservation' + (dReg.reservations_a_venir > 1 ? 's' : '') +
+              ' à venir sur ce logement — traitez-les avant.</span>'
+            : '';
+
+          noteRegroupement =
+            '<div style="background:' + V.orFond + ';border:1px solid ' + V.orFilet + ';border-radius:12px;' +
+            'padding:13px 15px;display:flex;align-items:flex-start;gap:11px;">' +
+            '<i class="fas fa-building" style="color:' + V.or + ';font-size:14px;margin-top:2px;flex:none;"></i>' +
+            '<span style="flex:1;font-size:13px;color:' + V.or + ';line-height:1.5;">' +
+            '<strong style="font-weight:600;">Même adresse que ' + esc(c0.nom) + ', mais établissement séparé.</strong> ' +
+            'Booking.com refusera ce logement : l\'identifiant de l\'établissement n\'est utilisable qu\'une fois. ' +
+            'Rattachez-le pour qu\'ils partagent le même. ' + coutRemap + coutResa +
+            '</span>' +
+            '<button type="button" onclick="window._bhRegrouper()" style="border:1px solid ' + V.orFilet +
+            ';background:#fff;color:' + V.or + ';font-family:' + V.sans + ';font-size:12.5px;font-weight:500;' +
+            'padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;flex:none;">Rattacher</button></div>';
+        }
+      }
+    } catch (eReg) {}
+
     modal.innerHTML = carte(540,
       entete(null, 'Connecter mes plateformes', pname) +
-      '<div style="padding:18px 24px;display:flex;flex-direction:column;gap:12px;">' + noteAdresse + noteImmeuble + lignes + '</div>' +
+      '<div style="padding:18px 24px;display:flex;flex-direction:column;gap:12px;">' + noteAdresse + noteRegroupement + noteImmeuble + lignes + '</div>' +
       pied(estConnecte
         ? '<button type="button" onclick="channexDisconnect(\'' + pid + '\')" style="border:0;background:transparent;' +
           'color:#C0433C;font-family:' + V.sans + ';font-size:13px;cursor:pointer;padding:8px 0;">Déconnecter ce logement</button>'
@@ -243,6 +287,40 @@
 
     window._bhRetourPerso = null;
     window._bhLot = function () { ecranLot(modal); };
+    window._bhRegrouper = async function () {
+      var cible = window._bhRegCible;
+      if (!cible) return;
+      modal.innerHTML = carte(420,
+        '<div style="padding:40px;text-align:center;">' +
+        '<div style="width:22px;height:22px;margin:0 auto;border:2px solid ' + V.ligne + ';border-top-color:' + V.vert +
+        ';border-radius:50%;animation:bhspin .8s linear infinite;"></div>' +
+        '<div style="margin-top:14px;font-size:13.5px;color:' + V.encre + ';">Rattachement en cours…</div>' +
+        '<div style="margin-top:6px;font-size:12.5px;color:' + V.t3 + ';">Ne fermez pas cette fenêtre.</div></div>');
+      try {
+        var r = await fetch(API_URL + '/api/properties/' + pid + '/regroupement', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
+          body: JSON.stringify({ cible_property_id: cible })
+        });
+        var d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Rattachement impossible');
+        if (typeof loadProperties === 'function') loadProperties().catch(function () {});
+        modal.innerHTML = carte(480,
+          entete(null, 'Rattaché à l\'immeuble', esc(d.immeuble_de || '')) +
+          '<div style="padding:22px 24px;font-size:14px;color:' + V.t2 + ';line-height:1.6;">' +
+          esc(d.message || '') + '</div>' +
+          pied('', btnPlein('Voir les plateformes', 'window._bhRetourPlateformes()')));
+        window._bhRetourPlateformes = function () { ecranPlateformes(modal, pid, pname); };
+      } catch (e) {
+        modal.innerHTML = carte(480,
+          entete(null, 'Le rattachement n\'a pas abouti', null) +
+          '<div style="padding:22px 24px;font-size:14px;color:' + V.encre + ';line-height:1.6;">' +
+          esc(e.message) + '</div>' +
+          pied('', btnFantome('Retour', 'window._bhRetourPlateformes()')));
+        window._bhRetourPlateformes = function () { ecranPlateformes(modal, pid, pname); };
+      }
+    };
+
     window._bhAdresse = function () {
       modal.remove();
       if (typeof openEditPropertyModal === 'function') openEditPropertyModal(pid);
