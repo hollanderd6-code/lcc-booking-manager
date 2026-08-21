@@ -1982,6 +1982,18 @@ html[data-theme-v3="1"] .subscription-card {
 </div>
 <!-- Script auth + user + logout -->
 <script>
+// Une date absente ne s'affiche pas. new Date(null) vaut le 1er janvier
+// 1970 : formater un champ vide donnait « Acces depuis 01/01/1970 » a
+// tous les comptes dont accepted_at est NULL en base.
+function bhDateAcces(d) {
+  var brut = d && (d.acceptedAt || d.accepted_at);
+  if (!brut) return '';
+  var dt = new Date(brut);
+  // Ecarte aussi le 0, la chaine vide et les dates aberrantes.
+  if (isNaN(dt.getTime()) || dt.getFullYear() < 2020) return '';
+  return ' \u00b7 Acc\u00e8s depuis ' + dt.toLocaleDateString('fr-FR');
+}
+
 // ── Hosterzz Connect Modal ──
 function openHzConnect() {
   let modal = document.getElementById('hzConnectModal');
@@ -3325,7 +3337,7 @@ document.addEventListener('DOMContentLoaded', function() {
               </div>
               <div>
                 <div style="font-weight:600;font-size:14px;">${d.name || d.email}</div>
-                <div style="font-size:12px;color:#9ca3af;">${d.propertyCount} logement(s) · Accès depuis ${new Date(d.acceptedAt).toLocaleDateString('fr-FR')}</div>
+                <div style="font-size:12px;color:#9ca3af;">${d.propertyCount} logement(s)${bhDateAcces(d)}</div>
               </div>
             </div>
             <button onclick="switchToAccount('${d.userId}', '${d.name || d.email}')"
