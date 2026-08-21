@@ -37,14 +37,20 @@
     sans: "'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"
   };
 
+  /* Icônes : celles déjà utilisées par settings.js (Font Awesome, chargé par la page),
+     posées sur une pastille teintée aux couleurs de chaque plateforme. */
   var PLATEFORMES = [
-    { code: 'ABB', cle: 'airbnb', label: 'Airbnb', couleur: '#FF5A5F',
+    { code: 'ABB', cle: 'airbnb', label: 'Airbnb', couleur: '#FF5A5F', fond: '#FFF1F0', filet: '#FFD6D4',
+      icone: '<i class="fa-brands fa-airbnb" style="font-size:17px;"></i>',
       cout: 'Un seul clic, aucun identifiant à saisir', prep: false },
-    { code: 'BDC', cle: 'booking', label: 'Booking.com', couleur: '#2E5288',
+    { code: 'BDC', cle: 'booking', label: 'Booking.com', couleur: '#003580', fond: '#F0F4FF', filet: '#C7D7F9',
+      icone: '<i class="fas fa-building" style="font-size:15px;"></i>',
       cout: 'Le Property ID de votre extranet', prep: true },
-    { code: 'EXP', cle: 'expedia', label: 'Expedia', couleur: '#B8C0CC',
+    { code: 'EXP', cle: 'expedia', label: 'Expedia', couleur: '#1B5E96', fond: '#F0F6FF', filet: '#C5DAF7',
+      icone: '<i class="fas fa-plane" style="font-size:14px;"></i>',
       cout: 'Le Property ID Expedia Partner Central', prep: false },
-    { code: 'VRB', cle: 'vrbo', label: 'Abritel / VRBO', couleur: '#C9C3B4',
+    { code: 'VRB', cle: 'vrbo', label: 'Abritel / VRBO', couleur: '#1C61A5', fond: '#F0F5FF', filet: '#C9DCF7',
+      icone: '<i class="fas fa-home" style="font-size:14px;"></i>',
       cout: "Le Property ID visible dans l'URL de votre annonce", prep: false }
   ];
 
@@ -155,7 +161,8 @@
         'border-radius:9px;cursor:pointer;white-space:nowrap;">' + (attente ? 'Préparer' : 'Connecter') + '</button>';
       return '<div style="border:1px solid ' + V.ligne + ';border-radius:12px;padding:14px 16px;display:flex;' +
         'align-items:center;gap:13px;">' +
-        '<span style="width:28px;height:28px;border-radius:8px;background:' + p.couleur + ';flex:none;"></span>' +
+        '<span style="width:30px;height:30px;border-radius:8px;background:' + p.fond + ';border:1px solid ' + p.filet +
+        ';color:' + p.couleur + ';display:flex;align-items:center;justify-content:center;flex:none;">' + p.icone + '</span>' +
         '<span style="flex:1;"><span style="display:block;font-size:14.5px;font-weight:500;">' + p.label + '</span>' +
         '<span style="display:block;font-size:12.5px;color:' + V.t3 + ';margin-top:2px;">' + esc(etat) + '</span></span>' +
         (ok ? '<span style="font-size:13px;color:' + V.vertClair + ';font-weight:500;">✓</span>' : action) +
@@ -282,6 +289,7 @@
     modal.innerHTML = cadre('<div style="height:520px;display:flex;flex-direction:column;align-items:center;' +
       'justify-content:center;gap:12px;border:1px solid ' + V.ligne + ';border-radius:12px;">' +
       '<div style="width:22px;height:22px;border:2px solid ' + V.ligne + ';border-top-color:' + p.couleur +
+
       ';border-radius:50%;animation:bhspin .8s linear infinite;"></div>' +
       '<div style="font-size:13px;color:' + V.t3 + ';">Ouverture de la fenêtre sécurisée…</div></div>');
 
