@@ -222,8 +222,9 @@
         'display:flex;align-items:flex-start;gap:11px;">' +
         '<i class="fas fa-circle-exclamation" style="color:' + V.or + ';font-size:14px;margin-top:2px;flex:none;"></i>' +
         '<span style="font-size:13px;color:' + V.or + ';line-height:1.5;flex:1;">Ce logement n\'a pas d\'adresse. ' +
-        'Il sera traité comme un logement indépendant — s\'il fait partie d\'un immeuble déjà connecté, ' +
-        'renseignez l\'adresse d\'abord pour éviter un doublon d\'établissement.</span>' +
+        'Il sera traité comme un logement indépendant. S\'il est en réalité dans un immeuble déjà connecté, ' +
+        'renseignez l\'adresse d\'abord : sans elle, Booking.com refusera l\'identifiant de l\'établissement, ' +
+        'déjà utilisé par votre premier logement.</span>' +
         '<button type="button" onclick="window._bhAdresse()" style="border:1px solid ' + V.orFilet +
         ';background:#fff;color:' + V.or + ';font-family:' + V.sans + ';font-size:12.5px;font-weight:500;padding:7px 12px;' +
         'border-radius:8px;cursor:pointer;white-space:nowrap;flex:none;">Ajouter l\'adresse</button></div>'
@@ -550,7 +551,41 @@
       'À la question ' + g('Activate Channel') + ', répondez ' + g('Save &amp; Activate') + ' — sans cette activation, le canal existe mais rien ne se synchronise.'
     ];
 
-    var etapesFenetre = (teteCanal[code] || teteGenerique).concat(queueCanal);
+    /* Deuxieme logement d'un meme immeuble : le canal existe deja au niveau de
+       l'etablissement. Cliquer sur « Create » echoue — Booking.com refuse un
+       identifiant d'etablissement deja utilise, parce que 9001519 designe
+       l'IMMEUBLE et 900151901 / 900151902 les logements qu'il contient.
+       Dans ce cas il ne faut pas creer un canal, mais mapper ce logement
+       dans le canal existant. */
+    var frereImmeuble = voisinConnecte(pid);
+    var canalDejaSurImmeuble = false;
+    if (frereImmeuble) {
+      try {
+        var fid = frereImmeuble.id || frereImmeuble._id;
+        var rFrere = await fetch(API_URL + '/api/channex/connected-channels/' + fid + '?bh_property_id=' + fid,
+          { headers: { Authorization: 'Bearer ' + token() } });
+        if (rFrere.ok) {
+          var dFrere = await rFrere.json();
+          canalDejaSurImmeuble = (dFrere.channels || []).some(function (c) {
+            var s = String(c.channel || '').toLowerCase();
+            return s === p.cle || s.indexOf(p.cle) > -1 ||
+                   (p.cle === 'booking' && s.indexOf('bdc') > -1) ||
+                   (p.cle === 'airbnb' && s === 'abb');
+          });
+        }
+      } catch (eFrere) {}
+    }
+
+    var etapesFenetre = canalDejaSurImmeuble
+      ? ['Ne cliquez ' + g('pas') + ' sur ' + g('Create') + ' : le canal ' + g(p.label) +
+           ' existe déjà pour cet immeuble.',
+         'Ouvrez la ligne ' + g(p.label) + ' déjà présente dans la liste.',
+         'Allez dans l\'onglet ' + g('Mapping') + '.',
+         'En face de ' + g('Not mapped') + ', choisissez ce logement — côté ' + p.label +
+           ', son identifiant est celui de l\'immeuble suivi de deux chiffres propres au logement.',
+         'Cliquez sur ' + g('Save') + ', puis répondez ' + g('Save &amp; Activate') +
+           ' — sans cette activation, rien ne se synchronise.']
+      : (teteCanal[code] || teteGenerique).concat(queueCanal);
 
     var aide = '<div style="display:flex;flex-direction:column;gap:6px;">' +
       etapesFenetre.map(function (t, i) {
@@ -593,11 +628,26 @@
         'white-space:nowrap;flex:none;">Vérifier mon profil</a></div>'
       : '';
 
+    /* Le mur le plus couteux du parcours : reutiliser l'identifiant de
+       l'etablissement pour un second logement. On explique la difference
+       AVANT la saisie, pas apres le refus. */
+    var bandeauImmeuble = canalDejaSurImmeuble
+      ? '<div style="display:flex;align-items:flex-start;gap:11px;background:' + V.creme +
+        ';border:1px solid ' + V.ligne + ';border-radius:10px;padding:11px 13px;margin-top:10px;">' +
+        '<i class="fas fa-building" style="color:' + V.t2 + ';font-size:14px;margin-top:2px;flex:none;"></i>' +
+        '<span style="flex:1;color:' + V.t2 + ';line-height:1.5;">' +
+        '<strong style="font-weight:600;color:' + V.encre + ';">Même immeuble que ' +
+        esc(frereImmeuble ? (frereImmeuble.name || 'votre autre logement') : 'votre autre logement') +
+        '.</strong> Ne ressaisissez pas l\'identifiant de l\'établissement : il n\'est utilisable ' +
+        'qu\'une fois. Ce logement se rattache en le mappant dans le canal déjà créé.' +
+        '</span></div>'
+      : '';
+
     var cadre = function (interieur) {
       return carte(720,
         entete(p.prep ? 'Étape 2 sur 2' : 'Dernière étape', p.label, pname) +
         '<div style="padding:12px 24px;background:' + V.creme + ';border-bottom:1px solid ' + V.ligne2 + ';font-size:12.5px;' +
-        'color:' + V.t2 + ';line-height:1.5;">' + aide + bandeauNom + bandeauPhoto +
+        'color:' + V.t2 + ';line-height:1.5;">' + aide + bandeauNom + bandeauImmeuble + bandeauPhoto +
         '<div style="margin-top:8px;color:' + V.t4 + ';">Cette fenêtre est celle de notre partenaire : elle est en anglais, c\'est normal.</div></div>' +
         '<div style="padding:14px 20px 18px;">' + interieur + '</div>' +
         pied('<button type="button" onclick="window._bhRetour()" style="border:0;background:transparent;color:' + V.vert +
