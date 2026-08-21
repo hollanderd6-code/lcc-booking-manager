@@ -277,6 +277,70 @@ async function pushAvailability(pool, { property_id, channex_property_id, channe
   }
 }
 
+// ── 2b-bis. Plans tarifaires majorés, un par plateforme ──────
+// Channex : un plan tarifaire = un prix, lu par tous les canaux qui lui sont
+// mappés. Pour vendre plus cher sur Airbnb que sur Booking, il faut donc un
+// plan par plateforme majorée — un seul plan ne peut pas porter deux prix.
+const LIBELLE_PLATEFORME = {
+  ABB: 'Airbnb',
+  BDC: 'Booking.com',
+  EXP: 'Expedia',
+  VRB: 'Abritel-VRBO'
+};
+
+async function assurerPlansMajores(pool, property_id) {
+  const { rows } = await pool.query(
+    `SELECT channex_property_id, channex_room_type_id,
+            COALESCE(platform_markups, '{}'::jsonb)          AS markups,
+            COALESCE(channex_markup_rate_plans, '{}'::jsonb) AS plans
+       FROM properties WHERE id = $1`,
+    [property_id]
+  );
+
+  const p = rows[0];
+  if (!p || !p.channex_property_id || !p.channex_room_type_id) return [];
+
+  const markups = p.markups || {};
+  const plans = Object.assign({}, p.plans || {});
+  const actifs = [];
+  let modifie = false;
+
+  for (const code of Object.keys(LIBELLE_PLATEFORME)) {
+    const pct = parseFloat(markups[code]);
+    if (!pct || !(pct > 0)) continue;   // 0, absent ou négatif : pas de plan dédié
+
+    if (!plans[code]) {
+      // Le titre porte le pourcentage : dans l'interface du partenaire, on doit
+      // pouvoir mapper le bon canal sur le bon plan sans avoir à deviner.
+      const res = await channexAPI.post('/rate_plans', {
+        rate_plan: {
+          property_id: p.channex_property_id,
+          room_type_id: p.channex_room_type_id,
+          title: 'Tarif ' + LIBELLE_PLATEFORME[code] + ' +' + pct + '%',
+          sell_mode: 'per_room',
+          rate_mode: 'manual',
+          currency: 'EUR',
+          options: [{ occupancy: 2, is_primary: true, rate: 0 }]
+        }
+      });
+      plans[code] = res.data.data.attributes.id;
+      modifie = true;
+      console.log(`✅ [CHANNEX] Plan majoré créé : ${LIBELLE_PLATEFORME[code]} +${pct}% (${plans[code]})`);
+    }
+
+    actifs.push({ code: code, pct: pct, rate_plan_id: plans[code] });
+  }
+
+  if (modifie) {
+    await pool.query(
+      'UPDATE properties SET channex_markup_rate_plans = $1 WHERE id = $2',
+      [JSON.stringify(plans), property_id]
+    );
+  }
+
+  return actifs;
+}
+
 // ── 2b. Pousser les prix vers Channex ────────────────────────
 async function pushRates(pool, { property_id, channex_property_id, channex_rate_plan_id, rates }) {
   // rates = [{ date: 'YYYY-MM-DD', price: 90 }, ...]
@@ -292,6 +356,51 @@ async function pushRates(pool, { property_id, channex_property_id, channex_rate_
 
     // ✅ Channex utilise /restrictions pour pousser rates ET restrictions
     await channexAPI.post('/restrictions', { values });
+
+    // ── Plans majorés par plateforme ─────────────────────────────
+    // La majoration s'applique ICI, à la sortie. Elle n'est jamais écrite dans
+    // base_price : le prix du calendrier reste la référence unique, sinon le
+    // moteur de tarification dynamique majorerait une majoration.
+    //
+    // Un échec sur un plan majoré ne doit PAS faire échouer le push principal,
+    // qui vient de réussir : chaque plan est tenté séparément et l'erreur est
+    // journalisée sans être relancée.
+    let plansMajores = [];
+    try {
+      plansMajores = await assurerPlansMajores(pool, property_id);
+    } catch (eM) {
+      console.warn('⚠️ [CHANNEX] Plans majorés indisponibles (non bloquant):',
+        eM.response?.data || eM.message);
+    }
+
+    for (const m of plansMajores) {
+      const majores = rates.map(r => ({
+        property_id: channex_property_id,
+        rate_plan_id: m.rate_plan_id,
+        date: r.date,
+        rate: Math.round(parseFloat(r.price) * (1 + m.pct / 100) * 100)
+      }));
+      try {
+        await channexAPI.post('/restrictions', { values: majores });
+        console.log(`✅ [CHANNEX] Tarifs +${m.pct}% poussés vers ${m.code} (${majores.length} jours)`);
+        await logChannex(pool, {
+          property_id, channex_property_id,
+          event_type: 'push_rates_markup',
+          direction: 'outbound',
+          payload: { plateforme: m.code, majoration_pct: m.pct, rates_count: majores.length }
+        });
+      } catch (eP) {
+        const d = eP.response?.data || eP.message;
+        console.error(`❌ [CHANNEX] Push +${m.pct}% ${m.code} échoué:`, d);
+        await logChannex(pool, {
+          property_id, channex_property_id,
+          event_type: 'push_rates_markup',
+          direction: 'outbound',
+          status: 'error',
+          error_message: typeof d === 'string' ? d : JSON.stringify(d)
+        });
+      }
+    }
 
     await logChannex(pool, {
       property_id, channex_property_id,
@@ -891,6 +1000,7 @@ module.exports = {
   listChannexRatePlans,
   pushAvailability,
   pushRates,
+  assurerPlansMajores,
   pushRestrictions,
   createChannexBooking,
   bookingAcknowledge,
