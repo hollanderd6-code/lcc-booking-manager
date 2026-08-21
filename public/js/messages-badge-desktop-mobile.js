@@ -25,6 +25,17 @@
 
    Les cinq setTimeout en cascade (0, 500, 1000, 2000, 3000 ms) sont
    remplaces par l'ecoute de sidebarReady, seule condition reelle.
+
+   3. DEUX IMPLEMENTATIONS DU MEME BADGE.
+      messages-badge-dynamic.js faisait le meme travail sur deux pages
+      (settings-account, sub-account), avec une regle inverse :
+      « Affiche toujours le badge (meme pour 0) », et un
+      « display: flex » force sur mobile. D'ou une pastille rouge « 0 »
+      sur ces deux pages, et pas sur les 21 autres.
+
+      Ce fichier reprend ce que dynamic.js avait de mieux — la mise a
+      jour Socket.io en temps reel — et dynamic.js est supprime. Un seul
+      badge, une seule regle.
    ============================================ */
 
 (function() {
@@ -160,12 +171,45 @@
     window.fetch = enveloppe;
   }
 
+  /* ── Temps reel ──────────────────────────────────────────────────────
+     Repris de messages-badge-dynamic.js, qui vivait en parallele sur deux
+     pages. Socket.io previent d'un nouveau message sans attendre le cycle
+     de 30 secondes. Si io n'est pas charge sur la page, on garde
+     simplement le rafraichissement periodique. */
+  let socket = null;
+
+  function idUtilisateur() {
+    try {
+      const brut = localStorage.getItem('lcc_user');
+      return brut ? JSON.parse(brut).id : null;
+    } catch (e) { return null; }
+  }
+
+  function connecterSocket() {
+    if (typeof io === 'undefined') return;
+    try {
+      socket = io(API_URL);
+      socket.on('connect', function() {
+        const id = idUtilisateur();
+        if (id) socket.emit('join_user_room', id);
+      });
+      // Un delai court : le serveur ecrit le message avant que le compteur
+      // ne soit juste.
+      socket.on('new_message', function() { setTimeout(loadUnreadCount, 500); });
+      socket.on('new_notification', function() { setTimeout(loadUnreadCount, 500); });
+    } catch (e) {
+      console.warn('[BADGE] Socket indisponible :', e.message);
+    }
+  }
+
   function init() {
     // auth-fetch.js enveloppe deja window.fetch : on se place APRES lui,
     // sinon notre enveloppe serait remplacee au chargement.
     surveiller();
 
     loadUnreadCount();
+    connecterSocket();
+    // Filet si Socket.io est absent ou tombe.
     setInterval(loadUnreadCount, 30000);
 
     document.addEventListener('sidebarReady', function() {
