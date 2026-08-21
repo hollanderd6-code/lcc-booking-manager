@@ -268,18 +268,36 @@
       }
     }
 
-    var aide = code === 'BDC'
-      ? 'Dans la fenêtre ci-dessous, cliquez sur <strong style="font-weight:500;">Create</strong>, puis collez votre <strong style="font-weight:500;">Property ID Booking.com</strong> et validez.'
-      : code === 'ABB'
-        ? 'La fenêtre ci-dessous vous redirige vers Airbnb pour donner votre accord, puis vous laisse associer votre annonce.'
-        : 'Dans la fenêtre ci-dessous, cliquez sur <strong style="font-weight:500;">Create</strong>, puis renseignez votre Property ID.';
+    var g = function (t) { return '<strong style="font-weight:500;color:' + V.encre + ';">' + t + '</strong>'; };
+    var etapesFenetre = code === 'ABB'
+      ? ['Cliquez sur ' + g('Create') + '.',
+         'Dans ' + g('Channel') + ', choisissez ' + g('Airbnb') + '.',
+         'Dans ' + g('Title') + ', donnez un nom à votre logement — idéalement le même que sur BoostingHost.',
+         'Cliquez sur ' + g('Save') + ', puis descendez et cliquez sur le bouton rouge ' + g('Connect with Airbnb') + '.']
+      : code === 'BDC'
+        ? ['Cliquez sur ' + g('Create') + '.',
+           'Dans ' + g('Channel') + ', choisissez ' + g('Booking.com') + '.',
+           'Dans ' + g('Title') + ', donnez un nom à votre logement — idéalement le même que sur BoostingHost.',
+           'Cliquez sur ' + g('Save') + ', puis renseignez votre ' + g('Property ID') + ' Booking.com.']
+        : ['Cliquez sur ' + g('Create') + '.',
+           'Dans ' + g('Channel') + ', choisissez ' + g(p.label) + '.',
+           'Dans ' + g('Title') + ', donnez un nom à votre logement — idéalement le même que sur BoostingHost.',
+           'Cliquez sur ' + g('Save') + ', puis renseignez votre ' + g('Property ID') + '.'];
+
+    var aide = '<div style="display:flex;flex-direction:column;gap:6px;">' +
+      etapesFenetre.map(function (t, i) {
+        return '<div style="display:flex;gap:9px;align-items:flex-start;">' +
+          '<span style="width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid ' + V.ligne +
+          ';color:' + V.vert + ';font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;' +
+          'flex:none;margin-top:1px;">' + (i + 1) + '</span><span>' + t + '</span></div>';
+      }).join('') + '</div>';
 
     var cadre = function (interieur) {
       return carte(720,
         entete(p.prep ? 'Étape 2 sur 2' : 'Dernière étape', p.label, pname) +
         '<div style="padding:12px 24px;background:' + V.creme + ';border-bottom:1px solid ' + V.ligne2 + ';font-size:12.5px;' +
         'color:' + V.t2 + ';line-height:1.5;">' + aide +
-        ' <span style="color:' + V.t4 + ';">Cette fenêtre est celle de notre partenaire : elle est en anglais, c\'est normal.</span></div>' +
+        '<div style="margin-top:8px;color:' + V.t4 + ';">Cette fenêtre est celle de notre partenaire : elle est en anglais, c\'est normal.</div></div>' +
         '<div style="padding:14px 20px 18px;">' + interieur + '</div>' +
         pied('<button type="button" onclick="window._bhRetour()" style="border:0;background:transparent;color:' + V.vert +
           ';font-family:' + V.sans + ';font-size:13.5px;font-weight:500;cursor:pointer;padding:8px 0;">← Retour aux plateformes</button>',
