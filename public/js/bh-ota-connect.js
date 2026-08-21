@@ -432,24 +432,50 @@
     }
 
     var g = function (t) { return '<strong style="font-weight:500;color:' + V.encre + ';">' + t + '</strong>'; };
-    var etapesFenetre = code === 'ABB'
-      ? ['Cliquez sur ' + g('Create') + '.',
-         'Dans ' + g('Channel') + ', choisissez ' + g('Airbnb') + '.',
-         'Dans ' + g('Title') + ', donnez un nom à votre logement — idéalement le même que sur BoostingHost.',
-         'Cliquez sur ' + g('Save') + ', puis descendez et cliquez sur le bouton rouge ' + g('Connect with Airbnb') + '.',
-         'Autorisez la connexion sur Airbnb, puis revenez sur cette fenêtre.',
-         'Fermez la fiche avec la croix ' + g('✕') + ' en haut à gauche, puis cliquez sur ' + g('Refresh') + ' : votre compte Airbnb apparaît dans la liste.',
-         'Ouvrez la ligne, allez dans l\'onglet ' + g('Mapping') + ', choisissez votre logement en face de ' + g('Not mapped') + ', puis ' + g('Save') + '.',
-         'À la question ' + g('Activate Channel') + ', répondez ' + g('Save &amp; Activate') + ' — sans cette activation, rien ne se synchronise.']
-      : code === 'BDC'
-        ? ['Cliquez sur ' + g('Create') + '.',
-           'Dans ' + g('Channel') + ', choisissez ' + g('Booking.com') + '.',
-           'Dans ' + g('Title') + ', donnez un nom à votre logement — idéalement le même que sur BoostingHost.',
-           'Cliquez sur ' + g('Save') + ', puis renseignez votre ' + g('Property ID') + ' Booking.com.']
-        : ['Cliquez sur ' + g('Create') + '.',
-           'Dans ' + g('Channel') + ', choisissez ' + g(p.label) + '.',
-           'Dans ' + g('Title') + ', donnez un nom à votre logement — idéalement le même que sur BoostingHost.',
-           'Cliquez sur ' + g('Save') + ', puis renseignez votre ' + g('Property ID') + '.'];
+    /* Le parcours dans la fenetre Channex se decompose en deux parties :
+       une TETE propre a chaque plateforme — la seule chose qui differe, c'est
+       la facon de s'authentifier — et une QUEUE identique partout : mapper
+       l'annonce, puis activer le canal. Ecrire la queue une seule fois evite
+       qu'une correction n'en oublie trois.
+
+       L'etape « Title » est commune aux quatre : un seul endroit a modifier. */
+    var etapeTitre = 'Dans ' + g('Title') + ', donnez un nom à votre logement — idéalement le même que sur BoostingHost.';
+
+    var teteCanal = {
+      ABB: ['Cliquez sur ' + g('Create') + '.',
+            'Dans ' + g('Channel') + ', choisissez ' + g('Airbnb') + '.',
+            etapeTitre,
+            'Cliquez sur ' + g('Save') + ', puis descendez et cliquez sur le bouton rouge ' + g('Connect with Airbnb') + '.',
+            'Autorisez la connexion sur Airbnb, puis revenez sur cette fenêtre.'],
+      BDC: ['Cliquez sur ' + g('Create') + '.',
+            'Dans ' + g('Channel') + ', choisissez ' + g('Booking.com') + '.',
+            etapeTitre,
+            'Cliquez sur ' + g('Save') + ', puis renseignez votre ' + g('Property ID') + ' : le numéro affiché en haut de votre extranet, à côté du nom de l\'établissement.'],
+      EXP: ['Cliquez sur ' + g('Create') + '.',
+            'Dans ' + g('Channel') + ', choisissez ' + g('Expedia') + '.',
+            etapeTitre,
+            'Cliquez sur ' + g('Save') + ', puis renseignez votre ' + g('Property ID') + ' : il se trouve dans les paramètres de votre logement sur ' + g('Expedia Partner Central') + '.'],
+      VRB: ['Cliquez sur ' + g('Create') + '.',
+            'Dans ' + g('Channel') + ', choisissez ' + g('Abritel / VRBO') + '.',
+            etapeTitre,
+            'Cliquez sur ' + g('Save') + ', puis renseignez votre ' + g('Property ID') + ' : il est visible dans l\'URL de votre annonce.']
+    };
+
+    var teteGenerique = ['Cliquez sur ' + g('Create') + '.',
+      'Dans ' + g('Channel') + ', choisissez ' + g(p.label) + '.',
+      etapeTitre,
+      'Cliquez sur ' + g('Save') + ', puis renseignez votre ' + g('Property ID') + '.'];
+
+    /* Identique sur les quatre plateformes. La derniere etape est la plus
+       couteuse a manquer : sans activation, le canal existe, le mapping est
+       fait, et rien ne remonte. */
+    var queueCanal = [
+      'Fermez la fiche avec la croix ' + g('✕') + ' en haut à gauche, puis cliquez sur ' + g('Refresh') + ' : votre canal apparaît dans la liste.',
+      'Ouvrez la ligne, allez dans l\'onglet ' + g('Mapping') + ', choisissez votre logement en face de ' + g('Not mapped') + ', puis ' + g('Save') + '.',
+      'À la question ' + g('Activate Channel') + ', répondez ' + g('Save &amp; Activate') + ' — sans cette activation, le canal existe mais rien ne se synchronise.'
+    ];
+
+    var etapesFenetre = (teteCanal[code] || teteGenerique).concat(queueCanal);
 
     var aide = '<div style="display:flex;flex-direction:column;gap:6px;">' +
       etapesFenetre.map(function (t, i) {
