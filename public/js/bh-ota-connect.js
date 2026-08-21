@@ -176,9 +176,24 @@
         'même établissement, automatiquement. Rien à saisir.</div>'
       : '';
 
+    /* Lot 4 : sans adresse, le rattachement d'immeuble ne peut pas être déduit.
+       On le dit avant la connexion, pas après. */
+    var sansAdresse = !!(moi && !String(moi.address || '').trim() && !estConnecte);
+    var noteAdresse = sansAdresse
+      ? '<div style="background:' + V.orFond + ';border:1px solid ' + V.orFilet + ';border-radius:12px;padding:13px 15px;' +
+        'display:flex;align-items:flex-start;gap:11px;">' +
+        '<i class="fas fa-circle-exclamation" style="color:' + V.or + ';font-size:14px;margin-top:2px;flex:none;"></i>' +
+        '<span style="font-size:13px;color:' + V.or + ';line-height:1.5;flex:1;">Ce logement n\'a pas d\'adresse. ' +
+        'Il sera traité comme un logement indépendant — s\'il fait partie d\'un immeuble déjà connecté, ' +
+        'renseignez l\'adresse d\'abord pour éviter un doublon d\'établissement.</span>' +
+        '<button type="button" onclick="window._bhAdresse()" style="border:1px solid ' + V.orFilet +
+        ';background:#fff;color:' + V.or + ';font-family:' + V.sans + ';font-size:12.5px;font-weight:500;padding:7px 12px;' +
+        'border-radius:8px;cursor:pointer;white-space:nowrap;flex:none;">Ajouter l\'adresse</button></div>'
+      : '';
+
     modal.innerHTML = carte(540,
       entete(null, 'Connecter mes plateformes', pname) +
-      '<div style="padding:18px 24px;display:flex;flex-direction:column;gap:12px;">' + noteImmeuble + lignes + '</div>' +
+      '<div style="padding:18px 24px;display:flex;flex-direction:column;gap:12px;">' + noteAdresse + noteImmeuble + lignes + '</div>' +
       pied(estConnecte
         ? '<button type="button" onclick="channexDisconnect(\'' + pid + '\')" style="border:0;background:transparent;' +
           'color:#C0433C;font-family:' + V.sans + ';font-size:13px;cursor:pointer;padding:8px 0;">Déconnecter ce logement</button>'
@@ -189,6 +204,11 @@
 
     window._bhRetourPerso = null;
     window._bhLot = function () { ecranLot(modal); };
+    window._bhAdresse = function () {
+      modal.remove();
+      if (typeof openEditPropertyModal === 'function') openEditPropertyModal(pid);
+      else toast("Ouvrez la fiche du logement pour renseigner l'adresse", 'info');
+    };
 
     window._bhOta = function (code) {
       var p = PLATEFORMES.find(function (x) { return x.code === code; });

@@ -134,11 +134,14 @@
       return !((p.channexEnabled || p.channex_enabled) && (p.channexPropertyId || p.channex_property_id));
     }).length;
 
+    var sansAdresse = logements().filter(function (p) { return !String(p.address || '').trim(); }).length;
+
     var tete = '<div style="padding:16px 20px;border-bottom:1px solid ' + V.ligne2 + ';display:flex;' +
       'align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">' +
       '<div><div style="font-family:' + V.serif + ';font-size:20px;color:' + V.encre + ';">Vos plateformes</div>' +
       '<div style="font-size:12.5px;color:' + V.t3 + ';margin-top:2px;">' + total + ' logements' +
-      (aPreparer ? ' · ' + aPreparer + ' pas encore dans Channex' : '') + '</div></div>' +
+      (aPreparer ? ' · ' + aPreparer + ' pas encore dans Channex' : '') +
+      (sansAdresse ? ' · <span style="color:#916018;">' + sansAdresse + ' sans adresse</span>' : '') + '</div></div>' +
       (aPreparer
         ? '<button type="button" onclick="bhOuvrirLotOTA&&bhOuvrirLotOTA()" style="border:0;background:' + V.vert +
           ';color:#fff;font-family:' + V.sans + ';font-size:13.5px;font-weight:500;padding:10px 16px;border-radius:9px;' +
@@ -155,7 +158,10 @@
     hote.innerHTML = coquille(tete +
       PLATEFORMES.map(function (pf) { return ligne(pf, compte[pf.cle] || 0, total); }).join('') +
       '<div style="padding:12px 20px;font-size:12.5px;color:' + V.t4 + ';background:' + V.cote + ';">' +
-      'Un tiret signifie que la plateforme n\'a jamais été essayée, pas qu\'elle a échoué.</div>');
+      'Un tiret signifie que la plateforme n\'a jamais été essayée, pas qu\'elle a échoué.' +
+      (sansAdresse ? ' — <span style="color:#916018;">' + sansAdresse + ' logement' + (sansAdresse > 1 ? 's' : '') +
+        ' sans adresse : le regroupement par immeuble ne peut pas être déduit pour ' +
+        (sansAdresse > 1 ? 'ceux-là' : 'celui-là') + '.</span>' : '') + '</div>');
 
     enCours = false;
   }
