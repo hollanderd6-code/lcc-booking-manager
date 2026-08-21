@@ -292,11 +292,24 @@
           'flex:none;margin-top:1px;">' + (i + 1) + '</span><span>' + t + '</span></div>';
       }).join('') + '</div>';
 
+    /* Lot 1 : le nom à utiliser dans le champ Title, copiable en un clic —
+       l'utilisateur ne réfléchit plus, et les noms restent alignés des deux côtés. */
+    var bandeauNom = pname
+      ? '<div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid ' + V.ligne +
+        ';border-radius:10px;padding:9px 12px;margin-top:10px;">' +
+        '<span style="font-size:12px;color:' + V.t3 + ';flex:none;">Nom à utiliser</span>' +
+        '<span style="font-size:13.5px;font-weight:500;color:' + V.encre + ';flex:1;overflow:hidden;' +
+        'text-overflow:ellipsis;white-space:nowrap;">' + esc(pname) + '</span>' +
+        '<button type="button" id="bhCopieNom" onclick="window._bhCopierNom()" style="border:1px solid ' + V.vertFilet +
+        ';background:' + V.vertPale + ';color:' + V.vert + ';font-family:' + V.sans + ';font-size:12.5px;font-weight:500;' +
+        'padding:7px 12px;border-radius:8px;cursor:pointer;flex:none;">Copier</button></div>'
+      : '';
+
     var cadre = function (interieur) {
       return carte(720,
         entete(p.prep ? 'Étape 2 sur 2' : 'Dernière étape', p.label, pname) +
         '<div style="padding:12px 24px;background:' + V.creme + ';border-bottom:1px solid ' + V.ligne2 + ';font-size:12.5px;' +
-        'color:' + V.t2 + ';line-height:1.5;">' + aide +
+        'color:' + V.t2 + ';line-height:1.5;">' + aide + bandeauNom +
         '<div style="margin-top:8px;color:' + V.t4 + ';">Cette fenêtre est celle de notre partenaire : elle est en anglais, c\'est normal.</div></div>' +
         '<div style="padding:14px 20px 18px;">' + interieur + '</div>' +
         pied('<button type="button" onclick="window._bhRetour()" style="border:0;background:transparent;color:' + V.vert +
@@ -312,6 +325,16 @@
       '<div style="font-size:13px;color:' + V.t3 + ';">Ouverture de la fenêtre sécurisée…</div></div>');
 
     window._bhRetour = function () { ecranPlateformes(modal, pid, pname); };
+    window._bhCopierNom = function () {
+      var b = document.getElementById('bhCopieNom');
+      var fini = function () {
+        if (!b) return;
+        b.textContent = 'Copié ✓';
+        setTimeout(function () { if (b) b.textContent = 'Copier'; }, 1800);
+      };
+      if (navigator.clipboard) navigator.clipboard.writeText(pname).then(fini).catch(function () { toast('Nom : ' + pname); });
+      else toast('Nom : ' + pname);
+    };
     window._bhFinir = function () {
       modal.remove();
       if (typeof loadProperties === 'function') loadProperties().catch(function () {});
