@@ -26525,6 +26525,9 @@ app.locals.pool = pool;
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 app.use('/api/welcome-books', welcomeRouter);
 
+const channexBulkRoutes = require('./routes/channex-bulk-routes');
+app.use('/api/channex', channexBulkRoutes(pool, { authenticateAny, getRealUserId }));
+
 // Dynamic Pricing routes
 setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail);
 setupPricingCalendarRoutes(app, pool, authenticateAny);
