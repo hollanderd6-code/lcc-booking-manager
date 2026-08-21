@@ -153,7 +153,7 @@
     var lignes = PLATEFORMES.map(function (p) {
       var ok = connectees.some(function (c) { return c.indexOf(p.cle) > -1 || (p.cle === 'booking' && c.indexOf('bdc') > -1) || (p.cle === 'airbnb' && c === 'abb'); });
       var attente = p.prep && !prepFaite();
-      var etat = ok ? 'Connecté — rien à faire' : (attente ? "Une autorisation à donner une fois dans votre extranet" : p.cout);
+      var etat = ok ? 'Connecté' : (attente ? "Une autorisation à donner une fois dans votre extranet" : p.cout);
       var action = ok ? '' :
         '<button type="button" onclick="window._bhOta(\'' + p.code + '\')" style="border:' +
         (attente ? '1px solid ' + V.orFilet : '0') + ';background:' + (attente ? V.orFond : V.vert) + ';color:' +
@@ -165,7 +165,16 @@
         ';color:' + p.couleur + ';display:flex;align-items:center;justify-content:center;flex:none;">' + p.icone + '</span>' +
         '<span style="flex:1;"><span style="display:block;font-size:14.5px;font-weight:500;">' + p.label + '</span>' +
         '<span style="display:block;font-size:12.5px;color:' + V.t3 + ';margin-top:2px;">' + esc(etat) + '</span></span>' +
-        (ok ? '<span style="font-size:13px;color:' + V.vertClair + ';font-weight:500;">✓</span>' : action) +
+        /* Une connexion etablie doit rester modifiable : corriger un mapping,
+           remapper apres avoir renomme une annonce, verifier ce qui est
+           associe. « Connecte — rien a faire » fermait la porte. */
+        (ok
+          ? '<span style="display:flex;align-items:center;gap:10px;">' +
+            '<span style="font-size:13px;color:' + V.vertClair + ';font-weight:500;">✓</span>' +
+            '<button type="button" onclick="window._bhOta(\'' + p.code + '\')" style="border:1px solid ' + V.ligne +
+            ';background:#fff;color:' + V.t2 + ';font-family:' + V.sans + ';font-size:12.5px;font-weight:500;' +
+            'padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;">Modifier</button></span>'
+          : action) +
         '</div>';
     }).join('');
 
