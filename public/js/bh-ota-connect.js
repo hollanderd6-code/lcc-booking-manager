@@ -182,7 +182,13 @@
       pied(estConnecte
         ? '<button type="button" onclick="channexDisconnect(\'' + pid + '\')" style="border:0;background:transparent;' +
           'color:#C0433C;font-family:' + V.sans + ';font-size:13px;cursor:pointer;padding:8px 0;">Déconnecter ce logement</button>'
-        : '', btnFantome('Fermer', "document.getElementById('channexModal')?.remove()")));
+        : '<button type="button" onclick="window._bhLot()" style="border:0;background:transparent;color:' + V.vert +
+          ';font-family:' + V.sans + ';font-size:13.5px;font-weight:500;cursor:pointer;padding:8px 0;text-align:left;">' +
+          'Préparer tous mes logements d\'un coup →</button>',
+        btnFantome('Fermer', "document.getElementById('channexModal')?.remove()")));
+
+    window._bhRetourPerso = null;
+    window._bhLot = function () { ecranLot(modal); };
 
     window._bhOta = function (code) {
       var p = PLATEFORMES.find(function (x) { return x.code === code; });
@@ -230,6 +236,143 @@
         btnPlein('Continuer', "window._bhLancer('" + code + "')", !!coche);
     };
     window._bhLancer = function (c) { if (prepFaite()) lancer(modal, pid, pname, c); };
+  }
+
+  /* ── mode lot : préparer tous les logements en un passage ──────────────── */
+  async function ecranLot(modal) {
+    modal.innerHTML = carte(420,
+      '<div style="padding:40px;text-align:center;">' +
+      '<div style="width:22px;height:22px;margin:0 auto;border:2px solid ' + V.ligne + ';border-top-color:' + V.vert +
+      ';border-radius:50%;animation:bhspin .8s linear infinite;"></div>' +
+      '<div style="margin-top:14px;font-size:13px;color:' + V.t3 + ';">Lecture de vos logements…</div></div>');
+
+    var etat;
+    try {
+      var r = await fetch(API_URL + '/api/channex/bulk-status', { headers: { Authorization: 'Bearer ' + token() } });
+      etat = await r.json();
+      if (!r.ok) throw new Error(etat.error || 'Erreur serveur');
+    } catch (e) {
+      modal.innerHTML = carte(460,
+        entete(null, 'Mode lot indisponible', null) +
+        '<div style="padding:22px 24px;font-size:14px;line-height:1.55;color:' + V.t2 + ';">' +
+        'La route <code>/api/channex/bulk-status</code> n\'est pas encore installée sur le serveur. ' +
+        'Une fois <code>routes/channex-bulk-routes.js</code> monté dans <code>server.js</code>, cet écran fonctionnera.' +
+        '</div>' + pied('', btnFantome('Fermer', "document.getElementById('channexModal')?.remove()")));
+      return;
+    }
+
+    var aPreparer = etat.a_preparer || [];
+    if (!aPreparer.length) {
+      modal.innerHTML = carte(460,
+        entete(null, 'Tout est déjà prêt', etat.total + ' logements dans Channex') +
+        '<div style="padding:22px 24px;font-size:14px;color:' + V.t2 + ';line-height:1.55;">' +
+        'Chaque logement a son établissement. Il ne reste qu\'à autoriser les plateformes, logement par logement ou établissement par établissement.</div>' +
+        pied('', btnFantome('Fermer', "document.getElementById('channexModal')?.remove()")));
+      return;
+    }
+
+    var lignes = aPreparer.map(function (l) {
+      return '<label style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid ' + V.ligne2 + ';cursor:pointer;">' +
+        '<input type="checkbox" checked data-bh-lot="' + esc(l.id) + '" style="width:17px;height:17px;accent-color:' + V.vert + ';flex:none;">' +
+        '<span style="flex:1;"><span style="display:block;font-size:14px;font-weight:500;">' + esc(l.name) + '</span>' +
+        '<span style="display:block;font-size:12.5px;color:' + (l.sans_adresse ? '#916018' : V.t3) + ';margin-top:2px;">' +
+        (l.sans_adresse ? 'Adresse manquante — sera traité comme un logement indépendant'
+          : (l.immeuble ? 'Même adresse qu\'un autre logement — sera rattaché au même établissement' : esc(l.address || ''))) +
+        '</span></span></label>';
+    }).join('');
+
+    modal.innerHTML = carte(620,
+      entete('En un passage', 'Préparer mes logements',
+        aPreparer.length + ' logements sur ' + etat.total + ' ne sont pas encore dans Channex') +
+      '<div style="padding:14px 24px;background:' + V.creme + ';border-bottom:1px solid ' + V.ligne2 +
+      ';font-size:13px;color:' + V.t2 + ';line-height:1.5;">Les logements qui partagent une adresse sont regroupés ' +
+      'dans un seul établissement, automatiquement. Vous n\'aurez ensuite qu\'une autorisation à donner par établissement, ' +
+      'au lieu d\'une par logement.</div>' +
+      '<div id="bhLotListe" style="padding:6px 24px 12px;max-height:44vh;overflow:auto;">' + lignes + '</div>' +
+      pied(btnFantome('Retour', "window._bhRetourLot()"),
+        btnPlein('Préparer ' + aPreparer.length + ' logements', 'window._bhLancerLot()')),
+      'max-height:90vh;overflow:auto;');
+
+    window._bhRetourLot = function () { document.getElementById('channexModal')?.remove(); };
+
+    window._bhLancerLot = async function () {
+      var ids = [].slice.call(document.querySelectorAll('[data-bh-lot]'))
+        .filter(function (c) { return c.checked; })
+        .map(function (c) { return c.getAttribute('data-bh-lot'); });
+      if (!ids.length) return toast('Sélectionnez au moins un logement', 'warning');
+
+      modal.innerHTML = carte(460,
+        '<div style="padding:40px;text-align:center;">' +
+        '<div style="width:22px;height:22px;margin:0 auto;border:2px solid ' + V.ligne + ';border-top-color:' + V.vert +
+        ';border-radius:50%;animation:bhspin .8s linear infinite;"></div>' +
+        '<div style="margin-top:14px;font-size:13.5px;color:' + V.encre + ';">Préparation de ' + ids.length + ' logements…</div>' +
+        '<div style="margin-top:6px;font-size:12.5px;color:' + V.t3 + ';">Comptez quelques secondes par logement. Ne fermez pas cette fenêtre.</div></div>');
+
+      try {
+        var rp = await fetch(API_URL + '/api/channex/bulk-prepare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
+          body: JSON.stringify({ property_ids: ids })
+        });
+        var d = await rp.json();
+        if (!rp.ok) throw new Error(d.error || 'Erreur serveur');
+        if (typeof loadProperties === 'function') loadProperties().catch(function () {});
+        ecranLotFini(modal, d);
+      } catch (e) {
+        modal.innerHTML = carte(460,
+          entete(null, 'La préparation a échoué', null) +
+          '<div style="padding:22px 24px;font-size:14px;color:' + V.encre + ';line-height:1.55;">' + esc(e.message) + '</div>' +
+          pied('', btnFantome('Fermer', "document.getElementById('channexModal')?.remove()")));
+      }
+    };
+  }
+
+  function ecranLotFini(modal, d) {
+    var file = [];
+    var vus = [];
+    (d.resultats || []).forEach(function (r) {
+      if (r.channex_property_id && vus.indexOf(r.channex_property_id) === -1) {
+        vus.push(r.channex_property_id);
+        file.push({ id: r.id, name: r.name });
+      }
+    });
+
+    var erreurs = (d.erreurs || []).map(function (e) {
+      return '<div style="font-size:13px;color:#C0433C;">' + esc(e.name) + ' — à reprendre</div>';
+    }).join('');
+
+    var rangees = file.map(function (f, i) {
+      return '<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid ' + V.ligne2 + ';">' +
+        '<span style="font-size:14px;font-weight:500;flex:1;">' + esc(f.name) + '</span>' +
+        '<button type="button" onclick="window._bhFile(' + i + ',\'ABB\')" style="border:1px solid ' + V.ligne +
+        ';background:#fff;color:' + V.encre + ';font-family:' + V.sans + ';font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;">Airbnb</button>' +
+        '<button type="button" onclick="window._bhFile(' + i + ',\'BDC\')" style="border:1px solid ' + V.ligne +
+        ';background:#fff;color:' + V.encre + ';font-family:' + V.sans + ';font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;">Booking.com</button>' +
+        '</div>';
+    }).join('');
+
+    modal.innerHTML = carte(620,
+      entete('Terminé', 'Vos logements sont prêts',
+        d.crees + ' établissements créés · ' + d.rattaches + ' logements rattachés à un immeuble existant') +
+      '<div style="padding:14px 24px;background:' + V.creme + ';border-bottom:1px solid ' + V.ligne2 +
+      ';font-size:13px;color:' + V.t2 + ';line-height:1.5;">Il reste ' + file.length + ' autorisation' +
+      (file.length > 1 ? 's' : '') + ' à donner — une par établissement, pas une par logement. ' +
+      'Choisissez la plateforme sur chaque ligne : vous revenez ici après chacune.</div>' +
+      (erreurs ? '<div style="padding:12px 24px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid ' + V.ligne2 + ';">' + erreurs + '</div>' : '') +
+      '<div style="padding:6px 24px 12px;max-height:44vh;overflow:auto;">' + rangees + '</div>' +
+      pied('', btnFantome('Fermer', "window._bhFinirLot()")),
+      'max-height:90vh;overflow:auto;');
+
+    window._bhFinirLot = function () {
+      modal.remove();
+      if (typeof loadProperties === 'function') loadProperties().catch(function () {});
+    };
+    window._bhFile = function (i, code) {
+      var f = file[i];
+      window._bhRetourPerso = function () { ecranLotFini(modal, d); };
+      if (code === 'BDC' && !prepFaite()) return ecranPrep(modal, f.id, f.name, code);
+      lancer(modal, f.id, f.name, code);
+    };
   }
 
   /* ── écran 3 : rattachement automatique puis fenêtre Channex ────────────── */
@@ -324,7 +467,10 @@
       ';border-radius:50%;animation:bhspin .8s linear infinite;"></div>' +
       '<div style="font-size:13px;color:' + V.t3 + ';">Ouverture de la fenêtre sécurisée…</div></div>');
 
-    window._bhRetour = function () { ecranPlateformes(modal, pid, pname); };
+    window._bhRetour = function () {
+      if (typeof window._bhRetourPerso === 'function') return window._bhRetourPerso();
+      ecranPlateformes(modal, pid, pname);
+    };
     window._bhCopierNom = function () {
       var b = document.getElementById('bhCopieNom');
       var fini = function () {
@@ -359,8 +505,16 @@
   /* ── remplacement de l'ancienne modale ─────────────────────────────────── */
   window.openChannexModal = function (propertyId, propertyName, isConnected, channelCode) {
     var modal = coquille();
+    window._bhRetourPerso = null;
     if (channelCode) return lancer(modal, propertyId, propertyName || '', channelCode);
     return ecranPlateformes(modal, propertyId, propertyName || '');
+  };
+
+  /* Point d'entrée du mode lot, à brancher sur un bouton de la page si besoin :
+     <button onclick="bhOuvrirLotOTA()">Connecter tous mes logements</button> */
+  window.bhOuvrirLotOTA = function () {
+    window._bhRetourPerso = null;
+    ecranLot(coquille());
   };
 
   if (!document.getElementById('bhOtaKeyframes')) {
