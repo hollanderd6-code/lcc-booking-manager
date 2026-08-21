@@ -149,6 +149,22 @@
       } catch (e) {}
     }
 
+    /* Les majorations de prix par plateforme. Le resultat de cet appel sert
+       aussi de test de disponibilite : si la route n'est pas montee cote
+       serveur, on n'affiche pas les champs — plutot que de proposer une
+       saisie qui ne serait jamais enregistree. */
+    var majorations = {};
+    var majorationsDispo = false;
+    try {
+      var rMaj = await fetch(API_URL + '/api/properties/' + pid + '/markups',
+        { headers: { Authorization: 'Bearer ' + token() } });
+      if (rMaj.ok) {
+        var dMaj = await rMaj.json();
+        majorations = dMaj.markups || {};
+        majorationsDispo = true;
+      }
+    } catch (eMaj) {}
+
     var voisin = voisinConnecte(pid);
     var lignes = PLATEFORMES.map(function (p) {
       var ok = connectees.some(function (c) { return c.indexOf(p.cle) > -1 || (p.cle === 'booking' && c.indexOf('bdc') > -1) || (p.cle === 'airbnb' && c === 'abb'); });
@@ -165,6 +181,19 @@
         ';color:' + p.couleur + ';display:flex;align-items:center;justify-content:center;flex:none;">' + p.icone + '</span>' +
         '<span style="flex:1;"><span style="display:block;font-size:14.5px;font-weight:500;">' + p.label + '</span>' +
         '<span style="display:block;font-size:12.5px;color:' + V.t3 + ';margin-top:2px;">' + esc(etat) + '</span></span>' +
+        /* Majoration : le prix du calendrier, majore de ce pourcentage, pour
+           cette plateforme seulement. Vide ou 0 = prix du calendrier tel quel. */
+        (majorationsDispo
+          ? '<span style="display:flex;align-items:center;gap:5px;flex:none;">' +
+            '<span style="font-size:12.5px;color:' + V.t3 + ';">+</span>' +
+            '<input type="number" min="0" max="100" step="0.5" inputmode="decimal" ' +
+            'value="' + (majorations[p.code] != null ? majorations[p.code] : '') + '" placeholder="0" ' +
+            'aria-label="Majoration de prix pour ' + esc(p.label) + ', en pourcentage" ' +
+            'onchange="window._bhMajoration(\'' + p.code + '\', this)" ' +
+            'style="width:54px;padding:7px;border:1px solid ' + V.ligne + ';border-radius:8px;font-family:' + V.sans +
+            ';font-size:13px;text-align:right;color:' + V.encre + ';background:#fff;">' +
+            '<span style="font-size:12.5px;color:' + V.t3 + ';">%</span></span>'
+          : '') +
         /* Une connexion etablie doit rester modifiable : corriger un mapping,
            remapper apres avoir renomme une annonce, verifier ce qui est
            associe. « Connecte — rien a faire » fermait la porte. */
@@ -217,6 +246,43 @@
       modal.remove();
       if (typeof openEditPropertyModal === 'function') openEditPropertyModal(pid);
       else toast("Ouvrez la fiche du logement pour renseigner l'adresse", 'info');
+    };
+
+    /* Enregistrement d'une majoration. Un PATCH par plateforme : deux
+       onglets ouverts ne s'ecrasent pas. Le champ passe au vert le temps de
+       confirmer, et on rappelle QUAND le prix partira — sinon l'utilisateur
+       verifie sur la plateforme, ne voit rien, et recommence. */
+    window._bhMajoration = async function (code, champ) {
+      var val = String(champ.value || '').trim().replace(',', '.');
+      var pct = val === '' ? 0 : parseFloat(val);
+      if (!isFinite(pct) || pct < 0 || pct > 100) {
+        champ.style.borderColor = '#C0433C';
+        toast('La majoration doit être un nombre entre 0 et 100.', 'error');
+        return;
+      }
+      champ.value = pct > 0 ? String(pct) : '';
+      champ.disabled = true;
+      try {
+        var r = await fetch(API_URL + '/api/properties/' + pid + '/markups', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
+          body: JSON.stringify({ code: code, pct: pct })
+        });
+        var d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Enregistrement impossible');
+        majorations = d.markups || {};
+        champ.style.borderColor = V.vertFilet;
+        setTimeout(function () { champ.style.borderColor = V.ligne; }, 1400);
+        var nom = (PLATEFORMES.find(function (x) { return x.code === code; }) || {}).label || code;
+        toast(pct > 0
+          ? nom + ' : +' + pct + '% — appliqué à la prochaine synchronisation des tarifs.'
+          : nom + ' : majoration retirée, prix du calendrier.', 'success');
+      } catch (e) {
+        champ.style.borderColor = '#C0433C';
+        toast(e.message, 'error');
+      } finally {
+        champ.disabled = false;
+      }
     };
 
     window._bhOta = function (code) {
