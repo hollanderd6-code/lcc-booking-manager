@@ -65,18 +65,46 @@ function trouverMappings(attrs) {
   if (attrs.settings && Array.isArray(attrs.settings.mappings)) {
     return { chemin: 'settings.mappings', liste: attrs.settings.mappings };
   }
+  // Dernier recours : le premier tableau d'objets portant un room_type_id,
+  // à un niveau quelconque. Channex a plusieurs formes selon le canal.
+  for (const cle of Object.keys(attrs)) {
+    const v = attrs[cle];
+    if (Array.isArray(v) && v.some((x) => x && typeof x === 'object' && 'room_type_id' in x)) {
+      return { chemin: cle, liste: v };
+    }
+    if (v && typeof v === 'object') {
+      for (const sous of Object.keys(v)) {
+        const w = v[sous];
+        if (Array.isArray(w) && w.some((x) => x && typeof x === 'object' && 'room_type_id' in x)) {
+          return { chemin: cle + '.' + sous, liste: w };
+        }
+      }
+    }
+  }
   return null;
 }
 
+/* La liste /channels ne porte pas les mappings : il faut lire chaque canal
+   individuellement. Un aller-retour de plus, mais c'est la seule source. */
 async function listerCanaux(channex_property_id) {
   const res = await channexAPI.get('/channels', {
     params: { 'filter[property_id]': channex_property_id, 'pagination[page_size]': 100 }
   });
   const data = res.data?.data || [];
-  return (Array.isArray(data) ? data : []).map((c) => ({
-    id: c.id,
-    attrs: c.attributes || {}
-  }));
+  const sommaire = Array.isArray(data) ? data : [];
+
+  const complets = [];
+  for (const c of sommaire) {
+    let attrs = c.attributes || {};
+    try {
+      const detail = await channexAPI.get(`/channels/${c.id}`);
+      attrs = detail.data?.data?.attributes || attrs;
+    } catch (e) {
+      console.warn(`⚠️ [MAPPING] Détail du canal ${c.id} illisible :`, e.response?.data || e.message);
+    }
+    complets.push({ id: c.id, attrs });
+  }
+  return complets;
 }
 
 /* ── Diagnostic, sans rien modifier ──────────────────────────────
@@ -107,7 +135,10 @@ async function inspecterCanaux(pool, { property_id }) {
         canal: c.attrs.channel || c.attrs.title || null,
         actif: c.attrs.is_active !== false,
         forme_mappings: m ? m.chemin : 'introuvable',
-        mappings: m ? m.liste : null
+        mappings: m ? m.liste : null,
+        // Quand la forme est introuvable, ces deux clés disent où chercher.
+        cles_attributs: m ? undefined : Object.keys(c.attrs),
+        attributs_bruts: m ? undefined : c.attrs
       };
     })
   };
@@ -189,7 +220,19 @@ async function remapperPlansMajores(pool, { property_id, user_id }) {
 
     const corps = trouve.chemin === 'mappings'
       ? { channel: { mappings: nouvelle } }
-      : { channel: { settings: Object.assign({}, canal.attrs.settings, { mappings: nouvelle }) } };
+      : trouve.chemin === 'settings.mappings'
+        ? { channel: { settings: Object.assign({}, canal.attrs.settings, { mappings: nouvelle }) } }
+        : (function () {
+            // Chemin découvert dynamiquement : on reconstruit l'imbrication
+            // exacte, sans rien supposer d'autre.
+            const parts = trouve.chemin.split('.');
+            if (parts.length === 1) {
+              const o = {}; o[parts[0]] = nouvelle; return { channel: o };
+            }
+            const racine = Object.assign({}, canal.attrs[parts[0]]);
+            racine[parts[1]] = nouvelle;
+            const o = {}; o[parts[0]] = racine; return { channel: o };
+          })();
 
     try {
       await channexAPI.put(`/channels/${canal.id}`, corps);
