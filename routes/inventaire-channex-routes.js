@@ -66,6 +66,25 @@ module.exports = function monterInventaire(app, pool, deps) {
         [ids]
       );
 
+      /* La clé API Channex est unique pour toute la plateforme : /properties
+         renvoie les établissements de TOUS les comptes. Juger « sans usage »
+         sur le seul parc du compte courant désignerait les logements des
+         autres clients comme supprimables. Le critère de sûreté doit donc
+         porter sur la base entière — sans exposer pour autant à qui ils sont. */
+      const { rows: toutLeMonde } = await pool.query(
+        `SELECT channex_property_id, channex_rate_plan_id,
+                COALESCE(channex_markup_rate_plans, '{}'::jsonb) AS plans
+           FROM properties WHERE channex_property_id IS NOT NULL`
+      );
+
+      const etabPlateforme = new Set();
+      const plansPlateforme = new Set();
+      toutLeMonde.forEach((p) => {
+        etabPlateforme.add(p.channex_property_id);
+        if (p.channex_rate_plan_id) plansPlateforme.add(p.channex_rate_plan_id);
+        Object.values(p.plans || {}).forEach((rp) => plansPlateforme.add(rp));
+      });
+
       const etabUtilises = new Map();   // channex_property_id -> [noms]
       const plansUtilises = new Set();
       parc.forEach((p) => {
@@ -82,11 +101,14 @@ module.exports = function monterInventaire(app, pool, deps) {
       const rapportEtabs = etablissements.map((e) => {
         const a = e.attributes || {};
         const noms = etabUtilises.get(e.id) || [];
+        const ailleurs = !noms.length && etabPlateforme.has(e.id);
         return {
           id: e.id,
           titre: a.title || null,
           logements_du_parc: noms,
-          statut: noms.length ? 'utilise' : 'sans_usage'
+          statut: noms.length ? 'utilise'
+            : ailleurs ? 'utilise_autre_compte'   // ne pas y toucher
+            : 'sans_usage'
         };
       });
 
@@ -101,11 +123,14 @@ module.exports = function monterInventaire(app, pool, deps) {
         const entrees = Array.isArray(a.rate_plans) ? a.rate_plans : [];
         const actif = a.is_active !== false;
         const nosEntrees = entrees.filter((x) => plansUtilises.has(x.rate_plan_id));
+        const entreesPlateforme = entrees.filter((x) => plansPlateforme.has(x.rate_plan_id));
         const etabs = a.properties || [];
         const etabsDuParc = etabs.filter((x) => etabUtilises.has(x));
+        const etabsPlateforme = etabs.filter((x) => etabPlateforme.has(x));
 
         let statut;
         if (nosEntrees.length) statut = 'utilise';
+        else if (entreesPlateforme.length || etabsPlateforme.length) statut = 'utilise_autre_compte';
         else if (!actif && !entrees.length) statut = 'inactif_vide';
         else if (!etabsDuParc.length) statut = 'sans_usage';
         else statut = 'a_verifier';   // etablissement du parc, mais aucun mapping reconnu
@@ -137,8 +162,10 @@ module.exports = function monterInventaire(app, pool, deps) {
         a_verifier: rapportCanaux.filter((x) => x.statut === 'a_verifier')
           .map((x) => 'Canal ' + (x.canal || '?') + ' « ' + (x.titre || x.id) + ' » porte un établissement du parc ' +
             'mais aucun mapping reconnu : mapping à faire, ou fait sur un ancien plan.'),
-        avertissement: 'Cette route ne supprime rien. Vérifiez chaque candidat dans Channex ' +
-          '(réservations à venir, logement d\'un autre compte) avant de le supprimer.'
+        avertissement: 'Cette route ne supprime rien. « sans_usage » signifie : aucun logement de ' +
+          'la base entière ne s\'appuie dessus. Vérifiez tout de même les réservations à venir dans ' +
+          'Channex avant de supprimer. Les objets marqués « utilise_autre_compte » appartiennent à ' +
+          'un autre compte de la plateforme : n\'y touchez pas.'
       });
     } catch (e) {
       const d = e.response?.data || e.message;
