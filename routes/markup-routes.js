@@ -59,6 +59,46 @@ module.exports = function monterRoutesMajoration(app, pool, deps) {
     return req.user && (req.user.id || req.user.userId);
   }
 
+  /* Un sous-compte d'agence gère des logements qui ne lui appartiennent pas :
+     ils sont au compte parent, et lui sont confiés par sub_account_properties.
+     Un contrôle sur le seul user_id lui refusait donc l'accès, et les champs
+     de majoration disparaissaient de son écran. On accepte les deux voies,
+     sans en ouvrir une troisième : soit le logement est à lui, soit il lui a
+     été explicitement confié. */
+  async function autorise(req, property_id) {
+    const uid = await resoudreUid(req);
+
+    const { rows } = await pool.query(
+      'SELECT id FROM properties WHERE id = $1 AND user_id = $2',
+      [property_id, uid]
+    );
+    if (rows.length) return uid;
+
+    if (req.user && req.user.isSubAccount) {
+      const { rows: confie } = await pool.query(
+        `SELECT 1 FROM sub_account_properties
+          WHERE sub_account_id = $1 AND property_id = $2`,
+        [req.user.subAccountId, property_id]
+      );
+      if (confie.length) return uid;
+
+      // Un sous-compte sans restriction voit tout le parc du parent.
+      const { rows: aucune } = await pool.query(
+        'SELECT 1 FROM sub_account_properties WHERE sub_account_id = $1 LIMIT 1',
+        [req.user.subAccountId]
+      );
+      if (!aucune.length) {
+        const { rows: duParent } = await pool.query(
+          'SELECT id FROM properties WHERE id = $1 AND user_id = $2',
+          [property_id, uid]
+        );
+        if (duParent.length) return uid;
+      }
+    }
+
+    return null;
+  }
+
   // Migration au démarrage : sans effet si les colonnes existent déjà.
   pool.query(MIGRATION)
     .then(() => console.log('✅ [MARKUPS] Colonnes platform_markups / channex_markup_rate_plans prêtes'))
@@ -70,7 +110,8 @@ module.exports = function monterRoutesMajoration(app, pool, deps) {
      plutôt que de proposer une saisie qui ne serait jamais enregistrée. */
   app.get('/api/properties/:id/markups', auth, async (req, res) => {
     try {
-      const uid = await resoudreUid(req);
+      const uid = await autorise(req, req.params.id);
+      if (!uid) return res.status(404).json({ error: 'Logement introuvable' });
       const { rows } = await pool.query(
         `SELECT COALESCE(platform_markups, '{}'::jsonb) AS markups
            FROM properties
@@ -102,7 +143,8 @@ module.exports = function monterRoutesMajoration(app, pool, deps) {
         return res.status(400).json({ error: 'La majoration doit être un nombre entre 0 et 100.' });
       }
 
-      const uid = await resoudreUid(req);
+      const uid = await autorise(req, req.params.id);
+      if (!uid) return res.status(404).json({ error: 'Logement introuvable' });
 
       const { rows } = await (pct > 0
         ? pool.query(

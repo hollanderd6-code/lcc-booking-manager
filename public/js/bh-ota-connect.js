@@ -190,7 +190,7 @@
             'value="' + (majorations[p.code] != null ? majorations[p.code] : '') + '" placeholder="0" ' +
             'aria-label="Majoration de prix pour ' + esc(p.label) + ', en pourcentage" ' +
             'onchange="window._bhMajoration(\'' + p.code + '\', this)" ' +
-            'style="width:54px;padding:7px;border:1px solid ' + V.ligne + ';border-radius:8px;font-family:' + V.sans +
+            'class="bhMajChamp" style="width:68px;padding:7px 6px;border:1px solid ' + V.ligne + ';border-radius:8px;font-family:' + V.sans +
             ';font-size:13px;text-align:right;color:' + V.encre + ';background:#fff;">' +
             '<span style="font-size:12.5px;color:' + V.t3 + ';">%</span></span>'
           : '') +
@@ -883,7 +883,12 @@
   if (!document.getElementById('bhOtaKeyframes')) {
     var st = document.createElement('style');
     st.id = 'bhOtaKeyframes';
-    st.textContent = '@keyframes bhspin{to{transform:rotate(360deg)}}';
+    st.textContent = '@keyframes bhspin{to{transform:rotate(360deg)}}' +
+      /* Les fleches d'un input number mangent la moitie de la largeur
+         utile : sans elles, « 15 » tient sans etre coupe. */
+      '.bhMajChamp{-moz-appearance:textfield;appearance:textfield;}' +
+      '.bhMajChamp::-webkit-outer-spin-button,.bhMajChamp::-webkit-inner-spin-button' +
+      '{-webkit-appearance:none;appearance:none;margin:0;}';
     document.head.appendChild(st);
   }
 })();
