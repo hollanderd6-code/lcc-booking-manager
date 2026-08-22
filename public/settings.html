@@ -1670,6 +1670,67 @@ html[data-theme-v3="1"] .sidebar {
 </div>
 </div>
 
+<!-- ✅ SECTION : MAJORATION PAR PLATEFORME -->
+<div id="bhMajorationBloc" style="display:none;">
+<div class="form-section-header" style="margin-top:24px;">
+  <i class="fas fa-arrow-trend-up"></i>
+  <span>Majoration par plateforme</span>
+</div>
+<p style="margin:0 0 12px;font-size:11.5px;color:#6B7280;line-height:1.5;">
+  Pourcentage <strong style="font-weight:600;">ajouté au prix envoyé</strong> à la plateforme, pour absorber sa commission.
+  À ne pas confondre avec les commissions ci-dessus, qui servent au calcul de votre revenu net.
+  Le prix de votre calendrier n'est pas modifié.
+</p>
+<div class="form-grid-2">
+<div class="form-group">
+<label for="propertyMarkupABB">
+<i class="fab fa-airbnb"></i>
+<span>Majoration Airbnb</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Le prix du calendrier est majoré de ce pourcentage avant d'être envoyé à Airbnb. Laissez vide pour envoyer le prix tel quel.</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyMarkupABB" min="0" max="100" placeholder="0" step="0.5" type="number"/>
+<span>%</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Vide = prix du calendrier, sans majoration</small>
+</div>
+<div class="form-group">
+<label for="propertyMarkupBDC">
+<i class="fas fa-bed"></i>
+<span>Majoration Booking</span>
+<span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Le prix du calendrier est majoré de ce pourcentage avant d'être envoyé à Booking.com. Laissez vide pour envoyer le prix tel quel.</span></span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyMarkupBDC" min="0" max="100" placeholder="0" step="0.5" type="number"/>
+<span>%</span>
+</div>
+<small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Vide = prix du calendrier, sans majoration</small>
+</div>
+</div>
+<div class="form-grid-2" style="margin-top:8px;">
+<div class="form-group">
+<label for="propertyMarkupEXP">
+<i class="fas fa-plane"></i>
+<span>Majoration Expedia</span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyMarkupEXP" min="0" max="100" placeholder="0" step="0.5" type="number"/>
+<span>%</span>
+</div>
+</div>
+<div class="form-group">
+<label for="propertyMarkupVRB">
+<i class="fas fa-home"></i>
+<span>Majoration Abritel</span>
+</label>
+<div class="input-with-suffix">
+<input id="propertyMarkupVRB" min="0" max="100" placeholder="0" step="0.5" type="number"/>
+<span>%</span>
+</div>
+</div>
+</div>
+</div>
+
 <!-- ✅ SECTION : NUITÉES MINIMUM -->
 <div class="form-grid-2" style="margin-top:12px;">
 <div class="form-group">
@@ -2535,6 +2596,7 @@ function insertVariable(textareaId, variable, event) {
 <!-- JS page -->
 <script src="/js/settings.js?v=ef825800"></script>
   <script src="/js/bh-ota-connect.js"></script>
+  <script src="/js/bh-majoration-form.js"></script>
   <script src="/js/bh-ota-status.js"></script>
 <!-- MOBILE MENU SCRIPT + nav active -->
 <script>
