@@ -57,29 +57,24 @@ function correspond(code, valeurCanal) {
   return (CANAUX[code] || []).some((c) => v === c || v.indexOf(c) > -1);
 }
 
-/* Les mappings peuvent être sous attributes.mappings, ou dans
-   attributes.settings.mappings selon le canal. On cherche le tableau
-   plutôt que de supposer un chemin. */
-function trouverMappings(attrs) {
+/* Channex range les mappings d'un canal dans attributes.rate_plans. Chaque
+   entrée ressemble à :
+
+     { id: "34e2…",                       // l'entrée de mapping elle-même
+       rate_plan_id: "1302f4f0…",         // NOTRE plan tarifaire
+       settings: { rate_plan_code: 30969044,   // les codes de l'OTA,
+                   room_type_code: 900151902 } }  // à ne jamais toucher
+
+   Il n'y a pas de room_type_id dans ces entrées : la correspondance se fait
+   donc sur rate_plan_id, en cherchant celle qui pointe vers notre plan
+   standard. C'est cette entrée, et elle seule, qu'on fait pointer vers le
+   plan majoré. */
+function trouverPlans(attrs) {
+  if (Array.isArray(attrs.rate_plans)) return { chemin: 'rate_plans', liste: attrs.rate_plans };
+  // Formes historiques, gardées par prudence.
   if (Array.isArray(attrs.mappings)) return { chemin: 'mappings', liste: attrs.mappings };
   if (attrs.settings && Array.isArray(attrs.settings.mappings)) {
     return { chemin: 'settings.mappings', liste: attrs.settings.mappings };
-  }
-  // Dernier recours : le premier tableau d'objets portant un room_type_id,
-  // à un niveau quelconque. Channex a plusieurs formes selon le canal.
-  for (const cle of Object.keys(attrs)) {
-    const v = attrs[cle];
-    if (Array.isArray(v) && v.some((x) => x && typeof x === 'object' && 'room_type_id' in x)) {
-      return { chemin: cle, liste: v };
-    }
-    if (v && typeof v === 'object') {
-      for (const sous of Object.keys(v)) {
-        const w = v[sous];
-        if (Array.isArray(w) && w.some((x) => x && typeof x === 'object' && 'room_type_id' in x)) {
-          return { chemin: cle + '.' + sous, liste: w };
-        }
-      }
-    }
   }
   return null;
 }
@@ -129,16 +124,23 @@ async function inspecterCanaux(pool, { property_id }) {
     plans_majores: p.plans,
     majorations: p.markups,
     canaux: canaux.map((c) => {
-      const m = trouverMappings(c.attrs);
+      const m = trouverPlans(c.attrs);
       return {
         id: c.id,
         canal: c.attrs.channel || c.attrs.title || null,
         actif: c.attrs.is_active !== false,
         forme_mappings: m ? m.chemin : 'introuvable',
-        mappings: m ? m.liste : null,
-        // Quand la forme est introuvable, ces deux clés disent où chercher.
-        cles_attributs: m ? undefined : Object.keys(c.attrs),
-        attributs_bruts: m ? undefined : c.attrs
+        // Vue lisible : quel plan de chez nous, derrière quels codes OTA.
+        mappings: m ? m.liste.map((e) => ({
+          entree_id: e.id,
+          rate_plan_id: e.rate_plan_id,
+          est_notre_plan_standard: e.rate_plan_id === p.channex_rate_plan_id,
+          codes_ota: e.settings
+            ? { room_type_code: e.settings.room_type_code, rate_plan_code: e.settings.rate_plan_code,
+                listing_id: e.settings.listing_id }
+            : null
+        })) : null,
+        cles_attributs: m ? undefined : Object.keys(c.attrs)
       };
     })
   };
@@ -184,7 +186,7 @@ async function remapperPlansMajores(pool, { property_id, user_id }) {
     const canal = canaux.find((c) => correspond(code, c.attrs.channel) || correspond(code, c.attrs.title));
     if (!canal) { ignores.push({ code, raison: 'canal_absent' }); continue; }
 
-    const trouve = trouverMappings(canal.attrs);
+    const trouve = trouverPlans(canal.attrs);
     if (!trouve) {
       // Forme inattendue : on ne devine pas, on signale.
       console.warn(`⚠️ [MAPPING] ${code} : mappings introuvables, canal laissé intact.`,
@@ -194,10 +196,15 @@ async function remapperPlansMajores(pool, { property_id, user_id }) {
     }
 
     const cible = plans[code];
-    const concernes = trouve.liste.filter((m) => m && m.room_type_id === p.channex_room_type_id);
-    if (!concernes.length) { ignores.push({ code, raison: 'room_type_non_mappe' }); continue; }
-    if (concernes.every((m) => m.rate_plan_id === cible)) {
-      faits.push({ code, deja: true, rate_plan_id: cible });
+
+    /* L'entrée à modifier est celle qui pointe vers notre plan standard.
+       Un même canal sert plusieurs logements : les autres entrées appartiennent
+       aux voisins et doivent être renvoyées telles quelles. */
+    const concernes = trouve.liste.filter((m) => m && m.rate_plan_id === p.channex_rate_plan_id);
+    if (!concernes.length) {
+      const deja = trouve.liste.some((m) => m && m.rate_plan_id === cible);
+      if (deja) { faits.push({ code, deja: true, rate_plan_id: cible }); continue; }
+      ignores.push({ code, raison: 'plan_standard_non_mappe' });
       continue;
     }
 
@@ -211,28 +218,18 @@ async function remapperPlansMajores(pool, { property_id, user_id }) {
       };
     }
 
-    // Seul rate_plan_id change ; les codes OTA restent verbatim.
+    // Seul rate_plan_id change ; les codes OTA de settings restent verbatim.
     const nouvelle = trouve.liste.map((m) =>
-      (m && m.room_type_id === p.channex_room_type_id)
+      (m && m.rate_plan_id === p.channex_rate_plan_id)
         ? Object.assign({}, m, { rate_plan_id: cible })
         : m
     );
 
-    const corps = trouve.chemin === 'mappings'
-      ? { channel: { mappings: nouvelle } }
-      : trouve.chemin === 'settings.mappings'
-        ? { channel: { settings: Object.assign({}, canal.attrs.settings, { mappings: nouvelle }) } }
-        : (function () {
-            // Chemin découvert dynamiquement : on reconstruit l'imbrication
-            // exacte, sans rien supposer d'autre.
-            const parts = trouve.chemin.split('.');
-            if (parts.length === 1) {
-              const o = {}; o[parts[0]] = nouvelle; return { channel: o };
-            }
-            const racine = Object.assign({}, canal.attrs[parts[0]]);
-            racine[parts[1]] = nouvelle;
-            const o = {}; o[parts[0]] = racine; return { channel: o };
-          })();
+    const corps = trouve.chemin === 'rate_plans'
+      ? { channel: { rate_plans: nouvelle } }
+      : trouve.chemin === 'mappings'
+        ? { channel: { mappings: nouvelle } }
+        : { channel: { settings: Object.assign({}, canal.attrs.settings, { mappings: nouvelle }) } };
 
     try {
       await channexAPI.put(`/channels/${canal.id}`, corps);
@@ -277,9 +274,11 @@ async function restaurerMapping(pool, { property_id, code }) {
   const b = backup[code];
   if (!b) return { restaure: false, raison: 'aucune_sauvegarde' };
 
-  const corps = b.chemin === 'mappings'
-    ? { channel: { mappings: b.mappings } }
-    : { channel: { settings: { mappings: b.mappings } } };
+  const corps = b.chemin === 'rate_plans'
+    ? { channel: { rate_plans: b.mappings } }
+    : b.chemin === 'mappings'
+      ? { channel: { mappings: b.mappings } }
+      : { channel: { settings: { mappings: b.mappings } } };
 
   await channexAPI.put(`/channels/${b.canal_id}`, corps);
   console.log(`↩️ [MAPPING] ${code} restauré dans l'état du ${b.date}`);
