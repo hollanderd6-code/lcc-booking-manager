@@ -296,5 +296,71 @@ module.exports = function monterRoutesAirbnb(app, pool, deps) {
     }
   });
 
+  /* ── Où est cette annonce, dans tout le compte ? ──────────────────
+     Quand une annonce refuse d'être librée, c'est souvent qu'une AUTRE
+     connexion Airbnb du même compte Channex la détient — un canal rattaché
+     à un autre établissement, invisible depuis la fenêtre du logement.
+     Cette route balaie tous les canaux du compte pour la retrouver. */
+  app.get('/api/channex/find-listing/:listing_id', auth, async (req, res) => {
+    try {
+      const cible = String(req.params.listing_id || '').trim();
+      const liste = await channexAPI.get('/channels', { params: { 'pagination[page_size]': 100 } });
+      const sommaire = liste.data?.data || [];
+
+      const trouvailles = [];
+      const canaux = [];
+
+      for (const c of (Array.isArray(sommaire) ? sommaire : [])) {
+        let attrs = c.attributes || {};
+        try {
+          const d = await channexAPI.get(`/channels/${c.id}`);
+          attrs = d.data?.data?.attributes || attrs;
+        } catch (e) {}
+
+        canaux.push({
+          id: c.id,
+          canal: attrs.channel || null,
+          titre: attrs.title || null,
+          actif: attrs.is_active !== false,
+          etablissements: attrs.properties || [],
+          nb_entrees: Array.isArray(attrs.rate_plans) ? attrs.rate_plans.length : 0
+        });
+
+        const entrees = Array.isArray(attrs.rate_plans) ? attrs.rate_plans : [];
+        for (const e of entrees) {
+          const lid = e.settings && String(e.settings.listing_id || e.settings.room_type_code || '');
+          if (lid === cible) {
+            trouvailles.push({
+              canal_id: c.id,
+              canal: attrs.channel || null,
+              titre: attrs.title || null,
+              actif: attrs.is_active !== false,
+              etablissements: attrs.properties || [],
+              entree_id: e.id,
+              rate_plan_id: e.rate_plan_id
+            });
+          }
+        }
+      }
+
+      res.json({
+        listing_id: cible,
+        trouve_dans: trouvailles,
+        tous_les_canaux: canaux,
+        aide: trouvailles.length > 1
+          ? 'Cette annonce est déclarée dans plusieurs canaux : c\'est la cause du verrou. ' +
+            'Il faut la retirer de tous sauf celui du bon établissement.'
+          : trouvailles.length === 1
+            ? 'Un seul canal la détient. Si le verrou persiste, il vient d\'Airbnb : ' +
+              'déconnectez le logiciel dans votre espace hôte.'
+            : 'Aucun canal de ce compte ne la déclare — elle est reliée à un autre compte Channex ou à un autre gestionnaire.'
+      });
+    } catch (e) {
+      const d = e.response?.data || e.message;
+      console.error('❌ [AIRBNB] find-listing:', d);
+      res.status(500).json({ error: typeof d === 'string' ? d : JSON.stringify(d) });
+    }
+  });
+
   console.log('✅ [AIRBNB] Routes de mapping des annonces montées');
 };
