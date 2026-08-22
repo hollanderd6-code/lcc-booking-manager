@@ -1002,7 +1002,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
             <div class="setting-desc">Recevez une notification quand un prix est modifié automatiquement (mode auto).</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" checked onchange="saveSettings()">
+            <input type="checkbox" id="notifPush" onchange="saveNotifPref('notifyPush', this)">
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -1012,7 +1012,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
             <div class="setting-desc">Chaque lundi matin : résumé des ajustements + revenu additionnel estimé.</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" checked onchange="saveSettings()">
+            <input type="checkbox" id="notifEmail" onchange="saveNotifPref('notifyEmail', this)">
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -1022,10 +1022,11 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
             <div class="setting-desc">Notification immédiate si le marché dépasse significativement votre prix actuel.</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" checked onchange="saveSettings()">
+            <input type="checkbox" id="notifAlert" onchange="saveNotifPref('notifyAlert', this)">
             <span class="toggle-slider"></span>
           </label>
         </div>
+        <div id="notif-etat" style="padding:10px 20px;font-size:12px;color:var(--muted);"></div>
       </div>
     </div>
 
@@ -1312,6 +1313,7 @@ function switchTab(name) {
   if (name === 'dashboard') loadDashboard();
   if (name === 'history' && !state.history.length) loadHistory();
   if (name === 'config') loadConfig();
+  if (name === 'settings') loadNotifPrefs();
   if (name === 'calendar') initCalendarTab();
   if (name === 'events')   initEventsTab();
 }
@@ -1960,9 +1962,68 @@ function tensionLabel(level) {
 }
 
 // ── Sauvegarde des paramètres (toggles) ─────────────────────
-function saveSettings() {
-  showToast('Préférences enregistrées ✓', 'success');
-  // TODO : appeler POST /api/dynamic-pricing/config avec les bons flags notifyPush/notifyEmail/notifyAlert
+/* Les preferences vivent dans pricing_config, une ligne par logement, mais
+   ce sont des preferences personnelles : elles s'appliquent a tout le parc.
+   La route dediee ne touche que les trois colonnes concernees — passer par
+   POST /config aurait exige priceMin/priceMax et ecrase les fourchettes. */
+const NOTIF_CHAMPS = { notifyPush: 'notifPush', notifyEmail: 'notifEmail', notifyAlert: 'notifAlert' };
+
+async function loadNotifPrefs() {
+  const etat = $('notif-etat');
+  try {
+    const r = await fetch(`${API_BASE}${DP}/notifications`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+
+    Object.keys(NOTIF_CHAMPS).forEach(cle => {
+      const el = $(NOTIF_CHAMPS[cle]);
+      if (!el) return;
+      el.checked  = !!d[cle];
+      el.disabled = d.logements === 0;
+      el.dataset.avant = el.checked ? '1' : '0';
+    });
+
+    /* Sans logement configure, il n'existe aucune ligne ou ecrire. On le dit
+       et on desactive, plutot que de laisser croire que le reglage tient. */
+    if (etat) {
+      if (d.logements === 0) {
+        etat.textContent = 'Activez le pricing dynamique sur au moins un logement pour régler vos notifications.';
+      } else {
+        const melanges = Object.keys(NOTIF_CHAMPS).filter(c => d.heterogene && d.heterogene[c]);
+        etat.textContent = melanges.length
+          ? 'Certains logements avaient un réglage différent : basculer un interrupteur alignera tout le parc.'
+          : 'Ces préférences s\'appliquent à vos ' + d.logements + ' logement' + (d.logements > 1 ? 's' : '') + '.';
+      }
+    }
+  } catch (e) {
+    /* La route n'est pas montee : on desactive au lieu d'afficher trois
+       interrupteurs qui ne menent nulle part. */
+    Object.values(NOTIF_CHAMPS).forEach(id => { const el = $(id); if (el) el.disabled = true; });
+    if (etat) etat.textContent = 'Préférences indisponibles pour le moment.';
+  }
+}
+
+async function saveNotifPref(cle, el) {
+  const avant = el.dataset.avant === '1';
+  el.disabled = true;
+  try {
+    const r = await fetch(`${API_BASE}${DP}/notifications`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: cle, value: el.checked })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Enregistrement impossible');
+
+    el.dataset.avant = el.checked ? '1' : '0';
+    showToast(el.checked ? 'Notification activée ✓' : 'Notification désactivée', 'success');
+  } catch (e) {
+    // Un interrupteur qui reste en place est une promesse : on le remet.
+    el.checked = avant;
+    showToast(e.message, 'error');
+  } finally {
+    el.disabled = false;
+  }
 }
 
 // ── Modale algo ──────────────────────────────────────────────
