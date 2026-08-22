@@ -452,7 +452,7 @@
     var etapes = [
       "Connectez-vous à l'extranet Booking.com.",
       'Allez dans <strong style="font-weight:500;">Compte → Fournisseur de connectivité</strong>.',
-      'Cherchez « Channex » et cliquez sur <strong style="font-weight:500;">Accepter</strong>.',
+      'Cherchez <strong style="font-weight:500;">Channex</strong> — le nom de notre fournisseur de connectivité chez Booking.com — puis cliquez sur <strong style="font-weight:500;">Accepter</strong>.',
       'Notez votre <strong style="font-weight:500;">Property ID</strong> : le numéro affiché en haut, à côté du nom de votre établissement.'
     ].map(function (t, i) {
       return '<div style="display:flex;gap:12px;align-items:flex-start;">' +
@@ -462,7 +462,7 @@
     }).join('');
 
     modal.innerHTML = carte(560,
-      entete('Étape 1 sur 2 · une seule fois', 'Autoriser Channex chez Booking.com',
+      entete('Étape 1 sur 2 · une seule fois', 'Autoriser la connexion chez Booking.com',
         'Une opération de compte, pas de logement. Vous ne reverrez plus cet écran.') +
       '<div style="padding:22px 24px;display:flex;flex-direction:column;gap:16px;">' +
       '<div style="display:flex;flex-direction:column;gap:12px;">' + etapes + '</div>' +
@@ -474,7 +474,7 @@
       ';border:1px solid ' + V.vertFilet + ';border-radius:12px;padding:14px;">' +
       '<input type="checkbox" id="bhPrepOk" onchange="window._bhPrep(this.checked)" ' +
       'style="width:18px;height:18px;accent-color:' + V.vert + ';margin-top:1px;flex:none;">' +
-      '<span><span style="display:block;font-size:14px;font-weight:500;">C\'est fait — Channex est accepté dans mon extranet.</span>' +
+      '<span><span style="display:block;font-size:14px;font-weight:500;">C\'est fait — la connexion est autorisée dans mon extranet.</span>' +
       '<span style="display:block;font-size:12.5px;color:' + V.t2 + ';margin-top:3px;">Cette étape ne vous sera plus demandée.</span></span>' +
       '</label></div>' +
       pied('', btnFantome('Plus tard', "document.getElementById('channexModal')?.remove()") +
@@ -513,10 +513,24 @@
 
     var aPreparer = etat.a_preparer || [];
     if (!aPreparer.length) {
+      /* Deux situations tombaient ici : « tout est pret » et « rien n'a ete lu ».
+         Le test « la liste a preparer est vide » est vrai dans les deux, d'ou
+         l'ecran contradictoire « Tout est déjà prêt · 0 logements ». Un zero
+         n'est pas une reussite : on distingue, et on dit quoi faire. */
+      var rienDeLu = !etat.total;
+      var n = etat.total || 0;
       modal.innerHTML = carte(460,
-        entete(null, 'Tout est déjà prêt', etat.total + ' logements dans Channex') +
-        '<div style="padding:22px 24px;font-size:14px;color:' + V.t2 + ';line-height:1.55;">' +
-        'Chaque logement a son établissement. Il ne reste qu\'à autoriser les plateformes, logement par logement ou établissement par établissement.</div>' +
+        entete(null,
+          rienDeLu ? 'Préparation groupée indisponible' : 'Tout est déjà prêt',
+          rienDeLu ? null : n + (n > 1 ? ' logements prêts' : ' logement prêt')) +
+        '<div style="padding:22px 24px;font-size:14px;color:' + V.t2 + ';line-height:1.6;">' +
+        (rienDeLu
+          ? 'Vos logements n\'ont pas pu être relevés ici — ce n\'est pas une erreur de votre part. ' +
+            'Connectez vos plateformes depuis la fiche de chaque logement : le résultat est le même, ' +
+            'cela demande simplement un passage par logement.'
+          : 'Chaque logement est prêt. Il ne reste qu\'à autoriser les plateformes, ' +
+            'logement par logement ou immeuble par immeuble.') +
+        '</div>' +
         pied('', btnFantome('Fermer', "document.getElementById('channexModal')?.remove()")));
       return;
     }
@@ -533,7 +547,7 @@
 
     modal.innerHTML = carte(620,
       entete('En un passage', 'Préparer mes logements',
-        aPreparer.length + ' logements sur ' + etat.total + ' ne sont pas encore dans Channex') +
+        aPreparer.length + (aPreparer.length > 1 ? ' logements' : ' logement') + ' à préparer sur ' + etat.total) +
       '<div style="padding:14px 24px;background:' + V.creme + ';border-bottom:1px solid ' + V.ligne2 +
       ';font-size:13px;color:' + V.t2 + ';line-height:1.5;">Les logements qui partagent une adresse sont regroupés ' +
       'dans un seul établissement, automatiquement. Vous n\'aurez ensuite qu\'une autorisation à donner par établissement, ' +
