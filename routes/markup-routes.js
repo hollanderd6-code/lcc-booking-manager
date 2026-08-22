@@ -28,13 +28,13 @@
 
 const CODES = { ABB: 'Airbnb', BDC: 'Booking.com', EXP: 'Expedia', VRB: 'Abritel / VRBO' };
 
-/* Le plan majoré et le remappage du canal sont facultatifs : si ces modules
-   ne sont pas encore installés, la majoration s'enregistre quand même et
-   s'appliquera au prochain envoi de tarifs. */
+/* Le plan majoré et la vérification de cohérence sont facultatifs : si ces
+   modules ne sont pas encore installés, la majoration s'enregistre quand même
+   et s'appliquera au prochain envoi de tarifs. */
 let assurerPlansMajores = null;
-let remapperPlansMajores = null;
+let verifierCoherence = null;
 try { assurerPlansMajores = require('../channex').assurerPlansMajores; } catch (e) {}
-try { remapperPlansMajores = require('../channex-mapping').remapperPlansMajores; } catch (e) {}
+try { verifierCoherence = require('../channex-coherence').verifierCoherence; } catch (e) {}
 
 const MIGRATION = `
   ALTER TABLE properties
@@ -131,35 +131,46 @@ module.exports = function monterRoutesMajoration(app, pool, deps) {
       /* ── La chaîne complète, tout de suite ───────────────────────────
          Sans ça, l'utilisateur devrait modifier un prix pour créer le plan,
          puis aller remapper le canal à la main. Deux étapes indevinables.
-         On crée le plan et on remappe ici, à l'enregistrement.
+         On crée le plan et on vérifie la cohérence ici, à l'enregistrement.
 
          Un échec ne remet jamais en cause la majoration, qui est déjà en
          base : elle s'appliquera au prochain envoi de tarifs, remappage ou
          non. On renvoie l'état réel pour que l'interface le dise. */
       let plan_cree = false;
-      let remappage = null;
-      if (pct > 0 && assurerPlansMajores) {
+      let coherence = null;
+      if (assurerPlansMajores) {
         try {
-          const actifs = await assurerPlansMajores(pool, req.params.id);
-          plan_cree = actifs.some((a) => a.code === code);
-          if (plan_cree && remapperPlansMajores) {
-            remappage = await remapperPlansMajores(pool, { property_id: req.params.id, user_id: uid });
+          if (pct > 0) {
+            const actifs = await assurerPlansMajores(pool, req.params.id);
+            plan_cree = actifs.some((a) => a.code === code);
+          }
+          // Appelée dans les deux sens : une majoration retirée doit ramener
+          // le canal sur le tarif standard, sinon il resterait majoré.
+          if (verifierCoherence) {
+            coherence = await verifierCoherence(pool, {
+              property_id: req.params.id, user_id: uid, reparer: true
+            });
           }
         } catch (e) {
-          console.warn('⚠️ [MARKUPS] Plan ou remappage indisponible (non bloquant) :',
+          console.warn('⚠️ [MARKUPS] Plan ou cohérence indisponible (non bloquant) :',
             e.response?.data || e.message);
         }
       }
 
-      const remappe = !!(remappage && remappage.faits &&
-        remappage.faits.some((f) => f.code === code));
+      const remappe = !!(coherence && (
+        (coherence.reparations || []).some((r) => r.code === code) ||
+        (coherence.conformes || []).some((c) => c.code === code)
+      ));
 
       res.json({
         markups: rows[0].markups || {},
         applique_au_prochain_push: true,
         plan_cree,
         remappe,
-        remappage
+        // Ce que l'utilisateur doit faire lui-même : un mapping absent ne
+        // s'invente pas.
+        action_utilisateur: (coherence && coherence.action_utilisateur) || [],
+        coherence
       });
     } catch (e) {
       console.error('❌ [MARKUPS] PATCH:', e.message);
