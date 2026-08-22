@@ -64,7 +64,6 @@
     }
     if (id === pidCharge) return;
     pidCharge = id;
-
     vider();
     try {
       var r = await fetch(API_URL + '/api/properties/' + id + '/markups',
@@ -140,27 +139,57 @@
     }
   }
 
-  /* La sauvegarde du formulaire et l'envoi des majorations partent ensemble :
-     on écoute la soumission sans la bloquer, saveProperty() suit son cours. */
+  /* La sauvegarde part avec celle du formulaire. On n'écoute pas l'événement
+     submit : selon la façon dont le bouton Enregistrer est câblé, il peut ne
+     jamais être émis. On enveloppe saveProperty(), qui est appelée dans tous
+     les cas — et on lit l'identifiant avant elle, car closeEditModal() le vide. */
   function brancher() {
+    if (typeof window.saveProperty === 'function' && !window.saveProperty.__bhMaj) {
+      var origine = window.saveProperty;
+      var enveloppe = function () {
+        try { enregistrer(); } catch (e) {}
+        return origine.apply(this, arguments);
+      };
+      enveloppe.__bhMaj = true;
+      window.saveProperty = enveloppe;
+    }
+
+    // Ceinture et bretelles : si le formulaire émet bien un submit et que
+    // saveProperty n'a pas pu être enveloppée, on passe par là.
     var form = document.getElementById('propertyForm');
     if (form && !form.dataset.bhMaj) {
       form.dataset.bhMaj = '1';
-      form.addEventListener('submit', function () { enregistrer(); }, true);
+      form.addEventListener('submit', function () {
+        if (!(window.saveProperty && window.saveProperty.__bhMaj)) enregistrer();
+      }, true);
     }
 
     var modal = document.getElementById('editPropertyModal');
     if (modal && !modal.dataset.bhMaj) {
       modal.dataset.bhMaj = '1';
-      // Le formulaire est rempli après l'ouverture : on attend le changement
-      // de classe, puis on laisse settings.js poser #propertyId.
+      // Le formulaire est rempli à l'ouverture : on attend le changement de
+      // classe, puis on relit quelques fois au cas où #propertyId arrive tard.
       new MutationObserver(function () {
-        if (modal.classList.contains('active')) setTimeout(charger, 120);
-        else pidCharge = null;
+        if (modal.classList.contains('active')) {
+          [80, 250, 600].forEach(function (d) { setTimeout(charger, d); });
+        } else {
+          pidCharge = null;
+        }
       }).observe(modal, { attributes: true, attributeFilter: ['class'] });
     }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', brancher);
-  else brancher();
+  /* saveProperty peut être définie après nous : on retente le temps qu'il faut. */
+  function attendre(n) {
+    brancher();
+    if (!(window.saveProperty && window.saveProperty.__bhMaj) && n > 0) {
+      setTimeout(function () { attendre(n - 1); }, 300);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { attendre(20); });
+  } else {
+    attendre(20);
+  }
 })();
