@@ -175,8 +175,48 @@ module.exports = function monterRoutesAirbnb(app, pool, deps) {
 
       const entrees = Array.isArray(canal.attrs.rate_plans) ? canal.attrs.rate_plans.slice() : [];
       const reassigner = req.body.reassigner === true;
+      const supprimer = req.body.supprimer === true;
 
       const existante = entrees.find((e) => e.settings && String(e.settings.listing_id) === listing_id);
+
+      /* Suppression de l'entrée ───────────────────────────────────
+         Quand l'établissement d'origine a été supprimé, l'entrée reste dans
+         le canal avec un rate_plan_id qui ne pointe plus vers rien. Elle
+         retient l'annonce et bloque tout remappage. La modifier ne sert à
+         rien : il faut la retirer, puis la recréer proprement. */
+      if (supprimer) {
+        if (!existante) return res.json({ supprime: false, raison: 'entree_absente' });
+
+        const restantes = entrees.filter((e) => e !== existante);
+        await channexAPI.put(`/channels/${canal.id}`, { channel: { rate_plans: restantes } });
+
+        // Channex annule parfois en silence : on relît pour le savoir.
+        let parti = false;
+        try {
+          const relu = await channexAPI.get(`/channels/${canal.id}`);
+          const apres = relu.data?.data?.attributes?.rate_plans || [];
+          parti = !apres.some((e) => e.settings && String(e.settings.listing_id) === listing_id);
+        } catch (e) { parti = true; }
+
+        if (!parti) {
+          return res.status(409).json({
+            supprime: false,
+            error: 'Channex a refusé la suppression de cette entrée. L\'annonce est probablement ' +
+                   'retenue côté Airbnb par un autre gestionnaire de canaux : déconnectez-la dans ' +
+                   'votre espace hôte Airbnb, section des logiciels connectés.'
+          });
+        }
+
+        await logChannex(pool, {
+          user_id: uid, property_id: p.id, channex_property_id: p.channex_property_id,
+          event_type: 'unmap_airbnb_listing',
+          direction: 'outbound',
+          payload: { listing_id, ancien_plan: existante.rate_plan_id }
+        });
+        console.log(`✅ [AIRBNB] Entrée morte de l'annonce ${listing_id} retirée du canal`);
+        return res.json({ supprime: true, listing_id, ancien_plan: existante.rate_plan_id,
+          suite: 'Relancez la même commande sans supprimer pour la mapper sur ce logement.' });
+      }
 
       /* Annonce déjà prise. Deux situations très différentes :
          — elle pointe vers un autre de VOS logements : c'est une erreur de
