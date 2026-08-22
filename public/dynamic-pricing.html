@@ -430,6 +430,22 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .summary-stat .val.green { color: var(--pg); }
 .summary-stat .val.orange { color: var(--warning); }
 .summary-stat .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+/* Infobulle de methode : un chiffre mis en avant doit pouvoir dire d'ou il vient. */
+.gain-methode { position: relative; display: inline-block; margin-left: 3px; cursor: help; outline: none; }
+.gain-methode i { font-size: 10px; opacity: .55; }
+.gain-methode-box {
+  position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%);
+  width: 230px; background: #20221F; color: #fff; font-size: 11.5px; line-height: 1.5;
+  text-align: left; padding: 10px 12px; border-radius: 9px; z-index: 30;
+  opacity: 0; visibility: hidden; transition: opacity .15s;
+  box-shadow: 0 8px 24px rgba(32,34,31,.28); font-weight: 400;
+}
+.gain-methode:hover .gain-methode-box,
+.gain-methode:focus .gain-methode-box { opacity: 1; visibility: visible; }
+@media (max-width: 640px) {
+  /* Sur petit ecran, l'infobulle centree deborderait : on l'ancre a gauche. */
+  .gain-methode-box { left: 0; transform: none; width: min(230px, 70vw); }
+}
 
 /* Property pricing card */
 .prop-pricing-card {
@@ -909,7 +925,16 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
       <div class="summary-row">
         <div class="summary-stat">
           <div class="val green" id="stat-gain">—</div>
-          <div class="lbl">Revenu additionnel estimé</div>
+          <div class="lbl">
+            Hausse de prix appliquée
+            <span class="gain-methode" tabindex="0"
+                  aria-label="Somme des hausses de prix à la nuit appliquées cette semaine. Ce n'est pas un revenu encaissé : il dépend des nuits réellement réservées.">
+              <i class="fas fa-circle-question"></i>
+              <span class="gain-methode-box">Somme des hausses de prix à la nuit appliquées cette semaine,
+                tous logements confondus.<br><br>Ce n'est pas un revenu encaissé : il dépend des nuits
+                réellement réservées.</span>
+            </span>
+          </div>
         </div>
         <div class="summary-stat">
           <div class="val" id="stat-count">—</div>

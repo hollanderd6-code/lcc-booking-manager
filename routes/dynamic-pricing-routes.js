@@ -222,7 +222,7 @@ function buildWeeklyEmailHtml(firstName, rows, weekLabel) {
       ${totalDelta > 0 ? `
       <div style="background:#F0FDF4;border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:14px 16px;margin-bottom:24px;">
         <span style="font-size:14px;font-weight:700;color:#065F46;">
-          💰 Revenu additionnel estimé cette semaine : <span style="color:#10b981;">+${Math.round(totalDelta)}€</span> vs tarif fixe
+          💰 Hausse de prix appliquée cette semaine : <span style="color:#10b981;">+${Math.round(totalDelta)}€</span> par nuit, tous logements confondus
         </span>
       </div>` : ''}
 
