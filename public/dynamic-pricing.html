@@ -431,6 +431,25 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .summary-stat .val.orange { color: var(--warning); }
 .summary-stat .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
+/* Barre d'action groupee, en tete de la liste des logements. */
+.tout-bar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: #F7F6F1; border: 1px solid var(--border); border-radius: 12px;
+  padding: 13px 16px; margin-bottom: 14px; font-size: 13px;
+}
+.tout-txt { flex: 1; min-width: 190px; line-height: 1.5; color: var(--muted); }
+.tout-txt strong { color: var(--ink); font-weight: 700; }
+.tout-note { display: block; font-size: 12px; margin-top: 3px; }
+.tout-btn {
+  border: 1px solid var(--border); background: #fff; color: var(--ink);
+  font-family: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 9px 15px; border-radius: 9px; cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.tout-btn.primaire { background: var(--pg); border-color: var(--pg); color: #fff; }
+.tout-btn:disabled { opacity: .55; cursor: default; }
+.tout-btn i { font-size: 11px; }
+
 /* Bandeau de pause generale. Discret quand tout tourne, franc quand c'est
    arrete : personne ne doit chercher pourquoi ses prix ne bougent plus. */
 .pause-bar {
@@ -1772,6 +1791,10 @@ async function loadConfig() {
         priceMax: cfg?.priceMax ?? 200,
         strategy: cfg?.strategy ?? 50,
         mode: cfg?.mode ?? 'manual',
+        /* 40–200 sont les valeurs par defaut du formulaire, pas un choix de
+           l'utilisateur. Sans cette distinction, une activation en masse
+           publierait des prix arbitraires sur de vraies annonces. */
+        fourchetteEnregistree: !!cfg,
       };
     });
 
@@ -1783,7 +1806,8 @@ async function loadConfig() {
           Aucun logement trouvé dans votre compte.
         </div>`;
     } else {
-      $('config-cards').innerHTML = merged.map((c, i) => renderConfigCard(c, i)).join('');
+      $('config-cards').innerHTML = barreToutActiver(merged)
+        + merged.map((c, i) => renderConfigCard(c, i)).join('');
     }
 
     $('config-loading').style.display = 'none';
@@ -1795,6 +1819,104 @@ async function loadConfig() {
       <i class="fas fa-exclamation-triangle" style="color:var(--warning);font-size:24px;display:block;margin-bottom:12px;"></i>
       Impossible de charger la configuration. <a href="javascript:loadConfig()" style="color:var(--pg);">Réessayer</a>`;
   }
+}
+
+/* En-tete de la liste : l'etat du parc, et le geste inverse de cet etat. */
+function barreToutActiver(configs) {
+  const actifs = configs.filter(c => c.isActive).length;
+  const total  = configs.length;
+  if (total < 2) return '';   // un seul logement : son interrupteur suffit
+
+  const activables = configs.filter(c => !c.isActive && c.fourchetteEnregistree).length;
+  const aRegler    = configs.filter(c => !c.isActive && !c.fourchetteEnregistree).length;
+  const toutActif  = actifs === total;
+
+  let bouton, note = '';
+  if (toutActif) {
+    bouton = `<button class="tout-btn" onclick="basculerTousLesLogements(false, this)">
+                <i class="fas fa-power-off"></i> Tout désactiver</button>`;
+  } else if (activables) {
+    bouton = `<button class="tout-btn primaire" onclick="basculerTousLesLogements(true, this)">
+                <i class="fas fa-bolt"></i> Activer les ${activables} logement${activables > 1 ? 's' : ''} déjà réglé${activables > 1 ? 's' : ''}</button>`;
+    if (aRegler) note = `${aRegler} logement${aRegler > 1 ? 's' : ''} sans fourchette de prix enregistrée ${aRegler > 1 ? 'restent' : 'reste'} à régler ci-dessous.`;
+  } else {
+    note = aRegler
+      ? `Renseignez une fourchette de prix sur un logement pour pouvoir activer le reste en une fois.`
+      : '';
+    bouton = actifs ? `<button class="tout-btn" onclick="basculerTousLesLogements(false, this)">
+                <i class="fas fa-power-off"></i> Tout désactiver</button>` : '';
+  }
+
+  return `
+    <div class="tout-bar">
+      <div class="tout-txt">
+        <strong>${actifs} logement${actifs > 1 ? 's' : ''} sur ${total}</strong> avec le pricing actif.
+        ${note ? '<span class="tout-note">' + note + '</span>' : ''}
+      </div>
+      ${bouton}
+    </div>`;
+}
+
+async function basculerTousLesLogements(activer, btn) {
+  const cibles = activer
+    ? state.configs.filter(c => !c.isActive && c.fourchetteEnregistree)
+    : state.configs.filter(c => c.isActive);
+
+  if (!cibles.length) return;
+
+  const question = activer
+    ? `Activer le pricing dynamique sur ${cibles.length} logement${cibles.length > 1 ? 's' : ''} ?\n\n`
+      + 'Chacun gardera sa propre fourchette de prix. Les suggestions apparaîtront '
+      + 'au dashboard : rien n\'est publié sans votre accord en mode manuel.'
+    : `Désactiver le pricing sur ${cibles.length} logement${cibles.length > 1 ? 's' : ''} ?\n\n`
+      + 'Les prix déjà publiés chez les plateformes restent en place.';
+  if (!confirm(question)) return;
+
+  const libelle = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = activer ? 'Activation…' : 'Désactivation…';
+
+  /* Un appel par logement — la route /config travaille logement par logement.
+     En serie plutot qu'en parallele : vingt-quatre ecritures simultanees sur
+     la meme table, pour un geste qui n'est pas urgent, ne se justifie pas. */
+  let faits = 0;
+  const echecs = [];
+  for (const c of cibles) {
+    try {
+      const r = await fetch(`${API_BASE}${DP}/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId: c.propertyId,
+          priceMin: c.priceMin,
+          priceMax: c.priceMax,
+          mode: c.mode || 'manual',
+          strategy: c.strategy ?? 50,
+          isActive: activer
+        })
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      c.isActive = activer;
+      faits++;
+    } catch (e) {
+      echecs.push(c.propertyName);
+    }
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = libelle;
+
+  if (echecs.length) {
+    showToast(`${faits} logement${faits > 1 ? 's' : ''} traité${faits > 1 ? 's' : ''}, ${echecs.length} en échec : ${echecs.slice(0, 3).join(', ')}`, 'error');
+  } else {
+    showToast(activer
+      ? `Pricing activé sur ${faits} logement${faits > 1 ? 's' : ''}`
+      : `Pricing désactivé sur ${faits} logement${faits > 1 ? 's' : ''}`, 'success');
+  }
+
+  await loadConfig();
+  if (activer && faits) loadDashboard();
+  if (typeof loadPauseEtat === 'function') loadPauseEtat();
 }
 
 function renderConfigCard(cfg, idx) {
