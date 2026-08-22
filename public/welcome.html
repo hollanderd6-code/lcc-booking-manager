@@ -1469,7 +1469,10 @@ async function compressImage(file) {
   }
 }
 
-// Compresse une liste de fichiers en parallèle
+/* Compresse une liste de fichiers en parallele. Appelee deux fois dans le
+   parcours : a la selection (bhPreparerFichiers) puis a l'envoi. Le second
+   passage ne recalcule rien — les fichiers deja prepares font moins de 2 Mo
+   ou tiennent dans 1920 px, deux conditions de sortie immediate. */
 async function compressAll(files) {
   return Promise.all(Array.from(files || []).map(compressImage));
 }
@@ -1483,17 +1486,65 @@ function validateFilesSize(files) {
   return false;
 }
 
+/* Comprime la selection, puis ne garde que ce qui tient dans la limite.
+   Mesurer le fichier brut alors qu'on envoie le fichier comprime refusait des
+   photos parfaitement acceptables : une photo de telephone recent depasse
+   souvent 20 Mo a la prise, et moins de 1 Mo apres preparation. */
+async function bhPreparerFichiers(input) {
+  const bruts = Array.from(input.files || []);
+  if (!bruts.length) return { gardes: [], refuses: [], avant: 0, apres: 0 };
+
+  const prepares = await compressAll(bruts);
+  const gardes = [], refuses = [];
+  let avant = 0, apres = 0;
+
+  prepares.forEach((f, i) => {
+    avant += bruts[i].size;
+    if (f.size > MAX_UPLOAD_BYTES) { refuses.push(f); return; }
+    apres += f.size;
+    gardes.push(f);
+  });
+
+  /* On remplace le contenu du champ par les fichiers prepares : ils partiront
+     tels quels, sans seconde compression a l'envoi. Les fichiers ecartes ne
+     sont plus dans le champ — le reste de la selection est preserve. */
+  try {
+    const dt = new DataTransfer();
+    gardes.forEach(f => dt.items.add(f));
+    input.files = dt.files;
+  } catch (e) {
+    /* Navigateur qui refuse l'ecriture de input.files : on ne perd rien,
+       la compression aura simplement lieu a l'envoi comme avant. */
+  }
+
+  return { gardes, refuses, avant, apres };
+}
+
 function setupImageUpload(inputId, previewId, multiple = false) {
   const input = document.getElementById(inputId);
   const preview = document.getElementById(previewId);
   if (!input || !preview) return;
 
-  input.addEventListener('change', () => {
-    // Validation de taille avant aperçu
-    if (!validateFilesSize(input.files)) {
-      input.value = ''; // vider la sélection invalide
-      return;
+  input.addEventListener('change', async () => {
+    if (!input.files || !input.files.length) { preview.innerHTML = ''; return; }
+
+    const boite = input.closest('.wiz-group')?.querySelector('.wiz-upload');
+    const texteBoite = boite ? boite.innerHTML : null;
+    if (boite) boite.innerHTML = '<i class="fas fa-spinner fa-spin"></i><p>Préparation des photos…</p>';
+
+    const { gardes, refuses, avant, apres } = await bhPreparerFichiers(input);
+    if (boite && texteBoite) boite.innerHTML = texteBoite;
+
+    if (refuses.length) {
+      const noms = refuses.map(f => `« ${f.name} » (${(f.size / 1024 / 1024).toFixed(1)} Mo)`).join(', ');
+      const p = refuses.length > 1 ? 's' : '';
+      showDraftToast(`${refuses.length} photo${p} écartée${p} — trop lourde${p} même après préparation : ${noms}. Limite ${MAX_UPLOAD_MB} Mo.`, true);
     }
+    if (gardes.length && avant > apres * 1.15) {
+      const mo = (o) => (o / 1024 / 1024).toFixed(1).replace('.', ',');
+      showDraftToast(`${gardes.length} photo${gardes.length > 1 ? 's' : ''} préparée${gardes.length > 1 ? 's' : ''} · ${mo(avant)} Mo → ${mo(apres)} Mo`);
+    }
+
     preview.innerHTML = '';
     const files = Array.from(input.files || []);
     if (!files.length) return;
