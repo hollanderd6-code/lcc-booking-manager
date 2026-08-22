@@ -174,6 +174,37 @@ async function verifierCoherence(pool, { property_id, user_id, reparer = false }
 
     try {
       await channexAPI.put(`/channels/${canal.id}`, { channel: { rate_plans: nouvelles } });
+
+      /* Channex accepte le PUT puis l'annule quand le mapping traverserait
+         deux établissements : l'annonce est déclarée sous l'un, le plan
+         appartient à l'autre. La réponse est 200 et rien n'a changé. On
+         relît donc pour savoir si la correction a tenu — sans ça, on
+         annoncerait une réparation imaginaire et on retenterait sans fin. */
+      let tenu = false;
+      try {
+        const relu = await channexAPI.get(`/channels/${canal.id}`);
+        const apres = relu.data?.data?.attributes?.rate_plans || [];
+        tenu = apres.some((e) => e.rate_plan_id === attendu);
+      } catch (e) { tenu = true; }   // illisible : on ne crie pas au loup
+
+      if (!tenu) {
+        console.warn(`⚠️ [COHERENCE] ${nom} · ${code} : Channex a annulé la correction.`);
+        anomalies.push({
+          code, type: 'refus_silencieux', plan_actuel: entree.rate_plan_id, plan_attendu: attendu,
+          message: `Sur ${code}, l'annonce de ${nom} est rattachée à un ancien établissement et ne peut ` +
+            `pas être corrigée automatiquement. Dans la fenêtre du partenaire : supprimez sa ligne, ` +
+            `enregistrez, puis recréez-la — elle se rattachera au bon établissement.`
+        });
+        await logChannex(pool, {
+          user_id, property_id, channex_property_id: p.channex_property_id,
+          event_type: 'coherence_repair',
+          direction: 'outbound',
+          status: 'error',
+          error_message: `refus silencieux ${code} : ${entree.rate_plan_id} → ${attendu}`
+        });
+        continue;
+      }
+
       reparations.push({ code, type, avant: entree.rate_plan_id, apres: attendu });
       console.log(`✅ [COHERENCE] ${nom} · ${code} : ${type} corrigé → ${attendu}`);
       await logChannex(pool, {
@@ -199,7 +230,8 @@ async function verifierCoherence(pool, { property_id, user_id, reparer = false }
     reparations,
     // Ce qui ne peut PAS être réparé automatiquement : à dire à l'utilisateur.
     action_utilisateur: anomalies
-      .filter((a) => a.type === 'canal_sans_mapping' || a.type === 'entree_introuvable' || a.echec_reparation)
+      .filter((a) => a.type === 'canal_sans_mapping' || a.type === 'entree_introuvable'
+        || a.type === 'refus_silencieux' || a.echec_reparation)
       .map((a) => a.message)
   };
 }
