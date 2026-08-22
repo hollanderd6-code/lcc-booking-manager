@@ -254,10 +254,10 @@
       ? '<div style="background:' + V.orFond + ';border:1px solid ' + V.orFilet + ';border-radius:12px;padding:13px 15px;' +
         'display:flex;align-items:flex-start;gap:11px;">' +
         '<i class="fas fa-circle-exclamation" style="color:' + V.or + ';font-size:14px;margin-top:2px;flex:none;"></i>' +
-        '<span style="font-size:13px;color:' + V.or + ';line-height:1.5;flex:1;">Ce logement n\'a pas d\'adresse. ' +
-        'Il sera traité comme un logement indépendant. S\'il est en réalité dans un immeuble déjà connecté, ' +
-        'renseignez l\'adresse d\'abord : sans elle, Booking.com refusera l\'identifiant de l\'établissement, ' +
-        'déjà utilisé par votre premier logement.</span>' +
+        '<span style="font-size:13px;color:' + V.or + ';line-height:1.5;flex:1;">' +
+        '<strong style="font-weight:600;">Adresse requise avant connexion.</strong> ' +
+        'C\'est elle qui permet de reconnaître les logements d\'un même immeuble, ' +
+        'qui doivent partager un seul établissement chez la plateforme.</span>' +
         '<button type="button" onclick="window._bhAdresse()" style="border:1px solid ' + V.orFilet +
         ';background:#fff;color:' + V.or + ';font-family:' + V.sans + ';font-size:12.5px;font-weight:500;padding:7px 12px;' +
         'border-radius:8px;cursor:pointer;white-space:nowrap;flex:none;">Ajouter l\'adresse</button></div>'
@@ -430,6 +430,24 @@
       if (typeof loadProperties === 'function') loadProperties().catch(function () {});
     };
 
+    window._bhAdresseRequise = function () {
+      modal.innerHTML = carte(500,
+        entete(null, 'Renseignez l\'adresse d\'abord', esc(pname)) +
+        '<div style="padding:22px 24px;display:flex;flex-direction:column;gap:14px;">' +
+        '<div style="font-size:14px;line-height:1.6;color:' + V.encre + ';">' +
+        'Les logements d\'un meme immeuble doivent partager un seul etablissement chez ' +
+        'la plateforme, et c\'est l\'adresse qui permet de les reconnaitre.</div>' +
+        '<div style="font-size:13px;line-height:1.6;color:' + V.t2 + ';background:' + V.creme +
+        ';border-radius:12px;padding:14px 16px;">Sans elle, ce logement serait declare separement. ' +
+        'Booking.com refuserait alors son identifiant, deja utilise par le premier logement de ' +
+        'l\'immeuble, et il faudrait tout reprendre : detacher, rattacher, puis remapper chaque plateforme.</div>' +
+        '<div style="font-size:12.5px;color:' + V.t4 + ';">Si ce logement est bien independant, ' +
+        'renseignez tout de meme son adresse : elle sert aussi aux voyageurs.</div>' +
+        '</div>' +
+        pied(btnFantome('Plus tard', "document.getElementById('channexModal')?.remove()"),
+          btnPlein('Renseigner l\'adresse', 'window._bhAdresse()')));
+    };
+
     window._bhAdresse = function () {
       modal.remove();
       if (typeof openEditPropertyModal === 'function') openEditPropertyModal(pid);
@@ -474,6 +492,11 @@
     };
 
     window._bhOta = function (code) {
+      /* Sans adresse, le regroupement d'immeuble ne peut pas etre deduit et
+         un etablissement separe serait cree. Le reparer ensuite coute un
+         detachement, un rattachement et un remappage de chaque plateforme.
+         On demande l'adresse maintenant. */
+      if (sansAdresse) return window._bhAdresseRequise();
       var p = PLATEFORMES.find(function (x) { return x.code === code; });
       if (p.prep && !prepFaite()) return ecranPrep(modal, pid, pname, code);
       lancer(modal, pid, pname, code);

@@ -23,7 +23,7 @@
 'use strict';
 
 const { verifierCoherence } = require('../channex-coherence');
-const { proprietaireDuLogement } = require('../acces-logement');
+const { proprietaireDuLogement, idsAccessibles } = require('../acces-logement');
 
 module.exports = function monterRoutesCoherence(app, pool, deps) {
   const auth = typeof deps === 'function'
@@ -68,18 +68,24 @@ module.exports = function monterRoutesCoherence(app, pool, deps) {
 
   app.post('/api/channex/coherence/repair-all', auth, async (req, res) => {
     try {
-      const uid = await resoudreUid(req);
+      /* Le parc d'une agence comprend les logements de ses comptes délégués :
+         se limiter à son propre user_id renvoyait « 0 logement ». */
+      const ids = await idsAccessibles(pool, req, getRealUserId);
+      if (!ids.length) return res.json({ logements: 0, reparations: 0, action_utilisateur: [], resultats: [] });
+
       const { rows } = await pool.query(
-        `SELECT id FROM properties
-          WHERE user_id = $1 AND channex_property_id IS NOT NULL
+        `SELECT id, user_id FROM properties
+          WHERE user_id = ANY($1) AND channex_property_id IS NOT NULL
           ORDER BY name ASC`,
-        [uid]
+        [ids]
       );
 
       const resultats = [];
       for (const r of rows) {
         try {
-          resultats.push(await verifierCoherence(pool, { property_id: r.id, user_id: uid, reparer: true }));
+          resultats.push(await verifierCoherence(pool, {
+            property_id: r.id, user_id: r.user_id, reparer: true
+          }));
         } catch (e) {
           resultats.push({ verifie: false, property_id: r.id, raison: e.message });
         }
