@@ -28,6 +28,14 @@
 
 const CODES = { ABB: 'Airbnb', BDC: 'Booking.com', EXP: 'Expedia', VRB: 'Abritel / VRBO' };
 
+/* Le plan majoré et le remappage du canal sont facultatifs : si ces modules
+   ne sont pas encore installés, la majoration s'enregistre quand même et
+   s'appliquera au prochain envoi de tarifs. */
+let assurerPlansMajores = null;
+let remapperPlansMajores = null;
+try { assurerPlansMajores = require('../channex').assurerPlansMajores; } catch (e) {}
+try { remapperPlansMajores = require('../channex-mapping').remapperPlansMajores; } catch (e) {}
+
 const MIGRATION = `
   ALTER TABLE properties
     ADD COLUMN IF NOT EXISTS platform_markups          JSONB DEFAULT '{}'::jsonb,
@@ -120,12 +128,38 @@ module.exports = function monterRoutesMajoration(app, pool, deps) {
 
       console.log(`💰 [MARKUPS] ${req.params.id} · ${CODES[code]} → ${pct > 0 ? '+' + pct + '%' : 'aucune'}`);
 
-      /* Le nouveau prix ne partira chez le partenaire qu'à la prochaine
-         synchronisation des tarifs — on le dit au client pour qu'il ne
-         croie pas à un échec en ne voyant rien changer tout de suite. */
+      /* ── La chaîne complète, tout de suite ───────────────────────────
+         Sans ça, l'utilisateur devrait modifier un prix pour créer le plan,
+         puis aller remapper le canal à la main. Deux étapes indevinables.
+         On crée le plan et on remappe ici, à l'enregistrement.
+
+         Un échec ne remet jamais en cause la majoration, qui est déjà en
+         base : elle s'appliquera au prochain envoi de tarifs, remappage ou
+         non. On renvoie l'état réel pour que l'interface le dise. */
+      let plan_cree = false;
+      let remappage = null;
+      if (pct > 0 && assurerPlansMajores) {
+        try {
+          const actifs = await assurerPlansMajores(pool, req.params.id);
+          plan_cree = actifs.some((a) => a.code === code);
+          if (plan_cree && remapperPlansMajores) {
+            remappage = await remapperPlansMajores(pool, { property_id: req.params.id, user_id: uid });
+          }
+        } catch (e) {
+          console.warn('⚠️ [MARKUPS] Plan ou remappage indisponible (non bloquant) :',
+            e.response?.data || e.message);
+        }
+      }
+
+      const remappe = !!(remappage && remappage.faits &&
+        remappage.faits.some((f) => f.code === code));
+
       res.json({
         markups: rows[0].markups || {},
-        applique_au_prochain_push: true
+        applique_au_prochain_push: true,
+        plan_cree,
+        remappe,
+        remappage
       });
     } catch (e) {
       console.error('❌ [MARKUPS] PATCH:', e.message);

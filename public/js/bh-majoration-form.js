@@ -107,6 +107,7 @@
     if (!aEnvoyer.length) return;
 
     var faits = [];
+    var aRemapper = [];   // majoration active mais canal non remappé
     for (var i = 0; i < aEnvoyer.length; i++) {
       var m = aEnvoyer[i];
       try {
@@ -119,6 +120,7 @@
         if (!r.ok) throw new Error(d.error || 'Erreur');
         initial = d.markups || {};
         faits.push(m.pct > 0 ? NOMS[m.code] + ' +' + m.pct + '%' : NOMS[m.code] + ' sans majoration');
+        if (m.pct > 0 && !d.remappe) aRemapper.push(NOMS[m.code]);
       } catch (e) {
         toast(NOMS[m.code] + ' : ' + e.message, 'error');
       }
@@ -127,6 +129,14 @@
     if (faits.length) {
       toast('Majoration enregistrée — ' + faits.join(', ') +
         '. Appliquée à la prochaine synchronisation des tarifs.', 'success');
+    }
+
+    /* Le remappage automatique a échoué : on le dit, plutôt que de laisser
+       croire que le prix majoré partira alors que le canal lit encore le
+       tarif standard. */
+    if (aRemapper.length) {
+      toast(aRemapper.join(', ') + ' : le canal lit encore le tarif standard. ' +
+        'Mappez-le sur le plan majoré dans la fenêtre du partenaire.', 'warning');
     }
   }
 
