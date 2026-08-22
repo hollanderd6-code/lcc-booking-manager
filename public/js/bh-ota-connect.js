@@ -56,8 +56,41 @@
 
   var CLE_PREP = 'bh_bdc_extranet_ok';
 
-  function prepFaite() { try { return localStorage.getItem(CLE_PREP) === '1'; } catch (e) { return false; } }
-  function marquerPrep(v) { try { v ? localStorage.setItem(CLE_PREP, '1') : localStorage.removeItem(CLE_PREP); } catch (e) {} }
+  /* L'autorisation se donne dans l'extranet d'UN compte Booking. La retenir
+     sous une cle fixe ferait croire a une agence, ou a un second utilisateur
+     du meme navigateur, que l'etape est faite alors qu'elle ne l'est pas
+     pour eux. La cle porte donc l'identifiant du compte. */
+  function compteCourant() {
+    try {
+      var gere = localStorage.getItem('lcc_managed_user');
+      if (gere) return 'u:' + gere;
+      var sous = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+      if (sous && sous.id) return 's:' + sous.id;
+      var u = JSON.parse(localStorage.getItem('lcc_user') || '{}');
+      if (u && (u.id || u.email)) return 'u:' + (u.id || u.email);
+    } catch (e) {}
+    return 'anon';
+  }
+
+  function clePrep() { return CLE_PREP + ':' + compteCourant(); }
+
+  function prepFaite() {
+    try {
+      if (localStorage.getItem(clePrep()) === '1') return true;
+      /* Reprise de l'ancienne cle globale, une seule fois et pour le compte
+         courant seulement : celui qui a deja fait l'etape ne la refait pas. */
+      if (localStorage.getItem(CLE_PREP) === '1') {
+        localStorage.setItem(clePrep(), '1');
+        localStorage.removeItem(CLE_PREP);
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  function marquerPrep(v) {
+    try { v ? localStorage.setItem(clePrep(), '1') : localStorage.removeItem(clePrep()); } catch (e) {}
+  }
   function token() { try { return localStorage.getItem('lcc_token'); } catch (e) { return null; } }
   function toast(m, t) { if (typeof showToast === 'function') showToast(m, t || 'info'); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {

@@ -94,14 +94,29 @@ async function verifierCoherence(pool, { property_id, user_id, reparer = false }
   const markups = p.markups || {};
   const plansMajores = p.plans || {};
 
-  // Tous nos plans, pour distinguer un plan à nous d'un plan orphelin.
-  const { rows: tous } = await pool.query(
-    `SELECT channex_rate_plan_id AS rp FROM properties
-      WHERE user_id = $1 AND channex_rate_plan_id IS NOT NULL`,
-    [user_id]
-  );
-  const nosPlans = new Set(tous.map((r) => r.rp));
-  Object.keys(plansMajores).forEach((c) => nosPlans.add(plansMajores[c]));
+  /* Les plans de CE logement, et eux seuls. Un canal couvre souvent plusieurs
+     établissements — chez une agence, ceux de clients différents. Se fier à
+     « ce plan n'est pas dans ma base » pour déclarer une entrée orpheline
+     reviendrait à traiter les mappings des autres clients comme des vestiges,
+     et à leur envoyer les prix de celui-ci. */
+  const siens = new Set([p.channex_rate_plan_id, ...Object.values(plansMajores)]);
+
+  /* Un plan est réellement mort si Channex ne le connaît plus. C'est la seule
+     preuve qui ne dépend pas de notre base — et donc la seule utilisable
+     quand plusieurs comptes partagent un canal. */
+  const memoirePlans = new Map();
+  async function planExisteEncore(rate_plan_id) {
+    if (!rate_plan_id) return false;
+    if (memoirePlans.has(rate_plan_id)) return memoirePlans.get(rate_plan_id);
+    let existe = true;   // en cas de doute : on ne touche à rien
+    try {
+      await channexAPI.get('/rate_plans/' + rate_plan_id);
+    } catch (e) {
+      if (e.response && e.response.status === 404) existe = false;
+    }
+    memoirePlans.set(rate_plan_id, existe);
+    return existe;
+  }
 
   const planAttendu = (code) => {
     const pct = parseFloat(markups[code]);
@@ -135,19 +150,24 @@ async function verifierCoherence(pool, { property_id, user_id, reparer = false }
     // Déjà conforme ?
     if (entrees.some((e) => e.rate_plan_id === attendu)) { conformes.push({ code, rate_plan_id: attendu }); continue; }
 
-    /* L'entrée de CE logement est celle qui pointe vers l'un de nos plans
-       possibles pour lui : son plan standard, ou l'un de ses plans majorés.
-       Toute autre entrée appartient à un logement voisin du même
-       établissement et doit être renvoyée intacte. */
-    const siens = new Set([p.channex_rate_plan_id, ...Object.values(plansMajores)]);
+    /* L'entrée de CE logement est celle qui pointe vers l'un de ses plans :
+       son plan standard, ou l'un de ses plans majorés. Toute autre entrée
+       appartient à un autre logement du canal — parfois d'un autre client —
+       et doit être renvoyée intacte. */
     let entree = entrees.find((e) => siens.has(e.rate_plan_id));
     let type = 'plan_obsolete';
 
     if (!entree) {
-      // Aucun de nos plans : reste-t-il une entrée orpheline, vestige d'un
-      // ancien établissement ? Une seule candidate, sinon on ne devine pas.
-      const orphelines = entrees.filter((e) => !nosPlans.has(e.rate_plan_id));
-      if (orphelines.length === 1) { entree = orphelines[0]; type = 'plan_orphelin'; }
+      /* Aucun de ses plans. Reste-t-il une entrée dont le plan a réellement
+         disparu de Channex ? C'est la signature d'un ancien établissement
+         supprimé. Une seule candidate, et vérifiée chez Channex — sinon on
+         ne devine pas. */
+      const mortes = [];
+      for (const e of entrees) {
+        if (siens.has(e.rate_plan_id)) continue;
+        if (!(await planExisteEncore(e.rate_plan_id))) mortes.push(e);
+      }
+      if (mortes.length === 1) { entree = mortes[0]; type = 'plan_orphelin'; }
     }
 
     if (!entree) {
