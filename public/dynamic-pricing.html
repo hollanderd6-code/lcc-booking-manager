@@ -430,6 +430,24 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 .summary-stat .val.green { color: var(--pg); }
 .summary-stat .val.orange { color: var(--warning); }
 .summary-stat .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* Bandeau de pause generale. Discret quand tout tourne, franc quand c'est
+   arrete : personne ne doit chercher pourquoi ses prix ne bougent plus. */
+.pause-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  border-radius: 12px; padding: 12px 16px; font-size: 13px;
+}
+.pause-bar.repos { background: #fff; border: 1px solid var(--border); color: var(--muted); }
+.pause-bar.arret { background: #FBF6E9; border: 1px solid #E5C98F; color: #916018; }
+.pause-bar .pause-txt { flex: 1; min-width: 180px; line-height: 1.5; }
+.pause-bar .pause-txt strong { font-weight: 700; }
+.pause-bar button {
+  border: 1px solid var(--border); background: #fff; color: var(--ink);
+  font-family: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 8px 14px; border-radius: 9px; cursor: pointer; white-space: nowrap;
+}
+.pause-bar.arret button { border-color: #E5C98F; color: #916018; }
+.pause-bar button:disabled { opacity: .5; cursor: default; }
 /* Infobulle de methode : un chiffre mis en avant doit pouvoir dire d'ou il vient. */
 .gain-methode { position: relative; display: inline-block; margin-left: 3px; cursor: help; outline: none; }
 .gain-methode i { font-size: 10px; opacity: .55; }
@@ -882,6 +900,10 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
     </h1>
     <p class="pricing-subtitle">Boostinghost analyse le marché local chaque semaine et ajuste vos prix automatiquement — sans aucune intervention.</p>
   </div>
+
+  <!-- ── Pause generale ──
+       Place avant les onglets : visible depuis n'importe lequel d'entre eux. -->
+  <div id="bhPauseBandeau" style="display:none;margin-bottom:16px;"></div>
 
   <!-- ── Tabs ── -->
   <div class="pricing-tabs">
@@ -1337,6 +1359,77 @@ function showToast(msg, type) {
 }
 
 // ── Tabs ─────────────────────────────────────────────────────
+/* ── Pause generale ─────────────────────────────────────────────────
+   Un seul levier : is_active dans pricing_config, sur lequel filtrent le
+   cron, le recalcul declenche, le dashboard et l'email hebdomadaire. */
+async function loadPauseEtat() {
+  const hote = $('bhPauseBandeau');
+  if (!hote) return;
+  try {
+    const r = await fetch(`${API_BASE}${DP}/pause`);
+    if (!r.ok) throw new Error('indisponible');
+    const d = await r.json();
+
+    // Aucun logement configure : rien a mettre en pause, rien a afficher.
+    if (!d.total) { hote.style.display = 'none'; return; }
+
+    hote.style.display = 'block';
+    if (d.en_pause) {
+      const depuis = d.depuis ? new Date(d.depuis).toLocaleDateString('fr-FR',
+        { day: 'numeric', month: 'long' }) : null;
+      hote.innerHTML = `
+        <div class="pause-bar arret">
+          <i class="fas fa-circle-pause" style="font-size:16px;"></i>
+          <div class="pause-txt">
+            <strong>BoostPrice est en pause${depuis ? ' depuis le ' + depuis : ''}.</strong>
+            Aucun prix ne sera plus ajusté sur vos ${d.logements_en_pause} logement${d.logements_en_pause > 1 ? 's' : ''}.
+            Les prix déjà publiés chez les plateformes restent en place.
+          </div>
+          <button onclick="basculerPause(false, this)">Reprendre</button>
+        </div>`;
+    } else {
+      hote.innerHTML = `
+        <div class="pause-bar repos">
+          <i class="fas fa-circle-play" style="font-size:14px;color:var(--pg);"></i>
+          <div class="pause-txt">Ajustement actif sur ${d.actifs} logement${d.actifs > 1 ? 's' : ''}.</div>
+          <button onclick="basculerPause(true, this)">Tout mettre en pause</button>
+        </div>`;
+    }
+  } catch (e) {
+    // Route absente : on n'affiche pas un frein qui ne freine rien.
+    hote.style.display = 'none';
+  }
+}
+
+async function basculerPause(pause, btn) {
+  if (pause && !confirm('Mettre BoostPrice en pause sur tous vos logements ?\n\n'
+    + 'Plus aucun prix ne sera ajusté. Les prix déjà publiés chez les plateformes '
+    + 'restent en place. Vous pourrez reprendre à tout moment : chaque logement '
+    + 'retrouvera exactement son réglage actuel.')) return;
+
+  btn.disabled = true;
+  btn.textContent = pause ? 'Mise en pause…' : 'Reprise…';
+  try {
+    const r = await fetch(`${API_BASE}${DP}/pause`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paused: pause })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Opération impossible');
+
+    showToast(pause
+      ? 'BoostPrice en pause sur ' + d.logements + ' logement' + (d.logements > 1 ? 's' : '')
+      : 'BoostPrice a repris — chaque logement a retrouvé son réglage', 'success');
+
+    await loadPauseEtat();
+    loadDashboard();
+  } catch (e) {
+    showToast(e.message, 'error');
+    await loadPauseEtat();
+  }
+}
+
 /* Les deux panneaux qui composent l'onglet « Reglages ». */
 const PANNEAUX_REGLAGES = ['panel-config', 'panel-settings'];
 
@@ -1349,7 +1442,7 @@ function switchTab(name) {
   $('panel-' + name)?.classList.add('active');
   $('tab-' + name)?.classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  if (name === 'dashboard') loadDashboard();
+  if (name === 'dashboard') { loadDashboard(); loadPauseEtat(); }
   if (name === 'history' && !state.history.length) loadHistory();
   /* « Reglages » reunit deux panneaux : ceux par logement (panel-config) et
      les preferences generales (panel-settings). On les affiche ensemble
@@ -2385,3 +2478,8 @@ async function setCalMode(mode){
 <script src="/js/bh-polish.js?v=1"></script>
 </body>
 </html>
+
+<script>document.addEventListener('DOMContentLoaded', function () {
+  // Premier affichage : le dashboard est actif sans passer par switchTab.
+  if (typeof loadPauseEtat === 'function') setTimeout(loadPauseEtat, 300);
+});</script>
