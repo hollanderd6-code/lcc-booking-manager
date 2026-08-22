@@ -93,11 +93,28 @@ module.exports = function monterRoutesAirbnb(app, pool, deps) {
       const { p, canal } = ctx;
 
       const entrees = Array.isArray(canal.attrs.rate_plans) ? canal.attrs.rate_plans : [];
-      const prises = entrees.map((e) => ({
-        listing_id: e.settings && e.settings.listing_id,
-        rate_plan_id: e.rate_plan_id,
-        est_ce_logement: e.rate_plan_id === p.channex_rate_plan_id
-      }));
+
+      /* Chaque annonce pointe vers un plan tarifaire. On regarde à quel
+         logement ce plan appartient VRAIMENT, chez nous : une annonce dont
+         le plan ne correspond à aucun logement est restée accrochée à un
+         ancien établissement — le cas typique d'un logement détaché puis
+         rattaché ailleurs. C'est celle-là qu'il faut réaffecter. */
+      const prises = [];
+      for (const e of entrees) {
+        const rp = e.rate_plan_id;
+        const { rows: prop } = await pool.query(
+          `SELECT id, name, internal_name FROM properties
+            WHERE channex_rate_plan_id = $1 AND user_id = $2 LIMIT 1`,
+          [rp, ctx.uid]
+        );
+        prises.push({
+          listing_id: e.settings && e.settings.listing_id,
+          rate_plan_id: rp,
+          est_ce_logement: rp === p.channex_rate_plan_id,
+          appartient_a: prop.length ? (prop[0].internal_name || prop[0].name) : null,
+          orphelin: prop.length === 0
+        });
+      }
 
       // Channex ne documente pas de route stable pour l'inventaire : on essaie.
       const tentatives = [
@@ -116,6 +133,7 @@ module.exports = function monterRoutesAirbnb(app, pool, deps) {
         } catch (e) { /* on passe au suivant */ }
       }
 
+      const orphelines = prises.filter((x) => x.orphelin);
       res.json({
         logement: p.internal_name || p.name,
         canal_id: canal.id,
@@ -124,9 +142,15 @@ module.exports = function monterRoutesAirbnb(app, pool, deps) {
         annonces_prises: prises,
         chemin_qui_repond,
         inventaire,
-        aide: chemin_qui_repond
-          ? 'Comparez l\'inventaire aux annonces déjà prises : celle qui reste est probablement la vôtre.'
-          : 'Aucun inventaire disponible via l\'API. Ouvrez l\'annonce sur airbnb.fr : le numéro dans l\'URL /rooms/NUMERO est le listing_id.'
+        aide: prises.some((x) => x.est_ce_logement)
+          ? 'Ce logement est déjà mappé sur son annonce.'
+          : orphelines.length === 1
+            ? 'L\'annonce ' + orphelines[0].listing_id + ' pointe vers un plan tarifaire ' +
+              'qui n\'appartient à aucun de vos logements : elle est restée accrochée à un ancien ' +
+              'établissement. Réaffectez-la avec { listing_id, reassigner: true }.'
+            : chemin_qui_repond
+              ? 'Comparez l\'inventaire aux annonces déjà prises : celle qui reste est probablement la vôtre.'
+              : 'Aucun inventaire disponible via l\'API. Ouvrez l\'annonce sur airbnb.fr : le numéro dans l\'URL /rooms/NUMERO est le listing_id.'
       });
     } catch (e) {
       console.error('❌ [AIRBNB] listings:', e.response?.data || e.message);
@@ -150,16 +174,56 @@ module.exports = function monterRoutesAirbnb(app, pool, deps) {
       }
 
       const entrees = Array.isArray(canal.attrs.rate_plans) ? canal.attrs.rate_plans.slice() : [];
+      const reassigner = req.body.reassigner === true;
 
-      // Refus net plutôt que doublon : une annonce déjà prise par un autre
-      // logement signifie qu'on s'est trompé de numéro.
-      const conflit = entrees.find((e) => e.settings && String(e.settings.listing_id) === listing_id
-        && e.rate_plan_id !== p.channex_rate_plan_id);
-      if (conflit) {
-        return res.status(409).json({
-          error: 'Cette annonce est déjà mappée sur un autre logement.',
-          rate_plan_id_existant: conflit.rate_plan_id
+      const existante = entrees.find((e) => e.settings && String(e.settings.listing_id) === listing_id);
+
+      /* Annonce déjà prise. Deux situations très différentes :
+         — elle pointe vers un autre de VOS logements : c'est une erreur de
+           numéro, on refuse ;
+         — elle pointe vers un plan orphelin (ancien établissement) : c'est
+           précisément le cas à réparer, sur demande explicite. */
+      if (existante && existante.rate_plan_id !== p.channex_rate_plan_id) {
+        const { rows: autre } = await pool.query(
+          `SELECT id, name, internal_name FROM properties
+            WHERE channex_rate_plan_id = $1 AND user_id = $2 LIMIT 1`,
+          [existante.rate_plan_id, uid]
+        );
+
+        if (autre.length) {
+          return res.status(409).json({
+            error: 'Cette annonce est déjà mappée sur ' + (autre[0].internal_name || autre[0].name) + '.',
+            rate_plan_id_existant: existante.rate_plan_id
+          });
+        }
+
+        if (!reassigner) {
+          return res.status(409).json({
+            error: 'Cette annonce pointe vers un plan tarifaire orphelin, hérité d\'un ancien ' +
+                   'établissement. Relancez avec reassigner: true pour la rattacher à ce logement.',
+            rate_plan_id_orphelin: existante.rate_plan_id,
+            orphelin: true
+          });
+        }
+
+        // Réaffectation : seul rate_plan_id change, les réglages Airbnb de
+        // l'annonce (tarifs, règles, promotions) sont conservés tels quels.
+        const nouvelles = entrees.map((e) =>
+          (e.settings && String(e.settings.listing_id) === listing_id)
+            ? Object.assign({}, e, { rate_plan_id: p.channex_rate_plan_id })
+            : e
+        );
+
+        await channexAPI.put(`/channels/${canal.id}`, { channel: { rate_plans: nouvelles } });
+        await logChannex(pool, {
+          user_id: uid, property_id: p.id, channex_property_id: p.channex_property_id,
+          event_type: 'reassign_airbnb_listing',
+          direction: 'outbound',
+          payload: { listing_id, avant: existante.rate_plan_id, apres: p.channex_rate_plan_id }
         });
+        console.log(`✅ [AIRBNB] Annonce ${listing_id} réaffectée à ${p.internal_name || p.name}`);
+        return res.json({ reassigne: true, listing_id, ancien_plan: existante.rate_plan_id,
+          rate_plan_id: p.channex_rate_plan_id });
       }
 
       const deja = entrees.find((e) => e.rate_plan_id === p.channex_rate_plan_id);
