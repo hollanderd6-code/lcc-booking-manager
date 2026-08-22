@@ -872,17 +872,14 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
     <button class="ptab active" onclick="switchTab('dashboard')" id="tab-dashboard">
       <i class="fas fa-chart-line"></i> Dashboard
     </button>
+    <button class="ptab" onclick="switchTab('calendar')" id="tab-calendar">
+      <i class="fas fa-calendar-days"></i> Calendrier
+    </button>
     <button class="ptab" onclick="switchTab('config')" id="tab-config">
-      <i class="fas fa-sliders-h"></i> Configuration
+      <i class="fas fa-sliders-h"></i> Réglages
     </button>
     <button class="ptab" onclick="switchTab('history')" id="tab-history">
       <i class="fas fa-clock-rotate-left"></i> Historique
-    </button>
-    <button class="ptab" onclick="switchTab('settings')" id="tab-settings">
-      <i class="fas fa-cog"></i> Paramètres
-    </button>
-    <button class="ptab" onclick="switchTab('calendar')" id="tab-calendar">
-      <i class="fas fa-calendar-days"></i> Calendrier
     </button>
     <button class="ptab" onclick="switchTab('events')" id="tab-events">
       <i class="fas fa-bullhorn"></i> Événements
@@ -991,6 +988,10 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
        TAB 4 — PARAMÈTRES
   ════════════════════════════════ -->
   <div class="tab-panel" id="panel-settings">
+    <!-- Affiche a la suite de panel-config, sous le meme onglet « Reglages » :
+         les reglages par logement d'abord, les preferences globales ensuite. -->
+    <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+                color:var(--muted);margin:24px 0 10px;">Préférences générales</div>
     <div class="pcard">
       <div class="pcard-header">
         <div class="pcard-title"><i class="fas fa-bell"></i> Notifications</div>
@@ -1304,16 +1305,29 @@ function showToast(msg, type) {
 }
 
 // ── Tabs ─────────────────────────────────────────────────────
+/* Les deux panneaux qui composent l'onglet « Reglages ». */
+const PANNEAUX_REGLAGES = ['panel-config', 'panel-settings'];
+
 function switchTab(name) {
+  // L'onglet Parametres a disparu ; les appels existants restent valides.
+  if (name === 'settings') name = 'config';
+
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.ptab').forEach(b => b.classList.remove('active'));
-  $('panel-' + name).classList.add('active');
-  $('tab-' + name).classList.add('active');
+  $('panel-' + name)?.classList.add('active');
+  $('tab-' + name)?.classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (name === 'dashboard') loadDashboard();
   if (name === 'history' && !state.history.length) loadHistory();
-  if (name === 'config') loadConfig();
-  if (name === 'settings') loadNotifPrefs();
+  /* « Reglages » reunit deux panneaux : ceux par logement (panel-config) et
+     les preferences generales (panel-settings). On les affiche ensemble
+     plutot que de deplacer le HTML — les identifiants restent intacts. */
+  if (name === 'config' || name === 'settings') {
+    PANNEAUX_REGLAGES.forEach(id => $(id)?.classList.add('active'));
+    $('tab-config').classList.add('active');
+    loadConfig();
+    loadNotifPrefs();
+  }
   if (name === 'calendar') initCalendarTab();
   if (name === 'events')   initEventsTab();
 }
