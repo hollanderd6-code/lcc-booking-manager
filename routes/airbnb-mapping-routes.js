@@ -304,8 +304,23 @@ module.exports = function monterRoutesAirbnb(app, pool, deps) {
   app.get('/api/channex/find-listing/:listing_id', auth, async (req, res) => {
     try {
       const cible = String(req.params.listing_id || '').trim();
-      const liste = await channexAPI.get('/channels', { params: { 'pagination[page_size]': 100 } });
-      const sommaire = liste.data?.data || [];
+
+      /* Channex ignore parfois page_size et s'en tient à sa page par défaut :
+         une recherche non paginée conclut à tort que l'annonce est absente.
+         On parcourt donc les pages jusqu'à épuisement. */
+      const sommaire = [];
+      for (let page = 1; page <= 20; page++) {
+        const r = await channexAPI.get('/channels', {
+          params: { 'pagination[page]': page, 'pagination[limit]': 100 }
+        });
+        const lot = r.data?.data || [];
+        if (!Array.isArray(lot) || !lot.length) break;
+        sommaire.push(...lot);
+        const meta = r.data?.meta;
+        const total = meta && (meta.total_pages || (meta.pagination && meta.pagination.total_pages));
+        if (total && page >= total) break;
+        if (lot.length < 10) break;   // page incomplète : c'est la dernière
+      }
 
       const trouvailles = [];
       const canaux = [];
@@ -345,6 +360,7 @@ module.exports = function monterRoutesAirbnb(app, pool, deps) {
 
       res.json({
         listing_id: cible,
+        canaux_parcourus: canaux.length,
         trouve_dans: trouvailles,
         tous_les_canaux: canaux,
         aide: trouvailles.length > 1
