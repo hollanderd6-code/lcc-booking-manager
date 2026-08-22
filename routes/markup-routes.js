@@ -26,6 +26,8 @@
 
 'use strict';
 
+const { proprietaireDuLogement } = require('../acces-logement');
+
 const CODES = { ABB: 'Airbnb', BDC: 'Booking.com', EXP: 'Expedia', VRB: 'Abritel / VRBO' };
 
 /* Le plan majoré et la vérification de cohérence sont facultatifs : si ces
@@ -59,44 +61,12 @@ module.exports = function monterRoutesMajoration(app, pool, deps) {
     return req.user && (req.user.id || req.user.userId);
   }
 
-  /* Un sous-compte d'agence gère des logements qui ne lui appartiennent pas :
-     ils sont au compte parent, et lui sont confiés par sub_account_properties.
-     Un contrôle sur le seul user_id lui refusait donc l'accès, et les champs
-     de majoration disparaissaient de son écran. On accepte les deux voies,
-     sans en ouvrir une troisième : soit le logement est à lui, soit il lui a
-     été explicitement confié. */
+  /* Trois sortes de comptes accèdent à un logement — propriétaire,
+     sous-compte, agence déléguée — et le contrôle vit dans acces-logement.js,
+     qui reprend le mécanisme de délégation déjà en place dans server.js.
+     Il renvoie le user_id du PROPRIÉTAIRE : c'est lui qui va dans le WHERE. */
   async function autorise(req, property_id) {
-    const uid = await resoudreUid(req);
-
-    const { rows } = await pool.query(
-      'SELECT id FROM properties WHERE id = $1 AND user_id = $2',
-      [property_id, uid]
-    );
-    if (rows.length) return uid;
-
-    if (req.user && req.user.isSubAccount) {
-      const { rows: confie } = await pool.query(
-        `SELECT 1 FROM sub_account_properties
-          WHERE sub_account_id = $1 AND property_id = $2`,
-        [req.user.subAccountId, property_id]
-      );
-      if (confie.length) return uid;
-
-      // Un sous-compte sans restriction voit tout le parc du parent.
-      const { rows: aucune } = await pool.query(
-        'SELECT 1 FROM sub_account_properties WHERE sub_account_id = $1 LIMIT 1',
-        [req.user.subAccountId]
-      );
-      if (!aucune.length) {
-        const { rows: duParent } = await pool.query(
-          'SELECT id FROM properties WHERE id = $1 AND user_id = $2',
-          [property_id, uid]
-        );
-        if (duParent.length) return uid;
-      }
-    }
-
-    return null;
+    return proprietaireDuLogement(pool, req, property_id, getRealUserId);
   }
 
   // Migration au démarrage : sans effet si les colonnes existent déjà.

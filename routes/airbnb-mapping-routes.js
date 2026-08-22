@@ -33,6 +33,7 @@
 'use strict';
 
 const { channexAPI, logChannex } = require('../channex');
+const { proprietaireDuLogement } = require('../acces-logement');
 
 const CANAUX_AIRBNB = ['airbnb', 'abb'];
 
@@ -55,7 +56,8 @@ module.exports = function monterRoutesAirbnb(app, pool, deps) {
   }
 
   async function contexte(req, res) {
-    const uid = await resoudreUid(req);
+    const uid = await proprietaireDuLogement(pool, req, req.params.id, getRealUserId);
+    if (!uid) { res.status(404).json({ error: 'Logement introuvable' }); return null; }
     const { rows } = await pool.query(
       `SELECT id, name, internal_name, channex_property_id, channex_room_type_id, channex_rate_plan_id
          FROM properties WHERE id = $1 AND user_id = $2`,

@@ -23,6 +23,7 @@
 'use strict';
 
 const { verifierCoherence } = require('../channex-coherence');
+const { proprietaireDuLogement } = require('../acces-logement');
 
 module.exports = function monterRoutesCoherence(app, pool, deps) {
   const auth = typeof deps === 'function'
@@ -38,12 +39,8 @@ module.exports = function monterRoutesCoherence(app, pool, deps) {
   }
 
   async function appartient(req, res) {
-    const uid = await resoudreUid(req);
-    const { rows } = await pool.query(
-      'SELECT id FROM properties WHERE id = $1 AND user_id = $2',
-      [req.params.id, uid]
-    );
-    if (!rows.length) { res.status(404).json({ error: 'Logement introuvable' }); return null; }
+    const uid = await proprietaireDuLogement(pool, req, req.params.id, getRealUserId);
+    if (!uid) { res.status(404).json({ error: 'Logement introuvable' }); return null; }
     return uid;
   }
 
