@@ -26527,6 +26527,7 @@ app.use('/api/welcome-books', welcomeRouter);
 
 require('./routes/markup-routes')(app, pool, { authenticateAny, getRealUserId });
 require('./routes/mapping-routes')(app, pool, { authenticateAny, getRealUserId });
+require('./routes/airbnb-mapping-routes')(app, pool, { authenticateAny, getRealUserId });
 
 const channexBulkRoutes = require('./routes/channex-bulk-routes');
 app.use('/api/channex', channexBulkRoutes(pool, { authenticateAny, getRealUserId }));
