@@ -283,7 +283,11 @@
         : '<button type="button" onclick="window._bhLot()" style="border:0;background:transparent;color:' + V.vert +
           ';font-family:' + V.sans + ';font-size:13.5px;font-weight:500;cursor:pointer;padding:8px 0;text-align:left;">' +
           'Préparer tous mes logements d\'un coup →</button>',
-        btnFantome('Fermer', "document.getElementById('channexModal')?.remove()")));
+        /* Un logement connecte mais jamais synchronise reste ferme a la vente
+           chez le partenaire. Ce bouton est le seul moyen de le debloquer. */
+        estConnecte
+          ? btnPlein('Envoyer vers les plateformes', 'window._bhEnvoyer()')
+          : btnFantome('Fermer', "document.getElementById('channexModal')?.remove()")));
 
     window._bhRetourPerso = null;
     window._bhLot = function () { ecranLot(modal); };
@@ -309,7 +313,10 @@
           entete(null, 'Rattaché à l\'immeuble', esc(d.immeuble_de || '')) +
           '<div style="padding:22px 24px;font-size:14px;color:' + V.t2 + ';line-height:1.6;">' +
           esc(d.message || '') + '</div>' +
-          pied('', btnPlein('Voir les plateformes', 'window._bhRetourPlateformes()')));
+          /* Un logement fraichement rattache n'a aucune disponibilite sous son
+             nouvel etablissement : sans cet envoi il resterait « Tarif fermé ». */
+          pied(btnFantome('Plus tard', 'window._bhRetourPlateformes()'),
+            btnPlein('Envoyer les disponibilités', 'window._bhEnvoyer()')));
         window._bhRetourPlateformes = function () { ecranPlateformes(modal, pid, pname); };
       } catch (e) {
         modal.innerHTML = carte(480,
@@ -319,6 +326,75 @@
           pied('', btnFantome('Retour', 'window._bhRetourPlateformes()')));
         window._bhRetourPlateformes = function () { ecranPlateformes(modal, pid, pname); };
       }
+    };
+
+    /* La sequence de fin de connexion. Sans elle, un logement mappe chez le
+       partenaire reste « Tarif fermé » : il est visible mais ferme a la vente,
+       faute de disponibilites envoyees. */
+    window._bhEnvoyer = async function () {
+      var etapes = [
+        'Connexion à la plateforme…',
+        'Récupération des réservations existantes…',
+        'Import des réservations dans BoostingHost…',
+        'Envoi des disponibilités et des tarifs…'
+      ];
+      var n = 0;
+
+      var afficher = function (texte, sousTexte) {
+        modal.innerHTML = carte(440,
+          '<div style="padding:38px 30px;text-align:center;">' +
+          '<div style="width:22px;height:22px;margin:0 auto;border:2px solid ' + V.ligne +
+          ';border-top-color:' + V.vert + ';border-radius:50%;animation:bhspin .8s linear infinite;"></div>' +
+          '<div style="margin-top:16px;font-size:14px;color:' + V.encre + ';">' + esc(texte) + '</div>' +
+          '<div style="margin-top:6px;font-size:12.5px;color:' + V.t3 + ';">' +
+          esc(sousTexte || 'Ne fermez pas cette fenêtre.') + '</div>' +
+          '<div style="margin-top:14px;font-size:11.5px;color:' + V.t4 + ';font-variant-numeric:tabular-nums;">' +
+          'Étape ' + (n) + ' sur ' + etapes.length + '</div></div>');
+      };
+
+      var appel = function (chemin) {
+        return fetch(API_URL + '/api/channex/' + chemin + '/' + pid, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token() }
+        }).then(function (r) { return r.ok ? r.json().catch(function () { return {}; }) : null; })
+          .catch(function () { return null; });
+      };
+
+      n = 1; afficher(etapes[0]);
+      await appel('pull-bookings');
+
+      n = 2; afficher(etapes[1], 'La plateforme peut mettre quelques secondes à répondre.');
+      // Sans cette attente, sync-bookings arrive avant la reponse de la
+      // plateforme et n'importe rien.
+      await new Promise(function (r) { setTimeout(r, 8000); });
+
+      n = 3; afficher(etapes[2]);
+      var dSync = await appel('sync-bookings');
+
+      n = 4; afficher(etapes[3], 'Cinq cents jours de calendrier sont envoyés.');
+      var dDispo = await appel('push-availability');
+
+      var importees = dSync ? ((dSync.imported || 0) + (dSync.updated || 0)) : 0;
+      var echecDispo = dDispo === null;
+
+      modal.innerHTML = carte(460,
+        entete(null, echecDispo ? 'Envoi incomplet' : 'Disponibilités envoyées', esc(pname)) +
+        '<div style="padding:20px 24px;font-size:14px;color:' + V.t2 + ';line-height:1.65;">' +
+        (echecDispo
+          ? 'Les réservations ont été relevées, mais l\'envoi des disponibilités a échoué. ' +
+            'Le logement restera fermé à la vente sur les plateformes tant qu\'il n\'aura pas abouti — ' +
+            'réessayez dans quelques minutes.'
+          : 'Le calendrier des 500 prochains jours est parti vers vos plateformes. ' +
+            'Comptez quelques minutes avant de voir les dates s\'ouvrir dans leur extranet.') +
+        (importees
+          ? '<span style="display:block;margin-top:10px;color:' + V.encre + ';">' +
+            importees + ' réservation' + (importees > 1 ? 's' : '') + ' importée' + (importees > 1 ? 's' : '') +
+            ' depuis les plateformes.</span>'
+          : '<span style="display:block;margin-top:10px;color:' + V.t3 + ';">Aucune réservation à importer.</span>') +
+        '</div>' +
+        pied('', btnPlein('Terminer', "document.getElementById('channexModal')?.remove()")));
+
+      if (typeof loadProperties === 'function') loadProperties().catch(function () {});
     };
 
     window._bhAdresse = function () {
