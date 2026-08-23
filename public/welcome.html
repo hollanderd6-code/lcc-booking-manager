@@ -1402,15 +1402,81 @@ function updateStepperDirect(index) {
   updateProgressBar(index);
 }
 
+/* Les champs obligatoires du formulaire entier : ceux marques [required], plus
+   la photo de couverture, qui est un champ fichier controle a part. */
+function bhEtatObligatoires() {
+  const form = document.getElementById('welcomeForm');
+  if (!form) return { remplis: 0, total: 0 };
+
+  const champs = Array.from(form.querySelectorAll('[required]'));
+  let remplis = champs.filter(f => (f.value || '').trim()).length;
+  let total = champs.length;
+
+  const cover = document.getElementById('coverPhoto');
+  if (cover) {
+    total += 1;
+    const apercu = document.getElementById('coverPhotoPreview');
+    if ((cover.files && cover.files.length) || (apercu && apercu.querySelector('img'))) remplis += 1;
+  }
+  return { remplis, total };
+}
+
+/* Une etape sans champ obligatoire peut etre passee : le livret se publie
+   sans elle. Calcule depuis le formulaire — ajouter un champ obligatoire a
+   une etape la retire de la liste sans toucher a ce code. */
+function bhMarquerEtapesOptionnelles() {
+  const sections = getSections();
+  document.querySelectorAll('.wizard-step').forEach((etape, i) => {
+    const section = sections[i];
+    if (!section) return;
+    const aDesObligatoires = section.querySelector('[required]') || section.querySelector('#coverPhoto');
+    let tag = etape.querySelector('.wiz-optionnel');
+    if (aDesObligatoires) { if (tag) tag.remove(); return; }
+    if (!tag) {
+      tag = document.createElement('span');
+      tag.className = 'wiz-optionnel';
+      tag.textContent = 'optionnel';
+      tag.style.cssText = 'font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;'
+        + 'color:#9CA3AF;background:rgba(32,34,31,.06);padding:2px 6px;border-radius:5px;margin-left:2px;';
+      etape.appendChild(tag);
+    }
+  });
+}
+
 function updateProgressBar(index) {
   const total = 5;
-  const pct = Math.round(((index) / (total - 1)) * 100);
-  const bar = document.getElementById('wizProgressBar');
   const label = document.getElementById('wizProgressLabel');
-  if (bar) bar.style.width = pct + '%';
   if (label) label.textContent = 'Étape ' + (index + 1) + ' / ' + total;
+
+  /* La barre mesure les champs obligatoires remplis. L'ancien calcul ne
+     dependait que de l'etape affichee : quatre clics sur « Suivant »
+     annonçaient 100 % sur un formulaire vide. */
+  const { remplis, total: obligatoires } = bhEtatObligatoires();
+  const pct = obligatoires ? Math.round((remplis / obligatoires) * 100) : 100;
+
+  const bar = document.getElementById('wizProgressBar');
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.style.background = pct === 100
+      ? 'linear-gradient(90deg,#0E3B2E,#3FA37A)'
+      : 'linear-gradient(90deg,#0E3B2E,#1E6E52)';
+  }
+
   const pctEl = document.getElementById('wizProgressPct');
-  if (pctEl) pctEl.textContent = pct + '%';
+  if (pctEl) {
+    if (pct === 100) {
+      pctEl.innerHTML = '<i class="fas fa-check" style="font-size:10px;"></i> Prêt à publier';
+      pctEl.style.color = '#0E3B2E';
+      pctEl.style.fontWeight = '600';
+    } else {
+      pctEl.textContent = remplis + ' champ' + (remplis > 1 ? 's' : '') + ' obligatoire'
+        + (remplis > 1 ? 's' : '') + ' sur ' + obligatoires;
+      pctEl.style.color = '#9CA3AF';
+      pctEl.style.fontWeight = '400';
+    }
+  }
+
+  bhMarquerEtapesOptionnelles();
 }
 
 // ----------------------------
@@ -1831,8 +1897,9 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!form) return;
 
   bhPoserIndicateurs();
-  form.addEventListener('input',  () => bhAutoSave.marquerSale());
-  form.addEventListener('change', () => bhAutoSave.marquerSale());
+  bhMarquerEtapesOptionnelles();
+  form.addEventListener('input',  () => { bhAutoSave.marquerSale(); updateProgressBar(currentSectionIndex); });
+  form.addEventListener('change', () => { bhAutoSave.marquerSale(); updateProgressBar(currentSectionIndex); });
   bhAutoSave.demarrer();
 
   /* Un depart avec du travail non ecrit doit etre confirme. Utile surtout
