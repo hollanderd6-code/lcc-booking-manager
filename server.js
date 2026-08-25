@@ -1264,7 +1264,12 @@ async function syncSingleIcalUrl(pool, property, entry) {
         const triggerTypes = ['on_booking'];
 
         const templates = await pool.query(
-          `SELECT * FROM message_templates WHERE user_id = $1 AND trigger_type = ANY($3) AND active = TRUE
+          `SELECT * FROM message_templates WHERE user_id IN (
+             /* agence : le proprietaire ET ses gestionnaires */
+             SELECT $1::text
+             UNION SELECT delegate_user_id FROM account_delegations
+              WHERE delegator_user_id = $1::text AND status = 'accepted'
+           ) AND trigger_type = ANY($3) AND active = TRUE
            AND (property_id IS NULL OR property_id::text = $2::text)`,
           [property.user_id, property.id, triggerTypes]
         );
@@ -4867,7 +4872,12 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                       // 📩 Déclencher les templates on_booking
                       try {
                         const tplTemplates = await pool.query(
-                          `SELECT * FROM message_templates WHERE user_id = $1 AND trigger_type = 'on_booking' AND active = TRUE
+                          `SELECT * FROM message_templates WHERE user_id IN (
+             /* agence : le proprietaire ET ses gestionnaires */
+             SELECT $1::text
+             UNION SELECT delegate_user_id FROM account_delegations
+              WHERE delegator_user_id = $1::text AND status = 'accepted'
+           ) AND trigger_type = 'on_booking' AND active = TRUE
                            AND (property_id IS NULL OR property_id::text = $2::text)`,
                           [ownerId, propId]
                         );
@@ -7116,7 +7126,12 @@ async function handleDepositPaid(depositId, io) {
         } else {
         const templates = await pool.query(
           `SELECT mt.* FROM message_templates mt
-           WHERE mt.user_id = $1 AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE
+           WHERE mt.user_id IN (
+             /* agence : le proprietaire ET ses gestionnaires */
+             SELECT $1::text
+             UNION SELECT delegate_user_id FROM account_delegations
+              WHERE delegator_user_id = $1::text AND status = 'accepted'
+           ) AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE
            AND (
              mt.property_id IS NULL
              OR mt.property_id::text = $2::text
@@ -30698,8 +30713,15 @@ async function proprietaireDesLogements(pool, req, listeIds, monoId) {
 
   if (!rows.length) return { erreur: 'Aucun des logements ciblés n\'existe.' };
   if (rows.length > 1) {
-    return { erreur: 'Les logements ciblés appartiennent à des comptes différents. '
-      + 'Créez un template par compte : un template ne peut pas être enregistré sous deux propriétaires.' };
+    /* Plusieurs comptes : acceptable pour une agence qui les gere tous —
+       le template lui appartient et l'envoi l'acceptera pour chacun. On
+       verifie seulement qu'aucun logement ne sort de son perimetre. */
+    const geres = await getAgencyUserIds({ query: { agency: 'all' } }, req.user.id);
+    const dehors = rows.map((r) => r.user_id).filter((u) => !geres.includes(u));
+    if (dehors.length) {
+      return { erreur: 'Certains logements ciblés appartiennent à des comptes que vous ne gérez pas.' };
+    }
+    return { userId: req.user.id, global: false, multi: true };
   }
   return { userId: rows[0].user_id, global: false };
 }
@@ -30713,16 +30735,21 @@ app.post('/api/message-templates', authenticateToken, async (req, res) => {
 
     /* Le proprietaire des logements cibles, et non l'auteur de la creation :
        c'est sous cet identifiant que le moteur d'envoi cherchera. */
+    /* Le template reste la propriete de qui le cree. Le moteur d'envoi
+       accepte desormais les templates des agences gerantes (voir plus bas
+       « le proprietaire ET ses gestionnaires ») : une agence peut donc en
+       poser un couvrant plusieurs de ses clients, ce que l'attribution au
+       proprietaire interdisait.
+
+       Le controle de coherence reste utile : il refuse un ciblage melant
+       des comptes hors du perimetre gere. */
     const proprio = await proprietaireDesLogements(pool, req, property_ids, property_id);
     if (proprio.erreur) return res.status(400).json({ error: proprio.erreur });
-    if (proprio.userId !== userId) {
-      console.log(`📩 [TEMPLATES] ${userId} cree un template pour le compte ${proprio.userId}`);
-    }
 
     const result = await pool.query(
       `INSERT INTO message_templates (user_id, property_id, title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, property_ids)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [proprio.userId, property_id || null, title, message, trigger_type, trigger_offset_hours || 0, trigger_offset_days || 0, send_condition || 'always',
+      [userId, property_id || null, title, message, trigger_type, trigger_offset_hours || 0, trigger_offset_days || 0, send_condition || 'always',
        JSON.stringify(property_ids && property_ids.length > 0 ? property_ids : [])]
     );
     res.json({ success: true, template: result.rows[0] });
@@ -31263,7 +31290,12 @@ async function sendDepositReminderJ2Cron(pool, io) {
       // Trouver un template before_arrival avec {caution_url} pour cet user/logement
       const tplResult = await pool.query(
         `SELECT * FROM message_templates
-         WHERE user_id = $1 AND trigger_type = 'before_arrival' AND active = TRUE
+         WHERE user_id IN (
+             /* agence : le proprietaire ET ses gestionnaires */
+             SELECT $1::text
+             UNION SELECT delegate_user_id FROM account_delegations
+              WHERE delegator_user_id = $1::text AND status = 'accepted'
+           ) AND trigger_type = 'before_arrival' AND active = TRUE
          AND message ILIKE '%caution_url%'
          AND (property_id IS NULL OR property_id::text = $2::text
               OR (property_ids IS NOT NULL AND property_ids @> to_jsonb($2::text)))
@@ -38370,7 +38402,12 @@ app.post('/api/channex/webhook', async (req, res) => {
           // Requête avec support property_ids (multi-logements)
           const templates = await pool.query(
             `SELECT * FROM message_templates
-             WHERE user_id = $1 AND trigger_type = ANY($3) AND active = TRUE
+             WHERE user_id IN (
+             /* agence : le proprietaire ET ses gestionnaires */
+             SELECT $1::text
+             UNION SELECT delegate_user_id FROM account_delegations
+              WHERE delegator_user_id = $1::text AND status = 'accepted'
+           ) AND trigger_type = ANY($3) AND active = TRUE
              AND (
                property_id IS NULL
                OR property_id::text = $2::text
@@ -38421,7 +38458,12 @@ app.post('/api/channex/webhook', async (req, res) => {
               // ── NON-AIRBNB : chercher tous les templates actifs pour ce logement/user ──
               const allTpls = await pool.query(
                 `SELECT * FROM message_templates
-                 WHERE user_id = $1 AND active = TRUE
+                 WHERE user_id IN (
+             /* agence : le proprietaire ET ses gestionnaires */
+             SELECT $1::text
+             UNION SELECT delegate_user_id FROM account_delegations
+              WHERE delegator_user_id = $1::text AND status = 'accepted'
+           ) AND active = TRUE
                  AND trigger_type IN ('before_arrival', 'on_booking', 'on_arrival')
                  AND (
                    property_id IS NULL
@@ -38503,7 +38545,12 @@ app.post('/api/channex/webhook', async (req, res) => {
                 if (alreadySentArrival.rows.length === 0) {
                   const arrivalTpls = await pool.query(
                     `SELECT * FROM message_templates
-                     WHERE user_id = $1 AND trigger_type = 'on_arrival' AND active = TRUE
+                     WHERE user_id IN (
+             /* agence : le proprietaire ET ses gestionnaires */
+             SELECT $1::text
+             UNION SELECT delegate_user_id FROM account_delegations
+              WHERE delegator_user_id = $1::text AND status = 'accepted'
+           ) AND trigger_type = 'on_arrival' AND active = TRUE
                      AND (
                        property_id IS NULL
                        OR property_id::text = $2::text
@@ -41828,7 +41875,12 @@ app.post('/api/guest/book', async (req, res) => {
 
         const templates = await pool.query(
           `SELECT * FROM message_templates
-           WHERE user_id = $1 AND trigger_type = ANY($3) AND active = TRUE
+           WHERE user_id IN (
+             /* agence : le proprietaire ET ses gestionnaires */
+             SELECT $1::text
+             UNION SELECT delegate_user_id FROM account_delegations
+              WHERE delegator_user_id = $1::text AND status = 'accepted'
+           ) AND trigger_type = ANY($3) AND active = TRUE
            AND (property_id IS NULL OR property_id::text = $2::text
                 OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
                     AND property_ids @> to_jsonb($2::text)))
@@ -45034,7 +45086,12 @@ N'hésitez pas à nous contacter via cette messagerie pour toute question. Bon s
 
           const templates = await pool.query(
             `SELECT * FROM message_templates
-             WHERE user_id = $1 AND trigger_type = ANY($3) AND active = TRUE
+             WHERE user_id IN (
+             /* agence : le proprietaire ET ses gestionnaires */
+             SELECT $1::text
+             UNION SELECT delegate_user_id FROM account_delegations
+              WHERE delegator_user_id = $1::text AND status = 'accepted'
+           ) AND trigger_type = ANY($3) AND active = TRUE
              AND (property_id IS NULL OR property_id::text = $2::text
                   OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
                       AND property_ids @> to_jsonb($2::text)))
