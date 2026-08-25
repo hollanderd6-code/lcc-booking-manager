@@ -30670,20 +30670,148 @@ app.get('/api/message-templates', authenticateToken, async (req, res) => {
   }
 });
 
+/* Sous quel compte enregistrer un template ?
+
+   Le moteur d'envoi cherche les templates sous « property.user_id », le
+   PROPRIETAIRE du logement. Un template enregistre sous l'identifiant de
+   l'agence ne sera donc jamais trouve : il s'affiche, parait actif, et ne
+   part jamais. Rien ne signale l'echec.
+
+   On deduit donc le proprietaire des logements cibles. Et on VERIFIE qu'ils
+   appartiennent tous au meme compte : un template ne peut pas porter deux
+   identifiants, et le refuser vaut mieux que d'en perdre la moitie. */
+async function proprietaireDesLogements(pool, req, listeIds, monoId) {
+  const ids = Array.isArray(listeIds) && listeIds.length ? listeIds
+    : (monoId ? [monoId] : []);
+
+  if (!ids.length) {
+    /* Template global : « tous les logements » de qui ? En mode agence,
+       l'intention est le client sur lequel on travaille. */
+    const gere = req.headers['x-managed-user'] || req.query.managed_user || null;
+    return { userId: gere || req.user.id, global: true };
+  }
+
+  const { rows } = await pool.query(
+    'SELECT DISTINCT user_id FROM properties WHERE id::text = ANY($1::text[])',
+    [ids.map(String)]
+  );
+
+  if (!rows.length) return { erreur: 'Aucun des logements ciblés n\'existe.' };
+  if (rows.length > 1) {
+    return { erreur: 'Les logements ciblés appartiennent à des comptes différents. '
+      + 'Créez un template par compte : un template ne peut pas être enregistré sous deux propriétaires.' };
+  }
+  return { userId: rows[0].user_id, global: false };
+}
+
 // POST — créer un template
 app.post('/api/message-templates', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { property_id, title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, property_ids } = req.body;
     if (!title || !message || !trigger_type) return res.status(400).json({ error: 'title, message et trigger_type requis' });
+
+    /* Le proprietaire des logements cibles, et non l'auteur de la creation :
+       c'est sous cet identifiant que le moteur d'envoi cherchera. */
+    const proprio = await proprietaireDesLogements(pool, req, property_ids, property_id);
+    if (proprio.erreur) return res.status(400).json({ error: proprio.erreur });
+    if (proprio.userId !== userId) {
+      console.log(`📩 [TEMPLATES] ${userId} cree un template pour le compte ${proprio.userId}`);
+    }
+
     const result = await pool.query(
       `INSERT INTO message_templates (user_id, property_id, title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, property_ids)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [userId, property_id || null, title, message, trigger_type, trigger_offset_hours || 0, trigger_offset_days || 0, send_condition || 'always',
+      [proprio.userId, property_id || null, title, message, trigger_type, trigger_offset_hours || 0, trigger_offset_days || 0, send_condition || 'always',
        JSON.stringify(property_ids && property_ids.length > 0 ? property_ids : [])]
     );
     res.json({ success: true, template: result.rows[0] });
   } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* Les templates crees avant cette correction portent l'identifiant de leur
+   auteur. Cette route les liste sans rien modifier : on regarde avant d'agir. */
+app.get('/api/message-templates/diagnostic', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
+
+    const { rows } = await pool.query(
+      `SELECT id, title, user_id, property_id, property_ids, active
+         FROM message_templates WHERE user_id = ANY($1::text[])`,
+      [agencyIds]
+    );
+
+    const rapport = [];
+    for (const t of rows) {
+      const liste = Array.isArray(t.property_ids) ? t.property_ids : [];
+      const ids = liste.length ? liste : (t.property_id ? [t.property_id] : []);
+      if (!ids.length) { rapport.push({ id: t.id, titre: t.title, etat: 'global — non concerne' }); continue; }
+
+      const { rows: proprios } = await pool.query(
+        'SELECT DISTINCT user_id FROM properties WHERE id::text = ANY($1::text[])',
+        [ids.map(String)]
+      );
+      if (!proprios.length) { rapport.push({ id: t.id, titre: t.title, etat: 'logements introuvables' }); continue; }
+      if (proprios.length > 1) { rapport.push({ id: t.id, titre: t.title, etat: 'plusieurs comptes — a scinder a la main' }); continue; }
+
+      const attendu = proprios[0].user_id;
+      rapport.push({
+        id: t.id, titre: t.title, actif: t.active,
+        proprietaire_actuel: t.user_id,
+        proprietaire_attendu: attendu,
+        etat: attendu === t.user_id ? 'correct' : 'NE PARTIRA PAS — mauvais proprietaire'
+      });
+    }
+
+    res.json({
+      total: rapport.length,
+      a_corriger: rapport.filter((r) => r.etat.indexOf('NE PARTIRA PAS') === 0).length,
+      templates: rapport,
+      aide: 'POST /api/message-templates/reattribuer corrige les lignes marquees « NE PARTIRA PAS ».'
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/* Corrige l'attribution. On ne touche qu'aux templates dont les logements
+   designent un proprietaire unique et different : le reste demande un
+   arbitrage humain. */
+app.post('/api/message-templates/reattribuer', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const agencyIds = await getAgencyUserIds(req, userId);
+
+    const { rows } = await pool.query(
+      `SELECT id, title, user_id, property_id, property_ids
+         FROM message_templates WHERE user_id = ANY($1::text[])`,
+      [agencyIds]
+    );
+
+    const corriges = [], ignores = [];
+    for (const t of rows) {
+      const liste = Array.isArray(t.property_ids) ? t.property_ids : [];
+      const ids = liste.length ? liste : (t.property_id ? [t.property_id] : []);
+      if (!ids.length) continue;
+
+      const { rows: proprios } = await pool.query(
+        'SELECT DISTINCT user_id FROM properties WHERE id::text = ANY($1::text[])',
+        [ids.map(String)]
+      );
+      if (proprios.length !== 1) { ignores.push({ titre: t.title, raison: 'proprietaire non unique' }); continue; }
+      if (proprios[0].user_id === t.user_id) continue;
+
+      await pool.query('UPDATE message_templates SET user_id = $1 WHERE id = $2',
+        [proprios[0].user_id, t.id]);
+      corriges.push({ titre: t.title, de: t.user_id, vers: proprios[0].user_id });
+      console.log(`🔧 [TEMPLATES] « ${t.title} » reattribue a ${proprios[0].user_id}`);
+    }
+
+    res.json({ corriges: corriges.length, ignores: ignores.length, detail: { corriges, ignores } });
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
