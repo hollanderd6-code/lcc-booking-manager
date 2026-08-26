@@ -1449,7 +1449,13 @@ var _bhNativeConfirm = window.confirm;
       '.mobile-tabs .glass-pill-mobile,.mobile-tabs .glass-pill{display:none!important;}' +
       '.mobile-tabs .tab-btn:focus,.mobile-tabs .tab-btn:focus-visible,.mobile-tabs .tab-btn:active{outline:none!important;-webkit-tap-highlight-color:transparent!important;}' +
       '.mobile-tabs .tab-btn.active{background:transparent!important;box-shadow:none!important;}' +
-      '.mobile-tabs{position:fixed!important;z-index:10001!important;pointer-events:auto!important;touch-action:none!important;}' +
+      /* ancrage bas — « position:fixed » sans « bottom » laisse l'element a sa
+         place dans le flux : la barre se figeait ou le contenu l'avait laissee,
+         d'ou une bande vide dessous sur les pages courtes. La zone sure entre
+         dans la marge interieure plutot que de repousser la barre. */
+      '.mobile-tabs{position:fixed!important;bottom:0!important;left:0!important;right:0!important;' +
+        'padding-bottom:env(safe-area-inset-bottom,0px)!important;' +
+        'z-index:10001!important;pointer-events:auto!important;touch-action:none!important;}' +
       // la feuille "Plus" passe AU-DESSUS de la barre (sinon la barre masque le bouton Déconnexion)
       '#moreMenuSheet,#moreMenuOverlay{z-index:10060!important;}' +
       // vrai conteneur scrollable : sinon le bouton Déconnexion est coupé et rebondit
