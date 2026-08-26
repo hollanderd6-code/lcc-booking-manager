@@ -1456,17 +1456,6 @@ var _bhNativeConfirm = window.confirm;
       '.mobile-tabs{position:fixed!important;bottom:0!important;left:0!important;right:0!important;' +
         'padding-bottom:env(safe-area-inset-bottom,0px)!important;' +
         'z-index:10001!important;pointer-events:auto!important;touch-action:none!important;}' +
-      /* fond unique + reserve de la barre — chaque page definissait son fond :
-         le plus opaque (rgba(245,242,236,.97)) transformait les 34 px de zone
-         sure en bande unie et le menu paraissait leve, alors qu'il etait au
-         meme endroit. Valeur retenue : celle d'app.html. Le fond de la barre
-         couvre deja la zone sure, via son padding-bottom pose juste au-dessus. */
-      '.mobile-tabs{' +
-        'background:rgba(251,251,250,.92)!important;' +
-        '-webkit-backdrop-filter:saturate(1.8) blur(14px)!important;' +
-        'backdrop-filter:saturate(1.8) blur(14px)!important;' +
-        'border-top:1px solid rgba(200,184,154,.28)!important;' +
-      '}' +
       // la feuille "Plus" passe AU-DESSUS de la barre (sinon la barre masque le bouton Déconnexion)
       '#moreMenuSheet,#moreMenuOverlay{z-index:10060!important;}' +
       // vrai conteneur scrollable : sinon le bouton Déconnexion est coupé et rebondit
@@ -1996,156 +1985,83 @@ var _bhNativeConfirm = window.confirm;
 })();
 
 
-/* ── Reserve de place sous la barre d'onglets ──────────────────────────
-   app.html reservait 74 px a ses conteneurs, messages.html rien : la liste
-   s'arretait a sa propre hauteur et la zone sure devenait une bande unie.
-   La reserve est posee ici une fois pour toutes les pages.
+/* ── barre d'onglets : une seule correction ───────────────────────────
+   La barre se reservait une zone sure deja retiree du viewport sur une
+   partie des pages :
 
-   Elle est MESUREE sur la barre (hauteur + zone sure, deja dans son
-   padding) plutot qu'ecrite en dur : une barre de 70 ou de 90 px, avec ou
-   sans encoche, donne la bonne valeur sans table de correspondance.
+       clientHeight ....... 860   partout
+       env(...-bottom) .... 34px  partout
+       innerHeight ........ 902 sur app.html, 868 sur messages.html
 
-   Elle n'est appliquee que si le conteneur reserve MOINS : les pages deja
-   reglees gardent leur valeur, rien n'est double. */
-(function () {
-  'use strict';
+   868 = 860 + 8 (inset haut) : le bas n'y est pas, mais env() l'annonce.
+   La barre gardait donc 34 px de vide en bas — c'etait la « bande », et
+   non un espace sous la barre.
 
-  function conteneurQuiDefile() {
-    var candidats = ['.main-content', '.app-container', 'main'];
-    for (var i = 0; i < candidats.length; i++) {
-      var el = document.querySelector(candidats[i]);
-      if (!el) continue;
-      var ov = getComputedStyle(el).overflowY;
-      if ((ov === 'auto' || ov === 'scroll') && el.scrollHeight > el.clientHeight + 4) return el;
-    }
-    // Sinon c'est la page entiere qui defile : la reserve va sur le premier
-    // conteneur present, a defaut sur body.
-    return document.querySelector('.main-content')
-        || document.querySelector('.app-container')
-        || document.body;
-  }
+   On mesure la zone sure REELLEMENT presente, et on garde une hauteur de
+   CONTENU constante : les onglets tombent au meme endroit par rapport au
+   bas de l'ecran sur toutes les pages, que la marge vaille 34 ou 0.
 
-  function reserver() {
-    var barre = document.querySelector('.mobile-tabs');
-    if (!barre) return;
-    var cs = getComputedStyle(barre);
-    if (cs.display === 'none' || cs.visibility === 'hidden') return;
-
-    var hauteur = Math.round(barre.getBoundingClientRect().height);
-    if (!hauteur) return;                     // pas encore mise en page
-    var voulu = hauteur + 12;                 // 12 px d'air sous le dernier element
-
-    var cible = conteneurQuiDefile();
-    if (!cible) return;
-    var actuel = parseFloat(getComputedStyle(cible).paddingBottom) || 0;
-    if (actuel >= voulu - 2) return;          // deja reserve : on ne touche pas
-    cible.style.setProperty('padding-bottom', voulu + 'px', 'important');
-  }
-
-  // La barre est injectee par mobile-native-experience.js apres bh-layout :
-  // on repasse quand elle existe, puis au resize et au retour de page.
-  function suivre() {
-    reserver();
-    setTimeout(reserver, 200);
-    setTimeout(reserver, 700);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', suivre);
-  } else {
-    suivre();
-  }
-  window.addEventListener('resize', reserver);
-  window.addEventListener('pageshow', reserver);
-  window.addEventListener('orientationchange', function () { setTimeout(reserver, 250); });
-
-  // bhDiagBarre() en console : dit ce qui est mesure et ce qui est applique.
-  window.bhDiagBarre = function () {
-    var b = document.querySelector('.mobile-tabs');
-    if (!b) return console.log('[BH] barre absente');
-    var r = b.getBoundingClientRect(), cs = getComputedStyle(b);
-    var c = conteneurQuiDefile();
-    console.log('[BH] barre  : hauteur', Math.round(r.height),
-      '| bas', Math.round(window.innerHeight - r.bottom),
-      '| fond', cs.backgroundColor,
-      '| padding-bottom', cs.paddingBottom);
-    console.log('[BH] reserve:', c ? (c.className || c.tagName) : '(aucun)',
-      '->', c ? getComputedStyle(c).paddingBottom : '-');
-  };
-})();
-
-
-/* ── Barre d'onglets : marge du bas mesuree, pas lue dans env() ──────────
-   Mesures relevees sur iPhone, application installee :
-
-       clientHeight ........... 860   sur les deux pages
-       env(...-top) ........... 8px   sur les deux pages
-       env(...-bottom) ........ 34px  sur les deux pages
-       innerHeight ............ 902 sur app.html, 868 sur messages.html
-
-   868 = 860 + 8 : sur messages.html la zone sure du bas est deja retiree
-   du viewport, alors qu'env() annonce toujours 34 px. La barre se
-   reservait donc 34 px de vide en bas — c'etait cela, la « bande », et
-   non un espace sous la barre. D'ou aussi le menu qui paraissait leve.
-
-   On mesure la marge reellement necessaire au lieu de croire env(), et on
-   pose le resultat en inline : bh-v3-mobile.css cible
+   Tout est pose en inline : bh-v3-mobile.css cible
    « html[data-theme-v3="1"] .mobile-tabs », plus specifique que la feuille
-   injectee — seul l'inline l'emporte a coup sur. */
+   injectee — un !important n'y suffit pas. Meme choix que pour l'en-tete
+   mobile dans normalizeBranding(). */
 (function () {
   'use strict';
 
-  var FOND = 'rgba(251,251,250,.92)';          // valeur d'app.html, jugee correcte
+  var CONTENU = 68;                             // hauteur des onglets, hors zone sure
+  var CAPSULE_H = 44;                           // hauteur de la capsule (valeur retenue a l'essai)
+  var CAPSULE_HAUT = 12;                        // son decalage depuis le haut de la barre
+  var FOND = 'rgba(251,251,250,.92)';           // valeur d'app.html, jugee correcte
   var FLOU = 'saturate(1.8) blur(14px)';
   var FILET = '1px solid rgba(200,184,154,.28)';
 
-  function nombre(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
-
-  // env(safe-area-inset-top) n'est pas lisible directement : on le fait
-  // resoudre par le moteur sur une sonde hors ecran.
   function insetHaut() {
+    // env() n'est pas lisible en JS : on le fait resoudre sur une sonde.
     var sonde = document.createElement('div');
     sonde.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;top:env(safe-area-inset-top,0px);';
     document.body.appendChild(sonde);
-    var v = nombre(getComputedStyle(sonde).top);
+    var v = parseFloat(getComputedStyle(sonde).top);
     sonde.remove();
-    return v;
+    return isNaN(v) ? 0 : v;
   }
 
   function normaliser() {
     var barre = document.querySelector('.mobile-tabs');
     if (!barre) return;
 
-    var client = document.documentElement.clientHeight;
-    var marge = Math.max(0, Math.round(window.innerHeight - client - insetHaut()));
+    var marge = Math.max(0, Math.round(
+      window.innerHeight - document.documentElement.clientHeight - insetHaut()
+    ));
 
     var s = barre.style;
+    s.setProperty('box-sizing', 'border-box', 'important');
+    s.setProperty('height', (CONTENU + marge) + 'px', 'important');
+    s.setProperty('min-height', (CONTENU + marge) + 'px', 'important');
+    s.setProperty('padding-top', '8px', 'important');
     s.setProperty('padding-bottom', marge + 'px', 'important');
     s.setProperty('background', FOND, 'important');
     s.setProperty('-webkit-backdrop-filter', FLOU, 'important');
     s.setProperty('backdrop-filter', FLOU, 'important');
     s.setProperty('border-top', FILET, 'important');
 
-    // La capsule glissante se dimensionne sur env() dans la feuille injectee.
-    // Elle doit suivre la marge reelle, sinon elle depasse de la barre.
+    // La capsule etait calculee en env() : sur les pages ou la marge vaut 0
+    // elle depassait par le haut. On l'accorde a la boite reelle.
     var cap = barre.querySelector('.lg-capsule');
-    if (cap) cap.style.setProperty('height', 'calc(100% - 12px - ' + marge + 'px)', 'important');
-
-    if (barre.__lgSync) barre.__lgSync(false);   // repositionne la capsule
-  }
-
-  // La barre est creee par mobile-native-experience.js, apres bh-layout :
-  // on attend qu'elle apparaisse, puis on suit les changements de viewport.
-  function suivre() {
-    if (document.querySelector('.mobile-tabs')) { normaliser(); return true; }
-    return false;
+    if (cap) {
+      cap.style.setProperty('top', CAPSULE_HAUT + 'px', 'important');
+      cap.style.setProperty('height', CAPSULE_H + 'px', 'important');
+    }
+    if (barre.__lgSync) barre.__lgSync(false);
   }
 
   function demarrer() {
-    if (suivre()) return;
-    var obs = new MutationObserver(function () { if (suivre()) obs.disconnect(); });
+    if (document.querySelector('.mobile-tabs')) { normaliser(); return; }
+    // La barre est creee par mobile-native-experience.js, apres bh-layout.
+    var obs = new MutationObserver(function () {
+      if (document.querySelector('.mobile-tabs')) { obs.disconnect(); normaliser(); }
+    });
     obs.observe(document.body, { childList: true });
-    setTimeout(function () { obs.disconnect(); suivre(); }, 4000);
+    setTimeout(function () { obs.disconnect(); normaliser(); }, 4000);
   }
 
   if (document.readyState === 'loading') {
@@ -2159,8 +2075,6 @@ var _bhNativeConfirm = window.confirm;
   window.addEventListener('orientationchange', function () { setTimeout(normaliser, 250); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', normaliser);
 
-  // bhDiagBarre() : les chiffres qui ont servi a la correction, relisibles
-  // sur n'importe quelle page.
   window.bhDiagBarre = function () {
     var b = document.querySelector('.mobile-tabs');
     if (!b) return console.log('[BH] barre absente');
@@ -2169,7 +2083,7 @@ var _bhNativeConfirm = window.confirm;
     console.log('[BH]', location.pathname);
     console.log('[BH] viewport : innerHeight', window.innerHeight, '| clientHeight', client, '| inset haut', haut);
     console.log('[BH] marge bas: mesuree', Math.max(0, Math.round(window.innerHeight - client - haut)),
-      '| env() annonce', cs.getPropertyValue('padding-bottom'), '| appliquee', b.style.paddingBottom);
+      '| appliquee', b.style.paddingBottom, '| env() annoncait 34px');
     console.log('[BH] barre    : hauteur', Math.round(r.height), '| bas', Math.round(window.innerHeight - r.bottom),
       '| fond', cs.backgroundColor);
   };
