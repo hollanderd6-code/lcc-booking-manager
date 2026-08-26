@@ -2056,14 +2056,39 @@ var _bhNativeConfirm = window.confirm;
     if (barre.__lgSync) barre.__lgSync(false);
   }
 
+  // La capsule est reecrite par la barre a chaque changement d'onglet
+  // (transform, width, parfois top/height). On remet notre mesure des
+  // qu'elle est touchee, sinon elle est perdue jusqu'au prochain resize.
+  var enCours = false;
+  function surveillerCapsule(barre) {
+    var cap = barre.querySelector('.lg-capsule');
+    if (!cap || cap.__bhCapsuleSurveillee) return;
+    cap.__bhCapsuleSurveillee = true;
+    new MutationObserver(function () {
+      if (enCours) return;
+      enCours = true;
+      normaliser();
+      enCours = false;
+    }).observe(cap, { attributes: true, attributeFilter: ['style'] });
+  }
+
   function demarrer() {
-    if (document.querySelector('.mobile-tabs')) { normaliser(); return; }
-    // La barre est creee par mobile-native-experience.js, apres bh-layout.
+    var barre = document.querySelector('.mobile-tabs');
+    if (barre) { normaliser(); surveillerCapsule(barre); return; }
+
+    // La barre est creee par mobile-native-experience.js, apres bh-layout,
+    // et pas en enfant direct de body : sans subtree l'observateur ne la
+    // voyait jamais et seul le repli agissait — d'ou les secondes d'attente.
     var obs = new MutationObserver(function () {
-      if (document.querySelector('.mobile-tabs')) { obs.disconnect(); normaliser(); }
+      var b = document.querySelector('.mobile-tabs');
+      if (b) { obs.disconnect(); normaliser(); surveillerCapsule(b); }
     });
-    obs.observe(document.body, { childList: true });
-    setTimeout(function () { obs.disconnect(); normaliser(); }, 4000);
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+    setTimeout(function () {
+      obs.disconnect();
+      var b = document.querySelector('.mobile-tabs');
+      if (b) { normaliser(); surveillerCapsule(b); }
+    }, 1500);
   }
 
   if (document.readyState === 'loading') {
