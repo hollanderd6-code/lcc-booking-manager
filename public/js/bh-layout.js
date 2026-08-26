@@ -1504,59 +1504,8 @@ var _bhNativeConfirm = window.confirm;
     s.textContent = css;
     document.head.appendChild(s);
 
-    reserverPlaceTabbar();
   }
 
-  /* La barre flotte au-dessus du contenu : sans reserve en bas de page, les
-     dernieres lignes passent dessous et la zone sure apparait comme une bande
-     vide. app.html reserve 74px + zone sure sur ses conteneurs ; aucune autre
-     page ne le faisait.
-
-     La hauteur est MESUREE, pas ecrite : la barre fait 102px dont 34 de zone
-     sure, et les 74px codes dans app.html sont deja faux. Une valeur figee se
-     demode au premier bouton ajoute au menu. */
-  function reserverPlaceTabbar() {
-    /* app.html porte ses propres regles en !important sur des conteneurs
-       internes. Y ajouter une reserve sur body creerait un double vide en bas
-       de page : une exception nommee vaut mieux qu'un conflit silencieux. */
-    var page = (location.pathname.split('/').pop() || '').toLowerCase();
-    if (page === 'app.html' || page === '' || page === 'app') return;
-
-    function poser() {
-      var bar = document.querySelector('.mobile-tabs');
-      if (!bar) return;
-      // Barre masquee (bureau, ou page sans menu) : rien a reserver.
-      if (!bar.offsetHeight || getComputedStyle(bar).display === 'none') {
-        document.documentElement.style.removeProperty('--bh-tabbar-h');
-        return;
-      }
-      /* La zone sure est deja dans offsetHeight : on ajoute seulement une
-         respiration, pour que la derniere ligne ne colle pas a la barre. */
-      document.documentElement.style.setProperty('--bh-tabbar-h', (bar.offsetHeight + 12) + 'px');
-    }
-
-    var st = document.getElementById('lg-tabbar-reserve');
-    if (!st) {
-      st = document.createElement('style');
-      st.id = 'lg-tabbar-reserve';
-      st.textContent =
-        '@media (max-width:1366px){' +
-          'body{padding-bottom:var(--bh-tabbar-h, 0px)!important;}' +
-          /* Un conteneur qui defile seul ne recoit pas le padding du body :
-             on l'ecourte pour que sa fin reste au-dessus de la barre. */
-          '.page-scroll,.main-scroll,#mainScroll{padding-bottom:var(--bh-tabbar-h, 0px)!important;}' +
-        '}';
-      document.head.appendChild(st);
-    }
-
-    poser();
-    /* La hauteur change avec l'orientation, et la barre peut etre construite
-       apres ce script. On repose plutot que de deviner le bon instant. */
-    window.addEventListener('resize', poser);
-    window.addEventListener('orientationchange', function () { setTimeout(poser, 250); });
-    setTimeout(poser, 400);
-    setTimeout(poser, 1200);
-  }
 
   function deburr(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); }
   function tabsOf(bar) { return Array.prototype.slice.call(bar.querySelectorAll('.tab-btn')).filter(function (t) { return t.offsetWidth > 0; }); }
