@@ -4896,6 +4896,22 @@ const TRIGGER_LABELS = {
   after_departure: "Après le départ"
 };
 
+
+/* La portee reelle d'un template, renvoyee par le serveur. « Tous les
+   logements » est vrai dans le parc du compte qui possede le template : sans
+   ce compteur, un template qui n'atteint personne s'affiche comme actif.
+
+   Rien tant que le serveur ne renvoie pas la donnee : mieux vaut l'affichage
+   d'avant qu'un « undefined logement ». */
+function porteeTexte(t) {
+  if (!t || typeof t.logements_couverts !== 'number') return '';
+  const n = t.logements_couverts;
+  if (n === 0) {
+    return ' — <span style="color:#B91C1C;font-weight:600;">aucun logement</span>';
+  }
+  return ' — ' + n + ' logement' + (n > 1 ? 's' : '');
+}
+
 async function loadTemplates() {
   const container = document.getElementById('templatesList');
   if (!container) return;
@@ -4942,7 +4958,7 @@ async function loadTemplates() {
               const ids = t.property_ids
                 ? (Array.isArray(t.property_ids) ? t.property_ids : (() => { try { return JSON.parse(t.property_ids); } catch(e) { return []; } })())
                 : (t.property_id ? [t.property_id] : []);
-              if (ids.length === 0) return ' · Tous les logements';
+              if (ids.length === 0) return ' · Tous les logements' + porteeTexte(t);
               const props = window._tplProperties || [];
               const names = ids.map(id => props.find(p => (p.id||p._id) === id)?.name || id).join(', ');
               return ` · <i class="fas fa-home" style="margin:0 3px;"></i>${names}`;
