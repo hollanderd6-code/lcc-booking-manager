@@ -166,10 +166,20 @@ html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: 
 /* ============================================================
    PAGE WELCOME — V3
    ============================================================ */
-html[data-theme-v3="1"],
-html[data-theme-v3="1"] body {
-  overflow: hidden !important;
-  height: 100% !important;
+/* verrou de scroll limite au desktop — sur iOS, un document verrouille en
+   overflow:hidden empeche WKWebView d'etendre le viewport sous
+   l'indicateur d'accueil : innerHeight restait a 868 au lieu de 902,
+   et les 34 px restants apparaissaient en bande sous la barre
+   d'onglets, peints par la WebView et hors d'atteinte du CSS.
+   Le verrou garde son sens en desktop, ou seuls les panneaux
+   internes doivent defiler. Seuil 1367 px : celui deja utilise par
+   ces pages pour leurs regles desktop. */
+@media (min-width: 1367px) {
+  html[data-theme-v3="1"],
+  html[data-theme-v3="1"] body {
+    overflow: hidden !important;
+    height: 100% !important;
+  }
 }
 html[data-theme-v3="1"] .app-container {
   height: calc(100vh - 40px) !important;
