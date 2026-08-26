@@ -22,6 +22,14 @@ const fs = require('fs');
 
 const PLACES = 10;
 
+// Date de clôture des candidatures (format ISO). Après cette date, la page
+// affiche « candidatures closes » et l'API refuse les envois.
+const CLOTURE = '2026-09-13';
+
+// Le nombre de candidatures reçues n'est affiché qu'à partir de ce seuil :
+// en dessous, il dessert plus qu'il ne sert.
+const SEUIL_AFFICHAGE = 5;
+
 const ADMIN_EMAIL = process.env.FONDATEURS_EMAIL
   || process.env.ADMIN_EMAIL
   || 'contact@boostinghost.fr';
@@ -55,6 +63,35 @@ function propre(v, max) {
   const s = String(v).trim();
   if (!s) return null;
   return s.slice(0, max || 500);
+}
+
+// Clôture à 23h59 (heure de Paris ≈ UTC+2 en septembre)
+function estClos() {
+  return Date.now() > new Date(CLOTURE + 'T21:59:59Z').getTime();
+}
+
+function clotureEnFrancais() {
+  return new Date(CLOTURE + 'T12:00:00Z').toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris'
+  });
+}
+
+function ilYA(date) {
+  const min = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
+  if (min < 2) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `il y a ${h} h`;
+  const j = Math.floor(h / 24);
+  return j === 1 ? 'hier' : `il y a ${j} jours`;
+}
+
+function libelleSegment(segment) {
+  return {
+    'PARTICULIER': 'Un propriétaire',
+    'PETITE CONCIERGERIE': 'Une petite conciergerie',
+    'GROSSE CONCIERGERIE': 'Une structure établie'
+  }[segment] || 'Un gestionnaire';
 }
 
 // Limite simple par IP : 3 candidatures par heure
@@ -127,15 +164,42 @@ function setupFondateursRoutes(app, pool, sendEmailViaBrevo) {
     );
   });
 
-  // ── Compteur de places ─────────────────────────────────────
+  // ── Compteur de places, d'activité et de clôture ───────────
   app.get('/api/fondateurs/places', async (req, res) => {
+    const base = {
+      total: PLACES, prises: 0, restantes: PLACES,
+      candidatures: null, derniere: null,
+      cloture: clotureEnFrancais(), close: estClos()
+    };
     try {
-      const r = await pool.query(
-        `SELECT COUNT(*)::int AS n FROM founder_applications WHERE statut = 'accepte'`
-      );
-      res.json({ total: PLACES, prises: r.rows[0].n, restantes: Math.max(0, PLACES - r.rows[0].n) });
+      const r = await pool.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE statut = 'accepte')::int AS acceptes,
+          COUNT(*)::int AS total
+        FROM founder_applications
+      `);
+      const acceptes = r.rows[0].acceptes;
+      base.prises = acceptes;
+      base.restantes = Math.max(0, PLACES - acceptes);
+
+      // Nombre de candidatures : affiché seulement au-delà du seuil
+      if (r.rows[0].total >= SEUIL_AFFICHAGE) base.candidatures = r.rows[0].total;
+
+      // Dernière candidature, anonymisée (moins de 7 jours)
+      const d = await pool.query(`
+        SELECT segment, created_at FROM founder_applications
+        WHERE created_at > NOW() - INTERVAL '7 days'
+        ORDER BY created_at DESC LIMIT 1
+      `);
+      if (d.rows.length) {
+        base.derniere = {
+          libelle: libelleSegment(d.rows[0].segment),
+          quand: ilYA(d.rows[0].created_at)
+        };
+      }
+      res.json(base);
     } catch (e) {
-      res.json({ total: PLACES, prises: 0, restantes: PLACES });
+      res.json(base);
     }
   });
 
@@ -146,6 +210,10 @@ function setupFondateursRoutes(app, pool, sendEmailViaBrevo) {
 
       // Piège à robots : le champ "site" doit rester vide
       if (b.site) return res.json({ ok: true });
+
+      if (estClos()) {
+        return res.status(410).json({ error: 'Les candidatures sont closes depuis le ' + clotureEnFrancais() + '.' });
+      }
 
       const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
       if (tropDeTentatives(ip)) {

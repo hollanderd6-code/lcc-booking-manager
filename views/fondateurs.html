@@ -69,6 +69,15 @@ h1.serif{font-size:clamp(34px,6vw,54px);line-height:1.1;color:var(--ink);margin-
 .place.prise{background:var(--vert);border-color:var(--vert)}
 .compteur-txt{font-size:14.5px;color:var(--muted)}
 .compteur-txt strong{color:var(--ink);font-weight:500}
+.compteur-activite,.compteur-cloture{
+  font-size:13.5px;color:var(--muted);margin-top:9px;
+  padding-top:9px;border-top:1px solid var(--border);display:none;
+}
+.compteur-activite b,.compteur-cloture b{color:var(--vert);font-weight:500}
+.pastille{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--vert-clair);margin-right:7px;vertical-align:middle;
+}
 
 /* ── Sections ────────────────────────────────────── */
 section{padding:56px 0;border-top:1px solid var(--border)}
@@ -186,6 +195,8 @@ footer a{color:var(--muted)}
     <div class="compteur">
       <div class="jauge" id="jauge" aria-hidden="true"></div>
       <p class="compteur-txt" id="compteurTxt">Chargement des places…</p>
+      <p class="compteur-activite" id="activite"></p>
+      <p class="compteur-cloture" id="cloture"></p>
     </div>
   </header>
 
@@ -378,27 +389,54 @@ footer a{color:var(--muted)}
   var PLACES = 10;
 
   /* ── Compteur ─────────────────────────────────── */
-  function rendreCompteur(prises){
+  function rendreCompteur(d){
+    var prises = d.prises || 0;
     var jauge = document.getElementById('jauge');
     var txt = document.getElementById('compteurTxt');
     jauge.innerHTML = '';
     for (var i = 0; i < PLACES; i++){
-      var d = document.createElement('div');
-      d.className = 'place' + (i < prises ? ' prise' : '');
-      jauge.appendChild(d);
+      var c = document.createElement('div');
+      c.className = 'place' + (i < prises ? ' prise' : '');
+      jauge.appendChild(c);
     }
     var restantes = PLACES - prises;
-    if (restantes <= 0){
+    if (d.close){
+      txt.innerHTML = '<strong>Les candidatures sont closes.</strong> Écrivez-moi pour la prochaine session.';
+    } else if (restantes <= 0){
       txt.innerHTML = '<strong>Les dix places sont pourvues.</strong> Vous pouvez candidater pour la prochaine session.';
     } else {
       txt.innerHTML = '<strong>' + restantes + ' place' + (restantes > 1 ? 's' : '') +
-        ' sur ' + PLACES + '</strong> encore ouverte' + (restantes > 1 ? 's' : '') + '.';
+        ' sur ' + PLACES + '</strong> encore ouverte' + (restantes > 1 ? 's' : '') +
+        (d.candidatures ? ' · ' + d.candidatures + ' candidatures reçues' : '') + '.';
+    }
+
+    if (d.derniere && !d.close){
+      var a = document.getElementById('activite');
+      a.innerHTML = '<span class="pastille"></span>Dernière candidature : <b>' +
+        d.derniere.libelle.toLowerCase() + '</b>, ' + d.derniere.quand + '.';
+      a.style.display = 'block';
+    }
+
+    if (d.cloture){
+      var c2 = document.getElementById('cloture');
+      c2.innerHTML = d.close
+        ? 'Les candidatures étaient ouvertes jusqu\'au ' + d.cloture + '.'
+        : 'Candidatures ouvertes jusqu\'au <b>' + d.cloture + '</b> inclus.';
+      c2.style.display = 'block';
+    }
+
+    if (d.close){
+      var f = document.getElementById('formFondateurs');
+      if (f){
+        f.querySelectorAll('input, textarea, button').forEach(function(el){ el.disabled = true; });
+        document.getElementById('btnEnvoyer').textContent = 'Candidatures closes';
+      }
     }
   }
   fetch('/api/fondateurs/places')
     .then(function(r){ return r.json(); })
-    .then(function(d){ PLACES = d.total || 10; rendreCompteur(d.prises || 0); })
-    .catch(function(){ rendreCompteur(0); });
+    .then(function(d){ PLACES = d.total || 10; rendreCompteur(d); })
+    .catch(function(){ rendreCompteur({ prises: 0 }); });
 
   /* ── Soumission ───────────────────────────────── */
   var form = document.getElementById('formFondateurs');
