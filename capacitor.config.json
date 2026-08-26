@@ -35,7 +35,7 @@
   },
   "ios": {
     "backgroundColor": "#FBFBFA",
-    "contentInset": "automatic",
+    "contentInset": "never",
     "allowsLinkPreview": false
   },
   "android": {
