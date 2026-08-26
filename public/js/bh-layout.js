@@ -1985,34 +1985,27 @@ var _bhNativeConfirm = window.confirm;
 })();
 
 
-/* ── barre d'onglets : une seule correction ───────────────────────────
-   La barre se reservait une zone sure deja retiree du viewport sur une
-   partie des pages :
+/* ── zone sure du bas : marge mesuree, rien d'autre ────────────────
+   Sur une partie des pages, WKWebView retire deja la zone sure du bas du
+   viewport, mais env(safe-area-inset-bottom) annonce toujours 34 px :
 
        clientHeight ....... 860   partout
-       env(...-bottom) .... 34px  partout
        innerHeight ........ 902 sur app.html, 868 sur messages.html
+       868 = 860 + 8 (inset haut) : le bas n'y est pas.
 
-   868 = 860 + 8 (inset haut) : le bas n'y est pas, mais env() l'annonce.
-   La barre gardait donc 34 px de vide en bas — c'etait la « bande », et
-   non un espace sous la barre.
+   La barre gardait donc 34 px de vide en bas — c'etait la bande unie, et
+   la raison pour laquelle le menu paraissait leve.
 
-   On mesure la zone sure REELLEMENT presente, et on garde une hauteur de
-   CONTENU constante : les onglets tombent au meme endroit par rapport au
-   bas de l'ecran sur toutes les pages, que la marge vaille 34 ou 0.
+   On ecrit UNE seule propriete : padding-bottom, avec la marge reellement
+   presente. La hauteur de la barre reste calculee par le navigateur et la
+   capsule garde son propre calcul : y toucher decalait la mise en page sur
+   les pages qui etaient correctes.
 
-   Tout est pose en inline : bh-v3-mobile.css cible
-   « html[data-theme-v3="1"] .mobile-tabs », plus specifique que la feuille
-   injectee — un !important n'y suffit pas. Meme choix que pour l'en-tete
-   mobile dans normalizeBranding(). */
+   L'inline est necessaire : bh-v3-mobile.css cible
+   « html[data-theme-v3="1"] .mobile-tabs », plus specifique qu'une feuille
+   injectee. Meme choix que normalizeBranding() pour l'en-tete. */
 (function () {
   'use strict';
-
-  var CONTENU = 68;                             // hauteur des onglets, hors zone sure
-  var CAPSULE_INSET = 0;                        // capsule = boite du bouton actif (valeur retenue a l'essai)
-  var FOND = 'rgba(251,251,250,.92)';           // valeur d'app.html, jugee correcte
-  var FLOU = 'saturate(1.8) blur(14px)';
-  var FILET = '1px solid rgba(200,184,154,.28)';
 
   function insetHaut() {
     // env() n'est pas lisible en JS : on le fait resoudre sur une sonde.
@@ -2027,68 +2020,24 @@ var _bhNativeConfirm = window.confirm;
   function normaliser() {
     var barre = document.querySelector('.mobile-tabs');
     if (!barre) return;
-
     var marge = Math.max(0, Math.round(
       window.innerHeight - document.documentElement.clientHeight - insetHaut()
     ));
-
-    var s = barre.style;
-    s.setProperty('box-sizing', 'border-box', 'important');
-    s.setProperty('height', (CONTENU + marge) + 'px', 'important');
-    s.setProperty('min-height', (CONTENU + marge) + 'px', 'important');
-    s.setProperty('padding-top', '8px', 'important');
-    s.setProperty('padding-bottom', marge + 'px', 'important');
-    s.setProperty('background', FOND, 'important');
-    s.setProperty('-webkit-backdrop-filter', FLOU, 'important');
-    s.setProperty('backdrop-filter', FLOU, 'important');
-    s.setProperty('border-top', FILET, 'important');
-
-    // La capsule etait calculee en env() : sur les pages ou la marge vaut 0
-    // elle depassait par le haut. On la mesure sur le bouton actif — les
-    // valeurs fixes ne suivaient pas la boite reelle des onglets.
-    var cap = barre.querySelector('.lg-capsule');
-    var actif = barre.querySelector('.tab-btn.active') || barre.querySelector('.tab-btn');
-    if (cap && actif) {
-      var rb = barre.getBoundingClientRect(), ra = actif.getBoundingClientRect();
-      cap.style.setProperty('top', Math.round(ra.top - rb.top) + CAPSULE_INSET + 'px', 'important');
-      cap.style.setProperty('height', Math.max(0, Math.round(ra.height) - CAPSULE_INSET * 2) + 'px', 'important');
-    }
-    if (barre.__lgSync) barre.__lgSync(false);
-  }
-
-  // La capsule est reecrite par la barre a chaque changement d'onglet
-  // (transform, width, parfois top/height). On remet notre mesure des
-  // qu'elle est touchee, sinon elle est perdue jusqu'au prochain resize.
-  var enCours = false;
-  function surveillerCapsule(barre) {
-    var cap = barre.querySelector('.lg-capsule');
-    if (!cap || cap.__bhCapsuleSurveillee) return;
-    cap.__bhCapsuleSurveillee = true;
-    new MutationObserver(function () {
-      if (enCours) return;
-      enCours = true;
-      normaliser();
-      enCours = false;
-    }).observe(cap, { attributes: true, attributeFilter: ['style'] });
+    if (barre.__bhMarge === marge) return;         // rien a faire, on ne remue pas la mise en page
+    barre.__bhMarge = marge;
+    barre.style.setProperty('padding-bottom', marge + 'px', 'important');
+    if (barre.__lgSync) barre.__lgSync(false);     // la capsule se repositionne elle-meme
   }
 
   function demarrer() {
-    var barre = document.querySelector('.mobile-tabs');
-    if (barre) { normaliser(); surveillerCapsule(barre); return; }
-
-    // La barre est creee par mobile-native-experience.js, apres bh-layout,
-    // et pas en enfant direct de body : sans subtree l'observateur ne la
-    // voyait jamais et seul le repli agissait — d'ou les secondes d'attente.
+    if (document.querySelector('.mobile-tabs')) { normaliser(); return; }
+    // La barre est creee par mobile-native-experience.js, plus profond que
+    // body : subtree est indispensable, sinon rien n'est vu.
     var obs = new MutationObserver(function () {
-      var b = document.querySelector('.mobile-tabs');
-      if (b) { obs.disconnect(); normaliser(); surveillerCapsule(b); }
+      if (document.querySelector('.mobile-tabs')) { obs.disconnect(); normaliser(); }
     });
     obs.observe(document.documentElement, { childList: true, subtree: true });
-    setTimeout(function () {
-      obs.disconnect();
-      var b = document.querySelector('.mobile-tabs');
-      if (b) { normaliser(); surveillerCapsule(b); }
-    }, 1500);
+    setTimeout(function () { obs.disconnect(); normaliser(); }, 1500);
   }
 
   if (document.readyState === 'loading') {
@@ -2108,10 +2057,10 @@ var _bhNativeConfirm = window.confirm;
     var r = b.getBoundingClientRect(), cs = getComputedStyle(b);
     var client = document.documentElement.clientHeight, haut = insetHaut();
     console.log('[BH]', location.pathname);
-    console.log('[BH] viewport : innerHeight', window.innerHeight, '| clientHeight', client, '| inset haut', haut);
-    console.log('[BH] marge bas: mesuree', Math.max(0, Math.round(window.innerHeight - client - haut)),
-      '| appliquee', b.style.paddingBottom, '| env() annoncait 34px');
-    console.log('[BH] barre    : hauteur', Math.round(r.height), '| bas', Math.round(window.innerHeight - r.bottom),
+    console.log('[BH] innerHeight', window.innerHeight, '| clientHeight', client, '| inset haut', haut);
+    console.log('[BH] marge mesuree', Math.max(0, Math.round(window.innerHeight - client - haut)),
+      '| appliquee', b.style.paddingBottom, '| env() annonce 34px');
+    console.log('[BH] barre hauteur', Math.round(r.height), '| bas', Math.round(window.innerHeight - r.bottom),
       '| fond', cs.backgroundColor);
   };
 })();
