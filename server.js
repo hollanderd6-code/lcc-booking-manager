@@ -30679,6 +30679,47 @@ app.get('/api/message-templates', authenticateToken, async (req, res) => {
     }
     q += ' ORDER BY created_at DESC';
     const result = await pool.query(q, params);
+
+    /* La portee reelle de chaque template. « Tous les logements » ne dit rien
+       de ce qui est reellement couvert : la reponse depend du compte qui
+       possede le template et des comptes qu'il gere. Un template actif qui
+       n'atteint personne doit pouvoir se voir. */
+    const parCompte = new Map();
+    for (const t of result.rows) {
+      if (!parCompte.has(t.user_id)) {
+        const { rows } = await pool.query(
+          `SELECT p.id FROM properties p
+            WHERE p.user_id = $1
+               OR p.user_id IN (
+                    SELECT delegator_user_id FROM account_delegations
+                     WHERE delegate_user_id = $1 AND status = 'accepted'
+                  )`,
+          [t.user_id]
+        ).catch(() => ({ rows: [] }));
+        parCompte.set(t.user_id, rows.map((r) => r.id));
+      }
+      const joignables = parCompte.get(t.user_id) || [];
+
+      const cibles = (() => {
+        try {
+          const l = Array.isArray(t.property_ids) ? t.property_ids : JSON.parse(t.property_ids || '[]');
+          if (l.length) return l;
+        } catch (e) {}
+        return t.property_id ? [t.property_id] : [];
+      })();
+
+      if (cibles.length) {
+        // Un ciblage hors du parc joignable ne partira pas : on compte l'intersection.
+        t.logements_couverts = cibles.filter((id) => joignables.includes(id)).length;
+        t.logements_cibles = cibles.length;
+        t.portee = 'ciblee';
+      } else {
+        t.logements_couverts = joignables.length;
+        t.logements_cibles = null;
+        t.portee = 'globale';
+      }
+    }
+
     res.json({ templates: result.rows });
   } catch(e) {
     res.status(500).json({ error: e.message });
