@@ -26542,6 +26542,9 @@ app.use('/api/welcome-books', welcomeRouter);
 
 require('./routes/markup-routes')(app, pool, { authenticateAny, getRealUserId });
 require('./routes/coherence-routes')(app, pool, { authenticateAny, getRealUserId });
+
+// ─── Programme Fondateurs : page /f/:slug + API de candidature ───
+require('./routes/fondateurs-routes').setupFondateursRoutes(app, pool, sendEmailViaBrevo);
 require('./routes/pricing-notifications-routes')(app, pool, { authenticateAny, getRealUserId });
 require('./routes/pricing-pause-routes')(app, pool, { authenticateAny, getRealUserId });
 require('./routes/inventaire-channex-routes')(app, pool, { authenticateAny, getRealUserId });

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Programme Fondateurs — Boostinghost</title>
+<meta property="og:title" content="Programme Fondateurs — Boostinghost">
+<meta property="og:description" content="Dix gestionnaires, six mois gratuits, puis −50 % à vie. J'ai construit ce logiciel pour ma conciergerie, je cherche des gens pour l'éprouver ailleurs.">
+<meta property="og:type" content="website">
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --vert:#0E3B2E;
+  --vert-clair:#15624B;
+  --cream:#F5F0E8;
+  --cream-fonce:#EDEAE3;
+  --ink:#0D1117;
+  --text:#374151;
+  --muted:#7A8695;
+  --border:rgba(200,184,154,.5);
+  --white:#FAFAF8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--cream);
+  color:var(--text);
+  font-family:'DM Sans',system-ui,sans-serif;
+  font-size:17px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:720px;margin:0 auto;padding:0 24px}
+.serif{font-family:'Instrument Serif',Georgia,serif;font-weight:400;letter-spacing:-.01em}
+
+/* ── Bandeau ─────────────────────────────────────── */
+.topbar{
+  background:var(--vert);color:var(--cream);
+  padding:14px 0;font-size:13px;letter-spacing:.14em;
+  text-transform:uppercase;text-align:center;
+}
+
+/* ── Hero ────────────────────────────────────────── */
+.hero{padding:72px 0 56px}
+.eyebrow{
+  font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--vert);font-weight:500;margin-bottom:26px;
+}
+h1.serif{font-size:clamp(34px,6vw,54px);line-height:1.1;color:var(--ink);margin-bottom:24px}
+.lede{font-size:19px;color:var(--text);max-width:60ch}
+.lede + .lede{margin-top:16px}
+
+/* ── Compteur de places (élément signature) ──────── */
+.compteur{
+  margin:44px 0 0;padding:24px 26px;
+  background:var(--white);border:1px solid var(--border);border-radius:20px;
+}
+.jauge{display:flex;gap:7px;margin-bottom:14px}
+.place{
+  flex:1;height:34px;border-radius:5px;
+  background:var(--cream-fonce);
+  border:1px solid var(--border);
+  transition:background .3s ease;
+}
+.place.prise{background:var(--vert);border-color:var(--vert)}
+.compteur-txt{font-size:14.5px;color:var(--muted)}
+.compteur-txt strong{color:var(--ink);font-weight:500}
+
+/* ── Sections ────────────────────────────────────── */
+section{padding:56px 0;border-top:1px solid var(--border)}
+h2.serif{font-size:clamp(26px,4vw,36px);color:var(--ink);margin-bottom:12px}
+.sous{color:var(--muted);margin-bottom:32px;font-size:16px}
+
+/* ── Échange réciproque ──────────────────────────── */
+.echange{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--border);border-radius:20px;overflow:hidden}
+.colonne{background:var(--white);padding:30px 26px}
+.colonne h3{
+  font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:500;margin-bottom:20px;color:var(--vert);
+}
+.colonne ul{list-style:none}
+.colonne li{padding:11px 0;border-bottom:1px solid var(--border);font-size:15.5px}
+.colonne li:last-child{border-bottom:0;padding-bottom:0}
+.colonne li b{color:var(--ink);font-weight:500}
+
+/* ── Quotas ──────────────────────────────────────── */
+.quotas{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.quota{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:24px 20px}
+.quota .n{font-family:'Instrument Serif',serif;font-size:44px;line-height:1;color:var(--vert);display:block;margin-bottom:8px}
+.quota .l{font-size:14.5px;color:var(--ink);font-weight:500;display:block;margin-bottom:4px}
+.quota .d{font-size:13.5px;color:var(--muted)}
+
+/* ── Tarifs ──────────────────────────────────────── */
+table.tarifs{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+table.tarifs th{
+  text-align:left;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;
+  font-weight:500;color:var(--muted);padding:14px 20px;border-bottom:1px solid var(--border);
+}
+table.tarifs td{padding:15px 20px;border-bottom:1px solid var(--border);font-size:15.5px}
+table.tarifs tr:last-child td{border-bottom:0}
+table.tarifs .barre{color:var(--muted);text-decoration:line-through}
+table.tarifs .apres{color:var(--vert);font-weight:500}
+
+/* ── Formulaire ──────────────────────────────────── */
+.form-zone{background:var(--vert);color:var(--cream);border-top:0}
+.form-zone h2.serif,.form-zone .sous{color:var(--cream)}
+.form-zone .sous{opacity:.72}
+fieldset{border:0;margin-bottom:34px}
+legend{
+  font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;
+  opacity:.65;margin-bottom:18px;padding:0;
+}
+label.champ{display:block;margin-bottom:18px}
+label.champ > span{display:block;font-size:15px;margin-bottom:7px}
+label.champ .aide{display:block;font-size:13.5px;opacity:.6;margin-top:-3px;margin-bottom:7px}
+input[type=text],input[type=email],input[type=tel],textarea,select{
+  width:100%;padding:13px 15px;font:inherit;font-size:16px;
+  background:rgba(255,255,255,.07);color:var(--cream);
+  border:1px solid rgba(245,240,232,.28);border-radius:11px;
+}
+textarea{min-height:92px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--cream);outline-offset:1px;background:rgba(255,255,255,.12)}
+input::placeholder,textarea::placeholder{color:rgba(245,240,232,.4)}
+
+.pills{display:flex;flex-wrap:wrap;gap:9px}
+.pill{position:relative}
+.pill input{position:absolute;opacity:0;width:1px;height:1px}
+.pill span{
+  display:block;padding:10px 17px;font-size:14.5px;cursor:pointer;
+  border:1px solid rgba(245,240,232,.28);border-radius:999px;transition:.15s;
+}
+.pill input:checked + span{background:var(--cream);color:var(--vert);border-color:var(--cream);font-weight:500}
+.pill input:focus-visible + span{outline:2px solid var(--cream);outline-offset:2px}
+
+.engagements{border:1px solid rgba(245,240,232,.28);border-radius:16px;padding:8px 18px}
+.engagement{display:flex;gap:13px;align-items:flex-start;padding:15px 0;border-bottom:1px solid rgba(245,240,232,.16);font-size:15px;cursor:pointer}
+.engagement:last-child{border-bottom:0}
+.engagement input{margin-top:3px;width:19px;height:19px;accent-color:var(--cream);flex-shrink:0}
+
+button.envoyer{
+  width:100%;padding:18px;font:inherit;font-size:17px;font-weight:500;
+  background:var(--cream);color:var(--vert);border:0;border-radius:13px;cursor:pointer;transition:.15s;
+}
+button.envoyer:hover{background:#fff}
+button.envoyer:disabled{opacity:.5;cursor:wait}
+.rgpd{font-size:13px;opacity:.6;margin-top:18px;line-height:1.5}
+.rgpd a{color:inherit}
+.erreur{background:rgba(255,120,110,.18);border:1px solid rgba(255,150,140,.5);border-radius:11px;padding:13px 16px;font-size:14.5px;margin-bottom:20px;display:none}
+.pot{position:absolute;left:-9999px}
+
+/* ── Confirmation ────────────────────────────────── */
+#merci{display:none;padding:80px 0;text-align:center}
+#merci h2{font-size:clamp(28px,5vw,42px);margin-bottom:18px}
+#merci p{max-width:46ch;margin:0 auto 14px;opacity:.85}
+
+footer{padding:40px 0 64px;font-size:13.5px;color:var(--muted);text-align:center}
+footer a{color:var(--muted)}
+
+@media(max-width:640px){
+  .echange,.quotas{grid-template-columns:1fr}
+  .echange{border-radius:16px}
+  .hero{padding:52px 0 40px}
+  section{padding:44px 0}
+  .jauge{gap:5px}
+  .place{height:28px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<div class="topbar">Boostinghost · Programme Fondateurs</div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Dix places · Candidature sur dossier</p>
+    <h1 class="serif">J'ai construit ce logiciel pour ma conciergerie. Je cherche dix personnes pour l'éprouver ailleurs.</h1>
+    <p class="lede">Boostinghost synchronise Airbnb et Booking, répond aux voyageurs, planifie les ménages, gère les serrures connectées et sort les factures. Il tourne tous les jours sur mes propres logements en Île-de-France.</p>
+    <p class="lede">Un outil qui ne connaît qu'une seule façon de travailler finit par n'aller qu'à une seule personne. D'où ces dix places : dix gestionnaires aux profils différents, six mois d'accès complet et gratuit, et un point tous les mois avec moi pour construire la suite avec vos contraintes plutôt qu'avec les miennes.</p>
+
+    <div class="compteur">
+      <div class="jauge" id="jauge" aria-hidden="true"></div>
+      <p class="compteur-txt" id="compteurTxt">Chargement des places…</p>
+    </div>
+  </header>
+
+  <section>
+    <h2 class="serif">L'échange</h2>
+    <p class="sous">Le programme est gratuit, mais il n'est pas passif.</p>
+    <div class="echange">
+      <div class="colonne">
+        <h3>Ce que vous recevez</h3>
+        <ul>
+          <li><b>Six mois d'accès complet</b>, sans carte bancaire</li>
+          <li><b>−50 % à vie</b> ensuite, sur la formule de votre choix</li>
+          <li><b>Mon numéro</b>, pas un formulaire de support</li>
+          <li><b>Vos demandes traitées en priorité</b> — c'est le principe</li>
+        </ul>
+      </div>
+      <div class="colonne">
+        <h3>Ce que je vous demande</h3>
+        <ul>
+          <li><b>45 minutes</b> au démarrage, pour connecter votre premier logement ensemble</li>
+          <li><b>20 minutes par mois</b> pendant six mois</li>
+          <li><b>Un témoignage</b> à partir du troisième mois, si l'outil vous a servi</li>
+          <li><b>Votre franchise</b>, surtout quand quelque chose ne va pas</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="serif">Trois profils, pas dix fois le même</h2>
+    <p class="sous">Les places sont réparties d'avance. Un outil éprouvé uniquement par des conciergeries de trente logements devient inutilisable pour un propriétaire qui en a deux.</p>
+    <div class="quotas">
+      <div class="quota">
+        <span class="n">3</span>
+        <span class="l">Propriétaires</span>
+        <span class="d">1 à 5 logements, en direct</span>
+      </div>
+      <div class="quota">
+        <span class="n">5</span>
+        <span class="l">Petites conciergeries</span>
+        <span class="d">6 à 20 logements, avec des intervenants</span>
+      </div>
+      <div class="quota">
+        <span class="n">2</span>
+        <span class="l">Structures établies</span>
+        <span class="d">Plus de 20 logements, plusieurs comptes</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="serif">Ce que vous paierez au septième mois</h2>
+    <p class="sous">Les tarifs actuels, et ce qu'ils deviennent pour un Fondateur. Le tarif réduit est acquis à vie, y compris si la grille publique augmente.</p>
+    <table class="tarifs">
+      <thead>
+        <tr><th>Formule</th><th>Tarif public</th><th>Votre tarif</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Starter · jusqu'à 3 logements</td><td class="barre">15 €/mois</td><td class="apres">7,50 €/mois</td></tr>
+        <tr><td>Pro · jusqu'à 50 logements</td><td class="barre">49 €/mois</td><td class="apres">24,50 €/mois</td></tr>
+        <tr><td>Agence · illimité</td><td class="barre">299 €/mois</td><td class="apres">149,50 €/mois</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+<div class="form-zone" id="candidater">
+  <div class="wrap">
+    <section style="border-top:0">
+      <h2 class="serif">Candidater</h2>
+      <p class="sous">Trois minutes. Je lis chaque réponse moi-même et je réponds sous 72 heures, que votre candidature soit retenue ou non.</p>
+
+      <div class="erreur" id="erreur"></div>
+
+      <form id="formFondateurs" novalidate>
+        <input type="text" name="site" class="pot" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+        <fieldset>
+          <legend>Vos coordonnées</legend>
+          <label class="champ"><span>Prénom et nom *</span><input type="text" name="nom" required autocomplete="name"></label>
+          <label class="champ"><span>Email *</span><input type="email" name="email" required autocomplete="email"></label>
+          <label class="champ"><span>Téléphone *</span><span class="aide">Le programme commence par un appel, d'où le numéro.</span><input type="tel" name="telephone" required autocomplete="tel"></label>
+          <label class="champ"><span>Nom de votre structure</span><span class="aide">Laissez vide si vous gérez à titre personnel.</span><input type="text" name="structure" autocomplete="organization"></label>
+          <label class="champ"><span>Ville ou zone d'activité *</span><input type="text" name="ville" required></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Votre activité</legend>
+
+          <label class="champ" style="margin-bottom:10px"><span>Combien de logements gérez-vous aujourd'hui ? *</span></label>
+          <div class="pills" style="margin-bottom:22px">
+            <label class="pill"><input type="radio" name="logements" value="1 à 2" required><span>1 à 2</span></label>
+            <label class="pill"><input type="radio" name="logements" value="3 à 5"><span>3 à 5</span></label>
+            <label class="pill"><input type="radio" name="logements" value="6 à 15"><span>6 à 15</span></label>
+            <label class="pill"><input type="radio" name="logements" value="16 à 40"><span>16 à 40</span></label>
+            <label class="pill"><input type="radio" name="logements" value="Plus de 40"><span>Plus de 40</span></label>
+          </div>
+
+          <label class="champ" style="margin-bottom:10px"><span>Vous gérez : *</span></label>
+          <div class="pills" style="margin-bottom:22px">
+            <label class="pill"><input type="radio" name="gestion" value="Mes propres biens" required><span>Mes propres biens</span></label>
+            <label class="pill"><input type="radio" name="gestion" value="Des biens de propriétaires tiers"><span>Des biens de propriétaires tiers</span></label>
+            <label class="pill"><input type="radio" name="gestion" value="Les deux"><span>Les deux</span></label>
+          </div>
+
+          <label class="champ" style="margin-bottom:10px"><span>Des intervenants (ménage, check-in, maintenance) auraient-ils besoin d'un accès ? *</span></label>
+          <div class="pills" style="margin-bottom:22px">
+            <label class="pill"><input type="radio" name="intervenants" value="Oui" required><span>Oui</span></label>
+            <label class="pill"><input type="radio" name="intervenants" value="Non"><span>Non</span></label>
+            <label class="pill"><input type="radio" name="intervenants" value="Pas encore, c'est prévu"><span>Pas encore, c'est prévu</span></label>
+          </div>
+
+          <label class="champ" style="margin-bottom:10px"><span>Sur quelles plateformes êtes-vous ? *</span></label>
+          <div class="pills">
+            <label class="pill"><input type="checkbox" name="plateformes" value="Airbnb"><span>Airbnb</span></label>
+            <label class="pill"><input type="checkbox" name="plateformes" value="Booking.com"><span>Booking.com</span></label>
+            <label class="pill"><input type="checkbox" name="plateformes" value="Abritel / Vrbo"><span>Abritel / Vrbo</span></label>
+            <label class="pill"><input type="checkbox" name="plateformes" value="Mon propre site"><span>Mon propre site</span></label>
+            <label class="pill"><input type="checkbox" name="plateformes" value="Autre"><span>Autre</span></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Votre situation actuelle</legend>
+
+          <label class="champ" style="margin-bottom:10px"><span>Aujourd'hui, vous gérez avec quoi ? *</span></label>
+          <div class="pills" style="margin-bottom:22px">
+            <label class="pill"><input type="radio" name="outil_actuel" value="Excel, Sheets ou papier" required><span>Excel, Sheets ou papier</span></label>
+            <label class="pill"><input type="radio" name="outil_actuel" value="Les calendriers Airbnb / Booking"><span>Les calendriers des plateformes</span></label>
+            <label class="pill"><input type="radio" name="outil_actuel" value="Un logiciel de gestion"><span>Un logiciel de gestion</span></label>
+          </div>
+
+          <label class="champ">
+            <span>Qu'est-ce qui vous fait perdre le plus de temps chaque semaine ? *</span>
+            <span class="aide">Soyez concret. C'est la réponse que je lis en premier.</span>
+            <textarea name="perte_temps" required maxlength="1200"></textarea>
+          </label>
+
+          <label class="champ">
+            <span>Si vous utilisez déjà un logiciel : lequel, et qu'est-ce qui vous manque ?</span>
+            <textarea name="logiciel_manque" maxlength="1200"></textarea>
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Engagement réciproque</legend>
+          <div class="engagements">
+            <label class="engagement"><input type="checkbox" name="e1" required><span>Je participerai à un appel de démarrage de 45 minutes avec Charles</span></label>
+            <label class="engagement"><input type="checkbox" name="e2" required><span>Je participerai à un point de 20 minutes par mois pendant 6 mois</span></label>
+            <label class="engagement"><input type="checkbox" name="e3" required><span>Je fournirai un témoignage utilisable publiquement à partir du 3<sup>e</sup> mois</span></label>
+          </div>
+
+          <label class="champ" style="margin:24px 0 10px"><span>Quand pourriez-vous commencer ? *</span></label>
+          <div class="pills">
+            <label class="pill"><input type="radio" name="demarrage" value="Tout de suite" required><span>Tout de suite</span></label>
+            <label class="pill"><input type="radio" name="demarrage" value="Dans le mois"><span>Dans le mois</span></label>
+            <label class="pill"><input type="radio" name="demarrage" value="Plus tard dans l'année"><span>Plus tard dans l'année</span></label>
+          </div>
+        </fieldset>
+
+        <button type="submit" class="envoyer" id="btnEnvoyer">Envoyer ma candidature</button>
+
+        <p class="rgpd">
+          Vos coordonnées servent uniquement à traiter cette candidature et à vous recontacter à ce sujet.
+          Elles sont conservées 12 mois, ne sont transmises à personne, et vous pouvez demander leur suppression
+          à tout moment à <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a>.
+          Voir la <a href="/politique-confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a>.
+        </p>
+      </form>
+
+      <div id="merci">
+        <h2 class="serif">Candidature reçue.</h2>
+        <p>Je la lis dans la journée et je vous réponds sous 72 heures, quelle que soit ma décision.</p>
+        <p>Si vous êtes retenu, vous recevrez directement un lien pour choisir le créneau de l'appel de démarrage.</p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    Boostinghost — Boostinghost SAS, 31 rue Adam Ledoux, 92400 Courbevoie ·
+    <a href="/mentions-legales.html">Mentions légales</a>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var PLACES = 10;
+
+  /* ── Compteur ─────────────────────────────────── */
+  function rendreCompteur(prises){
+    var jauge = document.getElementById('jauge');
+    var txt = document.getElementById('compteurTxt');
+    jauge.innerHTML = '';
+    for (var i = 0; i < PLACES; i++){
+      var d = document.createElement('div');
+      d.className = 'place' + (i < prises ? ' prise' : '');
+      jauge.appendChild(d);
+    }
+    var restantes = PLACES - prises;
+    if (restantes <= 0){
+      txt.innerHTML = '<strong>Les dix places sont pourvues.</strong> Vous pouvez candidater pour la prochaine session.';
+    } else {
+      txt.innerHTML = '<strong>' + restantes + ' place' + (restantes > 1 ? 's' : '') +
+        ' sur ' + PLACES + '</strong> encore ouverte' + (restantes > 1 ? 's' : '') + '.';
+    }
+  }
+  fetch('/api/fondateurs/places')
+    .then(function(r){ return r.json(); })
+    .then(function(d){ PLACES = d.total || 10; rendreCompteur(d.prises || 0); })
+    .catch(function(){ rendreCompteur(0); });
+
+  /* ── Soumission ───────────────────────────────── */
+  var form = document.getElementById('formFondateurs');
+  var btn = document.getElementById('btnEnvoyer');
+  var boiteErreur = document.getElementById('erreur');
+
+  function erreur(msg){
+    boiteErreur.textContent = msg;
+    boiteErreur.style.display = 'block';
+    boiteErreur.scrollIntoView({ block: 'center' });
+  }
+
+  form.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    boiteErreur.style.display = 'none';
+
+    if (!form.checkValidity()){
+      var premier = form.querySelector(':invalid');
+      if (premier){
+        premier.scrollIntoView({ block: 'center' });
+        if (premier.focus) premier.focus();
+      }
+      erreur('Il manque une réponse obligatoire un peu plus haut.');
+      return;
+    }
+
+    var plateformes = Array.prototype.slice
+      .call(form.querySelectorAll('input[name=plateformes]:checked'))
+      .map(function(c){ return c.value; });
+    if (!plateformes.length){ erreur('Indiquez au moins une plateforme.'); return; }
+
+    var fd = new FormData(form);
+    var data = {
+      nom: fd.get('nom'), email: fd.get('email'), telephone: fd.get('telephone'),
+      structure: fd.get('structure'), ville: fd.get('ville'),
+      logements: fd.get('logements'), gestion: fd.get('gestion'),
+      intervenants: fd.get('intervenants'), plateformes: plateformes,
+      outil_actuel: fd.get('outil_actuel'), perte_temps: fd.get('perte_temps'),
+      logiciel_manque: fd.get('logiciel_manque'), demarrage: fd.get('demarrage'),
+      canal: (document.body.dataset.canal || 'direct'),
+      site: fd.get('site')
+    };
+
+    btn.disabled = true;
+    btn.textContent = 'Envoi…';
+
+    fetch('/api/fondateurs/candidature', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+    .then(function(res){
+      if (!res.ok) throw new Error(res.j.error || 'Envoi impossible');
+      form.style.display = 'none';
+      document.getElementById('merci').style.display = 'block';
+      document.getElementById('merci').scrollIntoView({ block: 'center' });
+    })
+    .catch(function(e){
+      btn.disabled = false;
+      btn.textContent = 'Envoyer ma candidature';
+      erreur(e.message === 'deja_candidate'
+        ? 'Une candidature existe déjà avec cet email. Je reviens vers vous très vite.'
+        : 'L\'envoi a échoué. Réessayez, ou écrivez-moi à contact@boostinghost.fr.');
+    });
+  });
+})();
+</script>
+</body>
+</html>
