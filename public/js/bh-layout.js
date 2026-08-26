@@ -1456,6 +1456,17 @@ var _bhNativeConfirm = window.confirm;
       '.mobile-tabs{position:fixed!important;bottom:0!important;left:0!important;right:0!important;' +
         'padding-bottom:env(safe-area-inset-bottom,0px)!important;' +
         'z-index:10001!important;pointer-events:auto!important;touch-action:none!important;}' +
+      /* fond unique + reserve de la barre — chaque page definissait son fond :
+         le plus opaque (rgba(245,242,236,.97)) transformait les 34 px de zone
+         sure en bande unie et le menu paraissait leve, alors qu'il etait au
+         meme endroit. Valeur retenue : celle d'app.html. Le fond de la barre
+         couvre deja la zone sure, via son padding-bottom pose juste au-dessus. */
+      '.mobile-tabs{' +
+        'background:rgba(251,251,250,.92)!important;' +
+        '-webkit-backdrop-filter:saturate(1.8) blur(14px)!important;' +
+        'backdrop-filter:saturate(1.8) blur(14px)!important;' +
+        'border-top:1px solid rgba(200,184,154,.28)!important;' +
+      '}' +
       // la feuille "Plus" passe AU-DESSUS de la barre (sinon la barre masque le bouton Déconnexion)
       '#moreMenuSheet,#moreMenuOverlay{z-index:10060!important;}' +
       // vrai conteneur scrollable : sinon le bouton Déconnexion est coupé et rebondit
@@ -1982,4 +1993,83 @@ var _bhNativeConfirm = window.confirm;
   function boot() { injectLogoCSS(); injectStyleV4(); enhance(); attachHaptics(); setupPageTransitions(); setTimeout(function(){ injectLogoCSS(); injectStyleV4(); enhance(); }, 600); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
+})();
+
+
+/* ── Reserve de place sous la barre d'onglets ──────────────────────────
+   app.html reservait 74 px a ses conteneurs, messages.html rien : la liste
+   s'arretait a sa propre hauteur et la zone sure devenait une bande unie.
+   La reserve est posee ici une fois pour toutes les pages.
+
+   Elle est MESUREE sur la barre (hauteur + zone sure, deja dans son
+   padding) plutot qu'ecrite en dur : une barre de 70 ou de 90 px, avec ou
+   sans encoche, donne la bonne valeur sans table de correspondance.
+
+   Elle n'est appliquee que si le conteneur reserve MOINS : les pages deja
+   reglees gardent leur valeur, rien n'est double. */
+(function () {
+  'use strict';
+
+  function conteneurQuiDefile() {
+    var candidats = ['.main-content', '.app-container', 'main'];
+    for (var i = 0; i < candidats.length; i++) {
+      var el = document.querySelector(candidats[i]);
+      if (!el) continue;
+      var ov = getComputedStyle(el).overflowY;
+      if ((ov === 'auto' || ov === 'scroll') && el.scrollHeight > el.clientHeight + 4) return el;
+    }
+    // Sinon c'est la page entiere qui defile : la reserve va sur le premier
+    // conteneur present, a defaut sur body.
+    return document.querySelector('.main-content')
+        || document.querySelector('.app-container')
+        || document.body;
+  }
+
+  function reserver() {
+    var barre = document.querySelector('.mobile-tabs');
+    if (!barre) return;
+    var cs = getComputedStyle(barre);
+    if (cs.display === 'none' || cs.visibility === 'hidden') return;
+
+    var hauteur = Math.round(barre.getBoundingClientRect().height);
+    if (!hauteur) return;                     // pas encore mise en page
+    var voulu = hauteur + 12;                 // 12 px d'air sous le dernier element
+
+    var cible = conteneurQuiDefile();
+    if (!cible) return;
+    var actuel = parseFloat(getComputedStyle(cible).paddingBottom) || 0;
+    if (actuel >= voulu - 2) return;          // deja reserve : on ne touche pas
+    cible.style.setProperty('padding-bottom', voulu + 'px', 'important');
+  }
+
+  // La barre est injectee par mobile-native-experience.js apres bh-layout :
+  // on repasse quand elle existe, puis au resize et au retour de page.
+  function suivre() {
+    reserver();
+    setTimeout(reserver, 200);
+    setTimeout(reserver, 700);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', suivre);
+  } else {
+    suivre();
+  }
+  window.addEventListener('resize', reserver);
+  window.addEventListener('pageshow', reserver);
+  window.addEventListener('orientationchange', function () { setTimeout(reserver, 250); });
+
+  // bhDiagBarre() en console : dit ce qui est mesure et ce qui est applique.
+  window.bhDiagBarre = function () {
+    var b = document.querySelector('.mobile-tabs');
+    if (!b) return console.log('[BH] barre absente');
+    var r = b.getBoundingClientRect(), cs = getComputedStyle(b);
+    var c = conteneurQuiDefile();
+    console.log('[BH] barre  : hauteur', Math.round(r.height),
+      '| bas', Math.round(window.innerHeight - r.bottom),
+      '| fond', cs.backgroundColor,
+      '| padding-bottom', cs.paddingBottom);
+    console.log('[BH] reserve:', c ? (c.className || c.tagName) : '(aucun)',
+      '->', c ? getComputedStyle(c).paddingBottom : '-');
+  };
 })();
