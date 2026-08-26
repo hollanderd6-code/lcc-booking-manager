@@ -14,6 +14,7 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		5650D98D2F544FC5003AF20A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5650D98C2F544FC5003AF20A /* AppDelegate.swift */; };
 		5697C8652F49EF69009FA04A /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5697C8642F49EF69009FA04A /* LaunchScreen.storyboard */; };
+		56B80301303DC148009982FD /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B80300303DC148009982FD /* SceneDelegate.swift */; };
 		56CE2D242F23AE8800C79D24 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 56CE2D232F23AE8800C79D24 /* GoogleService-Info.plist */; };
 		56CE2D272F2427B600C79D24 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 56CE2D262F2427B600C79D24 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -28,6 +29,7 @@
 		5650D98C2F544FC5003AF20A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		5697C8632F49EE71009FA04A /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
 		5697C8642F49EF69009FA04A /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		56B80300303DC148009982FD /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SceneDelegate.swift; path = App/SceneDelegate.swift; sourceTree = "<group>"; };
 		56CE2D232F23AE8800C79D24 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		56CE2D252F23AEAB00C79D24 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		56CE2D262F2427B600C79D24 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -49,6 +51,7 @@
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
+				56B80300303DC148009982FD /* SceneDelegate.swift */,
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				504EC3051FED79650016851F /* Products */,
@@ -163,6 +166,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				56B80301303DC148009982FD /* SceneDelegate.swift in Sources */,
 				5650D98D2F544FC5003AF20A /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -320,7 +324,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.0.2;
+				MARKETING_VERSION = 5.0.4;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.boostinghost.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -350,7 +354,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.0.2;
+				MARKETING_VERSION = 5.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.boostinghost.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

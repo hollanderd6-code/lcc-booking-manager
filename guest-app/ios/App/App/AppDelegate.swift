@@ -76,6 +76,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         return true
     }
+
+    // Xcode 27 exige le cycle de vie par scenes : sans cette methode, iOS
+    // interrompt le lancement. Elle designe la configuration declaree dans
+    // Info.plist, qui pointe vers SceneDelegate.
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        return UISceneConfiguration(
+            name: "Default Configuration",
+            sessionRole: connectingSceneSession.role
+        )
+    }
     
     func application(_ application: UIApplication,
                      continue userActivity: NSUserActivity,
