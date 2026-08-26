@@ -2009,8 +2009,7 @@ var _bhNativeConfirm = window.confirm;
   'use strict';
 
   var CONTENU = 68;                             // hauteur des onglets, hors zone sure
-  var CAPSULE_H = 44;                           // hauteur de la capsule (valeur retenue a l'essai)
-  var CAPSULE_HAUT = 12;                        // son decalage depuis le haut de la barre
+  var CAPSULE_INSET = 0;                        // capsule = boite du bouton actif (valeur retenue a l'essai)
   var FOND = 'rgba(251,251,250,.92)';           // valeur d'app.html, jugee correcte
   var FLOU = 'saturate(1.8) blur(14px)';
   var FILET = '1px solid rgba(200,184,154,.28)';
@@ -2045,11 +2044,14 @@ var _bhNativeConfirm = window.confirm;
     s.setProperty('border-top', FILET, 'important');
 
     // La capsule etait calculee en env() : sur les pages ou la marge vaut 0
-    // elle depassait par le haut. On l'accorde a la boite reelle.
+    // elle depassait par le haut. On la mesure sur le bouton actif — les
+    // valeurs fixes ne suivaient pas la boite reelle des onglets.
     var cap = barre.querySelector('.lg-capsule');
-    if (cap) {
-      cap.style.setProperty('top', CAPSULE_HAUT + 'px', 'important');
-      cap.style.setProperty('height', CAPSULE_H + 'px', 'important');
+    var actif = barre.querySelector('.tab-btn.active') || barre.querySelector('.tab-btn');
+    if (cap && actif) {
+      var rb = barre.getBoundingClientRect(), ra = actif.getBoundingClientRect();
+      cap.style.setProperty('top', Math.round(ra.top - rb.top) + CAPSULE_INSET + 'px', 'important');
+      cap.style.setProperty('height', Math.max(0, Math.round(ra.height) - CAPSULE_INSET * 2) + 'px', 'important');
     }
     if (barre.__lgSync) barre.__lgSync(false);
   }
