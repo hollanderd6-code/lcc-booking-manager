@@ -434,8 +434,15 @@ footer a{color:var(--muted)}
       var fillCand = document.getElementById('candidaturesFill');
       var noteCand = document.getElementById('candidaturesNote');
       var nCand = Math.max(0, d.candidatures);
-      var objectifVisuel = 30; // échelle visuelle seulement, ce n'est pas un quota
-      var pctCand = Math.min(100, (nCand / objectifVisuel) * 100);
+      // Échelle adaptative : la jauge s'agrandit avant d'atteindre son maximum.
+      // 0–29 candidatures : échelle 30 ; 30–49 : 50 ; 50–74 : 75 ; etc.
+      var paliers = [30, 50, 75, 100, 150, 200, 300, 500, 750, 1000];
+      var objectifVisuel = paliers[paliers.length - 1];
+      for (var pi = 0; pi < paliers.length; pi++){
+        if (nCand < paliers[pi]) { objectifVisuel = paliers[pi]; break; }
+      }
+      if (nCand >= objectifVisuel) objectifVisuel = Math.ceil((nCand + 1) / 250) * 250;
+      var pctCand = Math.min(98, (nCand / objectifVisuel) * 100);
       nbCand.textContent = nCand;
       noteCand.textContent = nCand === 0
         ? 'Les candidatures viennent d’ouvrir.'
