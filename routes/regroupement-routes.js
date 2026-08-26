@@ -39,6 +39,25 @@
 
 'use strict';
 
+/* Les comptes qu'un utilisateur peut administrer : le sien, et ceux qui
+   l'ont explicitement delegue. Meme lecture que manual-reservations/delete,
+   qui etait deja juste. */
+async function comptesGeres(pool, req) {
+  const moi = req.user && (req.user.isSubAccount ? (req.user.parentUserId || req.user.id) : req.user.id);
+  if (!moi) return [];
+  try {
+    const { rows } = await pool.query(
+      `SELECT delegator_user_id FROM account_delegations
+        WHERE delegate_user_id = $1 AND status = 'accepted'`,
+      [moi]
+    );
+    return [moi, ...rows.map((d) => d.delegator_user_id)];
+  } catch (e) {
+    // Sans delegation lisible, on n'ouvre rien de plus que son propre compte.
+    return [moi];
+  }
+}
+
 module.exports = function monterRoutesRegroupement(app, pool, auth) {
 
   /* ── Ce qu'un rattachement couterait, sans rien modifier ──────
@@ -125,11 +144,17 @@ module.exports = function monterRoutesRegroupement(app, pool, auth) {
     if (!cible) return res.status(400).json({ error: 'Logement cible manquant' });
 
     try {
+      /* Un gestionnaire d'agence ne possede pas les logements qu'il gere :
+         un filtre sur son seul identifiant repondait « Logement
+         introuvable » sur un logement bien reel. On elargit aux comptes
+         qui l'ont delegue. */
+      const ids = await comptesGeres(pool, req);
+
       const { rows } = await pool.query(
-        `SELECT id, name, internal_name, channex_property_id, channex_enabled
+        `SELECT id, name, internal_name, channex_property_id, channex_enabled, user_id
            FROM properties
-          WHERE user_id = $1 AND id = ANY($2::text[])`,
-        [req.user.id, [req.params.id, cible]]
+          WHERE user_id = ANY($1::text[]) AND id = ANY($2::text[])`,
+        [ids, [req.params.id, cible]]
       );
 
       const moi = rows.find(r => r.id === req.params.id);
@@ -137,6 +162,17 @@ module.exports = function monterRoutesRegroupement(app, pool, auth) {
 
       if (!moi)   return res.status(404).json({ error: 'Logement introuvable' });
       if (!autre) return res.status(404).json({ error: 'Logement cible introuvable' });
+
+      /* Les deux logements doivent etre au MEME proprietaire. Sans cette
+         verification, une agence pourrait rattacher le logement d'un client
+         a l'immeuble d'un autre : leurs prix et leurs disponibilites se
+         melangeraient chez Channex, et on ne s'en apercevrait qu'apres une
+         reservation. */
+      if (moi.user_id !== autre.user_id) {
+        return res.status(409).json({
+          error: 'Ces deux logements appartiennent a des comptes differents : ils ne peuvent pas partager un immeuble.'
+        });
+      }
       if (!autre.channex_property_id) {
         return res.status(400).json({ error: 'Le logement cible n\'est pas encore connecté.' });
       }
