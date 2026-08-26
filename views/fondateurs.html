@@ -74,6 +74,13 @@ h1.serif{font-size:clamp(34px,6vw,54px);line-height:1.1;color:var(--ink);margin-
   padding-top:9px;border-top:1px solid var(--border);display:none;
 }
 .compteur-activite b,.compteur-cloture b{color:var(--vert);font-weight:500}
+
+.candidatures-box{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.candidatures-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:9px;font-size:13.5px;color:var(--muted)}
+.candidatures-head strong{color:var(--ink);font-weight:500}
+.candidatures-track{height:10px;background:var(--cream-fonce);border:1px solid var(--border);border-radius:999px;overflow:hidden;position:relative}
+.candidatures-fill{height:100%;width:0;background:var(--vert);border-radius:inherit;transition:width .8s cubic-bezier(.2,.7,.2,1)}
+.candidatures-note{font-size:12.5px;color:var(--muted);margin-top:7px}
 .pastille{
   display:inline-block;width:7px;height:7px;border-radius:50%;
   background:var(--vert-clair);margin-right:7px;vertical-align:middle;
@@ -195,6 +202,15 @@ footer a{color:var(--muted)}
     <div class="compteur">
       <div class="jauge" id="jauge" aria-hidden="true"></div>
       <p class="compteur-txt" id="compteurTxt">Chargement des places…</p>
+
+      <div class="candidatures-box" id="candidaturesBox" style="display:none">
+        <div class="candidatures-head">
+          <span>Candidatures reçues</span>
+          <strong id="candidaturesNombre">0</strong>
+        </div>
+        <div class="candidatures-track" aria-hidden="true"><div class="candidatures-fill" id="candidaturesFill"></div></div>
+        <p class="candidatures-note" id="candidaturesNote"></p>
+      </div>
       <p class="compteur-activite" id="activite"></p>
       <p class="compteur-cloture" id="cloture"></p>
     </div>
@@ -408,6 +424,24 @@ footer a{color:var(--muted)}
       txt.innerHTML = '<strong>' + restantes + ' place' + (restantes > 1 ? 's' : '') +
         ' sur ' + PLACES + '</strong> encore ouverte' + (restantes > 1 ? 's' : '') +
         (d.candidatures ? ' · ' + d.candidatures + ' candidatures reçues' : '') + '.';
+    }
+
+
+    /* Jauge de candidatures — basée uniquement sur le nombre réel renvoyé par l'API. */
+    if (typeof d.candidatures === 'number'){
+      var boxCand = document.getElementById('candidaturesBox');
+      var nbCand = document.getElementById('candidaturesNombre');
+      var fillCand = document.getElementById('candidaturesFill');
+      var noteCand = document.getElementById('candidaturesNote');
+      var nCand = Math.max(0, d.candidatures);
+      var objectifVisuel = 30; // échelle visuelle seulement, ce n'est pas un quota
+      var pctCand = Math.min(100, (nCand / objectifVisuel) * 100);
+      nbCand.textContent = nCand;
+      noteCand.textContent = nCand === 0
+        ? 'Les candidatures viennent d’ouvrir.'
+        : (nCand === 1 ? 'Première candidature reçue.' : 'Le programme suscite déjà de l’intérêt.');
+      boxCand.style.display = 'block';
+      requestAnimationFrame(function(){ fillCand.style.width = pctCand + '%'; });
     }
 
     if (d.derniere && !d.close){

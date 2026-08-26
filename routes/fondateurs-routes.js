@@ -26,9 +26,6 @@ const PLACES = 10;
 // affiche « candidatures closes » et l'API refuse les envois.
 const CLOTURE = '2026-09-13';
 
-// Le nombre de candidatures reçues n'est affiché qu'à partir de ce seuil :
-// en dessous, il dessert plus qu'il ne sert.
-const SEUIL_AFFICHAGE = 5;
 
 const ADMIN_EMAIL = process.env.FONDATEURS_EMAIL
   || process.env.ADMIN_EMAIL
@@ -182,8 +179,8 @@ function setupFondateursRoutes(app, pool, sendEmailViaBrevo) {
       base.prises = acceptes;
       base.restantes = Math.max(0, PLACES - acceptes);
 
-      // Nombre de candidatures : affiché seulement au-delà du seuil
-      if (r.rows[0].total >= SEUIL_AFFICHAGE) base.candidatures = r.rows[0].total;
+      // Nombre réel de candidatures reçues
+      base.candidatures = r.rows[0].total;
 
       // Dernière candidature, anonymisée (moins de 7 jours)
       const d = await pool.query(`
