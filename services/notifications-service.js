@@ -119,8 +119,10 @@ async function sendNotification(fcmToken, title, body, data = {}) {
       },
       payload: {
         aps: {
-          sound: 'default',
-          badge: 1
+          sound: 'default'
+          // badge retire volontairement : iOS affichait la valeur telle quelle
+          // (toujours 1) et aucun push ne renvoyait jamais 0. Le badge est
+          // desormais pilote par l'app, qui connait le vrai etat de lecture.
         }
       }
     }

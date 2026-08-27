@@ -13055,21 +13055,7 @@ if (document.readyState === 'loading') {
 <!-- Capacitor Core -->
 <script src="/js/vendor/capacitor-8.4.0.js?v=f384d8ca"></script>
 
-<!-- Initialisation des notifications -->
-<script>
-  // Initialiser les notifications au chargement
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      if (typeof initPushNotifications === 'function') {
-        initPushNotifications();
-      }
-    });
-  } else {
-    if (typeof initPushNotifications === 'function') {
-      initPushNotifications();
-    }
-  }
-</script>
+<!-- Notifications push : gerees par /js/push-notifications-handler.js -->
 <!-- 📱 Expérience Mobile Native -->
 <script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
 <script src="/js/mobile-tabs-handler.js?v=01e3d29a"></script>
@@ -14501,8 +14487,13 @@ async function loadPushNotifHistory() {
       });
     });
     list.innerHTML = html;
-    updateNotifBadge(0);
-    fetch('/api/notifications/history/read', { method: 'PATCH', credentials: 'include' });
+    // Le badge ne tombe qu'une fois le serveur d'accord : sinon il revenait
+    // au rechargement suivant. Le jeton est explicite, comme dans app.js.
+    var lu = await fetch('/api/notifications/history/read', {
+      method: 'PATCH',
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+    });
+    if (lu.ok) updateNotifBadge(0);
   } catch(e) {
     list.innerHTML = '<div style="text-align:center;padding:30px;color:#e53e3e;font-size:12px;">Erreur: ' + (e.message || e) + '</div>';
     console.error('loadPushNotifHistory:', e);

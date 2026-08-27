@@ -1,80 +1,112 @@
 // public/js/push-notifications-handler.js
-// Version Firebase Cloud Messaging avec support lcc_token + deep linking
+// ============================================================
+// GESTIONNAIRE UNIQUE DES NOTIFICATIONS PUSH
+// ============================================================
+// Plugin : @capacitor-firebase/messaging (le seul restant).
+//
+// Ce fichier est le SEUL endroit qui decide ou envoie un clic sur une
+// notification. Avant, trois codes se disputaient ce role :
+//   - une table de routage en Swift dans AppDelegate.swift, qui envoyait
+//     vers messages.html?open=ID alors que la page lit ?conv= ;
+//   - un bloc initPushNotifications dans mobile-native-experience.js, qui
+//     utilisait le second plugin @capacitor/push-notifications ;
+//   - ce fichier, qui ne connaissait pas le type 'new_message' pourtant
+//     envoye par le serveur pour les messages voyageurs.
+// Les deux premiers ont ete supprimes.
+//
+// Trois autres defauts corriges ici :
+//   - l'initialisation etait retardee de 3 secondes : au demarrage a froid
+//     (app fermee, notification tapee), l'evenement de clic arrive bien
+//     avant et etait donc perdu ;
+//   - rien ne vidait le tiroir de notifications : sur Android la pastille
+//     du lanceur restait affichee tant qu'une notification y trainait ;
+//   - le canal Android 'default' demande par le serveur n'existait pas,
+//     donc le son et la priorite haute etaient ignores.
+// ============================================================
 (function () {
-  console.log('🔔 [DEBUG] Fichier push-notifications-handler.js chargé (version Firebase)');
+  console.log('[PUSH] Gestionnaire de notifications charge');
   const API_BASE = 'https://lcc-booking-manager.onrender.com';
 
   // ============================================
-  // 🧭 DEEP LINKING — Navigation depuis notif
+  // TABLE DE ROUTAGE — type de notification -> page
   // ============================================
-  function navigateFromNotification(data) {
-    if (!data) return;
-    const type = data.type || '';
-    const convId = data.conversation_id || data.conversationId || '';
-    const propId = data.property_id || data.propertyId || '';
-    const cleaningId = data.cleaning_id || data.cleaningId || '';
-    const screen = data.screen || '';
+  // Les types listes ici viennent de services/notifications-service.js et
+  // services/pushNotificationService.js. Un type ajoute cote serveur doit
+  // etre ajoute ici, sinon la notification tombe sur l'accueil.
+  const ROUTES = {
+    messages: ['new_message', 'new_chat_message', 'new_guest_message',
+               'escalade', 'escalade_message', 'escalade_reminder',
+               'chat_sms', 'sms_reply', 'template_failed'],
+    calendar: ['new_reservation', 'new_booking', 'new_booking_channex',
+               'cancelled_reservation', 'reservation_cancelled',
+               'daily_arrivals', 'check_in', 'arrivals', 'departures',
+               'reminder_j1'],
+    cleaning: ['new_cleaning', 'cleaning_reminder', 'cleaning_assigned',
+               'cleaning_completed', 'cleaning_validated', 'cleaning_recap',
+               'cleaning_alert', 'cleaning_lastminute'],
+    deposits: ['new_deposit', 'deposit_paid', 'deposit_captured',
+               'caution', 'payment_received'],
+    invoices: ['new_invoice']
+  };
 
-    console.log('🧭 [DEEP LINK] Type:', type, '| convId:', convId, '| propId:', propId);
+  function pageFor(data) {
+    const type = (data && data.type) || '';
+    // Les payloads serveur melangent snake_case et camelCase.
+    const conv = (data && (data.conversation_id || data.conversationId)) || '';
+    const cleaning = (data && (data.cleaning_id || data.cleaningId)) || '';
 
-    // Détecter la page actuelle
-    const currentPath = window.location.pathname;
-    const isNative = !!(window.Capacitor?.isNativePlatform?.());
-
-    // Fonction de navigation
-    const goTo = (path, params) => {
-      const url = params ? path + '?' + new URLSearchParams(params).toString() : path;
-      if (isNative) {
-        window.location.href = url;
-      } else {
-        window.location.href = url;
-      }
-    };
-
-    // Routing selon le type
-    if (type === 'new_guest_message' || type === 'new_chat_message' || type === 'escalade_message' || screen === 'messages') {
-      if (convId) {
-        goTo('messages.html', { conv: convId });
-      } else {
-        goTo('messages.html');
-      }
-      return;
+    if (ROUTES.messages.indexOf(type) !== -1 || data.screen === 'messages') {
+      // ?conv= : c'est le parametre que lit chat-owner.js pour ouvrir
+      // automatiquement la conversation. Surtout ne pas remettre ?open=.
+      return conv ? '/messages.html?conv=' + conv : '/messages.html';
     }
-
-    if (type === 'new_reservation' || type === 'daily_arrivals' || type === 'check_in') {
-      goTo('app.html');
-      return;
+    if (ROUTES.calendar.indexOf(type) !== -1) return '/app.html?view=calendar';
+    if (ROUTES.cleaning.indexOf(type) !== -1) {
+      return cleaning ? '/cleaning.html?checklist=' + cleaning : '/cleaning.html';
     }
+    if (ROUTES.deposits.indexOf(type) !== -1) return '/deposits.html';
+    if (ROUTES.invoices.indexOf(type) !== -1) return '/clients.html';
 
-    if (type === 'new_cleaning' || type === 'cleaning_completed' || type === 'cleaning_reminder') {
-      if (cleaningId) {
-        goTo('cleaning.html', { checklist: cleaningId });
-      } else {
-        goTo('cleaning.html');
-      }
-      return;
-    }
+    // Un conversation_id sans type reconnu, c'est un message.
+    if (conv) return '/messages.html?conv=' + conv;
 
-    if (type === 'new_deposit' || type === 'deposit_paid' || type === 'caution') {
-      goTo('app.html');
-      return;
-    }
-
-    if (type === 'escalade' || type === 'escalade_reminder') {
-      if (convId) {
-        goTo('messages.html', { conv: convId });
-      } else {
-        goTo('messages.html');
-      }
-      return;
-    }
-
-    // Fallback : page d'accueil
-    console.log('⚠️ [DEEP LINK] Type inconnu, redirection accueil');
-    goTo('app.html');
+    console.warn('[PUSH] Type inconnu, repli accueil :', type);
+    return '/app.html';
   }
 
-  // Sauvegarder la notif dans l'historique
+  function navigateFromNotification(data) {
+    if (!data) return;
+    const target = pageFor(data);
+    console.log('[PUSH] Navigation ->', target, '| type:', data.type || '(aucun)');
+    window.location.href = target;
+  }
+
+  // ============================================
+  // BADGE ET TIROIR DE NOTIFICATIONS
+  // ============================================
+  // Le serveur n'envoie plus de valeur de badge : c'est l'app qui nettoie.
+  // Appele au demarrage et a chaque retour d'arriere-plan.
+  async function purgerNotifications() {
+    const FM = getFirebaseMessaging();
+    if (!FM) return;
+    try {
+      await FM.removeAllDeliveredNotifications();
+      console.log('[PUSH] Tiroir de notifications vide');
+    } catch (e) {
+      console.warn('[PUSH] Purge impossible :', e.message);
+    }
+  }
+
+  // Capacitor emet 'resume' sur document au retour d'arriere-plan ;
+  // visibilitychange couvre les cas ou l'evenement natif manque.
+  document.addEventListener('resume', purgerNotifications);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) purgerNotifications();
+  });
+
+  // ============================================
+  // HISTORIQUE
+  // ============================================
   async function logNotificationToHistory(title, body, type, data) {
     try {
       const jwt = localStorage.getItem('lcc_token');
@@ -84,11 +116,14 @@
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
         body: JSON.stringify({ title: title || '', body: body || '', type: type || 'push', data: data || {} })
       });
-    } catch(e) {
-      console.warn('⚠️ logNotificationToHistory:', e.message);
+    } catch (e) {
+      console.warn('[PUSH] logNotificationToHistory:', e.message);
     }
   }
 
+  // ============================================
+  // PLATEFORME ET PLUGIN
+  // ============================================
   function getDeviceType() {
     const cap = window.Capacitor;
     const ua = (navigator.userAgent || '').toLowerCase();
@@ -100,15 +135,14 @@
   }
 
   function getFirebaseMessaging() {
-    const cap = window.Capacitor;
-    const fcm = cap?.Plugins?.FirebaseMessaging;
-    if (!fcm) {
-      console.error('❌ [DEBUG] Plugin FirebaseMessaging introuvable');
-      return null;
-    }
+    const fcm = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.FirebaseMessaging;
+    if (!fcm) return null;
     return fcm;
   }
 
+  // ============================================
+  // JETON FCM
+  // ============================================
   async function getSupabaseJwt() {
     try {
       const lccToken = localStorage.getItem('lcc_token');
@@ -122,9 +156,11 @@
           const raw = localStorage.getItem(k);
           try {
             const parsed = JSON.parse(raw);
-            const token = parsed?.access_token || parsed?.session?.access_token || parsed?.data?.session?.access_token;
+            const token = parsed && (parsed.access_token
+              || (parsed.session && parsed.session.access_token)
+              || (parsed.data && parsed.data.session && parsed.data.session.access_token));
             if (token) return token;
-          } catch {}
+          } catch (e) {}
         }
       }
     } catch (e) {}
@@ -135,14 +171,14 @@
     try {
       let deviceId = localStorage.getItem('bh_device_id');
       if (!deviceId) {
-        deviceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        deviceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
           const r = Math.random() * 16 | 0;
           return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
         });
         localStorage.setItem('bh_device_id', deviceId);
       }
       return deviceId;
-    } catch(e) { return null; }
+    } catch (e) { return null; }
   }
 
   async function saveTokenToServer(fcmToken, deviceType) {
@@ -150,24 +186,27 @@
     try {
       const jwt = await getSupabaseJwt();
       if (!jwt) {
+        // Pas encore connecte : on reessaiera apres la connexion.
         try {
           localStorage.setItem('pending_fcm_token', fcmToken);
           localStorage.setItem('pending_device_type', deviceType);
-        } catch {}
+        } catch (e) {}
         return;
       }
       const res = await fetch(API_BASE + '/api/save-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
-        body: JSON.stringify({ token: fcmToken, device_type: deviceType, device_id: deviceId }),
+        body: JSON.stringify({ token: fcmToken, device_type: deviceType, device_id: deviceId })
       });
-      const data = await res.json().catch(function() { return {}; });
       if (res.ok) {
-        console.log('✅ [DEBUG] TOKEN FCM SAUVEGARDÉ !', data);
-        try { localStorage.removeItem('pending_fcm_token'); localStorage.removeItem('pending_device_type'); } catch {}
+        console.log('[PUSH] Jeton FCM enregistre');
+        try {
+          localStorage.removeItem('pending_fcm_token');
+          localStorage.removeItem('pending_device_type');
+        } catch (e) {}
       }
     } catch (err) {
-      console.error('❌ [DEBUG] Erreur réseau:', err);
+      console.error('[PUSH] Erreur reseau enregistrement jeton :', err);
     }
   }
 
@@ -179,6 +218,9 @@
     } catch (e) {}
   }
 
+  // ============================================
+  // INITIALISATION
+  // ============================================
   async function initPushNotifications() {
     if (window.__pushInitDone) return;
     window.__pushInitDone = true;
@@ -189,75 +231,89 @@
     if (platform !== 'ios' && platform !== 'android') return;
 
     const FirebaseMessaging = getFirebaseMessaging();
-    if (!FirebaseMessaging) return;
+    if (!FirebaseMessaging) {
+      console.error('[PUSH] Plugin FirebaseMessaging introuvable');
+      return;
+    }
 
     const deviceType = getDeviceType();
 
-    // ── Notification reçue en foreground ──
-    FirebaseMessaging.addListener('notificationReceived', function(notification) {
-      console.log('📩 [DEBUG] Notification reçue:', notification);
-      var n = notification.notification || notification;
-      var title = n.title || (notification.data && notification.data.title) || '';
-      var body  = n.body  || (notification.data && notification.data.body)  || '';
-      var type  = (notification.data && notification.data.type) || 'push';
-      logNotificationToHistory(title, body, type, notification.data || {});
+    // ── Les ecouteurs D'ABORD, sans aucun delai ──────────────
+    // Au demarrage a froid, l'evenement de clic est emis dans les premieres
+    // centaines de millisecondes : tout retard ici le perd.
+
+    FirebaseMessaging.addListener('notificationReceived', function (notification) {
+      const n = notification.notification || notification;
+      const data = notification.data || (n && n.data) || {};
+      const title = n.title || data.title || '';
+      const body = n.body || data.body || '';
+      const type = data.type || 'push';
+      console.log('[PUSH] Notification recue (app ouverte) :', type);
+      logNotificationToHistory(title, body, type, data);
       if (typeof window.initNotifBadge === 'function') setTimeout(window.initNotifBadge, 500);
     });
 
-    // ── Clic sur une notification (deep linking) ──
-    FirebaseMessaging.addListener('notificationActionPerformed', function(action) {
-      console.log('👉 [DEBUG] Notification cliquée:', action);
+    FirebaseMessaging.addListener('notificationActionPerformed', function (action) {
       try {
-        // Les data peuvent être dans action.notification.data ou action.data
-        const data = action?.notification?.data || action?.data || {};
-        console.log('🧭 [DEEP LINK] Data reçue:', JSON.stringify(data));
-        // Attendre que l'app soit prête avant de naviguer
-        if (document.readyState === 'complete') {
-          navigateFromNotification(data);
-        } else {
-          document.addEventListener('DOMContentLoaded', function() {
-            navigateFromNotification(data);
-          });
-        }
-      } catch(e) {
-        console.error('❌ [DEEP LINK] Erreur navigation:', e.message);
+        const data = (action && action.notification && action.notification.data)
+          || (action && action.data) || {};
+        console.log('[PUSH] Notification cliquee :', JSON.stringify(data));
+        navigateFromNotification(data);
+      } catch (e) {
+        console.error('[PUSH] Erreur navigation :', e.message);
       }
     });
 
-    // ── Notif reçue quand l'app était fermée (cold start) ──
-    try {
-      const deliveredNotifs = await FirebaseMessaging.getDeliveredNotifications();
-      if (deliveredNotifs?.notifications?.length > 0) {
-        console.log('📬 [DEBUG] Notifs livrées (cold start):', deliveredNotifs.notifications.length);
-        // Ne pas naviguer automatiquement au cold start — laisser l'utilisateur choisir
-      }
-    } catch(e) {}
-
-    FirebaseMessaging.addListener('tokenReceived', async function(result) {
-      const fcmToken = result?.token;
+    FirebaseMessaging.addListener('tokenReceived', async function (result) {
+      const fcmToken = result && result.token;
       if (fcmToken) {
-        try { localStorage.setItem('fcm_token', fcmToken); } catch {}
+        try { localStorage.setItem('fcm_token', fcmToken); } catch (e) {}
         await saveTokenToServer(fcmToken, deviceType);
       }
     });
 
+    // ── Permission et jeton ──────────────────────────────────
     try {
       const perm = await FirebaseMessaging.requestPermissions();
-      if (perm?.receive !== 'granted') return;
+      if (!perm || perm.receive !== 'granted') {
+        console.warn('[PUSH] Permission refusee');
+        return;
+      }
+
+      // Canal Android : doit porter le meme id que le channelId envoye par
+      // le serveur ('default'), sinon Android 8+ retombe sur le canal par
+      // defaut du plugin et ignore le son et la priorite demandes.
+      if (platform === 'android') {
+        try {
+          await FirebaseMessaging.createChannel({
+            id: 'default',
+            name: 'Notifications',
+            description: 'Messages, reservations et menages',
+            importance: 5,
+            visibility: 1
+          });
+        } catch (e) { console.warn('[PUSH] Canal Android :', e.message); }
+      }
+
       const tokenResult = await FirebaseMessaging.getToken();
-      const fcmToken = tokenResult?.token;
+      const fcmToken = tokenResult && tokenResult.token;
       if (fcmToken) {
-        try { localStorage.setItem('fcm_token', fcmToken); } catch {}
+        try { localStorage.setItem('fcm_token', fcmToken); } catch (e) {}
         await saveTokenToServer(fcmToken, deviceType);
       }
     } catch (err) {
-      console.error('❌ [DEBUG] Erreur:', err);
+      console.error('[PUSH] Erreur initialisation :', err);
     }
 
-    setTimeout(function() { retryPendingToken(); }, 2000);
+    // Icone propre des l'ouverture.
+    purgerNotifications();
+
+    setTimeout(retryPendingToken, 2000);
   }
 
   window.retryFCMTokenSave = retryPendingToken;
+  window.purgerNotifications = purgerNotifications;
 
-  setTimeout(function() { initPushNotifications(); }, 3000);
+  // Sans setTimeout : voir le commentaire des ecouteurs.
+  initPushNotifications();
 })();

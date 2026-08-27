@@ -18,8 +18,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // Ivoire #F2EADA — encre de la marque sur fond vert.
     let inkColor = UIColor(red: 0.949, green: 0.918, blue: 0.855, alpha: 1.0)
     var pendingFCMToken: String? = nil
-    // 🔗 Deep link en attente (notif reçue avant que la WebView soit prête → cold start)
-    var pendingDeepLink: String? = nil
 
     private func disablePullToRefresh(on webView: WKWebView) {
         let sv = webView.scrollView
@@ -75,78 +73,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 print("❌ Erreur restauration token: \(error)")
             } else {
                 print("✅ Token restauré dans localStorage")
-            }
-        }
-    }
-
-    // ============================================
-    // 🔗 DEEP LINKING — table de routage centralisée
-    // ============================================
-
-    /// Renvoie le chemin de page pour un type de notification donné.
-    /// Défaut : app.html (aucune notif ne doit jamais ne « rien » faire).
-    static func pageForNotification(type: String, conversationId conv: String) -> String {
-        let messages: Set<String> = [
-            "new_message", "new_guest_message", "new_chat_message",
-            "chat_sms", "template_failed", "bhguest_notif", "property"
-        ]
-        let calendar: Set<String> = [
-            "new_reservation", "new_booking", "new_booking_channex", "new_booking_guest",
-            "reservation_cancelled", "cancelled_booking_channex", "reservation_modified",
-            "arrivals", "departures", "bhguest_hold", "reminder_j1"
-        ]
-        let cleaning: Set<String> = [
-            "cleaning_assigned", "cleaning_recap", "cleaning_completed", "cleaning_validated",
-            "cleaning_alert", "cleaning_lastminute", "cleaning_complement", "sms_reply"
-        ]
-        let deposits: Set<String> = ["deposit_paid", "deposit_captured", "payment_received"]
-        let invoices: Set<String> = ["new_invoice"]
-        let smartLocks: Set<String> = ["smart_lock_battery"]
-
-        if messages.contains(type) {
-            return conv.isEmpty ? "messages.html" : "messages.html?open=\(conv)"
-        }
-        if calendar.contains(type)   { return "app.html?view=calendar" }
-        if cleaning.contains(type)   { return "cleaning.html" }
-        if deposits.contains(type)   { return "deposits.html" }
-        if invoices.contains(type)   { return "clients.html" }
-        if smartLocks.contains(type) { return "smart-locks.html" }
-        // daily_summary, monthly_summary, account_onboarding, contract_signed, agency_access, inconnus…
-        return "app.html"
-    }
-
-    /// Calcule la cible depuis le payload et tente de l'appliquer.
-    func routeNotification(_ userInfo: [AnyHashable: Any]) {
-        let type = userInfo["type"] as? String ?? ""
-        // ⚠️ tolère snake_case ET camelCase (les payloads serveur mélangent les deux)
-        let conv = (userInfo["conversation_id"] as? String)
-            ?? (userInfo["conversationId"] as? String) ?? ""
-        let path = AppDelegate.pageForNotification(type: type, conversationId: conv)
-        print("📱 Notif type='\(type)' conv='\(conv)' → /\(path)")
-        pendingDeepLink = path
-        applyPendingDeepLinkIfReady()
-    }
-
-    /// Applique le deep link en attente si la WebView est prête,
-    /// sinon le laisse en attente (sera appliqué dans didFinish — cold start).
-    func applyPendingDeepLinkIfReady() {
-        guard let path = pendingDeepLink else { return }
-        guard isWebViewLoaded,
-              let rootVC = window?.rootViewController as? CAPBridgeViewController,
-              let webView = rootVC.webView else {
-            print("📱 WebView pas prête → deep link mis en attente (/\(path))")
-            return
-        }
-        pendingDeepLink = nil
-        // location.replace pour ne pas polluer l'historique
-        let js = "window.location.replace('/\(path)');"
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            webView.evaluateJavaScript(js) { _, error in
-                if let error = error {
-                    print("❌ Deep link erreur: \(error)")
-                } else {
-                    print("✅ Deep link appliqué → /\(path)")
-                }
             }
         }
     }
@@ -434,9 +360,6 @@ extension AppDelegate: WKNavigationDelegate {
         let firstLoad = !isWebViewLoaded
         isWebViewLoaded = true
 
-        // 🔗 Applique un éventuel deep link en attente (cas cold start : notif tapée app fermée)
-        applyPendingDeepLinkIfReady()
-
         guard firstLoad else { return }
         print("📱 WebView chargée")
 
@@ -465,12 +388,15 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        let current = UIApplication.shared.applicationIconBadgeNumber
-        UIApplication.shared.applicationIconBadgeNumber = current + 1
+        // L'app est au premier plan : il n'y a rien a compter sur l'icone.
+        // L'ancien code incrementait le badge ici, APRES que les deux remises
+        // a zero (willEnterForeground / didBecomeActive) soient deja passees :
+        // le 1 restait donc colle jusqu'au prochain aller-retour en arriere-plan.
+        UIApplication.shared.applicationIconBadgeNumber = 0
         if #available(iOS 14.0, *) {
-            completionHandler([.banner, .badge, .sound])
+            completionHandler([.banner, .sound])
         } else {
-            completionHandler([.alert, .badge, .sound])
+            completionHandler([.alert, .sound])
         }
     }
 
@@ -480,9 +406,8 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         UIApplication.shared.applicationIconBadgeNumber = 0
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
 
-        // 🔗 Route via la table centralisée (gère cold start + warm start)
-        routeNotification(response.notification.request.content.userInfo)
-
+        // Navigation geree cote web (push-notifications-handler.js) :
+        // un seul routage, une seule table de types.
         completionHandler()
     }
 }
