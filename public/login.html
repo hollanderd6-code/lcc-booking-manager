@@ -125,61 +125,9 @@ html,body { font-family:'DM Sans',sans-serif; -webkit-font-smoothing:antialiased
   <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
   <link rel="stylesheet" href="/css/bh-tokens.css?v=9b734869">
   <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+  <script src="/splash.js"></script>
 </head>
 <body>
-
-<!-- ─── Ecran de demarrage natif (vert + monogramme) ─────────────────── -->
-<div id="bh-splash" aria-hidden="true">
-  <img id="bh-splash-img" src="/img/brand/web/mono-carre.svg?v=a3b57a36" alt=""
-       onerror="this.style.display='none';document.getElementById('bh-splash-b').style.display='block'">
-  <span id="bh-splash-b">B</span>
-</div>
-<style>
-#bh-splash{
-  position:fixed;inset:0;z-index:99999;
-  background:#0E3B2E;
-  display:flex;align-items:center;justify-content:center;
-  padding-bottom:24px;
-  opacity:1;transition:opacity .45s ease;
-}
-#bh-splash img{width:38vw;max-width:150px;height:auto}
-#bh-splash #bh-splash-b{
-  display:none;font-family:'Cormorant Garamond',Georgia,serif;
-  font-size:104px;line-height:1;color:#F2EADA;
-}
-#bh-splash.parti{opacity:0;pointer-events:none}
-@media(prefers-reduced-motion:reduce){#bh-splash{transition:none}}
-</style>
-<script>
-(function(){
-  var s = document.getElementById('bh-splash');
-  if (!s) return;
-  var natif = window.location.protocol === 'capacitor:' ||
-              window.location.protocol === 'ionic:' ||
-              !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-
-  // Jamais sur le web, et jamais lors d'un retour au login en cours de session
-  var dejaVu = false;
-  try { dejaVu = !!sessionStorage.getItem('bh_splash_vu'); } catch(e){}
-  if (!natif || dejaVu){ s.remove(); return; }
-  try { sessionStorage.setItem('bh_splash_vu','1'); } catch(e){}
-
-  function partir(){
-    if (!s || !s.parentNode) return;
-    s.classList.add('parti');
-    setTimeout(function(){ if (s.parentNode) s.remove(); }, 500);
-  }
-  var pret = new Promise(function(r){
-    if (document.readyState === 'complete') r();
-    else window.addEventListener('load', r);
-  });
-  // 1600 ms mini : le splash natif passe la main a 300 ms, celui-ci prend le relais
-  Promise.all([pret, new Promise(function(r){ setTimeout(r, 1600); })]).then(partir);
-  setTimeout(partir, 5000); // filet de securite
-})();
-</script>
-<!-- ──────────────────────────────────────────────────────────────────── -->
-
 <section class="hero">
   <div class="hero-bg"></div>
   <div class="hero-overlay"></div>
