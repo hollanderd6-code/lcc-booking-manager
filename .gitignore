@@ -31,3 +31,4 @@ boostinghost-poc/node_modules/
 .env
 .env.local
 .corbeille-lot5/
+*.bak
