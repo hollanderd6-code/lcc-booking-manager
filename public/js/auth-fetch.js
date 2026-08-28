@@ -112,12 +112,29 @@
     // Un seul refresh à la fois (évite les appels en rafale)
     let _refreshPromise = null;
 
+    /* Une impersonation agence est active quand lcc_agency_token existe :
+       il conserve le jeton de l'agence pendant que lcc_token porte celui du
+       compte gere. Le jeton Face ID, lui, appartient toujours au titulaire
+       du navigateur — le rafraichir ici ecraserait l'impersonation. Le jeton
+       agency_access se renouvelle par /api/agency/refresh. */
+    const _impersonationActive = () => {
+      try {
+        return !!(localStorage.getItem('lcc_agency_token')
+          || localStorage.getItem('lcc_managed_user'));
+      } catch { return false; }
+    };
+
     const refreshToken = () => {
       if (_refreshPromise) return _refreshPromise;
       _refreshPromise = (async () => {
         try {
           // Les sous-comptes utilisent un autre type de token → pas de refresh ici
           if (localStorage.getItem('lcc_account_type') === 'sub') return null;
+
+          // Impersonation agence en cours : ne pas rafraichir. Le jeton Face ID
+          // est celui de l'agence ; l'ecrire dans lcc_token ferait travailler
+          // l'agence sur son propre compte en croyant etre chez son client.
+          if (_impersonationActive()) return null;
 
           // On régénère à partir du token long (90j) si dispo, sinon du token courant
           const baseToken = localStorage.getItem('lcc_faceid_token') || getToken();
@@ -135,7 +152,9 @@
           if (!r.ok) return null;
           const d = await r.json();
           if (d?.token) {
-            await nativeSet('lcc_token', d.token);
+            // Ceinture : meme si l'on arrivait ici pendant une impersonation,
+            // lcc_token ne doit pas etre remplace. Seul le jeton long est roule.
+            if (!_impersonationActive()) await nativeSet('lcc_token', d.token);
             await nativeSet('lcc_faceid_token', d.token);
             try { localStorage.setItem('lcc_last_refresh', String(Date.now())); } catch {}
             console.log('🔄 [AUTH-FETCH] Token rafraîchi (90j)');
