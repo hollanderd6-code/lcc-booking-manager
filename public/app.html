@@ -325,11 +325,66 @@ window.switchAgencyAccount = async function(targetUserId, name, color) {
   // initAgencyBanner appelé dans DOMContentLoaded ci-dessous
 
   // ── Auto-refresh token agence toutes les 6h ──
+  /* Appel DIFFERE : window.agencyRefreshToken est defini plus bas dans ce
+     meme script, et une affectation sur window n'est pas hoistee. L'appeler
+     ici levait une ReferenceError — le refresh immediat echouait et le
+     setInterval n'etait jamais pose, donc le jeton mourait a 24 h. */
   if (localStorage.getItem('lcc_managed_user')) {
-    agencyRefreshToken(); // refresh immédiat au chargement (vérifie validité)
-    setInterval(agencyRefreshToken, 6 * 60 * 60 * 1000);
+    setTimeout(function() {
+      if (typeof agencyRefreshToken !== 'function') {
+        console.warn('⚠️ [AGENCY] agencyRefreshToken indisponible');
+        return;
+      }
+      // La veille passe d'abord : inutile de demander un refresh avec un
+      // jeton deja mort, la reponse serait un 401 de plus.
+      if (typeof agencyVeilleExpiration === 'function') agencyVeilleExpiration();
+      agencyRefreshToken();
+      setInterval(agencyRefreshToken, 6 * 60 * 60 * 1000);
+      if (typeof agencyVeilleExpiration === 'function') setInterval(agencyVeilleExpiration, 60000);
+    }, 0);
   }
 })();
+
+// ── Sortie du mode agence quand le jeton n'est plus valable ──
+/* L'interface affiche le compte actif d'apres lcc_managed_user, qui
+   survit a l'expiration du jeton. Sans message ni rechargement, on
+   continue donc de croire qu'on travaille chez le client alors qu'on
+   est revenu sur son propre compte. */
+window.agencySortieExpiree = function(raison) {
+  var nom = '';
+  try { nom = (JSON.parse(localStorage.getItem('lcc_managed_user') || '{}').name) || ''; } catch (e) {}
+  var msg = nom
+    ? 'Votre accès au compte ' + nom + ' a expiré. Retour à votre compte.'
+    : 'Votre accès au compte géré a expiré. Retour à votre compte.';
+  if (raison) console.warn('⚠️ [AGENCY] ' + raison);
+  try {
+    if (typeof showToast === 'function') showToast(msg);
+    else if (typeof toast === 'function') toast(msg);
+    else alert(msg);
+  } catch (e) { try { alert(msg); } catch (e2) {} }
+  // exitAgencyMode restaure le jeton de l'agence et nettoie les caches.
+  // La redirection est indispensable : sans elle, la page en cours garde
+  // a l'ecran les donnees chargees sous l'autre compte.
+  try { exitAgencyMode('/app.html'); }
+  catch (e) { try { exitAgencyMode(); } finally { window.location.href = '/app.html'; } }
+};
+
+/* Echeance lue dans le jeton lui-meme : c'est la seule source fiable.
+   Le refresh toutes les 6 h ne voit pas un portable referme 24 h. */
+window.agencyJetonExpire = function() {
+  if (!localStorage.getItem('lcc_managed_user')) return false;
+  var t = localStorage.getItem('lcc_token');
+  if (!t) return true;
+  try {
+    var p = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    if (!p || !p.exp) return false;               // pas d'echeance : on ne juge pas
+    return (p.exp * 1000) - Date.now() < 120000;  // mort, ou dans moins de 2 min
+  } catch (e) { return false; }                   // jeton illisible : on laisse le 401 trancher
+};
+
+window.agencyVeilleExpiration = function() {
+  if (window.agencyJetonExpire()) window.agencySortieExpiree('jeton d\'impersonation expire');
+};
 
 // ── Refresh token agence ──
 window.agencyRefreshToken = async function() {
@@ -347,8 +402,9 @@ window.agencyRefreshToken = async function() {
       if (data.permissions) localStorage.setItem('lcc_agency_permissions', JSON.stringify(data.permissions));
       console.log('🔄 [AGENCY] Token refreshed');
     } else if (res.status === 403 || res.status === 401) {
-      console.warn('⚠️ [AGENCY] Token expiré ou délégation révoquée — retour au compte principal');
-      exitAgencyMode();
+      // Le jeton est mort ou la delegation a ete revoquee : on le DIT et on
+      // recharge, au lieu de nettoyer en silence en laissant l'ecran mentir.
+      agencySortieExpiree('refresh refuse (' + res.status + ')');
     }
   } catch(e) {
     console.warn('⚠️ [AGENCY] Refresh échoué:', e.message);
