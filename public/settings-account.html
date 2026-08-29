@@ -2628,6 +2628,31 @@ if (logoInput && logoPreview) {
       const connectStripeBtn = document.getElementById('connectStripeBtn');
       const manageStripeBtn  = document.getElementById('manageStripeBtn');
 
+      /* Un bandeau sous la pastille : la pastille est trop courte pour dire
+         ce qu'il faut faire, et un proprietaire qui ne comprend pas ne fait
+         rien. Le bandeau nomme la consequence — les paiements arrivent chez
+         Boostinghost et devront lui etre reverses — puis l'action. */
+      function afficherAvertissementStripe(raison) {
+        var id = 'bh-stripe-alerte';
+        var vieux = document.getElementById(id);
+        if (!raison) { if (vieux) vieux.remove(); return; }
+        if (vieux) vieux.remove();
+
+        var socle = stripeStatusEl && stripeStatusEl.parentElement;
+        if (!socle || !socle.parentElement) return;
+
+        var el = document.createElement('div');
+        el.id = id;
+        el.style.cssText = 'margin:10px 0 14px;padding:12px 14px;border-radius:10px;' +
+          'background:#FFF8E7;border:1px solid #F0C674;font-size:13px;line-height:1.55;color:#6B4E12;';
+        el.innerHTML =
+          '<strong>Votre compte Stripe ne peut pas encore encaisser</strong> (' + raison + ').<br>' +
+          'En attendant, les paiements et cautions de vos logements sont encaissés par ' +
+          'Boostinghost et vous seront reversés. Terminez votre inscription pour les ' +
+          'recevoir directement.';
+        socle.parentElement.insertBefore(el, socle.nextSibling);
+      }
+
       async function refreshStripeStatus() {
         if (!stripeStatusEl) return;
 
@@ -2651,9 +2676,28 @@ if (logoInput && logoPreview) {
 
           const data = await res.json();
 
-          if (data.connected) {
+          /* Trois etats, et non deux. Un compte « connecte » peut etre
+             incapable d'encaisser : sans nom d'entreprise, Stripe refuse
+             toute page de paiement. Afficher un vert rassurant dans ce cas
+             laissait le proprietaire ignorer que ses cautions echouaient. */
+          if (data.connected && data.canCharge === false) {
+            var manque = (data.blocages && data.blocages.length)
+              ? data.blocages.join(', ')
+              : 'configuration incomplète';
+            stripeStatusEl.innerHTML =
+              '<i class="fas fa-triangle-exclamation"></i> Inscription à terminer — ' + manque;
+            stripeStatusEl.className = 'pill-status stripe-pill-warn';
+            afficherAvertissementStripe(manque);
+
+            if (manageStripeBtn) manageStripeBtn.style.display = 'inline-flex';
+            if (connectStripeBtn) {
+              connectStripeBtn.querySelector('span').textContent =
+                'Terminer mon inscription Stripe';
+            }
+          } else if (data.connected) {
             stripeStatusEl.textContent = 'Compte Stripe connecté';
             stripeStatusEl.className   = 'pill-status stripe-pill-ok';
+            afficherAvertissementStripe(null);
 
             if (manageStripeBtn) {
               manageStripeBtn.style.display = 'inline-flex';
@@ -2663,8 +2707,14 @@ if (logoInput && logoPreview) {
                 'Reconnecter / compléter mon compte Stripe';
             }
           } else {
-            stripeStatusEl.textContent = 'Aucun compte Stripe connecté';
+            /* Aucun compte, ou compte introuvable : dans les deux cas le
+               proprietaire doit agir, mais le message differe. */
+            stripeStatusEl.textContent = (data.blocages && data.blocages.length)
+              ? 'Compte Stripe indisponible — ' + data.blocages.join(', ')
+              : 'Aucun compte Stripe connecté';
             stripeStatusEl.className   = 'pill-status stripe-pill-warn';
+            afficherAvertissementStripe(
+              (data.blocages && data.blocages.length) ? data.blocages.join(', ') : null);
 
             if (manageStripeBtn) {
               manageStripeBtn.style.display = 'none';

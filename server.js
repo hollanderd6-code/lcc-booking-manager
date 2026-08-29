@@ -22063,10 +22063,30 @@ console.log('DEBUG stripe/status user:', user.id, user.stripeAccountId);
     try {
       const account = await stripe.accounts.retrieve(user.stripeAccountId);
 
+      /* « connected » ne suffit pas a savoir si le compte peut encaisser.
+         Stripe refuse d'ouvrir une page Checkout tant qu'aucun nom
+         d'entreprise n'est renseigne — un compte peut donc avoir
+         charges_enabled ET details_submitted, et faire echouer tous les
+         paiements. C'est ce qui s'est produit : des dizaines de cautions
+         rejetees avec « you must set an account or business name », sans
+         que l'ecran de reglages ne montre autre chose qu'un vert rassurant. */
+      const businessName = (account.business_profile && account.business_profile.name)
+        || (account.settings && account.settings.dashboard && account.settings.dashboard.display_name)
+        || null;
       const connected = !!(account.charges_enabled && account.details_submitted);
+      const canCharge = connected && !!businessName;
+
+      /* Ce qui manque, en clair, pour l'afficher tel quel. */
+      const blocages = [];
+      if (!account.details_submitted) blocages.push('inscription non terminée');
+      if (!account.charges_enabled) blocages.push('paiements non activés par Stripe');
+      if (!businessName) blocages.push("nom de l'entreprise absent");
 
       return res.json({
         connected,
+        canCharge,
+        blocages,
+        businessName,
         accountId: user.stripeAccountId,
         chargesEnabled: account.charges_enabled,
         payoutsEnabled: account.payouts_enabled,
@@ -22077,6 +22097,9 @@ console.log('DEBUG stripe/status user:', user.id, user.stripeAccountId);
       // Si on n'arrive pas à récupérer le compte, on considère "non connecté"
       return res.json({
         connected: false,
+        canCharge: false,
+        blocages: ['compte introuvable chez Stripe'],
+        accountId: user.stripeAccountId,
         error: 'Impossible de récupérer le compte Stripe'
       });
     }
