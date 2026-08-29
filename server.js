@@ -16225,7 +16225,8 @@ async function sendArrivalWelcomeTours(io) {
 
     const convs = (await pool.query(
       `SELECT c.id, c.user_id, c.property_id, c.guest_name, c.reservation_start_date,
-              c.reservation_uid, p.arrival_time, p.name AS property_name
+              c.reservation_uid, c.platform, c.channex_booking_id,
+              p.arrival_time, p.name AS property_name
        FROM conversations c
        LEFT JOIN properties p ON p.id = c.property_id
        WHERE DATE(c.reservation_start_date) = $1
@@ -16247,6 +16248,21 @@ async function sendArrivalWelcomeTours(io) {
       if (currentHour < sendHour) continue; // pas encore l'heure
 
       try {
+        /* Ne pas souhaiter la bienvenue a quelqu'un qui n'a pas paye sa caution.
+           Le message livre un lien de sejour et suppose l'arrivee effective ;
+           l'envoyer a un voyageur qui n'est jamais venu est au mieux absurde,
+           au pire une invitation a entrer.
+
+           On reutilise le helper des modeles plutot que d'ecrire une regle
+           parallele : il connait deja les exemptions (Airbnb et BHGuest
+           encaissent eux-memes la caution) et le cas des logements sans
+           caution, ou il laisse passer. */
+        const barrage = await shouldSkipForDepositCondition(pool, conv, 'deposit_active');
+        if (barrage.skip) {
+          console.log(`🛎️ [ARRIVAL] Tour de bienvenue NON envoyé — conv ${conv.id} — ${barrage.reason}`);
+          continue;
+        }
+
         const token = await ensureArrivalCheckin(conv);
         const baseUrl = (process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
         const link = `${baseUrl}/arrival.html?token=${token}`;
