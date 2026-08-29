@@ -696,6 +696,83 @@
   }
 
   /* ── écran 3 : rattachement automatique puis fenêtre Channex ────────────── */
+  /* ── Rattacher a l'etablissement voisin ? On demande. ──────────────────
+     Deux logements a la meme adresse ne sont pas forcement deux chambres du
+     meme etablissement. Jusqu'ici le rattachement etait AUTOMATIQUE des que
+     l'adresse coincidait, et l'utilisateur l'apprenait par un message une
+     fois le fait accompli.
+
+     Les consequences sont lourdes et invisibles : les deux logements
+     partagent alors une seule property Channex, et Channex mappe le nouveau
+     room type sur TOUS les canaux deja branches sur cette property. Un gite
+     connecte a Booking seul se retrouve ainsi annonce sur Airbnb.
+
+     Le defaut est desormais « logements independants » — le cas courant.
+     Le rattachement reste possible, mais il se choisit. */
+  function demanderRattachement(modal, moi, voisin) {
+    return new Promise(function (resoudre) {
+      var nomVoisin = esc(voisin.name || 'votre autre logement');
+      var nomMoi = esc((moi && moi.name) || 'ce logement');
+      var adresse = esc((moi && moi.address) || '');
+
+      var option = function (id, titre, texte, recommande) {
+        return '<button type="button" id="' + id + '" style="width:100%;text-align:left;cursor:pointer;' +
+          'background:#fff;border:1.5px solid ' + (recommande ? V.vertFilet : V.ligne) + ';border-radius:12px;' +
+          'padding:14px 16px;margin-bottom:10px;font-family:inherit;display:block;">' +
+          '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<span style="font-size:14px;font-weight:600;color:' + V.encre + ';">' + titre + '</span>' +
+          (recommande ? '<span style="font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;' +
+            'color:' + V.vert + ';background:' + V.vertPale + ';border-radius:99px;padding:3px 9px;">Recommandé</span>' : '') +
+          '</div>' +
+          '<div style="margin-top:5px;font-size:12.5px;line-height:1.5;color:' + V.t2 + ';">' + texte + '</div>' +
+          '</button>';
+      };
+
+      modal.innerHTML = carte(500,
+        entete('Connexion aux plateformes', 'Un autre logement a la même adresse',
+               adresse || (nomMoi + ' · ' + nomVoisin)) +
+        '<div style="padding:20px 24px 22px;">' +
+        '<div style="font-size:13px;line-height:1.55;color:' + V.t2 + ';margin-bottom:16px;">' +
+        '<strong style="color:' + V.encre + ';">' + nomVoisin + '</strong> est déjà connecté à cette adresse. ' +
+        'Comment faut-il traiter <strong style="color:' + V.encre + ';">' + nomMoi + '</strong> ?' +
+        '</div>' +
+        option('bh-rat-independant', 'Ce sont deux logements distincts',
+               'Chacun garde son propre établissement, ses plateformes et ses tarifs. ' +
+               'C\'est le cas de deux gîtes, deux appartements ou deux maisons loués séparément.', true) +
+        option('bh-rat-immeuble', 'Ce sont deux unités du même établissement',
+               'Les deux partagent un seul établissement chez les plateformes. ' +
+               'À ne choisir que si vos annonces partagent déjà le même identifiant hôtelier ' +
+               '— sinon les plateformes du voisin seront appliquées à ce logement.', false) +
+        '<div style="text-align:center;margin-top:6px;">' +
+        '<button type="button" id="bh-rat-annuler" style="background:none;border:none;cursor:pointer;' +
+        'font-family:inherit;font-size:12.5px;color:' + V.t4 + ';padding:8px 12px;">Annuler</button>' +
+        '</div></div>');
+
+      var fini = false;
+      var repondre = function (valeur) {
+        if (fini) return;
+        fini = true;
+        clearInterval(veille);
+        resoudre(valeur);
+      };
+
+      /* Si la modale est fermee par la croix de l'en-tete, la promesse doit
+         se resoudre quand meme : sans cela, la connexion resterait suspendue
+         sans que rien ne l'indique. */
+      var veille = setInterval(function () {
+        if (!modal.isConnected) repondre(null);
+      }, 300);
+
+      var brancher = function (id, valeur) {
+        var b = modal.querySelector('#' + id);
+        if (b) b.onclick = function () { repondre(valeur); };
+      };
+      brancher('bh-rat-independant', false);
+      brancher('bh-rat-immeuble', true);
+      brancher('bh-rat-annuler', null);
+    });
+  }
+
   async function lancer(modal, pid, pname, code) {
     var p = PLATEFORMES.find(function (x) { return x.code === code; });
     modal.innerHTML = carte(420,
@@ -710,8 +787,24 @@
 
     if (!dejaConnecte) {
       var voisin = voisinConnecte(pid);
+
+      /* Le rattachement n'est plus automatique. Voir demanderRattachement :
+         partager une adresse ne veut pas dire partager un etablissement, et
+         le rattachement embarque le logement sur toutes les plateformes du
+         voisin. */
+      var rattacher = false;
+      if (voisin) {
+        rattacher = await demanderRattachement(modal, moi, voisin);
+        if (rattacher === null) { if (modal.isConnected) modal.remove(); return; }
+        modal.innerHTML = carte(420,
+          '<div style="padding:40px;text-align:center;">' +
+          '<div style="width:22px;height:22px;margin:0 auto;border:2px solid ' + V.ligne + ';border-top-color:' + V.vert +
+          ';border-radius:50%;animation:bhspin .8s linear infinite;"></div>' +
+          '<div style="margin-top:14px;font-size:13px;color:' + V.t3 + ';">Préparation de la connexion…</div></div>');
+      }
+
       var corps = { property_id: pid };
-      if (voisin) corps.channex_property_id = voisin.channexPropertyId || voisin.channex_property_id;
+      if (voisin && rattacher) corps.channex_property_id = voisin.channexPropertyId || voisin.channex_property_id;
       try {
         var r = await fetch(API_URL + '/api/channex/connect-property', {
           method: 'POST',
@@ -720,7 +813,7 @@
         });
         var d = await r.json();
         if (!r.ok) throw new Error(d.error || 'Erreur activation');
-        if (voisin) toast('Rattaché au même établissement que ' + (voisin.name || 'votre autre logement') + '.', 'success');
+        if (voisin && rattacher) toast('Rattaché au même établissement que ' + (voisin.name || 'votre autre logement') + '.', 'success');
         if (typeof loadProperties === 'function') loadProperties().catch(function () {});
       } catch (e) {
         modal.innerHTML = carte(420,
