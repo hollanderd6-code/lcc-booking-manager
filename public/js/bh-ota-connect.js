@@ -166,6 +166,66 @@
       ';font-family:' + V.sans + ';font-size:13.5px;padding:10px 12px;cursor:pointer;">' + texte + '</button>';
   }
 
+
+  /* ── L'etat reel du logement, avant la liste des plateformes ──────────
+     « Connecte » ne veut pas dire « vendable ». Un logement peut etre relie
+     a Booking et rester ferme a la reservation faute de tarifs envoyes —
+     c'est arrive, et rien ne le disait. Ce bloc affiche ce que le serveur
+     constate, avec l'action qui repare a cote. */
+  function renduSante(d) {
+    if (!d || !d.points || !d.points.length) return '';
+    if (d.vendable) {
+      return '<div style="background:' + V.vertPale + ';border:1px solid ' + V.vertFilet + ';border-radius:12px;' +
+        'padding:13px 15px;display:flex;align-items:center;gap:11px;">' +
+        '<span style="color:' + V.vertClair + ';font-size:14px;flex:none;">\u2713</span>' +
+        '<span style="font-size:13px;color:' + V.vert + ';line-height:1.5;">' +
+        '<strong style="font-weight:600;">Ce logement est ouvert a la vente.</strong> ' +
+        'Calendrier et tarifs sont partis vers vos plateformes.</span></div>';
+    }
+
+    var lignes = d.points.map(function (pt) {
+      var couleur = pt.ok ? '#2E8B62' : V.or;
+      var quand = pt.quand
+        ? '<span style="display:block;font-size:11.5px;color:' + V.t4 + ';margin-top:2px;">' +
+          esc(new Date(pt.quand).toLocaleDateString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })) + '</span>'
+        : '';
+      var bouton = '';
+      if (!pt.ok && pt.action) {
+        var libelle = pt.action === 'prix' ? 'Fixer mon prix'
+          : pt.action === 'stripe' ? 'Verifier le compte'
+          : 'Envoyer maintenant';
+        bouton = '<button type="button" onclick="window._bhSante(\'' + pt.action + '\')" ' +
+          'style="border:1px solid ' + V.orFilet + ';background:#fff;color:' + V.or + ';font-family:' + V.sans + ';' +
+          'font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;flex:none;">' +
+          libelle + '</button>';
+      }
+      return '<div style="display:flex;align-items:flex-start;gap:11px;padding:11px 0;border-bottom:1px solid ' + V.ligne2 + ';">' +
+        '<span style="color:' + couleur + ';font-size:13px;flex:none;margin-top:2px;">' + (pt.ok ? '\u2713' : '\u2715') + '</span>' +
+        '<span style="flex:1;">' +
+        '<span style="display:block;font-size:13.5px;font-weight:' + (pt.ok ? '400' : '600') + ';color:' + V.encre + ';">' + esc(pt.titre) + '</span>' +
+        (pt.details ? '<span style="display:block;font-size:12.5px;color:' + V.or + ';margin-top:3px;line-height:1.5;">' + esc(pt.details) + '</span>' : '') +
+        quand + '</span>' + bouton + '</div>';
+    }).join('');
+
+    return '<div style="background:#fff;border:1px solid ' + V.orFilet + ';border-radius:12px;overflow:hidden;">' +
+      '<div style="padding:13px 15px 4px;">' +
+      '<span style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + V.or + ';">' +
+      (d.a_regler > 1 ? d.a_regler + ' choses a regler' : 'Une chose a regler') + '</span></div>' +
+      '<div style="padding:0 15px 6px;">' + lignes + '</div></div>';
+  }
+
+  /* Les actions de reparation. « Envoyer » couvre calendrier et tarifs :
+     les deux partent ensemble, et l'utilisateur n'a pas a savoir lequel
+     manquait. */
+  window._bhSante = async function (action) {
+    if (action === 'prix') {
+      document.getElementById('channexModal')?.remove();
+      if (typeof openEditPropertyModal === 'function') openEditPropertyModal(window._bhSantePid);
+      return;
+    }
+    if (action === 'stripe') { window.location.href = '/settings-account.html'; return; }
+    if (typeof window._bhEnvoyerTout === 'function') window._bhEnvoyerTout();
+  };
   /* ── écran 1 : les plateformes de CE logement ───────────────────────────── */
   async function ecranPlateformes(modal, pid, pname) {
     var connectees = [];
@@ -198,6 +258,14 @@
       }
     } catch (eMaj) {}
 
+    /* L'etat reel avant la liste : « connecte » ne veut pas dire « vendable ». */
+    window._bhSantePid = pid;
+    var blocSante = '';
+    try {
+      var rSante = await fetch(API_URL + '/api/properties/' + pid + '/sante',
+        { headers: { Authorization: 'Bearer ' + token() } });
+      if (rSante.ok) blocSante = renduSante(await rSante.json());
+    } catch (eSante) {}
     var voisin = voisinConnecte(pid);
     var lignes = PLATEFORMES.map(function (p) {
       var ok = connectees.some(function (c) { return c.indexOf(p.cle) > -1 || (p.cle === 'booking' && c.indexOf('bdc') > -1) || (p.cle === 'airbnb' && c === 'abb'); });
@@ -309,7 +377,7 @@
 
     modal.innerHTML = carte(540,
       entete(null, 'Connecter mes plateformes', pname) +
-      '<div style="padding:18px 24px;display:flex;flex-direction:column;gap:12px;">' + noteAdresse + noteRegroupement + noteImmeuble + lignes + '</div>' +
+      '<div style="padding:18px 24px;display:flex;flex-direction:column;gap:12px;">' + blocSante + noteAdresse + noteRegroupement + noteImmeuble + lignes + '</div>' +
       pied(estConnecte
         ? '<button type="button" onclick="channexDisconnect(\'' + pid + '\')" style="border:0;background:transparent;' +
           'color:#C0433C;font-family:' + V.sans + ';font-size:13px;cursor:pointer;padding:8px 0;">Déconnecter ce logement</button>'
@@ -364,6 +432,42 @@
     /* La sequence de fin de connexion. Sans elle, un logement mappe chez le
        partenaire reste « Tarif fermé » : il est visible mais ferme a la vente,
        faute de disponibilites envoyees. */
+    /* Calendrier ET tarifs. La sequence _bhEnvoyer ci-dessous importe les
+       reservations puis pousse les disponibilites, mais jamais les tarifs :
+       or un logement sans tarif reste ferme a la vente, ce que rien
+       n'indiquait. */
+    window._bhEnvoyerTout = async function () {
+      modal.innerHTML = carte(430,
+        '<div style="padding:38px 30px;text-align:center;">' +
+        '<div style="width:22px;height:22px;margin:0 auto;border:2px solid ' + V.ligne +
+        ';border-top-color:' + V.vert + ';border-radius:50%;animation:bhspin .8s linear infinite;"></div>' +
+        '<div style="margin-top:16px;font-size:14px;color:' + V.encre + ';">Envoi du calendrier et des tarifs\u2026</div>' +
+        '<div style="margin-top:6px;font-size:12.5px;color:' + V.t3 + ';">Ne fermez pas cette fen\u00eatre.</div></div>');
+      var appel = function (url) {
+        return fetch(API_URL + url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
+          body: '{}'
+        }).then(function (r) { return { ok: r.ok, statut: r.status }; })
+          .catch(function () { return { ok: false, statut: 0 }; });
+      };
+      var dispo = await appel('/api/channex/push-availability/' + pid);
+      var tarifs = await appel('/api/pricing/rules/push-channex/' + pid);
+      var bilan = [];
+      bilan.push(dispo.ok ? 'calendrier envoy\u00e9' : 'calendrier : \u00e9chec');
+      bilan.push(tarifs.ok ? 'tarifs envoy\u00e9s'
+        : (tarifs.statut === 403 ? 'tarifs non envoy\u00e9s (droit \u00ab gestion des prix \u00bb requis)' : 'tarifs : \u00e9chec'));
+      var toutOk = dispo.ok && tarifs.ok;
+      modal.innerHTML = carte(470,
+        entete(null, toutOk ? 'C\'est parti' : 'Envoi incomplet', esc(pname)) +
+        '<div style="padding:20px 24px;font-size:14px;color:' + V.t2 + ';line-height:1.65;">' +
+        esc(bilan.join(' \u00b7 ')) +
+        (toutOk ? '<span style="display:block;margin-top:10px;">Comptez quelques minutes avant que les plateformes ouvrent les dates.</span>' : '') +
+        '</div>' +
+        pied('', btnPlein('Revoir l\'\u00e9tat', 'window._bhRevoirSante()')));
+      window._bhRevoirSante = function () { ecranPlateformes(modal, pid, pname); };
+      if (typeof loadProperties === 'function') loadProperties().catch(function () {});
+    };
     window._bhEnvoyer = async function () {
       var etapes = [
         'Connexion à la plateforme…',

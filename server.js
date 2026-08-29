@@ -37492,6 +37492,86 @@ app.get('/api/integrations/channex-key', authenticateToken, async (req, res) => 
 
 // ── Lister les propriétés Channex existantes ─────────────────
 // ── Lister les channels connectés d'une property Channex ─────
+
+// ── État réel d'un logement : est-il vendable, et sinon pourquoi ? ──
+// Chaque point correspond a une panne rencontree en production et restee
+// muette : disponibilites jamais poussees, tarifs absents (« Tarif ferme »
+// chez Booking), compte Stripe du proprietaire inutilisable. L'information
+// existait deja en base — elle n'etait affichee nulle part.
+app.get('/api/properties/:property_id/sante', authenticateAny, async (req, res) => {
+  try {
+    const { property_id } = req.params;
+    const agencyIds = await getAgencyUserIds(req, req.user.id);
+    const pr = await pool.query(
+      `SELECT id, name, base_price, deposit_amount, channex_enabled, channex_property_id,
+              channex_room_type_id, channex_rate_plan_id
+         FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [property_id, agencyIds]
+    );
+    const p = pr.rows[0];
+    if (!p) return res.status(404).json({ error: 'Logement introuvable' });
+
+    // Dernier evenement d'un type donne. Le journal channex_logs est la
+    // seule preuve qu'un envoi a REELLEMENT abouti.
+    const dernier = async (types) => {
+      const r = await pool.query(
+        `SELECT event_type, status, created_at FROM channex_logs
+            WHERE property_id = $1 AND event_type = ANY($2::text[])
+            ORDER BY created_at DESC LIMIT 1`,
+        [property_id, types]
+      ).catch(() => ({ rows: [] }));
+      return r.rows[0] || null;
+    };
+
+    const points = [];
+    const relie = !!(p.channex_enabled && p.channex_property_id && p.channex_room_type_id);
+    points.push({ cle: 'relie', ok: relie, titre: "L'annonce est reliée",
+      details: relie ? null : "Ce logement n'est connecté à aucune plateforme." });
+
+    if (relie) {
+      const dispo = await dernier(['push_availability']);
+      const okDispo = !!(dispo && dispo.status === 'success');
+      points.push({ cle: 'calendrier', ok: okDispo,
+        titre: okDispo ? 'Calendrier envoyé' : 'Calendrier jamais envoyé',
+        quand: dispo ? dispo.created_at : null,
+        details: okDispo ? null : 'Vos dates ne sont pas parties : le logement reste fermé à la réservation.',
+        action: okDispo ? null : 'envoyer' });
+
+      // Un plan tarifaire sans prix de base ne peut rien envoyer : les deux
+      // conditions sont necessaires, et le message differe.
+      const prix = Number(p.base_price || 0) > 0;
+      const tarifs = await dernier(['push_rates', 'push_restrictions']);
+      const okTarifs = prix && !!(tarifs && tarifs.status === 'success');
+      points.push({ cle: 'tarifs', ok: okTarifs,
+        titre: okTarifs ? 'Tarifs envoyés' : (prix ? 'Aucun tarif envoyé' : 'Aucun prix de base'),
+        quand: tarifs ? tarifs.created_at : null,
+        details: okTarifs ? null : (prix
+          ? 'Les plateformes affichent « Tarif fermé » : le logement est visible mais personne ne peut réserver.'
+          : 'Sans prix de base, aucun tarif ne peut partir — le logement restera fermé à la vente.'),
+        action: okTarifs ? null : (prix ? 'envoyer' : 'prix') });
+    }
+
+    if (Number(p.deposit_amount || 0) > 0) {
+      let cautionOk = true, pourquoi = null;
+      try {
+        const cible = await getStripeForProperty(pool, property_id, req.user.id);
+        if (cible.stripeAccountId && typeof compteStripeUtilisable === 'function') {
+          cautionOk = await compteStripeUtilisable(cible.stripeAccountId);
+          if (!cautionOk) pourquoi = "Le compte Stripe rattaché ne peut pas encaisser : son inscription n'est pas terminée.";
+        }
+      } catch (e) { cautionOk = true; }   // dans le doute, on n'accuse pas
+      points.push({ cle: 'caution', ok: cautionOk,
+        titre: cautionOk ? 'Le lien de caution fonctionne' : 'Le lien de caution ne peut pas être créé',
+        details: pourquoi, action: cautionOk ? null : 'stripe' });
+    }
+
+    const aRegler = points.filter((x) => !x.ok).length;
+    res.json({ property_id, nom: p.name, relie, vendable: relie && aRegler === 0, a_regler: aRegler, points });
+  } catch (e) {
+    console.error('[sante]', e.message);
+    res.status(500).json({ error: 'Vérification impossible' });
+  }
+});
 app.get('/api/channex/connected-channels/:property_id', authenticateToken, async (req, res) => {
   const { property_id } = req.params;
   const user_id = req.user.id;
