@@ -1312,8 +1312,22 @@ function setOwnerLang(lang) {
 
 async function sendMessageOwner() {
   const input = document.getElementById('chatInput');
-  // Sur messages.html, currentConversationId est dans window — fallback
-  if (!currentConversationId && window.currentConversationId) {
+  /* Sur messages.html, openChat est remplace par un patch qui n'appelle pas
+     la version d'origine : la variable locale ci-dessus n'est donc jamais
+     mise a jour, et window.currentConversationId est la seule source fiable.
+
+     L'ancienne condition « if (!currentConversationId) » ne recopiait la
+     valeur QU'UNE FOIS. Des la deuxieme conversation ouverte, la locale
+     restait figee sur la premiere et tous les envois y repartaient — le
+     message arrivait chez le mauvais voyageur. */
+  if (window.currentConversationId
+      && String(window.currentConversationId) !== String(currentConversationId)) {
+    currentConversationId = window.currentConversationId;
+    /* L'identifiant de reservation Channex appartient a la conversation :
+       le conserver enverrait le message dans le fil Booking du precedent.
+       On le reprend meme lorsqu'il est vide. */
+    currentChannexBookingId = window._currentChannexBookingId || null;
+  } else if (!currentConversationId && window.currentConversationId) {
     currentConversationId = window.currentConversationId;
   }
   if (!currentChannexBookingId && window._currentChannexBookingId) {

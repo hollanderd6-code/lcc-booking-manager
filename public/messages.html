@@ -2434,6 +2434,12 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
 
     window.openChat = async function(conversationId) {
       window.currentConversationId = conversationId;
+      /* Ce patch remplace openChat de chat-owner.js sans jamais appeler
+         l'original : la variable interne de ce module n'est donc plus
+         actualisee, et window fait desormais foi. On remet aussi a zero
+         l'identifiant Channex — sans quoi le message partirait dans le fil
+         Booking du voyageur precedent. */
+      window._currentChannexBookingId = null;
 
       // Marquer actif dans la liste
       document.querySelectorAll('#conversationsList .conversation-item').forEach(function(el) {
@@ -3537,6 +3543,10 @@ let _currentChannexBookingId = null;
 const _origOpenConv = window.openConversation;
 window.openConversation = async function(convId, ...args) {
   _currentChannexBookingId = null;
+  /* Publie sur window : chat-owner.js ne lit que window._currentChannexBookingId
+     et n'a aucun acces a cette variable locale. Sans cette ligne, les deux
+     fichiers suivaient deux conversations differentes. */
+  window._currentChannexBookingId = null;
   const btn = document.getElementById('btnBookingMessage');
   if (btn) btn.style.display = 'none';
 
@@ -3557,6 +3567,7 @@ window.openConversation = async function(convId, ...args) {
       const data = await res.json();
       if (data.channex_booking_id) {
         _currentChannexBookingId = data.channex_booking_id;
+        window._currentChannexBookingId = data.channex_booking_id;
         if (btn) {
           btn.style.display = 'flex';
           btn.title = 'Répondre sur Airbnb / Booking';
