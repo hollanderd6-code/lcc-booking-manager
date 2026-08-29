@@ -3753,8 +3753,25 @@ function formatDateFr(dateStr) {
               + (photos.length>4 ? '<div style="width:54px;height:54px;border-radius:8px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text-secondary);">+' + (photos.length-4) + '</div>' : '')
               + '</div>'
             : '';
+          /* Marquer comme traite : l'action la plus courante n'avait aucun
+             bouton. La carte ouvre bien un modal ou l'on peut changer le
+             statut, mais rien ne l'indique — seul le bouton rouge de retenue
+             sur caution etait visible, c'est-a-dire l'action financiere
+             irreversible. On expose donc la sortie normale a cote d'elle.
+
+             Affiche tant que le ticket n'est ni resolu ni cloture. */
+          const dejaTraite = t.status === 'resolved' || t.status === 'closed';
+          const doneBtn = dejaTraite
+            ? ''
+            : '<button onclick="event.stopPropagation();marquerTicketTraite(' + t.id + ', this)" style="margin-top:11px;cursor:pointer;border:1px solid rgba(14,59,46,.25);background:#fff;color:#0E3B2E;font-weight:700;padding:9px 14px;border-radius:9px;font-size:13px;display:inline-flex;align-items:center;gap:7px;"><i class="fas fa-check"></i> Marquer comme traité</button>';
+
           const retainBtn = isDamage
             ? '<button onclick="event.stopPropagation();retainOnDeposit(' + t.id + ')" style="margin-top:11px;cursor:pointer;border:none;background:#dc2626;color:#fff;font-weight:700;padding:9px 14px;border-radius:9px;font-size:13px;display:inline-flex;align-items:center;gap:7px;"><i class="fas fa-hand-holding-dollar"></i> Retenir sur la caution</button>'
+            : '';
+          /* Les deux boutons partagent une ligne : sans conteneur flex, ils se
+             collent et debordent sur les petits ecrans. */
+          const actionsHtml = (doneBtn || retainBtn)
+            ? '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">' + doneBtn + retainBtn + '</div>'
             : '';
           return '<div onclick="openTicketModal(' + t.id + ')" style="cursor:pointer;border:1px solid var(--border);border-left:4px solid ' + (isDamage ? '#dc2626' : prio.c) + ';border-radius:12px;padding:13px 15px;margin-bottom:10px;">'
             + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
@@ -3768,10 +3785,41 @@ function formatDateFr(dateStr) {
             + '</div>'
             + (t.description ? '<div style="font-size:13px;color:var(--text);margin-top:7px;opacity:.85;">' + _maintEsc(String(t.description).slice(0,120)) + (t.description.length>120?'…':'') + '</div>' : '')
             + photosHtml
-            + retainBtn
+            + actionsHtml
             + '</div>';
         }).join('');
       }
+
+      /* ── Marquer un ticket comme traite ──────────────────────────────
+         Reprend exactement le corps envoye par saveTicket : la route PATCH
+         attend l'objet complet, et n'envoyer que le statut risquerait
+         d'effacer les autres champs. */
+      window.marquerTicketTraite = async function (id, btn) {
+        const t = (typeof maintTickets !== 'undefined' ? maintTickets : []).find(x => String(x.id) === String(id));
+        if (!t) { alert('Ticket introuvable — rechargez la page.'); return; }
+        const libelle = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> …'; }
+        try {
+          const res = await fetch(API_URL + '/api/maintenance/tickets/' + id, {
+            method: 'PATCH',
+            headers: Object.assign({ 'Content-Type': 'application/json' }, _maintHeaders()),
+            body: JSON.stringify({
+              propertyId: t.property_id,
+              title: t.title,
+              description: t.description,
+              priority: t.priority,
+              status: 'resolved',
+              artisanId: t.artisan_id || null
+            })
+          });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          await loadMaintTickets();
+        } catch (e) {
+          console.error('[MAINT] marquerTicketTraite', e);
+          alert('Impossible de marquer ce ticket comme traité : ' + e.message);
+          if (btn) { btn.disabled = false; btn.innerHTML = libelle; }
+        }
+      };
 
       // ── Retenue sur la caution depuis un incident de dégradation ──
       let _retainCtx = null;
