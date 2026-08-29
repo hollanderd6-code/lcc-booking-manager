@@ -1382,19 +1382,28 @@ html[data-theme-v3="1"] .cleaning-tab:not(.active):hover {
 @media (max-width: 1366px) {
   /* Hauteur dynamique : sur iOS, 100vh dépasse la zone visible -> bas inatteignable.
      100dvh suit la zone réellement visible, donc le scroll va jusqu'au bout. */
+  /* Le « - 40px » retranchait 40 px a la zone de defilement : le bas du
+     contenu passait sous l'ecran et devenait inatteignable (la derniere
+     carte et le dernier champ des formulaires etaient coupes), tandis que
+     le padding-bottom laissait une bande vide au-dessus de la barre.
+     100dvh suit exactement la zone visible : aucune soustraction n'est
+     necessaire. */
   html[data-theme-v3="1"] .app-container {
-    height: calc(100dvh - 40px) !important;
-    min-height: calc(100dvh - 40px) !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
     overflow: hidden !important;
   }
   html[data-theme-v3="1"] main.main-content {
     height: 100% !important;
-    max-height: calc(100dvh - 40px) !important;
+    max-height: 100dvh !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior: contain;
     /* espace pour que le dernier élément passe AU-DESSUS de la barre du bas */
-    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important;
+    /* Juste ce qu'il faut pour degager la barre du bas (60 a 80 px selon
+       l'appareil), aligne sur la valeur de bh-bottom-bar.css. Au-dela, on
+       fabrique une bande vide. */
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)) !important;
     box-sizing: border-box !important;
   }
   html[data-theme-v3="1"] .page-content {
@@ -1529,6 +1538,38 @@ html[data-theme-v3="1"] .checklist-item-actions .btn {
 }
 html[data-theme-v3="1"] .checklist-item-actions .btn:hover {
   background: white !important;
+}
+
+/* Le bouton « Valider » etait invisible : blanc sur blanc.
+   Deux causes cumulees, corrigees ici :
+
+   1. La regle ci-dessus (attribut + deux classes) est plus specifique que
+      « .btn-validate », donc son fond blanc gagnait — alors que la couleur
+      de texte « white » de .btn-validate restait. Texte blanc sur fond
+      blanc. « Complement » restait lisible, lui, parce que son rouge
+      survivait au meme traitement.
+
+   2. .btn-validate peint son fond avec var(--bh-vert-fonce), variable qui
+      n'est definie NI dans cette page, NI dans bh-brand.css, NI dans
+      bh-bottom-bar.css. La declaration etait donc invalide et le fond vert
+      n'a jamais ete applique. D'ou la valeur de repli explicite ci-dessous :
+      elle fonctionne que la variable existe ou non. */
+html[data-theme-v3="1"] .checklist-item-actions .btn-validate,
+html[data-theme-v3="1"] .checklist-item-actions .btn-validate:hover {
+  background: var(--bh-vert-fonce, #0A2C22) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+html[data-theme-v3="1"] .checklist-item-actions .btn-validate i {
+  color: #fff !important;
+}
+/* Meme correction pour le bouton de refus, dont le fond blanc etait
+   fortuitement lisible mais pas intentionnel. */
+html[data-theme-v3="1"] .checklist-item-actions .btn-reject,
+html[data-theme-v3="1"] .checklist-item-actions .btn-reject:hover {
+  background: rgba(255,255,255,.6) !important;
+  color: #B4402A !important;
+  border-color: rgba(180,64,42,.35) !important;
 }
 
 /* Modal detail */
