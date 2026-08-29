@@ -813,67 +813,106 @@
 
      Le defaut est desormais « logements independants » — le cas courant.
      Le rattachement reste possible, mais il se choisit. */
+  /* ── La question d'immeuble, posee au bon moment ──────────────────────
+     Deux logements a la meme adresse ne sont pas forcement deux chambres du
+     meme etablissement. Le rattachement etait autrefois automatique, et
+     l'utilisateur l'apprenait une fois le fait accompli.
+
+     La consequence est desormais ecrite DANS l'option, pas en note de bas
+     de page, et elle nomme les plateformes reelles du voisin : « sera aussi
+     mise en vente sur Airbnb » se comprend, « les canaux seront partages »
+     non. C'est exactement ce qui a mis Airbnb sur une longere qui n'y
+     etait pas. */
+  async function plateformesDuVoisin(voisin) {
+    var id = voisin && (voisin.id || voisin._id);
+    if (!id) return [];
+    try {
+      var r = await fetch(API_URL + '/api/channex/connected-channels/' + id + '?bh_property_id=' + id,
+        { headers: { Authorization: 'Bearer ' + token() } });
+      if (!r.ok) return [];
+      var d = await r.json();
+      var noms = { airbnb: 'Airbnb', bookingcom: 'Booking.com', expedia: 'Expedia', vrbo: 'Abritel' };
+      return (d.channels || []).map(function (c) { return noms[String(c.channel || '').toLowerCase()]; })
+        .filter(function (x, i, t) { return x && t.indexOf(x) === i; });
+    } catch (e) { return []; }   // sans la liste, on reste general plutot que faux
+  }
+
+  function enumerer(liste) {
+    if (liste.length === 1) return liste[0];
+    return liste.slice(0, -1).join(', ') + ' et ' + liste[liste.length - 1];
+  }
+
   function demanderRattachement(modal, moi, voisin) {
     return new Promise(function (resoudre) {
       var nomVoisin = esc(voisin.name || 'votre autre logement');
       var nomMoi = esc((moi && moi.name) || 'ce logement');
-      var adresse = esc((moi && moi.address) || '');
-
-      var option = function (id, titre, texte, recommande) {
-        return '<button type="button" id="' + id + '" style="width:100%;text-align:left;cursor:pointer;' +
-          'background:#fff;border:1.5px solid ' + (recommande ? V.vertFilet : V.ligne) + ';border-radius:12px;' +
-          'padding:14px 16px;margin-bottom:10px;font-family:inherit;display:block;">' +
-          '<div style="display:flex;align-items:center;gap:8px;">' +
-          '<span style="font-size:14px;font-weight:600;color:' + V.encre + ';">' + titre + '</span>' +
-          (recommande ? '<span style="font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;' +
-            'color:' + V.vert + ';background:' + V.vertPale + ';border-radius:99px;padding:3px 9px;">Recommandé</span>' : '') +
-          '</div>' +
-          '<div style="margin-top:5px;font-size:12.5px;line-height:1.5;color:' + V.t2 + ';">' + texte + '</div>' +
-          '</button>';
-      };
-
-      modal.innerHTML = carte(500,
-        entete('Connexion aux plateformes', 'Un autre logement a la même adresse',
-               adresse || (nomMoi + ' · ' + nomVoisin)) +
-        '<div style="padding:20px 24px 22px;">' +
-        '<div style="font-size:13px;line-height:1.55;color:' + V.t2 + ';margin-bottom:16px;">' +
-        '<strong style="color:' + V.encre + ';">' + nomVoisin + '</strong> est déjà connecté à cette adresse. ' +
-        'Comment faut-il traiter <strong style="color:' + V.encre + ';">' + nomMoi + '</strong> ?' +
-        '</div>' +
-        option('bh-rat-independant', 'Ce sont deux logements distincts',
-               'Chacun garde son propre établissement, ses plateformes et ses tarifs. ' +
-               'C\'est le cas de deux gîtes, deux appartements ou deux maisons loués séparément.', true) +
-        option('bh-rat-immeuble', 'Ce sont deux unités du même établissement',
-               'Les deux partagent un seul établissement chez les plateformes. ' +
-               'À ne choisir que si vos annonces partagent déjà le même identifiant hôtelier ' +
-               '— sinon les plateformes du voisin seront appliquées à ce logement.', false) +
-        '<div style="text-align:center;margin-top:6px;">' +
-        '<button type="button" id="bh-rat-annuler" style="background:none;border:none;cursor:pointer;' +
-        'font-family:inherit;font-size:12.5px;color:' + V.t4 + ';padding:8px 12px;">Annuler</button>' +
-        '</div></div>');
 
       var fini = false;
+      var veille = null;
       var repondre = function (valeur) {
         if (fini) return;
         fini = true;
-        clearInterval(veille);
+        if (veille) clearInterval(veille);
         resoudre(valeur);
       };
 
-      /* Si la modale est fermee par la croix de l'en-tete, la promesse doit
-         se resoudre quand meme : sans cela, la connexion resterait suspendue
-         sans que rien ne l'indique. */
-      var veille = setInterval(function () {
-        if (!modal.isConnected) repondre(null);
-      }, 300);
+      var peindre = function (plateformes) {
+        // L'avertissement n'apparait que s'il y a quelque chose a perdre :
+        // un voisin sans plateforme connectee ne fait courir aucun risque.
+        var alerte = plateformes.length
+          ? '<div style="font-size:12.5px;line-height:1.5;color:#8A5B14;margin-top:8px;background:' + V.orFond +
+            ';border-radius:8px;padding:9px 11px;">Attention : ' + nomMoi + ' sera aussi mise en vente sur ' +
+            esc(enumerer(plateformes)) + ', o\u00f9 ' + nomVoisin + ' est d\u00e9j\u00e0 pr\u00e9sente.</div>'
+          : '';
 
-      var brancher = function (id, valeur) {
-        var b = modal.querySelector('#' + id);
-        if (b) b.onclick = function () { repondre(valeur); };
+        var option = function (id, titre, texte, courant, sous) {
+          return '<button type="button" id="' + id + '" style="width:100%;text-align:left;cursor:pointer;' +
+            'background:' + (courant ? V.vertPale : '#fff') + ';border:1.5px solid ' + (courant ? V.vertFilet : V.ligne) +
+            ';border-radius:13px;padding:15px 16px;margin-bottom:10px;font-family:inherit;display:block;">' +
+            '<div style="display:flex;align-items:center;gap:9px;">' +
+            '<span style="font-size:14.5px;font-weight:600;color:' + V.encre + ';">' + titre + '</span>' +
+            (courant ? '<span style="font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:' +
+              V.vert + ';background:#fff;border-radius:99px;padding:3px 9px;">Le plus courant</span>' : '') +
+            '</div>' +
+            '<div style="font-size:13px;line-height:1.55;color:' + V.t2 + ';margin-top:6px;">' + texte + '</div>' +
+            (sous || '') + '</button>';
+        };
+
+        modal.innerHTML = carte(500,
+          entete('Une question avant de brancher',
+                 nomMoi + ' partage son adresse avec ' + nomVoisin, null) +
+          '<div style="padding:18px 22px 20px;">' +
+          option('bh-rat-independant', 'Deux logements s\u00e9par\u00e9s',
+                 'Deux g\u00eetes, deux annonces, deux calendriers. Chacun ses plateformes et ses tarifs.', true) +
+          option('bh-rat-immeuble', 'Deux chambres du m\u00eame \u00e9tablissement',
+                 'Un h\u00f4tel, une r\u00e9sidence. Vos annonces partagent d\u00e9j\u00e0 le m\u00eame num\u00e9ro chez Booking.com.',
+                 false, alerte) +
+          '<div style="text-align:center;margin-top:4px;">' +
+          '<button type="button" id="bh-rat-annuler" style="background:none;border:none;cursor:pointer;' +
+          'font-family:inherit;font-size:12.5px;color:' + V.t3 + ';padding:8px 12px;">Annuler</button>' +
+          '</div></div>');
+
+        // Fermer par la croix vaut annulation : sans cela, la connexion
+        // resterait suspendue sans que rien ne l'indique.
+        if (veille) clearInterval(veille);
+        veille = setInterval(function () { if (!modal.isConnected) repondre(null); }, 300);
+
+        var brancher = function (id, valeur) {
+          var b = modal.querySelector('#' + id);
+          if (b) b.onclick = function () { repondre(valeur); };
+        };
+        brancher('bh-rat-independant', false);
+        brancher('bh-rat-immeuble', true);
+        brancher('bh-rat-annuler', null);
       };
-      brancher('bh-rat-independant', false);
-      brancher('bh-rat-immeuble', true);
-      brancher('bh-rat-annuler', null);
+
+      // On peint tout de suite avec ce qu'on sait, puis on enrichit des que
+      // les plateformes du voisin sont connues : l'ecran ne reste jamais vide
+      // en attendant le reseau.
+      peindre([]);
+      plateformesDuVoisin(voisin).then(function (liste) {
+        if (!fini && liste.length) peindre(liste);
+      });
     });
   }
 
