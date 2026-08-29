@@ -30505,13 +30505,32 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
         }
       }
       if (!cautionUrl) {
-        console.warn(`⚠️ [TPL] {caution_url} non résolu pour conv ${conv.id} — deposit absent ou montant=0`);
+        /* Airbnb encaisse lui-meme la caution : il n'y a pas de lien BH a
+           fournir, et le message reste utile sans lui. Meme regle que le
+           cron (voir « Airbnb — {caution_url} supprime »). */
+        const plateforme = (conv.platform || conv.channex_platform || conv.ota_name || '')
+          .toLowerCase().replace(/[_\-\s]/g, '');
+        if (plateforme.includes('airbnb') || plateforme === 'abb') {
+          msg = msg.replace(/{caution_url}/gi, '');
+          console.log(`ℹ️ [TPL] Airbnb — {caution_url} supprimé pour conv ${conv.id} (pas de caution BH)`);
+        } else {
+          /* Ailleurs, on N'ENVOIE PAS. Auparavant le message partait avec
+             « {caution_url} » en toutes lettres : le voyageur recevait une
+             consigne inapplicable, et l'hote devait envoyer le lien a la main
+             sans savoir pourquoi. Un message absent se remarque et se
+             rattrape ; un message casse fait perdre la confiance.
+             Le cron applique deja cette regle — les deux chemins s'accordent. */
+          console.warn(`⚠️ [TPL] {caution_url} non résolu pour conv ${conv.id} — message NON envoyé (deposit absent, montant=0, ou compte Stripe du propriétaire inutilisable)`);
+          return { skipped: true, reason: 'lien de caution indisponible' };
+        }
       } else {
         msg = msg.replace(/{caution_url}/gi, cautionUrl);
       }
     } catch(e) {
-      msg = msg.replace(/{caution_url}/gi, '');
-      console.warn('⚠️ [TPL] Erreur résolution {caution_url}:', e.message);
+      /* Meme principe en cas d'erreur : mieux vaut ne rien envoyer qu'un
+         message ampute de son lien. */
+      console.warn('⚠️ [TPL] Erreur résolution {caution_url} — message NON envoyé :', e.message);
+      return { skipped: true, reason: 'erreur lors de la création du lien de caution' };
     }
   }
 
