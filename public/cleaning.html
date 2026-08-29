@@ -4805,6 +4805,19 @@ function formatDateFr(dateStr) {
     // PONT HOSTERZZ — création de mission ménage depuis un départ
     // ══════════════════════════════════════════════════════════
     // formatDateFr vit dans un autre bloc <script> : repli local si indisponible.
+
+    /* API_URL vit lui aussi dans un autre bloc <script> — et lui n'a jamais eu
+       de repli. Resultat : « API_URL is not defined » a chaque appel, attrape
+       par les catch et affiche « Erreur de chargement ». Les trois fonctions
+       qui parlent au serveur etaient donc muettes : loadHzAutoMissionSettings,
+       toggleHzAutoMission et submitHzMission. Verifie en console sur la page :
+       typeof API_URL renvoyait 'undefined'.
+
+       On declare ici la valeur, en reprenant window.API_URL si une autre
+       partie de l'application l'a publiee un jour. */
+    const API_URL = (typeof window.API_URL === 'string' && window.API_URL)
+      || 'https://lcc-booking-manager.onrender.com';
+
     function hzDateFr(d) {
       if (!d) return '-';
       if (typeof window.formatDateFr === 'function') { try { return window.formatDateFr(d); } catch (e) {} }
@@ -4841,18 +4854,62 @@ function formatDateFr(dateStr) {
       const listEl = document.getElementById('hzAutoMissionList');
       if (!listEl) return;
       listEl.innerHTML = '<p class="text-secondary">Chargement…</p>';
+
+      /* Toute panne affichait le meme « Erreur de chargement », sans dire
+         laquelle ni permettre de reessayer. On ne savait pas s'il fallait se
+         reconnecter, attendre, ou signaler un bug — et la trace n'existait
+         nulle part. Chaque cas est desormais nomme, et journalise en console. */
+      const echec = (texte, technique) => {
+        if (technique) console.error('[HZ auto-mission]', technique);
+        listEl.innerHTML =
+          '<p class="text-secondary" style="margin:0 0 8px;">' + texte + '</p>' +
+          '<button type="button" class="btn btn-sm" onclick="loadHzAutoMissionSettings()" ' +
+          'style="background:#0A2C22;color:#fff;border:none;border-radius:10px;padding:6px 14px;font-size:12px;cursor:pointer;">' +
+          'Réessayer</button>';
+      };
+
+      const token = localStorage.getItem('lcc_token');
+      if (!token) return echec('Session expirée. Reconnectez-vous.', 'aucun jeton');
+
+      let res;
       try {
-        const token = localStorage.getItem('lcc_token');
-        const res = await fetch(`${API_URL}/api/hosterzz/auto-mission-settings`, {
-          headers: { Authorization: 'Bearer ' + token }
+        /* Le serveur s'endort apres une periode d'inactivite et met jusqu'a
+           une minute a repondre au premier appel. Sans delai explicite, la
+           requete pouvait rester suspendue puis echouer sans explication. */
+        res = await fetch(`${API_URL}/api/hosterzz/auto-mission-settings`, {
+          headers: { Authorization: 'Bearer ' + token },
+          signal: AbortSignal.timeout ? AbortSignal.timeout(60000) : undefined
         });
-        const data = await res.json();
-        const props = data.properties || [];
-        if (!props.length) {
-          listEl.innerHTML = '<p class="text-secondary">Aucun logement trouvé.</p>';
-          return;
-        }
-        listEl.innerHTML = props.map((p) => `
+      } catch (e) {
+        return echec(
+          e.name === 'TimeoutError'
+            ? 'Le serveur met trop de temps à répondre. Réessayez dans un instant.'
+            : 'Connexion impossible. Vérifiez votre réseau.',
+          e.message
+        );
+      }
+
+      if (res.status === 401 || res.status === 403) {
+        return echec('Session expirée ou accès refusé. Reconnectez-vous.', 'HTTP ' + res.status);
+      }
+      if (!res.ok) {
+        return echec('Le serveur a refusé la demande (erreur ' + res.status + ').', 'HTTP ' + res.status);
+      }
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        /* Reponse non-JSON : page d'erreur HTML, redirection, proxy… */
+        return echec('Réponse inattendue du serveur.', 'JSON illisible : ' + e.message);
+      }
+
+      const props = data.properties || [];
+      if (!props.length) {
+        listEl.innerHTML = '<p class="text-secondary">Aucun logement trouvé.</p>';
+        return;
+      }
+      listEl.innerHTML = props.map((p) => `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--border-color);border-radius:12px;margin-bottom:8px;">
             <span style="font-size:14px;font-weight:600;">${(p.name || 'Logement').replace(/</g, '&lt;')}</span>
             <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
@@ -4864,9 +4921,6 @@ function formatDateFr(dateStr) {
             </label>
           </div>
         `).join('');
-      } catch (e) {
-        listEl.innerHTML = '<p class="text-secondary">Erreur de chargement.</p>';
-      }
     };
 
     window.toggleHzAutoMission = async function (checkboxEl) {
