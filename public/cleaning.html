@@ -1955,70 +1955,10 @@ html[data-theme-v3="1"] #templatesList > div {
 </section>
 </div>
 
-</div>
-
-<!-- ===== CHECKLIST DETAIL MODAL ===== -->
-<div class="checklist-detail-modal" id="checklistDetailModal">
-  <div class="checklist-detail-overlay" onclick="closeChecklistDetail()"></div>
-  <div class="checklist-detail-panel">
-    <div class="checklist-detail-header">
-      <div>
-        <div style="font-size:17px; font-weight:700;" id="detailPropertyName">—</div>
-        <div style="font-size:13px; color:var(--text-secondary);" id="detailSubtitle">—</div>
-      </div>
-      <button class="checklist-detail-close" onclick="closeChecklistDetail()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="checklist-detail-body">
-      <div class="checklist-detail-section">
-        <div class="checklist-detail-section-title">Infos</div>
-        <div id="detailInfos"></div>
-      </div>
-      <div class="checklist-detail-section">
-        <div class="checklist-detail-section-title">Tâches</div>
-        <div class="checklist-detail-tasks" id="detailTasks"></div>
-      </div>
-      <div class="checklist-detail-section">
-        <div class="checklist-detail-section-title">Photos</div>
-        <div class="checklist-detail-photos" id="detailPhotos"></div>
-      </div>
-      <div class="checklist-detail-section" id="detailNotesSection" style="display:none;">
-        <div class="checklist-detail-section-title">Notes du cleaner</div>
-        <div class="checklist-detail-notes" id="detailNotes"></div>
-      </div>
-      <div class="checklist-detail-section" id="detailOwnerNotesSection" style="display:none;">
-        <div class="checklist-detail-section-title">Votre commentaire (rejet)</div>
-        <div class="checklist-detail-notes" id="detailOwnerNotes" style="background:#fee2e2; color:#991b1b; border-color:#ef4444;"></div>
-      </div>
-      <div class="checklist-detail-section" id="detailSignatureSection" style="display:none;">
-        <div class="checklist-detail-section-title"><i class="fas fa-shield-check" style="color:#0E3B2E;margin-right:6px;"></i>Certification du ménage</div>
-        <div id="detailSignatureContent"></div>
-      </div>
-    </div>
-    <div class="checklist-detail-footer" id="detailFooter">
-      <!-- Boutons valider/rejeter ajoutés dynamiquement -->
-    </div>
-  </div>
-</div>
-
-<!-- ===== HISTORIQUE MODAL ===== -->
-<div class="checklist-detail-modal" id="historyModal">
-  <div class="checklist-detail-overlay" onclick="closeHistoryModal()"></div>
-  <div class="checklist-detail-panel" style="max-width:560px;">
-    <div class="checklist-detail-header">
-      <div>
-        <div style="font-size:17px; font-weight:700;" id="historyModalTitle">Historique</div>
-        <div style="font-size:13px; color:var(--text-secondary);" id="historyModalSubtitle"></div>
-      </div>
-      <button class="checklist-detail-close" onclick="closeHistoryModal()"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="checklist-detail-body" style="padding:0;">
-      <div id="historyModalList" style="padding:0 16px 16px;"></div>
-    </div>
-  </div>
-</div>
-
+<!-- Reassort, Maintenance et Hosterzz vivaient APRES la fermeture de
+     page-content : hors du conteneur, ils ignoraient ses marges et
+     recouvraient la barre d'onglets de 9 px. Ils sont remis a leur place,
+     a la suite des quatre premiers panneaux. -->
 <!-- ════════ PANEL RÉASSORT ════════ -->
 <div class="cleaning-tab-panel" id="panel-restock">
   <section class="card">
@@ -2125,6 +2065,71 @@ html[data-theme-v3="1"] #templatesList > div {
     </div>
   </section>
 </div>
+
+</div>
+
+<!-- ===== CHECKLIST DETAIL MODAL ===== -->
+<div class="checklist-detail-modal" id="checklistDetailModal">
+  <div class="checklist-detail-overlay" onclick="closeChecklistDetail()"></div>
+  <div class="checklist-detail-panel">
+    <div class="checklist-detail-header">
+      <div>
+        <div style="font-size:17px; font-weight:700;" id="detailPropertyName">—</div>
+        <div style="font-size:13px; color:var(--text-secondary);" id="detailSubtitle">—</div>
+      </div>
+      <button class="checklist-detail-close" onclick="closeChecklistDetail()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="checklist-detail-body">
+      <div class="checklist-detail-section">
+        <div class="checklist-detail-section-title">Infos</div>
+        <div id="detailInfos"></div>
+      </div>
+      <div class="checklist-detail-section">
+        <div class="checklist-detail-section-title">Tâches</div>
+        <div class="checklist-detail-tasks" id="detailTasks"></div>
+      </div>
+      <div class="checklist-detail-section">
+        <div class="checklist-detail-section-title">Photos</div>
+        <div class="checklist-detail-photos" id="detailPhotos"></div>
+      </div>
+      <div class="checklist-detail-section" id="detailNotesSection" style="display:none;">
+        <div class="checklist-detail-section-title">Notes du cleaner</div>
+        <div class="checklist-detail-notes" id="detailNotes"></div>
+      </div>
+      <div class="checklist-detail-section" id="detailOwnerNotesSection" style="display:none;">
+        <div class="checklist-detail-section-title">Votre commentaire (rejet)</div>
+        <div class="checklist-detail-notes" id="detailOwnerNotes" style="background:#fee2e2; color:#991b1b; border-color:#ef4444;"></div>
+      </div>
+      <div class="checklist-detail-section" id="detailSignatureSection" style="display:none;">
+        <div class="checklist-detail-section-title"><i class="fas fa-shield-check" style="color:#0E3B2E;margin-right:6px;"></i>Certification du ménage</div>
+        <div id="detailSignatureContent"></div>
+      </div>
+    </div>
+    <div class="checklist-detail-footer" id="detailFooter">
+      <!-- Boutons valider/rejeter ajoutés dynamiquement -->
+    </div>
+  </div>
+</div>
+
+<!-- ===== HISTORIQUE MODAL ===== -->
+<div class="checklist-detail-modal" id="historyModal">
+  <div class="checklist-detail-overlay" onclick="closeHistoryModal()"></div>
+  <div class="checklist-detail-panel" style="max-width:560px;">
+    <div class="checklist-detail-header">
+      <div>
+        <div style="font-size:17px; font-weight:700;" id="historyModalTitle">Historique</div>
+        <div style="font-size:13px; color:var(--text-secondary);" id="historyModalSubtitle"></div>
+      </div>
+      <button class="checklist-detail-close" onclick="closeHistoryModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="checklist-detail-body" style="padding:0;">
+      <div id="historyModalList" style="padding:0 16px 16px;"></div>
+    </div>
+  </div>
+</div>
+
 
 <!-- Modal ticket -->
 <div class="checklist-detail-modal" id="ticketModal">
