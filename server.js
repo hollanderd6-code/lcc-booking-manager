@@ -37625,6 +37625,41 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
       dates_blocked
     });
 
+    /* ── Les TARIFS ──────────────────────────────────────────────
+       Sans eux, le plan tarifaire existe chez Channex mais ne porte
+       aucun prix : Booking affiche « Tarif ferme » et le logement n'est
+       pas vendable. La disponibilite seule ne suffit pas.
+
+       triggerChannexRatesSync fait deja ce travail apres chaque
+       modification de prix (base_price / weekend_price, overrides,
+       regles long sejour) : on la reutilise, pour qu'il n'existe qu'une
+       seule logique de tarification dans le produit.
+
+       Un echec ici ne fait pas echouer la connexion : la property, les
+       webhooks et la disponibilite sont deja en place cote Channex, et
+       un second essai buterait sur « deja connecte a Channex ». */
+    let tarifs_pousses = false;
+    let avertissement = null;
+    try {
+      const prixRes = await pool.query('SELECT base_price FROM properties WHERE id = $1', [property_id]);
+      const basePrice = prixRes.rows[0] ? prixRes.rows[0].base_price : null;
+
+      if (basePrice == null || !(Number(basePrice) > 0)) {
+        // Cas frequent et silencieux : le logement n'a pas encore de prix.
+        // On le dit, sinon l'utilisateur voit « connecte » et un logement
+        // ferme sur Booking, sans lien evident entre les deux.
+        avertissement = "Aucun prix de base n'est defini sur ce logement : les plateformes le laisseront ferme tant qu'un tarif ne sera pas renseigne.";
+        console.warn(`⚠️ [CHANNEX CONNECT] ${property_id} : pas de base_price, aucun tarif pousse`);
+      } else {
+        await triggerChannexRatesSync(property_id, user_id);
+        tarifs_pousses = true;
+        console.log(`✅ [CHANNEX CONNECT] Tarifs pousses pour ${property_id}`);
+      }
+    } catch (rateErr) {
+      avertissement = "Les tarifs n'ont pas pu etre envoyes aux plateformes : " + rateErr.message;
+      console.error('❌ [CHANNEX CONNECT] push tarifs:', rateErr.message);
+    }
+
     // ✅ Enregistrer les webhooks uniquement si nouvelle property Channex
     if (!existing_channex_property_id) {
       try {
@@ -37690,8 +37725,12 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
 
     res.json({
       success: true,
-      message: 'Logement connecté à Channex avec succès',
-      channex_property_id: result.channex_property_id
+      message: tarifs_pousses
+        ? 'Logement connecté à Channex, disponibilités et tarifs envoyés'
+        : 'Logement connecté à Channex — tarifs non envoyés',
+      channex_property_id: result.channex_property_id,
+      tarifs_pousses,
+      ...(avertissement ? { avertissement } : {})
     });
 
   } catch (e) {
