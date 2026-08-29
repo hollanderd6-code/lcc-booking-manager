@@ -1013,6 +1013,52 @@ const stripe = process.env.STRIPE_SECRET_KEY
 // Priorité : Stripe proprio → Stripe user → Stripe BH (3%)
 // Retourne { stripeAccountId, applyFee }
 // ============================================
+/* ── Ce compte Stripe peut-il encaisser ? ────────────────────────
+   Un proprietaire peut avoir commence une connexion Stripe sans jamais
+   la terminer : le compte existe, son identifiant est enregistre chez
+   nous, mais Stripe refuse toute page de paiement (« you must set an
+   account or business name »). Les cautions echouaient alors en boucle,
+   sans que personne ne soit prevenu.
+
+   La reponse est mise en cache : sans cela, chaque paiement ajouterait
+   un aller-retour vers Stripe. Dix minutes — un compte fraichement
+   valide est donc pris en compte au bout de dix minutes au plus. */
+const _cacheComptesStripe = new Map();   // acct_… -> { utilisable, jusqua }
+const CACHE_COMPTE_MS = 10 * 60 * 1000;
+
+async function compteStripeUtilisable(accountId) {
+  if (!accountId) return false;
+  if (!stripe) return true;              // pas de Stripe configure : on ne juge pas
+
+  const enCache = _cacheComptesStripe.get(accountId);
+  if (enCache && enCache.jusqua > Date.now()) return enCache.utilisable;
+
+  try {
+    const compte = await stripe.accounts.retrieve(accountId);
+    const nom = (compte.business_profile && compte.business_profile.name)
+      || (compte.settings && compte.settings.dashboard && compte.settings.dashboard.display_name)
+      || null;
+    // Les deux conditions que Stripe exige pour ouvrir une page Checkout.
+    const utilisable = !!compte.charges_enabled && !!nom;
+    _cacheComptesStripe.set(accountId, { utilisable, jusqua: Date.now() + CACHE_COMPTE_MS });
+    if (!utilisable) {
+      const raisons = [];
+      if (!compte.charges_enabled) raisons.push('paiements desactives');
+      if (!nom) raisons.push('nom d\'entreprise absent');
+      if (!compte.details_submitted) raisons.push('inscription inachevee');
+      console.warn(`⚠️ [STRIPE] ${accountId} inutilisable (${raisons.join(', ')}) — encaissement bascule sur le compte Boostinghost`);
+    }
+    return utilisable;
+  } catch (e) {
+    /* Stripe injoignable, compte supprime, cle restreinte… On ne SAIT pas.
+       On garde alors le compte du proprietaire : basculer les fonds vers la
+       tresorerie de la plateforme sur un doute serait pire que l'erreur
+       qu'on cherche a eviter. */
+    console.warn(`⚠️ [STRIPE] verification de ${accountId} impossible (${e.message}) — compte conserve`);
+    return true;
+  }
+}
+
 async function getStripeForProperty(pool, propertyId, userId) {
   // 1) Chercher le propriétaire lié au logement
   if (propertyId) {
@@ -1025,7 +1071,11 @@ async function getStripeForProperty(pool, propertyId, userId) {
     );
     const owner = ownerRes.rows[0];
     if (owner?.stripe_account_id && !owner?.use_bh_stripe) {
-      return { stripeAccountId: owner.stripe_account_id, applyFee: true }; // ✅ 3% même sur compte connecté
+      // Un compte connecte mais non valide ferait echouer le paiement :
+      // on ne l'utilise que s'il peut reellement encaisser.
+      if (await compteStripeUtilisable(owner.stripe_account_id)) {
+        return { stripeAccountId: owner.stripe_account_id, applyFee: true }; // ✅ 3% même sur compte connecté
+      }
     }
   }
 
@@ -1037,7 +1087,9 @@ async function getStripeForProperty(pool, propertyId, userId) {
     );
     const user = userRes.rows[0];
     if (user?.stripe_account_id && !user?.use_bh_stripe) {
-      return { stripeAccountId: user.stripe_account_id, applyFee: true }; // ✅ 3% même sur compte connecté
+      if (await compteStripeUtilisable(user.stripe_account_id)) {
+        return { stripeAccountId: user.stripe_account_id, applyFee: true }; // ✅ 3% même sur compte connecté
+      }
     }
   }
 
