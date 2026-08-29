@@ -1439,6 +1439,10 @@ function renderProperties() {
             <button type="button" class="btn-sync-bookings" data-id="${escapeHtml(id)}" title="Importer toutes les réservations Channex" style="width:100%;margin-bottom:8px;padding:4px 10px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10px;color:#64748b;">
               <i class="fas fa-cloud-download-alt" style="font-size:10px;"></i>
               <span>Importer l'historique des réservations</span>
+            </button>
+            <button type="button" class="btn-resync-ota" data-id="${escapeHtml(id)}" title="Renvoyer disponibilités et tarifs aux plateformes" style="width:100%;margin-bottom:8px;padding:4px 10px;background:#f0fdf8;border:1px solid #b8ddd4;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10px;color:#0E3B2E;font-weight:600;">
+              <i class="fas fa-rotate" style="font-size:10px;"></i>
+              <span>Resynchroniser les plateformes</span>
             </button>` : ''}` : `
             <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#0E3B2E,#1E6E52);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
               <i class="fas fa-plug"></i> Connecter mes plateformes
@@ -1518,6 +1522,10 @@ function renderProperties() {
 
   grid.querySelectorAll(".btn-sync-bookings").forEach((btn) => {
     btn.addEventListener("click", () => syncChannexBookings(btn.getAttribute("data-id"), btn));
+  });
+
+  grid.querySelectorAll(".btn-resync-ota").forEach((btn) => {
+    btn.addEventListener("click", () => resyncOtaPlateformes(btn.getAttribute("data-id"), btn));
   });
 
   // Charger les logos des plateformes connectées
@@ -1603,6 +1611,10 @@ function renderPropertiesFiltered(filteredProps) {
           <button type="button" class="btn-sync-bookings" data-id="${escapeHtml(id)}" title="Importer toutes les réservations Channex" style="width:100%;margin-bottom:8px;padding:4px 10px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10px;color:#64748b;">
             <i class="fas fa-cloud-download-alt" style="font-size:10px;"></i>
             <span>Importer l'historique des réservations</span>
+          </button>
+          <button type="button" class="btn-resync-ota" data-id="${escapeHtml(id)}" title="Renvoyer disponibilités et tarifs aux plateformes" style="width:100%;margin-bottom:8px;padding:4px 10px;background:#f0fdf8;border:1px solid #b8ddd4;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10px;color:#0E3B2E;font-weight:600;">
+            <i class="fas fa-rotate" style="font-size:10px;"></i>
+            <span>Resynchroniser les plateformes</span>
           </button>` : ''}` : `
           <button type="button" class="btn-channex-connect" data-id="${escapeHtml(id)}" data-name="${escapeHtml(name)}" style="width:100%;margin-bottom:8px;padding:7px 12px;background:linear-gradient(135deg,#0E3B2E,#1E6E52);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
             <i class="fas fa-plug"></i> Connecter mes plateformes
@@ -1655,6 +1667,10 @@ function renderPropertiesFiltered(filteredProps) {
   });
   grid.querySelectorAll(".btn-sync-bookings").forEach(btn => {
     btn.addEventListener("click", () => syncChannexBookings(btn.getAttribute("data-id"), btn));
+  });
+
+  grid.querySelectorAll(".btn-resync-ota").forEach((btn) => {
+    btn.addEventListener("click", () => resyncOtaPlateformes(btn.getAttribute("data-id"), btn));
   });
 
   // Charger les logos des plateformes connectées
@@ -2018,6 +2034,67 @@ async function syncChannexBookings(propertyId, btn) {
     btn.disabled = false;
     btn.style.color = '';
     btn.style.borderColor = '';
+  }
+}
+
+/* ── Resynchroniser un logement vers les plateformes ──────────────
+   Renvoie les DEUX choses qu'une plateforme attend : les disponibilites
+   et les tarifs. Jusqu'ici la connexion n'envoyait que les
+   disponibilites — or un plan tarifaire sans prix reste ferme a la vente
+   (Booking affiche « Tarif ferme »), sans que rien ne le signale.
+
+   Deux routes distinctes, car elles existent deja et portent des droits
+   differents : la tarification demande la permission can_manage_pricing.
+   Un compte sans ce droit synchronise donc les disponibilites, et on le
+   lui dit clairement plutot que d'echouer en silence. */
+async function resyncOtaPlateformes(propertyId, btn) {
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:10px;"></i><span>Synchronisation...</span>';
+  const token = localStorage.getItem('lcc_token');
+  const appel = async (url) => {
+    const r = await fetch(`${API_URL}${url}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+    let d = {};
+    try { d = await r.json(); } catch (e) {}
+    return { ok: r.ok, statut: r.status, data: d };
+  };
+
+  try {
+    const dispo = await appel(`/api/channex/sync-availability/${propertyId}`);
+    const tarifs = await appel(`/api/pricing/rules/push-channex/${propertyId}`);
+
+    const bilan = [];
+    bilan.push(dispo.ok ? 'disponibilités envoyées' : 'disponibilités : ' + (dispo.data.error || 'échec'));
+    if (tarifs.ok) {
+      // Le serveur repond « N jours de tarifs + M jours de restrictions ».
+      const n = String(tarifs.data.message || '').match(/^(\d+)/);
+      bilan.push(n ? n[1] + ' jours de tarifs envoyés' : 'tarifs envoyés');
+      if (n && n[1] === '0') {
+        showToast("Aucun tarif à envoyer : vérifiez le prix de base du logement.", 'warning');
+      }
+    } else if (tarifs.statut === 403) {
+      bilan.push("tarifs non envoyés (droit « gestion des prix » requis)");
+    } else {
+      bilan.push('tarifs : ' + (tarifs.data.error || 'échec'));
+    }
+
+    const toutOk = dispo.ok && tarifs.ok;
+    showToast((toutOk ? '✅ ' : '⚠️ ') + bilan.join(' · '), toutOk ? 'success' : 'warning');
+    btn.innerHTML = toutOk
+      ? '<i class="fas fa-check" style="font-size:10px;"></i><span>Synchronisé</span>'
+      : original;
+    btn.disabled = !toutOk;
+    /* Les plateformes mettent quelques minutes a repercuter : rendre le
+       bouton a son etat initial evite que l'utilisateur croie l'ecran fige. */
+    if (toutOk) setTimeout(() => { btn.innerHTML = original; btn.disabled = false; }, 6000);
+  } catch (e) {
+    showToast('Erreur de synchronisation : ' + e.message, 'error');
+    btn.innerHTML = original;
+    btn.disabled = false;
   }
 }
 
