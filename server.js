@@ -283,7 +283,7 @@ async function triggerChannexAvailabilitySync(propertyId, targetDates = null) {
 
     // Inclure aussi les holds BHGuest actifs
     const holdsResult = await pool.query(
-      `SELECT checkin as start_str, checkout as end_str FROM bhguest_holds
+      `SELECT to_char(checkin,'YYYY-MM-DD') as start_str, to_char(checkout,'YYYY-MM-DD') as end_str FROM bhguest_holds
        WHERE property_id = $1 AND status = 'active' AND expires_at > NOW()`,
       [propertyId]
     );
@@ -30168,7 +30168,7 @@ async function releaseHoldChannex(pool, hold) {
       [hold.property_id]
     );
     const allHolds = await pool.query(
-      `SELECT checkin as s, checkout as e FROM bhguest_holds
+      `SELECT to_char(checkin,'YYYY-MM-DD') as s, to_char(checkout,'YYYY-MM-DD') as e FROM bhguest_holds
        WHERE property_id = $1 AND status = 'active' AND expires_at > NOW() AND link_token != $2`,
       [hold.property_id, hold.link_token]
     );
@@ -44442,7 +44442,7 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
           [property_id]
         );
         const allHolds = await pool.query(
-          `SELECT checkin as s, checkout as e FROM bhguest_holds
+          `SELECT to_char(checkin,'YYYY-MM-DD') as s, to_char(checkout,'YYYY-MM-DD') as e FROM bhguest_holds
            WHERE property_id = $1 AND status = 'active' AND expires_at > NOW()`,
           [property_id]
         );
