@@ -219,6 +219,50 @@ async function addRoomTypeToProperty(pool, { user_id, property_id, channex_prope
 
 // ── 2. Pousser les disponibilités vers Channex ────────────────
 
+/* BLOCAGE_VERIFIE ────────────────────────────────────────────────────
+   Channex repond « task » : un 200 signifie mis en file, pas applique.
+   Un lot de 500 valeurs peut donc echouer en silence — c'est ce qui a
+   laisse la nuit du 15/01/2027 en vente malgre un hold actif. On attend
+   desormais l'issue de chaque tache, et on relit avant de conclure. */
+const CHANNEX_TRANCHE = 100;
+
+async function attendreTache(taskId, essais = 12) {
+  for (let i = 0; i < essais; i++) {
+    await new Promise(r => setTimeout(r, 700));
+    try {
+      const r = await channexAPI.get('/tasks/' + taskId);
+      const a = (r.data && r.data.data && (r.data.data.attributes || r.data.data)) || {};
+      const st = String(a.status || a.state || '').toLowerCase();
+      if (st === 'completed' || st === 'success' || st === 'applied') return { ok: true };
+      if (st === 'failed' || st === 'error') {
+        return { ok: false, raison: JSON.stringify(a.errors || a.error || a).slice(0, 300) };
+      }
+    } catch (e) {
+      /* Endpoint indisponible : on n'invente pas d'echec, la relecture
+         qui suit reste le juge. */
+      return { ok: true, indetermine: true };
+    }
+  }
+  return { ok: true, indetermine: true };
+}
+
+/* Relit ce que Channex expose vraiment, pour les dates qui devaient
+   etre bloquees. Renvoie la liste de celles qui sont encore vendables. */
+async function verifierBlocage(channex_property_id, channex_room_type_id, dates) {
+  if (!dates.length) return [];
+  const triees = [...dates].sort();
+  const r = await channexAPI.get('/availability', {
+    params: {
+      'filter[property_id]': channex_property_id,
+      'filter[date][gte]': triees[0],
+      'filter[date][lte]': triees[triees.length - 1]
+    }
+  });
+  const d = (r.data && r.data.data) || {};
+  const parRt = d[channex_room_type_id] || d[Object.keys(d)[0]] || {};
+  return triees.filter(j => Number(parRt[j]) !== 0);
+}
+
 async function pushAvailability(pool, { property_id, channex_property_id, channex_room_type_id, dates_blocked = [], dates_to_update = null }) {
   try {
     console.log(`📅 [CHANNEX] Push disponibilités pour ${channex_property_id} (${dates_blocked.length} dates bloquées)`);
@@ -252,7 +296,36 @@ async function pushAvailability(pool, { property_id, channex_property_id, channe
       }
     }
 
-    await channexAPI.post('/availability', { values });
+    /* Envoi par tranches : un lot unique de 500 valeurs est accepte puis
+       partiellement perdu, sans erreur. */
+    const taches = [];
+    for (let i = 0; i < values.length; i += CHANNEX_TRANCHE) {
+      const lot = values.slice(i, i + CHANNEX_TRANCHE);
+      const rep = await channexAPI.post('/availability', { values: lot });
+      const donnee = rep.data && rep.data.data;
+      const id = Array.isArray(donnee) ? (donnee[0] && donnee[0].id) : (donnee && donnee.id);
+      if (id) taches.push(id);
+    }
+
+    /* On attend l'issue de chaque tache : « Success » a l'appel ne dit
+       rien de son execution. */
+    for (const t of taches) {
+      const issue = await attendreTache(t);
+      if (!issue.ok) {
+        throw new Error('Channex a refuse la mise a jour (tache ' + t + ') : ' + issue.raison);
+      }
+    }
+
+    /* Puis on relit. C'est la seule preuve : le reste est de la parole. */
+    const aVerifier = values.filter(v => v.availability === 0).map(v => v.date);
+    if (aVerifier.length) {
+      const manquantes = await verifierBlocage(channex_property_id, channex_room_type_id, aVerifier);
+      if (manquantes.length) {
+        throw new Error('Channex expose encore ' + manquantes.length + ' nuit(s) en vente apres blocage : '
+          + manquantes.slice(0, 6).join(', ') + (manquantes.length > 6 ? '…' : ''));
+      }
+      console.log('✓ [CHANNEX] Blocage relu et confirme (' + aVerifier.length + ' nuits a 0)');
+    }
 
     await logChannex(pool, {
       property_id, channex_property_id,
@@ -261,7 +334,7 @@ async function pushAvailability(pool, { property_id, channex_property_id, channe
       payload: { dates_count: values.length, blocked_count: dates_blocked.length }
     });
 
-    console.log(`✅ [CHANNEX] Disponibilités poussées (${values.length} jours)`);
+    console.log(`✅ [CHANNEX] Disponibilités poussées ET verifiees (${values.length} jours, ${taches.length} tranche(s))`);
 
   } catch (e) {
     const errDetail = e.response?.data || e.message;

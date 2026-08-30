@@ -33,3 +33,4 @@ boostinghost-poc/node_modules/
 .corbeille-lot5/
 *.bak
 server.js.avant-comptes-geres
+channex.js.avant-blocage-verifie
