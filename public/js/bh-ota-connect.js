@@ -1053,7 +1053,43 @@
           '<span style="width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid ' + V.ligne +
           ';color:' + V.vert + ';font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;' +
           'flex:none;margin-top:1px;">' + (i + 1) + '</span><span>' + t + '</span></div>';
-      }).join('') + '</div>';
+      }).join('') +
+      /* L'issue de secours. Cette fenetre appartient a un tiers, elle est en
+         anglais, et c'est le point du parcours ou un client bloque abandonne
+         sans rien dire. Une main tendue ici vaut mieux qu'un centre d'aide :
+         elle est offerte a l'instant precis du blocage, et elle est humaine. */
+      '<div style="margin-top:12px;padding-top:11px;border-top:1px solid ' + V.ligne +
+        ';display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
+        '<span style="font-size:12.5px;color:' + V.t3 + ';">Bloqu\u00e9 \u00e0 une \u00e9tape&nbsp;?</span>' +
+        '<button type="button" onclick="window._bhAideHumaine()" style="border:1px solid ' + V.vertFilet +
+        ';background:' + V.vertPale + ';color:' + V.vert + ';font-family:' + V.sans + ';font-size:12.5px;' +
+        'font-weight:600;padding:8px 13px;border-radius:8px;cursor:pointer;">Faites-le nous faire</button>' +
+      '</div>' +
+      '</div>';
+
+    /* Le message est pret et copie : le client n'a pas a expliquer sa
+       situation, ce qu'il ne saurait pas faire — il ne connait ni le nom de
+       la plateforme chez nous, ni celui de son logement chez elle. */
+    window._bhAideHumaine = function () {
+      var texte = 'Bonjour, je bloque sur la connexion de \u00ab ' + (pname || 'mon logement') +
+        ' \u00bb \u00e0 ' + p.label + '. Pouvez-vous la faire pour moi\u00a0?';
+      try { navigator.clipboard && navigator.clipboard.writeText(texte); } catch (e) {}
+      modal.innerHTML = carte(470,
+        entete(null, 'On s\'en occupe', esc(pname)) +
+        '<div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;">' +
+        '<div style="font-size:14px;line-height:1.65;color:' + V.t2 + ';">' +
+        'Cette \u00e9tape se passe chez ' + esc(p.label) + ', dans une fen\u00eatre que nous ne ma\u00eetrisons pas. ' +
+        'Plut\u00f4t que d\'y perdre votre temps, dites-le nous : nous la faisons \u00e0 votre place.' +
+        '</div>' +
+        '<div style="background:' + V.creme + ';border-radius:11px;padding:13px 15px;font-size:13px;' +
+        'line-height:1.55;color:' + V.encre + ';">' + esc(texte) + '</div>' +
+        '<div style="font-size:12.5px;color:' + V.t3 + ';">Ce message est d\u00e9j\u00e0 copi\u00e9 : ' +
+        'collez-le dans le chat du support, nous reprenons la main de l\u00e0.</div>' +
+        '</div>' +
+        pied(btnFantome('Revenir aux \u00e9tapes', 'window._bhRetourFenetre()'),
+          btnPlein('Ouvrir le support', "window.location.href='/help.html'")));
+      window._bhRetourFenetre = function () { lancer(modal, pid, pname, code); };
+    };
 
     /* Lot 1 : le nom à utiliser dans le champ Title, copiable en un clic —
        l'utilisateur ne réfléchit plus, et les noms restent alignés des deux côtés. */
