@@ -16323,10 +16323,15 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
         // Le back renvoie sms_sent : true / false / null (pas de téléphone).
         // undefined = ancien back → on garde l'ancien comportement.
         var smsFailed = !!phone && data.sms_sent === false;
+        // La passerelle a trois issues, pas deux : « Pending » signifie que le
+        // message attend l'appareil Android relais. Le dire, plutot que de
+        // cocher « envoye » et decouvrir trois jours plus tard qu'il dormait.
+        var smsEnAttente = !!phone && !smsFailed && !!data.sms_state
+          && ['Sent', 'Delivered'].indexOf(data.sms_state) === -1;
         status.style.display = 'block';
         var dest = [];
         if (email) dest.push('email');
-        if (phone && !smsFailed) dest.push('SMS');
+        if (phone && !smsFailed && !smsEnAttente) dest.push('SMS');
         if (smsFailed && !email) {
           btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le lien';
           btn.style.background = '#3B82F6';
@@ -16338,6 +16343,12 @@ document.getElementById('batchEditModal').addEventListener('click', function(e) 
           btn.style.background = '#0A2C22';
           status.style.color = '#B45309';
           status.innerHTML = '⚠️ Lien envoyé par email · SMS non envoyé · Dates bloquées jusqu\'à ' + exp;
+        } else if (smsEnAttente) {
+          btn.innerHTML = '<i class="fas fa-check"></i> Lien créé';
+          btn.style.background = '#0A2C22';
+          status.style.color = '#B45309';
+          status.innerHTML = (email ? '✅ Lien envoyé par email · ' : '')
+            + '⏳ SMS en attente de l\'appareil relais — pas encore parti · Dates bloquées jusqu\'à ' + exp;
         } else {
           btn.innerHTML = '<i class="fas fa-check"></i> Lien envoyé';
           btn.style.background = '#0A2C22';
