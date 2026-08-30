@@ -226,25 +226,8 @@ async function addRoomTypeToProperty(pool, { user_id, property_id, channex_prope
    desormais l'issue de chaque tache, et on relit avant de conclure. */
 const CHANNEX_TRANCHE = 100;
 
-async function attendreTache(taskId, essais = 12) {
-  for (let i = 0; i < essais; i++) {
-    await new Promise(r => setTimeout(r, 700));
-    try {
-      const r = await channexAPI.get('/tasks/' + taskId);
-      const a = (r.data && r.data.data && (r.data.data.attributes || r.data.data)) || {};
-      const st = String(a.status || a.state || '').toLowerCase();
-      if (st === 'completed' || st === 'success' || st === 'applied') return { ok: true };
-      if (st === 'failed' || st === 'error') {
-        return { ok: false, raison: JSON.stringify(a.errors || a.error || a).slice(0, 300) };
-      }
-    } catch (e) {
-      /* Endpoint indisponible : on n'invente pas d'echec, la relecture
-         qui suit reste le juge. */
-      return { ok: true, indetermine: true };
-    }
-  }
-  return { ok: true, indetermine: true };
-}
+/* attendreTache a ete retiree : la relecture de /availability est une
+   preuve plus forte, et huit secondes plus rapide par tranche. */
 
 /* Relit ce que Channex expose vraiment, pour les dates qui devaient
    etre bloquees. Renvoie la liste de celles qui sont encore vendables. */
@@ -298,28 +281,33 @@ async function pushAvailability(pool, { property_id, channex_property_id, channe
 
     /* Envoi par tranches : un lot unique de 500 valeurs est accepte puis
        partiellement perdu, sans erreur. */
-    const taches = [];
+    /* BLOCAGE_RAPIDE — tranches simultanees. En serie, cinq tranches
+       mettaient quarante secondes au clic sur « Envoyer ». */
+    const lots = [];
     for (let i = 0; i < values.length; i += CHANNEX_TRANCHE) {
-      const lot = values.slice(i, i + CHANNEX_TRANCHE);
-      const rep = await channexAPI.post('/availability', { values: lot });
-      const donnee = rep.data && rep.data.data;
-      const id = Array.isArray(donnee) ? (donnee[0] && donnee[0].id) : (donnee && donnee.id);
-      if (id) taches.push(id);
+      lots.push(values.slice(i, i + CHANNEX_TRANCHE));
     }
+    const taches = (await Promise.all(lots.map(function (lot) {
+      return channexAPI.post('/availability', { values: lot }).then(function (rep) {
+        const d = rep.data && rep.data.data;
+        return Array.isArray(d) ? (d[0] && d[0].id) : (d && d.id);
+      });
+    }))).filter(Boolean);
 
-    /* On attend l'issue de chaque tache : « Success » a l'appel ne dit
-       rien de son execution. */
-    for (const t of taches) {
-      const issue = await attendreTache(t);
-      if (!issue.ok) {
-        throw new Error('Channex a refuse la mise a jour (tache ' + t + ') : ' + issue.raison);
-      }
-    }
+    /* Plus d'attente de tache : la relecture ci-dessous dit ce que
+       Channex expose vraiment, ce qui vaut mieux que ce qu'il pense
+       avoir fait — et coute huit secondes de moins par tranche. */
 
     /* Puis on relit. C'est la seule preuve : le reste est de la parole. */
     const aVerifier = values.filter(v => v.availability === 0).map(v => v.date);
     if (aVerifier.length) {
-      const manquantes = await verifierBlocage(channex_property_id, channex_room_type_id, aVerifier);
+      /* Channex applique en differe : si la premiere lecture arrive trop
+         tot, on reessaie avant de crier a l'echec. */
+      let manquantes = await verifierBlocage(channex_property_id, channex_room_type_id, aVerifier);
+      for (let essai = 0; essai < 2 && manquantes.length; essai++) {
+        await new Promise(r => setTimeout(r, 900 * (essai + 1)));
+        manquantes = await verifierBlocage(channex_property_id, channex_room_type_id, aVerifier);
+      }
       if (manquantes.length) {
         throw new Error('Channex expose encore ' + manquantes.length + ' nuit(s) en vente apres blocage : '
           + manquantes.slice(0, 6).join(', ') + (manquantes.length > 6 ? '…' : ''));
