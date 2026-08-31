@@ -1,0 +1,314 @@
+{
+  "bloc": {
+    "ids": [
+      "calendarSection",
+      "calDayView",
+      "calendarSubtitle",
+      "calendarSearchBtn",
+      "calendarPromoBtn",
+      "calendarSettingsBtn",
+      "batchEditBtn",
+      "prevPeriod",
+      "currentMonth",
+      "currentYear",
+      "nextPeriod",
+      "btnReorderProperties",
+      "propertyList",
+      "daysHeader",
+      "calendarGrid"
+    ],
+    "taille_ko": 7
+  },
+  "calendar_modern_charge_par_app": false,
+  "scripts_inline_lies_au_calendrier": [
+    {
+      "ligne_debut": 7199,
+      "ligne_fin": 8376,
+      "taille_ko": 66,
+      "nb_fonctions": 33,
+      "fonctions": [
+        "pltInfo",
+        "ds",
+        "dFromStr",
+        "nights",
+        "guests",
+        "guestName",
+        "openBooking",
+        "el",
+        "div",
+        "pltBadge"
+      ],
+      "ids_calendrier": [
+        "currentMonth",
+        "currentYear"
+      ],
+      "nb_ids_calendrier": 2,
+      "classes_calendrier": [
+        "calendar-cell",
+        "booking-block",
+        "view-tab",
+        "cell-price"
+      ],
+      "ids_hors_calendrier": [
+        "bhCalSubtitle",
+        "bhCalSearchBtn",
+        "bhCalPromoBtn",
+        "bhCalSettingsBtn",
+        "'+prop.id+'"
+      ],
+      "nb_ids_hors_calendrier": 5,
+      "appels_api": [],
+      "voyageable": false
+    },
+    {
+      "ligne_debut": 13850,
+      "ligne_fin": 14239,
+      "taille_ko": 15,
+      "nb_fonctions": 15,
+      "fonctions": [
+        "loadOrderFromDB",
+        "getSavedOrder",
+        "applyPropertyOrder",
+        "patchCalendarOrder",
+        "reapplyOrderToDOM",
+        "openReorderModal",
+        "closeReorderModal",
+        "addTouchDrag",
+        "moveReorderItem",
+        "savePropertyOrder"
+      ],
+      "ids_calendrier": [
+        "propertyList",
+        "calendarGrid"
+      ],
+      "nb_ids_calendrier": 2,
+      "classes_calendrier": [
+        "calendar-row",
+        "property-item"
+      ],
+      "ids_hors_calendrier": [
+        "reorderModal",
+        "reorderList"
+      ],
+      "nb_ids_hors_calendrier": 2,
+      "appels_api": [
+        "/api/properties-order/bulk"
+      ],
+      "voyageable": false
+    },
+    {
+      "ligne_debut": 5076,
+      "ligne_fin": 5751,
+      "taille_ko": 29,
+      "nb_fonctions": 16,
+      "fonctions": [
+        "cleanGuestName",
+        "getGuestInitial",
+        "getGuestPhone",
+        "getAvailablePropertiesForNewReservation",
+        "populateNewReservationProperties",
+        "populateEditBookingProperties",
+        "getReservationKey",
+        "getCleanerNameById",
+        "getPropertyNameById",
+        "openCleaningTodayModal"
+      ],
+      "ids_calendrier": [
+        "calendarSection"
+      ],
+      "nb_ids_calendrier": 1,
+      "classes_calendrier": [],
+      "ids_hors_calendrier": [
+        "bh-mobile-svc",
+        "msvc-dot-render",
+        "msvc-dot-channex",
+        "bh-mobile-ann-btn",
+        "newReservationBtn",
+        "newReservationModal",
+        "newReservationClose",
+        "newReservationForm",
+        "nrProperty",
+        "newReservationCancel"
+      ],
+      "nb_ids_hors_calendrier": 19,
+      "appels_api": [],
+      "voyageable": false
+    },
+    {
+      "ligne_debut": 13712,
+      "ligne_fin": 13759,
+      "taille_ko": 1,
+      "nb_fonctions": 2,
+      "fonctions": [
+        "doScroll",
+        "bindCalendarLink"
+      ],
+      "ids_calendrier": [
+        "calDayView"
+      ],
+      "nb_ids_calendrier": 1,
+      "classes_calendrier": [],
+      "ids_hors_calendrier": [],
+      "nb_ids_hors_calendrier": 0,
+      "appels_api": [],
+      "voyageable": true
+    },
+    {
+      "ligne_debut": 85,
+      "ligne_fin": 185,
+      "taille_ko": 5,
+      "nb_fonctions": 0,
+      "fonctions": [],
+      "ids_calendrier": [],
+      "nb_ids_calendrier": 0,
+      "classes_calendrier": [
+        "cell-price"
+      ],
+      "ids_hors_calendrier": [
+        "newReservationBtn",
+        "fabAddResa"
+      ],
+      "nb_ids_hors_calendrier": 2,
+      "appels_api": [],
+      "voyageable": false
+    },
+    {
+      "ligne_debut": 9038,
+      "ligne_fin": 9195,
+      "taille_ko": 6,
+      "nb_fonctions": 0,
+      "fonctions": [],
+      "ids_calendrier": [],
+      "nb_ids_calendrier": 0,
+      "classes_calendrier": [
+        "calendar-cell",
+        "booking-block",
+        "cell-price"
+      ],
+      "ids_hors_calendrier": [],
+      "nb_ids_hors_calendrier": 0,
+      "appels_api": [
+        "/api/pricing/rules"
+      ],
+      "voyageable": true
+    },
+    {
+      "ligne_debut": 9197,
+      "ligne_fin": 9260,
+      "taille_ko": 3,
+      "nb_fonctions": 0,
+      "fonctions": [],
+      "ids_calendrier": [],
+      "nb_ids_calendrier": 0,
+      "classes_calendrier": [
+        "calendar-cell",
+        "booking-block",
+        "cell-price"
+      ],
+      "ids_hors_calendrier": [],
+      "nb_ids_hors_calendrier": 0,
+      "appels_api": [
+        "/api/pricing/overrides"
+      ],
+      "voyageable": true
+    },
+    {
+      "ligne_debut": 9262,
+      "ligne_fin": 9477,
+      "taille_ko": 9,
+      "nb_fonctions": 0,
+      "fonctions": [],
+      "ids_calendrier": [],
+      "nb_ids_calendrier": 0,
+      "classes_calendrier": [
+        "calendar-cell",
+        "cell-price"
+      ],
+      "ids_hors_calendrier": [
+        "cellModal",
+        "cellModalTitle",
+        "cellModalDate",
+        "cellPriceInput",
+        "cellMinStayInput",
+        "' + _cellPropertyId + '"
+      ],
+      "nb_ids_hors_calendrier": 6,
+      "appels_api": [
+        "/api/pricing/overrides",
+        "/api/pricing/rules"
+      ],
+      "voyageable": false
+    },
+    {
+      "ligne_debut": 9478,
+      "ligne_fin": 11181,
+      "taille_ko": 85,
+      "nb_fonctions": 12,
+      "fonctions": [
+        "loadCleaners",
+        "findReservationForBlock",
+        "fixModalContent",
+        "getReservationPropertyId",
+        "normPlatformModal",
+        "fmtAmount",
+        "toISO",
+        "toTextDate",
+        "showAmountModal",
+        "handleEditBooking"
+      ],
+      "ids_calendrier": [],
+      "nb_ids_calendrier": 0,
+      "classes_calendrier": [
+        "booking-block"
+      ],
+      "ids_hors_calendrier": [
+        "reservationDetailsModal",
+        "reservationDetailsContent",
+        "editBookingModal",
+        "editModalOverlay",
+        "closeEditModal",
+        "editBookingForm",
+        "editBookingId",
+        "editBookingSource",
+        "editBookingProperty",
+        "editCheckIn"
+      ],
+      "nb_ids_hors_calendrier": 30,
+      "appels_api": [
+        "/api/guest/cancel-reservation",
+        "/api/reservations/",
+        "/api/guest/modify-reservation"
+      ],
+      "voyageable": false
+    },
+    {
+      "ligne_debut": 14287,
+      "ligne_fin": 14430,
+      "taille_ko": 5,
+      "nb_fonctions": 2,
+      "fonctions": [
+        "applyKpiRestrictions",
+        "applyCleanerRestrictions"
+      ],
+      "ids_calendrier": [],
+      "nb_ids_calendrier": 0,
+      "classes_calendrier": [
+        "calendar-cell",
+        "booking-block"
+      ],
+      "ids_hors_calendrier": [
+        "newReservationBtn",
+        "kpiTodayMovesCard",
+        "kpiCleaning48hCard",
+        "kpiPropertiesCard",
+        "kpiTopRisksCard",
+        "kpiCaCard",
+        "fabAddResa"
+      ],
+      "nb_ids_hors_calendrier": 7,
+      "appels_api": [],
+      "voyageable": false
+    }
+  ],
+  "total_scripts_inline_analyses": 10
+}
