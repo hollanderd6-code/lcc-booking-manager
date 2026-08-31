@@ -1,4 +1,75 @@
+#!/usr/bin/env node
 /* ============================================================
+   outils/refonte-14-moteur-calendrier.js
+   Lot 14 : lancer le moteur, et ne masquer qu'apres
+   ============================================================
+
+   ── LE DEFAUT ────────────────────────────────────────────────────
+   Sur /calendrier.html : l'adresse est bonne, la section est la, et la
+   grille est vide. Aucun appel a /api/properties ni /api/reservations
+   dans le journal — le moteur du calendrier n'a jamais demarre.
+
+   Et mon module, lui, avait masque les onze voisins sans verifier que
+   le calendrier etait rempli. D'ou la page blanche. C'est la faute la
+   plus grave des deux : masquer d'abord, verifier ensuite.
+
+   ── CE QUI DEMARRE LE MOTEUR ─────────────────────────────────────
+   Les globales de la page les nomment :
+
+       loadCalendarData      charge logements et reservations
+       renderModernCalendar  dessine la grille
+       initializeCalendar    les deux, si elle existe
+       __bhCalendarRender    le rendu interne
+       .view-tab[data-view=month]   le clic qui declenche tout
+
+   Le module les essaie dans cet ordre, une par tour, et s'arrete des
+   que la grille se remplit. Il note laquelle a marche :
+   bhVerifVueCalendrier().moteur_lance_par.
+
+   Je ne cherche pas POURQUOI le declencheur d'origine ne part pas sur
+   cette adresse. Ce serait une enquete dans 224 Ko, pour un resultat
+   identique.
+
+   ── L'ORDRE INVERSE, ET UN FILET ─────────────────────────────────
+   Desormais : d'abord la grille se remplit, ensuite seulement les
+   voisins sont masques. Une grille vide ne masque rien.
+
+   Et si apres dix-huit secondes le calendrier n'est toujours pas la, le
+   module se retracte tout seul, rend la page complete et l'ecrit dans
+   la console. Une page blanche n'est jamais un resultat acceptable, et
+   surtout pas un resultat silencieux.
+
+   ── REMPLACE LE MODULE DU LOT 12 ─────────────────────────────────
+   Meme fichier, meme balise, rien a changer dans app.html.
+
+   Usage :
+     node outils/refonte-14-moteur-calendrier.js --essai
+     node outils/refonte-14-moteur-calendrier.js
+   ============================================================ */
+
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+const PUBLIC = path.join(process.cwd(), 'public');
+const MODULE = path.join(PUBLIC, 'js', 'bh-vue-calendrier.js');
+const APP = path.join(PUBLIC, 'app.html');
+const ESSAI = process.argv.includes('--essai') || process.argv.includes('--dry');
+
+function echec(msg) {
+  console.error('\n  \u2717 ' + msg);
+  console.error("    Rien n'a ete ecrit.\n");
+  process.exit(1);
+}
+
+if (!fs.existsSync(APP)) echec('public/app.html introuvable. Lancez depuis la racine du projet.');
+if (!fs.existsSync(MODULE)) echec('bh-vue-calendrier.js absent. Lancez d\'abord le lot 12.');
+if (fs.readFileSync(APP, 'utf8').indexOf('bh-vue-calendrier.js') === -1) {
+  echec('La balise du module est absente de app.html. Lancez d\'abord le lot 12.');
+}
+
+const SOURCE = `/* ============================================================
    bh-vue-calendrier.js — /calendrier.html
    ============================================================
    Le calendrier ne peut pas quitter app.html : 224 Ko de moteur l'y
@@ -107,7 +178,7 @@
         if (frere.dataset) frere.dataset.bhVueMasque = '1';
         diag.masques++;
         diag.voisins.push((frere.id ? '#' + frere.id : frere.tagName.toLowerCase())
-          + (frere.className && typeof frere.className === 'string' ? '.' + frere.className.split(/\s+/)[0] : ''));
+          + (frere.className && typeof frere.className === 'string' ? '.' + frere.className.split(/\\s+/)[0] : ''));
       }
       courant = parent;
     }
@@ -194,3 +265,33 @@
   [1200, 2200, 3500, 5000, 7000, 9500, 12000, 15000].forEach(function (t) { setTimeout(tour, t); });
   setTimeout(filet, 18000);
 })();
+`;
+
+try { new Function(SOURCE); } catch (e) { echec('Le module ne serait pas valide — ' + e.message); }
+['bhAnnulerVueCalendrier', 'bhVerifVueCalendrier', 'function filet(', 'loadCalendarData'].forEach(function (t) {
+  if (SOURCE.indexOf(t) === -1) echec('Verification : ' + t + ' absent du module.');
+});
+
+if (!ESSAI) {
+  fs.writeFileSync(MODULE, SOURCE, 'utf8');
+  const relu = fs.readFileSync(MODULE, 'utf8');
+  if (relu.indexOf('function filet(') === -1) echec("Le module n'est pas complet apres ecriture.");
+  try { new Function(relu); } catch (e) { echec('Module invalide apres ecriture — ' + e.message); }
+}
+
+console.log('\n' + (ESSAI ? '— ESSAI, aucune ecriture —' : '— APPLIQUE ET VERIFIE —'));
+console.log('  public/js/bh-vue-calendrier.js  remplace (' + Math.round(SOURCE.length / 1024) + ' Ko)');
+console.log('  app.html                        inchange, la balise est deja la');
+console.log('\n  1. Le moteur est appele : loadCalendarData, puis');
+console.log('     initializeCalendar, renderModernCalendar, __bhCalendarRender,');
+console.log('     __bhCalSwitchView, et en dernier le clic sur l\'onglet Mois.');
+console.log('     Une par tour, jusqu\'a ce que la grille se remplisse.');
+console.log('\n  2. Rien n\'est masque tant que la grille est vide. C\'etait');
+console.log('     l\'inverse, et c\'est ce qui a produit la page blanche.');
+console.log('\n  3. Filet : apres 18 s sans calendrier, le module se retracte,');
+console.log('     rend la page complete et l\'ecrit dans la console.');
+console.log('\n  A verifier, cache vide, sur /calendrier.html :');
+console.log('    bhVerifVueCalendrier()');
+console.log('  J\'attends grille_remplie > 0 et moteur_lance_par renseigne.');
+console.log('  Ce champ me dira laquelle des six voies a fonctionne.\n');
+if (ESSAI) console.log('  Relancez sans --essai pour appliquer.\n');
