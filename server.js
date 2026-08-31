@@ -31750,20 +31750,6 @@ app.get('/api/aujourdhui/etats', authenticateAny, async (req, res) => {
 // ============================================================
 // GET /calendrier.html — la page Calendrier
 // ============================================================
-// Le calendrier vit dans public/app.html : son moteur y est tisse avec
-// les modales, le reordonnancement et les restrictions de la page
-// (voir outils/refonte-11c-sonde-scripts.js). Le sortir demanderait de
-// reecrire 224 Ko.
-//
-// On lui donne donc une seconde adresse plutot qu'une seconde copie.
-// Un seul fichier sur le disque : les deux pages ne peuvent pas diverger.
-// bh-vue-calendrier.js reconnait le nom de page et n'affiche que la
-// section calendrier.
-app.get('/calendrier.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'app.html'));
-});
-
-// ============================================================
 // GET /api/ia/semaine — ce que l'IA a repondu sur sept jours
 // ============================================================
 // Lecture seule. Compte les messages portant is_bot_response, colonne

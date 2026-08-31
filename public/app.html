@@ -2,25 +2,6 @@
 
 <html data-theme="light" lang="fr" data-theme-v3="1">
 <head>
-<!-- bh-anti-clignotement : ne pas montrer ce que les modules remplacent -->
-<style id="bh-anti-clignotement">
-  html.bh-refonte-attente #bhListesJour { display: none !important; }
-</style>
-<script>
-  /* Pose avant le premier affichage : l'ancienne version n'est jamais
-     peinte, meme une image. */
-  document.documentElement.classList.add('bh-refonte-attente');
-  /* Filet : si les modules ne se signalent pas en quatre secondes,
-     l'ancienne version revient entiere. Un clignotement vaut mieux
-     qu'un ecran vide. */
-  setTimeout(function () {
-    if (!document.documentElement.classList.contains('bh-refonte-prete')) {
-      document.documentElement.classList.remove('bh-refonte-attente');
-      console.warn('[anti-clignotement] Les modules ne se sont pas signales : '
-        + 'ancienne version rendue.');
-    }
-  }, 4000);
-</script>
 
 <meta charset="utf-8"/>
 <meta content="no-store, no-cache, must-revalidate, max-age=0" http-equiv="Cache-Control"/>
@@ -13623,18 +13604,8 @@ if (window.Capacitor) {
   <script src="/js/bh-v3-finitions.js"></script>
 <script src="js/bh-mon-compte.js"></script>
 <script src="js/bh-initiales.js"></script>
-<script src="js/bh-barre-onglets.js"></script>
-<script src="js/bh-vue-calendrier.js"></script>
-<script src="js/bh-entete-calendrier.js"></script>
 <script src="js/bh-barre-style.js"></script>
-<script src="js/bh-bande-jours.js"></script>
-<script src="js/bh-entete-jour.js"></script>
-<script src="js/bh-vide-du-haut.js"></script>
 <script src="js/bh-kpi-haut.js"></script>
-<script src="js/bh-listes-jour.js"></script>
-<script src="js/bh-liste-unifiee.js"></script>
-<script src="js/bh-cartes-mois.js"></script>
-<script src="js/bh-aujourdhui-allege.js"></script>
 <script src="js/bh-app-net.js"></script>
 <script src="js/bh-carte-journee.js"></script>
 <script src="js/bh-header-epure.js"></script>  
