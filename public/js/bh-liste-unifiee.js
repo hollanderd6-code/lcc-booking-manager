@@ -295,23 +295,58 @@
     var carte = document.createElement('div');
     carte.style.cssText = 'background:#fff;border:1px solid ' + BORD + ';border-radius:16px;overflow:hidden';
 
+    /* L'heure telle que la base la porte : « 15:00:00 », « 15:00 »,
+       parfois « 15h ». On en tire des minutes pour trier et un « 15:00 »
+       pour afficher. Ce qu'on ne sait pas lire ne recoit pas d'heure —
+       jamais de valeur par defaut : on organiserait sa journee dessus. */
+    function minutesDe(brut) {
+      if (!brut) return null;
+      var m = String(brut).match(/(\d{1,2})\s*[:hH]\s*(\d{2})?/);
+      if (!m) return null;
+      var h = parseInt(m[1], 10);
+      var mn = m[2] ? parseInt(m[2], 10) : 0;
+      if (isNaN(h) || h > 23 || mn > 59) return null;
+      return h * 60 + mn;
+    }
+    function heureTexte(min) {
+      if (min === null) return null;
+      var h = Math.floor(min / 60), mn = min % 60;
+      return (h < 10 ? '0' + h : h) + ':' + (mn < 10 ? '0' + mn : mn);
+    }
+
     var rangs = [];
     arrivees.forEach(function (a) {
       var n = nuits(a.arrivee, a.depart);
       var p = plateforme(a.platform);
-      var detail = ['Arrivée', n ? n + ' nuit' + (n > 1 ? 's' : '') : null, p ? p.nom : null]
-        .filter(Boolean).join(' \u00b7 ');
+      var min = minutesDe(a.heure_arrivee);
+      var h = heureTexte(min);
+      var detail = [h ? 'Arrivée à partir de ' + h : 'Arrivée',
+                    n ? n + ' nuit' + (n > 1 ? 's' : '') : null,
+                    p ? p.nom : null].filter(Boolean).join(' \u00b7 ');
       var t = [a.guest_name, a.property_name].filter(Boolean).join(' \u00b7 ');
-      rangs.push({ icone: fleche(true), titre: t || 'Arrivée', detail: detail, lien: '/messages.html' });
-      diag.arrivees.push((a.property_name || '?') + ' / ' + (a.guest_name || '?'));
+      rangs.push({ tri: min, icone: fleche(true), titre: t || 'Arrivée', detail: detail, lien: '/messages.html' });
+      diag.arrivees.push((a.property_name || '?') + ' / ' + (a.guest_name || '?') + (h ? ' — ' + h : ' — sans heure'));
     });
     departs.forEach(function (x) {
       var men = x.menage_fait === true
         ? (x.menage_valide === true ? 'ménage fait et validé' : 'ménage fait')
         : (x.menage_fait === false ? 'ménage à faire' : null);
-      var detail = ['Départ', x.guest_name || null, men].filter(Boolean).join(' \u00b7 ');
-      rangs.push({ icone: fleche(false), titre: x.property_name || 'Départ', detail: detail, lien: '/reservations.html' });
-      diag.departs.push((x.property_name || '?') + ' / ' + (x.guest_name || '?'));
+      var min = minutesDe(x.heure_depart);
+      var h = heureTexte(min);
+      var detail = [h ? 'Départ avant ' + h : 'Départ', x.guest_name || null, men]
+        .filter(Boolean).join(' \u00b7 ');
+      rangs.push({ tri: min, icone: fleche(false), titre: x.property_name || 'Départ', detail: detail, lien: '/reservations.html' });
+      diag.departs.push((x.property_name || '?') + ' / ' + (x.guest_name || '?') + (h ? ' — ' + h : ' — sans heure'));
+    });
+
+    /* La journee telle qu'elle se passe : les departs du matin, puis les
+       arrivees de l'apres-midi. Les mouvements sans heure ferment la
+       liste plutot que de s'inserer au hasard. */
+    rangs.sort(function (a, b) {
+      if (a.tri === null && b.tri === null) return 0;
+      if (a.tri === null) return 1;
+      if (b.tri === null) return -1;
+      return a.tri - b.tri;
     });
 
     rangs.forEach(function (r, i) {
@@ -413,6 +448,7 @@
       bloc_affiche: !!document.getElementById('bhListeUnifiee'),
       source: diag.source,
       forme: enVueCalendrier ? 'compacte (vue calendrier)' : 'cartes (Aujourd hui)',
+      heures: 'properties.arrival_time / departure_time',
       date: diag.date,
       total_arrivees: diag.arrivees.length,
       a_traiter: diag.a_traiter,
