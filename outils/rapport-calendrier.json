@@ -1,0 +1,441 @@
+{
+  "app": {
+    "taille_ko": 747,
+    "ancres": [
+      {
+        "ancre": "id=\"calendarGrid\"",
+        "quoi": "la grille",
+        "ligne": 4137,
+        "occurrences": 1,
+        "ancetres": [
+          {
+            "balise": "div",
+            "id": "calendarGrid",
+            "classe": "calendar-grid",
+            "ligne_debut": 4137,
+            "ligne_fin": 4139,
+            "taille_ko": 0
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "calendar-grid-wrapper",
+            "ligne_debut": 4131,
+            "ligne_fin": 4140,
+            "taille_ko": 0
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "calendar-container",
+            "ligne_debut": 4117,
+            "ligne_fin": 4141,
+            "taille_ko": 1
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "calendar-wrapper",
+            "ligne_debut": 4045,
+            "ligne_fin": 4142,
+            "taille_ko": 7
+          },
+          {
+            "balise": "section",
+            "id": "calendarSection",
+            "classe": "card",
+            "ligne_debut": 4037,
+            "ligne_fin": 4143,
+            "taille_ko": 7
+          }
+        ]
+      },
+      {
+        "ancre": "id=\"propertyList\"",
+        "quoi": "la colonne des logements",
+        "ligne": 4126,
+        "occurrences": 1,
+        "ancetres": [
+          {
+            "balise": "div",
+            "id": "propertyList",
+            "classe": "property-list-items",
+            "ligne_debut": 4126,
+            "ligne_fin": 4128,
+            "taille_ko": 0
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "property-list-column",
+            "ligne_debut": 4119,
+            "ligne_fin": 4129,
+            "taille_ko": 1
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "calendar-container",
+            "ligne_debut": 4117,
+            "ligne_fin": 4141,
+            "taille_ko": 1
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "calendar-wrapper",
+            "ligne_debut": 4045,
+            "ligne_fin": 4142,
+            "taille_ko": 7
+          },
+          {
+            "balise": "section",
+            "id": "calendarSection",
+            "classe": "card",
+            "ligne_debut": 4037,
+            "ligne_fin": 4143,
+            "taille_ko": 7
+          }
+        ]
+      },
+      {
+        "ancre": "id=\"daysHeader\"",
+        "quoi": "la ligne des jours",
+        "ligne": 4133,
+        "occurrences": 1,
+        "ancetres": [
+          {
+            "balise": "div",
+            "id": "daysHeader",
+            "classe": "days-header",
+            "ligne_debut": 4133,
+            "ligne_fin": 4135,
+            "taille_ko": 0
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "calendar-grid-wrapper",
+            "ligne_debut": 4131,
+            "ligne_fin": 4140,
+            "taille_ko": 0
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "calendar-container",
+            "ligne_debut": 4117,
+            "ligne_fin": 4141,
+            "taille_ko": 1
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "calendar-wrapper",
+            "ligne_debut": 4045,
+            "ligne_fin": 4142,
+            "taille_ko": 7
+          },
+          {
+            "balise": "section",
+            "id": "calendarSection",
+            "classe": "card",
+            "ligne_debut": 4037,
+            "ligne_fin": 4143,
+            "taille_ko": 7
+          }
+        ]
+      },
+      {
+        "ancre": "id=\"calendarSection\"",
+        "quoi": "une section nommee",
+        "ligne": 4037,
+        "occurrences": 1,
+        "ancetres": [
+          {
+            "balise": "section",
+            "id": "calendarSection",
+            "classe": "card",
+            "ligne_debut": 4037,
+            "ligne_fin": 4143,
+            "taille_ko": 7
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "page-content",
+            "ligne_debut": 3758,
+            "ligne_fin": 4144,
+            "taille_ko": 24
+          },
+          {
+            "balise": "main",
+            "id": null,
+            "classe": "main-content",
+            "ligne_debut": 3735,
+            "ligne_fin": 4148,
+            "taille_ko": 26
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "app-container",
+            "ligne_debut": 3730,
+            "ligne_fin": 4149,
+            "taille_ko": 26
+          },
+          {
+            "balise": "body",
+            "id": null,
+            "classe": null,
+            "ligne_debut": 3675,
+            "ligne_fin": 14768,
+            "taille_ko": 513
+          }
+        ]
+      },
+      {
+        "ancre": "calendar-modern-header",
+        "quoi": "l'en-tete du composant",
+        "ligne": 1345,
+        "occurrences": 3,
+        "ancetres": [
+          {
+            "balise": "style",
+            "id": null,
+            "classe": null,
+            "ligne_debut": 1294,
+            "ligne_fin": 2528,
+            "taille_ko": 28
+          },
+          {
+            "balise": "html",
+            "id": null,
+            "classe": null,
+            "ligne_debut": 3,
+            "ligne_fin": 17173,
+            "taille_ko": 747
+          }
+        ]
+      },
+      {
+        "ancre": "calendar-header-top",
+        "quoi": "sa barre haute",
+        "ligne": 1351,
+        "occurrences": 3,
+        "ancetres": [
+          {
+            "balise": "style",
+            "id": null,
+            "classe": null,
+            "ligne_debut": 1294,
+            "ligne_fin": 2528,
+            "taille_ko": 28
+          },
+          {
+            "balise": "html",
+            "id": null,
+            "classe": null,
+            "ligne_debut": 3,
+            "ligne_fin": 17173,
+            "taille_ko": 747
+          }
+        ]
+      },
+      {
+        "ancre": "id=\"prevPeriod\"",
+        "quoi": "la fleche mois precedent",
+        "ligne": 4105,
+        "occurrences": 1,
+        "ancetres": [
+          {
+            "balise": "button",
+            "id": "prevPeriod",
+            "classe": "period-nav-btn",
+            "ligne_debut": 4105,
+            "ligne_fin": 4107,
+            "taille_ko": 0
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "period-navigation",
+            "ligne_debut": 4101,
+            "ligne_fin": 4115,
+            "taille_ko": 1
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "calendar-wrapper",
+            "ligne_debut": 4045,
+            "ligne_fin": 4142,
+            "taille_ko": 7
+          },
+          {
+            "balise": "section",
+            "id": "calendarSection",
+            "classe": "card",
+            "ligne_debut": 4037,
+            "ligne_fin": 4143,
+            "taille_ko": 7
+          },
+          {
+            "balise": "div",
+            "id": null,
+            "classe": "page-content",
+            "ligne_debut": 3758,
+            "ligne_fin": 4144,
+            "taille_ko": 24
+          }
+        ]
+      }
+    ],
+    "poseurs_de_bhCalRoot": [
+      {
+        "ligne": 3555,
+        "texte": "#bhCalRoot { font-family: 'DM Sans', 'Inter', sans-serif; }"
+      },
+      {
+        "ligne": 3569,
+        "texte": "#bhCalRoot .bh-cal-body { min-height: 300px; }"
+      },
+      {
+        "ligne": 7318,
+        "texte": "wrap = document.getElementById('bhCalRoot');"
+      },
+      {
+        "ligne": 7324,
+        "texte": "wrap.id = 'bhCalRoot';"
+      },
+      {
+        "ligne": 7329,
+        "texte": "wrap.id = 'bhCalRoot';"
+      }
+    ]
+  },
+  "reservations": {
+    "taille_ko": 97,
+    "a_calendar_modern_js": false,
+    "sections_premier_niveau": [
+      {
+        "balise": "div",
+        "id": "sidebarOverlay",
+        "classe": "sidebar-overlay",
+        "ligne_debut": 555,
+        "ligne_fin": 555,
+        "taille_ko": 0
+      },
+      {
+        "balise": "div",
+        "id": null,
+        "classe": "app-container",
+        "ligne_debut": 556,
+        "ligne_fin": 676,
+        "taille_ko": 7
+      },
+      {
+        "balise": "div",
+        "id": "invoiceModal",
+        "classe": null,
+        "ligne_debut": 1572,
+        "ligne_fin": 1647,
+        "taille_ko": 5
+      }
+    ],
+    "identifiants_1_a_60": [
+      "resa-mobile-master (l.413)",
+      "sidebarOverlay (l.555)",
+      "bhSidebar (l.557)",
+      "bhHeader (l.558)",
+      "pageLoader (l.563)",
+      "searchInput (l.569)",
+      "propFilter (l.572)",
+      "platFilter (l.575)",
+      "periodFilter (l.585)",
+      "resaTable (l.596)",
+      "tableBody (l.615)",
+      "pagination (l.619)",
+      "mobileView (l.623)",
+      "mobileSearch (l.628)",
+      "mobilePropFilter (l.632)",
+      "mobilePlatformFilter (l.635)",
+      "mobilePeriodFilter (l.643)",
+      "mobileStatusFilter (l.649)",
+      "mobileCards (l.659)",
+      "detailOverlay (l.664)",
+      "detailSheet (l.665)",
+      "detailBody (l.671)",
+      "policeSection (l.1209)",
+      "invoiceModal (l.1572)",
+      "inv_clientName (l.1582)",
+      "inv_clientNationality (l.1583)",
+      "inv_clientEmail (l.1584)",
+      "inv_clientAddress (l.1585)",
+      "inv_clientPostalCode (l.1587)",
+      "inv_clientCity (l.1588)",
+      "inv_isCompany (l.1590)",
+      "inv_companyGroup (l.1591)",
+      "inv_clientCompany (l.1592)",
+      "inv_clientSiret (l.1593)",
+      "inv_freeNote (l.1595)",
+      "inv_platform (l.1596)",
+      "inv_propertyName (l.1601)",
+      "inv_checkin (l.1606)",
+      "inv_checkout (l.1607)",
+      "inv_rent (l.1611)",
+      "inv_taxes (l.1612)",
+      "inv_cleaning (l.1613)",
+      "inv_withVat (l.1614)",
+      "inv_vatGroup (l.1615)",
+      "inv_vatRate (l.1618)",
+      "inv_preview (l.1631)",
+      "inv_sendBtn (l.1642)",
+      "bh-luxe-resa (l.1937)"
+    ],
+    "scripts": [
+      "/js/auth-fetch.js?v=cd78753d",
+      "/js/messages-badge-desktop-mobile.js?v=db6e7409",
+      "/js/bh-guest-mark.js?v=535077b0",
+      "/js/bh-layout.js?v=65920d9d",
+      "/js/bh-clavier.js",
+      "/js/bh-v3-finitions.js",
+      "js/bh-mon-compte.js",
+      "js/bh-initiales.js",
+      "js/bh-barre-onglets.js",
+      "js/bh-barre-style.js",
+      "js/bh-header-epure.js",
+      "/js/mobile-native-experience.js?v=eedbac9c",
+      "/js/mobile-tabs-handler.js?v=01e3d29a",
+      "/js/bh-onboarding-pages.js?v=313cb8ca",
+      "/js/bh-auto-refresh.js?v=a3ac1b53",
+      "/js/bh-haptics.js?v=41ebfc2f",
+      "/js/bh-page-transitions.js?v=6b08d80b",
+      "/js/bh-global-search.js?v=4f234cfd",
+      "/js/bh-polish.js?v=1",
+      "/js/bh-pull-refresh.js?v=07bdb653"
+    ],
+    "scripts_presents_dans_app_et_absents_ici": [
+      "/js/sub-account-guard.js?v=3558a1b3",
+      "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",
+      "https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js",
+      "https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/fr.global.min.js",
+      "/js/app.js?v=ce9b384d",
+      "/js/vendor/capacitor-8.4.0.js?v=f384d8ca",
+      "/js/push-notifications-handler.js?v=288ea9dc",
+      "https://cdn.socket.io/4.7.2/socket.io.min.js",
+      "js/bh-bande-jours.js",
+      "js/bh-entete-jour.js",
+      "js/bh-vide-du-haut.js",
+      "js/bh-kpi-haut.js",
+      "js/bh-listes-jour.js",
+      "js/bh-liste-unifiee.js",
+      "js/bh-cartes-mois.js",
+      "js/bh-aujourdhui-allege.js",
+      "js/bh-carte-journee.js",
+      "/js/bh-today.js?v=5bfbc1a1",
+      "/js/bh-onboarding.js?v=9f39ef93"
+    ]
+  }
+}
