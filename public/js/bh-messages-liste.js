@@ -10,6 +10,15 @@
 (function () {
   'use strict';
 
+  /* Anti-clignotement : la page masque l'ancienne version jusqu'a ce
+     signal. Pose des que notre bloc est en place — pas avant, sinon on
+     revelerait un ecran vide. */
+  function signalerPret() {
+    document.documentElement.classList.add('bh-refonte-prete');
+    document.documentElement.classList.remove('bh-refonte-attente');
+  }
+
+
   if (window.__bhMessagesListe) return;
   window.__bhMessagesListe = true;
 
@@ -293,6 +302,7 @@
     vieille.style.setProperty('display', 'none', 'important');
 
     etat.pose = true;
+    signalerPret();
     return true;
   }
 

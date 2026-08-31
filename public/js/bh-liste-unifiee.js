@@ -11,6 +11,15 @@
 (function () {
   'use strict';
 
+  /* Anti-clignotement : la page masque l'ancienne version jusqu'a ce
+     signal. Pose des que notre bloc est en place — pas avant, sinon on
+     revelerait un ecran vide. */
+  function signalerPret() {
+    document.documentElement.classList.add('bh-refonte-prete');
+    document.documentElement.classList.remove('bh-refonte-attente');
+  }
+
+
   if (window.__bhListeUnifiee) return;
   /* En vue calendrier, ce module a bien quelque chose a construire : les
      mouvements du jour, sous le calendrier. Ce qui lui manquait n'etait
@@ -406,6 +415,7 @@
     }
 
     endormirAncien();
+    signalerPret();
     place.parent.insertBefore(bloc, place.avant);
     return true;
   }

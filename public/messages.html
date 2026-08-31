@@ -1,6 +1,26 @@
 <!DOCTYPE html>
 <html data-theme="light" data-theme-v3="1" class="bh-lux" lang="fr">
 <head>
+<!-- bh-anti-clignotement : ne pas montrer ce que les modules remplacent -->
+<style id="bh-anti-clignotement">
+  html.bh-refonte-attente #conversationsList { display: none !important; }
+</style>
+<script>
+  /* Pose avant le premier affichage : l'ancienne version n'est jamais
+     peinte, meme une image. */
+  document.documentElement.classList.add('bh-refonte-attente');
+  /* Filet : si les modules ne se signalent pas en quatre secondes,
+     l'ancienne version revient entiere. Un clignotement vaut mieux
+     qu'un ecran vide. */
+  setTimeout(function () {
+    if (!document.documentElement.classList.contains('bh-refonte-prete')) {
+      document.documentElement.classList.remove('bh-refonte-attente');
+      console.warn('[anti-clignotement] Les modules ne se sont pas signales : '
+        + 'ancienne version rendue.');
+    }
+  }, 4000);
+</script>
+
 <script>document.documentElement.classList.add('bh-lux');</script>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
