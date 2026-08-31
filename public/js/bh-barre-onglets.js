@@ -17,12 +17,14 @@
   window.__bhBarreOnglets = true;
 
   /* ── La barre visee ─────────────────────────────────────────── */
+  /* Dans l'ORDRE DES BOUTONS EXISTANTS, pour ne pas desynchroniser la
+     capsule glissante .lg-capsule, qui se place selon leur position. */
   var VISEE = [
-    { cle: 'accueil',     libelle: "Aujourd'hui", page: 'app.html' },
-    { cle: 'messages',    libelle: 'Messages',    page: 'messages.html' },
-    { cle: 'calendrier',  libelle: 'Calendrier',  page: 'reservations.html' },
-    { cle: 'logements',   libelle: 'Logements',   page: 'settings.html' },
-    { cle: 'argent',      libelle: 'Argent',      page: 'deposits.html' }
+    { cle: 'accueil',    libelle: "Aujourd'hui", page: 'app.html',          mots: ['accueil', 'dashboard', "aujourd"] },
+    { cle: 'calendrier', libelle: 'Calendrier',  page: 'reservations.html', mots: ['réservation', 'reservation', 'calendrier'] },
+    { cle: 'messages',   libelle: 'Messages',    page: 'messages.html',     mots: ['message'] },
+    { cle: 'logements',  libelle: 'Logements',   page: 'settings.html',     mots: ['ménage', 'menage', 'logement', 'cleaning'] },
+    { cle: 'argent',     libelle: 'Argent',      page: 'deposits.html',     mots: ['plus', 'caution', 'argent'] }
   ];
 
   /* ── Le role, lu avant toute modification ───────────────────── */
@@ -64,7 +66,7 @@
   /* ── Les onglets presents, quel que soit leur habillage ─────── */
   function lireOnglets() {
     var barres = [];
-    ['.bh-tabbar', '#bhTabBar', '[class*="tabbar"]', '[class*="tab-bar"]', '.mobile-nav', '#mobileNav', 'nav[class*="bottom"]']
+    ['.mobile-tabs', '.bh-tabbar', '#bhTabBar', '[class*="tabbar"]', '[class*="tab-bar"]', '.mobile-nav', '#mobileNav']
       .forEach(function (sel) {
         try {
           var els = document.querySelectorAll(sel);
@@ -73,9 +75,15 @@
       });
 
     for (var b = 0; b < barres.length; b++) {
-      var items = barres[b].querySelectorAll('a[href], button, [data-tab], [role="tab"]');
-      if (items.length >= 4 && items.length <= 7) {
-        return { barre: barres[b], items: Array.prototype.slice.call(items) };
+      /* .tab-btn d'abord : cela ecarte d'emblee la capsule .lg-capsule,
+         qui n'est pas un onglet mais l'indicateur qui glisse dessous. */
+      var items = barres[b].querySelectorAll('.tab-btn');
+      if (!items.length) items = barres[b].querySelectorAll('a[href], button, [data-tab], [role="tab"]');
+      var vrais = Array.prototype.slice.call(items).filter(function (e) {
+        return !/lg-capsule|capsule|indicator/.test(e.className || '');
+      });
+      if (vrais.length >= 4 && vrais.length <= 7) {
+        return { barre: barres[b], items: vrais };
       }
     }
     return null;
@@ -123,10 +131,7 @@
         if (pageDe(libres[i]) === v.page) { trouve = libres[i]; break; }
       }
       if (!trouve) {
-        var mots = { accueil: ['accueil', 'dashboard', 'aujourd'], messages: ['message'],
-                     calendrier: ['reservation', 'calendrier', 'calendar'],
-                     logements: ['logement', 'settings', 'parametre'],
-                     argent: ['caution', 'argent', 'paiement', 'plus'] }[v.cle] || [];
+        var mots = v.mots || [];
         for (var j = 0; j < libres.length && !trouve; j++) {
           var t = texteDe(libres[j]);
           for (var k = 0; k < mots.length; k++) {
@@ -145,39 +150,63 @@
     /* Renommage et repointage. */
     pris.forEach(function (p) {
       var el = p.el;
-      /* Le libelle : le dernier noeud texte non vide, sans toucher aux icones. */
-      var cibles = el.querySelectorAll('span, div, small, label');
+
+      /* « Messages 0 7 » : deux badges cohabitent avec le mot. On ne
+         remplace donc que la feuille qui contient DEJA le mot attendu,
+         jamais un compteur ni une icone. */
+      var cibles = el.querySelectorAll('span, div, small, label, p');
       var pose = false;
-      for (var i = cibles.length - 1; i >= 0; i--) {
+      for (var i = 0; i < cibles.length && !pose; i++) {
         var c = cibles[i];
         if (c.children.length) continue;
         var t = (c.textContent || '').trim();
         if (!t || /^\d+$/.test(t)) continue;
-        c.textContent = p.vise.libelle;
-        pose = true;
-        break;
+        var bas = t.toLowerCase();
+        for (var k = 0; k < (p.vise.mots || []).length; k++) {
+          if (bas.indexOf(p.vise.mots[k]) !== -1) { c.textContent = p.vise.libelle; pose = true; break; }
+        }
+      }
+      /* Repli : la derniere feuille non numerique. */
+      if (!pose) {
+        for (var j = cibles.length - 1; j >= 0; j--) {
+          var c2 = cibles[j];
+          if (c2.children.length) continue;
+          var t2 = (c2.textContent || '').trim();
+          if (!t2 || /^\d+$/.test(t2)) continue;
+          c2.textContent = p.vise.libelle;
+          pose = true;
+          break;
+        }
       }
       if (!pose && !el.children.length) el.textContent = p.vise.libelle;
 
+      /* Ce sont des <button> : un href ne navigue pas. On reecrit le clic,
+         en capture, pour passer devant le gestionnaire d'origine. */
       if (el.tagName === 'A') el.setAttribute('href', '/' + p.vise.page);
+      if (!el.__bhClic) {
+        el.__bhClic = true;
+        var page = p.vise.page;
+        el.addEventListener('click', function (ev) {
+          var ici = location.pathname.split('/').pop().toLowerCase();
+          if (ici === page) return; /* deja sur place : on laisse faire */
+          ev.preventDefault();
+          ev.stopImmediatePropagation();
+          location.href = '/' + page;
+        }, true);
+      }
+
       el.setAttribute('data-bh-onglet', p.vise.cle);
+      el.setAttribute('aria-label', p.vise.libelle);
       etat.renommes.push(p.vise.libelle + ' \u2192 ' + p.vise.page);
     });
 
-    /* Les onglets restes sans role visé quittent la barre — « Plus » en
-       tete, puisque « Mon compte » l'a remplace. */
+    /* Cinq boutons pour cinq destinations : rien n'est masque, donc la
+       capsule glissante garde ses reperes et la barre sa geometrie.
+       « Plus » n'est pas retire — il devient « Argent ». */
+    etat.plus_retire = pris.some(function (p) { return p.vise.cle === 'argent'; });
     libres.forEach(function (el) {
-      var t = texteDe(el);
-      el.style.setProperty('display', 'none', 'important');
-      el.setAttribute('data-bh-retire', '1');
-      if (t.indexOf('plus') !== -1) etat.plus_retire = true;
+      el.setAttribute('data-bh-restant', texteDe(el) || '?');
     });
-
-    /* La barre compte cinq colonnes, pas six. */
-    try {
-      var st = getComputedStyle(lu.barre);
-      if (st.display === 'grid') lu.barre.style.setProperty('grid-template-columns', 'repeat(' + pris.length + ', 1fr)', 'important');
-    } catch (e) {}
 
     etat.agi = true;
     etat.raison = 'applique';
@@ -190,9 +219,11 @@
       raison: etat.raison,
       onglets: etat.renommes.slice(),
       plus_retire: etat.plus_retire,
-      visibles: Array.prototype.slice.call(document.querySelectorAll('[data-bh-onglet]'))
+      ordre_reel: Array.prototype.slice.call(document.querySelectorAll('[data-bh-onglet]'))
         .map(function (e) { return e.getAttribute('data-bh-onglet'); }),
-      caches: document.querySelectorAll('[data-bh-retire]').length
+      non_apparies: Array.prototype.slice.call(document.querySelectorAll('[data-bh-restant]'))
+        .map(function (e) { return e.getAttribute('data-bh-restant'); }),
+      note: 'Calendrier est en 2e place, pas en 3e : reordonner desynchroniserait la capsule.'
     };
     console.log('── Barre d\'onglets ──');
     console.log(res);
