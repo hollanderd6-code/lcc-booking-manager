@@ -12,12 +12,12 @@
   'use strict';
 
   if (window.__bhListeUnifiee) return;
-  /* En vue calendrier, ce module n'a rien a construire — et ce qu'il
-     construirait reapparaitrait par-dessus le calendrier, apres le
-     masquage. Un module qui ne se lance pas ne peut pas defaire le
-     travail d'un autre. */
-  if ((location.search || '').indexOf('vue=calendrier') !== -1) return;
-  if ((location.pathname || '').split('/').pop().toLowerCase() === 'calendrier.html') return;
+  /* En vue calendrier, ce module a bien quelque chose a construire : les
+     mouvements du jour, sous le calendrier. Ce qui lui manquait n'etait
+     pas le droit de tourner, c'etait un point d'ancrage — il visait la
+     bande de sept jours, qui n'existe pas la. */
+  var enVueCalendrier = (location.search || '').indexOf('vue=calendrier') !== -1
+    || (location.pathname || '').split('/').pop().toLowerCase() === 'calendrier.html';
   window.__bhListeUnifiee = true;
 
   var ENCRE = '#0D1117';
@@ -184,6 +184,15 @@
   /* On se place la ou l'ancien bloc se trouvait, pour ne rien deplacer
      d'autre dans la page. */
   function ancre() {
+    /* Vue calendrier : apres le calendrier, dans le conteneur de la vue.
+       Tant que bh-vue-calendrier n'a pas pose sa racine, on attend —
+       inserer avant reviendrait a etre masque avec le reste. */
+    if (enVueCalendrier) {
+      var racine = document.getElementById('bhVueRacine');
+      var section = document.getElementById('calendarSection');
+      if (!racine || !section || section.parentElement !== racine) return null;
+      return { parent: racine, avant: section.nextSibling };
+    }
     var vieux = document.getElementById('bhListesJour');
     if (vieux && vieux.parentElement) return { parent: vieux.parentElement, avant: vieux };
     var bande = document.getElementById('bhBandeJours');
@@ -313,4 +322,7 @@
   }
   setTimeout(charger, 3200);
   setTimeout(charger, 5800);
+  /* bh-vue-calendrier peut poser sa racine jusqu'a 11 s : sans ces
+     passages, la liste renoncerait avant qu'elle existe. */
+  [8000, 11500, 14000].forEach(function (t) { setTimeout(charger, t); });
 })();
