@@ -30,30 +30,43 @@
      condition inconnue est affichee brute plutot que traduite au
      jugé : mieux vaut un nom technique qu'un contresens. */
   var CONDITIONS = {
-    police_complete: 'Fiche police non signée',
+    deposit_active: 'Caution à autoriser',
     deposit_paid: 'Caution non payée',
     deposit_authorized: 'Caution non autorisée',
+    police_complete: 'Fiche police non signée',
     contract_signed: 'Contrat non signé',
     checkin_completed: 'Enregistrement non terminé',
-    id_verified: 'Pièce d identité non vérifiée'
+    id_verified: "Pièce d'identité non vérifiée"
   };
 
-  function cause(a) {
-    var c = a.condition_envoi;
-    if (!c) return null;
-    if (c === 'always') return 'Condition « always » — cause ailleurs';
-    return CONDITIONS[c] || ('Condition « ' + c + ' »');
+  /* Le serveur renvoie parfois plusieurs conditions separees par une
+     virgule : « deposit_active,police_complete ». Chacune est une raison
+     distincte, donc chacune sa pastille. Une condition inconnue passe
+     telle quelle — un nom technique vaut mieux qu'une traduction
+     inventee. */
+  function causes(a) {
+    var brut = a.condition_envoi;
+    if (!brut) return [];
+    var liste = String(brut).split(/[,+;|]/).map(function (x) { return x.trim(); }).filter(Boolean);
+    if (!liste.length) return [];
+    if (liste.length === 1 && liste[0] === 'always') return ['Envoi immédiat prévu — cause ailleurs'];
+    var out = [];
+    liste.forEach(function (c) {
+      if (c === 'always') return;
+      out.push(CONDITIONS[c] || c);
+    });
+    return out;
   }
 
   var PLATEFORMES = {
-    airbnb: { nom: 'AIRBNB', fond: '#E4EDE8', encre: '#0E3B2E' },
-    abb: { nom: 'AIRBNB', fond: '#E4EDE8', encre: '#0E3B2E' },
-    booking: { nom: 'BOOKING', fond: '#FBEAE4', encre: '#A8452A' },
-    bookingcom: { nom: 'BOOKING', fond: '#FBEAE4', encre: '#A8452A' },
-    bdc: { nom: 'BOOKING', fond: '#FBEAE4', encre: '#A8452A' },
+    airbnb: { nom: 'AIRBNB', fond: '#FCE7EC', encre: '#B81E4B' },
+    abb: { nom: 'AIRBNB', fond: '#FCE7EC', encre: '#B81E4B' },
+    booking: { nom: 'BOOKING', fond: '#E3EAF8', encre: '#123E86' },
+    bookingcom: { nom: 'BOOKING', fond: '#E3EAF8', encre: '#123E86' },
+    bdc: { nom: 'BOOKING', fond: '#E3EAF8', encre: '#123E86' },
     expedia: { nom: 'EXPEDIA', fond: '#EEF0F6', encre: '#3A4A6B' },
-    boostinghost: { nom: 'BHGUEST', fond: '#F4EDE4', encre: '#8A5B14' },
-    bhguest: { nom: 'BHGUEST', fond: '#F4EDE4', encre: '#8A5B14' }
+    boostinghost: { nom: 'BHGUEST', fond: '#FDEBDC', encre: '#A85413' },
+    bhguest: { nom: 'BHGUEST', fond: '#FDEBDC', encre: '#A85413' }
   };
 
   function plateforme(p) {
@@ -149,8 +162,9 @@
     var out = [];
     if (urgent) {
       if (a.message_envoye === false) out.push(pastille('Infos non envoyées', 'rouge'));
-      var c = cause(a);
-      if (a.message_envoye === false && c) out.push(pastille(c, 'ambre'));
+      if (a.message_envoye === false) {
+        causes(a).forEach(function (c) { out.push(pastille(c, 'ambre')); });
+      }
       if (a.caution_bloquante === true) out.push(pastille('Caution non autorisée', 'ambre'));
       if (a.menage_attendu === true && a.menage_fait === false) out.push(pastille('Ménage non fait', 'ambre'));
     } else {
@@ -203,7 +217,7 @@
         var bas = [a.property_name, nuits(a.arrivee, a.depart) ? nuits(a.arrivee, a.depart) + ' nuit' + (nuits(a.arrivee, a.depart) > 1 ? 's' : '') : null]
           .filter(Boolean).join(' \u00b7 ');
         bloc.appendChild(carte(a.guest_name, bas, a.platform, pastillesArrivee(a, true), true, '/messages.html'));
-        diag.a_traiter.push((a.property_name || '?') + ' / ' + (a.guest_name || '?') + ' — ' + (cause(a) || 'sans condition connue'));
+        diag.a_traiter.push((a.property_name || '?') + ' / ' + (a.guest_name || '?') + ' — ' + (causes(a).join(' + ') || 'sans condition connue'));
       });
     }
 
