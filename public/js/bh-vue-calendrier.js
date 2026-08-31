@@ -13,7 +13,14 @@
   'use strict';
 
   if (window.__bhVueCalendrier) return;
-  if ((location.search || '').indexOf('vue=calendrier') === -1) return;
+  /* Deux facons d'etre en vue calendrier : la page dediee, ou le
+     parametre — garde pour ne pas casser les liens deja poses. */
+  function vueDemandee() {
+    var page = (location.pathname || '').split('/').pop().toLowerCase();
+    if (page === 'calendrier.html') return true;
+    return (location.search || '').indexOf('vue=calendrier') !== -1;
+  }
+  if (!vueDemandee()) return;
   window.__bhVueCalendrier = true;
 
   var mem = [];

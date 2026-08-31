@@ -15,6 +15,7 @@
   /* En vue calendrier, ce module n'a rien a alleger — et il masquerait
      precisement le calendrier qu'on vient afficher. */
   if ((location.search || '').indexOf('vue=calendrier') !== -1) return;
+  if ((location.pathname || '').split('/').pop().toLowerCase() === 'calendrier.html') return;
   window.__bhAujourdhuiAllege = true;
 
   var mem = [];
