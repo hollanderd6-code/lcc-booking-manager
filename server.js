@@ -31492,6 +31492,154 @@ async function sendDepositReminderJ2Cron(pool, io) {
   return { sent, skipped: convs.rows.length - sent };
 }
 
+// ============================================================
+// GET /api/aujourdhui/etats — etats des arrivees du jour
+// ============================================================
+// Lecture seule. Un seul appel pour l'ecran « Aujourd'hui » : pour chaque
+// arrivee du jour, le message d'arrivee est-il parti, la caution bloque-
+// t-elle. Aucune ecriture, aucune table modifiee.
+//
+// « menage_fait » revient null tant que le nom de la table de menage
+// n'est pas confirme : le champ « diagnostic » liste les candidates
+// trouvees dans la base, pour l'ajouter sans deviner.
+app.get('/api/aujourdhui/etats', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?.user_id || req.userId;
+    if (!userId) return res.status(401).json({ error: 'non authentifie' });
+
+    // Date Paris, calculee sans passer par toISOString (qui recule d'un
+    // jour en soiree) — meme methode que runTemplatesCron.
+    const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const pad = n => String(n).padStart(2, '0');
+    const jour = req.query.date && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)
+      ? req.query.date
+      : `${nowParis.getFullYear()}-${pad(nowParis.getMonth() + 1)}-${pad(nowParis.getDate())}`;
+
+    // Comptes accessibles : le sien, plus ceux qu'il gere. Sans cela une
+    // agence ne verrait pas les arrivees de ses mandants.
+    const ids = [userId];
+    try {
+      const del = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations
+         WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [userId]
+      );
+      del.rows.forEach(r => { if (r.delegator_user_id && !ids.includes(r.delegator_user_id)) ids.push(r.delegator_user_id); });
+    } catch (e) {
+      // Table absente ou renommee : on continue avec le seul compte.
+    }
+
+    const arrivees = await pool.query(
+      `SELECT c.id AS conversation_id, c.guest_name, c.property_id, c.platform,
+              c.channex_booking_id,
+              p.name AS property_name, p.deposit_amount,
+              to_char(c.reservation_start_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') AS arrivee,
+              to_char(c.reservation_end_date AT TIME ZONE 'Europe/Paris', 'YYYY-MM-DD') AS depart
+       FROM conversations c
+       LEFT JOIN properties p ON p.id = c.property_id
+       WHERE c.user_id = ANY($1::text[])
+         AND c.status <> 'cancelled'
+         AND DATE(c.reservation_start_date AT TIME ZONE 'Europe/Paris') = $2
+       ORDER BY p.name NULLS LAST`,
+      [ids, jour]
+    );
+
+    const convIds = arrivees.rows.map(r => r.conversation_id).filter(Boolean);
+
+    // Le message d'arrivee est-il parti ? « manual » compte : un envoi a
+    // la main informe le voyageur autant qu'un envoi automatique.
+    const envoyes = new Set();
+    if (convIds.length) {
+      try {
+        const logs = await pool.query(
+          `SELECT DISTINCT conversation_id FROM message_template_logs
+           WHERE conversation_id = ANY($1::int[])
+             AND trigger_type IN ('on_arrival', 'manual')
+             AND status = 'sent'`,
+          [convIds]
+        );
+        logs.rows.forEach(r => envoyes.add(r.conversation_id));
+      } catch (e) {
+        // Table absente : le champ restera null plutot que faux.
+      }
+    }
+
+    // La caution. L'uid suit la convention CHX_<channex_booking_id>.
+    const cautions = {};
+    const uids = arrivees.rows
+      .filter(r => r.channex_booking_id)
+      .map(r => 'CHX_' + r.channex_booking_id);
+    if (uids.length) {
+      try {
+        const dep = await pool.query(
+          `SELECT uid, status, amount_cents FROM deposits WHERE uid = ANY($1::text[])`,
+          [uids]
+        );
+        dep.rows.forEach(r => { cautions[r.uid] = r; });
+      } catch (e) {
+        // Table absente : caution null.
+      }
+    }
+
+    // Les tables candidates pour le menage, pour l'ajouter sans deviner.
+    let diagnostic = null;
+    if (req.query.diagnostic === '1') {
+      try {
+        const cand = await pool.query(
+          `SELECT table_name, column_name, data_type
+           FROM information_schema.columns
+           WHERE table_schema = 'public'
+             AND (table_name ILIKE '%clean%' OR table_name ILIKE '%menage%' OR table_name ILIKE '%tache%')
+           ORDER BY table_name, ordinal_position`
+        );
+        diagnostic = {
+          tables_menage: cand.rows.reduce((acc, r) => {
+            (acc[r.table_name] = acc[r.table_name] || []).push(r.column_name + ' : ' + r.data_type);
+            return acc;
+          }, {})
+        };
+      } catch (e) {
+        diagnostic = { erreur: e.message };
+      }
+    }
+
+    const sortie = arrivees.rows.map(r => {
+      const caution = r.channex_booking_id ? (cautions['CHX_' + r.channex_booking_id] || null) : null;
+      const plateforme = String(r.platform || '').toLowerCase();
+      const estAirbnb = plateforme.includes('airbnb') || plateforme === 'abb';
+      const cautionExigee = Number(r.deposit_amount || 0) > 0 && !estAirbnb;
+      const cautionOk = caution && ['authorized', 'captured', 'paid', 'succeeded'].includes(String(caution.status || '').toLowerCase());
+
+      return {
+        conversation_id: r.conversation_id,
+        guest_name: r.guest_name,
+        property_id: r.property_id,
+        property_name: r.property_name,
+        platform: r.platform,
+        arrivee: r.arrivee,
+        depart: r.depart,
+        message_envoye: convIds.length ? envoyes.has(r.conversation_id) : null,
+        caution: caution ? caution.status : null,
+        caution_exigee: cautionExigee,
+        // Ce qui bloque reellement l'envoi automatique des infos.
+        caution_bloquante: cautionExigee && !cautionOk,
+        menage_fait: null
+      };
+    });
+
+    res.json({
+      date: jour,
+      comptes: ids.length,
+      arrivees: sortie,
+      menage_fait_indisponible: 'table de menage non confirmee — appelez ?diagnostic=1',
+      diagnostic
+    });
+  } catch (e) {
+    console.error('❌ [AUJOURDHUI/ETATS]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 async function runTemplatesCron(triggerTypes) {
   try {
     // Calcul fiable de la date Paris — éviter le bug toLocaleString + toISOString
