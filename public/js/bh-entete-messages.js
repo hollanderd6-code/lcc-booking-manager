@@ -17,7 +17,8 @@
   var GRIS = '#8B8B84';
 
   var mem = [];
-  var diag = { entete: false, rond: false, loupe: false, defilement: [], onglets: null, raison: '' };
+  var diag = { entete: false, rond: false, loupe: false, defilement: [], onglets: null,
+               marque: null, recherche: null, raison: '' };
 
   function memoriser(el, prop, valeur) {
     mem.push({ type: 'style', el: el, prop: prop, valeur: el.style.getPropertyValue(prop), priorite: el.style.getPropertyPriority(prop) });
@@ -93,16 +94,7 @@
         b.innerHTML = SVG_LOUPE;
         b.addEventListener('click', function (ev) {
           ev.preventDefault();
-          /* La page a deja un champ de recherche : on lui donne le
-             focus plutot que d'en creer un second. */
-          var champ = document.getElementById('msgsSearchInput')
-            || document.querySelector('input[placeholder*="echerch"]');
-          if (champ) {
-            champ.scrollIntoView ? null : null;
-            try { champ.focus(); } catch (e) {}
-          } else {
-            console.warn('[entete msg] aucun champ de recherche trouve');
-          }
+          basculerRecherche();
         });
         droiteEl.appendChild(b);
         diag.loupe = true;
@@ -117,6 +109,97 @@
       }
     }
     return true;
+  }
+
+  /* ── 1 bis. La marque et la recherche ───────────────────────── */
+
+  function champRecherche() {
+    return document.getElementById('msgsSearchInput')
+      || document.querySelector('input[placeholder*="echerch"], input[placeholder*="echerch"]');
+  }
+
+  /* Le bandeau : le plus petit conteneur qui porte le champ et qui a
+     une hauteur propre. On remonte de trois crans au plus. */
+  function bandeauRecherche() {
+    var c = champRecherche();
+    if (!c) return null;
+    var el = c.parentElement, garde = 0, dernier = null;
+    while (el && el !== document.body && garde++ < 3) {
+      if (el.querySelector('#conversationsList, #bhMessagesListe')) break;
+      dernier = el;
+      el = el.parentElement;
+    }
+    return dernier;
+  }
+
+  /* La barre de marque : un conteneur portant « BOOSTINGHOST », court,
+     et qui ne contient ni la liste ni le champ de recherche. */
+  function barreMarque() {
+    var noeuds = document.querySelectorAll('header, div, nav, section');
+    var meilleur = null;
+    for (var i = 0; i < noeuds.length; i++) {
+      var n = noeuds[i];
+      if (n.id === 'bhEnteteMsg' || n.closest && n.closest('#bhEnteteMsg')) continue;
+      if (n.querySelector('#conversationsList, #bhMessagesListe, #msgsSearchInput')) continue;
+      var t = (n.textContent || '').replace(/\s+/g, ' ').trim();
+      var logo = n.querySelector('img[alt*="oosting" i], img[src*="logo" i]');
+      var dit = /BOOSTINGHOST/i.test(t) && t.length < 90;
+      if (!logo && !dit) continue;
+      if (n.getBoundingClientRect().height < 24) continue;
+      if (!meilleur || (n.textContent || '').length < (meilleur.textContent || '').length) meilleur = n;
+    }
+    return meilleur;
+  }
+
+  var rechercheOuverte = false;
+
+  function basculerRecherche() {
+    var bandeau = bandeauRecherche();
+    var champ = champRecherche();
+    if (!bandeau || !champ) {
+      console.warn('[entete msg] aucun champ de recherche a ouvrir');
+      return;
+    }
+    rechercheOuverte = !rechercheOuverte;
+    bandeau.style.setProperty('display', rechercheOuverte ? '' : 'none', 'important');
+    if (rechercheOuverte) {
+      try { champ.focus(); } catch (e) {}
+    } else if (champ.value) {
+      /* On referme sur un champ vide : sinon la liste resterait filtree
+         par un texte que plus personne ne voit. */
+      champ.value = '';
+      try { champ.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+    }
+  }
+
+  function replierRecherche() {
+    var bandeau = bandeauRecherche();
+    if (!bandeau || bandeau.dataset.bhReplie) return;
+    bandeau.dataset.bhReplie = '1';
+    memoriser(bandeau, 'display', 'none');
+    diag.recherche = 'repliee — la loupe l ouvre';
+
+    var champ = champRecherche();
+    if (champ && !champ.dataset.bhEchap) {
+      champ.dataset.bhEchap = '1';
+      champ.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') basculerRecherche();
+      });
+      champ.addEventListener('blur', function () {
+        if (!champ.value && rechercheOuverte) setTimeout(basculerRecherche, 120);
+      });
+    }
+  }
+
+  function masquerMarque() {
+    if (diag.marque) return;
+    var b = barreMarque();
+    if (!b) { diag.marque = null; return; }
+    if (b.dataset.bhMarqueMasquee) return;
+    b.dataset.bhMarqueMasquee = '1';
+    memoriser(b, 'display', 'none');
+    diag.marque = (b.id ? '#' + b.id : b.tagName.toLowerCase())
+      + (typeof b.className === 'string' && b.className ? '.' + b.className.split(/\s+/)[0] : '');
   }
 
   /* ── 2. Le defilement ───────────────────────────────────────── */
@@ -188,6 +271,8 @@
 
   function tour() {
     poserEntete();
+    masquerMarque();
+    replierRecherche();
     libererDefilement();
     masquerOnglets();
   }
@@ -200,6 +285,8 @@
         else m.el.style.removeProperty(m.prop);
         delete m.el.dataset.bhDefilement;
         delete m.el.dataset.bhOngletsMasques;
+        delete m.el.dataset.bhMarqueMasquee;
+        delete m.el.dataset.bhReplie;
       } else if (m.type === 'place' && m.parent) {
         m.parent.insertBefore(m.el, m.avant);
       }
@@ -222,6 +309,9 @@
       rond_deplace: diag.rond,
       defilement: diag.defilement.length ? diag.defilement : 'aucun conteneur ne bloquait',
       onglets_masques: diag.onglets || 'barre non trouvee — rien masque',
+      marque_masquee: diag.marque || 'barre BOOSTINGHOST non trouvee — rien masque',
+      recherche: diag.recherche || 'bandeau non trouve — laisse en place',
+      recherche_ouverte: rechercheOuverte,
       annulable: mem.length + ' changement(s) memorise(s)',
       raison: diag.raison
     };
