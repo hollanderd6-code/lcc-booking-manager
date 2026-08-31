@@ -36,6 +36,30 @@
     return m ? m[1] : null;
   }
 
+  /* Le CA, lu la ou il est calcule. La carte affiche « 19 111 € » avec
+     une espace insecable : on accepte les deux espaces, et on rend le
+     montant tel qu'il est ecrit plutot que de le reformater. */
+  function caMensuel() {
+    var c = document.querySelector('.bh2-feat');
+    if (!c) return null;
+    var txt = (c.textContent || '').replace(/\u00a0/g, ' ');
+    var m = txt.match(/(\d[\d  .,]{0,12}\d)\s*€/);
+    if (!m) return null;
+    var brut = m[1].replace(/[.,]$/, '').trim();
+    return brut ? brut + ' €' : null;
+  }
+
+  /* Le sous-titre : l'argent d'abord, l'occupation qui l'explique
+     ensuite. Ce qui manque est omis, jamais remplace par un zero. */
+  function sousTitre() {
+    var bouts = [];
+    var ca = caMensuel();
+    var occ = occupation();
+    if (ca) bouts.push(ca + ' ce mois');
+    if (occ) bouts.push(occ + " % d'occupation");
+    return bouts.join('  \u00b7  ');
+  }
+
   var SVG_LOUPE = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"'
     + ' stroke="#3D4A44" stroke-width="1.9" stroke-linecap="round">'
     + '<circle cx="10.6" cy="10.6" r="6.4"/><path d="M15.4 15.4 20.5 20.5"/></svg>';
@@ -67,8 +91,9 @@
       gauche.style.cssText = 'min-width:0';
       var sous = document.createElement('div');
       sous.id = 'bhEnteteCalSous';
-      sous.textContent = pct ? pct + " % d'occupation ce mois" : '';
-      sous.style.cssText = 'font-size:13.5px;font-weight:500;color:' + GRIS + ';letter-spacing:-.01em;min-height:18px';
+      sous.textContent = sousTitre();
+      sous.style.cssText = 'font-size:13.5px;font-weight:500;color:' + GRIS
+        + ';letter-spacing:-.01em;min-height:18px;line-height:1.35;text-wrap:pretty';
       gauche.appendChild(sous);
       var titre = document.createElement('div');
       titre.textContent = 'Calendrier';
@@ -84,9 +109,18 @@
       racine.insertBefore(bloc, racine.firstChild);
       diag.entete = true;
     } else {
-      /* Le pourcentage arrive parfois apres nous. */
+      /* Les deux chiffres arrivent par des chemins differents, et l'un
+         peut etre pret avant l'autre. On reecrit tant qu'il en manque un,
+         puis on cesse — sinon on ecraserait a chaque passage. */
       var s = document.getElementById('bhEnteteCalSous');
-      if (s && pct && !s.textContent) s.textContent = pct + " % d'occupation ce mois";
+      if (s) {
+        var frais = sousTitre();
+        var complet = frais.indexOf('\u00b7') !== -1;
+        if (frais && (!s.textContent || !s.dataset.bhComplet)) {
+          s.textContent = frais;
+          if (complet) s.dataset.bhComplet = '1';
+        }
+      }
     }
 
     /* L'en-tete doit rester le premier enfant : bh-vue-calendrier
@@ -172,6 +206,8 @@
       entete_pose: !!bloc,
       premier_dans_la_vue: !!(racine && bloc && racine.firstChild === bloc),
       occupation_lue: diag.occupation,
+      ca_lu: caMensuel(),
+      sous_titre: (document.getElementById('bhEnteteCalSous') || {}).textContent || null,
       loupe_propre: !!document.getElementById('bhLoupeCal'),
       rond_deplace: diag.rond,
       cartes_masquees: diag.cartes,
