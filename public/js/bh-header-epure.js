@@ -25,10 +25,10 @@
     {
       cle: 'serveurs',
       titre: 'Etat des serveurs',
-      selecteurs: ['#serverStatus', '#statusDots', '.server-status', '[data-server-status]', '#healthDots', '.status-dot'],
+      selecteurs: ['#bh-mobile-svc'],
       valeur: function (el) {
         /* Les pastilles disent vert ou rouge. On le dit en mots. */
-        var dots = el.querySelectorAll ? el.querySelectorAll('span,i,div') : [];
+        var dots = el.querySelectorAll ? el.querySelectorAll('span,i,div,em,b') : [];
         var rouge = 0, total = 0;
         for (var i = 0; i < dots.length; i++) {
           var c = getComputedStyle(dots[i]).backgroundColor || '';
@@ -47,10 +47,11 @@
     {
       cle: 'notifications',
       titre: 'Notifications',
-      selecteurs: ['#notifBtn', '#notificationsBtn', '.notif-btn', '[data-notifications]', '#bellBtn', '.notification-bell'],
+      selecteurs: ['#bh-mobile-notif-btn'],
       valeur: function (el) {
         var badge = el.querySelector ? el.querySelector('.badge, .notif-count, sup, [data-count]') : null;
-        var n = badge ? parseInt((badge.textContent || '').replace(/\D/g, ''), 10) : 0;
+        var brut = badge ? badge.textContent : el.textContent;
+        var n = parseInt((brut || '').replace(/\D/g, ''), 10) || 0;
         if (n > 0) return { texte: n + ' non lue' + (n > 1 ? 's' : ''), ton: 'alerte' };
         return { texte: 'A jour', ton: 'neutre' };
       }
@@ -58,19 +59,19 @@
     {
       cle: 'agence',
       titre: 'Mode agence',
-      selecteurs: ['#agencyBtn', '#agenceBtn', '[data-agency]', '.agency-btn', '#switchAgency'],
+      selecteurs: ['#agencySwitcherBtnMobile'],
       valeur: function () { return { texte: '', ton: 'neutre' }; }
     },
     {
       cle: 'info',
       titre: 'Aide et informations',
-      selecteurs: ['#infoBtn', '#helpBtn', '[data-info]', '.info-btn', '#aideBtn'],
+      selecteurs: ['#bh-mobile-ann-btn'],
       valeur: function () { return { texte: '', ton: 'neutre' }; }
     }
   ];
 
   /* ── « Actualiser » : retire, pas deplace ────────────────────── */
-  var ACTUALISER = ['#refreshBtn', '#reloadBtn', '[data-refresh]', '.refresh-btn', '#actualiserBtn', '[onclick*="location.reload"]'];
+  var ACTUALISER = ['#syncBtnMobile'];
 
   function chercher(selecteurs) {
     for (var i = 0; i < selecteurs.length; i++) {
