@@ -31581,6 +31581,66 @@ app.get('/api/aujourdhui/etats', authenticateAny, async (req, res) => {
       }
     }
 
+    // Le menage. Table confirmee : cleaning_checklists.
+    // Pour une arrivee du jour, le menage qui compte est celui du DEPART
+    // qui la precede : meme propriete, checkout_date = aujourd'hui.
+    const menages = {};
+    try {
+      const men = await pool.query(
+        `SELECT property_id, completed_at, is_validated, cleaner_certified
+         FROM cleaning_checklists
+         WHERE user_id = ANY($1::text[]) AND checkout_date = $2::date`,
+        [ids, jour]
+      );
+      men.rows.forEach(r => {
+        const p = menages[r.property_id];
+        // Si plusieurs fiches, la plus avancee gagne : une fiche terminee
+        // ne doit pas etre effacee par un brouillon cree apres.
+        if (!p || (!p.completed_at && r.completed_at)) menages[r.property_id] = r;
+      });
+    } catch (e) {
+      // Table absente : menage_fait restera null, jamais false.
+    }
+
+    // Un menage n'est attendu que si un depart a lieu ce jour-la sur ce
+    // logement. Sans cela « menage_fait: false » serait une fausse alerte
+    // sur un logement qui etait vide la veille.
+    const departsDuJour = new Set();
+    try {
+      const dep = await pool.query(
+        `SELECT DISTINCT property_id FROM conversations
+         WHERE user_id = ANY($1::text[]) AND status <> 'cancelled'
+           AND DATE(reservation_end_date AT TIME ZONE 'Europe/Paris') = $2`,
+        [ids, jour]
+      );
+      dep.rows.forEach(r => departsDuJour.add(r.property_id));
+    } catch (e) {
+      // On laissera menage_attendu a null.
+    }
+
+    // La condition du modele d'arrivee : c'est elle qui retient les
+    // messages, comme « police_complete » l'a fait pour Roxana.
+    const conditions = {};
+    try {
+      const tpl = await pool.query(
+        `SELECT id, title, send_condition, property_id, property_ids
+         FROM message_templates
+         WHERE user_id = ANY($1::text[]) AND trigger_type = 'on_arrival' AND active = TRUE`,
+        [ids]
+      );
+      tpl.rows.forEach(t => {
+        let liste = [];
+        if (Array.isArray(t.property_ids)) liste = t.property_ids;
+        else if (t.property_ids) { try { liste = JSON.parse(t.property_ids); } catch (e) { liste = []; } }
+        if (!liste.length && t.property_id) liste = [t.property_id];
+        liste.forEach(pid => {
+          if (!conditions[pid]) conditions[pid] = { titre: t.title, condition: t.send_condition || 'always' };
+        });
+      });
+    } catch (e) {
+      // Pas de condition renvoyee, plutot qu'une condition inventee.
+    }
+
     // Les tables candidates pour le menage, pour l'ajouter sans deviner.
     let diagnostic = null;
     if (req.query.diagnostic === '1') {
@@ -31607,7 +31667,11 @@ app.get('/api/aujourdhui/etats', authenticateAny, async (req, res) => {
       const caution = r.channex_booking_id ? (cautions['CHX_' + r.channex_booking_id] || null) : null;
       const plateforme = String(r.platform || '').toLowerCase();
       const estAirbnb = plateforme.includes('airbnb') || plateforme === 'abb';
-      const cautionExigee = Number(r.deposit_amount || 0) > 0 && !estAirbnb;
+      // shouldSkipForDepositCondition exempte Airbnb ET BHGuest de la
+      // verification caution. Reproduire la moitie de la regle faisait
+      // accuser la caution de bloquer M10, M11 et M13 a tort.
+      const estBhGuest = plateforme.includes('boostinghost') || plateforme.includes('bhguest');
+      const cautionExigee = Number(r.deposit_amount || 0) > 0 && !estAirbnb && !estBhGuest;
       const cautionOk = caution && ['authorized', 'captured', 'paid', 'succeeded'].includes(String(caution.status || '').toLowerCase());
 
       return {
@@ -31623,7 +31687,14 @@ app.get('/api/aujourdhui/etats', authenticateAny, async (req, res) => {
         caution_exigee: cautionExigee,
         // Ce qui bloque reellement l'envoi automatique des infos.
         caution_bloquante: cautionExigee && !cautionOk,
-        menage_fait: null
+        plateforme_exemptee_de_caution: estAirbnb || estBhGuest,
+        menage_attendu: departsDuJour.size ? departsDuJour.has(r.property_id) : null,
+        menage_fait: menages[r.property_id] ? !!menages[r.property_id].completed_at : null,
+        menage_valide: menages[r.property_id] ? !!menages[r.property_id].is_validated : null,
+        // Quand message_envoye est false, c'est presque toujours ici que
+        // se trouve la reponse.
+        modele_arrivee: conditions[r.property_id] ? conditions[r.property_id].titre : null,
+        condition_envoi: conditions[r.property_id] ? conditions[r.property_id].condition : null
       };
     });
 
@@ -31631,7 +31702,6 @@ app.get('/api/aujourdhui/etats', authenticateAny, async (req, res) => {
       date: jour,
       comptes: ids.length,
       arrivees: sortie,
-      menage_fait_indisponible: 'table de menage non confirmee — appelez ?diagnostic=1',
       diagnostic
     });
   } catch (e) {
