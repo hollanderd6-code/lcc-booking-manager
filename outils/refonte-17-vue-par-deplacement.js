@@ -1,4 +1,74 @@
+#!/usr/bin/env node
 /* ============================================================
+   outils/refonte-17-vue-par-deplacement.js
+   Lot 17 : deplacer un bloc plutot que d'en masquer trente
+   ============================================================
+
+   ── POURQUOI CHANGER DE METHODE ──────────────────────────────────
+   Masquer les voisins un par un est fragile par construction. La page
+   se construit par vagues : chaque vague ajoute des blocs, et il faut
+   repasser. J'ai repasse, et la vague suivante a produit une page
+   blanche. On peut courir longtemps derriere.
+
+   Le lot 16 est un mauvais lot. Je le remplace au lieu de le rustiner.
+
+   ── LA METHODE ───────────────────────────────────────────────────
+   Un seul deplacement, un seul masquage :
+
+       1. <section id="calendarSection"> est DEPLACEE dans un conteneur
+          neuf, attache directement au corps de page.
+       2. La barre d'onglets est deplacee de meme, pour survivre.
+       3. Tout le reste du corps est masque en bloc.
+
+   Ce qui arrive ensuite — la liste du jour, les cartes, les modales —
+   nait a l'interieur de ce qui est deja masque. Il n'y a plus de
+   retardataire possible. Le probleme n'est pas mieux traite : il ne se
+   pose plus.
+
+   Le conteneur herite de la CLASSE du parent d'origine, pour que la
+   section garde la mise en page que son CSS attend.
+
+   ── DEPLACEE, PAS COPIEE ─────────────────────────────────────────
+   insertBefore et appendChild deplacent le noeud. Aucun clone, donc
+   aucun ecouteur perdu, et le moteur du calendrier continue de dessiner
+   dans le meme element sans savoir qu'il a change de parent.
+
+   ── LE FILET, PLUS COURT ─────────────────────────────────────────
+   Douze secondes. Si le calendrier n'est pas rempli, la page est
+   rendue intacte et la console le dit. Rien n'est jamais masque avant
+   que le calendrier ne soit la.
+
+   ── ANNULATION ───────────────────────────────────────────────────
+   bhAnnulerVueCalendrier() remet la section a sa place exacte, la barre
+   a la sienne, et rend les blocs masques.
+
+   Usage :
+     node outils/refonte-17-vue-par-deplacement.js --essai
+     node outils/refonte-17-vue-par-deplacement.js
+   ============================================================ */
+
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+const PUBLIC = path.join(process.cwd(), 'public');
+const MODULE = path.join(PUBLIC, 'js', 'bh-vue-calendrier.js');
+const APP = path.join(PUBLIC, 'app.html');
+const ESSAI = process.argv.includes('--essai') || process.argv.includes('--dry');
+
+function echec(msg) {
+  console.error('\n  \u2717 ' + msg);
+  console.error("    Rien n'a ete ecrit.\n");
+  process.exit(1);
+}
+
+if (!fs.existsSync(APP)) echec('public/app.html introuvable. Lancez depuis la racine du projet.');
+if (fs.readFileSync(APP, 'utf8').indexOf('bh-vue-calendrier.js') === -1) {
+  echec('La balise du module est absente de app.html. Lancez d\'abord le lot 12.');
+}
+
+const SOURCE = `/* ============================================================
    bh-vue-calendrier.js — /calendrier.html, par deplacement
    ============================================================
    Le calendrier ne peut pas quitter app.html : 224 Ko de moteur l'y
@@ -213,3 +283,42 @@
   [900, 1500, 2200, 3000, 4000, 5500, 7000, 9000, 11000].forEach(function (t) { setTimeout(tour, t); });
   setTimeout(filet, 12000);
 })();
+`;
+
+try { new Function(SOURCE); } catch (e) { echec('Le module ne serait pas valide — ' + e.message); }
+[
+  ['le deplacement', "racine.appendChild(section)"],
+  ['la barre sauvee', "etat.barre = {"],
+  ['le masquage en bloc', 'enfants.forEach'],
+  ['le filet', 'function filet('],
+  ['l\'annulation', 'bhAnnulerVueCalendrier'],
+  ['le bon conteneur', "getElementById('bhMonthOuter')"],
+].forEach(function (c) {
+  if (SOURCE.indexOf(c[1]) === -1) echec('Verification : ' + c[0] + ' est absent du module.');
+});
+
+if (!ESSAI) {
+  fs.writeFileSync(MODULE, SOURCE, 'utf8');
+  const relu = fs.readFileSync(MODULE, 'utf8');
+  if (relu.indexOf('bhVueRacine') === -1) echec("Le module n'est pas complet apres ecriture.");
+  try { new Function(relu); } catch (e) { echec('Module invalide apres ecriture — ' + e.message); }
+}
+
+console.log('\n' + (ESSAI ? '— ESSAI, aucune ecriture —' : '— APPLIQUE ET VERIFIE —'));
+console.log('  public/js/bh-vue-calendrier.js  reecrit (' + Math.round(SOURCE.length / 1024) + ' Ko)');
+console.log('  app.html                        inchange');
+console.log('\n  Nouvelle methode : la section calendrier est DEPLACEE dans un');
+console.log('  conteneur neuf attache au corps, la barre d\'onglets aussi, et');
+console.log('  tout le reste est masque en un seul geste.');
+console.log('\n  Ce qui arrive apres — liste du jour, cartes, modales — nait a');
+console.log('  l\'interieur de ce qui est deja masque. Plus de retardataires,');
+console.log('  donc plus de repassage, donc plus de page blanche a la vague');
+console.log('  suivante. Le lot 16 courait derriere le probleme ; celui-ci le');
+console.log('  supprime.');
+console.log('\n  Filet ramene a 12 s : si le calendrier n\'est pas rempli, RIEN');
+console.log('  n\'est masque et la page reste entiere.');
+console.log('\n  A verifier, cache vide, sur /calendrier.html :');
+console.log('    bhVerifVueCalendrier()');
+console.log('  J\'attends pose: true, section_dans_la_vue: true, et la barre');
+console.log('  d\'onglets toujours en bas.\n');
+if (ESSAI) console.log('  Relancez sans --essai pour appliquer.\n');
