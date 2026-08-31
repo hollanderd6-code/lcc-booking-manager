@@ -33,8 +33,10 @@
   }
 
   /* Les noms de champs possibles, du plus probable au moins. */
-  var DEBUTS = ['start_date', 'reservation_start_date', 'checkin', 'check_in', 'arrival_date', 'arrival', 'date_debut', 'from'];
-  var FINS   = ['end_date', 'reservation_end_date', 'checkout', 'check_out', 'departure_date', 'departure', 'date_fin', 'to'];
+  /* Votre API repond en camelCase : startDate / endDate, avec start / end
+     en doublon. Le snake_case reste en repli pour les autres routes. */
+  var DEBUTS = ['startDate', 'start', 'start_date', 'reservation_start_date', 'checkin', 'check_in', 'arrival_date', 'date_debut'];
+  var FINS   = ['endDate', 'end', 'end_date', 'reservation_end_date', 'checkout', 'check_out', 'departure_date', 'date_fin'];
 
   function trouverChamp(ligne, noms) {
     for (var i = 0; i < noms.length; i++) {
@@ -64,7 +66,7 @@
     if (!lignes) { diag.forme = 'inconnue'; return null; }
 
     diag.lignes = lignes.length;
-    if (!lignes.length) return { compte: {}, departs: {} };
+    if (!lignes.length) return { compte: {}, departs: {}, bloques: {}, noms: {} };
 
     var cDebut = null, cFin = null;
     for (var i = 0; i < lignes.length && !cDebut; i++) {
@@ -74,20 +76,37 @@
     diag.champs = { debut: cDebut, fin: cFin, exemple: Object.keys(lignes[0] || {}).slice(0, 14) };
     if (!cDebut || !cFin) return null;
 
-    var compte = {}, departs = {};
+    var compte = {}, departs = {}, bloques = {}, noms = {};
     lignes.forEach(function (r) {
       var st = String(r.status || r.state || '').toLowerCase();
       if (st.indexOf('cancel') !== -1 || st.indexOf('annul') !== -1) return;
+
       var d1 = versDate(r[cDebut]), d2 = versDate(r[cFin]);
       if (!d1 || !d2) return;
+
+      /* Un blocage manuel occupe la nuit mais ne la vend pas. Le compter
+         comme une reservation gonflerait l'occupation affichee. */
+      var manuel = r.isManual === true || String(r.type || '').toLowerCase().indexOf('block') !== -1
+        || String(r.source || '').toLowerCase().indexOf('manual') !== -1;
+
       for (var d = new Date(d1); d < d2; d.setDate(d.getDate() + 1)) {
         var k = ymd(d);
-        compte[k] = (compte[k] || 0) + 1;
+        if (manuel) bloques[k] = (bloques[k] || 0) + 1;
+        else compte[k] = (compte[k] || 0) + 1;
       }
-      var kf = ymd(d2);
-      departs[kf] = (departs[kf] || 0) + 1;
+
+      /* Un blocage qui se termine n'appelle pas de menage. */
+      if (!manuel) {
+        var kf = ymd(d2);
+        departs[kf] = (departs[kf] || 0) + 1;
+        var nom = r.propertyName || r.property_name || '';
+        if (nom) {
+          if (!noms[kf]) noms[kf] = [];
+          if (noms[kf].indexOf(nom) === -1) noms[kf].push(nom);
+        }
+      }
     });
-    return { compte: compte, departs: departs };
+    return { compte: compte, departs: departs, bloques: bloques, noms: noms };
   }
 
   /* ── L'endroit ou s'inserer ─────────────────────────────────── */
@@ -142,13 +161,25 @@
       var k = ymd(d);
       var occupe = (donnees.compte[k] || 0) > 0;
       var depart = (donnees.departs[k] || 0) > 0;
-      jours.push({ date: k, occupe: occupe, depart: depart, nuits: donnees.compte[k] || 0 });
+      var bloque = (donnees.bloques[k] || 0) > 0;
+      jours.push({
+        date: k,
+        occupe: occupe,
+        depart: depart,
+        nuits_vendues: donnees.compte[k] || 0,
+        blocages: donnees.bloques[k] || 0,
+        departs: donnees.departs[k] || 0,
+        logements_qui_partent: (donnees.noms[k] || []).join(', ')
+      });
 
       var cell = document.createElement('div');
       var estAuj = i === 0;
       cell.style.cssText = 'text-align:center;padding:7px 0 8px;border-radius:11px'
         + ';background:' + (estAuj ? VERT : (depart && !occupe ? '#FBF6E9' : '#F4F2EC'));
-      cell.title = jours[i].nuits + ' nuit(s) occupee(s)' + (depart ? ', depart' : '');
+      var infos = [(donnees.compte[k] || 0) + ' nuit(s) vendue(s)'];
+      if (bloque) infos.push((donnees.bloques[k] || 0) + ' blocage(s) manuel(s)');
+      if (depart) infos.push('depart : ' + ((donnees.noms[k] || []).join(', ') || (donnees.departs[k] + ' logement(s)')));
+      cell.title = infos.join(' \u00b7 ');
 
       var jn = document.createElement('div');
       jn.textContent = JOURS[d.getDay()];
@@ -173,6 +204,13 @@
         p2.style.cssText = 'width:4px;height:4px;border-radius:50%;background:' + AMBRE;
         pts.appendChild(p2);
       }
+      /* Bloque mais pas vendu : un point creux, pour ne pas confondre
+         « personne ne peut reserver » et « personne n'a reserve ». */
+      if (bloque && !occupe) {
+        var p3 = document.createElement('span');
+        p3.style.cssText = 'width:4px;height:4px;border-radius:50%;border:1px solid #B9B4A8;box-sizing:border-box';
+        pts.appendChild(p3);
+      }
       cell.appendChild(pts);
       grille.appendChild(cell);
     }
@@ -185,7 +223,9 @@
       '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:' + GRIS + '">'
       + '<span style="width:5px;height:5px;border-radius:50%;background:' + VERT_CLAIR + '"></span>occupé</span>'
       + '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:' + GRIS + '">'
-      + '<span style="width:5px;height:5px;border-radius:50%;background:' + AMBRE + '"></span>départ, ménage à prévoir</span>';
+      + '<span style="width:5px;height:5px;border-radius:50%;background:' + AMBRE + '"></span>départ, ménage à prévoir</span>'
+      + '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:' + GRIS + '">'
+      + '<span style="width:5px;height:5px;border-radius:50%;border:1px solid #B9B4A8;box-sizing:border-box"></span>bloqué</span>';
     cadre.appendChild(legende);
 
     place.parent.insertBefore(cadre, place.avant);
