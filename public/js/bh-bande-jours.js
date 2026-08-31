@@ -185,7 +185,7 @@
 
       var cell = document.createElement('div');
       var estAuj = i === 0;
-      cell.style.cssText = 'position:relative;overflow:hidden;text-align:center;padding:7px 0 8px'
+      cell.style.cssText = 'position:relative;overflow:hidden;text-align:center;padding:7px 0 11px'
         + ';border-radius:11px;background:' + (estAuj ? VERT : '#F4F2EC');
       var infos = [(donnees.compte[k] || 0) + ' nuit(s) vendue(s)'];
       if (bloque) infos.push((donnees.bloques[k] || 0) + ' blocage(s) manuel(s)');
@@ -218,19 +218,24 @@
 
       /* La jauge d'occupation, en fond : la lire ne demande pas de
          compter, seulement de comparer des hauteurs. */
+      /* Une barre explicite, sous le chiffre : sa LARGEUR est la part
+         occupee. Le sens de lecture est celui de l'ecriture — plus rien
+         a interpreter, contrairement a un fond teinte. */
       if (parc) {
-        var jauge = document.createElement('div');
-        jauge.style.cssText = 'position:absolute;left:0;right:0;bottom:0;height:' + Math.round(part * 100) + '%'
-          + ';background:' + (estAuj ? 'rgba(143,211,180,.20)' : 'rgba(46,139,98,.13)')
-          + ';pointer-events:none';
-        cell.insertBefore(jauge, cell.firstChild);
+        var rail = document.createElement('div');
+        rail.style.cssText = 'margin:5px auto 0;width:24px;height:3px;border-radius:2px'
+          + ';background:' + (estAuj ? 'rgba(255,255,255,.22)' : '#E4E1D8') + ';overflow:hidden';
+        var barreOccup = document.createElement('div');
+        barreOccup.style.cssText = 'height:100%;width:' + Math.round(part * 100) + '%'
+          + ';border-radius:2px;background:' + (estAuj ? '#8FD3B4' : VERT_CLAIR);
+        rail.appendChild(barreOccup);
+        cell.appendChild(rail);
       }
 
       /* Le depart reste signale : c'est du travail a prevoir, pas du CA. */
       if (depart) {
         var trait = document.createElement('div');
-        trait.style.cssText = 'position:absolute;top:0;left:50%;transform:translateX(-50%)'
-          + ';width:16px;height:3px;border-radius:0 0 3px 3px;background:' + AMBRE;
+        trait.style.cssText = 'position:absolute;left:0;right:0;bottom:0;height:3px;background:' + AMBRE;
         cell.appendChild(trait);
       }
 
@@ -268,6 +273,8 @@
       + '</span>'
       + '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:' + GRIS + '">'
       + '<span style="width:11px;height:3px;border-radius:2px;background:' + AMBRE + '"></span>départ ce jour-là</span>'
+      + (parcConnu ? '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:' + GRIS + '">'
+          + '<span style="width:11px;height:3px;border-radius:2px;background:' + VERT_CLAIR + '"></span>part occupée</span>' : '')
       + '';
     cadre.appendChild(legende);
 
