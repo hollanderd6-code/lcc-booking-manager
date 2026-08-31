@@ -90,54 +90,116 @@
     return true;
   }
 
-  /* La loupe et le rond sont DEPLACES, pas copies : leurs ecouteurs
-     restent attaches, donc la recherche et « Mon compte » fonctionnent
-     sans qu'une ligne de leur logique soit reecrite. */
+  /* ── Une loupe, la notre, creee une fois ──────────────────────
+     Le composant de recherche recree son bouton a intervalles : le
+     deplacer produisait une loupe de plus a chaque passage. On cree
+     donc la notre, et au clic on declenche l'original — celui qui
+     existe a cet instant. La logique de recherche est appelee, jamais
+     dupliquee. */
+  var SVG_LOUPE = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"'
+    + ' stroke="#3D4A44" stroke-width="1.9" stroke-linecap="round">'
+    + '<circle cx="10.6" cy="10.6" r="6.4"/><path d="M15.4 15.4 20.5 20.5"/></svg>';
+
+  function loupeOriginale() {
+    var tous = document.querySelectorAll('.bhgs-trigger-mobile, .bhgs-trigger, [class*="bhgs-trigger"]');
+    for (var i = 0; i < tous.length; i++) {
+      if (tous[i].id === 'bhLoupeEntete') continue;
+      return tous[i];
+    }
+    return null;
+  }
+
+  function poserLoupe(droite) {
+    if (document.getElementById('bhLoupeEntete')) return true;
+    var b = document.createElement('button');
+    b.id = 'bhLoupeEntete';
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Rechercher');
+    b.style.cssText = 'flex:none;width:40px;height:40px;padding:0;border:1px solid #E4E1D8'
+      + ';border-radius:50%;background:#fff;display:inline-flex;align-items:center'
+      + ';justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent';
+    b.innerHTML = SVG_LOUPE;
+    b.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      var orig = loupeOriginale();
+      if (!orig) { console.warn('[entete] aucun bouton de recherche a declencher'); return; }
+      /* Masque : certaines librairies refusent d'agir sur un element
+         invisible. On le montre le temps du clic. */
+      var avant = orig.style.display;
+      orig.style.removeProperty('display');
+      try { orig.click(); } catch (e) {}
+      setTimeout(function () {
+        if (orig.dataset.bhLoupeMasquee) orig.style.setProperty('display', 'none', 'important');
+        else orig.style.display = avant;
+      }, 60);
+    });
+    droite.insertBefore(b, droite.firstChild);
+    diag.loupe = true;
+    return true;
+  }
+
+  /* Le menage : toute loupe surnumeraire arrivee dans l'en-tete par mes
+     passages precedents, et celles du header, sont masquees. */
+  function rangerLoupes(droite) {
+    var n = 0;
+    var tous = document.querySelectorAll('.bhgs-trigger-mobile, .bhgs-trigger, [class*="bhgs-trigger"]');
+    for (var i = 0; i < tous.length; i++) {
+      var e = tous[i];
+      if (e.id === 'bhLoupeEntete') continue;
+      /* Une intruse deja dans l'en-tete : elle vient de mes anciens
+         deplacements, on la retire du flux. */
+      if (droite && droite.contains(e)) { e.remove(); n++; continue; }
+      if (!e.dataset.bhLoupeMasquee) {
+        e.dataset.bhLoupeMasquee = '1';
+        e.style.setProperty('display', 'none', 'important');
+        n++;
+      }
+    }
+    diag.loupes_rangees = (diag.loupes_rangees || 0) + n;
+    return n;
+  }
+
   function deplacerCommandes() {
     var droite = document.getElementById('bhEnteteCommandes');
     if (!droite) return false;
 
-    var loupe = document.querySelector('.bhgs-trigger-mobile');
-    var rond = document.getElementById('bhAvatarHeader');
-    if (!loupe && !rond) { diag.raison = 'ni loupe ni rond trouves'; return false; }
+    poserLoupe(droite);
+    rangerLoupes(droite);
 
-    if (loupe && loupe.parentElement !== droite) {
-      loupe.style.setProperty('margin', '0', 'important');
-      loupe.style.setProperty('flex', 'none', 'important');
-      droite.appendChild(loupe);
-      diag.loupe = true;
-    }
+    /* Le rond porte un id unique : un seul deplacement possible. */
+    var rond = document.getElementById('bhAvatarHeader');
     if (rond && rond.parentElement !== droite) {
       rond.style.setProperty('margin', '0', 'important');
       droite.appendChild(rond);
       diag.rond = true;
     }
 
-    /* La barre beige n'est masquee que si les deux commandes ont bien
-       trouve leur nouvelle place. Deux etages valent mieux qu'une
-       application sans recherche ni acces au compte. */
-    if (loupe && rond && loupe.parentElement === droite && rond.parentElement === droite) {
-      var barre = loupe.closest('header, .mobile-header, [class*="header"]');
-      if (barre && !barre.dataset.bhMasquee) {
-        /* On ne masque pas un conteneur qui porte encore autre chose de
-           visible et cliquable — un bouton que je n'aurais pas vu. */
-        var restants = barre.querySelectorAll('button:not([data-bh-masque]), a[href]:not(.mobile-logo)');
-        var vivants = 0;
-        for (var i = 0; i < restants.length; i++) {
-          var e = restants[i];
-          if (e === loupe || e === rond) continue;
-          if (droite.contains(e)) continue;
-          if (getComputedStyle(e).display === 'none') continue;
-          vivants++;
-        }
-        if (vivants === 0) {
+    /* Le header part si l'en-tete porte sa loupe ET le rond. La
+       condition ne depend plus de ce que le header contient — sinon un
+       bouton recree par son proprietaire le bloquerait indefiniment. */
+    var maLoupe = document.getElementById('bhLoupeEntete');
+    var monRond = document.getElementById('bhAvatarHeader');
+    var pret = !!(maLoupe && maLoupe.parentElement === droite)
+            && !!(monRond && monRond.parentElement === droite);
+
+    if (pret) {
+      var repere = document.querySelector('.mobile-logo') || loupeOriginale();
+      var barre = repere ? repere.closest('header, .mobile-header, [class*="header"]') : null;
+      if (barre && barre !== document.body && !barre.contains(droite)) {
+        if (!barre.dataset.bhMasquee) {
           barre.style.setProperty('display', 'none', 'important');
           barre.dataset.bhMasquee = '1';
           diag.barre_masquee = true;
-        } else {
-          diag.raison = vivants + ' bouton(s) encore vivant(s) dans la barre — non masquee';
+        } else if (getComputedStyle(barre).display !== 'none') {
+          /* Son proprietaire l'a rouverte : on remasque, sans bruit. */
+          barre.style.setProperty('display', 'none', 'important');
         }
+      } else if (!barre) {
+        diag.raison = 'conteneur du header introuvable';
       }
+    } else {
+      diag.raison = 'en-tete incomplet (loupe ou rond absent)';
     }
     return true;
   }
@@ -153,6 +215,10 @@
       loupe_deplacee: !!diag.loupe,
       rond_deplace: !!diag.rond,
       barre_beige_masquee: !!diag.barre_masquee,
+      loupes_visibles: Array.prototype.slice.call(
+        document.querySelectorAll('#bhLoupeEntete, .bhgs-trigger-mobile, [class*="bhgs-trigger"]')
+      ).filter(function (e) { return getComputedStyle(e).display !== 'none'; }).length,
+      loupes_rangees: diag.loupes_rangees || 0,
       bande_visible_sans_defiler: bande ? bande.getBoundingClientRect().top < window.innerHeight : false,
       raison: diag.raison
     };
