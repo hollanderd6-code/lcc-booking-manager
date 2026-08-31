@@ -21,7 +21,7 @@
      capsule glissante .lg-capsule, qui se place selon leur position. */
   var VISEE = [
     { cle: 'accueil',    libelle: "Aujourd'hui", page: 'app.html',          mots: ['accueil', 'dashboard', "aujourd"] },
-    { cle: 'calendrier', libelle: 'Calendrier',  page: 'reservations.html', dest: 'calendrier.html', mots: ['réservation', 'reservation', 'calendrier'] },
+    { cle: 'calendrier', libelle: 'Calendrier',  page: 'calendrier.html', dest: 'calendrier.html', mots: ['réservation', 'reservation', 'calendrier'] },
     { cle: 'messages',   libelle: 'Messages',    page: 'messages.html',     mots: ['message'] },
     { cle: 'logements',  libelle: 'Logements',   page: 'settings.html',     mots: ['ménage', 'menage', 'logement', 'cleaning'] },
     { cle: 'argent',     libelle: 'Argent',      page: 'deposits.html',     mots: ['plus', 'caution', 'argent'] }

@@ -12,6 +12,12 @@
   'use strict';
 
   if (window.__bhListeUnifiee) return;
+  /* En vue calendrier, ce module n'a rien a construire — et ce qu'il
+     construirait reapparaitrait par-dessus le calendrier, apres le
+     masquage. Un module qui ne se lance pas ne peut pas defaire le
+     travail d'un autre. */
+  if ((location.search || '').indexOf('vue=calendrier') !== -1) return;
+  if ((location.pathname || '').split('/').pop().toLowerCase() === 'calendrier.html') return;
   window.__bhListeUnifiee = true;
 
   var ENCRE = '#0D1117';
