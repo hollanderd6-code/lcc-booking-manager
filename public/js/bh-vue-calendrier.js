@@ -26,7 +26,7 @@
 
   var mem = [];
   var diag = {
-    section: false, masques: 0, voisins: [], moteur_lance_par: null,
+    section: false, masques: 0, voisins: [], moteur_lance_par: null, conteneur: null,
     tentatives: [], retracte: false, raison: ''
   };
 
@@ -35,8 +35,25 @@
     el.style.setProperty(prop, valeur, 'important');
   }
 
-  function grille() { return document.getElementById('calendarGrid'); }
-  function remplie() { var g = grille(); return !!(g && g.childElementCount > 0); }
+  /* #calendarGrid est un vestige : il est vide sur app.html aussi,
+     alors que le calendrier s'y affiche. Le rendu reel va dans
+     #bhMonthOuter. On accepte les trois reponses possibles plutot que
+     de parier sur un seul conteneur. */
+  function conteneurRempli() {
+    var mo = document.getElementById('bhMonthOuter');
+    if (mo && mo.childElementCount > 0) return 'bhMonthOuter';
+    var g = document.getElementById('calendarGrid');
+    if (g && g.childElementCount > 0) return 'calendarGrid';
+    var s = document.getElementById('calendarSection');
+    if (s && s.querySelectorAll('.calendar-cell, .calendar-row, .day-header').length > 10) return 'cellules';
+    return null;
+  }
+  function grille() { return document.getElementById('bhMonthOuter') || document.getElementById('calendarGrid'); }
+  function remplie() {
+    var q = conteneurRempli();
+    if (q) diag.conteneur = q;
+    return !!q;
+  }
 
   /* ── Le moteur ──────────────────────────────────────────────
      Les noms viennent des globales de la page, pas d'une supposition.
@@ -158,7 +175,10 @@
       adresse: location.pathname,
       section_trouvee: !!s,
       section_visible: !!(s && getComputedStyle(s).display !== 'none'),
+      conteneur_rempli: diag.conteneur || null,
       grille_remplie: g ? g.childElementCount : 0,
+      bhMonthOuter: (document.getElementById('bhMonthOuter') || {}).childElementCount || 0,
+      calendarGrid: (document.getElementById('calendarGrid') || {}).childElementCount || 0,
       moteur_lance_par: diag.moteur_lance_par,
       tentatives: diag.tentatives,
       voisins_masques: diag.masques,
@@ -169,7 +189,10 @@
     };
     console.log('── Vue calendrier ──');
     console.log(res);
-    if (!res.grille_remplie) console.warn('Grille vide : ' + (diag.raison || 'moteur non demarre'));
+    if (!res.conteneur_rempli) {
+      console.warn('Aucun conteneur rempli : ' + (diag.raison || 'moteur non demarre'));
+      console.warn('bhMonthOuter ' + res.bhMonthOuter + ' · calendarGrid ' + res.calendarGrid);
+    }
     console.log('Pour revenir a la page complete : bhAnnulerVueCalendrier()');
     return res;
   };
