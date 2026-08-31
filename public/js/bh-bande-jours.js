@@ -66,7 +66,7 @@
     if (!lignes) { diag.forme = 'inconnue'; return null; }
 
     diag.lignes = lignes.length;
-    if (!lignes.length) return { compte: {}, departs: {}, bloques: {}, noms: {} };
+    if (!lignes.length) return { compte: {}, departs: {}, bloques: {}, noms: {}, logements_vus: 0 };
 
     var cDebut = null, cFin = null;
     for (var i = 0; i < lignes.length && !cDebut; i++) {
@@ -76,8 +76,10 @@
     diag.champs = { debut: cDebut, fin: cFin, exemple: Object.keys(lignes[0] || {}).slice(0, 14) };
     if (!cDebut || !cFin) return null;
 
-    var compte = {}, departs = {}, bloques = {}, noms = {};
+    var compte = {}, departs = {}, bloques = {}, noms = {}, vusParc = {};
     lignes.forEach(function (r) {
+      var pid = r.propertyId || r.property_id;
+      if (pid) vusParc[pid] = true;
       var st = String(r.status || r.state || '').toLowerCase();
       if (st.indexOf('cancel') !== -1 || st.indexOf('annul') !== -1) return;
 
@@ -106,7 +108,8 @@
         }
       }
     });
-    return { compte: compte, departs: departs, bloques: bloques, noms: noms };
+    return { compte: compte, departs: departs, bloques: bloques, noms: noms,
+             logements_vus: Object.keys(vusParc).length };
   }
 
   /* ── L'endroit ou s'inserer ─────────────────────────────────── */
@@ -172,10 +175,18 @@
         logements_qui_partent: (donnees.noms[k] || []).join(', ')
       });
 
+      /* Un logement bloque n'est pas a vendre : il compte comme occupe. */
+      var pris = (donnees.compte[k] || 0) + (donnees.bloques[k] || 0);
+      var parc = donnees.parcTotal || 0;
+      var libres = parc ? Math.max(0, parc - pris) : null;
+      var part = parc ? Math.min(1, pris / parc) : 0;
+      jours[jours.length - 1].libres = libres;
+      jours[jours.length - 1].occupation = parc ? Math.round(part * 100) + ' %' : null;
+
       var cell = document.createElement('div');
       var estAuj = i === 0;
-      cell.style.cssText = 'text-align:center;padding:7px 0 8px;border-radius:11px'
-        + ';background:' + (estAuj ? VERT : (depart && !occupe ? '#FBF6E9' : '#F4F2EC'));
+      cell.style.cssText = 'position:relative;overflow:hidden;text-align:center;padding:7px 0 8px'
+        + ';border-radius:11px;background:' + (estAuj ? VERT : '#F4F2EC');
       var infos = [(donnees.compte[k] || 0) + ' nuit(s) vendue(s)'];
       if (bloque) infos.push((donnees.bloques[k] || 0) + ' blocage(s) manuel(s)');
       if (depart) infos.push('depart : ' + ((donnees.noms[k] || []).join(', ') || (donnees.departs[k] + ' logement(s)')));
@@ -192,8 +203,39 @@
         + ';margin-top:3px;color:' + (estAuj ? '#fff' : (depart && !occupe ? '#8A5B14' : '#0D1117'));
       cell.appendChild(num);
 
+      /* Le chiffre qui varie : les logements libres cette nuit-la.
+         Sans total de parc, on retombe sur les nuits vendues, et la
+         legende le dit. */
+      var chiffre = document.createElement('div');
+      var valeur = libres === null ? (donnees.compte[k] || 0) : libres;
+      chiffre.textContent = valeur;
+      var complet = libres !== null && libres === 0;
+      chiffre.style.cssText = 'position:relative;font-size:13px;font-weight:700;margin-top:4px'
+        + ';letter-spacing:-.01em;color:'
+        + (estAuj ? (complet ? '#8FD3B4' : '#DCE8E1')
+                  : (complet ? VERT : (valeur > 0 ? '#8A5B14' : '#0D1117')));
+      cell.appendChild(chiffre);
+
+      /* La jauge d'occupation, en fond : la lire ne demande pas de
+         compter, seulement de comparer des hauteurs. */
+      if (parc) {
+        var jauge = document.createElement('div');
+        jauge.style.cssText = 'position:absolute;left:0;right:0;bottom:0;height:' + Math.round(part * 100) + '%'
+          + ';background:' + (estAuj ? 'rgba(143,211,180,.20)' : 'rgba(46,139,98,.13)')
+          + ';pointer-events:none';
+        cell.insertBefore(jauge, cell.firstChild);
+      }
+
+      /* Le depart reste signale : c'est du travail a prevoir, pas du CA. */
+      if (depart) {
+        var trait = document.createElement('div');
+        trait.style.cssText = 'position:absolute;top:0;left:50%;transform:translateX(-50%)'
+          + ';width:16px;height:3px;border-radius:0 0 3px 3px;background:' + AMBRE;
+        cell.appendChild(trait);
+      }
+
       var pts = document.createElement('div');
-      pts.style.cssText = 'display:flex;gap:2px;justify-content:center;margin-top:5px;height:4px';
+      pts.style.cssText = 'display:none';
       if (occupe) {
         var p1 = document.createElement('span');
         p1.style.cssText = 'width:4px;height:4px;border-radius:50%;background:' + (estAuj ? '#8FD3B4' : VERT_CLAIR);
@@ -219,17 +261,40 @@
 
     var legende = document.createElement('div');
     legende.style.cssText = 'display:flex;gap:14px;margin-top:11px;padding-top:10px;border-top:1px solid #EFEDE6;flex-wrap:wrap';
+    var parcConnu = donnees.parcTotal || 0;
     legende.innerHTML =
-      '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:' + GRIS + '">'
-      + '<span style="width:5px;height:5px;border-radius:50%;background:' + VERT_CLAIR + '"></span>occupé</span>'
+      '<span style="font-size:11px;color:' + GRIS + '">'
+      + (parcConnu ? 'le chiffre : logements libres sur ' + parcConnu : 'le chiffre : nuits vendues (parc inconnu)')
+      + '</span>'
       + '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:' + GRIS + '">'
-      + '<span style="width:5px;height:5px;border-radius:50%;background:' + AMBRE + '"></span>départ, ménage à prévoir</span>'
-      + '<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:' + GRIS + '">'
-      + '<span style="width:5px;height:5px;border-radius:50%;border:1px solid #B9B4A8;box-sizing:border-box"></span>bloqué</span>';
+      + '<span style="width:11px;height:3px;border-radius:2px;background:' + AMBRE + '"></span>départ ce jour-là</span>'
+      + '';
     cadre.appendChild(legende);
 
     place.parent.insertBefore(cadre, place.avant);
     return true;
+  }
+
+  /* Le total du parc : sans lui, « combien de vides » n'a pas de sens.
+     Lecture seule sur /api/properties, aucune ecriture. */
+  function lireParc(t) {
+    return fetch('/api/properties', { headers: { Authorization: 'Bearer ' + t } })
+      .then(function (r) { return r.json(); })
+      .then(function (rep) {
+        var l = Array.isArray(rep) ? rep
+          : (rep && (rep.properties || rep.data || rep.rows || rep.results)) || null;
+        if (!Array.isArray(l)) return 0;
+        var n = l.filter(function (p) {
+          if (p.archived === true || p.deleted === true) return false;
+          var st = String(p.status || '').toLowerCase();
+          if (st.indexOf('archiv') !== -1) return false;
+          if (st.indexOf('inactif') !== -1) return false;
+          return true;
+        }).length;
+        diag.parc_source = '/api/properties';
+        return n;
+      })
+      .catch(function () { return 0; });
   }
 
   function charger() {
@@ -247,7 +312,17 @@
           console.warn('[bande] ' + diag.erreur + ' — la bande ne s\'affiche pas. Tapez bhVerifBande().');
           return;
         }
-        construire(d);
+        lireParc(t).then(function (parc) {
+          /* Repli : les logements vus dans les reservations. C'est un
+             plancher, jamais un chiffre invente. */
+          if (!parc) {
+            parc = d.logements_vus || 0;
+            diag.parc_source = parc ? 'logements vus dans les reservations (plancher)' : 'aucun';
+          }
+          d.parcTotal = parc;
+          diag.parc = parc;
+          construire(d);
+        });
       })
       .catch(function (e) {
         diag.erreur = e.message;
@@ -261,6 +336,8 @@
       forme_reponse: diag.forme,
       lignes_recues: diag.lignes,
       champs_dates: diag.champs,
+      parc_total: diag.parc,
+      parc_source: diag.parc_source,
       sept_jours: diag.jours,
       erreur: diag.erreur
     };
