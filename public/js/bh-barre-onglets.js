@@ -21,7 +21,7 @@
      capsule glissante .lg-capsule, qui se place selon leur position. */
   var VISEE = [
     { cle: 'accueil',    libelle: "Aujourd'hui", page: 'app.html',          mots: ['accueil', 'dashboard', "aujourd"] },
-    { cle: 'calendrier', libelle: 'Calendrier',  page: 'reservations.html', mots: ['réservation', 'reservation', 'calendrier'] },
+    { cle: 'calendrier', libelle: 'Calendrier',  page: 'reservations.html', dest: 'app.html?vue=calendrier', mots: ['réservation', 'reservation', 'calendrier'] },
     { cle: 'messages',   libelle: 'Messages',    page: 'messages.html',     mots: ['message'] },
     { cle: 'logements',  libelle: 'Logements',   page: 'settings.html',     mots: ['ménage', 'menage', 'logement', 'cleaning'] },
     { cle: 'argent',     libelle: 'Argent',      page: 'deposits.html',     mots: ['plus', 'caution', 'argent'] }
@@ -182,22 +182,27 @@
 
       /* Ce sont des <button> : un href ne navigue pas. On reecrit le clic,
          en capture, pour passer devant le gestionnaire d'origine. */
-      if (el.tagName === 'A') el.setAttribute('href', '/' + p.vise.page);
+      if (el.tagName === 'A') el.setAttribute('href', '/' + (p.vise.dest || p.vise.page));
       if (!el.__bhClic) {
         el.__bhClic = true;
-        var page = p.vise.page;
+        var dest = p.vise.dest || p.vise.page;
         el.addEventListener('click', function (ev) {
+          var cible = dest.split('?')[0].toLowerCase();
+          var recherche = dest.indexOf('?') !== -1 ? '?' + dest.split('?')[1] : '';
           var ici = location.pathname.split('/').pop().toLowerCase();
-          if (ici === page) return; /* deja sur place : on laisse faire */
+          /* Deja sur place : meme fichier ET meme vue. Sans la seconde
+             condition, Aujourd'hui et Calendrier deviendraient le meme
+             bouton, puisqu'ils partagent app.html. */
+          if (ici === cible && (location.search || '') === recherche) return;
           ev.preventDefault();
           ev.stopImmediatePropagation();
-          location.href = '/' + page;
+          location.href = '/' + dest;
         }, true);
       }
 
       el.setAttribute('data-bh-onglet', p.vise.cle);
       el.setAttribute('aria-label', p.vise.libelle);
-      etat.renommes.push(p.vise.libelle + ' \u2192 ' + p.vise.page);
+      etat.renommes.push(p.vise.libelle + ' \u2192 ' + (p.vise.dest || p.vise.page));
     });
 
     /* Cinq boutons pour cinq destinations : rien n'est masque, donc la
