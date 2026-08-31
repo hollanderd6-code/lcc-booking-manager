@@ -14,142 +14,87 @@
   var mem = [];
   var diag = { deplacees: [], raison: '', restantes: 0 };
 
-  /* Les trois tuiles cherchees, par leur libelle. */
-  var CHERCHEES = [
-    { cle: 'arrivees', mots: ['arrivée', 'arrivee', 'arrivées'] },
-    { cle: 'departs',  mots: ['départ', 'depart', 'check-out', 'checkout'] },
-    { cle: 'menages',  mots: ['ménage', 'menage', 'nettoy'] }
-  ];
-
   function memoriser(el, prop, valeur) {
     mem.push({ type: 'style', el: el, prop: prop, valeur: el.style.getPropertyValue(prop), priorite: el.style.getPropertyPriority(prop) });
     el.style.setProperty(prop, valeur, 'important');
   }
 
-  function carteJournee() {
-    var titres = document.querySelectorAll('h1, h2, h3, h4, .card-title, [class*="title"]');
-    for (var i = 0; i < titres.length; i++) {
-      var t = (titres[i].textContent || '').toLowerCase();
-      if (t.indexOf('votre journ') === -1) continue;
-      var carte = titres[i].closest('.card, [class*="card"], section, .panel') || titres[i].parentElement;
-      var garde = 0;
-      while (carte && carte.parentElement && carte.getBoundingClientRect().height < 120 && garde++ < 6) {
-        carte = carte.parentElement;
-      }
-      return carte;
-    }
-    return null;
-  }
-
-  /* Une tuile : le plus petit bloc qui contient a la fois le libelle et
-     un nombre. On remonte depuis le libelle jusqu'a trouver le nombre. */
-  function tuileDepuisLibelle(el, racine) {
-    var n = el;
-    var garde = 0;
-    while (n && n !== racine && garde++ < 6) {
-      var txt = (n.textContent || '');
-      if (/\d/.test(txt) && n.getBoundingClientRect().height > 40) return n;
-      n = n.parentElement;
-    }
-    return null;
-  }
-
-  function trouverTuiles(carte) {
-    var out = [];
-    var pris = [];
-    var feuilles = carte.querySelectorAll('div, span, p, small, label, h4, h5');
-
-    CHERCHEES.forEach(function (c) {
-      for (var i = 0; i < feuilles.length; i++) {
-        var f = feuilles[i];
-        if (f.children.length) continue;
-        var t = (f.textContent || '').trim().toLowerCase();
-        if (!t || t.length > 24) continue;
-        var ok = false;
-        for (var k = 0; k < c.mots.length; k++) if (t.indexOf(c.mots[k]) !== -1) { ok = true; break; }
-        if (!ok) continue;
-        var tuile = tuileDepuisLibelle(f, carte);
-        if (!tuile) continue;
-        /* Pas deux fois la meme, ni une tuile imbriquee dans une autre. */
-        var conflit = false;
-        for (var j = 0; j < pris.length; j++) {
-          if (pris[j] === tuile || pris[j].contains(tuile) || tuile.contains(pris[j])) { conflit = true; break; }
-        }
-        if (conflit) continue;
-        pris.push(tuile);
-        out.push({ cle: c.cle, el: tuile, libelle: t });
-        break;
-      }
-    });
-    return out;
-  }
-
-  function compacter(tuile) {
-    memoriser(tuile, 'padding', '11px 12px');
-    memoriser(tuile, 'margin', '0');
-    memoriser(tuile, 'min-height', '0');
-    memoriser(tuile, 'height', 'auto');
-
-    var feuilles = tuile.querySelectorAll('div, span, p, small, label, h3, h4, h5');
-    for (var i = 0; i < feuilles.length; i++) {
-      var f = feuilles[i];
-      if (f.children.length) continue;
-      var t = (f.textContent || '').trim();
-      if (!t) continue;
-      if (/^[\d\s.,%€]+$/.test(t)) {
-        memoriser(f, 'font-size', '26px');
-        memoriser(f, 'line-height', '1');
-        memoriser(f, 'margin', '0');
-      } else {
-        memoriser(f, 'font-size', '12px');
-        memoriser(f, 'margin', '5px 0 0');
-        memoriser(f, 'line-height', '1.25');
-      }
-    }
-    /* Les icones decoratives prennent la place du chiffre. */
-    var icones = tuile.querySelectorAll('svg, i, img, [class*="icon"]');
-    for (var j = 0; j < icones.length; j++) {
-      if ((icones[j].textContent || '').trim()) continue;
-      memoriser(icones[j], 'display', 'none');
-    }
-  }
-
+  /* ── Le deplacement ───────────────────────────────────────────
+     Les trois tuiles sont deja reunies dans div.bh2-ops, et rien
+     d'autre ne s'y trouve. Un seul noeud a deplacer : aucune detection,
+     donc aucun pari. */
   function deplacer() {
     if (document.getElementById('bhKpiHaut')) return true;
 
+    var ops = document.querySelector('.bh2-ops');
     var entete = document.getElementById('bhEnteteJour');
     var bande = document.getElementById('bhBandeJours');
-    var carte = carteJournee();
-    if (!entete || !carte) { diag.raison = 'en-tete ou carte introuvable'; return false; }
+    if (!ops) { diag.raison = 'div.bh2-ops introuvable'; return false; }
+    if (!entete) { diag.raison = 'en-tete introuvable'; return false; }
 
-    var tuiles = trouverTuiles(carte);
-    if (tuiles.length < 2) { diag.raison = 'seulement ' + tuiles.length + ' tuile(s) reconnue(s)'; return false; }
+    var tuiles = ops.querySelectorAll('.bh2-op');
+    if (!tuiles.length) { diag.raison = 'aucune .bh2-op dans .bh2-ops'; return false; }
 
-    /* Si la carte n'a que ces tuiles, la vider la laisserait fantome. */
-    var nombresAvant = (carte.textContent.match(/\d+/g) || []).length;
-    var nombresDansTuiles = 0;
-    tuiles.forEach(function (t) { nombresDansTuiles += (t.el.textContent.match(/\d+/g) || []).length; });
-    if (nombresAvant - nombresDansTuiles < 2) {
-      diag.raison = 'la carte « Votre journee » serait vide — deplacement annule';
+    /* « Votre journee » doit rester habitee : ses quatre mesures de fond
+       vivent dans section.bh2-stats, hors de .bh2-ops. */
+    var stats = document.querySelector('.bh2-stats');
+    if (!stats || !stats.querySelectorAll('.bh2-stat').length) {
+      diag.raison = 'section.bh2-stats absente — la carte serait vide, deplacement annule';
       return false;
     }
-    diag.restantes = nombresAvant - nombresDansTuiles;
+    diag.restantes = stats.querySelectorAll('.bh2-stat').length;
 
-    var rangee = document.createElement('div');
-    rangee.id = 'bhKpiHaut';
-    rangee.style.cssText = 'display:grid;grid-template-columns:repeat(' + tuiles.length + ',1fr)'
-      + ';gap:8px;margin:0 0 14px;font-family:inherit';
+    /* On memorise la place exacte avant de bouger. */
+    mem.push({ type: 'place', el: ops, parent: ops.parentElement, avant: ops.nextSibling });
 
-    tuiles.forEach(function (t) {
-      mem.push({ type: 'place', el: t.el, parent: t.el.parentElement, avant: t.el.nextSibling });
-      compacter(t.el);
-      rangee.appendChild(t.el);
-      diag.deplacees.push(t.cle + ' (' + t.libelle + ')');
+    /* Trois colonnes egales. #kpiTodayMovesCard groupe deux tuiles sur
+       trois : display:contents les rend freres dans la grille, sinon
+       deux se serreraient dans une colonne. */
+    memoriser(ops, 'display', 'grid');
+    memoriser(ops, 'grid-template-columns', 'repeat(' + tuiles.length + ', 1fr)');
+    memoriser(ops, 'gap', '8px');
+    memoriser(ops, 'margin', '0 0 14px');
+    memoriser(ops, 'padding', '0');
+
+    var groupe = document.getElementById('kpiTodayMovesCard');
+    if (groupe && groupe.querySelectorAll('.bh2-op').length) {
+      memoriser(groupe, 'display', 'contents');
+    }
+
+    /* Compacite : le libelle et le chiffre suffisent a trois de front. */
+    for (var i = 0; i < tuiles.length; i++) {
+      var t = tuiles[i];
+      memoriser(t, 'padding', '11px 12px');
+      memoriser(t, 'margin', '0');
+      memoriser(t, 'min-height', '0');
+      memoriser(t, 'height', 'auto');
+      diag.deplacees.push((t.querySelector('.bh2-op-lbl') || {}).textContent || '?');
+    }
+    ['.bh2-op-sub', '.bh2-op-ic'].forEach(function (sel) {
+      var els = ops.querySelectorAll(sel);
+      for (var j = 0; j < els.length; j++) memoriser(els[j], 'display', 'none');
     });
+    var nums = ops.querySelectorAll('.bh2-op-num');
+    for (var k = 0; k < nums.length; k++) {
+      memoriser(nums[k], 'font-size', '26px');
+      memoriser(nums[k], 'line-height', '1');
+      memoriser(nums[k], 'margin', '4px 0 0');
+    }
+
+    ops.id = ops.id || '';
+    ops.setAttribute('data-bh-kpi-haut', '1');
+
+    /* Un repere stable pour le diagnostic, sans changer l'id d'origine. */
+    var marque = document.createElement('div');
+    marque.id = 'bhKpiHaut';
+    marque.style.cssText = 'display:none';
+    ops.appendChild(marque);
+    mem.push({ type: 'place', el: marque, parent: null, avant: null });
 
     /* Au-dessus de la bande, sous l'en-tete. */
-    var ancre = bande || carte;
-    ancre.parentElement.insertBefore(rangee, ancre);
+    var ancre = bande || entete.nextSibling;
+    if (bande) bande.parentElement.insertBefore(ops, bande);
+    else entete.parentElement.insertBefore(ops, entete.nextSibling);
     return true;
   }
 
@@ -159,12 +104,13 @@
       if (m.type === 'style') {
         if (m.valeur) m.el.style.setProperty(m.prop, m.valeur, m.priorite);
         else m.el.style.removeProperty(m.prop);
-      } else if (m.type === 'place' && m.parent) {
-        m.parent.insertBefore(m.el, m.avant);
+      } else if (m.type === 'place') {
+        if (m.parent) m.parent.insertBefore(m.el, m.avant);
+        else if (m.el && m.el.parentElement) m.el.remove();
       }
     }
-    var r = document.getElementById('bhKpiHaut');
-    if (r) r.remove();
+    var ops = document.querySelector('[data-bh-kpi-haut]');
+    if (ops) ops.removeAttribute('data-bh-kpi-haut');
     var n = mem.length;
     mem = [];
     console.log(n + ' changement(s) annule(s). Les tuiles sont revenues dans « Votre journee ».');
@@ -172,9 +118,9 @@
   };
 
   window.bhVerifKpi = function () {
-    var rangee = document.getElementById('bhKpiHaut');
+    var rangee = document.querySelector('[data-bh-kpi-haut]');
     var res = {
-      rangee_posee: !!rangee,
+      deplacement_fait: !!document.querySelector('[data-bh-kpi-haut]'),
       tuiles_deplacees: diag.deplacees,
       nombres_restants_dans_la_carte: diag.restantes,
       au_dessus_de_la_bande: !!(rangee && document.getElementById('bhBandeJours')
@@ -184,7 +130,7 @@
     };
     console.log('── KPI en haut ──');
     console.log(res);
-    if (!res.rangee_posee) console.warn('Non deplacees : ' + (diag.raison || 'inconnu'));
+    if (!res.deplacement_fait) console.warn('Non deplacees : ' + (diag.raison || 'inconnu'));
     console.log('Pour revenir en arriere : bhAnnulerKpi()');
     return res;
   };
