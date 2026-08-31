@@ -132,23 +132,59 @@
     return dernier;
   }
 
-  /* La barre de marque : un conteneur portant « BOOSTINGHOST », court,
-     et qui ne contient ni la liste ni le champ de recherche. */
+  /* La barre de marque.
+
+     Ma premiere regle — « le plus petit conteneur portant BOOSTINGHOST »
+     — designait #bhSidebar : le menu lateral porte le mot lui aussi, et
+     il est plus court. Le mot est partout dans la page ; la barre du
+     haut, elle, est une FORME et une POSITION.
+
+     On part donc de « SMART PROPERTY MANAGER », qui n'apparait que sous
+     le logo, et on remonte jusqu'a l'ancetre qui ressemble a une barre :
+     large, basse, tout en haut. Avec des refus explicites. */
+  function estBarreDuHaut(el) {
+    if (!el || el.nodeType !== 1) return false;
+    if (el === document.body || el.tagName === 'HTML') return false;
+    if (el.id === 'bhSidebar') return false;
+    var cls = ' ' + (typeof el.className === 'string' ? el.className.toLowerCase() : '') + ' ';
+    if (/sidebar|drawer|menu-lateral|offcanvas/.test(cls)) return false;
+    if (el.querySelector('#conversationsList, #bhMessagesListe, #msgsSearchInput')) return false;
+    var r = el.getBoundingClientRect();
+    if (r.width < window.innerWidth * 0.7) return false;
+    if (r.height < 40 || r.height > 160) return false;
+    if (r.top > 200) return false;
+    return true;
+  }
+
   function barreMarque() {
-    var noeuds = document.querySelectorAll('header, div, nav, section');
-    var meilleur = null;
+    /* Le sous-titre du logo : present une seule fois dans la page. */
+    var depart = null;
+    var noeuds = document.querySelectorAll('div, span, p, small, h1, h2');
     for (var i = 0; i < noeuds.length; i++) {
       var n = noeuds[i];
-      if (n.id === 'bhEnteteMsg' || n.closest && n.closest('#bhEnteteMsg')) continue;
-      if (n.querySelector('#conversationsList, #bhMessagesListe, #msgsSearchInput')) continue;
+      if (n.children.length) continue;
       var t = (n.textContent || '').replace(/\s+/g, ' ').trim();
-      var logo = n.querySelector('img[alt*="oosting" i], img[src*="logo" i]');
-      var dit = /BOOSTINGHOST/i.test(t) && t.length < 90;
-      if (!logo && !dit) continue;
-      if (n.getBoundingClientRect().height < 24) continue;
-      if (!meilleur || (n.textContent || '').length < (meilleur.textContent || '').length) meilleur = n;
+      if (/^smart property manager$/i.test(t)) { depart = n; break; }
     }
-    return meilleur;
+    /* A defaut, le logo lui-meme. */
+    if (!depart) depart = document.querySelector('img[alt*="oosting" i], img[src*="logo" i]');
+    if (!depart) return null;
+    if (depart.closest && depart.closest('#bhSidebar')) {
+      /* Le sous-titre trouve est celui du menu : on cherche l'autre. */
+      var tous = document.querySelectorAll('img[alt*="oosting" i], img[src*="logo" i]');
+      depart = null;
+      for (var j = 0; j < tous.length; j++) {
+        if (!tous[j].closest('#bhSidebar')) { depart = tous[j]; break; }
+      }
+      if (!depart) return null;
+    }
+
+    var el = depart, garde = 0;
+    while (el && garde++ < 8) {
+      if (estBarreDuHaut(el)) return el;
+      el = el.parentElement;
+    }
+    return null;
   }
 
   var rechercheOuverte = false;
@@ -195,6 +231,10 @@
     if (diag.marque) return;
     var b = barreMarque();
     if (!b) { diag.marque = null; return; }
+    if (b.id === 'bhSidebar' || (b.closest && b.closest('#bhSidebar'))) {
+      diag.marque = 'refus : la cible serait le menu lateral';
+      return;
+    }
     if (b.dataset.bhMarqueMasquee) return;
     b.dataset.bhMarqueMasquee = '1';
     memoriser(b, 'display', 'none');
@@ -269,7 +309,24 @@
 
   /* ── Le tour ────────────────────────────────────────────────── */
 
+  /* Le lot 19 masquait #bhSidebar par erreur. On le rend avant tout,
+     une seule fois, quoi qu'il arrive ensuite. */
+  var sidebarRendu = false;
+  function rendreSidebar() {
+    if (sidebarRendu) return;
+    sidebarRendu = true;
+    var s = document.getElementById('bhSidebar');
+    if (s && s.dataset.bhMarqueMasquee) {
+      s.style.removeProperty('display');
+      delete s.dataset.bhMarqueMasquee;
+      for (var i = mem.length - 1; i >= 0; i--) if (mem[i].el === s) mem.splice(i, 1);
+      diag.marque = null;
+      console.log('[entete msg] menu lateral rendu — il avait ete masque par erreur.');
+    }
+  }
+
   function tour() {
+    rendreSidebar();
     poserEntete();
     masquerMarque();
     replierRecherche();
