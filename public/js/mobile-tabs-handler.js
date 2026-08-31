@@ -198,6 +198,12 @@
   } else if (dataPage && PLUS_PAGES.includes(dataPage)) {
     // Pages du menu Plus → Onglet Plus
     activeTab = 'more';
+  } else if (currentPath.includes('calendrier')) {
+    // calendrier.html sert app.html : sans cette branche, activeTab reste
+    // « dashboard » et la capsule s'allume sous Aujourd'hui. C'est la seule
+    // ligne necessaire — mobile-native-experience lit __bhActiveTab, et
+    // bh-layout place ensuite la capsule avec sa transition normale.
+    activeTab = 'calendar';
   } else if (currentPath.includes('messages')) {
     activeTab = 'messages';
   } else if (currentPath.includes('reservations')) {
