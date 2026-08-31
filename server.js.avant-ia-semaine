@@ -31763,55 +31763,6 @@ app.get('/calendrier.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'app.html'));
 });
 
-// ============================================================
-// GET /api/ia/semaine — ce que l'IA a repondu sur sept jours
-// ============================================================
-// Lecture seule. Compte les messages portant is_bot_response, colonne
-// que auto-response-handler.js remplit a chaque reponse automatique.
-//
-// Aucun compte d'escalade : rien dans le schema n'enregistre une
-// escalade. Le bandeau dira donc ce qu'il sait et se taira sur le reste.
-app.get('/api/ia/semaine', authenticateAny, async (req, res) => {
-  try {
-    const userId = req.user?.id || req.user?.user_id || req.userId;
-    if (!userId) return res.status(401).json({ error: 'non authentifie' });
-
-    const ids = [userId];
-    try {
-      const del = await pool.query(
-        `SELECT delegator_user_id FROM account_delegations
-         WHERE delegate_user_id = $1 AND status = 'accepted'`,
-        [userId]
-      );
-      del.rows.forEach(r => { if (r.delegator_user_id && !ids.includes(r.delegator_user_id)) ids.push(r.delegator_user_id); });
-    } catch (e) {
-      // Table absente ou renommee : on compte pour le seul compte.
-    }
-
-    let reponses = null;
-    try {
-      const q = await pool.query(
-        `SELECT COUNT(*)::int AS n
-         FROM messages m
-         JOIN conversations c ON c.id = m.conversation_id
-         WHERE c.user_id = ANY($1::text[])
-           AND m.is_bot_response = TRUE
-           AND m.created_at >= NOW() - INTERVAL '7 days'`,
-        [ids]
-      );
-      reponses = q.rows[0] ? q.rows[0].n : 0;
-    } catch (e) {
-      // Colonne absente : null, jamais un zero qui ressemblerait a un fait.
-      console.error('[IA/SEMAINE]', e.message);
-    }
-
-    res.json({ reponses, jours: 7, comptes: ids.length });
-  } catch (e) {
-    console.error('❌ [IA/SEMAINE]', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
-
 async function runTemplatesCron(triggerTypes) {
   try {
     // Calcul fiable de la date Paris — éviter le bug toLocaleString + toISOString
