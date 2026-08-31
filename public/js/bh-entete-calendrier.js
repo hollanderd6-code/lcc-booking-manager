@@ -36,17 +36,35 @@
     return m ? m[1] : null;
   }
 
-  /* Le CA, lu la ou il est calcule. La carte affiche « 19 111 € » avec
-     une espace insecable : on accepte les deux espaces, et on rend le
-     montant tel qu'il est ecrit plutot que de le reformater. */
+  /* Le montant, lu au NOEUD et non a l'expression reguliere.
+
+     « 19 111 € » separe ses milliers par une espace fine insecable
+     (U+202F). Ma classe de caracteres ne la connaissait pas et coupait :
+     « 111 ». Plutot que d'allonger la liste des espaces possibles — il en
+     existe une dizaine en Unicode — on cherche la feuille qui porte le
+     montant et on rend son texte tel quel. C'est ce que votre code
+     ecrit, donc c'est juste par construction. */
+  function feuilleMontant(racine) {
+    if (!racine) return null;
+    var noeuds = racine.querySelectorAll('*');
+    var meilleur = null, maxChiffres = 0;
+    for (var i = 0; i < noeuds.length; i++) {
+      var n = noeuds[i];
+      if (n.children.length) continue;
+      var t = (n.textContent || '').trim();
+      if (!t || t.length > 24) continue;
+      if (t.indexOf('\u20ac') === -1) continue;
+      var chiffres = (t.match(/\d/g) || []).length;
+      if (chiffres > maxChiffres) { maxChiffres = chiffres; meilleur = t; }
+    }
+    return maxChiffres ? meilleur : null;
+  }
+
   function caMensuel() {
-    var c = document.querySelector('.bh2-feat');
-    if (!c) return null;
-    var txt = (c.textContent || '').replace(/\u00a0/g, ' ');
-    var m = txt.match(/(\d[\d  .,]{0,12}\d)\s*€/);
-    if (!m) return null;
-    var brut = m[1].replace(/[.,]$/, '').trim();
-    return brut ? brut + ' €' : null;
+    /* La carte d'abord, son conteneur ensuite : selon les versions le
+       montant vit dans #kpiCaCard ou directement dans .bh2-feat. */
+    return feuilleMontant(document.getElementById('kpiCaCard'))
+        || feuilleMontant(document.querySelector('.bh2-feat'));
   }
 
   /* Le sous-titre : l'argent d'abord, l'occupation qui l'explique
@@ -109,17 +127,13 @@
       racine.insertBefore(bloc, racine.firstChild);
       diag.entete = true;
     } else {
-      /* Les deux chiffres arrivent par des chemins differents, et l'un
-         peut etre pret avant l'autre. On reecrit tant qu'il en manque un,
-         puis on cesse — sinon on ecraserait a chaque passage. */
+      /* Jamais fige : la carte se remplit a son rythme, et une valeur
+         partielle lue trop tot doit pouvoir etre corrigee. On reecrit a
+         chaque passage, et on ne vide jamais un sous-titre deja rempli. */
       var s = document.getElementById('bhEnteteCalSous');
       if (s) {
         var frais = sousTitre();
-        var complet = frais.indexOf('\u00b7') !== -1;
-        if (frais && (!s.textContent || !s.dataset.bhComplet)) {
-          s.textContent = frais;
-          if (complet) s.dataset.bhComplet = '1';
-        }
+        if (frais) s.textContent = frais;
       }
     }
 

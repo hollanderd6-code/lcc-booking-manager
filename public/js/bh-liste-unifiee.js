@@ -210,6 +210,119 @@
     vieux.dataset.bhEndormi = '1';
   }
 
+  /* ── La forme compacte, pour la vue calendrier ─────────────────
+     Une seule carte, une ligne par mouvement. Les grandes cartes qui
+     nomment ce qui bloque restent sur Aujourd'hui : c'est la qu'on agit.
+
+     Les mouvements sont groupes, arrivees puis departs. La maquette les
+     melange par heure, mais l'API ne porte pas l'heure d'arrivee — un
+     ordre honnete vaut mieux qu'un « 16 h » invente. */
+  var JOURS_LONG = ['DIMANCHE', 'LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI'];
+  var MOIS_LONG = ['JANVIER', 'FÉVRIER', 'MARS', 'AVRIL', 'MAI', 'JUIN', 'JUILLET',
+                   'AOÛT', 'SEPTEMBRE', 'OCTOBRE', 'NOVEMBRE', 'DÉCEMBRE'];
+
+  function fleche(entrante) {
+    var d = entrante
+      ? '<path d="M13 4.5 20 12l-7 7.5"/><path d="M20 12H9"/><path d="M4.5 4v16"/>'
+      : '<path d="M17 4.5 24 12l-7 7.5"/><path d="M24 12H13"/><path d="M8.5 4v16"/>';
+    var couleur = entrante ? '#0E3B2E' : '#8A5230';
+    return '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"'
+      + ' stroke="' + couleur + '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+      + d + '</svg>';
+  }
+
+  function ligneCompacte(icone, titre, detail, lien, dernier) {
+    var a = document.createElement('a');
+    a.href = lien;
+    a.style.cssText = 'display:flex;align-items:center;gap:12px;padding:13px 15px'
+      + ';text-decoration:none;min-height:44px'
+      + (dernier ? '' : ';border-bottom:1px solid #F0EEE7');
+
+    var g = document.createElement('span');
+    g.style.cssText = 'flex:none;display:inline-flex;line-height:0';
+    g.innerHTML = icone;
+    a.appendChild(g);
+
+    var m = document.createElement('span');
+    m.style.cssText = 'flex:1;min-width:0';
+    var t = document.createElement('span');
+    t.textContent = titre;
+    t.style.cssText = 'display:block;font-size:14.5px;font-weight:600;color:' + ENCRE
+      + ';letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    m.appendChild(t);
+    if (detail) {
+      var s = document.createElement('span');
+      s.textContent = detail;
+      s.style.cssText = 'display:block;font-size:12.5px;color:' + GRIS + ';margin-top:1px'
+        + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      m.appendChild(s);
+    }
+    a.appendChild(m);
+
+    var ch = document.createElement('span');
+    ch.textContent = '\u203A';
+    ch.setAttribute('aria-hidden', 'true');
+    ch.style.cssText = 'flex:none;color:#C4C0B6;font-size:18px;line-height:1';
+    a.appendChild(ch);
+    return a;
+  }
+
+  function construireCompact(d) {
+    if (document.getElementById('bhListeUnifiee')) return true;
+    var place = ancre();
+    if (!place) { diag.erreur = 'point d insertion introuvable'; return false; }
+
+    var arrivees = Array.isArray(d.arrivees) ? d.arrivees : [];
+    var departs = Array.isArray(d.departs) ? d.departs : [];
+    var total = arrivees.length + departs.length;
+    if (!total) { diag.erreur = 'aucun mouvement aujourd hui'; return false; }
+
+    var bloc = document.createElement('div');
+    bloc.id = 'bhListeUnifiee';
+    bloc.style.cssText = 'font-family:inherit;margin:16px 0 0';
+
+    var quand = new Date();
+    if (d.date && /^\d{4}-\d{2}-\d{2}$/.test(d.date)) {
+      var p = d.date.split('-');
+      quand = new Date(+p[0], +p[1] - 1, +p[2]);
+    }
+    var titre = document.createElement('div');
+    titre.textContent = JOURS_LONG[quand.getDay()] + ' ' + quand.getDate() + ' '
+      + MOIS_LONG[quand.getMonth()] + ' \u00b7 ' + total + ' MOUVEMENT' + (total > 1 ? 'S' : '');
+    titre.style.cssText = 'font-size:11px;font-weight:700;letter-spacing:.13em;color:#8B8B84;padding:0 4px 9px';
+    bloc.appendChild(titre);
+
+    var carte = document.createElement('div');
+    carte.style.cssText = 'background:#fff;border:1px solid ' + BORD + ';border-radius:16px;overflow:hidden';
+
+    var rangs = [];
+    arrivees.forEach(function (a) {
+      var n = nuits(a.arrivee, a.depart);
+      var p = plateforme(a.platform);
+      var detail = ['Arrivée', n ? n + ' nuit' + (n > 1 ? 's' : '') : null, p ? p.nom : null]
+        .filter(Boolean).join(' \u00b7 ');
+      var t = [a.guest_name, a.property_name].filter(Boolean).join(' \u00b7 ');
+      rangs.push({ icone: fleche(true), titre: t || 'Arrivée', detail: detail, lien: '/messages.html' });
+      diag.arrivees.push((a.property_name || '?') + ' / ' + (a.guest_name || '?'));
+    });
+    departs.forEach(function (x) {
+      var men = x.menage_fait === true
+        ? (x.menage_valide === true ? 'ménage fait et validé' : 'ménage fait')
+        : (x.menage_fait === false ? 'ménage à faire' : null);
+      var detail = ['Départ', x.guest_name || null, men].filter(Boolean).join(' \u00b7 ');
+      rangs.push({ icone: fleche(false), titre: x.property_name || 'Départ', detail: detail, lien: '/reservations.html' });
+      diag.departs.push((x.property_name || '?') + ' / ' + (x.guest_name || '?'));
+    });
+
+    rangs.forEach(function (r, i) {
+      carte.appendChild(ligneCompacte(r.icone, r.titre, r.detail, r.lien, i === rangs.length - 1));
+    });
+    bloc.appendChild(carte);
+
+    place.parent.insertBefore(bloc, place.avant);
+    return true;
+  }
+
   function construire(d) {
     if (document.getElementById('bhListeUnifiee')) return true;
     var place = ancre();
@@ -275,7 +388,7 @@
       .then(function (d) {
         if (!d || !Array.isArray(d.arrivees)) { diag.erreur = 'forme de reponse non reconnue'; return; }
         diag.date = d.date || '';
-        construire(d);
+        (enVueCalendrier ? construireCompact : construire)(d);
       })
       .catch(function (e) { diag.erreur = e.message; });
   }
@@ -299,6 +412,7 @@
     var res = {
       bloc_affiche: !!document.getElementById('bhListeUnifiee'),
       source: diag.source,
+      forme: enVueCalendrier ? 'compacte (vue calendrier)' : 'cartes (Aujourd hui)',
       date: diag.date,
       total_arrivees: diag.arrivees.length,
       a_traiter: diag.a_traiter,
