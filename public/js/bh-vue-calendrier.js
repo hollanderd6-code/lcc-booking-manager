@@ -129,8 +129,13 @@
       courant = parent;
     }
 
-    memoriser(section, 'margin', '0');
-    if (section.parentElement) memoriser(section.parentElement, 'padding-top', '8px');
+    if (!diag.pose) {
+      diag.pose = true;
+      memoriser(section, 'margin', '0');
+      if (section.parentElement) memoriser(section.parentElement, 'padding-top', '8px');
+      /* On arrive sinon au milieu de l'ancien defilement, devant du vide. */
+      try { window.scrollTo(0, 0); } catch (e) {}
+    }
     diag.raison = '';
     return true;
   }
@@ -138,7 +143,7 @@
   function tour() {
     if (diag.retracte) return;
     if (!remplie()) { lancerMoteur(); return; }
-    if (!diag.masques) masquer();
+    masquer();
   }
 
   /* ── Le filet ───────────────────────────────────────────────
@@ -216,4 +221,20 @@
   }
   [1200, 2200, 3500, 5000, 7000, 9500, 12000, 15000].forEach(function (t) { setTimeout(tour, t); });
   setTimeout(filet, 18000);
+
+  /* La page se construit par vagues : la liste du jour arrive une
+     seconde apres nous, les cartes plus tard encore. On repasse a
+     chaque insertion — puis on se debranche. Un observateur oublie
+     coute plus qu'il ne rapporte. */
+  if (window.MutationObserver) {
+    var enAttente = null;
+    var obs = new MutationObserver(function () {
+      if (enAttente) return;
+      enAttente = setTimeout(function () { enAttente = null; tour(); }, 250);
+    });
+    try {
+      obs.observe(document.body, { childList: true, subtree: true });
+      setTimeout(function () { obs.disconnect(); }, 30000);
+    } catch (e) {}
+  }
 })();
