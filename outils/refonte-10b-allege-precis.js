@@ -1,4 +1,75 @@
+#!/usr/bin/env node
 /* ============================================================
+   outils/refonte-10b-allege-precis.js
+   Lot 10b : viser les identifiants, pas les alentours
+   ============================================================
+
+   ── CE QUI S'EST PASSE ───────────────────────────────────────────
+   Le lot 10 remontait de l'intitule jusqu'au bloc de premier niveau.
+   Pour « Votre journee », ce bloc portait aussi les quatre cartes kpi* :
+   en masquant le titre, j'ai masque les compteurs. C'est exactement ce
+   que le garde-fou etait cense empecher, et il ne l'a pas vu parce que
+   ces cartes n'etaient pas dans ma liste de cibles.
+
+   Et CA mensuel et Occupation partagent un meme bloc : chacun a donc
+   refuse de partir en accusant l'autre. Huit refus pour une situation
+   parfaitement normale — les deux s'en vont ensemble, au meme endroit.
+
+   ── CE QUE FAIT CE LOT ───────────────────────────────────────────
+   Votre inventaire a donne les identifiants reels. On ne remonte plus a
+   l'aveugle :
+
+       #bh2TodayDate        la date, et le titre « Votre journee »
+       #bhCalRoot           le calendrier des reservations, en entier
+       #kpiAutoLabel        la carte Automatisation
+       CA + Occupation      leur bloc commun, assume comme tel
+
+   Rien ne peut plus emporter un voisin : avant de masquer quoi que ce
+   soit, le module verifie que la zone visee ne contient AUCUN de ces
+   noeuds proteges —
+
+       #bhEnteteJour, #bhBandeJours, #bhListeUnifiee, #bhListesJour,
+       toute carte dont l'identifiant commence par « kpi » et qui n'est
+       pas la cible.
+
+   Si la verification echoue, rien n'est masque et bhVerifAllege() nomme
+   le noeud qui a bloque.
+
+   ── SUR LES COMPTEURS ────────────────────────────────────────────
+   Les quatre cartes kpi* de « Votre journee » restent en place. Deux
+   d'entre elles portent encore des zeros — « Tout est valide 0 »,
+   « Notes sur reservations 0 ». Elles meritent leur propre decision,
+   pas d'etre emportees par un titre.
+
+   ── REMPLACE LE LOT 10 ───────────────────────────────────────────
+   Meme fichier, meme balise : rien a retirer de app.html. Si le lot 10
+   tourne encore dans un onglet ouvert, bhAnnulerAllege() puis un
+   rechargement suffisent.
+
+   Usage :
+     node outils/refonte-10b-allege-precis.js --essai
+     node outils/refonte-10b-allege-precis.js
+   ============================================================ */
+
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+const PUBLIC = path.join(process.cwd(), 'public');
+const APP = path.join(PUBLIC, 'app.html');
+const MODULE = path.join(PUBLIC, 'js', 'bh-aujourdhui-allege.js');
+const ESSAI = process.argv.includes('--essai') || process.argv.includes('--dry');
+
+function echec(msg) {
+  console.error('\n  \u2717 ' + msg);
+  console.error("    Rien n'a ete ecrit.\n");
+  process.exit(1);
+}
+
+if (!fs.existsSync(APP)) echec('public/app.html introuvable. Lancez depuis la racine du projet.');
+
+const SOURCE = `/* ============================================================
    bh-aujourdhui-allege.js — quatre departs, vises a l'identifiant
    ============================================================
    La date et le titre « Votre journee », le bloc CA mensuel +
@@ -18,7 +89,7 @@
   var diag = { masques: [], refuses: [], introuvables: [], details: {} };
 
   function normaliser(t) {
-    return String(t || '').replace(/\s+/g, ' ').trim().toUpperCase();
+    return String(t || '').replace(/\\s+/g, ' ').trim().toUpperCase();
   }
 
   /* Ce qui ne doit jamais partir dans un masquage. */
@@ -57,7 +128,7 @@
     zone.style.setProperty('display', 'none', 'important');
     if (diag.masques.indexOf(cle) === -1) diag.masques.push(cle);
     diag.details[cle] = (zone.id ? '#' + zone.id : zone.tagName.toLowerCase())
-      + ' \u00b7 ' + normaliser(zone.textContent).slice(0, 44);
+      + ' \\u00b7 ' + normaliser(zone.textContent).slice(0, 44);
     return true;
   }
 
@@ -176,7 +247,7 @@
     mem = [];
     diag.masques = [];
     diag.details = {};
-    console.log(n + ' element(s) rendu(s) a Aujourd\'hui.');
+    console.log(n + ' element(s) rendu(s) a Aujourd\\'hui.');
     return n;
   };
 
@@ -192,7 +263,7 @@
       liste_intacte: !!document.getElementById('bhListeUnifiee'),
       annulable: mem.length + ' element(s) memorise(s)'
     };
-    console.log('── Aujourd\'hui allege ──');
+    console.log('── Aujourd\\'hui allege ──');
     console.log(res);
     if (diag.refuses.length) console.warn('Refus : ' + diag.refuses.join(' | '));
     if (diag.introuvables.length) console.warn('Non trouves : ' + diag.introuvables.join(', '));
@@ -209,3 +280,46 @@
   setTimeout(passer, 6400);
   setTimeout(passer, 9000);
 })();
+`;
+
+const BALISE = '<script src="js/bh-aujourdhui-allege.js"></script>';
+
+let html = fs.readFileSync(APP, 'utf8');
+let etatApp;
+
+if (html.indexOf('bh-aujourdhui-allege.js') !== -1) {
+  etatApp = 'balise deja en place (lot 10)';
+} else {
+  let ancre = html.indexOf('bh-liste-unifiee.js');
+  let nom = 'bh-liste-unifiee.js';
+  if (ancre === -1) { ancre = html.indexOf('bh-listes-jour.js'); nom = 'bh-listes-jour.js'; }
+  if (ancre === -1) echec('Aucun module des lots precedents dans app.html.');
+  const fin = html.indexOf('</script>', ancre);
+  if (fin === -1) echec('Balise mal formee dans app.html.');
+  const pos = fin + '</script>'.length;
+  html = html.slice(0, pos) + '\n' + BALISE + html.slice(pos);
+  etatApp = 'balise ajoutee apres ' + nom;
+  if (!ESSAI) fs.writeFileSync(APP, html, 'utf8');
+}
+
+if (!ESSAI) {
+  fs.writeFileSync(MODULE, SOURCE, 'utf8');
+  const relu = fs.readFileSync(MODULE, 'utf8');
+  if (relu.indexOf('bhAnnulerAllege') === -1) echec("Le module n'est pas complet apres ecriture.");
+  if (relu.indexOf('function proteges(') === -1) echec('Le garde-fou des noeuds proteges est absent.');
+  try { new Function(relu); } catch (e) { echec('Module invalide — ' + e.message); }
+}
+
+console.log('\n' + (ESSAI ? '— ESSAI, aucune ecriture —' : '— APPLIQUE ET VERIFIE —'));
+console.log('  public/js/bh-aujourdhui-allege.js  remplace (' + Math.round(SOURCE.length / 1024) + ' Ko)');
+console.log('  app.html                           ' + etatApp);
+console.log('\n  Vise a l\'identifiant : #bh2TodayDate, #bhCalRoot, #kpiAutoLabel,');
+console.log('  et le bloc commun CA mensuel + Occupation.');
+console.log('\n  Les quatre cartes kpi* restent. Aucune zone n\'est masquee si');
+console.log('  elle contient l\'en-tete, la bande, la liste du jour ou une');
+console.log('  carte kpi — le module refuse et nomme le noeud qui bloque.');
+console.log('\n  Apres deploiement, cache vide :');
+console.log('    bhVerifAllege()');
+console.log('  J\'attends masques: 4 et compteurs_intacts: true.');
+console.log('\n  Annulation immediate : bhAnnulerAllege()\n');
+if (ESSAI) console.log('  Relancez sans --essai pour appliquer.\n');
