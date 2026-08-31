@@ -234,7 +234,10 @@
   function demarrer() {
     poserEntete();
     deplacerCommandes();
-    remonterBande();
+    /* remonterBande() n'est plus appelee : l'ordre du haut est arbitre
+       par bh-kpi-haut.js. Deux modules qui deplacent le meme bloc
+       finissent par dependre de la vitesse du reseau. */
+    if (!document.querySelector('[data-bh-kpi-haut]')) remonterBande();
   }
 
   if (document.readyState === 'loading') {

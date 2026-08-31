@@ -91,10 +91,30 @@
     ops.appendChild(marque);
     mem.push({ type: 'place', el: marque, parent: null, avant: null });
 
-    /* Au-dessus de la bande, sous l'en-tete. */
-    var ancre = bande || entete.nextSibling;
-    if (bande) bande.parentElement.insertBefore(ops, bande);
-    else entete.parentElement.insertBefore(ops, entete.nextSibling);
+    imposerOrdre();
+    return true;
+  }
+
+  /* ── L'arbitre de l'ordre ─────────────────────────────────────
+     Un seul module decide de la sequence, et il la reaffirme a chaque
+     passage. Sinon deux modules se la disputent et le resultat depend
+     de la vitesse du reseau — ce qui n'est pas un resultat. */
+  function imposerOrdre() {
+    var entete = document.getElementById('bhEnteteJour');
+    var ops = document.querySelector('[data-bh-kpi-haut]');
+    if (!entete || !ops || !entete.parentElement) return false;
+
+    /* en-tete -> tuiles */
+    if (ops.previousElementSibling !== entete) {
+      entete.parentElement.insertBefore(ops, entete.nextSibling);
+      diag.ordre_corrige = (diag.ordre_corrige || 0) + 1;
+    }
+    /* tuiles -> bande */
+    var bande = document.getElementById('bhBandeJours');
+    if (bande && bande.previousElementSibling !== ops) {
+      ops.parentElement.insertBefore(bande, ops.nextSibling);
+      diag.ordre_corrige = (diag.ordre_corrige || 0) + 1;
+    }
     return true;
   }
 
@@ -125,6 +145,7 @@
       nombres_restants_dans_la_carte: diag.restantes,
       au_dessus_de_la_bande: !!(rangee && document.getElementById('bhBandeJours')
         && rangee.compareDocumentPosition(document.getElementById('bhBandeJours')) & Node.DOCUMENT_POSITION_FOLLOWING),
+      ordre_corrige_fois: diag.ordre_corrige || 0,
       annulable: mem.length + ' changement(s) memorise(s)',
       raison: diag.raison
     };
@@ -135,7 +156,10 @@
     return res;
   };
 
-  function demarrer() { deplacer(); }
+  function demarrer() {
+    deplacer();
+    imposerOrdre();
+  }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { setTimeout(demarrer, 1800); });
@@ -144,4 +168,6 @@
   }
   setTimeout(demarrer, 3200);
   setTimeout(demarrer, 5200);
+  setTimeout(demarrer, 7000);
+  setTimeout(demarrer, 9500);
 })();
