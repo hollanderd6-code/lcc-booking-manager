@@ -2,6 +2,23 @@
 <html data-theme="light" lang="fr" data-theme-v3="1" class="bh-lux">
 <head>
 <meta charset="utf-8"/>
+<!-- BH-REDIRECTION-CALENDRIER debut -->
+<script>
+/* L'onglet Calendrier montre le calendrier de app.html : son moteur y
+   est tisse avec le reste de la page et ne peut pas en sortir sans
+   plusieurs jours de travail (voir outils/refonte-11c-sonde-scripts.js).
+
+   Pose avant tout le reste : la page ne se construit pas, donc aucun
+   clignotement. location.replace pour ne pas piéger le bouton retour.
+
+   Porte de sortie : /reservations.html?garder=1 ouvre cette page,
+   intacte. */
+(function () {
+  if (location.search.indexOf('garder=1') !== -1) return;
+  location.replace('/app.html?vue=calendrier');
+})();
+</script>
+<!-- BH-REDIRECTION-CALENDRIER fin -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Réservations</title>
 <!-- Fonts -->
