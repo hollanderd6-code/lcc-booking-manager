@@ -26641,6 +26641,7 @@ require('./routes/pricing-pause-routes')(app, pool, { authenticateAny, getRealUs
 require('./routes/inventaire-channex-routes')(app, pool, { authenticateAny, getRealUserId });
 require('./routes/mapping-routes')(app, pool, { authenticateAny, getRealUserId });
 require('./routes/airbnb-mapping-routes')(app, pool, { authenticateAny, getRealUserId });
+require('./routes/aujourdhui-routes')(app, pool, authenticateAny, checkSubscription);
 
 const channexBulkRoutes = require('./routes/channex-bulk-routes');
 app.use('/api/channex', channexBulkRoutes(pool, { authenticateAny, getRealUserId }));
