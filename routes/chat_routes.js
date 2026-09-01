@@ -300,6 +300,8 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
       let query = `
         SELECT DISTINCT ON (c.id)
           c.*,
+          (c.owner_suggestion IS NOT NULL AND c.owner_suggestion <> ''
+           AND c.owner_suggestion_status = 'pending') AS has_suggestion,
           c.guest_first_name,
           c.guest_last_name,
           c.guest_phone,
