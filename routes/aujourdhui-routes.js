@@ -87,8 +87,8 @@ module.exports = function setupAujourdhuiRoutes(app, pool, authenticateAny, chec
             p.access_code,
             -- Les heures viennent du LOGEMENT, jamais d'un défaut codé en dur.
             -- C'est ce qui manquait aux départs.
-            TO_CHAR(p.arrival_time,   'HH24:MI') AS arrival_time,
-            TO_CHAR(p.departure_time, 'HH24:MI') AS departure_time,
+            p.arrival_time   AS arrival_time,
+            p.departure_time AS departure_time,
             c.id        AS conversation_id,
             c.escalated,
             c.ai_disabled,
