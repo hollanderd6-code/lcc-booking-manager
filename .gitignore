@@ -38,3 +38,5 @@ server.js.avant-hold-dates
 channex.js.avant-blocage-rapide
 server.js.avant-sms-etat
 public/app.html.avant-sms-ecran
+server.js.avant-caution-options
+server.js.avant-comptes-geres

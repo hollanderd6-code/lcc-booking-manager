@@ -1059,6 +1059,16 @@ async function compteStripeUtilisable(accountId) {
   }
 }
 
+/* stripe-node ne reconnait un 2e argument comme options que s'il porte une
+   cle connue. Un objet VIDE devient un argument surnumeraire et l'appel est
+   refuse — « Unknown arguments ». Toutes les cautions encaissees sur le compte
+   Boostinghost echouaient donc, et elles seules. */
+function createCheckoutSession(sessionParams, sessionOptions) {
+  return (sessionOptions && Object.keys(sessionOptions).length > 0)
+    ? stripe.checkout.sessions.create(sessionParams, sessionOptions)
+    : stripe.checkout.sessions.create(sessionParams);
+}
+
 async function getStripeForProperty(pool, propertyId, userId) {
   // 1) Chercher le propriétaire lié au logement
   if (propertyId) {
@@ -6973,7 +6983,7 @@ async function sendDepositRequestMessages(io) {
         // ⏸️ Commission BH en pause sur cautions automatiques
         console.log(`✅ Caution automatique — pas de commission BH`);
 
-        const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+        const session = await createCheckoutSession(sessionParams, sessionOptions);
         console.log('✅ Caution automatique Booking créée sur compte plateforme (pas Connect)');
 
         // Sauvegarder en DB
@@ -22502,7 +22512,7 @@ app.post('/api/deposits',
     // ⏸️ Commission BH en pause sur cautions
     console.log(`✅ Création caution — pas de commission BH`);
 
-    session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+    session = await createCheckoutSession(sessionParams, sessionOptions);
 
     deposit.stripeSessionId = session.id;
     deposit.checkoutUrl = session.url;
@@ -28154,7 +28164,7 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
           ? { stripeAccount: stripeTarget.stripeAccountId } : {};
         // ⏸️ Commission BH en pause sur cautions
 
-        const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+        const session = await createCheckoutSession(sessionParams, sessionOptions);
 
         await pool.query(
           `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
@@ -29922,7 +29932,7 @@ async function regenStripeSession(record, type, pool) {
       cancel_url: `${appUrl}/caution-cancel.html?depositId=${record.id}`,
     };
     // ✅ Pas de transfer_data : sessionOptions contient déjà { stripeAccount } — Stripe refuse le transfer vers soi-même
-    const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+    const session = await createCheckoutSession(sessionParams, sessionOptions);
     const expiresAt = new Date(session.expires_at * 1000).toISOString();
     await pool.query(
       `UPDATE deposits SET stripe_session_id = $1, checkout_url = $2, stripe_session_expires_at = $3, updated_at = NOW() WHERE id = $4`,
@@ -29947,7 +29957,7 @@ async function regenStripeSession(record, type, pool) {
       cancel_url: `${appUrl}/cautions-paiements.html?tab=payments`,
     };
     // ✅ Pas de transfer_data ni on_behalf_of : sessionOptions contient déjà { stripeAccount }
-    const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+    const session = await createCheckoutSession(sessionParams, sessionOptions);
     const expiresAt = new Date(session.expires_at * 1000).toISOString();
     await pool.query(
       `UPDATE payments SET stripe_session_id = $1, checkout_url = $2, stripe_session_expires_at = $3, updated_at = NOW() WHERE id = $4`,
@@ -30506,7 +30516,7 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
                 success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
                 cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`,
               };
-              const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+              const session = await createCheckoutSession(sessionParams, sessionOptions);
               await pool.query(
                 `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
                  VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW())`,
@@ -31139,7 +31149,7 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
                   success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
                   cancel_url: `${appUrl}/caution-cancel.html?depositId=${depositId}`,
                 };
-                const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+                const session = await createCheckoutSession(sessionParams, sessionOptions);
                 await pool.query(
                   `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
                    VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW())`,
@@ -44923,7 +44933,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     }
 
     const sessionOptions = stripeAccountId ? { stripeAccount: stripeAccountId } : {};
-    const session = await stripe.checkout.sessions.create(sessionParams, sessionOptions);
+    const session = await createCheckoutSession(sessionParams, sessionOptions);
 
     res.json({
       checkoutUrl: session.url,
