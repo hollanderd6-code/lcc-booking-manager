@@ -149,7 +149,10 @@ function requirePermission(pool, permission) {
         'can_manage_templates': 'can_manage_templates',
 
         // Contrats
-        'can_view_contracts': 'can_view_contracts'
+        'can_view_contracts': 'can_view_contracts',
+
+        // Propriétaires
+        'can_view_owners': 'can_view_owners'
       };
       
       const dbPermission = permissionMapping[permission] || permission;
