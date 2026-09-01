@@ -14798,14 +14798,15 @@ app.get('/api/cleaning/assignments',
     let virtualAssignments = [];
     try {
       const resaResult = await pool.query(
-        `SELECT uid, property_id, start_date, end_date FROM reservations
+        `SELECT uid, property_id,
+                TO_CHAR(start_date, 'YYYY-MM-DD') AS start_date,
+                TO_CHAR(end_date,   'YYYY-MM-DD') AS end_date
+         FROM reservations
          WHERE user_id = ANY($1::text[]) AND status NOT IN ('cancelled')`,
         [agencyIds]
       );
       for (const resa of resaResult.rows) {
-        const startStr = String(resa.start_date).slice(0, 10);
-        const endStr   = String(resa.end_date).slice(0, 10);
-        const key = `${resa.property_id}_${startStr}_${endStr}`;
+        const key = `${resa.property_id}_${resa.start_date}_${resa.end_date}`;
         if (specificKeys.has(key)) continue; // déjà une assignation spécifique
         const def = defaultRows.find(d => String(d.property_id) === String(resa.property_id));
         if (!def) continue;
