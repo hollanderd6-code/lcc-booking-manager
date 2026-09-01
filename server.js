@@ -18961,8 +18961,8 @@ app.patch('/api/properties/:propertyId', authenticateAny, async (req, res) => {
     if (!check.rows.length) return res.status(404).json({ error: 'Logement non trouvé' });
 
     await pool.query(
-      'UPDATE properties SET owner_id = $1 WHERE id = $2',
-      [ownerId || null, propertyId]
+      'UPDATE properties SET owner_id = $1 WHERE id = $2 AND user_id = ANY($3::text[])',
+      [ownerId || null, propertyId, agencyIds]
     );
 
     // ✅ Recharger le store en mémoire pour que la logique Stripe soit immédiatement à jour
