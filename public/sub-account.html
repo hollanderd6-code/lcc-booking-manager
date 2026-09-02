@@ -737,6 +737,55 @@
   <link rel="stylesheet" href="/css/menu-plus-fixes.css?v=13677c32">
   <link rel="stylesheet" href="/css/menu-active-button.css?v=f21f319b">
   <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+
+  <!-- ==========================================================================
+       MODAL EQUIPE — LE CORPS DOIT DEFILER
+       ==========================================================================
+       Meme cause que sur settings-account.html. Le CSS de cette page declare
+       « .modal-content { max-height: 90vh; overflow-y: auto } » : borne en
+       hauteur, avec son propre ascenseur. Correct.
+
+       Mais bh-theme-v3.css est charge APRES le <style> de la page (ligne 734
+       contre 728) et pose « html[data-theme-v3="1"] .modal-content {
+       overflow: hidden !important } ». Le !important gagne : la hauteur reste
+       bornee a 90vh, l'ascenseur disparait. Le bas du formulaire — role,
+       permissions, boutons Annuler / Enregistrer — devient inatteignable.
+
+       On ne touche pas a bh-theme-v3.css : ce overflow:hidden sert aux modales
+       qui gerent leur propre defilement interne. On deplace l'ascenseur d'un
+       cran vers l'interieur, .modal-body, ce qui est le montage attendu par le
+       reste du theme (bh-v3-mobile.css fait deja exactement ca).
+
+       min-height:0 est la ligne indispensable : sans elle un enfant flex en
+       « flex:1 » refuse de descendre sous la hauteur de son contenu, donc il
+       deborde au lieu de defiler.
+
+       Cette feuille est la derniere du document : l'ordre suffit, pas besoin
+       d'aller au-dela du !important necessaire pour repasser devant
+       bh-theme-v3.css.
+       ========================================================================== -->
+  <style>
+    #addTeamMemberModal .modal-content {
+      display: flex !important;
+      flex-direction: column !important;
+      max-height: calc(100dvh - 40px) !important;
+      overflow: hidden !important;
+    }
+
+    #addTeamMemberModal .modal-header,
+    #addTeamMemberModal .modal-footer {
+      flex: 0 0 auto !important;
+    }
+
+    #addTeamMemberModal .modal-body {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior: contain !important;
+    }
+  </style>
 </head>
 <body>
 <div class="platform-layout" id="platformLayout">

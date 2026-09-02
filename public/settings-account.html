@@ -5251,6 +5251,58 @@ html[data-theme-v3="1"] .btn-danger { border-radius: 999px !important; }
   border-radius: 22px !important;
   box-shadow: 0 24px 70px rgba(32,34,31,.3), inset 0 1px 0 rgba(255,255,255,.9) !important;
 }
+
+/* ============================================================================
+   MODAL EQUIPE — LE FORMULAIRE DOIT DEFILER
+   ============================================================================
+   Le modal « Ajouter / Modifier un membre » comptait sur .booking-modal
+   (overflow-y:auto) comme ascenseur, avec un .modal-content de hauteur libre.
+   Ca ne peut plus fonctionner : en thème v3, html et body sont en
+   « overflow:hidden !important; height:100% » et .app-container clippe son
+   contenu. Le formulaire depasse donc l'ecran sans qu'aucun conteneur ne
+   defile — le bas du modal (role, notifications, proprietes, boutons) devient
+   inatteignable.
+
+   Le correctif deplace l'ascenseur d'un cran vers l'interieur : .modal-content
+   est borne en hauteur et ne deborde pas, .booking-form devient le conteneur
+   scrollable. Un modal ne doit jamais dependre du defilement de la page.
+
+   min-height:0 est la ligne indispensable : sans elle, un enfant flex en
+   « flex:1 » refuse de se reduire sous la hauteur de son contenu, donc il
+   deborde au lieu de defiler. C'est ce qui manquait aussi au bloc mobile
+   v3 plus haut dans ce fichier (ligne ~610) — cette regle le repare des deux
+   cotes.
+
+   Specificite volontairement basse (#id + .classe) : les regles mobile v3
+   (#id + [attr] + .classe) restent prioritaires pour la position et la
+   hauteur, et gardent le modal en plein ecran sous 1366px.
+   ============================================================================ */
+
+#addTeamMemberModal {
+  align-items: center !important;
+  padding: 24px 0 !important;
+}
+
+#addTeamMemberModal .modal-content {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: calc(100dvh - 48px) !important;
+  overflow: hidden !important;
+}
+
+#addTeamMemberModal .modal-header {
+  flex: 0 0 auto !important;
+}
+
+#addTeamMemberModal .booking-form {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+}
+
 </style>
 
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
