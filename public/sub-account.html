@@ -1762,7 +1762,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadPropertiesForSelect() {
     try {
       const token = localStorage.getItem('lcc_token');
-      const res = await fetch('/api/properties', {
+      const res = await fetch('/api/properties?agency=all', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
