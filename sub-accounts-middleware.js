@@ -31,7 +31,7 @@ function authenticateAny(req, res, next) {
   const token = authHeader && authHeader.split(' ')[1];
   
   if (!token) {
-    return res.status(401).json({ error: 'Token manquant' });
+    return res.status(401).json({ error: 'Token manquant', code: 'token_missing' });
   }
   
   const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
@@ -59,8 +59,29 @@ function authenticateAny(req, res, next) {
     
     next();
   } catch (err) {
-    console.error('❌ Erreur auth:', err.message);
-    return res.status(403).json({ error: 'Token invalide' });
+    /* 401, pas 403.
+
+       403 signifie « je sais qui tu es, mais tu n'as pas le droit » — c'est ce
+       que renvoie requirePermission plus bas, a juste titre. Ici on ne sait pas
+       qui appelle : le token est illisible, perime ou signe avec une autre cle.
+       C'est un 401.
+
+       La distinction n'est pas theorique. Le code client ne redirige vers la
+       connexion que sur 401 (voir chat-owner.js : « if (response.status === 401)
+       window.location.href = '/login.html' »). Avec un 403, le client ne purge
+       pas son token et le renvoie a chaque appel : boucle infinie de
+       « Erreur auth: invalid signature » dans les logs, et surtout utilisateur
+       bloque sans aucun message lui disant de se reconnecter.
+
+       Le cas le plus expose : generateSubAccountToken signe sans expiresIn,
+       donc les tokens des sous-comptes ne perimaient jamais. Apres une rotation
+       de JWT_SECRET ils deviennent tous invalides d'un coup, et faute de
+       redirection ces comptes restaient bloques en silence. */
+    console.warn('⚠️ [AUTH] token refuse :', err.name === 'TokenExpiredError' ? 'expire' : err.message);
+    return res.status(401).json({
+      error: 'Token invalide',
+      code: err.name === 'TokenExpiredError' ? 'token_expired' : 'token_invalid'
+    });
   }
 }
 
