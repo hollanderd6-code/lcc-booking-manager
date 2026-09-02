@@ -31402,6 +31402,34 @@ app.get('/api/message-template-logs', authenticateToken, async (req, res) => {
 // initArrivalMessagesCron(pool, io);
 console.log("ℹ️ Cron arrival-messages désactivé (remplacé par templates)");
 
+/* Les comptes dont un template peut servir les conversations : celui qui le
+   possede, et ceux qui l'ont delegue a ce compte.
+
+   Le cache evite de relire account_delegations pour chaque template du meme
+   compte. Sa duree de vie est courte (5 min) : une delegation acceptee doit
+   prendre effet a la prochaine execution, pas au prochain redemarrage. */
+const _cacheComptesTmpl = new Map();
+async function comptesDuTemplate(userId) {
+  if (!userId) return [];
+  const cache = _cacheComptesTmpl.get(userId);
+  if (cache && Date.now() - cache.t < 300000) return cache.v;
+  let v = [userId];
+  try {
+    const { rows } = await pool.query(
+      `SELECT delegator_user_id FROM account_delegations
+        WHERE delegate_user_id = $1 AND status = 'accepted'`,
+      [userId]
+    );
+    v = [userId, ...rows.map((d) => d.delegator_user_id)];
+  } catch (e) {
+    console.error('⚠️ [TPL CRON] delegations illisibles pour', userId, ':', e.message);
+    /* On n'ouvre rien de plus que son propre compte : mieux vaut un envoi
+       manquant qu'un message parti chez le mauvais voyageur. */
+  }
+  _cacheComptesTmpl.set(userId, { t: Date.now(), v });
+  return v;
+}
+
 // ✅ Cron message_templates
 // - before_arrival  : la veille à 7h (Europe/Paris)
 // - on_arrival      : le jour J à 7h (Europe/Paris)
@@ -31533,6 +31561,10 @@ async function runTemplatesCron(triggerTypes) {
         }
 
         // Chercher les conversations éligibles
+        /* Les comptes dont ce template peut servir les conversations : le sien,
+           et ceux qui l'ont delegue a ce compte. */
+        const comptesTmpl = await comptesDuTemplate(tmpl.user_id);
+
         const isDepRelated = tmpl.trigger_type.includes('departure') || tmpl.trigger_type === 'after_departure';
         const dateCol = isDepRelated ? 'reservation_end_date' : 'reservation_start_date';
 
@@ -31546,7 +31578,12 @@ async function runTemplatesCron(triggerTypes) {
              AND DATE(r.start_date) = DATE(c.reservation_start_date)
              AND r.status != 'cancelled'
            )
-           WHERE c.user_id = $1
+           /* Le template peut appartenir a un compte d'AGENCE et la conversation
+              au compte proprietaire du logement : comparer les deux identifiants
+              ne remontait alors jamais rien. On lit desormais le compte du
+              template ET ceux qui l'ont delegue a ce compte.
+              Le filtre property_ids ci-dessous reste seul maitre des logements. */
+           WHERE c.user_id = ANY($1::text[])
            AND DATE(c.${dateCol} AT TIME ZONE 'Europe/Paris') = $2
            AND c.status != 'cancelled'
            ${(() => {
@@ -31557,10 +31594,15 @@ async function runTemplatesCron(triggerTypes) {
              if (ids.length === 1) return `AND c.property_id = '${ids[0].replace(/'/g,"''")}'`;
              return `AND c.property_id IN (${ids.map(id => `'${id.replace(/'/g,"''")}'`).join(',')})`;
            })()}`,
-          [tmpl.user_id, targetDate]
+          [comptesTmpl, targetDate]
         );
 
-        console.log(`  Template "${tmpl.title}" → ${convs.rows.length} conversation(s) ciblée(s) pour ${targetDate}`);
+        /* Le nombre de comptes interroges est affiche avec le resultat : sans
+           lui, un « 0 conversation » ne distingue pas « aucune arrivee ce
+           jour » de « mauvais compte ». C'est ce silence qui a laisse le
+           defaut passer inapercu. */
+        console.log(`  Template "${tmpl.title}" → ${convs.rows.length} conversation(s) ciblée(s) ` +
+          `sur ${comptesTmpl.length} compte(s) pour ${targetDate}`);
 
         for (const conv of convs.rows) {
           // Skip Airbnb si template contient {caution_url} (Airbnb gere la caution)
