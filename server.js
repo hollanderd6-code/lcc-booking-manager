@@ -31289,11 +31289,16 @@ app.get('/api/message-template-scheduled', authenticateToken, async (req, res) =
                   c.platform
            FROM conversations c
            LEFT JOIN properties p ON p.id = c.property_id
-           WHERE c.user_id = $1
+           /* agencyIds est deja calcule en tete de route et sert a lire les
+              templates : on l'utilise aussi ici, sinon les templates d'agence
+              s'affichent sans jamais trouver les conversations des logements
+              delegues. Route en lecture seule : aucun envoi, aucun doublon
+              possible. Le filtre par logement ci-dessous reste souverain. */
+           WHERE c.user_id = ANY($1::text[])
            AND DATE(c.${dateCol} AT TIME ZONE 'Europe/Paris') = $2
            AND c.status != 'cancelled'
            ${propFilter}`,
-          [userId, targetDate]
+          [agencyIds, targetDate]
         );
 
         for (const conv of convs.rows) {
