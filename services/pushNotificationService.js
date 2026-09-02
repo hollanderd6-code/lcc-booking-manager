@@ -6,17 +6,25 @@ let firebaseInitialized = false;
 
 function initializeFirebase() {
   if (firebaseInitialized) return;
-  
+
   try {
     const serviceAccount = require(path.join(__dirname, '../firebase-service-account.json'));
-    
+
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
-    
+
     firebaseInitialized = true;
     console.log('✅ Firebase Admin SDK initialisé');
   } catch (error) {
+    // Firebase refuse un second initializeApp sur l'app par défaut. Si un autre
+    // module l'a déjà initialisée, ce n'est pas une panne : on se marque comme
+    // prêt au lieu de rester bloqué à false et de refuser tous les envois.
+    if (error.code === 'app/duplicate-app' || /already exists/i.test(error.message || '')) {
+      firebaseInitialized = true;
+      console.log('ℹ️ Firebase Admin déjà initialisé par un autre module');
+      return;
+    }
     console.error('❌ Erreur initialisation Firebase Admin:', error.message);
   }
 }
@@ -35,21 +43,25 @@ async function sendPushNotification(userId, notification, db) {
     console.error('❌ Firebase Admin non initialisé');
     return;
   }
-  
+
   try {
-    // Récupérer les tokens FCM de l'utilisateur
+    // La colonne s'appelle fcm_token, pas token : la table user_fcm_tokens a
+    // pour colonnes id, user_id, fcm_token, device_id, device_type,
+    // sub_account_id, created_at, updated_at. La requête d'origine lisait
+    // « token » — elle levait donc une erreur SQL à chaque appel, et aucune
+    // notification passant par ce fichier ne partait.
     const tokens = await db.query(
-      'SELECT token FROM user_fcm_tokens WHERE user_id = $1',
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
       [userId]
     );
-    
+
     if (!tokens.rows || tokens.rows.length === 0) {
       console.log(`ℹ️ Aucun token FCM pour l'utilisateur ${userId}`);
       return;
     }
-    
-    const fcmTokens = tokens.rows.map(row => row.token);
-    
+
+    const fcmTokens = tokens.rows.map(row => row.fcm_token);
+
     // Préparer le message
     const message = {
       notification: {
@@ -59,30 +71,42 @@ async function sendPushNotification(userId, notification, db) {
       data: notification.data || {},
       tokens: fcmTokens
     };
-    
-    // Envoyer via Firebase Cloud Messaging
-    const response = await admin.messaging().sendMulticast(message);
-    
+
+    // sendMulticast a été retiré de firebase-admin en v11 ; le projet est en
+    // ^13.6.0, donc la méthode était undefined et l'appel levait un TypeError.
+    // sendEachForMulticast prend le même message et renvoie la même forme de
+    // réponse (successCount, failureCount, responses[]).
+    const response = await admin.messaging().sendEachForMulticast(message);
+
     console.log(`✅ Notification envoyée à ${userId}: ${response.successCount}/${fcmTokens.length} tokens`);
-    
+
     // Nettoyer les tokens invalides
     if (response.failureCount > 0) {
       const tokensToDelete = [];
       response.responses.forEach((resp, idx) => {
         if (!resp.success) {
-          tokensToDelete.push(fcmTokens[idx]);
+          // Ne supprimer que les tokens réellement périmés. Une panne réseau ou
+          // un quota dépassé fait aussi échouer la réponse : purger sur ce seul
+          // critère effacerait des tokens valides, et l'appareil ne recevrait
+          // plus rien jusqu'à sa prochaine reconnexion.
+          const code = resp.error?.code || '';
+          if (code === 'messaging/registration-token-not-registered'
+              || code === 'messaging/invalid-registration-token'
+              || code === 'messaging/invalid-argument') {
+            tokensToDelete.push(fcmTokens[idx]);
+          }
         }
       });
-      
+
       if (tokensToDelete.length > 0) {
         await db.query(
-          'DELETE FROM user_fcm_tokens WHERE token = ANY($1)',
+          'DELETE FROM user_fcm_tokens WHERE fcm_token = ANY($1)',
           [tokensToDelete]
         );
         console.log(`🧹 ${tokensToDelete.length} token(s) invalide(s) supprimé(s)`);
       }
     }
-    
+
     return response;
   } catch (error) {
     console.error('❌ Erreur envoi notification push:', error.message);
@@ -122,12 +146,20 @@ async function sendNewMessageNotification(recipientUserId, messageDataOrGuestNam
     .replace(/https?:\/\/\S+/g, '🔗 Lien')
     .substring(0, 80);
 
-  // Récupérer le nom du logement depuis la conversation si possible
+  // Récupérer le nom du logement depuis la conversation si possible.
+  // conversations n'a PAS de colonne property_name : la requête d'origine
+  // lisait cette colonne inexistante, l'erreur était avalée par le .catch
+  // juste en dessous, et le nom du logement n'apparaissait jamais dans le
+  // titre. On passe par properties, comme le reste du code.
   let propertyName = '';
   try {
     if (conversationId && db) {
       const convRow = await db.query(
-        'SELECT property_name FROM conversations WHERE id = $1 LIMIT 1',
+        `SELECT COALESCE(p.internal_name, p.name) AS property_name
+           FROM conversations c
+           LEFT JOIN properties p ON p.id = c.property_id
+          WHERE c.id = $1
+          LIMIT 1`,
         [conversationId]
       ).catch(() => ({ rows: [] }));
       propertyName = convRow.rows[0]?.property_name || '';
@@ -168,7 +200,7 @@ async function sendNewReservationNotification(userId, reservationData, db) {
       end_date: reservationData.endDate || ''
     }
   };
-  
+
   return await sendPushNotification(userId, notification, db);
 }
 
@@ -188,7 +220,7 @@ async function sendCheckInNotification(userId, checkInData, db) {
       reservation_id: checkInData.reservationId || ''
     }
   };
-  
+
   return await sendPushNotification(userId, notification, db);
 }
 
@@ -209,7 +241,7 @@ async function sendCleaningNotification(userId, cleaningData, db) {
       date: cleaningData.date || ''
     }
   };
-  
+
   return await sendPushNotification(userId, notification, db);
 }
 
@@ -227,7 +259,7 @@ async function sendTestPushNotification(userId, db) {
       timestamp: new Date().toISOString()
     }
   };
-  
+
   return await sendPushNotification(userId, notification, db);
 }
 
