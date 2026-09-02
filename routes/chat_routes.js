@@ -172,6 +172,31 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
     } catch(e) { return [userId]; }
   }
 
+  /* Les comptes pour lesquels cet utilisateur a le droit d'agir : le sien, et
+     ceux qui le lui ont délégué.
+
+     Distinct de getAgencyUserIds ci-dessus, qui n'élargit que si la requête
+     porte ?agency=all — un opt-in d'affichage, absent des POST. Pour un
+     contrôle d'accès, la délégation doit être lue dans tous les cas : un
+     gestionnaire qui répond à un voyageur sur un logement délégué en a le
+     droit, qu'il ait passé ce paramètre ou non. */
+  async function comptesAutorises(userId) {
+    if (!userId) return [];
+    try {
+      const { rows } = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations
+          WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [userId]
+      );
+      return [userId, ...rows.map(d => d.delegator_user_id)];
+    } catch (e) {
+      /* On n'ouvre rien de plus que son propre compte : mieux vaut un accès
+         refusé a tort qu'une conversation ouverte au mauvais compte. */
+      console.error('⚠️ [CHAT] delegations illisibles pour', userId, ':', e.message);
+      return [userId];
+    }
+  }
+
   // ============================================
   // MIDDLEWARE D'AUTHENTIFICATION OPTIONNELLE
   // ============================================
@@ -192,7 +217,20 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
       
       const token = authHeader.substring(7);
       const jwt = require('jsonwebtoken');
-      const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+      /* Le repli DOIT être le même que partout ailleurs. Ce fichier utilisait
+         'your-secret-key' alors que server.js (26 endroits) et
+         sub-accounts-middleware.js utilisent 'dev-secret-change-me'.
+         Tant que JWT_SECRET n'est pas défini dans l'environnement, les tokens
+         sont signés avec l'un et vérifiés avec l'autre : la vérification
+         échouait sur CHAQUE requête (« invalid signature » dans les logs),
+         req.user restait null, et les contrôles d'accès ci-dessous étaient
+         purement et simplement sautés.
+
+         Le vrai correctif reste de définir JWT_SECRET dans l'environnement :
+         un secret en dur dans le dépôt permet de forger un token. Mais le
+         définir invalide toutes les sessions en cours — à faire à un moment
+         choisi, pas dans le même passage que ce correctif. */
+      const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
       
       try {
         const decoded = jwt.verify(token, JWT_SECRET);
@@ -667,8 +705,14 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
         const realUserId = req.user.isSubAccount 
           ? (await getRealUserId(pool, req))
           : req.user.id;
-        
-        if (realUserId !== conversation.user_id) {
+
+        /* Un compte d'agence lit légitimement les conversations des logements
+           qui lui sont délégués : comparer au seul user_id de la conversation
+           l'aurait refusé. Tant que la vérification du token échouait, ce
+           contrôle n'était jamais atteint et le défaut restait invisible. */
+        const comptes = await comptesAutorises(realUserId);
+
+        if (!comptes.includes(conversation.user_id)) {
           // Vérifier si sous-compte avec accès à cette propriété
           if (req.user.isSubAccount) {
             const subAccountData = await pool.query(
@@ -752,14 +796,33 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
 
       const conversation = convResult.rows[0];
 
-      // Vérifier les permissions
-      if (req.user && sender_type === 'owner') {
+      /* Vérifier les permissions.
+
+         Le contrôle était écrit « if (req.user && sender_type === 'owner') » :
+         il ne s'appliquait donc QUE si l'authentification avait réussi. Comme
+         la vérification du token échouait systématiquement (mauvais secret,
+         corrigé plus haut), req.user valait null et tout ce bloc était sauté :
+         n'importe quel appel pouvait poster en 'owner' dans n'importe quelle
+         conversation, sans token valide, et le message partait au voyageur.
+
+         Un contrôle d'accès doit refuser par défaut. On exige donc une
+         identité pour écrire au nom de l'hôte, au lieu de ne vérifier que
+         ceux qui en présentent une. */
+      if (sender_type === 'owner') {
+        if (!req.user) {
+          return res.status(401).json({ error: 'Authentification requise' });
+        }
+
         // ✅ Support des sous-comptes
         const realUserId = req.user.isSubAccount 
           ? (await getRealUserId(pool, req))
           : req.user.id;
-        
-        if (realUserId !== conversation.user_id) {
+
+        /* Comme pour la lecture : un gestionnaire répond légitimement sur un
+           logement que le propriétaire lui a délégué. */
+        const comptes = await comptesAutorises(realUserId);
+
+        if (!comptes.includes(conversation.user_id)) {
           return res.status(403).json({ error: 'Accès refusé' });
         }
         
