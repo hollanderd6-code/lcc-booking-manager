@@ -11,14 +11,24 @@ const jwt = require('jsonwebtoken');
  */
 function generateSubAccountToken(subAccountId) {
   const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
-  
+
   return jwt.sign(
     {
       subAccountId: subAccountId,
       type: 'sub_account'
     },
     secret,
-    {}
+    /* Le troisieme argument etait {} : le token n'avait aucune expiration.
+       Un token de sous-compte vole restait donc valable indefiniment, et
+       desactiver le compte en base ne l'invalidait pas (authenticateAny ne
+       verifie que la signature ; is_active n'est lu que par requirePermission,
+       donc les routes sans permission particuliere restaient ouvertes).
+
+       90 jours : assez long pour du personnel de menage sur mobile, qui ne se
+       reconnecte pas volontiers, assez court pour qu'un token perdu cesse un
+       jour de fonctionner. A l'expiration, authenticateAny renvoie maintenant
+       un 401 — le client redirige vers la connexion au lieu de bloquer. */
+    { expiresIn: '90d' }
   );
 }
 

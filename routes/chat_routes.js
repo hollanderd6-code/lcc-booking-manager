@@ -1254,9 +1254,16 @@ if (sender_type === 'owner' && (message && message.trim())) {
   app.post('/api/chat/toggle-ai/:conversationId', authenticateToken, async (req, res) => {
     try {
       const { conversationId } = req.params;
-      const userId = req.user.id;
+      /* getRealUserId, pas req.user.id : pour un sous-compte, req.user.id vaut
+         null (voir sub-accounts-middleware) — la requête ne remontait donc
+         jamais rien et l'appel répondait 404. */
+      const userId = await getRealUserId(pool, req);
+      /* Et les comptes délégués : couper l'IA sur une conversation d'un logement
+         confié par un propriétaire est légitime. Avec le seul user_id, la
+         conversation était introuvable et l'interrupteur restait sans effet. */
+      const comptes = await comptesAutorises(userId);
       // Vérifier que la conversation appartient à l'utilisateur
-      const conv = await pool.query('SELECT id, ai_disabled FROM conversations WHERE id = $1 AND user_id = $2', [conversationId, userId]);
+      const conv = await pool.query('SELECT id, ai_disabled FROM conversations WHERE id = $1 AND user_id = ANY($2::text[])', [conversationId, comptes]);
       if (!conv.rows.length) return res.status(404).json({ error: 'Conversation non trouvée' });
 
       const newState = !conv.rows[0].ai_disabled;
