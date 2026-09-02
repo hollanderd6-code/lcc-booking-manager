@@ -1238,6 +1238,13 @@ Enregistrer les préférences
 <span>Créer et gérer les codes d'accès</span>
 </div>
 </div>
+<div class="permission-item">
+<input id="perm_canViewOwners" type="checkbox"/>
+<div class="permission-label">
+<strong>Propriétaires, contrats et factures propriétaires</strong>
+<span>Consulter les propriétaires et leurs documents</span>
+</div>
+</div>
 </div>
 </div>
 </form>
@@ -1823,7 +1830,8 @@ document.addEventListener('DOMContentLoaded', () => {
         can_view_finances: document.getElementById('perm_canViewFinances')?.checked || false,
         can_manage_team: false,
         can_view_deposits: document.getElementById('perm_canViewDeposits')?.checked || false,
-        can_manage_locks: document.getElementById('perm_canManageLocks')?.checked || false
+        can_manage_locks: document.getElementById('perm_canManageLocks')?.checked || false,
+        can_view_owners: document.getElementById('perm_canViewOwners')?.checked || false
       };
       console.log('🔐 Permissions:', data.permissions);
     }
@@ -1902,6 +1910,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('perm_canViewProperties')) document.getElementById('perm_canViewProperties').checked = member.can_view_properties || false;
         if (document.getElementById('perm_canViewDeposits')) document.getElementById('perm_canViewDeposits').checked = member.can_view_deposits || false;
         if (document.getElementById('perm_canManageLocks')) document.getElementById('perm_canManageLocks').checked = member.can_manage_locks || false;
+        if (document.getElementById('perm_canViewOwners')) document.getElementById('perm_canViewOwners').checked = member.can_view_owners || false;
       }
       
       document.querySelector('#addTeamMemberModal h2').textContent = 'Modifier le membre';
