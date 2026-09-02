@@ -431,7 +431,13 @@ RÈGLES DE CE MODE :
 // Respecte le délai indiqué par Groq ("try again in Xs") ou l'en-tête
 // retry-after ; réessaie au maximum 2 fois avant d'abandonner (retourne null).
 // ─────────────────────────────────────────────
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+// llama-3.3-70b-versatile a ete deprecie par Groq (annonce du 17 juin 2026,
+// arret le 16 aout 2026) : l'API repond « model_not_found » sur chaque appel,
+// donc AUCUNE reponse IA ne partait plus et toutes les conversations
+// basculaient sur l'escalade « je vous mets en relation avec le responsable ».
+// Remplacant recommande par Groq pour ce modele : openai/gpt-oss-120b.
+// Surchargeable sans redeploiement via la variable d'environnement GROQ_MODEL.
+const GROQ_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 
 function _groqRetryMs(headers, bodyText) {
   const ra = headers && headers.get && headers.get('retry-after');
