@@ -29901,14 +29901,44 @@ async function regenStripeSession(record, type, pool) {
     return null;
   }
 
-  // Récupérer le logement pour le nom
-  const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [propertyId]).catch(() => ({ rows: [] }));
-  const prop = propRow.rows[0] || {};
+  /* Récupérer le logement pour le nom.
 
-  // Si le logement n'existe pas en DB, on annule la caution et on skip
+     Le .catch(() => ({ rows: [] })) qui se trouvait ici confondait deux
+     situations très différentes : « le logement n'existe pas » et « je n'ai
+     pas réussi à le lire ». Une coupure réseau ou un timeout renvoyait zéro
+     ligne, et le code en concluait la disparition du logement.
+
+     On laisse donc l'erreur remonter comme telle, et on la traite à part. */
+  let prop = {};
+  let lectureOk = true;
+  try {
+    const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [propertyId]);
+    prop = propRow.rows[0] || {};
+  } catch (e) {
+    lectureOk = false;
+    console.warn(`⚠️ [REGEN] lecture du logement impossible pour ${record.id} (${propertyId}) : ${e.message}`);
+  }
+
+  /* Requête en échec : on ne conclut rien. Le lien sera régénéré au passage
+     suivant du cron — un lien périmé de quelques heures se répare tout seul. */
+  if (!lectureOk) return null;
+
+  /* Logement réellement absent : on saute, et on NE TOUCHE PAS au statut de
+     la caution.
+
+     Le code annulait ici la caution (UPDATE deposits SET status = 'cancelled').
+     Ce cron n'a qu'une tâche : régénérer un lien Stripe expiré. Annuler une
+     caution engage l'argent du voyageur et de l'hôte — ce n'est pas à un job
+     de maintenance de le décider sur la foi d'une jointure vide.
+
+     En production, deux cautions bien réelles ont été annulées ainsi, parce
+     que leur property_id pointait vers un identifiant périmé : le logement
+     avait été recréé sous le compte propriétaire. Le logement n'avait pas
+     disparu, c'était la référence qui était fausse.
+
+     La caution reste donc en attente, visible, rattrapable à la main. */
   if (!prop.id) {
-    console.warn(`⚠️ [REGEN] ${record.id} ignoré — logement ${propertyId} introuvable, caution annulée`);
-    await pool.query('UPDATE deposits SET status = $1, updated_at = NOW() WHERE id = $2', ['cancelled', record.id]).catch(() => {});
+    console.warn(`⚠️ [REGEN] ${record.id} ignoré — logement ${propertyId} introuvable (statut inchangé, à vérifier à la main)`);
     return null;
   }
 
