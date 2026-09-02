@@ -11267,6 +11267,14 @@ app.get('/api/subscription/status', authenticateAny, async (req, res) => {
     const smsIncluded = basePlan === 'pro';
     const smsEnabled = smsIncluded || (sub.sms_enabled === true);
 
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const propCountResult = await pool.query(
+      'SELECT COUNT(*) FROM properties WHERE user_id = ANY($1::text[])',
+      [agencyIds]
+    );
+    const propertiesUsed = parseInt(propCountResult.rows[0].count, 10);
+    const propertiesLimit = getPlanLimits(sub.plan_type).included;
+
     res.json({
       status: sub.status,
       planType: sub.plan_type,
@@ -11277,7 +11285,9 @@ app.get('/api/subscription/status', authenticateAny, async (req, res) => {
       displayMessage: displayMessage,
       showAlert: sub.status === 'trial' && daysRemaining !== null && daysRemaining <= 3,
       smsEnabled: smsEnabled,
-      smsIncluded: smsIncluded
+      smsIncluded: smsIncluded,
+      propertiesUsed: propertiesUsed,
+      propertiesLimit: propertiesLimit
     });
 
   } catch (err) {
