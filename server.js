@@ -4814,8 +4814,20 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
               // Si pas de pmt (session Guest App directe), récupérer user_id via la propriété
               let ownerId = pmt?.user_id || null;
               if (!ownerId && propId) {
-                const propOwner = await pool.query('SELECT user_id FROM properties WHERE id = $1', [propId]).catch(() => ({ rows: [] }));
+                /* L'echec de cette lecture laisse ownerId a null, et le garde
+                   « && ownerId » plus bas empeche alors la creation de la
+                   reservation : le paiement est encaisse sans reservation
+                   enregistree. La logique est prudente, mais l'echec etait
+                   muet — on le rend visible pour qu'il soit rattrapable. */
+                const propOwner = await pool.query('SELECT user_id FROM properties WHERE id = $1', [propId])
+                  .catch((e) => {
+                    console.error(`❌ [PAIEMENT] proprietaire du logement ${propId} illisible : ${e.message} — reservation NON creee, a reprendre a la main`);
+                    return { rows: [] };
+                  });
                 ownerId = propOwner.rows[0]?.user_id || null;
+                if (!ownerId) {
+                  console.warn(`⚠️ [PAIEMENT] aucun proprietaire trouve pour le logement ${propId} — reservation NON creee`);
+                }
               }
 
               if ((isFreeLinkWithDates || isGuestAppSession) && startDate && endDate && propId && ownerId) {
@@ -6322,7 +6334,20 @@ async function getNextInvoiceNumber(pool, ownerUserId, yearStr) {
            AND (is_credit_note IS NULL OR is_credit_note = FALSE)
      ) t`,
     [ownerUserId, like]
-  ).catch(() => ({ rows: [{ max_seq: 0 }] }));
+  ).catch((e) => {
+    /* Ne PAS renvoyer max_seq = 0 ici.
+
+       Ce repli est indistinguable du cas normal : une premiere facture de
+       l'annee donne aussi max_seq = 0. Sur une erreur de lecture, la
+       fonction repartait donc a FACT-<annee>-0001 et reattribuait un numero
+       deja utilise.
+
+       La numerotation des factures doit etre sequentielle et unique. Mieux
+       vaut ne pas produire la facture — l'hote reessaie — que d'en produire
+       une avec un numero en doublon, qui se repare en comptabilite. */
+    console.error('❌ [FACTURE] numerotation illisible, aucune facture generee :', e.message);
+    throw new Error('Numerotation de facture indisponible — facture non generee');
+  });
   const next = (parseInt(r.rows[0]?.max_seq || 0) + 1);
   return `FACT-${yearStr}-${String(next).padStart(4, '0')}`;
 }
