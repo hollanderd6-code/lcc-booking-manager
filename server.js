@@ -18348,6 +18348,11 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         if (raw === 'direct' || raw === '' || raw === 'manuel' || raw === 'manual') return 'Direct';
         return raw.charAt(0).toUpperCase() + raw.slice(1);
       })();
+      // Blocages calendrier — toutes variantes (block/blocked/blocage/bloqué/bloc)
+      const isBlock = (() => {
+        const raw = (r.ota_name || r.platform || '').toLowerCase();
+        return raw.includes('block') || raw.includes('blocage') || raw === 'bloc' || raw === 'bloqué';
+      })();
 
       return {
         uid: r.uid,
@@ -18376,7 +18381,8 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         otaCommissionPct,
         otaCommissionAmount: Math.round(otaCommissionAmount * 100) / 100,
         netMargin: Math.round(netMargin * 100) / 100,
-        netMarginPct
+        netMarginPct,
+        isBlock
       };
     });
 
@@ -18397,9 +18403,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     }));
 
     filteredResas.forEach(r => {
-      // Exclure les blocs (pas des réservations réelles)
-      if ((r.platform || '').toLowerCase().includes('block') ||
-          (r.platform || '').toLowerCase() === 'bloc') return;
+      if (r.isBlock) return;
       // Grouper par mois de PAIEMENT effectif
       const payMonthIdx = r.paymentYear === selectedYear ? r.paymentMonth - 1 : -1;
       const m = payMonthIdx >= 0 ? monthlyData[payMonthIdx] : null;
@@ -18493,6 +18497,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     // ── Répartition par plateforme (global) ────────────────────
     const platformStats = {};
     filteredResas.forEach(r => {
+      if (r.isBlock) return;
       if (!platformStats[r.platform]) {
         platformStats[r.platform] = { bookings: 0, nights: 0, revenue: 0 };
       }
@@ -18500,7 +18505,8 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
       platformStats[r.platform].nights    += r.nights;
       platformStats[r.platform].revenue   += r.grossRevenue;
     });
-    const totalBookings = filteredResas.length;
+    const realResas = filteredResas.filter(r => !r.isBlock);
+    const totalBookings = realResas.length;
     const platformArray = Object.entries(platformStats).map(([name, stats]) => ({
       name,
       bookings: stats.bookings,
@@ -18512,16 +18518,16 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     // ── Résumé global ───────────────────────────────────────────
     const summary = {
       totalBookings,
-      totalNights:            filteredResas.reduce((s, r) => s + r.nights, 0),
-      totalGrossRevenue:      Math.round(filteredResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100,
-      totalNetRevenue:        Math.round(filteredResas.reduce((s, r) => s + r.netRevenue, 0) * 100) / 100,
-      totalTouristTax:        Math.round(filteredResas.reduce((s, r) => s + r.touristTax, 0) * 100) / 100,
-      totalCleaningFee:       Math.round(filteredResas.reduce((s, r) => s + r.cleaningFee, 0) * 100) / 100,
-      totalConcierge:         Math.round(filteredResas.reduce((s, r) => s + r.conciergeAmount, 0) * 100) / 100,
-      totalOwnerRevenue:      Math.round(filteredResas.reduce((s, r) => s + r.ownerRevenue, 0) * 100) / 100,
-      totalOtaCommission:     Math.round(filteredResas.reduce((s, r) => s + r.otaCommissionAmount, 0) * 100) / 100,
+      totalNights:            realResas.reduce((s, r) => s + r.nights, 0),
+      totalGrossRevenue:      Math.round(realResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100,
+      totalNetRevenue:        Math.round(realResas.reduce((s, r) => s + r.netRevenue, 0) * 100) / 100,
+      totalTouristTax:        Math.round(realResas.reduce((s, r) => s + r.touristTax, 0) * 100) / 100,
+      totalCleaningFee:       Math.round(realResas.reduce((s, r) => s + r.cleaningFee, 0) * 100) / 100,
+      totalConcierge:         Math.round(realResas.reduce((s, r) => s + r.conciergeAmount, 0) * 100) / 100,
+      totalOwnerRevenue:      Math.round(realResas.reduce((s, r) => s + r.ownerRevenue, 0) * 100) / 100,
+      totalOtaCommission:     Math.round(realResas.reduce((s, r) => s + r.otaCommissionAmount, 0) * 100) / 100,
       avgNightsPerBooking: totalBookings > 0
-        ? Math.round(filteredResas.reduce((s, r) => s + r.nights, 0) / totalBookings * 10) / 10
+        ? Math.round(realResas.reduce((s, r) => s + r.nights, 0) / totalBookings * 10) / 10
         : 0
     };
 
