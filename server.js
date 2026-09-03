@@ -17001,7 +17001,110 @@ app.get('/api/properties',
   }
 });
 
-app.get('/api/properties/:propertyId', 
+// Agrégation de l'état de diffusion pour tous les logements du périmètre.
+// Une seule requête SQL (LATERAL) remplace les N appels à /sante unitaire.
+// Même règles que la route unitaire — ne pas modifier l'une sans l'autre.
+app.get('/api/properties/diffusion', authenticateAny, requirePermission(pool, 'can_view_properties'), loadSubAccountData(pool), async (req, res) => {
+  try {
+    const agencyIds = await getAgencyUserIds(req, req.user.id);
+
+    // Propriétés + dernier événement Channex par catégorie (dispo / tarifs) + comptes
+    // Stripe pour le check caution (mirror de getStripeForProperty, sans appel API ici).
+    const { rows } = await pool.query(
+      `SELECT
+         p.id,
+         p.name,
+         p.base_price,
+         p.deposit_amount,
+         p.channex_enabled,
+         p.channex_property_id,
+         p.channex_room_type_id,
+         dispo.status   AS dispo_status,
+         tarifs.status  AS tarifs_status,
+         oc.stripe_account_id AS owner_stripe,
+         oc.use_bh_stripe     AS owner_use_bh,
+         u.stripe_account_id  AS user_stripe,
+         u.use_bh_stripe      AS user_use_bh
+       FROM properties p
+       LEFT JOIN owner_clients oc ON oc.id = p.owner_id
+       LEFT JOIN users u ON u.id = p.user_id
+       LEFT JOIN LATERAL (
+         SELECT status FROM channex_logs
+         WHERE property_id = p.id AND event_type = 'push_availability'
+         ORDER BY created_at DESC LIMIT 1
+       ) dispo ON true
+       LEFT JOIN LATERAL (
+         SELECT status FROM channex_logs
+         WHERE property_id = p.id
+           AND event_type = ANY(ARRAY['push_rates', 'push_restrictions'])
+         ORDER BY created_at DESC LIMIT 1
+       ) tarifs ON true
+       WHERE p.user_id = ANY($1::text[])
+       ORDER BY p.name`,
+      [agencyIds]
+    );
+
+    // compteStripeUtilisable a un cache interne — les appels parallèles sont bon marché.
+    // On ne vérifie que les logements ayant une caution configurée.
+    const stripeIds = new Set();
+    for (const r of rows) {
+      if (Number(r.deposit_amount || 0) <= 0) continue;
+      if (r.owner_stripe && !r.owner_use_bh) stripeIds.add(r.owner_stripe);
+      else if (r.user_stripe && !r.user_use_bh) stripeIds.add(r.user_stripe);
+    }
+    const stripeOk = new Map();
+    await Promise.all([...stripeIds].map(async (id) => {
+      stripeOk.set(id, await compteStripeUtilisable(id));
+    }));
+
+    // Calcul par logement — règles identiques à /api/properties/:property_id/sante
+    const logements = rows.map((r) => {
+      const relie = !!(r.channex_enabled && r.channex_property_id && r.channex_room_type_id);
+      let aRegler = relie ? 0 : 1; // point « relie » échoue si non connecté
+
+      if (relie) {
+        const okDispo = r.dispo_status === 'success';
+        if (!okDispo) aRegler++;
+
+        const prix = Number(r.base_price || 0) > 0;
+        const okTarifs = prix && r.tarifs_status === 'success';
+        if (!okTarifs) aRegler++;
+      }
+
+      if (Number(r.deposit_amount || 0) > 0) {
+        // Mirror de getStripeForProperty : propriétaire lié d'abord, puis compte principal
+        let cautionOk = true;
+        if (r.owner_stripe && !r.owner_use_bh) {
+          cautionOk = stripeOk.get(r.owner_stripe) ?? true;
+        } else if (r.user_stripe && !r.user_use_bh) {
+          cautionOk = stripeOk.get(r.user_stripe) ?? true;
+        }
+        if (!cautionOk) aRegler++;
+      }
+
+      return {
+        property_id: r.id,
+        nom: r.name,
+        diffuse: relie,
+        vendable: relie && aRegler === 0,
+        a_regler: aRegler,
+      };
+    });
+
+    const visibles = filterByAccessibleProperties(logements, req);
+    res.json({
+      total: visibles.length,
+      diffuses: visibles.filter((l) => l.diffuse).length,
+      vendables: visibles.filter((l) => l.vendable).length,
+      logements: visibles,
+    });
+  } catch (e) {
+    console.error('[diffusion]', e.message);
+    res.status(500).json({ error: 'Vérification impossible' });
+  }
+});
+
+app.get('/api/properties/:propertyId',
   authenticateAny,
   requirePermission(pool, 'can_view_properties'),
   loadSubAccountData(pool),
