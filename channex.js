@@ -253,10 +253,15 @@ async function pushAvailability(pool, { property_id, channex_property_id, channe
     const blockedSet = new Set(dates_blocked);
     const values = [];
     const today = new Date();
+    // Référence Paris pour ignorer les nuits révolues dans les deux branches.
+    const todayParis = today.toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
 
     if (dates_to_update && dates_to_update.length > 0) {
       // Mode partiel : envoyer seulement les dates concernées
       for (const dateStr of dates_to_update) {
+        // Une nuit passée ne peut plus être réservée : inutile de demander
+        // à Channex de la fermer, et la relecture la compterait à tort en échec.
+        if (dateStr < todayParis) continue;
         values.push({
           property_id: channex_property_id,
           room_type_id: channex_room_type_id,
@@ -309,10 +314,19 @@ async function pushAvailability(pool, { property_id, channex_property_id, channe
         manquantes = await verifierBlocage(channex_property_id, channex_room_type_id, aVerifier);
       }
       if (manquantes.length) {
-        throw new Error('Channex expose encore ' + manquantes.length + ' nuit(s) en vente apres blocage : '
-          + manquantes.slice(0, 6).join(', ') + (manquantes.length > 6 ? '…' : ''));
+        // Filet de sécurité : le mode full sync part de new Date() UTC, qui peut
+        // inclure la veille en heure de Paris. On retire les dates passées avant
+        // de conclure à un vrai échec.
+        const futures = manquantes.filter(d => d >= todayParis);
+        if (futures.length) {
+          throw new Error('Channex expose encore ' + futures.length + ' nuit(s) en vente apres blocage : '
+            + futures.slice(0, 6).join(', ') + (futures.length > 6 ? '…' : ''));
+        }
+        console.log('✓ [CHANNEX] Dates non fermees par Channex mais toutes passees ('
+          + manquantes.length + ') — ignorees');
+      } else {
+        console.log('✓ [CHANNEX] Blocage relu et confirme (' + aVerifier.length + ' nuits a 0)');
       }
-      console.log('✓ [CHANNEX] Blocage relu et confirme (' + aVerifier.length + ' nuits a 0)');
     }
 
     await logChannex(pool, {

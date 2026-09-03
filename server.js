@@ -37792,8 +37792,11 @@ app.get('/api/properties/:property_id/sante', authenticateAny, async (req, res) 
     if (relie) {
       const dispo = await dernier(['push_availability']);
       const okDispo = !!(dispo && dispo.status === 'success');
+      const titreDispo = okDispo ? 'Calendrier envoyé'
+        : dispo ? 'Dernier envoi en échec'
+        : 'Calendrier jamais envoyé';
       points.push({ cle: 'calendrier', ok: okDispo,
-        titre: okDispo ? 'Calendrier envoyé' : 'Calendrier jamais envoyé',
+        titre: titreDispo,
         quand: dispo ? dispo.created_at : null,
         details: okDispo ? null : 'Vos dates ne sont pas parties : le logement reste fermé à la réservation.',
         action: okDispo ? null : 'envoyer' });
