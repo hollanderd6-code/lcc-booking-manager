@@ -1521,6 +1521,9 @@ window.bhConfirmDanger = function(message, title) {
   let editingInvoiceId = null;
   let editingClientId = null;
   let isReadOnlyMode = false;
+  let _tabSwitchIntentional = false;
+  let _draftEditMode = false;
+  let _editingClientName = null;
   let emitterProfile = {
     company: '',
     address: '',
@@ -1612,6 +1615,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- TABS ---
   window.switchTab = function(id) {
+    if (id === 'create' && !_tabSwitchIntentional && editingInvoiceId !== null) {
+      createNewInvoice();
+      return;
+    }
+    _tabSwitchIntentional = false;
     document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach(e => e.classList.remove('active'));
     document.getElementById('tab-'+id).classList.add('active');
@@ -3017,6 +3025,9 @@ function getSelectedProperties() {
 }
   // --- SAVE ---
   window.createInvoice = async function(send) {
+    // Fix #3 : lecture seule → aucune écriture
+    if (isReadOnlyMode) return;
+
     const clientId = document.getElementById('invoiceClientId').value;
     if(!clientId) return alert('Veuillez sélectionner un client');
 
@@ -3042,6 +3053,14 @@ function getSelectedProperties() {
       sendEmail: send
     };
 
+    // Garde-fou : PUT inattendu sur un brouillon → confirmation
+    if (editingInvoiceId && !_draftEditMode) {
+      if (!await window.bhConfirm(
+        `Vous allez remplacer le brouillon de ${_editingClientName || 'ce client'}. Continuer ?`,
+        'Confirmation'
+      )) return;
+    }
+
     try {
       const url = editingInvoiceId ? `/api/owner-invoices/${editingInvoiceId}` : '/api/owner-invoices';
       const method = editingInvoiceId ? 'PUT' : 'POST';
@@ -3051,6 +3070,15 @@ function getSelectedProperties() {
         body: JSON.stringify(data)
       });
       if (res.ok) {
+        // Fix #1 : la facture enregistrée n'est plus la facture en cours
+        editingInvoiceId = null;
+        isReadOnlyMode = false;
+        _draftEditMode = false;
+        _editingClientName = null;
+        const _sbSave = document.getElementById('editorSidebar');
+        if (_sbSave) _sbSave.classList.remove('readonly');
+        const _rbSave = document.getElementById('readonlyBanner');
+        if (_rbSave) _rbSave.style.display = 'none';
         alert('[OK] Facture enregistrée !');
         prestations = [];
         prestationCounter = 0;
@@ -3070,6 +3098,8 @@ function getSelectedProperties() {
   window.createNewInvoice = function() {
     // Désactiver le mode lecture seule
     isReadOnlyMode = false;
+    _draftEditMode = false;
+    _editingClientName = null;
     const sidebar = document.getElementById('editorSidebar');
     if (sidebar) sidebar.classList.remove('readonly');
     const banner = document.getElementById('readonlyBanner');
@@ -3129,6 +3159,8 @@ window.editOwnerInvoiceDraft = async function(id) {
     // Mode édition (pas lecture seule)
     isReadOnlyMode = false;
     editingInvoiceId = inv.id;
+    _draftEditMode = true;
+    _editingClientName = inv.client_name || null;
     const sidebar = document.getElementById('editorSidebar');
     if (sidebar) sidebar.classList.remove('readonly');
     const banner = document.getElementById('readonlyBanner');
@@ -3164,6 +3196,7 @@ window.editOwnerInvoiceDraft = async function(id) {
 
     renderEditorPrestations();
     updatePreview();
+    _tabSwitchIntentional = true;
     switchTab('create');
 
   } catch (err) {
@@ -3190,6 +3223,8 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     // Activer le mode lecture seule
     isReadOnlyMode = true;
     editingInvoiceId = inv.id;
+    _draftEditMode = false;
+    _editingClientName = inv.client_name || null;
     const _numEl = document.getElementById('previewInvoiceNumber');
     if (_numEl) _numEl.textContent = 'N° ' + (inv.invoice_number || 'BROUILLON');
     
@@ -3237,6 +3272,7 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
     renderEditorPrestations();
     updatePreview();
+    _tabSwitchIntentional = true;
     switchTab('create');
 
   } catch (err) {

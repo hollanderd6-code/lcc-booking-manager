@@ -25961,7 +25961,8 @@ app.put('/api/owner-invoices/:id',
         vat_applicable = $1, vat_rate = $2,
         discount_type = $3, discount_value = $4, discount_amount = $5,
         subtotal_ht = $6, subtotal_debours = $7, vat_amount = $8, total_ttc = $9,
-        notes = $10, internal_notes = $11
+        notes = $10, internal_notes = $11,
+        updated_at = NOW()
       WHERE id = $12
     `, [
       vatApplicable, vatRate,
