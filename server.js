@@ -18210,7 +18210,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
 
     const propIds = properties.map(p => p.id);
 
-    // Récupérer toutes les réservations confirmées de l'année
+    // Récupérer les réservations confirmées et en attente d'approbation de l'année
     const resaResult = await pool.query(`
       SELECT
         r.uid, r.property_id, r.start_date, r.end_date,
@@ -18223,7 +18223,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         (r.end_date::date - r.start_date::date) as nights
       FROM reservations r
       WHERE r.user_id = ANY($1::text[])
-        AND r.status = 'confirmed'
+        AND r.status IN ('confirmed', 'pending_approval')
         AND r.property_id = ANY($3)
         AND (
           EXTRACT(YEAR FROM r.start_date) = $2
@@ -18353,6 +18353,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         const raw = (r.ota_name || r.platform || '').toLowerCase();
         return raw.includes('block') || raw.includes('blocage') || raw === 'bloc' || raw === 'bloqué';
       })();
+      const isPending = r.status === 'pending_approval';
 
       return {
         uid: r.uid,
@@ -18382,7 +18383,8 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         otaCommissionAmount: Math.round(otaCommissionAmount * 100) / 100,
         netMargin: Math.round(netMargin * 100) / 100,
         netMarginPct,
-        isBlock
+        isBlock,
+        isPending
       };
     });
 
@@ -18390,6 +18392,8 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     const filteredResas = selectedMonth
       ? enrichedResas.filter(r => r.paymentYear === selectedYear && r.paymentMonth === selectedMonth)
       : enrichedResas;
+    const realResas    = filteredResas.filter(r => !r.isBlock && !r.isPending);
+    const pendingResas = filteredResas.filter(r => !r.isBlock &&  r.isPending);
 
     // ── Agrégats par mois ───────────────────────────────────────
     const monthlyData = Array.from({ length: 12 }, (_, i) => ({
@@ -18403,7 +18407,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     }));
 
     filteredResas.forEach(r => {
-      if (r.isBlock) return;
+      if (r.isBlock || r.isPending) return;
       // Grouper par mois de PAIEMENT effectif
       const payMonthIdx = r.paymentYear === selectedYear ? r.paymentMonth - 1 : -1;
       const m = payMonthIdx >= 0 ? monthlyData[payMonthIdx] : null;
@@ -18455,6 +18459,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         touristTax: 0, cleaningFee: 0,
         conciergeAmount: 0, ownerRevenue: 0,
         otaCommissionAmount: 0, netMargin: 0,
+        pendingBookings: 0, pendingGrossRevenue: 0,
         conciergePct: p.concierge_pct || 0,
         airbnbCommissionPct: parseFloat(p.airbnb_commission_pct) || 3,
         bookingCommissionPct: parseFloat(p.booking_commission_pct) || 15,
@@ -18465,6 +18470,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     filteredResas.forEach(r => {
       const p = byProperty[r.propertyId];
       if (!p) return;
+      if (r.isBlock || r.isPending) return;
       if (r.paymentYear !== selectedYear) return; // Exclure si paiement hors année sélectionnée
       p.bookings++;
       p.nights += r.nights;
@@ -18477,6 +18483,15 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
       p.otaCommissionAmount += r.otaCommissionAmount;
       p.netMargin           += r.netMargin;
       p.platforms[r.platform] = (p.platforms[r.platform] || 0) + 1;
+    });
+
+    // Accumuler le pending par logement
+    pendingResas.forEach(r => {
+      const p = byProperty[r.propertyId];
+      if (!p) return;
+      if (r.paymentYear !== selectedYear) return;
+      p.pendingBookings++;
+      p.pendingGrossRevenue += r.grossRevenue;
     });
 
     // Taux d'occupation (jours réservés / jours dans l'année)
@@ -18492,26 +18507,35 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
       p.otaCommissionAmount = Math.round(p.otaCommissionAmount * 100) / 100;
       p.netMargin           = Math.round(p.netMargin * 100) / 100;
       p.netMarginPct        = p.grossRevenue > 0 ? Math.round(p.netMargin / p.grossRevenue * 100 * 10) / 10 : 0;
+      p.pendingGrossRevenue = Math.round(p.pendingGrossRevenue * 100) / 100;
     });
 
     // ── Répartition par plateforme (global) ────────────────────
     const platformStats = {};
     filteredResas.forEach(r => {
-      if (r.isBlock) return;
+      if (r.isBlock || r.isPending) return;
       if (!platformStats[r.platform]) {
-        platformStats[r.platform] = { bookings: 0, nights: 0, revenue: 0 };
+        platformStats[r.platform] = { bookings: 0, nights: 0, revenue: 0, pendingRevenue: 0 };
       }
       platformStats[r.platform].bookings++;
       platformStats[r.platform].nights    += r.nights;
       platformStats[r.platform].revenue   += r.grossRevenue;
     });
-    const realResas = filteredResas.filter(r => !r.isBlock);
+    // Accumuler le revenu pending par plateforme
+    filteredResas.forEach(r => {
+      if (r.isBlock || !r.isPending) return;
+      if (!platformStats[r.platform]) {
+        platformStats[r.platform] = { bookings: 0, nights: 0, revenue: 0, pendingRevenue: 0 };
+      }
+      platformStats[r.platform].pendingRevenue += r.grossRevenue;
+    });
     const totalBookings = realResas.length;
     const platformArray = Object.entries(platformStats).map(([name, stats]) => ({
       name,
       bookings: stats.bookings,
       nights: stats.nights,
       revenue: Math.round(stats.revenue * 100) / 100,
+      pendingRevenue: Math.round(stats.pendingRevenue * 100) / 100,
       pct: totalBookings > 0 ? Math.round(stats.bookings / totalBookings * 100) : 0
     })).sort((a, b) => b.bookings - a.bookings);
 
@@ -18528,7 +18552,9 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
       totalOtaCommission:     Math.round(realResas.reduce((s, r) => s + r.otaCommissionAmount, 0) * 100) / 100,
       avgNightsPerBooking: totalBookings > 0
         ? Math.round(realResas.reduce((s, r) => s + r.nights, 0) / totalBookings * 10) / 10
-        : 0
+        : 0,
+      pendingBookings:     pendingResas.length,
+      pendingGrossRevenue: Math.round(pendingResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100
     };
 
     res.json({
