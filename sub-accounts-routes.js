@@ -195,6 +195,15 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           can_view_invoices: permissions.can_view_invoices || false,
           can_manage_invoices: permissions.can_manage_invoices || false,
           can_view_contracts: permissions.can_view_contracts || false,
+          can_view_owners: permissions.can_view_owners || false,
+          can_view_pricing: permissions.can_view_pricing || false,
+          can_manage_pricing: permissions.can_manage_pricing || false,
+          can_view_reporting: permissions.can_view_reporting || false,
+          can_view_debours: permissions.can_view_debours || false,
+          can_manage_debours: permissions.can_manage_debours || false,
+          can_view_welcome_book: permissions.can_view_welcome_book || false,
+          can_view_templates: permissions.can_view_templates || false,
+          can_manage_templates: permissions.can_manage_templates || false,
           visible_kpis: permissions.visible_kpis || {}
         };
       } else {
@@ -391,6 +400,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           can_view_welcome_book = $40,
           can_view_templates = $41,
           can_manage_templates = $42,
+          can_view_owners = $43,
           notif_sub_new_reservation = $26,
           notif_sub_reservation_cancelled = $27,
           notif_sub_cleaning_assigned = $28,
@@ -443,7 +453,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
         finalPermissions.can_manage_debours || false,
         finalPermissions.can_view_welcome_book || false,
         finalPermissions.can_view_templates || false,
-        finalPermissions.can_manage_templates || false
+        finalPermissions.can_manage_templates || false,
+        finalPermissions.can_view_owners || false
       ]);
 
       if (propertyIds && propertyIds.length > 0) {
@@ -557,6 +568,15 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           can_view_invoices: permissions.can_view_invoices || false,
           can_manage_invoices: permissions.can_manage_invoices || false,
           can_view_contracts: permissions.can_view_contracts || false,
+          can_view_owners: permissions.can_view_owners || false,
+          can_view_pricing: permissions.can_view_pricing || false,
+          can_manage_pricing: permissions.can_manage_pricing || false,
+          can_view_reporting: permissions.can_view_reporting || false,
+          can_view_debours: permissions.can_view_debours || false,
+          can_manage_debours: permissions.can_manage_debours || false,
+          can_view_welcome_book: permissions.can_view_welcome_book || false,
+          can_view_templates: permissions.can_view_templates || false,
+          can_manage_templates: permissions.can_manage_templates || false,
           visible_kpis: permissions.visible_kpis || {}
         };
       } else {
@@ -716,6 +736,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
              can_view_welcome_book = $40,
              can_view_templates = $41,
              can_manage_templates = $42,
+             can_view_owners = $43,
              notif_sub_new_reservation = $26,
              notif_sub_reservation_cancelled = $27,
              notif_sub_cleaning_assigned = $28,
@@ -768,7 +789,8 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           finalPermissions.can_manage_debours || false,
           finalPermissions.can_view_welcome_book || false,
           finalPermissions.can_view_templates || false,
-          finalPermissions.can_manage_templates || false
+          finalPermissions.can_manage_templates || false,
+          finalPermissions.can_view_owners || false
         ]
       );
       
@@ -846,6 +868,15 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           sp.can_view_payments,
           sp.can_manage_payments,
           sp.can_view_contracts,
+          sp.can_view_owners,
+          sp.can_view_pricing,
+          sp.can_manage_pricing,
+          sp.can_view_reporting,
+          sp.can_view_debours,
+          sp.can_manage_debours,
+          sp.can_view_welcome_book,
+          sp.can_view_templates,
+          sp.can_manage_templates,
           sp.notif_sub_new_reservation,
           sp.notif_sub_reservation_cancelled,
           sp.notif_sub_cleaning_assigned,

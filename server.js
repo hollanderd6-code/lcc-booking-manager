@@ -2829,6 +2829,7 @@ ON invoice_download_tokens(token);
         ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_view_welcome_book BOOLEAN DEFAULT FALSE;
         ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_view_templates BOOLEAN DEFAULT FALSE;
         ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_manage_templates BOOLEAN DEFAULT FALSE;
+        ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_view_owners BOOLEAN DEFAULT FALSE;
       `);
       console.log('✅ Colonne visible_kpis ajoutée à sub_account_permissions');
     } catch (e) {
