@@ -12133,14 +12133,28 @@ app.post('/api/settings/notifications', async (req, res) => {
     return res.status(401).json({ error: 'Non autorisé' });
   }
 
-    try {
-    const {
-      newReservation, reminder, whatsappEnabled, whatsappNumber,
-    } = req.body || {};
+  try {
+    // Lire l'état actuel : les clés absentes du corps conservent leur valeur en base
+    const existing = await getNotificationSettings(user.id);
+    const body = req.body || {};
 
-    const saved = await saveNotificationSettings(user.id, {
-      newReservation, reminder, whatsappEnabled, whatsappNumber,
-    });
+    // Fusionner : on n'écrase une clé que si le corps fournit un booléen explicite
+    const merged = { ...existing };
+    const BOOL_KEYS = [
+      'newReservation', 'reminder', 'whatsappEnabled',
+      'notif_new_reservation', 'notif_reservation_cancelled',
+      'notif_daily_summary', 'notif_reminder_j1',
+      'notif_cleaning_reminder', 'notif_cleaning_completed',
+      'notif_checklist_done', 'notif_deposit_request',
+      'notif_new_message', 'notif_new_invoice',
+      'notif_cleaning_alert', 'notif_template_failed',
+    ];
+    for (const key of BOOL_KEYS) {
+      if (typeof body[key] === 'boolean') merged[key] = body[key];
+    }
+    if (typeof body.whatsappNumber === 'string') merged.whatsappNumber = body.whatsappNumber;
+
+    const saved = await saveNotificationSettings(user.id, merged);
 
     res.json({
       message: 'Préférences de notifications mises à jour',
