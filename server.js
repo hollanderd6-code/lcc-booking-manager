@@ -13454,8 +13454,8 @@ app.post('/api/cleaning/assignments', async (req, res) => {
       });
     }
 
-    // Vérifier que le logement appartient bien à l'utilisateur
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    // Vérifier que le logement appartient bien à l'utilisateur (ou à un délégant accepté)
+    const property = PROPERTIES.find(p => p.id === propertyId && agencyIds.includes(p.userId));
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé pour cet utilisateur' });
     }
@@ -13478,11 +13478,11 @@ app.post('/api/cleaning/assignments', async (req, res) => {
       [agencyIds, reservationKey]
     );
 
-    // Puis insérer la nouvelle assignation
+    // Puis insérer la nouvelle assignation (user_id = propriétaire du logement)
     await pool.query(
       `INSERT INTO cleaning_assignments (user_id, property_id, reservation_key, cleaner_id, created_at, updated_at)
        VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-      [user.id, propertyId, reservationKey, cleanerId]
+      [property.userId, propertyId, reservationKey, cleanerId]
     );
 
     // 🔔 ENVOYER NOTIFICATION DE NOUVEAU MÉNAGE
@@ -13572,8 +13572,8 @@ app.post('/api/cleaning/assignments',
       });
     }
 
-    // Vérifier que le logement appartient bien à l'utilisateur
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === user.id);
+    // Vérifier que le logement appartient bien à l'utilisateur (ou à un délégant accepté)
+    const property = PROPERTIES.find(p => p.id === propertyId && agencyIds.includes(p.userId));
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé pour cet utilisateur' });
     }
@@ -13596,11 +13596,11 @@ app.post('/api/cleaning/assignments',
       [agencyIds, reservationKey]
     );
 
-    // Puis insérer la nouvelle assignation
+    // Puis insérer la nouvelle assignation (user_id = propriétaire du logement)
     await pool.query(
       `INSERT INTO cleaning_assignments (user_id, property_id, reservation_key, cleaner_id, created_at, updated_at)
        VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-      [userId, propertyId, reservationKey, cleanerId]
+      [property.userId, propertyId, reservationKey, cleanerId]
     );
 
     res.json({
@@ -16736,8 +16736,8 @@ app.put('/api/cleaning/default-cleaner/:propertyId',
       const { propertyId } = req.params;
       const { cleanerId } = req.body;
 
-      // Vérifier que le logement existe
-      const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+      // Vérifier que le logement appartient à l'utilisateur ou à un délégant accepté
+      const property = PROPERTIES.find(p => p.id === propertyId && agencyIds.includes(p.userId));
       if (!property) {
         return res.status(404).json({ error: 'Logement non trouvé' });
       }
@@ -16761,13 +16761,13 @@ app.put('/api/cleaning/default-cleaner/:propertyId',
         return res.status(404).json({ error: 'Personne de ménage introuvable' });
       }
 
-      // Upsert
+      // Upsert — user_id = propriétaire du logement (clé PK de la table)
       await pool.query(
         `INSERT INTO property_default_cleaners (user_id, property_id, cleaner_id, updated_at)
          VALUES ($1, $2, $3, NOW())
          ON CONFLICT (user_id, property_id)
          DO UPDATE SET cleaner_id = $3, updated_at = NOW()`,
-        [userId, propertyId, cleanerId]
+        [property.userId, propertyId, cleanerId]
       );
 
       console.log(`✅ Cleaner par défaut pour ${propertyId}: ${cleanerResult.rows[0].name}`);
@@ -16801,7 +16801,7 @@ app.get('/api/cleaning/qr/:propertyId',
       const { propertyId } = req.params;
 
       const property = PROPERTIES.find(
-        p => p.id === propertyId && p.userId === user.id
+        p => p.id === propertyId && agencyIds.includes(p.userId)
       );
 
       if (!property) {
