@@ -525,8 +525,12 @@ async function hasValidDeposit(pool, reservationUid) {
     const result = await pool.query(
       `SELECT status 
        FROM deposits 
-       WHERE reservation_uid = $1 
-       ORDER BY created_at DESC 
+       WHERE reservation_uid = $1
+       ORDER BY CASE status WHEN 'captured' THEN 5 WHEN 'paid' THEN 5
+                            WHEN 'released' THEN 4 WHEN 'authorized' THEN 4
+                            WHEN 'processing' THEN 2 WHEN 'pending' THEN 1
+                            ELSE 0 END DESC,
+                created_at DESC
        LIMIT 1`,
       [reservationUid]
     );

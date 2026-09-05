@@ -11638,8 +11638,8 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
     // ── 1. Tous les deposits de l'utilisateur ──────────────────────────────
     const depositsResult = await pool.query(
       `SELECT id, reservation_uid, amount_cents, status, checkout_url, stripe_session_id, created_at
-       FROM deposits WHERE user_id = ANY($1::text[])`,
-      [agencyIds]
+       FROM deposits WHERE property_id = ANY($1::text[])`,
+      [propIds]
     );
     const depositsMap = new Map();
     depositsResult.rows.forEach(d => {
@@ -11681,8 +11681,8 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
 
     // Récupérer d'abord les uids de deposits actifs pour cet user (pour inclure résas annulées)
     const activeDepUids = await pool.query(
-      `SELECT reservation_uid FROM deposits WHERE user_id = ANY($1::text[]) AND status IN ('authorized','captured')`,
-      [agencyIds]
+      `SELECT reservation_uid FROM deposits WHERE property_id = ANY($1::text[]) AND status IN ('authorized','captured')`,
+      [propIds]
     );
     const activeDepUidList = activeDepUids.rows.map(r => r.reservation_uid).filter(Boolean);
 
@@ -28307,9 +28307,14 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
     if (row.reservation_uid) {
       const dep = await pool.query(
         `SELECT checkout_url, amount_cents FROM deposits
-         WHERE reservation_uid = $1 AND user_id = ANY($2::text[]) AND status IN ('pending','authorized')
-         ORDER BY created_at DESC LIMIT 1`,
-        [row.reservation_uid, agencyIds]
+         WHERE reservation_uid = $1
+           AND status NOT IN ('cancelled','failed','expired')
+         ORDER BY CASE status WHEN 'captured' THEN 5 WHEN 'paid' THEN 5
+                              WHEN 'authorized' THEN 4 WHEN 'processing' THEN 2
+                              WHEN 'pending' THEN 1 ELSE 0 END DESC,
+                  created_at DESC
+         LIMIT 1`,
+        [row.reservation_uid]
       );
       if (dep.rows.length) {
         depositUrl = dep.rows[0].checkout_url;
@@ -28355,10 +28360,15 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
 
         const session = await createCheckoutSession(sessionParams, sessionOptions);
 
+        // La caution appartient au propriétaire du logement, pas à l'utilisateur
+        // connecté : sinon chaque délégué qui ouvre la conversation en recrée une.
+        const depOwnerRes = await pool.query('SELECT user_id FROM properties WHERE id = $1', [row.property_id]);
+        const depOwnerId = depOwnerRes.rows[0]?.user_id || userId;
+
         await pool.query(
           `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
            VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, NOW(), NOW())`,
-          [depositId, userId, row.reservation_uid, row.property_id, amountCents, session.id, session.url]
+          [depositId, depOwnerId, row.reservation_uid, row.property_id, amountCents, session.id, session.url]
         );
 
         depositUrl = session.url;
