@@ -13231,9 +13231,9 @@ app.get('/api/cleaners', authenticateAny, checkSubscription, requirePermission(p
 // POST - Créer une nouvelle personne de ménage
 app.post('/api/cleaners', authenticateAny, requirePermission(pool, 'can_manage_cleaning'), async (req, res) => {
   try {
-    const userId = req.user.isSubAccount
+    const userId = req.bhAgencyTarget || (req.user.isSubAccount
       ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
+      : (await getUserFromRequest(req))?.id);
 
     if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
