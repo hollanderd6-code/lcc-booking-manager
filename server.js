@@ -5833,6 +5833,8 @@ app.use((req, res, next) => {
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
+const { setupAgencyTarget } = require("./agency-target");
+setupAgencyTarget(app, pool);
 // 🍎 /.well-known/ : Express ignore par défaut les chemins commençant par un
 // point, ce qui casserait la vérification de domaine Apple (et Let's Encrypt).
 // Montage dédié et limité à ce dossier, placé avant le static général.
