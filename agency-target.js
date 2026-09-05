@@ -25,6 +25,7 @@
 // ============================================
 
 const jwt = require('jsonwebtoken');
+const { authenticateAny } = require('./sub-accounts-middleware');
 
 function setupAgencyTarget(app, pool) {
   const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
@@ -119,11 +120,12 @@ function setupAgencyTarget(app, pool) {
 
   // ── Liste des comptes sur lesquels l'utilisateur peut créer ──────────────
   // Alimente le sélecteur « Pour quel compte ? » des deux formulaires.
-  app.get('/api/agency/target-accounts', async (req, res) => {
-    const callerId = callerIdFromRequest(req);
-    if (!callerId) {
-      return res.status(401).json({ success: false, error: 'Token invalide' });
+  // Seuls les comptes principaux (agences) appellent cette route.
+  app.get('/api/agency/target-accounts', authenticateAny, async (req, res) => {
+    if (req.user.isSubAccount) {
+      return res.status(403).json({ success: false, error: 'Accès réservé aux comptes principaux' });
     }
+    const callerId = req.user.id;
     try {
       const me = await pool.query(
         'SELECT id, email, company, first_name, last_name FROM users WHERE id = $1',

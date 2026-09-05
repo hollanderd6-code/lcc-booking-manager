@@ -912,16 +912,25 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           sp.notif_sub_daily_summary,
           sp.visible_kpis,
           
+          -- Compte propriétaire
+          sa.parent_user_id,
+          COALESCE(
+            NULLIF(TRIM(COALESCE(u.company, '')), ''),
+            NULLIF(TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')), ''),
+            u.email
+          ) AS parent_user_name,
+
           -- Propriétés accessibles (array de TEXT/VARCHAR, pas INTEGER)
           COALESCE(
             (SELECT array_agg(property_id)
-             FROM sub_account_properties 
+             FROM sub_account_properties
              WHERE sub_account_id = sa.id),
             ARRAY[]::text[]
           ) as accessible_properties
-          
+
         FROM sub_accounts sa
         LEFT JOIN sub_account_permissions sp ON sa.id = sp.sub_account_id
+        LEFT JOIN users u ON u.id = sa.parent_user_id
         WHERE sa.parent_user_id = ANY($1::text[])
         ORDER BY sa.created_at DESC
       `, [await agencyIdsFor(req)]);

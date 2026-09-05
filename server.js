@@ -13212,10 +13212,18 @@ app.get('/api/cleaners', authenticateAny, checkSubscription, requirePermission(p
     const agencyIds = await getAgencyUserIds(req, userId);
 
     const result = await pool.query(
-      `SELECT id, name, phone, email, notes, pin_code, is_active, sub_account_id, sms_recap_enabled, access_token, created_at
-       FROM cleaners
-       WHERE user_id = ANY($1::text[])
-       ORDER BY name ASC`,
+      `SELECT c.id, c.name, c.phone, c.email, c.notes, c.pin_code, c.is_active,
+              c.sub_account_id, c.sms_recap_enabled, c.access_token, c.created_at,
+              c.user_id,
+              COALESCE(
+                NULLIF(TRIM(COALESCE(u.company, '')), ''),
+                NULLIF(TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')), ''),
+                u.email
+              ) AS user_name
+       FROM cleaners c
+       LEFT JOIN users u ON u.id = c.user_id
+       WHERE c.user_id = ANY($1::text[])
+       ORDER BY c.name ASC`,
       [agencyIds]
     );
 
