@@ -2210,6 +2210,7 @@ function openPriceLabsConnect() {
     });
 }
 </script>
+<script src="/js/agency-target-picker.js"></script>
 <script>
 // ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
 (function() {
@@ -3635,6 +3636,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const modal = document.getElementById('addTeamMemberModal');
       if (modal) {
         modal.style.display = 'flex';
+        await window.bhLoadTargetAccounts?.('memberTargetAccount', 'memberTargetAccountGroup');
         await loadPropertiesForSelect();
       }
     });
@@ -3727,6 +3729,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (!editingMemberId) {
       data.password = document.getElementById('memberPassword').value;
+      // Mode agence : compte client auquel rattacher le sous-compte
+      const _target = document.getElementById('memberTargetAccount');
+      if (_target && _target.value) data.targetUserId = _target.value;
     }
     
     // visible_kpis envoyé toujours, quel que soit le rôle
@@ -3820,6 +3825,9 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!member) throw new Error('Membre introuvable');
       
       editingMemberId = id;
+      // Un sous-compte existant ne se déplace pas d'un compte à l'autre.
+      const _tgGroup = document.getElementById('memberTargetAccountGroup');
+      if (_tgGroup) _tgGroup.style.display = 'none';
       await loadPropertiesForSelect();
       
       document.getElementById('memberEmail').value = member.email;
@@ -4271,6 +4279,15 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 
     <form class="booking-form" id="addTeamMemberForm">
+      <!-- Mode agence : pour quel compte client ? -->
+      <div class="form-group" id="memberTargetAccountGroup" style="display:none;">
+        <label>Pour quel compte ? <span style="color:#ef4444;">*</span></label>
+        <select id="memberTargetAccount" style="width:100%;"></select>
+        <div style="font-size:11px;color:var(--text-secondary,#888);margin-top:4px;">
+          Le membre sera créé dans ce compte. Choix définitif à la création.
+        </div>
+      </div>
+
       <!-- Informations de base -->
       <div class="form-group">
         <label>Email <span style="color:#ef4444;">*</span></label>

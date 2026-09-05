@@ -13,6 +13,7 @@
 <!-- CSS plateforme globale -->
 
 <script src="/js/auth-fetch.js?v=cd78753d"></script>
+<script src="/js/agency-target-picker.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <!-- Marque Boostinghost — genere par outils/marque.js -->
@@ -1749,6 +1750,11 @@ html[data-theme-v3="1"] #templatesList > div {
               </div>
 </div>
 <form class="form-grid" id="cleanerForm">
+<div class="form-row" id="cleanerTargetAccountRow" style="display:none;">
+<label for="cleanerTargetAccount">Pour quel compte ?</label>
+<select id="cleanerTargetAccount" style="width:100%; padding:8px 10px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-primary); color:var(--text-primary); font-size:14px;"></select>
+<div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">La personne sera ajoutée à l'équipe de ce compte.</div>
+</div>
 <div class="form-row">
 <label for="cleanerName">Nom &amp; prénom</label>
 <input id="cleanerName" required="" type="text"/>
@@ -3079,6 +3085,8 @@ function formatDateFr(dateStr) {
 
       // Ajout d'un membre
       if (cleanerForm) {
+        // Mode agence : remplir le sélecteur « Pour quel compte ? »
+        window.bhLoadTargetAccounts?.('cleanerTargetAccount', 'cleanerTargetAccountRow');
         cleanerForm.addEventListener('submit', async (e) => {
           e.preventDefault();
           const name = document.getElementById('cleanerName').value.trim();
@@ -3086,6 +3094,7 @@ function formatDateFr(dateStr) {
           const phone = document.getElementById('cleanerPhone').value.trim();
           const notes = document.getElementById('cleanerNotes').value.trim();
           const subAccountId = document.getElementById('cleanerSubAccount')?.value || null;
+          const targetUserId = document.getElementById('cleanerTargetAccount')?.value || null;
 
           if (!name) return;
 
@@ -3108,7 +3117,9 @@ function formatDateFr(dateStr) {
                 phone: phone || null,
                 notes: notes || null,
                 isActive: true,
-                subAccountId: subAccountId ? parseInt(subAccountId) : null
+                subAccountId: subAccountId ? parseInt(subAccountId) : null,
+                // Mode agence : compte client auquel rattacher le membre
+                ...(targetUserId ? { targetUserId } : {})
               })
             });
 

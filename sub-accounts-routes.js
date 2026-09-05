@@ -167,6 +167,19 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
 
       const subAccount = result.rows[0];
 
+      /* La ligne de permissions doit exister AVANT l'UPDATE ci-dessous.
+         Sans cela l'UPDATE ne touche aucune ligne (rowCount = 0) : le
+         sous-compte est créé mais sans aucune permission — il peut se
+         connecter et ne voit rien, et requirePermission renvoie 404 sur
+         toutes les routes. C'était le second volet du bug. */
+      await pool.query(
+        `INSERT INTO sub_account_permissions (sub_account_id)
+         SELECT $1 WHERE NOT EXISTS (
+           SELECT 1 FROM sub_account_permissions WHERE sub_account_id = $1
+         )`,
+        [subAccount.id]
+      );
+
       // Permissions selon le rôle
       let finalPermissions = {};
       
@@ -466,7 +479,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
         }
       }
 
-      console.log(`✅ Sous-compte créé: ${email} (role: ${role})`);
+      console.log(`✅ Sous-compte créé: ${email} (role: ${role}, compte parent: ${req.user.id})`);
 
       // ── Envoi email de bienvenue au sous-compte ──────────────────────────
       try {
@@ -499,7 +512,9 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
           email: subAccount.email,
           firstName: subAccount.first_name,
           lastName: subAccount.last_name,
-          role: subAccount.role
+          role: subAccount.role,
+          // Compte auquel le sous-compte est rattaché (utile en mode agence)
+          parentUserId: req.user.id
         }
       });
 
@@ -539,6 +554,16 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
          SET first_name = $1, last_name = $2, role = $3, updated_at = NOW()
          WHERE id = $4`,
         [firstName, lastName, role, subAccountId]
+      );
+
+      // Même garde-fou que sur la création : les sous-comptes créés avant le
+      // correctif n'ont pas de ligne de permissions du tout.
+      await pool.query(
+        `INSERT INTO sub_account_permissions (sub_account_id)
+         SELECT $1 WHERE NOT EXISTS (
+           SELECT 1 FROM sub_account_permissions WHERE sub_account_id = $1
+         )`,
+        [subAccountId]
       );
       
       // Permissions
