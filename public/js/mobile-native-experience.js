@@ -185,7 +185,10 @@
       ];
 
       // Filtrer selon rôle + permissions
-      const tabs = allTabs.filter(tab => tab.perm === null || _canSeeTab(tab.id, tab.perm));
+      let tabs = allTabs.filter(tab => tab.perm === null || _canSeeTab(tab.id, tab.perm));
+      // Le personnel de menage lit deja le detail des sejours dans le
+      // calendrier du dashboard : l'onglet Reservations fait doublon.
+      if (_role === 'cleaner') tabs = tabs.filter(t => t.id !== 'calendar');
 
       // Onglet réellement actif pour la page courante (calculé par mobile-tabs-handler).
       // On démarre la barre dessus → la capsule glass se pose directement au bon
