@@ -435,6 +435,10 @@
         if (t === 'messages'  && !canSeePage('messages'))  tab.style.display = 'none';
         if (t === 'cleaning'  && !canSeePage('cleaning'))  tab.style.display = 'none';
         if (t === 'calendar'  && !canSeePage('calendar'))  tab.style.display = 'none';
+        // Le personnel de menage lit deja le detail des sejours dans le
+        // calendrier du dashboard : un onglet Reservations en plus n'apporte
+        // rien et ouvre une page qui ne le concerne pas.
+        if (t === 'calendar'  && role === 'cleaner')       tab.style.display = 'none';
       });
     }, 150);
   }
