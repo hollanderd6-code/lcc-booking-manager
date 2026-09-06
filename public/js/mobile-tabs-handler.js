@@ -60,6 +60,18 @@
 
   const allowedPages = isSubAccount ? (ROLE_PAGES[role] || null) : null;
 
+  // Le personnel de menage lit deja le detail des sejours dans le calendrier
+  // du dashboard : l'onglet Reservations n'apporte rien. Regle CSS posee tout
+  // de suite plutot qu'un style.display apres 150 ms, sinon un re-rendu de la
+  // barre (ou un onglet injecte plus tard) la fait reapparaitre.
+  if (role === 'cleaner') {
+    try {
+      var _st = document.createElement('style');
+      _st.textContent = '.tab-btn[data-tab="calendar"],.mobile-tabs .tab-btn[data-tab="calendar"]{display:none!important;}';
+      (document.head || document.documentElement).appendChild(_st);
+    } catch (e) {}
+  }
+
   const canSeePage = (page) => {
     if (!isSubAccount) return true;
     if (page === 'dashboard') return true;

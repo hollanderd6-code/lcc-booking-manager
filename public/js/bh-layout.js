@@ -526,6 +526,32 @@ function getSidebarHTML() {
       mobileLogoText.innerHTML = '';
     }
 
+    // --- BH FIX NOM TRONQUE ---
+    // Le bloc texte n'avait ni min-width:0 ni ellipsis : coince entre six
+    // boutons sur un ecran Android de ~360 px, il etait coupe en pleine
+    // lettre ("Harry Lok", "ESPACE COLLA"). On lui donne le droit de
+    // retrecir, on tronque proprement, et sous 400 px on n'affiche que le
+    // prenom plutot qu'un nom complet illisible.
+    if (nomSousCompte) {
+      mobileLogoText.style.setProperty('min-width', '0', 'important');
+      mobileLogoText.style.setProperty('flex', '1 1 auto', 'important');
+      mobileLogoText.style.setProperty('overflow', 'hidden', 'important');
+      var _titre = mobileLogoText.querySelector('.mobile-logo-title');
+      var _sous  = mobileLogoText.querySelector('.mobile-logo-subtitle');
+      [_titre, _sous].forEach(function (el) {
+        if (!el) return;
+        el.style.setProperty('display', 'block', 'important');
+        el.style.setProperty('white-space', 'nowrap', 'important');
+        el.style.setProperty('overflow', 'hidden', 'important');
+        el.style.setProperty('text-overflow', 'ellipsis', 'important');
+        el.style.setProperty('line-height', '1.2', 'important');
+      });
+      if (_titre && window.innerWidth < 400) {
+        var _prenom = nomSousCompte.split(' ')[0];
+        if (_titre.textContent !== _prenom) _titre.textContent = _prenom;
+      }
+    }
+
     // --- BH FIX HEADER MOBILE ---
     // Les trois zones du header se partageaient la largeur a parts egales
     // (flex:1) sans regarder leur contenu, et le logo etait en position
