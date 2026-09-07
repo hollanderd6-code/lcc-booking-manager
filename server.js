@@ -26109,8 +26109,8 @@ async function buildAndSendInvoiceToConversation({ pool, io, userId, agencyIds, 
           [publicToken, userId, invoiceNumber, buildMeta(invoiceNumber), tokenExpires]
         );
         await client.query(
-          `INSERT INTO owner_invoices (user_id, invoice_number, client_name, client_email, total_ttc, status, created_at)
-           VALUES ($1, $2, $3, '', $4, 'sent', NOW()) ON CONFLICT DO NOTHING`,
+          `INSERT INTO owner_invoices (id, user_id, invoice_number, client_name, client_email, total_ttc, status, created_at)
+           VALUES (gen_random_uuid(), $1, $2, $3, '', $4, 'sent', NOW()) ON CONFLICT DO NOTHING`,
           [userId, invoiceNumber, clientName, rentAmount + cleaningFee + touristTax]
         );
         await client.query('COMMIT');
@@ -32490,8 +32490,8 @@ async function runInvoiceQueue(mode) {
               [publicToken, userId, invoiceNumber, invoiceMeta, tokenExpires]
             );
             await cronClient.query(
-              `INSERT INTO owner_invoices (user_id, invoice_number, client_name, client_email, total_ttc, status, created_at)
-               VALUES ($1, $2, $3, $4, $5, 'sent', NOW()) ON CONFLICT DO NOTHING`,
+              `INSERT INTO owner_invoices (id, user_id, invoice_number, client_name, client_email, total_ttc, status, created_at)
+               VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'sent', NOW()) ON CONFLICT DO NOTHING`,
               [userId, invoiceNumber, clientName, clientEmail,
                parseFloat(rentAmount) + parseFloat(cleaningFee) + parseFloat(touristTax)]
             );
