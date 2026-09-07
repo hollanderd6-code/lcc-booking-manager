@@ -25504,8 +25504,8 @@ app.get('/api/invoice/history',
         checkinDate: meta.checkinDate || '',
         checkoutDate: meta.checkoutDate || '',
         total: parseFloat(meta.rentAmount || 0) + parseFloat(meta.touristTaxAmount || 0) + parseFloat(meta.cleaningFee || 0),
-        conversationId: row.conversation_id ?? null,
-        reservationUid: row.reservation_uid ?? null
+        conversationId: meta.conversationId ?? row.conversation_id ?? null,
+        reservationUid: meta.reservationUid ?? row.reservation_uid ?? null
       };
     });
 
@@ -26111,7 +26111,9 @@ async function buildAndSendInvoiceToConversation({ pool, io, userId, agencyIds, 
       checkinDate: reservation?.start_date || '',
       checkoutDate: reservation?.end_date   || '',
       nights, rentAmount, touristTaxAmount: touristTax, cleaningFee, vatRate: 0,
-      invoiceNumber: num
+      invoiceNumber: num,
+      conversationId: conversation.id,
+      reservationUid: reservation?.uid || null
     });
 
     if (!invoiceNumber) {
