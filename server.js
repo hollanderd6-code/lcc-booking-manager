@@ -25286,7 +25286,7 @@ app.post('/api/invoice/resend',
     const checkinFr  = meta.checkinDate  ? new Date(meta.checkinDate).toLocaleDateString('fr-FR',  {day:'2-digit', month:'long', year:'numeric'}) : '';
     const checkoutFr = meta.checkoutDate ? new Date(meta.checkoutDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'}) : '';
     const emitterName = ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.trim()) : (user.company || 'Ma Conciergerie');
-    const total = parseFloat(meta.total || 0);
+    const total = parseFloat(meta.rentAmount || 0) + parseFloat(meta.touristTaxAmount || 0) + parseFloat(meta.cleaningFee || 0);
 
     await transporter.sendMail({
       from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
@@ -25441,7 +25441,7 @@ app.get('/api/invoice/history',
       `SELECT invoice_number, file_path, created_at FROM (
          SELECT DISTINCT ON (invoice_number) invoice_number, file_path, created_at
          FROM invoice_download_tokens
-         WHERE user_id = ANY($1::text[])
+         WHERE user_id = ANY($1::text[]) AND file_path LIKE '{%'
          ORDER BY invoice_number, created_at DESC
        ) sub
        ORDER BY created_at DESC
@@ -25478,7 +25478,7 @@ app.get('/api/invoice/history',
         propertyName: meta.propertyName || '',
         checkinDate: meta.checkinDate || '',
         checkoutDate: meta.checkoutDate || '',
-        total: meta.total || 0
+        total: parseFloat(meta.rentAmount || 0) + parseFloat(meta.touristTaxAmount || 0) + parseFloat(meta.cleaningFee || 0)
       };
     });
 
