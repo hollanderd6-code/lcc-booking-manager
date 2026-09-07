@@ -7973,28 +7973,36 @@ async function releaseDeposit(depositId) {
     try {
       const pi = await stripe.paymentIntents.retrieve(depositData.stripe_payment_intent_id, stripeOpts);
       console.log(`PI Stripe status: ${pi.status} (account: ${stripeAccount || 'platform'})`);
-      
+
       if (pi.status === 'requires_capture') {
         console.log(`Annulation PI ${pi.id}`);
         await stripe.paymentIntents.cancel(pi.id, stripeOpts);
-        
+
       } else if (pi.status === 'succeeded') {
         console.log(`Remboursement PI ${pi.id}`);
         await stripe.refunds.create({ payment_intent: pi.id }, stripeOpts);
-        
+
       } else {
+        // PI déjà dans un état terminal (canceled, expired, etc.) — libération BDD correcte
         console.log(`PI ${pi.id} déjà dans état terminal (${pi.status}), mise à jour BDD seulement`);
       }
     } catch (stripeError) {
-      console.warn(`⚠️ Erreur Stripe lors release (ignorée, mise à jour BDD quand même):`, stripeError.message);
+      // StripeInvalidRequestError = PI inexistant ou déjà annulé/expiré côté Stripe
+      // → l'empreinte n'existe plus, passer à 'released' est correct
+      if (stripeError.type === 'StripeInvalidRequestError') {
+        console.log(`PI introuvable ou état incompatible côté Stripe (${stripeError.code}), mise à jour BDD seulement`);
+      } else {
+        // Erreur d'infrastructure (réseau, clé invalide, compte suspendu…) — ne pas marquer released
+        console.error(`❌ Erreur Stripe lors release (${stripeError.type || 'unknown'}):`, stripeError.message);
+        throw stripeError;
+      }
     }
-  } 
+  }
   // CAS 2 : Caution MANUELLE (sans Stripe)
   else {
     console.log(`Liberation caution manuelle ${depositId} (pas de Stripe Payment Intent)`);
   }
 
-  // Mettre à jour en base dans TOUS les cas (même si Stripe a échoué)
   await updateDepositStatus(depositId, 'released');
   
   console.log(`✅ Caution ${depositId} liberee avec succes`);
