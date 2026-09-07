@@ -3201,6 +3201,45 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Table airbnb_accounts:', e.message);
     }
 
+    // ── Contenu d'aide (FAQ, vidéos, guides) ──
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS help_faq (
+          id              SERIAL PRIMARY KEY,
+          question        TEXT    NOT NULL,
+          answer_html     TEXT    NOT NULL,
+          answer_text     TEXT    NOT NULL,
+          category        TEXT,
+          display_order   INTEGER NOT NULL DEFAULT 0,
+          active          BOOLEAN NOT NULL DEFAULT TRUE
+        );
+
+        CREATE TABLE IF NOT EXISTS help_videos (
+          id            SERIAL PRIMARY KEY,
+          title         TEXT        NOT NULL,
+          youtube_id    VARCHAR(20) NOT NULL,
+          display_order INTEGER     NOT NULL DEFAULT 0,
+          active        BOOLEAN     NOT NULL DEFAULT TRUE
+        );
+
+        CREATE TABLE IF NOT EXISTS help_guides (
+          id            SERIAL PRIMARY KEY,
+          title         TEXT    NOT NULL,
+          description   TEXT    NOT NULL,
+          page_url      TEXT    NOT NULL,
+          icon          TEXT    NOT NULL,
+          accent_color  TEXT    NOT NULL,
+          time_label    TEXT,
+          badge_label   TEXT,
+          display_order INTEGER NOT NULL DEFAULT 0,
+          active        BOOLEAN NOT NULL DEFAULT TRUE
+        );
+      `);
+      console.log('✅ Tables help_faq / help_videos / help_guides OK');
+    } catch (e) {
+      console.log('ℹ️ Tables help:', e.message);
+    }
+
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
@@ -35726,6 +35765,63 @@ app.delete('/api/debours/:id', authenticateAny, requireFeature('invoices_clients
   } catch(e) {
     console.error('❌ DELETE /api/debours:', e.message);
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Contenu d'aide ──────────────────────────────────────────────────────────
+// Contenu identique pour tous les comptes — auth uniquement pour bloquer les
+// non-connectés, aucun filtre par user_id.
+app.get('/api/help/content', authenticateAny, async (req, res) => {
+  try {
+    const [faqRes, videosRes, guidesRes] = await Promise.all([
+      pool.query(`
+        SELECT id, question, answer_html, answer_text, category
+        FROM help_faq
+        WHERE active = TRUE
+        ORDER BY display_order ASC
+      `),
+      pool.query(`
+        SELECT id, title, youtube_id
+        FROM help_videos
+        WHERE active = TRUE
+        ORDER BY display_order ASC
+      `),
+      pool.query(`
+        SELECT id, title, description, page_url, icon, accent_color, time_label, badge_label
+        FROM help_guides
+        WHERE active = TRUE
+        ORDER BY display_order ASC
+      `),
+    ]);
+
+    res.json({
+      success: true,
+      faq:    faqRes.rows.map(r => ({
+        id:         r.id,
+        question:   r.question,
+        answerHtml: r.answer_html,
+        answerText: r.answer_text,
+        category:   r.category,
+      })),
+      videos: videosRes.rows.map(r => ({
+        id:        r.id,
+        title:     r.title,
+        youtubeId: r.youtube_id,
+      })),
+      guides: guidesRes.rows.map(r => ({
+        id:          r.id,
+        title:       r.title,
+        description: r.description,
+        pageUrl:     r.page_url,
+        icon:        r.icon,
+        accentColor: r.accent_color,
+        timeLabel:   r.time_label,
+        badgeLabel:  r.badge_label,
+      })),
+    });
+  } catch (e) {
+    console.error('GET /api/help/content:', e);
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
