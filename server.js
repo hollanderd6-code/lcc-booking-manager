@@ -25446,13 +25446,22 @@ app.get('/api/invoice/history',
     const agencyIds = await getAgencyUserIds(req, userId);
 
     const result = await pool.query(
-      `SELECT invoice_number, file_path, created_at FROM (
+      `SELECT sub.invoice_number, sub.file_path, sub.created_at, ir.conversation_id, ir.reservation_uid
+       FROM (
          SELECT DISTINCT ON (invoice_number) invoice_number, file_path, created_at
          FROM invoice_download_tokens
          WHERE user_id = ANY($1::text[]) AND file_path LIKE '{%'
          ORDER BY invoice_number, created_at DESC
        ) sub
-       ORDER BY created_at DESC
+       LEFT JOIN LATERAL (
+         SELECT conversation_id, reservation_uid
+         FROM invoice_requests
+         WHERE invoice_number = sub.invoice_number
+           AND user_id = ANY($1::text[])
+         ORDER BY sent_at DESC NULLS LAST, id DESC
+         LIMIT 1
+       ) ir ON TRUE
+       ORDER BY sub.created_at DESC
        LIMIT 100`,
       [agencyIds]
     );
@@ -25461,13 +25470,21 @@ app.get('/api/invoice/history',
     let rows = result.rows;
     if (rows.length === 0) {
       const fallback = await pool.query(
-        `SELECT invoice_number, NULL as file_path, created_at
-         FROM owner_invoices
-         WHERE user_id = $1
-           AND (is_credit_note IS NULL OR is_credit_note = FALSE)
-           AND client_id IS NULL
-           AND (period_start IS NULL OR period_start = period_end)
-         ORDER BY created_at DESC
+        `SELECT oi.invoice_number, NULL::text AS file_path, oi.created_at, ir.conversation_id, ir.reservation_uid
+         FROM owner_invoices oi
+         LEFT JOIN LATERAL (
+           SELECT conversation_id, reservation_uid
+           FROM invoice_requests
+           WHERE invoice_number = oi.invoice_number
+             AND user_id = $1
+           ORDER BY sent_at DESC NULLS LAST, id DESC
+           LIMIT 1
+         ) ir ON TRUE
+         WHERE oi.user_id = $1
+           AND (oi.is_credit_note IS NULL OR oi.is_credit_note = FALSE)
+           AND oi.client_id IS NULL
+           AND (oi.period_start IS NULL OR oi.period_start = oi.period_end)
+         ORDER BY oi.created_at DESC
          LIMIT 100`,
         [userId]
       );
@@ -25486,7 +25503,9 @@ app.get('/api/invoice/history',
         propertyName: meta.propertyName || '',
         checkinDate: meta.checkinDate || '',
         checkoutDate: meta.checkoutDate || '',
-        total: parseFloat(meta.rentAmount || 0) + parseFloat(meta.touristTaxAmount || 0) + parseFloat(meta.cleaningFee || 0)
+        total: parseFloat(meta.rentAmount || 0) + parseFloat(meta.touristTaxAmount || 0) + parseFloat(meta.cleaningFee || 0),
+        conversationId: row.conversation_id ?? null,
+        reservationUid: row.reservation_uid ?? null
       };
     });
 
