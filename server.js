@@ -11638,7 +11638,7 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
 
     // ── 1. Tous les deposits de l'utilisateur ──────────────────────────────
     const depositsResult = await pool.query(
-      `SELECT id, reservation_uid, amount_cents, status, checkout_url, stripe_session_id, created_at
+      `SELECT id, reservation_uid, amount_cents, status, checkout_url, stripe_session_id, created_at, authorized_at
        FROM deposits WHERE property_id = ANY($1::text[])`,
       [propIds]
     );
@@ -11650,7 +11650,8 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
         status: d.status,
         checkoutUrl: d.checkout_url,
         stripeSessionId: d.stripe_session_id,
-        createdAt: d.created_at
+        createdAt: d.created_at,
+        authorizedAt: d.authorized_at
       };
       // Garder le deposit ABOUTI en priorité (capturé/payé/autorisé), puis le
       // plus récent — pour éviter d'afficher un lien "En attente" alors qu'un
@@ -11682,7 +11683,7 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
 
     // Récupérer d'abord les uids de deposits actifs pour cet user (pour inclure résas annulées)
     const activeDepUids = await pool.query(
-      `SELECT reservation_uid FROM deposits WHERE property_id = ANY($1::text[]) AND status IN ('authorized','captured')`,
+      `SELECT reservation_uid FROM deposits WHERE property_id = ANY($1::text[]) AND status IN ('authorized','captured','auth_expired')`,
       [propIds]
     );
     const activeDepUidList = activeDepUids.rows.map(r => r.reservation_uid).filter(Boolean);
@@ -11762,7 +11763,8 @@ app.get('/api/reservations-with-deposits', authenticateAny, loadSubAccountData(p
           amountCents:  deposit.amountCents,
           status:       deposit.status,
           checkoutUrl:  deposit.checkoutUrl,
-          createdAt:    deposit.createdAt
+          createdAt:    deposit.createdAt,
+          authorizedAt: deposit.authorizedAt
         } : null
       };
     });

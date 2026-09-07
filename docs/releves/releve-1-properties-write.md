@@ -255,3 +255,133 @@ Chaque élément : `{ title: string, text: string }` ou string simple (rétro-co
 **Colonne modifiée :** `display_order` (échange avec le voisin).
 
 **`getAgencyUserIds` :** NON.
+
+---
+
+## Assistant IA — structures de données
+
+### `customAutoResponses` — Q&R personnalisées
+
+**Colonne DB :** `custom_auto_responses` — JSONB, DEFAULT `'[]'::jsonb` (migration `server.js` l.2664).
+
+**Exposée dans** `GET /api/properties` et `PUT /api/properties/:id` sous les deux clés `customAutoResponses` et `custom_auto_responses` (doublon volontaire pour rétrocompat).
+
+**Structure d'un élément :**
+```json
+{ "keywords": "piscine, pool, nager", "response": "Oui, le logement dispose d'une piscine privée chauffée !" }
+```
+
+| Champ | Type | Rôle |
+|---|---|---|
+| `keywords` | string | Mots-clés déclencheurs, séparés par des virgules. L'IA cherche un mot-clé dans la question du voyageur avant d'utiliser cette réponse. |
+| `response` | string | Texte de la réponse automatique envoyée au voyageur. |
+
+Construit dans `renderCustomQR()` / `addCustomQR()` (`public/js/settings.js` l.3091–3132). Sauvegardé via `PUT /api/properties/:propertyId` (champ `customAutoResponses`, JSON stringifié dans le multipart).
+
+---
+
+### Faits mémorisés — table `property_facts`
+
+Les « faits mémorisés » ne sont **pas** une colonne JSONB sur `properties` : ils vivent dans une **table dédiée** `property_facts` (`server.js` l.36194).
+
+**Schéma :**
+```sql
+CREATE TABLE IF NOT EXISTS property_facts (
+  id          BIGSERIAL PRIMARY KEY,
+  property_id TEXT NOT NULL,
+  question    TEXT NOT NULL,
+  answer      BOOLEAN,          -- vrai/faux (ex: "Y a-t-il une piscine ?")
+  detail      TEXT,             -- précision libre, nullable
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (property_id, question)
+);
+```
+
+**Routes CRUD (toutes `authenticateToken`) :**
+
+| Méthode | Route | Réponse |
+|---|---|---|
+| GET | `/api/properties/:id/facts` | `{ facts: [{ id, question, answer, detail, updated_at }] }` |
+| POST | `/api/properties/:id/facts` | `{ success: true, fact: { id, question, answer, detail, updated_at } }` |
+| DELETE | `/api/properties/:id/facts/:factId` | `{ success: true }` |
+
+**Body POST :**
+```json
+{ "question": "Y a-t-il une piscine ?", "answer": true, "detail": "Piscine chauffée, disponible d'avril à octobre." }
+```
+`question` (string) et `answer` (booléen strict) sont obligatoires. `detail` est optionnel.
+
+Un `POST` sur une question déjà existante fait un `ON CONFLICT ... DO UPDATE` (upsert).
+
+Ces faits ne sont **pas** inclus dans la réponse de `GET /api/properties`. L'app mobile doit appeler `GET /api/properties/:id/facts` séparément.
+
+---
+
+### `quickReplies` — Raccourcis de messages
+
+**Colonne DB :** `quick_replies` — JSONB, DEFAULT `'[]'::jsonb` (migration `server.js` l.2546).
+
+**Exposée dans** `GET /api/properties` sous la clé `quick_replies` (et aussi `quickReplies` dans certains payloads agence `l.16996`).
+
+**Structure d'un élément :**
+```json
+{ "title": "Code WiFi", "text": "Le code WiFi est ABC123. Le réseau s'appelle Appartement-Paris." }
+```
+
+| Champ | Type | Contrainte | Rôle |
+|---|---|---|---|
+| `title` | string | max 50 chars | Libellé du bouton affiché dans l'interface de messagerie. |
+| `text` | string | max 200 chars | Message réellement envoyé au voyageur. |
+
+Maximum **5 éléments** (tronqué côté backend, `l.28255`). Rétrocompat : un élément string simple est accepté (`title` = `text.slice(0, 30)`).
+
+Route d'écriture dédiée : `PUT /api/properties/:id/quick-replies` (§6 ci-dessus). Les raccourcis sont aussi accessibles par `GET /api/properties/:id/quick-context` (avec `depositUrl`) pour l'interface de chat.
+
+---
+
+## Majorations par plateforme
+
+**Colonne DB :** `platform_markups` — JSONB, DEFAULT `'{}'::jsonb` (+ `channex_markup_rate_plans` JSONB pour les plans Channex associés). Migration dans `routes/markup-routes.js` l.41.
+
+### Lecture — `GET /api/properties/:id/markups`
+
+**Fichier :** `routes/markup-routes.js` **Ligne :** 81
+
+**Middleware :** `authenticateAny` (via `proprietaireDuLogement` dans `acces-logement.js` — fonctionne pour compte principal, sous-compte et délégation agence).
+
+Les majorations **ne sont pas** incluses dans la réponse de `GET /api/properties`. Il faut un appel séparé à cette route.
+
+**Réponse :**
+```json
+{
+  "markups": { "ABB": 5, "BDC": 10.5 },
+  "codes":   { "ABB": "Airbnb", "BDC": "Booking.com", "EXP": "Expedia", "VRB": "Abritel / VRBO" }
+}
+```
+
+`markups` est un objet dont les clés sont les codes plateforme présents **et non nuls**. Une clé absente signifie « pas de majoration » (les valeurs 0 sont supprimées à l'écriture). La valeur est un `numeric` PostgreSQL (pourcentage, ex: `5` = +5 %).
+
+`codes` liste tous les codes connus avec leur libellé affichable — utile pour rendre les champs sans les coder en dur côté client.
+
+### Écriture — `PATCH /api/properties/:id/markups`
+
+**Fichier :** `routes/markup-routes.js` **Ligne :** 103
+
+**Body :**
+```json
+{ "code": "ABB", "pct": 5 }
+```
+
+Un seul PATCH par plateforme (pas de remplacement total). Envoyer `pct: 0` ou `pct: ""` supprime la clé. **Réponse :**
+```json
+{
+  "markups": { "ABB": 5 },
+  "applique_au_prochain_push": true,
+  "plan_cree": true,
+  "remappe": false,
+  "action_utilisateur": [],
+  "coherence": { ... }
+}
+```
+`markups` reflète l'état complet de `platform_markups` après modification.
