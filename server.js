@@ -25984,7 +25984,7 @@ app.post('/api/invoice/create',
       await pool.query(
         `INSERT INTO owner_invoices (user_id, invoice_number, client_name, client_email, total_ttc, status, created_at)
          VALUES ($1, $2, $3, $4, $5, 'sent', NOW()) ON CONFLICT DO NOTHING`,
-        [userId, invoiceNumber, clientName || '', clientEmail || '',
+        [billingUserId, invoiceNumber, clientName || '', clientEmail || '',
          parseFloat(rentAmount||0) + parseFloat(touristTaxAmount||0) + parseFloat(cleaningFee||0)]
       );
     } catch(e) { /* non bloquant */ }
@@ -26086,7 +26086,19 @@ async function buildAndSendInvoiceToConversation({ pool, io, userId, agencyIds, 
     // Token expiré → invoiceNumber conservé, downloadUrl reste null → nouveau token ci-dessous
   }
 
-  // ── 2. Calcul des montants depuis la réservation ──────────────────────────
+  // ── 2. Compte de facturation ─────────────────────────────────────────────
+  // userId (session) contrôle l'accès via agencyIds. La facturation et la
+  // numérotation suivent le propriétaire du logement (properties.user_id).
+  let billingUserId = userId;
+  if (conversation.property_id) {
+    const propRow = await pool.query(
+      'SELECT user_id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [conversation.property_id, agencyIds]
+    );
+    if (propRow.rows[0]) billingUserId = propRow.rows[0].user_id;
+  }
+
+  // ── 3. Calcul des montants depuis la réservation ──────────────────────────
   const nights = reservation
     ? Math.round((new Date(reservation.end_date) - new Date(reservation.start_date)) / 86400000)
     : 0;
@@ -26098,7 +26110,7 @@ async function buildAndSendInvoiceToConversation({ pool, io, userId, agencyIds, 
     : parseFloat(reservation?.amount_rooms) || 0;
   const clientName = reservation?.guest_name || conversation.guest_name || 'Client';
 
-  // ── 3. Génération numéro + token si nécessaire ───────────────────────────
+  // ── 4. Génération numéro + token si nécessaire ───────────────────────────
   if (!downloadUrl) {
     const publicToken = require('crypto').randomBytes(32).toString('hex');
     const tokenExpires = new Date(Date.now() + 365 * 24 * 3600 * 1000);
@@ -26122,17 +26134,17 @@ async function buildAndSendInvoiceToConversation({ pool, io, userId, agencyIds, 
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
-        await client.query('SELECT pg_advisory_xact_lock(1001, hashtext($1))', [userId]);
-        invoiceNumber = await getNextInvoiceNumber(client, userId, yearStr);
+        await client.query('SELECT pg_advisory_xact_lock(1001, hashtext($1))', [billingUserId]);
+        invoiceNumber = await getNextInvoiceNumber(client, billingUserId, yearStr);
         await client.query(
           `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at)
            VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
-          [publicToken, userId, invoiceNumber, buildMeta(invoiceNumber), tokenExpires]
+          [publicToken, billingUserId, invoiceNumber, buildMeta(invoiceNumber), tokenExpires]
         );
         await client.query(
           `INSERT INTO owner_invoices (id, user_id, invoice_number, client_name, client_email, total_ttc, status, created_at)
            VALUES (gen_random_uuid(), $1, $2, $3, '', $4, 'sent', NOW()) ON CONFLICT DO NOTHING`,
-          [userId, invoiceNumber, clientName, rentAmount + cleaningFee + touristTax]
+          [billingUserId, invoiceNumber, clientName, rentAmount + cleaningFee + touristTax]
         );
         await client.query('COMMIT');
       } catch (e) {
@@ -26146,14 +26158,14 @@ async function buildAndSendInvoiceToConversation({ pool, io, userId, agencyIds, 
       await pool.query(
         `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at)
          VALUES ($1, $2, $3, $4, $5)`,
-        [publicToken, userId, invoiceNumber, buildMeta(invoiceNumber), tokenExpires]
+        [publicToken, billingUserId, invoiceNumber, buildMeta(invoiceNumber), tokenExpires]
       );
     }
 
     downloadUrl = `${appUrl}/api/invoice/download/${publicToken}`;
   }
 
-  // ── 4. Message dans la conversation ──────────────────────────────────────
+  // ── 5. Message dans la conversation ──────────────────────────────────────
   const _d1 = reservation?.start_date ? new Date(reservation.start_date).toLocaleDateString('fr-FR') : '';
   const _d2 = reservation?.end_date   ? new Date(reservation.end_date).toLocaleDateString('fr-FR')   : '';
   const invoiceMsg = `📄 Voici votre facture ${invoiceNumber} pour votre séjour${_d1 ? ` du ${_d1} au ${_d2}` : ''}.
@@ -26162,7 +26174,7 @@ async function buildAndSendInvoiceToConversation({ pool, io, userId, agencyIds, 
 (lien valable 1 an)`;
   await sendAutomatedMessage(conversation.id, invoiceMsg, io);
 
-  // ── 5. Post Channex (non bloquant) ────────────────────────────────────────
+  // ── 6. Post Channex (non bloquant) ────────────────────────────────────────
   if (conversation.channex_booking_id) {
     try {
       await channexAPI.post(`/bookings/${conversation.channex_booking_id}/messages`, {
