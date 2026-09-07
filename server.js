@@ -544,7 +544,8 @@ async function triggerChannexRatesSync(propertyId, userId) {
 // 💰 IMPORT SYSTÈME DE MESSAGES POUR LES CAUTIONS
 // ============================================
 const { initDepositRemindersCron } = require('./deposit-messages-cron');
-const { 
+const { initDepositReconcileCron } = require('./scripts/reconcile-deposits-cron');
+const {
   sendDepositAuthorizedMessage,
   sendDepositReleasedMessage,
   sendDepositFailedMessage
@@ -32171,6 +32172,7 @@ console.log('✅ Cron message_templates initialisé (7h avant/arrivée+before_de
 // 💰 INITIALISATION DU CRON JOB DES RAPPELS CAUTION
 // ============================================
 initDepositRemindersCron(pool, io);
+initDepositReconcileCron(pool, stripe, sendNotificationToMultipleLogged);
 
 // ── CRON : Envoi automatique des factures le jour du départ (10h00) ──────────
 // mode = 'due_or_overdue' (séjour terminé aujourd'hui OU déjà passé) | 'overdue' (strictement passé)
