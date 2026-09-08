@@ -4715,31 +4715,37 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
       // 2. Mettre à jour owner_id sur les logements cochés/décochés
       const checkboxes = document.querySelectorAll('#agencyClientPropertiesList input[type="checkbox"]');
+      const patchErrors = [];
       await Promise.all(Array.from(checkboxes).map(async (cb) => {
         const propId = cb.value || cb.dataset.propertyId;
         const currentProp = (window.allProperties || []).find(function(p) { return String(p.id) === String(propId); });
         const currentOwner = String(currentProp?.owner_id || currentProp?.ownerId || '');
+        let patchBody = null;
         if (cb.checked && currentOwner !== String(clientRealId)) {
-          // Cocher : associer à ce client
-          await fetch(API_BASE + '/api/properties/' + propId, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ ownerId: clientRealId })
-          });
+          patchBody = { ownerId: clientRealId };
         } else if (!cb.checked && currentOwner === String(clientRealId)) {
-          // Décocher : retirer SEULEMENT si c'était ce client
-          await fetch(API_BASE + '/api/properties/' + propId, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({ ownerId: null })
-          });
+          patchBody = { ownerId: null };
+        }
+        if (!patchBody) return;
+        const r = await fetch(API_BASE + '/api/properties/' + propId + '?agency=all', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(patchBody)
+        });
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          patchErrors.push(currentProp?.name || propId + ' : ' + (err.error || r.status));
         }
       }));
 
       document.getElementById('agencyClientModal').style.display = 'none';
       await loadPropertiesForInvoice();
       await loadClients();
-      showToast('✅ Infos de facturation enregistrées');
+      if (patchErrors.length) {
+        alert('⚠️ Certains logements n\'ont pas pu être mis à jour :\n' + patchErrors.join('\n'));
+      } else {
+        showToast('✅ Infos de facturation enregistrées');
+      }
     } catch(e) { alert('Erreur réseau'); }
   };
 

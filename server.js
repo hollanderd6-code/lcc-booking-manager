@@ -19203,8 +19203,10 @@ app.patch('/api/properties/:propertyId', authenticateAny, async (req, res) => {
 
     // Vérifier que le logement appartient à cet user
     const agencyIds = await getAgencyUserIds(req, user.id);
-    const check = await pool.query('SELECT id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])', [propertyId, agencyIds]);
+    const check = await pool.query('SELECT id, owner_id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])', [propertyId, agencyIds]);
     if (!check.rows.length) return res.status(404).json({ error: 'Logement non trouvé' });
+
+    const previousOwnerId = check.rows[0].owner_id || null;
 
     await pool.query(
       'UPDATE properties SET owner_id = $1 WHERE id = $2 AND user_id = ANY($3::text[])',
@@ -19214,7 +19216,7 @@ app.patch('/api/properties/:propertyId', authenticateAny, async (req, res) => {
     // ✅ Recharger le store en mémoire pour que la logique Stripe soit immédiatement à jour
     await loadProperties();
 
-    return res.json({ success: true, propertyId, ownerId: ownerId || null });
+    return res.json({ success: true, propertyId, ownerId: ownerId || null, previousOwnerId });
   } catch (err) {
     console.error('Erreur PATCH /api/properties/:propertyId :', err);
     res.status(500).json({ error: err.message });
