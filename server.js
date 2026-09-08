@@ -41852,44 +41852,398 @@ app.get('/api/reservations/notes/:property_id', authenticateToken, async (req, r
 });
 
 // ============================================================
-// 📄 ATTESTATION FISCALE — Envoi par email via Brevo
+// 📄 ATTESTATION FISCALE — Génération PDF (PDFKit) + envoi Brevo
 // ============================================================
-app.post('/api/attestation/send', authenticateToken, requireFeature('attestation_conciergerie'), async (req, res) => {
+
+// ── Génère un Buffer PDF — mise en page identique à jsPDF (clients.html:5554–5808) ──
+async function generateAttestationPdfBuffer({
+  senderName, senderLines,
+  clientName, clientLines,
+  year, ville, dateFormatted,
+  lines, grandTotal,
+  monthlyRows, signatureData
+}) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
+    const chunks = [];
+    doc.on('data', c => chunks.push(c));
+    doc.on('end',  () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const W = 595, mg = 50, col = W - mg * 2;
+    const GREEN = '#1A7A5E', DARK = '#111827', GRAY = '#6B7280';
+    const BORDER = '#E5E7EB', LIGHT = '#F9FAFB';
+    const GREEN_PALE = '#ECFDF5', GREEN_BORDER = '#6EE7B7';
+
+    const fmt = v => {
+      const n = parseFloat(String(v)) || 0;
+      const parts = n.toFixed(2).split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      return parts.join(',') + ' €';
+    };
+
+    let y = 0;
+
+    // 1. Barre verte (2 mm ≈ 6 pt)
+    doc.rect(0, 0, W, 6).fill(GREEN);
+    y = 20;
+
+    // 2. Titre ATTESTATION FISCALE — bold 20 pt vert
+    doc.font('Helvetica-Bold').fontSize(20).fillColor(GREEN)
+       .text('ATTESTATION FISCALE', mg, y);
+    y += 26;
+
+    // 3. Sous-titre 9 pt gris
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+       .text('Services à la personne — Année ' + year, mg, y);
+    y += 16;
+
+    // 4. Séparateur vert
+    doc.moveTo(mg, y).lineTo(W - mg, y).lineWidth(2).stroke(GREEN);
+    y += 12;
+
+    // 5+6. Blocs PRESTATAIRE / BÉNÉFICIAIRE côte à côte
+    const LINE_H = 13;
+    const halfCol = Math.floor((col - 14) / 2);
+    const col2x   = mg + halfCol + 14;
+    const boxH    = Math.max(80,
+      36 + senderLines.length * LINE_H + 8,
+      36 + clientLines.length * LINE_H + 8);
+
+    doc.roundedRect(mg, y, halfCol, boxH, 3).fillAndStroke(LIGHT, BORDER);
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN)
+       .text('PRESTATAIRE', mg + 6, y + 8);
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK)
+       .text(senderName, mg + 6, y + 20, { width: halfCol - 12 });
+    doc.font('Helvetica').fontSize(8).fillColor(GRAY);
+    senderLines.forEach((l, i) =>
+      doc.text(l, mg + 6, y + 34 + i * LINE_H, { width: halfCol - 12 })
+    );
+
+    doc.roundedRect(col2x, y, halfCol, boxH, 3).fillAndStroke(LIGHT, BORDER);
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN)
+       .text('BÉNÉFICIAIRE', col2x + 6, y + 8);
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK)
+       .text(clientName, col2x + 6, y + 20, { width: halfCol - 12 });
+    doc.font('Helvetica').fontSize(8).fillColor(GRAY);
+    clientLines.forEach((l, i) =>
+      doc.text(l, col2x + 6, y + 34 + i * LINE_H, { width: halfCol - 12 })
+    );
+
+    y += boxH + 14;
+
+    // 7. Texte introductif (clients.html:5629)
+    const intro = "Je soussigné(e), " + senderName +
+      ", prestataire de services à la personne, atteste avoir fourni à " +
+      clientName + " les prestations suivantes au cours de l'année " + year + " :";
+    doc.font('Helvetica').fontSize(10);
+    const introH = doc.heightOfString(intro, { width: col });
+    doc.fillColor(DARK).text(intro, mg, y, { width: col });
+    y += introH + 10;
+
+    // 8. Tableau prestations — en-tête (clients.html:5642–5646)
+    const ROW_H = 23;
+    const c1x = mg + 4,                      c1w = Math.floor(col * 0.49) - 4;
+    const c2x = mg + Math.floor(col * 0.49), c2w = Math.floor(col * 0.14);
+    const c3x = mg + Math.floor(col * 0.63), c3w = Math.floor(col * 0.18);
+    const c4x = mg + Math.floor(col * 0.81), c4w = col - Math.floor(col * 0.81);
+
+    doc.lineWidth(0.5).rect(mg, y, col, ROW_H).fillAndStroke('#F3F4F6', BORDER);
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(GRAY);
+    doc.text('PRESTATION', c1x,       y + 8);
+    doc.text('HEURES',    c2x, y + 8, { width: c2w, align: 'center' });
+    doc.text('TARIF/H',   c3x, y + 8, { width: c3w, align: 'center' });
+    doc.text('TOTAL TTC', c4x, y + 8, { width: c4w, align: 'center' });
+    y += ROW_H;
+
+    // 9. Lignes prestations (clients.html:5651–5663)
+    lines.forEach((l, i) => {
+      if (i % 2 === 1) doc.rect(mg, y, col, ROW_H).fill(LIGHT);
+      doc.font('Helvetica').fontSize(10).fillColor(DARK)
+         .text(String(l.label), c1x, y + 6, { width: c1w });
+      doc.text(String(l.heures) + ' h', c2x, y + 6, { width: c2w, align: 'center' });
+      doc.text(fmt(l.taux) + ' /h',     c3x, y + 6, { width: c3w, align: 'center' });
+      doc.font('Helvetica-Bold').fillColor(DARK)
+         .text(fmt(l.total),            c4x, y + 6, { width: c4w, align: 'center' });
+      doc.moveTo(mg, y + ROW_H).lineTo(mg + col, y + ROW_H).lineWidth(0.2).stroke(BORDER);
+      y += ROW_H;
+    });
+
+    // 10. Total annuel (clients.html:5666–5677)
+    doc.moveTo(mg, y).lineTo(mg + col, y).lineWidth(1.5).stroke(GREEN);
+    y += 8;
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK)
+       .text('Total annuel', mg, y + 2, { width: col * 0.80, align: 'right' });
+    doc.font('Helvetica-Bold').fontSize(14).fillColor(GREEN)
+       .text(fmt(grandTotal), mg + col * 0.80 + 4, y, { width: col * 0.20 - 4, align: 'right' });
+    y += 24;
+
+    // 11. Détail mensuel — optionnel (clients.html:5680–5738)
+    if (monthlyRows && monthlyRows.length > 0) {
+      const MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin',
+                       'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+      const sorted = [...monthlyRows].sort((a, b) =>
+        MOIS_FR.indexOf(a.mois) - MOIS_FR.indexOf(b.mois));
+      const totalH = sorted.reduce((s, r) => s + (parseFloat(r.heures) || 0), 0);
+      const totalM = sorted.reduce((s, r) => s + (parseFloat(r.montant) || 0), 0);
+
+      const estimH = 22 + ROW_H + sorted.length * ROW_H + ROW_H + 14;
+      if (y + estimH > 720) { doc.addPage(); y = mg; }
+
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(GREEN)
+         .text('Détail mensuel', mg, y + 5, { width: col, align: 'center' });
+      y += 22;
+
+      const mColW = [col * 0.35, col * 0.30, col * 0.35];
+
+      doc.rect(mg, y, col, ROW_H).fill(GREEN);
+      doc.font('Helvetica-Bold').fontSize(8.5).fillColor('white');
+      let xc = mg;
+      ["Mois", "Nombre d'heures", 'Montant'].forEach((h, i) => {
+        doc.text(h, xc, y + 7, { width: mColW[i], align: 'center' });
+        xc += mColW[i];
+      });
+      y += ROW_H;
+
+      sorted.forEach((r, idx) => {
+        if (idx % 2 === 0) doc.rect(mg, y, col, ROW_H).fill(LIGHT);
+        doc.rect(mg, y, col, ROW_H).lineWidth(0.2).stroke(BORDER);
+        const heuresNum = parseFloat(r.heures) || 0;
+        xc = mg;
+        [r.mois, heuresNum ? heuresNum + ' h' : '—', fmt(r.montant)].forEach((v, i) => {
+          doc.font('Helvetica').fontSize(9).fillColor(DARK)
+             .text(String(v), xc, y + 7, { width: mColW[i], align: 'center' });
+          xc += mColW[i];
+        });
+        y += ROW_H;
+      });
+
+      doc.lineWidth(0.3).rect(mg, y, col, ROW_H).fillAndStroke('#F0FDF4', GREEN_BORDER);
+      xc = mg;
+      ['Total', totalH ? totalH + ' h' : '—', fmt(totalM)].forEach((v, i) => {
+        doc.font('Helvetica-Bold').fontSize(9).fillColor(GREEN)
+           .text(String(v), xc, y + 7, { width: mColW[i], align: 'center' });
+        xc += mColW[i];
+      });
+      y += ROW_H + 14;
+    }
+
+    // 12. Note TVA (clients.html:5745)
+    doc.font('Helvetica').fontSize(8).fillColor(GRAY)
+       .text('TVA non applicable, art. 293 B du CGI', mg, y);
+    y += 16;
+
+    // 13. Encadré crédit d'impôt (clients.html:5752 — texte légal verbatim)
+    const encText =
+      "Conformément aux articles L.7231-1 et suivants du Code du travail, ces prestations" +
+      " sont éligibles au crédit d'impôt pour l'emploi d'un salarié à domicile" +
+      " (art. 199 sexdecies du CGI). Le montant des dépenses ouvrant droit à réduction" +
+      " ou crédit d'impôt au titre de l'année " + year +
+      " s'élève à : " + fmt(grandTotal) + ".";
+    doc.font('Helvetica').fontSize(8.5);
+    const encInnerW = col - 14;
+    const encTextH  = doc.heightOfString(encText, { width: encInnerW });
+    const encH      = encTextH + 18;
+    doc.roundedRect(mg, y, col, encH, 3).fillAndStroke(GREEN_PALE, GREEN_BORDER);
+    doc.font('Helvetica').fontSize(8.5).fillColor('#065F46')
+       .text(encText, mg + 7, y + 9, { width: encInnerW });
+    y += encH + 14;
+
+    // 14. Fait à / Signature (clients.html:5770–5797)
+    if (y > 667) { doc.addPage(); y = mg; }
+
+    doc.font('Helvetica').fontSize(10).fillColor('#374151')
+       .text('Fait à ' + ville + ', le ' + dateFormatted, mg, y);
+
+    const sigX = mg + Math.floor(col / 2);
+    doc.font('Helvetica').fontSize(9).fillColor(GRAY)
+       .text('Signature du prestataire', sigX, y + 8);
+
+    if (signatureData && signatureData.startsWith('data:image/png;base64,')) {
+      try {
+        const sigBuf = Buffer.from(signatureData.split(',')[1], 'base64');
+        doc.image(sigBuf, sigX, y + 14, { fit: [170, 57] });
+        y += 54;
+      } catch (e) {
+        doc.moveTo(sigX, y + 60).lineTo(sigX + 170, y + 60).lineWidth(1).stroke(DARK);
+        y += 66;
+      }
+    } else {
+      doc.moveTo(sigX, y + 60).lineTo(sigX + 170, y + 60).lineWidth(1).stroke(DARK);
+      y += 66;
+    }
+
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(DARK)
+       .text(senderName, sigX, y);
+
+    // 15. Footer fixe y = 285 mm = 808 pt (clients.html:5800–5807)
+    const footerY = 808;
+    doc.moveTo(mg, footerY - 10).lineTo(W - mg, footerY - 10)
+       .lineWidth(0.3).stroke(BORDER);
+    doc.font('Helvetica').fontSize(8).fillColor('#9CA3AF')
+       .text('Attestation générée via boostinghost.fr — logiciel de gestion locative',
+             mg, footerY, { width: col, align: 'center' });
+
+    doc.end();
+  });
+}
+
+// ── Résout les paramètres d'attestation depuis le body + DB ──────────────────
+async function resolveAttestationParams(userId, body) {
+  const {
+    clientId, year, ville, dateStr,
+    emitter: eb = {},
+    lines, monthlyRows, grandTotal, signatureData
+  } = body;
+
+  const clientRes = await pool.query(
+    'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
+    [String(clientId), String(userId)]
+  );
+  if (clientRes.rows.length === 0) {
+    const err = new Error('Client non trouvé');
+    err.status = 404;
+    throw err;
+  }
+  const c = clientRes.rows[0];
+
+  const uRes = await pool.query(
+    'SELECT company, address, postal_code, city, siret, email, invoice_email FROM users WHERE id = $1',
+    [userId]
+  );
+  const u = uRes.rows[0] || {};
+
+  const senderName = eb.company    || u.company    || 'Votre entreprise';
+  const cpCity     = ((eb.postalCode || u.postal_code || '') + ' ' + (eb.city || u.city || '')).trim();
+  const siret      = eb.siret      || u.siret      || '';
+  const senderLines = [
+    eb.address || u.address                          || null,
+    cpCity                                           || null,
+    siret ? 'SIRET : ' + siret                      : null,
+    eb.email || u.invoice_email || u.email           || null
+  ].filter(Boolean);
+
+  const clientName   = c.company_name || (`${c.first_name || ''} ${c.last_name || ''}`).trim() || 'Client';
+  const clientCpCity = ((c.postal_code || '') + ' ' + (c.city || '')).trim();
+  const clientLines  = [
+    c.address    || null,
+    clientCpCity || null,
+    c.email      || null
+  ].filter(v => v && String(v).trim());
+
+  const villeClean    = String(ville || '').trim() || 'votre ville';
+  const dateFormatted = dateStr
+    ? new Date(dateStr + 'T12:00:00').toLocaleDateString('fr-FR',
+        { day: 'numeric', month: 'long', year: 'numeric' })
+    : new Date().toLocaleDateString('fr-FR',
+        { day: 'numeric', month: 'long', year: 'numeric' });
+
+  return {
+    senderName, senderLines,
+    clientName, clientEmail: c.email || '',
+    clientLines,
+    year:        String(year || new Date().getFullYear()),
+    ville:       villeClean,
+    dateFormatted,
+    lines:       Array.isArray(lines) ? lines : [],
+    grandTotal:  String(grandTotal || '0'),
+    monthlyRows: Array.isArray(monthlyRows) ? monthlyRows : [],
+    signatureData: signatureData || null
+  };
+}
+
+// ── POST /api/attestation/generate — renvoie le PDF binaire directement ──────
+app.post('/api/attestation/generate', authenticateAny, requireFeature('attestation_conciergerie'), async (req, res) => {
   try {
-    const userId = req.user.id;
-    const {
-      pdfBase64,      // PDF en base64 généré par jsPDF côté client
-      clientEmail,    // Email du bénéficiaire
-      clientName,     // Nom du bénéficiaire
-      year,           // Année de l'attestation
-      senderName,     // Nom du prestataire
-    } = req.body;
+    const { clientId, lines } = req.body;
+    if (!clientId) return res.status(400).json({ error: 'clientId requis' });
+    if (typeof clientId === 'string' && clientId.startsWith('agency_client_')) {
+      return res.status(400).json({ error: 'Les clients agence ne sont pas supportés via cette route' });
+    }
+    if (!Array.isArray(lines) || lines.length === 0) {
+      return res.status(400).json({ error: 'Au moins une prestation est requise (lines)' });
+    }
 
-    if (!pdfBase64)    return res.status(400).json({ error: 'PDF manquant' });
-    if (!clientEmail)  return res.status(400).json({ error: 'Email destinataire manquant' });
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
-    // Récupérer l'email de l'expéditeur
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
-    const fromEmail = user.email;
-    const fromName  = senderName || user.firstName || 'Boostinghost';
+    const params    = await resolveAttestationParams(userId, req.body);
+    const pdfBuffer = await generateAttestationPdfBuffer(params);
 
-    // Nettoyer le base64 et convertir en Buffer (comme les autres routes PDF)
-    const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, '').replace(/\s/g, '');
-    const pdfBuffer  = Buffer.from(base64Data, 'base64');
-    console.log(`📄 [ATTESTATION] PDF buffer: ${pdfBuffer.length} octets, début: ${pdfBuffer.slice(0,4).toString('ascii')}`);
+    const clientSlug = params.clientName.replace(/\s+/g, '-').toLowerCase();
+    const fileName   = `attestation-fiscale-${params.year}-${clientSlug}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(pdfBuffer);
 
-    const fileName = `attestation-fiscale-${year}-${(clientName || 'client').replace(/\s+/g, '-').toLowerCase()}.pdf`;
+    console.log(`✅ [ATTESTATION GENERATE] PDF généré pour ${params.clientName} — ${params.year}`);
+  } catch (e) {
+    console.error('❌ [ATTESTATION GENERATE]', e.message);
+    if (e.status === 404) return res.status(404).json({ error: e.message });
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /api/attestation/send — envoie par email (Brevo) ────────────────────
+// Forme 1 : pdfBase64 fourni → comportement original inchangé (web jsPDF)
+// Forme 2 : pdfBase64 absent + données body → génération server-side
+app.post('/api/attestation/send', authenticateAny, requireFeature('attestation_conciergerie'), async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { pdfBase64, clientEmail, clientName: clientNameBody, year, senderName: senderNameBody } = req.body;
+
+    let pdfBuffer;
+    let resolvedClientEmail = clientEmail;
+    let resolvedClientName  = clientNameBody;
+    let resolvedSenderName  = senderNameBody;
+    let resolvedYear        = year;
+
+    if (pdfBase64) {
+      // Forme 1 : PDF fourni par le client (jsPDF web) — comportement original
+      if (!clientEmail) return res.status(400).json({ error: 'Email destinataire manquant' });
+      const base64Data = pdfBase64.replace(/^data:application\/pdf;base64,/, '').replace(/\s/g, '');
+      pdfBuffer = Buffer.from(base64Data, 'base64');
+      console.log(`📄 [ATTESTATION] PDF buffer: ${pdfBuffer.length} octets, début: ${pdfBuffer.slice(0,4).toString('ascii')}`);
+    } else {
+      // Forme 2 : génération server-side
+      const { clientId, lines } = req.body;
+      if (!clientId) return res.status(400).json({ error: 'clientId ou pdfBase64 requis' });
+      if (typeof clientId === 'string' && clientId.startsWith('agency_client_')) {
+        return res.status(400).json({ error: 'Les clients agence ne sont pas supportés via cette route' });
+      }
+      if (!Array.isArray(lines) || lines.length === 0) {
+        return res.status(400).json({ error: 'Au moins une prestation est requise (lines)' });
+      }
+      const params        = await resolveAttestationParams(userId, req.body);
+      pdfBuffer           = await generateAttestationPdfBuffer(params);
+      resolvedClientEmail = params.clientEmail;
+      resolvedClientName  = params.clientName;
+      resolvedSenderName  = params.senderName;
+      resolvedYear        = params.year;
+      if (!resolvedClientEmail) {
+        return res.status(400).json({ error: "Ce client n'a pas d'adresse email enregistrée" });
+      }
+    }
+
+    const fromName   = resolvedSenderName || 'Boostinghost';
+    resolvedYear     = resolvedYear || String(new Date().getFullYear());
+    const fileName   = `attestation-fiscale-${resolvedYear}-${(resolvedClientName || 'client').replace(/\s+/g, '-').toLowerCase()}.pdf`;
 
     const htmlBody = bhEmailTemplate({
       icon: '🧾',
-      title: `Attestation fiscale ${year}`,
+      title: `Attestation fiscale ${resolvedYear}`,
       tag: 'Services à la personne',
       bodyHtml: `
         <p>Bonjour,</p>
-        <p>Veuillez trouver en pièce jointe votre <strong>attestation fiscale pour l'année ${year}</strong> concernant les services à la personne fournis par <strong>${fromName}</strong>.</p>
+        <p>Veuillez trouver en pièce jointe votre <strong>attestation fiscale pour l'année ${resolvedYear}</strong> concernant les services à la personne fournis par <strong>${fromName}</strong>.</p>
         <p>Ce document vous permettra de bénéficier du <strong>crédit d'impôt pour l'emploi d'un salarié à domicile</strong> (art. 199 sexdecies du CGI) lors de votre déclaration de revenus.</p>
-        <div class="info-card">💡 <strong>Conseil :</strong> Conservez ce document pour votre déclaration de revenus ${parseInt(year) + 1}.</div>
+        <div class="info-card">💡 <strong>Conseil :</strong> Conservez ce document pour votre déclaration de revenus ${parseInt(resolvedYear) + 1}.</div>
         <p>Pour toute question, n'hésitez pas à nous contacter.<br>Cordialement, <strong>${fromName}</strong></p>
       `
     });
@@ -41898,9 +42252,9 @@ app.post('/api/attestation/send', authenticateToken, requireFeature('attestation
     console.log('📧 [ATTESTATION] Expéditeur Brevo:', JSON.stringify(brevoSender));
     await sendEmail({
       from: `${fromName} <${brevoSender.email}>`,
-      to:   clientEmail,
-      subject: `Attestation fiscale ${year} – Services à la personne`,
-      html: htmlBody,
+      to:   resolvedClientEmail,
+      subject: `Attestation fiscale ${resolvedYear} – Services à la personne`,
+      html:    htmlBody,
       attachments: [{
         filename:    fileName,
         content:     pdfBuffer,
@@ -41908,11 +42262,12 @@ app.post('/api/attestation/send', authenticateToken, requireFeature('attestation
       }]
     });
 
-    console.log(`✅ [ATTESTATION] Envoyée à ${clientEmail} pour l'année ${year}`);
-    res.json({ success: true, message: `Attestation envoyée à ${clientEmail}` });
+    console.log(`✅ [ATTESTATION] Envoyée à ${resolvedClientEmail} pour l'année ${resolvedYear}`);
+    res.json({ success: true, message: `Attestation envoyée à ${resolvedClientEmail}` });
 
   } catch (e) {
     console.error('❌ [ATTESTATION SEND]', e.message);
+    if (e.status === 404) return res.status(404).json({ error: e.message });
     res.status(500).json({ error: e.message });
   }
 });
