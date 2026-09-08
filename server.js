@@ -26341,6 +26341,7 @@ app.put('/api/owner-invoices/:id',
 
     const {
       items,
+      propertyIds,
       vatApplicable, vatRate,
       discountType, discountValue,
       notes, internalNotes
@@ -26405,6 +26406,22 @@ app.put('/api/owner-invoices/:id',
         item.rentalAmount, item.commissionRate, item.quantity, item.unitPrice, item.total,
         i, item.isDebours || false, item.deboursId || null
       ]);
+    }
+
+    // Sync logements liés — uniquement si propertyIds est présent dans le body.
+    // Un tableau vide efface toutes les associations ; undefined les laisse intactes.
+    if (Array.isArray(propertyIds)) {
+      await client.query(
+        'DELETE FROM owner_invoice_properties WHERE invoice_id = $1',
+        [req.params.id]
+      );
+      for (const propId of propertyIds) {
+        await client.query(`
+          INSERT INTO owner_invoice_properties (id, invoice_id, property_id)
+          VALUES (gen_random_uuid(), $1, $2)
+          ON CONFLICT DO NOTHING
+        `, [req.params.id, propId]);
+      }
     }
 
     await client.query('COMMIT');
