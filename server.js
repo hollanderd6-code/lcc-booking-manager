@@ -35293,6 +35293,56 @@ app.post('/api/contrats/:id/resend-sign', authenticateAny, async (req, res) => {
 });
 
 // ============================================
+// DELETE /api/contrats/:id
+// Supprime un contrat non signé (+ fichiers PDF sur disque)
+// ============================================
+app.delete('/api/contrats/:id', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const agencyIds = await getAgencyUserIds(req, userId);
+
+    const result = await pool.query(
+      `SELECT * FROM contracts WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [req.params.id, agencyIds]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Contrat introuvable' });
+
+    const contract = result.rows[0];
+    if (contract.guest_signed_at != null || contract.status === 'signed') {
+      return res.status(400).json({ error: 'Un contrat signé ne peut pas être supprimé' });
+    }
+
+    const del = await pool.query(
+      `DELETE FROM contracts
+       WHERE id = $1 AND user_id = ANY($2::text[]) AND guest_signed_at IS NULL`,
+      [req.params.id, agencyIds]
+    );
+    if (del.rowCount === 0) {
+      return res.status(409).json({ error: 'Contrat modifié entre-temps, réessayez' });
+    }
+
+    for (const filePath of [contract.pdf_path, contract.signed_pdf_path]) {
+      if (filePath) {
+        try {
+          await fsp.unlink(filePath);
+        } catch (e) {
+          console.warn(`⚠️ DELETE /api/contrats — fichier introuvable ou déjà supprimé : ${filePath}`);
+        }
+      }
+    }
+
+    res.json({ message: 'Contrat supprimé' });
+  } catch (err) {
+    console.error('❌ DELETE /api/contrats:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
 // GET /api/contrats/:id/pdf
 // Retourne le PDF signé en base64 pour téléchargement
 // ============================================
