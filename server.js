@@ -34361,7 +34361,9 @@ app.post('/api/contrat/send', authenticateAny, async (req, res) => {
       // Date signature
       signatureDate,
       // Réservation liée (optionnel)
-      reservationUid
+      reservationUid,
+      // Client propriétaire lié (optionnel)
+      clientId
     } = req.body;
 
     if (!guestEmail) return res.status(400).json({ error: 'Email du locataire requis' });
@@ -34623,9 +34625,11 @@ app.post('/api/contrat/send', authenticateAny, async (req, res) => {
         signatureDate
       };
 
+      const resolvedClientId = clientId && !String(clientId).startsWith('agency_client_') ? clientId : null;
+
       await pool.query(`
-        INSERT INTO contracts (id, user_id, reservation_uid, property_id, status, contract_data, owner_signature, sign_token, sign_token_expires_at, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, 'sent', $5, $6, $7, $8, NOW(), NOW())
+        INSERT INTO contracts (id, user_id, reservation_uid, property_id, status, contract_data, owner_signature, sign_token, sign_token_expires_at, client_id, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, 'sent', $5, $6, $7, $8, $9, NOW(), NOW())
       `, [
         contractId,
         userId,
@@ -34634,7 +34638,8 @@ app.post('/api/contrat/send', authenticateAny, async (req, res) => {
         JSON.stringify(contractData),
         signatureData || null,
         signToken,
-        signExpires
+        signExpires,
+        resolvedClientId
       ]);
 
       // ── Envoyer l'email de signature au locataire ──
@@ -35097,8 +35102,30 @@ app.get('/api/contrats', authenticateAny, async (req, res) => {
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const agencyIds = await getAgencyUserIds(req, userId);
-    const { status, limit = 50, offset = 0 } = req.query;
+    const { status, client_id, limit = 50, offset = 0 } = req.query;
+
+    // Synthetic agency-client IDs never match a real row — return empty immediately
+    if (client_id && client_id.startsWith('agency_client_')) {
+      return res.json({ contracts: [], total: 0, limit: parseInt(limit), offset: parseInt(offset) });
+    }
+
+    const params = [agencyIds];
+    const countParams = [agencyIds];
+    let whereClause = `WHERE user_id = ANY($1::text[])`;
+
+    if (status) {
+      params.push(status);
+      countParams.push(status);
+      whereClause += ` AND status = $${params.length}`;
+    }
+    if (client_id) {
+      params.push(client_id);
+      countParams.push(client_id);
+      whereClause += ` AND client_id = $${params.length}`;
+    }
+
     let query = `SELECT id, status, reservation_uid, sign_token_expires_at, guest_signed_at, created_at,
+                        client_id,
                         contract_data,
                         contract_data->>'guestFirstName' as guest_first_name,
                         contract_data->>'guestLastName' as guest_last_name,
@@ -35107,15 +35134,12 @@ app.get('/api/contrats', authenticateAny, async (req, res) => {
                         contract_data->>'checkin' as checkin,
                         contract_data->>'checkout' as checkout,
                         contract_data->>'totalPrice' as total_price
-                 FROM contracts WHERE user_id = ANY($1::text[])`;
-    const params = [agencyIds];
-
-    if (status) { query += ` AND status = $${params.length + 1}`; params.push(status); }
+                 FROM contracts ${whereClause}`;
     query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(parseInt(limit), parseInt(offset));
 
     const result = await pool.query(query, params);
-    const countResult = await pool.query(`SELECT COUNT(*) FROM contracts WHERE user_id = ANY($1::text[])${status ? ' AND status = $2' : ''}`, status ? [agencyIds, status] : [agencyIds]);
+    const countResult = await pool.query(`SELECT COUNT(*) FROM contracts ${whereClause}`, countParams);
 
     res.json({
       contracts: result.rows,
@@ -35125,6 +35149,48 @@ app.get('/api/contrats', authenticateAny, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ GET /api/contrats:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
+// Strips personal/per-property fields from a mandat's contract_data
+// before returning it as a duplication source.
+// ============================================
+function stripMandatPersonalData(data) {
+  const d = typeof data === 'string' ? JSON.parse(data) : { ...data };
+  [
+    'signatureData', 'signatureDate',
+    'reservationUid',
+    'ownerEmail', 'ownerFirstName', 'ownerLastName', 'ownerAddress', 'ownerPhone', 'ownerDOB', 'ownerSiren',
+    'propAddress', 'propType', 'propCapacity',
+  ].forEach(k => delete d[k]);
+  return d;
+}
+
+// ============================================
+// GET /api/contrats/:id/duplicate-source
+// Renvoie le contract_data épuré pour pré-remplir un nouveau mandat
+// ============================================
+app.get('/api/contrats/:id/duplicate-source', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const result = await pool.query(
+      `SELECT * FROM contracts WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [req.params.id, await getAgencyUserIds(req, userId)]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Contrat introuvable' });
+
+    const row = result.rows[0];
+    const source = stripMandatPersonalData(row.contract_data);
+
+    res.json({ source, sourceId: row.id, contractType: source.contractType || 'mandat' });
+  } catch (err) {
+    console.error('❌ GET /api/contrats/:id/duplicate-source:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -35616,6 +35682,9 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
     console.log('✅ Table debours OK');
     // Ajouter colonne debours_id si manquante
     await pool.query(`ALTER TABLE owner_invoice_items ADD COLUMN IF NOT EXISTS debours_id TEXT`);
+    // Lien contrat ↔ client propriétaire
+    await pool.query(`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS client_id TEXT`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_contracts_user_client ON contracts(user_id, client_id)`);
     // Ajouter colonnes profil émetteur à users
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS invoice_email TEXT`);
@@ -36921,6 +36990,37 @@ app.delete('/api/admin/roadmap/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// ============================================
+// GET /api/mandat/last
+// Renvoie le contract_data épuré du mandat le plus récent de l'utilisateur.
+// Retourne { source: null } (200) si l'utilisateur n'a encore aucun mandat.
+// ============================================
+app.get('/api/mandat/last', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const result = await pool.query(
+      `SELECT id, contract_data FROM contracts
+       WHERE user_id = ANY($1::text[]) AND contract_data->>'contractType' = 'mandat'
+       ORDER BY created_at DESC LIMIT 1`,
+      [agencyIds]
+    );
+
+    if (!result.rows.length) return res.json({ source: null });
+
+    const row = result.rows[0];
+    const source = stripMandatPersonalData(row.contract_data);
+    res.json({ source, sourceId: row.id, contractType: 'mandat' });
+  } catch (err) {
+    console.error('❌ GET /api/mandat/last:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/mandat/send', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.isSubAccount
@@ -36952,7 +37052,9 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
       // Signature
       signatureData, signatureDate,
       // Token lié
-      reservationUid
+      reservationUid,
+      // Client propriétaire lié (optionnel)
+      clientId
     } = req.body;
 
     if (!ownerEmail) return res.status(400).json({ error: 'Email du propriétaire requis' });
@@ -37183,10 +37285,12 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
       signatureDate
     };
 
+    const resolvedClientId = clientId && !String(clientId).startsWith('agency_client_') ? clientId : null;
+
     await pool.query(`
-      INSERT INTO contracts (id, user_id, reservation_uid, property_id, status, contract_data, owner_signature, sign_token, sign_token_expires_at, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, 'sent', $5, $6, $7, $8, NOW(), NOW())
-    `, [contractId, userId, reservationUid || null, propAddress || null, JSON.stringify(contractData), signatureData || null, signToken, signExpires]);
+      INSERT INTO contracts (id, user_id, reservation_uid, property_id, status, contract_data, owner_signature, sign_token, sign_token_expires_at, client_id, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, 'sent', $5, $6, $7, $8, $9, NOW(), NOW())
+    `, [contractId, userId, reservationUid || null, propAddress || null, JSON.stringify(contractData), signatureData || null, signToken, signExpires, resolvedClientId]);
 
     // ── Email de signature au propriétaire ──
     const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
