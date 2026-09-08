@@ -35873,6 +35873,55 @@ app.get('/api/debours/:id', authenticateAny, requireFeature('invoices_clients'),
   }
 });
 
+// PUT /api/debours/:id — modifier un débours
+app.put('/api/debours/:id', authenticateAny, requireFeature('invoices_clients'), requirePermission(pool, 'can_manage_debours'), uploadDebours.single('photo'), async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { client_id, description, montant, date } = req.body;
+    if (!client_id || !description || !montant) {
+      return res.status(400).json({ error: 'client_id, description et montant requis' });
+    }
+
+    let uploadedUrl = null;
+    if (req.file) {
+      const filename = `debours_${userId}_${Date.now()}`;
+      uploadedUrl = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'lcc-debours', public_id: filename, resource_type: 'auto' },
+          (err, result) => err ? reject(err) : resolve(result.secure_url)
+        );
+        require('stream').Readable.from(req.file.buffer).pipe(stream);
+      });
+    }
+
+    const dateParam  = req.body.date?.trim() || null;
+    const photoParam = uploadedUrl || null;
+
+    const result = await pool.query(
+      `UPDATE debours
+       SET client_id   = $1,
+           description = $2,
+           montant     = $3,
+           date        = COALESCE($4, date),
+           photo_url   = COALESCE($5, photo_url)
+       WHERE id = $6 AND user_id = $7
+       RETURNING *`,
+      [client_id, description, parseFloat(montant), dateParam, photoParam, req.params.id, userId]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Débours non trouvé' });
+    console.log(`✅ [DÉBOURS] Modifié: ${req.params.id}`);
+    res.json({ success: true, debours: result.rows[0] });
+  } catch(e) {
+    console.error('❌ PUT /api/debours/:id:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.patch('/api/debours/:id/status', authenticateAny, requireFeature('invoices_clients'), requirePermission(pool, 'can_manage_debours'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
