@@ -23729,12 +23729,15 @@ app.get('/api/owner-clients', authenticateAny, requireFeature('facturation_propr
     let agencyClients = [];
     try {
       const delegations = await pool.query(
-        `SELECT ad.delegator_user_id, u.first_name as owner_first, u.last_name as owner_last, u.email as owner_email
+        `SELECT ad.delegator_user_id, ad.billing_override,
+                u.first_name as owner_first, u.last_name as owner_last, u.email as owner_email
          FROM account_delegations ad
          JOIN users u ON u.id = ad.delegator_user_id
          WHERE ad.delegate_user_id = $1 AND ad.status = 'accepted'`,
         [user.id]
       );
+
+      const OVERRIDE_FIELDS = ['company_name','first_name','last_name','siret','phone','email','address','city','postal_code'];
 
       for (const d of delegations.rows) {
         // Récupérer les owner_clients du compte délégué
@@ -23744,16 +23747,30 @@ app.get('/api/owner-clients', authenticateAny, requireFeature('facturation_propr
           [d.delegator_user_id, d.delegator_user_id,
            ((d.owner_first || '') + ' ' + (d.owner_last || '')).trim() || d.owner_email]
         );
+        const bo = (d.billing_override && typeof d.billing_override === 'object') ? d.billing_override : {};
         clientsResult.rows.forEach(c => {
+          // Fusionner l'override par-client si présent (clé = vrai id du client)
+          const clientOverride = (bo[c.id] && typeof bo[c.id] === 'object') ? bo[c.id] : null;
+          let hasOverride = false;
+          const merged = { ...c };
+          if (clientOverride) {
+            OVERRIDE_FIELDS.forEach(k => {
+              if (clientOverride[k] != null && clientOverride[k] !== '') {
+                merged[k] = clientOverride[k];
+                hasOverride = true;
+              }
+            });
+          }
           agencyClients.push({
-            ...c,
+            ...merged,
             id: 'agency_client_' + c.id, // préfixe pour éviter collisions
             original_id: c.id,
             user_id: user.id,
             delegator_user_id: d.delegator_user_id,
             delegator_name: ((d.owner_first || '') + ' ' + (d.owner_last || '')).trim() || d.owner_email,
             is_agency_client: true,
-            from_agency: true
+            from_agency: true,
+            has_override: hasOverride
           });
         });
       }
@@ -23832,6 +23849,59 @@ app.get('/api/agency/properties/:delegatorUserId', authenticateAny, async (req, 
   }
 });
 
+// ── PATCH /api/agency/client-override/:delegatorUserId/:clientId ──
+// Override des coordonnées d'un client propriétaire géré en agence.
+// Écrit dans billing_override[clientId] sans toucher les autres clients.
+app.patch('/api/agency/client-override/:delegatorUserId/:clientId',
+  authenticateAny, requireProPlan,
+  async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const { delegatorUserId, clientId } = req.params;
+
+    // Vérifier que la délégation existe et est acceptée
+    const check = await pool.query(
+      `SELECT 1 FROM account_delegations
+       WHERE delegate_user_id = $1 AND delegator_user_id = $2 AND status = 'accepted'`,
+      [user.id, delegatorUserId]
+    );
+    if (!check.rows.length) return res.status(403).json({ error: 'Délégation non trouvée' });
+
+    // Vérifier que le client appartient bien au délégateur
+    const clientCheck = await pool.query(
+      'SELECT id FROM owner_clients WHERE id = $1 AND user_id = $2',
+      [clientId, delegatorUserId]
+    );
+    if (!clientCheck.rows.length) return res.status(404).json({ error: 'Client non trouvé' });
+
+    // Construire l'objet partiel (ne stocker que les champs présents dans le body)
+    const { company_name, first_name, last_name, siret, phone, address, city, postal_code, email } = req.body;
+    const clientData = {};
+    Object.entries({ company_name, first_name, last_name, siret, phone, address, city, postal_code, email })
+      .forEach(([k, v]) => { if (v !== undefined) clientData[k] = v; });
+
+    // Merge sur la clé du client uniquement — les autres clients ne sont pas touchés
+    const result = await pool.query(
+      `UPDATE account_delegations
+       SET billing_override = jsonb_set(
+         COALESCE(billing_override, '{}'::jsonb),
+         ARRAY[$1],
+         COALESCE(billing_override->$1, '{}'::jsonb) || $2::jsonb,
+         true
+       ), updated_at = NOW()
+       WHERE delegator_user_id = $3 AND delegate_user_id = $4 AND status = 'accepted'
+       RETURNING id`,
+      [clientId, JSON.stringify(clientData), delegatorUserId, user.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Délégation non trouvée' });
+    res.json({ success: true });
+  } catch(e) {
+    console.error('❌ [AGENCY] client-override:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ── PATCH /api/agency/billing-override/:delegatorUserId ────────
 // Sauvegarder les données de facturation personnalisées pour un compte délégué
 app.patch('/api/agency/billing-override/:delegatorUserId', authenticateAny, requireProPlan, async (req, res) => {
@@ -23886,7 +23956,34 @@ app.get('/api/owner-clients/:id', authenticateAny, requireFeature('facturation_p
       return res.status(404).json({ error: 'Client non trouvé' });
     }
 
-    res.json(result.rows[0]);
+    const row = { ...result.rows[0] };
+    let hasOverride = false;
+
+    if (row.user_id !== user.id) {
+      // Client appartenant à un compte délégué — appliquer l'override par-client si présent
+      try {
+        const boRes = await pool.query(
+          `SELECT billing_override FROM account_delegations
+           WHERE delegate_user_id = $1 AND delegator_user_id = $2 AND status = 'accepted'`,
+          [user.id, row.user_id]
+        );
+        if (boRes.rows.length > 0) {
+          const bo = (boRes.rows[0].billing_override && typeof boRes.rows[0].billing_override === 'object')
+            ? boRes.rows[0].billing_override : {};
+          const clientOverride = (bo[req.params.id] && typeof bo[req.params.id] === 'object') ? bo[req.params.id] : null;
+          if (clientOverride) {
+            ['company_name','first_name','last_name','siret','phone','email','address','city','postal_code'].forEach(k => {
+              if (clientOverride[k] != null && clientOverride[k] !== '') {
+                row[k] = clientOverride[k];
+                hasOverride = true;
+              }
+            });
+          }
+        }
+      } catch(e) { /* fallback : données brutes sans override */ }
+    }
+
+    res.json({ ...row, has_override: hasOverride });
   } catch (err) {
     console.error('Erreur détail client:', err);
     res.status(500).json({ error: 'Erreur serveur' });

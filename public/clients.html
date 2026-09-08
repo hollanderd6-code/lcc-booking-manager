@@ -1826,6 +1826,16 @@ html[data-theme-v3="1"] .invoice-paper {
     <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;max-height:65vh;overflow-y:auto;">
       <input type="hidden" id="agencyClientDelegatorId">
       <input type="hidden" id="agencyClientOriginalId">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Prénom</label>
+          <input id="agencyClientFirstName" type="text" placeholder="Jean" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Nom</label>
+          <input id="agencyClientLastName" type="text" placeholder="Dupont" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+        </div>
+      </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Nom / Entreprise</label>
         <input id="agencyClientCompany" type="text" placeholder="Nom d'entreprise ou nom complet" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
@@ -1837,6 +1847,10 @@ html[data-theme-v3="1"] .invoice-paper {
       <div>
         <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Téléphone</label>
         <input id="agencyClientPhone" type="text" placeholder="+33 6 00 00 00 00" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Email</label>
+        <input id="agencyClientEmail" type="email" placeholder="contact@exemple.fr" style="width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;">
       </div>
       <div>
         <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Adresse</label>
@@ -4642,7 +4656,10 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     document.getElementById('agencyClientDelegatorId').value = client.delegator_user_id || '';
     document.getElementById('agencyClientOriginalId').value = client.original_id || client.id || '';
     document.getElementById('agencyClientSubtitle').textContent = client.email || 'Compte Agence';
+    document.getElementById('agencyClientFirstName').value = client.first_name || '';
+    document.getElementById('agencyClientLastName').value = client.last_name || '';
     document.getElementById('agencyClientCompany').value = client.company_name || '';
+    document.getElementById('agencyClientEmail').value = client.email || '';
     document.getElementById('agencyClientSiret').value = client.siret || '';
     document.getElementById('agencyClientPhone').value = client.phone || '';
     document.getElementById('agencyClientAddress').value = client.address || '';
@@ -4675,18 +4692,21 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
   window.saveAgencyClientOverride = async function() {
     const delegatorId = document.getElementById('agencyClientDelegatorId').value;
-    const clientRealId = document.getElementById('agencyClientOriginalId').value;
+    const clientRealId = document.getElementById('agencyClientOriginalId').value.replace('agency_client_', '');
     const body = {
+      first_name:   document.getElementById('agencyClientFirstName').value.trim(),
+      last_name:    document.getElementById('agencyClientLastName').value.trim(),
       company_name: document.getElementById('agencyClientCompany').value.trim(),
-      siret: document.getElementById('agencyClientSiret').value.trim(),
-      phone: document.getElementById('agencyClientPhone').value.trim(),
-      address: document.getElementById('agencyClientAddress').value.trim(),
-      postal_code: document.getElementById('agencyClientPostal').value.trim(),
-      city: document.getElementById('agencyClientCity').value.trim()
+      email:        document.getElementById('agencyClientEmail').value.trim(),
+      siret:        document.getElementById('agencyClientSiret').value.trim(),
+      phone:        document.getElementById('agencyClientPhone').value.trim(),
+      address:      document.getElementById('agencyClientAddress').value.trim(),
+      postal_code:  document.getElementById('agencyClientPostal').value.trim(),
+      city:         document.getElementById('agencyClientCity').value.trim()
     };
     try {
-      // 1. Sauvegarder les infos de facturation
-      const r = await fetch(API_BASE + '/api/agency/billing-override/' + delegatorId, {
+      // 1. Sauvegarder les infos de facturation (override par client)
+      const r = await fetch(API_BASE + '/api/agency/client-override/' + delegatorId + '/' + clientRealId, {
         method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
