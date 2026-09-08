@@ -24506,7 +24506,7 @@ res.json({
   }
 });
 // ── Télécharger PDF d'une facture propriétaire (généré server-side avec PDFKit) ──
-app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('facturation_proprietaires'), async (req, res) => {
+app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('facturation_proprietaires'), requirePermission(pool, 'can_view_invoices'), async (req, res) => {
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -26506,6 +26506,7 @@ app.delete('/api/owner-invoices/:id',
   authenticateAny, requireFeature('facturation_proprietaires'),
   requirePermission(pool, 'can_manage_invoices'),
   async (req, res) => {
+  const client = await pool.connect();
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
@@ -26514,7 +26515,7 @@ app.delete('/api/owner-invoices/:id',
 
     // Vérifier que c'est un brouillon (périmètre agence inclus)
     const agencyIds = await getAgencyUserIds(req, userId);
-    const checkResult = await pool.query(
+    const checkResult = await client.query(
       'SELECT status FROM owner_invoices WHERE id = $1 AND user_id = ANY($2::text[])',
       [req.params.id, agencyIds]
     );
@@ -26527,12 +26528,19 @@ app.delete('/api/owner-invoices/:id',
       return res.status(400).json({ error: 'Seuls les brouillons peuvent être supprimés. Créez un avoir pour annuler.' });
     }
 
-    await pool.query('DELETE FROM owner_invoices WHERE id = $1', [req.params.id]);
+    await client.query('BEGIN');
+    await client.query('DELETE FROM owner_invoice_items WHERE invoice_id = $1', [req.params.id]);
+    await client.query('DELETE FROM owner_invoice_properties WHERE invoice_id = $1', [req.params.id]);
+    await client.query('DELETE FROM owner_invoices WHERE id = $1', [req.params.id]);
+    await client.query('COMMIT');
 
     res.json({ message: 'Facture supprimée' });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Erreur suppression facture:', err);
     res.status(500).json({ error: 'Erreur serveur' });
+  } finally {
+    client.release();
   }
 });
 // 2bis. VALIDER UNE FACTURE (BROUILLON -> FACTURÉE)
