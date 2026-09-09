@@ -47877,7 +47877,8 @@ app.get('/api/search', authenticateAny, async (req, res) => {
       }
     }
 
-    res.json({ results });
+    const counts = Object.fromEntries(Object.entries(results).map(([k, v]) => [k, v.length]));
+    res.json({ q, results, counts });
   } catch (err) {
     console.error('Erreur recherche globale:', err);
     res.status(500).json({ error: 'Erreur serveur', detail: err.message });
