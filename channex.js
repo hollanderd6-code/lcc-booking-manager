@@ -70,7 +70,13 @@ async function createChannexProperty(pool, { user_id, property_id, name, address
     const channex_property_id = res.data.data.attributes.id;
     console.log(`✅ [CHANNEX] Propriété créée: ${channex_property_id}`);
 
-    // Déléguer la création du room type + rate plan + mise à jour DB
+    // ── Écriture immédiate : si la suite échoue, le retry trouvera l'ID
+    // en DB et ne recrée pas de deuxième entrée chez le prestataire.
+    await pool.query(
+      `UPDATE properties SET channex_property_id = $1 WHERE id = $2`,
+      [channex_property_id, property_id]
+    );
+
     return await addRoomTypeToProperty(pool, { user_id, property_id, channex_property_id, name });
 
   } catch (e) {
@@ -95,39 +101,81 @@ async function addRoomTypeToProperty(pool, { user_id, property_id, channex_prope
   try {
     console.log(`🏠 [CHANNEX] Ajout room type "${name}" sur property ${channex_property_id}`);
 
-    // Créer le Room Type
-    const rtRes = await channexAPI.post('/room_types', {
-      room_type: {
-        property_id: channex_property_id,
-        title: name,
-        count_of_rooms: 1,
-        occ_adults: 2,
-        occ_children: 0,
-        occ_infants: 0,
-        default_occupancy: 2
+    // ── Récupérer l'état partiel éventuellement déjà en DB (reprise après interruption) ──
+    const dbState = await pool.query(
+      `SELECT channex_room_type_id, channex_rate_plan_id FROM properties WHERE id = $1`,
+      [property_id]
+    );
+    let channex_room_type_id = dbState.rows[0]?.channex_room_type_id || null;
+    let channex_rate_plan_id = dbState.rows[0]?.channex_rate_plan_id || null;
+
+    // ── Room Type ─────────────────────────────────────────────────────────
+    if (!channex_room_type_id) {
+      // Vérifier chez le prestataire avant de créer (guard anti-orphelin) :
+      // si un room type existe déjà sur cette property, le réutiliser plutôt
+      // que d'en créer un deuxième. Uniquement quand channex_property_id est
+      // connu en DB — on ne cherche pas par nom pour éviter les faux matchs.
+      const existingRts = await channexAPI.get('/room_types', {
+        params: { property_id: channex_property_id, 'pagination[page_size]': 10 }
+      });
+      const rts = existingRts.data?.data || [];
+      if (rts.length > 0) {
+        channex_room_type_id = rts[0].attributes?.id || rts[0].id;
+        console.log(`♻️ [CHANNEX] Room Type existant réutilisé: ${channex_room_type_id}`);
+      } else {
+        const rtRes = await channexAPI.post('/room_types', {
+          room_type: {
+            property_id: channex_property_id,
+            title: name,
+            count_of_rooms: 1,
+            occ_adults: 2,
+            occ_children: 0,
+            occ_infants: 0,
+            default_occupancy: 2
+          }
+        });
+        channex_room_type_id = rtRes.data.data.attributes.id;
+        console.log(`✅ [CHANNEX] Room Type créé: ${channex_room_type_id}`);
       }
-    });
+      // Écriture immédiate : le prochain retry ne recrée pas de room type
+      await pool.query(
+        `UPDATE properties SET channex_room_type_id = $1 WHERE id = $2`,
+        [channex_room_type_id, property_id]
+      );
+    } else {
+      console.log(`♻️ [CHANNEX] Room Type déjà en DB: ${channex_room_type_id}`);
+    }
 
-    const channex_room_type_id = rtRes.data.data.attributes.id;
-    console.log(`✅ [CHANNEX] Room Type créé: ${channex_room_type_id}`);
-
-    // Créer le Rate Plan
-    const rpRes = await channexAPI.post('/rate_plans', {
-      rate_plan: {
-        property_id: channex_property_id,
-        room_type_id: channex_room_type_id,
-        title: 'Tarif standard',
-        sell_mode: 'per_room',
-        rate_mode: 'manual',
-        currency: 'EUR',
-        options: [{ occupancy: 2, is_primary: true, rate: 0 }]
+    // ── Rate Plan ─────────────────────────────────────────────────────────
+    if (!channex_rate_plan_id) {
+      // Même garde : vérifier si un rate plan existe déjà sur ce room type
+      const existingRps = await channexAPI.get('/rate_plans', {
+        params: { room_type_id: channex_room_type_id, 'pagination[page_size]': 10 }
+      });
+      const rps = existingRps.data?.data || [];
+      if (rps.length > 0) {
+        channex_rate_plan_id = rps[0].attributes?.id || rps[0].id;
+        console.log(`♻️ [CHANNEX] Rate Plan existant réutilisé: ${channex_rate_plan_id}`);
+      } else {
+        const rpRes = await channexAPI.post('/rate_plans', {
+          rate_plan: {
+            property_id: channex_property_id,
+            room_type_id: channex_room_type_id,
+            title: 'Tarif standard',
+            sell_mode: 'per_room',
+            rate_mode: 'manual',
+            currency: 'EUR',
+            options: [{ occupancy: 2, is_primary: true, rate: 0 }]
+          }
+        });
+        channex_rate_plan_id = rpRes.data.data.attributes.id;
+        console.log(`✅ [CHANNEX] Rate Plan créé: ${channex_rate_plan_id}`);
       }
-    });
+    } else {
+      console.log(`♻️ [CHANNEX] Rate Plan déjà en DB: ${channex_rate_plan_id}`);
+    }
 
-    const channex_rate_plan_id = rpRes.data.data.attributes.id;
-    console.log(`✅ [CHANNEX] Rate Plan créé: ${channex_rate_plan_id}`);
-
-    // Sauvegarder les IDs dans la DB
+    // ── Finalisation DB : confirme l'état complet en un seul UPDATE ───────
     await pool.query(
       `UPDATE properties
        SET channex_property_id = $1, channex_room_type_id = $2, channex_rate_plan_id = $3, channex_enabled = true

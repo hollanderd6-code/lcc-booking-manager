@@ -2012,21 +2012,34 @@ const CHANNEX_CODE_MAP = {
 async function syncChannexBookings(propertyId, btn) {
   const original = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:10px;"></i><span>Importation en cours...</span>';
   btn.style.color = '#0E3B2E';
   btn.style.borderColor = '#0E3B2E';
+  const setLabel = (txt) => { btn.innerHTML = `<i class="fas fa-spinner fa-spin" style="font-size:10px;"></i><span>${txt}</span>`; };
   try {
     const token = localStorage.getItem('lcc_token');
+
+    // 1. Demander aux plateformes de pousser leurs réservations vers le gestionnaire de canaux
+    setLabel('Récupération depuis les plateformes…');
+    await fetch(`${API_URL}/api/channex/pull-bookings/${propertyId}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).catch(() => {});
+
+    // 2. Attendre que le gestionnaire de canaux reçoive les données
+    setLabel('Réception des données…');
+    await new Promise(r => setTimeout(r, 8000));
+
+    // 3. Importer dans BH
+    setLabel('Import en cours…');
     const r = await fetch(`${API_URL}/api/channex/sync-bookings/${propertyId}`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'Erreur serveur');
-    const { imported = 0, updated = 0, errors = 0, total = 0 } = d;
+    const { imported = 0, updated = 0, total = 0 } = d;
     showToast(`✅ ${imported} réservation(s) importée(s), ${updated} mise(s) à jour sur ${total} trouvée(s)`, 'success');
     btn.innerHTML = `<i class="fas fa-check" style="font-size:10px;color:#0E3B2E;"></i><span style="color:#0E3B2E;">Import terminé (${imported} nouvelles)</span>`;
-    // Refresh calendrier si dispo
     if (typeof loadReservations === 'function') loadReservations();
   } catch(e) {
     showToast('Erreur import : ' + e.message, 'error');
@@ -2409,9 +2422,12 @@ function _showPlatformPicker(modal, propertyId, propertyName, isConnected) {
         </div>
 
         ${isConnected ? `
-        <div style="margin-top:10px;text-align:center;">
-          <button onclick="channexDisconnect('${propertyId}')" style="background:none;border:none;color:#dc2626;font-size:12px;cursor:pointer;text-decoration:underline;">
-            Déconnecter ce logement
+        <div style="margin-top:10px;text-align:center;display:flex;justify-content:center;gap:16px;">
+          <button onclick="channexDisconnect('${propertyId}')" style="background:none;border:none;color:#6b7280;font-size:12px;cursor:pointer;text-decoration:underline;">
+            Suspendre la diffusion
+          </button>
+          <button onclick="channexHardDelete('${propertyId}')" style="background:none;border:none;color:#dc2626;font-size:12px;cursor:pointer;text-decoration:underline;">
+            Réinitialiser complètement
           </button>
         </div>` : ''}
       </div>
@@ -2591,9 +2607,9 @@ async function _closeChannexIframe(propertyId) {
 
 async function channexDisconnect(propertyId) {
   const confirmed = await bhConfirm(
-    'Déconnecter ce logement ?',
-    'Les nouvelles réservations OTA ne seront plus reçues automatiquement.',
-    'Déconnecter',
+    'Suspendre la diffusion ?',
+    'Les nouvelles réservations OTA ne seront plus reçues automatiquement. La configuration est conservée — vous pourrez reprendre la diffusion sans tout reconfigurer.',
+    'Suspendre',
     'Annuler',
     'danger'
   );
@@ -2614,7 +2630,40 @@ async function channexDisconnect(propertyId) {
     if (!res.ok) throw new Error(data.error || 'Erreur serveur');
 
     document.getElementById('channexModal')?.remove();
-    showToast('Logement déconnecté de la synchronisation OTA.', 'info');
+    showToast('Diffusion suspendue. Vous pouvez la reprendre à tout moment depuis les réglages.', 'info');
+    await loadProperties();
+
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function channexHardDelete(propertyId) {
+  const confirmed = await bhConfirm(
+    'Réinitialiser complètement ?',
+    'Cette action supprime définitivement la configuration de diffusion. Les canaux OTA devront être reconnectés depuis zéro. Irréversible.',
+    'Réinitialiser',
+    'Annuler',
+    'danger'
+  );
+  if (!confirmed) return;
+
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const res = await fetch(`${API_URL}/api/channex/hard-delete-property`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ property_id: propertyId })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+
+    document.getElementById('channexModal')?.remove();
+    showToast('Configuration réinitialisée.', 'info');
     await loadProperties();
 
   } catch (e) {

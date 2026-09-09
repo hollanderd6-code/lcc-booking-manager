@@ -38501,6 +38501,10 @@ console.log('✅ Service de notifications initialisé');
             const a = w.attributes || w;
             return a.event_mask === 'message' && a.is_active !== false;
           });
+          const hasActiveChannelEvent = existing.some(w => {
+            const a = w.attributes || w;
+            return a.event_mask === 'activate_channel' && a.is_active !== false;
+          });
 
           // Réactiver les inactifs
           for (const wh of existing) {
@@ -38515,8 +38519,9 @@ console.log('✅ Service de notifications initialisé');
 
           // Créer si manquants
           const toCreate = [];
-          if (!hasActiveBooking) toCreate.push({ event_mask: 'booking', callback_url: `${appUrl}/api/channex/webhook`, label: 'BH Bookings' });
-          if (!hasActiveMessage) toCreate.push({ event_mask: 'message', callback_url: `${appUrl}/api/channex/webhook-message`, label: 'BH Messages' });
+          if (!hasActiveBooking)      toCreate.push({ event_mask: 'booking',          callback_url: `${appUrl}/api/channex/webhook`,         label: 'BH Bookings' });
+          if (!hasActiveMessage)      toCreate.push({ event_mask: 'message',          callback_url: `${appUrl}/api/channex/webhook-message`, label: 'BH Messages' });
+          if (!hasActiveChannelEvent) toCreate.push({ event_mask: 'activate_channel', callback_url: `${appUrl}/api/channex/webhook-channel`, label: 'BH Channel Events' });
 
           for (const wh of toCreate) {
             const payload = { property_id: prop.channex_property_id, callback_url: wh.callback_url, event_mask: wh.event_mask, is_active: true, send_data: true, label: wh.label };
@@ -38882,12 +38887,20 @@ app.post('/api/channex/link-property', authenticateToken, async (req, res) => {
   }
 });
 
+// ── Verrou anti-double-clic : une seule connexion simultanée par logement ─
+const _connectingProperties = new Set();
+
 app.post('/api/channex/connect-property', authenticateToken, async (req, res) => {
   const { property_id, channex_property_id: existing_channex_property_id } = req.body;
   const user_id = req.user.id;
   const agencyIds = await getAgencyUserIds(req, user_id);
 
   if (!property_id) return res.status(400).json({ error: 'property_id requis' });
+
+  if (_connectingProperties.has(property_id)) {
+    return res.status(429).json({ error: 'Connexion en cours — veuillez patienter' });
+  }
+  _connectingProperties.add(property_id);
 
   try {
     const propResult = await pool.query(
@@ -38905,6 +38918,7 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
       console.warn(`⚠️ [CHANNEX CONNECT] État incohérent : channex_enabled=true mais channex_property_id=null pour property ${property_id}`);
     }
 
+    // ── Déjà pleinement actif ──────────────────────────────────────────────
     if (property.channex_enabled && property.channex_property_id) {
       return res.json({
         success: true,
@@ -38916,10 +38930,38 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
     }
 
     let result;
+    // Mémoriser si la property existait déjà chez le prestataire avant cet
+    // appel (pour ne pas recréer les webhooks lors d'un soft-reconnect).
+    const isNewChannexProperty = !property.channex_property_id;
 
-    if (existing_channex_property_id) {
-      // ── Scénario multi-logements : rattacher à une property Channex existante ──
-      // Vérifier que cette channex_property_id appartient bien à l'utilisateur
+    // ── Soft-reconnect : tous les IDs présents en DB mais channex_enabled=false ──
+    // (disconnect conserve les IDs, on se rebranche sans rien recréer)
+    if (property.channex_property_id && property.channex_room_type_id && property.channex_rate_plan_id) {
+      console.log(`♻️ [CHANNEX CONNECT] Reconnexion sur setup existant pour ${property_id}`);
+      await pool.query(
+        `UPDATE properties SET channex_enabled = true, updated_at = NOW() WHERE id = $1`,
+        [property_id]
+      );
+      result = {
+        channex_property_id: property.channex_property_id,
+        channex_room_type_id: property.channex_room_type_id,
+        channex_rate_plan_id: property.channex_rate_plan_id
+      };
+
+    // ── Reprise partielle : property créée mais room_type manquant ─────────
+    // (interruption entre POST /properties et POST /room_types au dernier appel)
+    } else if (property.channex_property_id && !property.channex_room_type_id) {
+      console.log(`♻️ [CHANNEX CONNECT] Reprise depuis room_type pour property ${property.channex_property_id}`);
+      const { addRoomTypeToProperty } = require('./channex');
+      result = await addRoomTypeToProperty(pool, {
+        user_id,
+        property_id,
+        channex_property_id: property.channex_property_id,
+        name: property.name
+      });
+
+    // ── Rattachement à une property existante (multi-logements) ───────────
+    } else if (existing_channex_property_id) {
       const ownerCheck = await pool.query(
         'SELECT id FROM properties WHERE channex_property_id = $1 AND user_id = ANY($2::text[]) LIMIT 1',
         [existing_channex_property_id, agencyIds]
@@ -38927,7 +38969,6 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
       if (ownerCheck.rows.length === 0) {
         return res.status(403).json({ error: 'Logement de référence introuvable ou non autorisé' });
       }
-
       const { addRoomTypeToProperty } = require('./channex');
       result = await addRoomTypeToProperty(pool, {
         user_id,
@@ -38935,8 +38976,9 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
         channex_property_id: existing_channex_property_id,
         name: property.name
       });
+
+    // ── Création complète : nouvelle property ──────────────────────────────
     } else {
-      // ── Scénario standard : créer une nouvelle property Channex ──
       result = await createChannexProperty(pool, {
         user_id,
         property_id,
@@ -39002,8 +39044,9 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
       console.error('❌ [CHANNEX CONNECT] push tarifs:', rateErr.message);
     }
 
-    // ✅ Enregistrer les webhooks uniquement si nouvelle property Channex
-    if (!existing_channex_property_id) {
+    // ✅ Enregistrer les webhooks uniquement pour une nouvelle property
+    // (pas en soft-reconnect ni reprise partielle — ils existent déjà)
+    if (isNewChannexProperty && !existing_channex_property_id) {
       try {
         const { channexAPI } = require('./channex');
         const appUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
@@ -39018,8 +39061,9 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
         } catch (e) { /* non bloquant */ }
 
         for (const wh of [
-          { event_mask: 'booking', callback_url: `${appUrl}/api/channex/webhook`, label: 'BH Bookings' },
-          { event_mask: 'message', callback_url: `${appUrl}/api/channex/webhook-message`, label: 'BH Messages' }
+          { event_mask: 'booking',          callback_url: `${appUrl}/api/channex/webhook`,         label: 'BH Bookings' },
+          { event_mask: 'message',          callback_url: `${appUrl}/api/channex/webhook-message`, label: 'BH Messages' },
+          { event_mask: 'activate_channel', callback_url: `${appUrl}/api/channex/webhook-channel`, label: 'BH Channel Events' }
         ]) {
           const payload = {
             property_id: result.channex_property_id,
@@ -39078,6 +39122,8 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
   } catch (e) {
     console.error('❌ [CHANNEX CONNECT]', e.message);
     res.status(500).json({ error: 'Erreur lors de l\'activation de la diffusion' });
+  } finally {
+    _connectingProperties.delete(property_id);
   }
 });
 
@@ -39182,22 +39228,115 @@ app.get('/api/channex/list-user-properties', authenticateToken, async (req, res)
   }
 });
 
-// ── Déconnecter un logement de Channex ───────────────────────
+// ── Suspendre la diffusion d'un logement (soft) ──────────────
+// Ne supprime rien chez le prestataire — les IDs sont conservés en DB
+// pour permettre une reconnexion sans tout recréer.
 app.post('/api/channex/disconnect-property', authenticateToken, async (req, res) => {
   const { property_id } = req.body;
   const user_id = req.user.id;
   const agencyIds = await getAgencyUserIds(req, user_id);
 
   try {
-    await pool.query(
-      'UPDATE properties SET channex_enabled = false, channex_property_id = NULL, channex_room_type_id = NULL, channex_rate_plan_id = NULL WHERE id = $1 AND user_id = ANY($2::text[])',
+    const r = await pool.query(
+      `UPDATE properties SET channex_enabled = false, updated_at = NOW()
+       WHERE id = $1 AND user_id = ANY($2::text[])`,
       [property_id, agencyIds]
     );
-    await loadProperties(); // Rafraîchir le cache mémoire
+    if (r.rowCount === 0) return res.status(404).json({ error: 'Logement introuvable' });
+    await loadProperties();
     res.json({ success: true, message: 'Logement retiré de la diffusion' });
   } catch (e) {
     console.error('❌ [CHANNEX DISCONNECT]', e.message);
     res.status(500).json({ error: 'Erreur lors de la désactivation de la diffusion' });
+  }
+});
+
+// ── Supprimer complètement la configuration de diffusion (hard) ──
+// Efface les IDs en DB et tente la suppression chez le prestataire.
+// À n'utiliser que si le logement doit vraiment repartir de zéro.
+app.post('/api/channex/hard-delete-property', authenticateToken, async (req, res) => {
+  const { property_id } = req.body;
+  const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
+
+  try {
+    const r = await pool.query(
+      `SELECT channex_property_id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
+      [property_id, agencyIds]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ error: 'Logement introuvable' });
+
+    const { channex_property_id } = r.rows[0];
+    let deletedRemote = false;
+
+    if (channex_property_id) {
+      try {
+        const { channexAPI } = require('./channex');
+        await channexAPI.delete(`/properties/${channex_property_id}`);
+        deletedRemote = true;
+        console.log(`🗑️ [CHANNEX HARD DELETE] Property ${channex_property_id} supprimée`);
+      } catch (e) {
+        console.warn(`⚠️ [CHANNEX HARD DELETE] Suppression distante échouée:`, e.response?.data || e.message);
+      }
+    }
+
+    await pool.query(
+      `UPDATE properties
+       SET channex_enabled = false, channex_property_id = NULL,
+           channex_room_type_id = NULL, channex_rate_plan_id = NULL, updated_at = NOW()
+       WHERE id = $1`,
+      [property_id]
+    );
+    await loadProperties();
+    res.json({ success: true, deletedRemote, message: 'Configuration de diffusion réinitialisée' });
+  } catch (e) {
+    console.error('❌ [CHANNEX HARD DELETE]', e.message);
+    res.status(500).json({ error: 'Erreur lors de la réinitialisation' });
+  }
+});
+
+// ── Diagnostic : room types chez le prestataire sans correspondance en DB ─
+// Lecture seule — aucune suppression.
+app.get('/api/channex/orphan-room-types', authenticateToken, async (req, res) => {
+  const user_id = req.user.id;
+  const agencyIds = await getAgencyUserIds(req, user_id);
+  try {
+    const { channexAPI } = require('./channex');
+
+    const propsRes = await pool.query(
+      `SELECT DISTINCT channex_property_id FROM properties
+       WHERE user_id = ANY($1::text[]) AND channex_property_id IS NOT NULL`,
+      [agencyIds]
+    );
+
+    const orphans = [];
+    for (const row of propsRes.rows) {
+      const cpid = row.channex_property_id;
+      const rtRes = await channexAPI.get('/room_types', {
+        params: { property_id: cpid, 'pagination[page_size]': 50 }
+      });
+      const rts = rtRes.data?.data || [];
+      for (const rt of rts) {
+        const rtId = rt.attributes?.id || rt.id;
+        const dbMatch = await pool.query(
+          `SELECT id, name FROM properties WHERE channex_room_type_id = $1 AND user_id = ANY($2::text[])`,
+          [rtId, agencyIds]
+        );
+        if (dbMatch.rows.length === 0) {
+          orphans.push({
+            channex_property_id: cpid,
+            channex_room_type_id: rtId,
+            title: rt.attributes?.title || rtId,
+            inserted_at: rt.attributes?.inserted_at || null
+          });
+        }
+      }
+    }
+
+    res.json({ orphans, count: orphans.length });
+  } catch (e) {
+    console.error('❌ [CHANNEX ORPHANS]', e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -40895,6 +41034,36 @@ app.put('/api/properties/:id/upsell', authenticateAny, async (req, res) => {
   }
 });
 
+
+// ── Webhook channel events (activate_channel, etc.) — étape 1 : log brut ──
+// Handler intentionnellement minimaliste : on capture le payload sans
+// rien déclencher, pour observer la structure réelle avant d'implémenter
+// la logique de déclenchement (étape 3, après observation en prod).
+app.post('/api/channex/webhook-channel', async (req, res) => {
+  // Répondre immédiatement — un webhook qui tarde est considéré en échec
+  res.json({ ok: true });
+
+  try {
+    const payload = req.body;
+    console.log('📡 [CHANNEX CHANNEL EVENT] Payload brut:', JSON.stringify(payload));
+
+    // Insertion en DB pour analyse offline (lecture via GET /api/channex/logs)
+    const { logChannex } = require('./channex');
+    const propertyId = payload.property_id || payload.data?.property_id || null;
+    await logChannex(pool, {
+      user_id: null,
+      property_id: null,
+      channex_property_id: propertyId,
+      event_type: 'channel_event_raw',
+      direction: 'inbound',
+      payload,
+      status: 'success',
+      error_message: null
+    });
+  } catch (e) {
+    console.error('❌ [CHANNEX CHANNEL EVENT]', e.message);
+  }
+});
 
 // ── Enregistrer les webhooks Channex pour un logement ────────
 app.post('/api/channex/register-webhooks', authenticateToken, async (req, res) => {
