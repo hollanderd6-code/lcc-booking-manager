@@ -861,7 +861,7 @@ async function processChannexBooking(pool, bookingData) {
         console.warn(`⚠️ [CHANNEX] Ambiguïté iCal : ${icalCheck.rows.length} lignes chevauchant ${arrival_date}→${departure_date} sur property ${property_id} (${icalCheck.rows.map(r => r.uid).join(', ')}) — création normale pour éviter un écrasement incorrect`);
       } else if (icalCheck.rows.length === 1) {
         const icalRow = icalCheck.rows[0];
-        const convertedStatus = (isAirbnb && booking_status === 'new') ? 'pending_approval' : 'confirmed';
+        const convertedStatus = 'confirmed';
         console.log(`🔄 [CHANNEX] Conversion iCal → OTA : property=${property_id}, uid=${icalRow.uid}, dates ${icalRow.start_date}→${icalRow.end_date}, booking_id=${booking_id} (${ota_name})`);
         await pool.query(
           `UPDATE reservations SET
@@ -1022,8 +1022,10 @@ async function processChannexBooking(pool, bookingData) {
         final_host_payout,
         Object.keys(airbnbData).length ? JSON.stringify(airbnbData) : null,
         ota_name || 'channex', 'channex',
-        // Demande Airbnb non confirmée → pending_approval
-        (isAirbnb && booking_status === 'new') ? 'pending_approval' : 'confirmed',
+        // booking_status === 'new' = statut de révision (toute nouvelle résa), pas un indicateur request-to-book.
+        // Channex ne distingue pas instant-book de request-to-book dans attrs.status.
+        // Les vraies demandes refusées arrivent via webhook 'declined_reservation' → cancelled.
+        'confirmed',
         booking_id, revision_id || null,
         ota_name || null, ota_reservation_code || null,
         guest_special_request || null
