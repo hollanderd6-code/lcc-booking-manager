@@ -18114,7 +18114,7 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, requir
     const prop = propResult.rows[0];
     const ownerId = prop.user_id;
     if (!prop.channex_enabled || !prop.channex_property_id || !prop.channex_rate_plan_id) {
-      return res.status(400).json({ error: 'Ce logement n\'est pas connecté à Channex' });
+      return res.status(400).json({ error: 'Ce logement n\'est pas configuré pour la diffusion' });
     }
 
     // Récupérer les règles actives pour ce logement
@@ -18312,7 +18312,7 @@ app.get('/api/pricing/rules/channex-check/:property_id', authenticateAny, requir
       `SELECT channex_property_id, channex_rate_plan_id, name FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
       [property_id, agencyIds]
     );
-    if (!prop.rows[0]?.channex_property_id) return res.status(400).json({ error: 'Propriété non connectée à Channex' });
+    if (!prop.rows[0]?.channex_property_id) return res.status(400).json({ error: 'Logement non configuré pour la diffusion' });
 
     const p = prop.rows[0];
     const from = date_from || new Date().toISOString().split('T')[0];
@@ -19759,7 +19759,7 @@ app.delete('/api/properties/:propertyId',
 // ============================================
 app.post('/api/properties/test-ical', async (req, res) => {
   // Route désactivée — iCal remplacé par Channex
-  res.status(410).json({ error: 'iCal désactivé. Utilisez Channex pour la synchronisation OTA.' });
+  res.status(410).json({ error: 'iCal désactivé. Utilisez la synchronisation OTA depuis les paramètres.' });
 });
   // ============================================
 // Réorganiser l'ordre des logements (SAFE)
@@ -33254,20 +33254,20 @@ console.log('✅ Route de test /api/test/invoice-cron ajoutée');
 // 🗓️ ROUTE : Synchronisation iCal manuelle
 app.post('/api/sync/ical', authenticateAny, async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?.userId;
-    // Sync uniquement les logements de cet utilisateur
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (req.user?.id || req.user?.userId);
+    const agencyIds = await getAgencyUserIds(req, userId);
     const propsResult = await pool.query(
-      `SELECT id, user_id, name, ical_urls FROM properties WHERE user_id = $1 AND ical_urls IS NOT NULL AND ical_urls != '[]'`,
-      [userId]
+      `SELECT id, user_id, name, ical_urls FROM properties WHERE user_id = ANY($1::text[]) AND ical_urls IS NOT NULL AND ical_urls != '[]'`,
+      [agencyIds]
     );
 
-    let totalCreated = 0;
     for (const prop of propsResult.rows) {
       let icalUrls = [];
       try { icalUrls = typeof prop.ical_urls === 'string' ? JSON.parse(prop.ical_urls) : (prop.ical_urls || []); } catch (_) { continue; }
       for (const entry of icalUrls) {
         try {
-          const before = totalCreated;
           await syncSingleIcalUrl(pool, prop, entry);
         } catch (e) {
           console.warn(`⚠️ [ICAL MANUAL] ${entry.url}:`, e.message);
@@ -36235,26 +36235,110 @@ async function logAdminAction(adminUser, targetUserId, action, details) {
 }
 
 // GET /api/admin/clients — liste tous les comptes + abonnement
-app.post('/api/admin/sync-all-channex', authenticateToken, async (req, res) => {
+app.post('/api/diffusion/sync-all', authenticateAny, async (req, res) => {
   try {
-    const userId = req.user.id;
-    // Récupérer tous les logements Channex actifs de cet utilisateur
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (req.user?.id || req.user?.userId);
+    const agencyIds = await getAgencyUserIds(req, userId);
+
     const propsResult = await pool.query(
-      `SELECT id FROM properties WHERE user_id = $1 AND channex_enabled = TRUE AND channex_property_id IS NOT NULL`,
-      [userId]
+      `SELECT id, channex_property_id, channex_room_type_id, channex_rate_plan_id,
+              base_price, weekend_price
+       FROM properties
+       WHERE user_id = ANY($1::text[]) AND channex_enabled = TRUE AND channex_property_id IS NOT NULL`,
+      [agencyIds]
     );
     const properties = propsResult.rows;
-    res.json({ message: `Sync démarré pour ${properties.length} logements`, properties: properties.map(p => p.id) });
-    // Sync en arrière-plan avec délai entre chaque pour ne pas flood Channex
+    res.json({ message: `Synchronisation démarrée pour ${properties.length} logements`, count: properties.length });
+
+    // Sync en arrière-plan avec délai entre chaque
     (async () => {
+      const fmt = d => d.toISOString().split('T')[0];
       for (const prop of properties) {
         try {
+          // 1. Disponibilités
           await triggerChannexAvailabilitySync(prop.id);
+
+          // 2. Tarifs + restrictions (500 jours)
+          const rulesResult = await pool.query(
+            `SELECT * FROM pricing_rules
+             WHERE property_id = $1 AND user_id = ANY($2::text[]) AND active = true
+             ORDER BY priority DESC`,
+            [prop.id, agencyIds]
+          );
+          const rules = rulesResult.rows;
+          const minStayRules  = rules.filter(r => r.rule_type === 'min_stay');
+          const stopSellRules = rules.filter(r => r.rule_type === 'stop_sell');
+          const periodRules   = rules.filter(r => r.rule_type === 'period');
+          const weekdayRules  = rules.filter(r => r.rule_type === 'weekday');
+
+          const today = new Date();
+          const restrictions = [];
+          for (let i = 0; i < 500; i++) {
+            const d = new Date(today);
+            d.setDate(today.getDate() + i);
+            const dateStr = fmt(d);
+            const dow = d.getDay();
+            const entry = { date: dateStr };
+
+            let price = null;
+            for (const rule of periodRules) {
+              if (rule.start_date && rule.end_date && rule.price != null &&
+                  dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
+                price = parseFloat(rule.price); break;
+              }
+            }
+            if (price === null) {
+              for (const rule of weekdayRules) {
+                if (rule.days_of_week && rule.price != null && rule.days_of_week.includes(dow)) {
+                  price = parseFloat(rule.price); break;
+                }
+              }
+            }
+            if (price === null) {
+              const isPremium = (dow === 5 || dow === 6);
+              price = isPremium && prop.weekend_price != null
+                ? parseFloat(prop.weekend_price)
+                : (prop.base_price != null ? parseFloat(prop.base_price) : null);
+            }
+            if (price != null) entry.rate = price;
+
+            for (const rule of minStayRules) {
+              if (rule.min_nights == null) continue;
+              if (!rule.start_date && !rule.end_date) { entry.min_stay = rule.min_nights; break; }
+              if (rule.start_date && rule.end_date &&
+                  dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
+                entry.min_stay = rule.min_nights; break;
+              }
+            }
+            if (entry.min_stay == null) entry.min_stay = 1;
+
+            for (const rule of stopSellRules) {
+              if (rule.start_date && rule.end_date &&
+                  dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
+                entry.stop_sell = true; break;
+              }
+            }
+
+            restrictions.push(entry);
+          }
+
+          if (prop.channex_rate_plan_id) {
+            await pushRestrictions(pool, {
+              property_id: prop.id,
+              channex_property_id:  prop.channex_property_id,
+              channex_room_type_id: prop.channex_room_type_id,
+              channex_rate_plan_id: prop.channex_rate_plan_id,
+              restrictions
+            });
+          }
+
           console.log(`✅ [SYNC-ALL] ${prop.id} OK`);
         } catch(e) {
           console.error(`❌ [SYNC-ALL] ${prop.id}:`, e.message);
         }
-        await new Promise(r => setTimeout(r, 1000)); // 1s entre chaque
+        await new Promise(r => setTimeout(r, 1000));
       }
       console.log(`✅ [SYNC-ALL] Terminé — ${properties.length} logements synchronisés`);
     })();
@@ -38657,7 +38741,7 @@ app.get('/api/channex/list-properties', authenticateToken, async (req, res) => {
     res.json(properties);
   } catch (e) {
     console.error('❌ [CHANNEX LIST]', e.message);
-    res.status(500).json({ error: 'Erreur Channex: ' + e.message });
+    res.status(500).json({ error: 'Erreur de récupération des logements disponibles' });
   }
 });
 
@@ -38667,7 +38751,8 @@ app.get('/api/channex/room-types/:channexPropertyId', authenticateToken, async (
     const roomTypes = await listChannexRoomTypes(req.params.channexPropertyId);
     res.json(roomTypes);
   } catch (e) {
-    res.status(500).json({ error: 'Erreur Channex: ' + e.message });
+    console.error('❌ [CHANNEX ROOM-TYPES]', e.message);
+    res.status(500).json({ error: 'Erreur de récupération des types de logements' });
   }
 });
 
@@ -38677,7 +38762,8 @@ app.get('/api/channex/rate-plans/:channexRoomTypeId', authenticateToken, async (
     const ratePlans = await listChannexRatePlans(req.params.channexRoomTypeId);
     res.json(ratePlans);
   } catch (e) {
-    res.status(500).json({ error: 'Erreur Channex: ' + e.message });
+    console.error('❌ [CHANNEX RATE-PLANS]', e.message);
+    res.status(500).json({ error: 'Erreur de récupération des plans tarifaires' });
   }
 });
 
@@ -38717,7 +38803,7 @@ app.post('/api/channex/link-property', authenticateToken, async (req, res) => {
     });
     await pushAvailability(pool, { property_id, channex_property_id, channex_room_type_id, dates_blocked });
 
-    res.json({ success: true, message: 'Logement associé à Channex avec succès' });
+    res.json({ success: true, message: 'Logement configuré pour la diffusion avec succès' });
   } catch (e) {
     console.error('❌ [CHANNEX LINK]', e.message);
     res.status(500).json({ error: 'Erreur lors de l\'association: ' + e.message });
@@ -38743,8 +38829,18 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
 
     const property = propResult.rows[0];
 
+    if (property.channex_enabled && !property.channex_property_id) {
+      console.warn(`⚠️ [CHANNEX CONNECT] État incohérent : channex_enabled=true mais channex_property_id=null pour property ${property_id}`);
+    }
+
     if (property.channex_enabled && property.channex_property_id) {
-      return res.status(400).json({ error: 'Ce logement est déjà connecté à Channex' });
+      return res.json({
+        success: true,
+        message: 'Logement déjà activé pour la diffusion',
+        channex_property_id: property.channex_property_id,
+        channex_room_type_id: property.channex_room_type_id,
+        channex_rate_plan_id: property.channex_rate_plan_id
+      });
     }
 
     let result;
@@ -38757,7 +38853,7 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
         [existing_channex_property_id, agencyIds]
       );
       if (ownerCheck.rows.length === 0) {
-        return res.status(403).json({ error: 'Property Channex introuvable ou non autorisée' });
+        return res.status(403).json({ error: 'Logement de référence introuvable ou non autorisé' });
       }
 
       const { addRoomTypeToProperty } = require('./channex');
@@ -38900,8 +38996,8 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
     res.json({
       success: true,
       message: tarifs_pousses
-        ? 'Logement connecté à Channex, disponibilités et tarifs envoyés'
-        : 'Logement connecté à Channex — tarifs non envoyés',
+        ? 'Logement activé pour la diffusion — disponibilités et tarifs envoyés'
+        : 'Logement activé pour la diffusion — tarifs non envoyés',
       channex_property_id: result.channex_property_id,
       tarifs_pousses,
       ...(avertissement ? { avertissement } : {})
@@ -38909,7 +39005,7 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
 
   } catch (e) {
     console.error('❌ [CHANNEX CONNECT]', e.message);
-    res.status(500).json({ error: 'Erreur lors de la connexion Channex: ' + e.message });
+    res.status(500).json({ error: 'Erreur lors de l\'activation de la diffusion' });
   }
 });
 
@@ -38929,7 +39025,7 @@ app.post('/api/channex/install-messages-app', authenticateToken, async (req, res
     });
 
     if (!msgApp) {
-      return res.status(404).json({ error: 'App Messages & Reviews non trouvée dans Channex' });
+      return res.status(404).json({ error: 'Application de messagerie non disponible' });
     }
 
     const appId = msgApp.id;
@@ -39026,10 +39122,10 @@ app.post('/api/channex/disconnect-property', authenticateToken, async (req, res)
       [property_id, agencyIds]
     );
     await loadProperties(); // Rafraîchir le cache mémoire
-    res.json({ success: true, message: 'Logement déconnecté de Channex' });
+    res.json({ success: true, message: 'Logement retiré de la diffusion' });
   } catch (e) {
     console.error('❌ [CHANNEX DISCONNECT]', e.message);
-    res.status(500).json({ error: 'Erreur déconnexion Channex' });
+    res.status(500).json({ error: 'Erreur lors de la désactivation de la diffusion' });
   }
 });
 
@@ -40390,7 +40486,7 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
     );
 
     if (resaResult.rows.length === 0 || !resaResult.rows[0].channex_booking_id) {
-      return res.status(400).json({ error: 'Pas de réservation Channex liée à cette conversation' });
+      return res.status(400).json({ error: 'Pas de réservation OTA liée à cette conversation' });
     }
 
     const { channex_booking_id, guest_name } = resaResult.rows[0];
@@ -40741,7 +40837,7 @@ app.post('/api/channex/register-webhooks', authenticateToken, async (req, res) =
 
     const prop = propResult.rows[0];
     if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
-      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+      return res.status(400).json({ error: 'Logement non configuré pour la diffusion' });
     }
 
     const { channexAPI } = require('./channex');
@@ -40815,7 +40911,7 @@ app.post('/api/channex/sync-availability/:property_id', authenticateToken, async
 
     const property = propResult.rows[0];
     if (!property || !property.channex_enabled) {
-      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+      return res.status(400).json({ error: 'Logement non configuré pour la diffusion' });
     }
 
     const resaResult = await pool.query(
@@ -40862,7 +40958,7 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
 
     const prop = propResult.rows[0];
     if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
-      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+      return res.status(400).json({ error: 'Logement non configuré pour la diffusion' });
     }
 
     // Récupérer toutes les règles actives
@@ -40973,7 +41069,7 @@ app.post('/api/channex/sync-revisions/:property_id', authenticateToken, async (r
     );
     const prop = propResult.rows[0];
     if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
-      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+      return res.status(400).json({ error: 'Logement non configuré pour la diffusion' });
     }
 
     const { channexAPI, processChannexBooking, bookingAcknowledge } = require('./channex');
@@ -41038,7 +41134,7 @@ app.post('/api/channex/push-availability/:property_id', authenticateAny, async (
     );
     if (!prop.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
     const { channex_property_id, channex_room_type_id, channex_enabled } = prop.rows[0];
-    if (!channex_enabled || !channex_property_id) return res.status(400).json({ error: 'Logement non connecté à Channex' });
+    if (!channex_enabled || !channex_property_id) return res.status(400).json({ error: 'Logement non configuré pour la diffusion' });
 
     // Récupérer toutes les réservations actives pour bloquer les dates
     const resaResult = await pool.query(
@@ -41079,7 +41175,7 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
     );
     const prop = propResult.rows[0];
     if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
-      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+      return res.status(400).json({ error: 'Logement non configuré pour la diffusion' });
     }
 
     const { channexAPI, processChannexBooking, bookingAcknowledge } = require('./channex');
@@ -41258,7 +41354,7 @@ app.post('/api/channex/pull-bookings/:property_id', authenticateToken, async (re
     );
     const prop = propResult.rows[0];
     if (!prop?.channex_enabled || !prop?.channex_property_id) {
-      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+      return res.status(400).json({ error: 'Logement non configuré pour la diffusion' });
     }
 
     const channexPropertyId = prop.channex_property_id;
@@ -41326,7 +41422,7 @@ app.post('/api/channex/sync-messages/:reservation_uid', authenticateToken, async
     // Récupérer les messages depuis Channex
     const messages = await getBookingMessages(resa.channex_booking_id);
     if (!messages || messages.length === 0) {
-      return res.json({ success: true, imported: 0, message: 'Aucun message trouvé sur Channex' });
+      return res.json({ success: true, imported: 0, message: 'Aucun message trouvé sur la plateforme' });
     }
 
     const conv_id = resa.conv_id;
@@ -41535,7 +41631,7 @@ app.post('/api/channex/iframe-token', authenticateToken, async (req, res) => {
     const property = propResult.rows[0];
 
     if (!property.channex_enabled || !property.channex_property_id) {
-      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+      return res.status(400).json({ error: 'Logement non configuré pour la diffusion' });
     }
 
     // Générer le one-time token via l'API Channex
@@ -41738,7 +41834,7 @@ app.get('/api/channex/reviews/:property_id', authenticateToken, async (req, res)
     const prop = propResult.rows[0];
     if (!prop) return res.status(404).json({ error: 'Logement introuvable' });
     if (!prop.channex_enabled || !prop.channex_property_id) {
-      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+      return res.status(400).json({ error: 'Logement non configuré pour la diffusion' });
     }
 
     const channexPropertyId = prop.channex_property_id;
@@ -41895,7 +41991,7 @@ app.post('/api/channex/reviews/:review_id/reply', authenticateToken, async (req,
     const prop = propResult.rows[0];
     if (!prop) return res.status(404).json({ error: 'Logement introuvable' });
     if (!prop.channex_enabled || !prop.channex_property_id) {
-      return res.status(400).json({ error: 'Logement non connecté à Channex' });
+      return res.status(400).json({ error: 'Logement non configuré pour la diffusion' });
     }
 
     // 2. Envoyer la réponse via Channex
