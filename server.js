@@ -19801,10 +19801,13 @@ app.delete('/api/properties/:propertyId',
     }
     
     // 5. Supprimer le logement
-    await pool.query(
-      'DELETE FROM properties WHERE id = $1 AND user_id = $2',
-      [propertyId, userId]
+    const deleteResult = await pool.query(
+      'DELETE FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [propertyId, agencyIds]
     );
+    if (deleteResult.rowCount === 0) {
+      return res.status(404).json({ error: 'Logement introuvable' });
+    }
     console.log('  ✅ Logement supprimé');
 
     // Nettoyer le cache mémoire
