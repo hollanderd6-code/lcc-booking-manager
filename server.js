@@ -47730,6 +47730,160 @@ app.delete('/api/guest/promo/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+// ============================================
+// 🔍 RECHERCHE GLOBALE
+// ============================================
+app.get('/api/search', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : req.user.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const q = (req.query.q || '').trim();
+    if (q.length < 2) return res.json({ results: {} });
+
+    const globalLimit = Math.min(parseInt(req.query.limit, 10) || 25, 100);
+    const PER_CAT = 5;
+    const pattern = `%${q}%`;
+
+    const agencyIds = await getAgencyUserIds(req, userId);
+
+    // col peut être une expression SQL (ex: "sub.client_name" ou une concat).
+    const cmp = (col) => `unaccent(COALESCE(${col}, '')) ILIKE unaccent($1)`;
+
+    const baseUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
+
+    // ── Factures propriétaires : repli si la colonne i.client_name n'existe pas ──
+    const ownerInvQuery = async (withClientNameCol) => {
+      const clientNameExpr = withClientNameCol
+        ? `COALESCE(c.company_name, NULLIF(TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,'')), ''), i.client_name)`
+        : `COALESCE(c.company_name, NULLIF(TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,'')), ''))`;
+      const sql = `
+        SELECT sub.id, sub.invoice_number, sub.client_name, sub.total_ttc, sub.status, sub.issue_date
+        FROM (
+          SELECT i.id,
+            COALESCE(i.invoice_number, 'Brouillon #' || i.id::text) AS invoice_number,
+            ${clientNameExpr} AS client_name,
+            i.total_ttc, i.status, i.issue_date
+          FROM owner_invoices i
+          LEFT JOIN owner_clients c ON c.id = i.client_id
+          WHERE i.user_id = ANY($2::text[])
+        ) sub
+        WHERE ${cmp('sub.invoice_number')} OR ${cmp('sub.client_name')}
+        ORDER BY sub.issue_date DESC NULLS LAST, sub.id DESC
+        LIMIT ${PER_CAT}
+      `;
+      try {
+        return await pool.query(sql, [pattern, agencyIds]);
+      } catch (e) {
+        if (e.code === '42703' && withClientNameCol) return ownerInvQuery(false);
+        throw e;
+      }
+    };
+
+    const [resaRes, convRes, propRes, ownerInvRes, voyInvRes, clientRes] =
+      await Promise.all([
+
+        // 1. Réservations — uid actionnable pour ouvrir la fiche
+        pool.query(`
+          SELECT uid, guest_name, start_date, end_date, property_id, source AS platform
+          FROM reservations
+          WHERE user_id = ANY($2::text[])
+            AND (${cmp('guest_name')} OR ${cmp('uid')})
+          ORDER BY start_date DESC
+          LIMIT ${PER_CAT}
+        `, [pattern, agencyIds]),
+
+        // 2. Conversations — id actionnable pour ouvrir le fil
+        pool.query(`
+          SELECT id, guest_name, platform, property_id, reservation_uid
+          FROM conversations
+          WHERE user_id = ANY($2::text[])
+            AND ${cmp('guest_name')}
+          ORDER BY id DESC
+          LIMIT ${PER_CAT}
+        `, [pattern, agencyIds]),
+
+        // 3. Propriétés
+        pool.query(`
+          SELECT id, name, internal_name
+          FROM properties
+          WHERE user_id = ANY($2::text[])
+            AND (${cmp('name')} OR ${cmp('internal_name')})
+          ORDER BY internal_name NULLS LAST, name
+          LIMIT ${PER_CAT}
+        `, [pattern, agencyIds]),
+
+        // 4. Factures propriétaires
+        ownerInvQuery(true),
+
+        // 5. Factures voyageurs — DISTINCT pour éviter les doublons entre ré-envois
+        pool.query(`
+          SELECT DISTINCT ON (invoice_number)
+            invoice_number,
+            token,
+            expires_at,
+            CASE WHEN file_path LIKE '{%'
+                 THEN (file_path::jsonb)->>'clientName'
+                 ELSE NULL END AS client_name
+          FROM invoice_download_tokens
+          WHERE user_id = ANY($2::text[])
+            AND (
+              unaccent(COALESCE(invoice_number, '')) ILIKE unaccent($1)
+              OR (file_path LIKE '{%'
+                  AND unaccent(COALESCE((file_path::jsonb)->>'clientName', '')) ILIKE unaccent($1))
+            )
+          ORDER BY invoice_number, created_at DESC
+          LIMIT ${PER_CAT}
+        `, [pattern, agencyIds]),
+
+        // 6. Clients propriétaires — id actionnable pour ouvrir la fiche client
+        pool.query(`
+          SELECT id, client_type, first_name, last_name, company_name, email
+          FROM owner_clients
+          WHERE user_id = ANY($2::text[])
+            AND (
+              ${cmp('first_name')} OR ${cmp('last_name')} OR ${cmp('company_name')} OR ${cmp('email')}
+              OR ${cmp(`NULLIF(TRIM(COALESCE(first_name,'') || ' ' || COALESCE(last_name,'')), '')`)}
+            )
+          ORDER BY company_name NULLS LAST, last_name, first_name
+          LIMIT ${PER_CAT}
+        `, [pattern, agencyIds]),
+      ]);
+
+    const results = {
+      reservations: resaRes.rows,
+      conversations: convRes.rows,
+      properties: propRes.rows,
+      owner_invoices: ownerInvRes.rows,
+      voyageur_invoices: voyInvRes.rows.map(r => ({
+        invoice_number: r.invoice_number,
+        client_name: r.client_name,
+        download_url: `${baseUrl}/api/invoice/download/${r.token}`,
+        expired: new Date(r.expires_at) < new Date(),
+      })),
+      owner_clients: clientRes.rows,
+    };
+
+    // Limite globale : on sature les catégories dans l'ordre jusqu'à épuisement du quota.
+    const total = Object.values(results).reduce((s, a) => s + a.length, 0);
+    if (total > globalLimit) {
+      let remaining = globalLimit;
+      for (const key of Object.keys(results)) {
+        const take = Math.min(results[key].length, remaining);
+        results[key] = results[key].slice(0, take);
+        remaining -= take;
+      }
+    }
+
+    res.json({ results });
+  } catch (err) {
+    console.error('Erreur recherche globale:', err);
+    res.status(500).json({ error: 'Erreur serveur', detail: err.message });
+  }
+});
+
 // ── Servir l'app Guest (catch-all SPA) ───────────────────────
 app.get('/guest-app/public', (req, res) => {
   res.sendFile(path.join(__dirname, 'guest-app', 'public', 'index.html'));
