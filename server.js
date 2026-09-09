@@ -1185,15 +1185,46 @@ async function syncAllIcalUrls(pool) {
         const url = entry.url || entry;
         if (!url || typeof url !== 'string') continue;
         try {
-          await syncSingleIcalUrl(pool, prop, entry);
+          const result = await syncSingleIcalUrl(pool, prop, entry);
+          await writeIcalSyncStatus(pool, prop.id, url, { ok: true, events: result?.events ?? 0 });
         } catch (err) {
           console.warn(`⚠️ [ICAL] Erreur sync ${url}:`, err.message);
+          await writeIcalSyncStatus(pool, prop.id, url, { ok: false, error: classifyIcalError(err) });
         }
       }
     }
     console.log(`✅ [ICAL CRON] Synchronisation terminée pour ${propsResult.rows.length} logement(s)`);
   } catch (err) {
     console.error('❌ [ICAL CRON] syncAllIcalUrls:', err.message);
+  }
+}
+
+/** Traduit une erreur technique iCal en message lisible pour l'utilisateur */
+function classifyIcalError(err) {
+  if (err.code === 'ECONNABORTED' || /timeout/i.test(err.message)) return 'Délai d\'attente dépassé';
+  const status = err.response?.status;
+  if (status === 404) return 'Flux introuvable (erreur 404)';
+  if (status === 403 || status === 401) return 'Accès refusé au flux';
+  if (status >= 500) return `Erreur serveur distant (${status})`;
+  if (/parse|invalid|vcalendar/i.test(err.message)) return 'Format de fichier invalide';
+  return 'Erreur de récupération du flux';
+}
+
+/** Persiste le résultat d'une sync iCal dans properties (jamais bloquant) */
+async function writeIcalSyncStatus(pool, propertyId, url, { ok, events = 0, error = null }) {
+  try {
+    const entry = JSON.stringify({
+      [url]: { ok, at: new Date().toISOString(), events: ok ? events : 0, error: ok ? null : error }
+    });
+    await pool.query(
+      `UPDATE properties
+       SET last_ical_sync_at = NOW(),
+           ical_sync_status  = COALESCE(ical_sync_status, '{}'::jsonb) || $1::jsonb
+       WHERE id = $2`,
+      [entry, propertyId]
+    );
+  } catch (dbErr) {
+    console.warn(`⚠️ [ICAL] Échec écriture statut sync pour ${propertyId}:`, dbErr.message);
   }
 }
 
@@ -1224,16 +1255,27 @@ async function syncSingleIcalUrl(pool, property, entry) {
     const guestName = event.summary || `Voyageur ${platformName}`;
     const icalUid = event.uid || `${property.id}_${platformName}_${startStr}`;
 
-    // Anti-doublon : par ical_uid d'abord, puis par dates
+    // Anti-doublon : par ical_uid d'abord, puis par chevauchement (start+end, toutes sources)
     const existing = await pool.query(
-      `SELECT id FROM reservations
+      `SELECT id, uid, source FROM reservations
        WHERE property_id = $1
-       AND (ical_uid = $2 OR (DATE(start_date) = DATE($3) AND status != 'cancelled'))
+         AND status != 'cancelled'
+         AND (
+           ical_uid = $2
+           OR (DATE(start_date) = DATE($3) AND DATE(end_date) = DATE($4))
+         )
        LIMIT 1`,
-      [property.id, icalUid, startStr]
+      [property.id, icalUid, startStr, endStr]
     );
 
-    if (existing.rows.length > 0) { skipped++; continue; }
+    if (existing.rows.length > 0) {
+      const ex = existing.rows[0];
+      if (ex.source !== 'ical') {
+        console.log(`⚠️ [ICAL] Doublon cross-source ignoré : property=${property.id}, dates ${startStr}→${endStr}, ligne existante uid=${ex.uid} source=${ex.source}`);
+      }
+      skipped++;
+      continue;
+    }
 
     // Créer la réservation
     const uid = `ICAL_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,6)}`;
@@ -1382,6 +1424,7 @@ async function syncSingleIcalUrl(pool, property, entry) {
   }
 
   console.log(`✅ [ICAL] ${property.name}/${platformName} : ${created} créée(s), ${skipped} doublon(s)`);
+  return { events: events.length, created, skipped };
 }
 
 /**
@@ -3161,6 +3204,16 @@ ON invoice_download_tokens(token);
       console.log('✅ Colonne deposit_release_days OK');
     } catch (e) {
       console.log('ℹ️ Colonne deposit_release_days:', e.message);
+    }
+
+    try {
+      await pool.query(`
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS last_ical_sync_at TIMESTAMPTZ NULL;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS ical_sync_status   JSONB NULL DEFAULT NULL;
+      `);
+      console.log('✅ Colonnes observabilité iCal OK');
+    } catch (e) {
+      console.log('ℹ️ Colonnes observabilité iCal:', e.message);
     }
 
 
@@ -6532,7 +6585,9 @@ async function loadProperties() {
         internal_name,
         custom_auto_responses,
         airbnb_commission_pct,
-        booking_commission_pct
+        booking_commission_pct,
+        last_ical_sync_at,
+        ical_sync_status
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -6592,7 +6647,9 @@ async function loadProperties() {
         beds: row.beds != null ? parseInt(row.beds, 10) : null,
         bathrooms: row.bathrooms != null ? parseInt(row.bathrooms, 10) : null,
         internal_name: row.internal_name || null,
-        custom_auto_responses: row.custom_auto_responses || []
+        custom_auto_responses: row.custom_auto_responses || [],
+        last_ical_sync_at: row.last_ical_sync_at || null,
+        ical_sync_status: row.ical_sync_status || null
       };
     });
     console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
@@ -17064,7 +17121,9 @@ app.get('/api/properties',
         airbnbCommissionPct: p.airbnbCommissionPct ?? p.airbnb_commission_pct ?? 3,
         airbnb_commission_pct: p.airbnbCommissionPct ?? p.airbnb_commission_pct ?? 3,
         bookingCommissionPct: p.bookingCommissionPct ?? p.booking_commission_pct ?? 15,
-        booking_commission_pct: p.bookingCommissionPct ?? p.booking_commission_pct ?? 15
+        booking_commission_pct: p.bookingCommissionPct ?? p.booking_commission_pct ?? 15,
+        lastIcalSyncAt: p.last_ical_sync_at || null,
+        icalSyncStatus: p.ical_sync_status || null
       };
     });
 
@@ -17254,7 +17313,9 @@ app.get('/api/properties/:propertyId',
       bookingCommissionPct: property.bookingCommissionPct ?? property.booking_commission_pct ?? 15,
       booking_commission_pct: property.bookingCommissionPct ?? property.booking_commission_pct ?? 15,
 
-      reservationCount: (reservationsStore.properties[property.id] || []).length
+      reservationCount: (reservationsStore.properties[property.id] || []).length,
+      lastIcalSyncAt: property.last_ical_sync_at || null,
+      icalSyncStatus: property.ical_sync_status || null
     });
   } catch (error) {
     console.error('Erreur GET /api/properties/:propertyId:', error);
@@ -19581,9 +19642,17 @@ userId: userId
       airbnbCommissionPct: parseFloat(dbRow.rows[0].airbnb_commission_pct) || 3,
       bookingCommissionPct: parseFloat(dbRow.rows[0].booking_commission_pct) || 15,
     } : PROPERTIES.find(p => p.id === propertyId && agencyIds.includes(p.userId));
+
+    const avertissementCoexistence =
+      icalUrls !== undefined && newIcalUrls && newIcalUrls.length > 0 &&
+      (dbRow.rows[0]?.channex_enabled || property.channex_enabled)
+        ? 'Ce logement est configuré pour la diffusion OTA. Les réservations reçues par les deux canaux risquent d\'apparaître en double dans votre calendrier — vérifiez que les flux iCal configurés ne couvrent pas les mêmes plateformes que la diffusion active.'
+        : null;
+
     res.json({
       message: 'Logement modifié avec succès',
-      property: updated
+      property: updated,
+      ...(avertissementCoexistence ? { avertissement: avertissementCoexistence } : {})
     });
     // Pousser les nouveaux tarifs (prix de base/weekend) vers Channex
     setImmediate(() => triggerChannexRatesSync(propertyId, userId));

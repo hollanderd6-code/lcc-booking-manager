@@ -794,6 +794,87 @@ async function processChannexBooking(pool, bookingData) {
       }
     }
 
+    // 4. Fallback élargi : ligne iCal chevauchant les mêmes dates (EN DERNIER — jamais avant les niveaux 1-3)
+    //    Une re-livraison webhook retombe toujours sur sa propre ligne channex via les niveaux 1-3.
+    if (existing.rows.length === 0 && arrival_date && departure_date && property_id) {
+      const icalCheck = await pool.query(
+        `SELECT id, uid, start_date, end_date FROM reservations
+         WHERE property_id = $1
+           AND source = 'ical'
+           AND status != 'cancelled'
+           AND start_date < $3
+           AND end_date   > $2
+         ORDER BY created_at DESC`,
+        [property_id, arrival_date, departure_date]
+      );
+
+      if (icalCheck.rows.length > 1) {
+        // Ambiguïté : plusieurs lignes iCal chevauchent — ne modifier aucune, créer normalement
+        console.warn(`⚠️ [CHANNEX] Ambiguïté iCal : ${icalCheck.rows.length} lignes chevauchant ${arrival_date}→${departure_date} sur property ${property_id} (${icalCheck.rows.map(r => r.uid).join(', ')}) — création normale pour éviter un écrasement incorrect`);
+      } else if (icalCheck.rows.length === 1) {
+        const icalRow = icalCheck.rows[0];
+        const convertedStatus = (isAirbnb && booking_status === 'new') ? 'pending_approval' : 'confirmed';
+        console.log(`🔄 [CHANNEX] Conversion iCal → OTA : property=${property_id}, uid=${icalRow.uid}, dates ${icalRow.start_date}→${icalRow.end_date}, booking_id=${booking_id} (${ota_name})`);
+        await pool.query(
+          `UPDATE reservations SET
+            source              = 'channex',
+            channex_booking_id  = $1,
+            channex_revision_id = $2,
+            ota_name            = $3,
+            ota_reservation_id  = $4,
+            platform            = $5,
+            start_date          = $6,
+            end_date            = $7,
+            guest_name          = $8,
+            guest_first_name    = $9,
+            guest_last_name     = $10,
+            guest_email         = $11,
+            guest_phone         = $12,
+            guest_country       = $13,
+            guest_language      = $14,
+            guest_city          = $15,
+            guest_address       = $16,
+            guest_zip           = $17,
+            occupancy_adults    = $18,
+            occupancy_children  = $19,
+            amount_total        = $20,
+            amount_rooms        = $21,
+            amount_taxes        = $22,
+            amount_cleaning     = $23,
+            ota_commission      = $24,
+            days_breakdown      = $25,
+            services_raw        = $26,
+            currency            = $27,
+            host_payout         = $28,
+            airbnb_data         = $29,
+            notes               = COALESCE($30, notes),
+            status              = $31,
+            updated_at          = NOW()
+           WHERE id = $32`,
+          [
+            booking_id, revision_id || null,
+            ota_name || null, ota_reservation_code || null,
+            ota_name || 'channex',
+            arrival_date, departure_date,
+            guest_name, guest_first_name, guest_last_name,
+            guest_email, guest_phone,
+            guest_country, guest_language,
+            guest_city, guest_address, guest_zip,
+            occupancy_adults, occupancy_children,
+            amount_total, amount_rooms, final_amount_taxes,
+            final_amount_cleaning, final_ota_commission,
+            JSON.stringify(days_breakdown), JSON.stringify(all_services),
+            currency, final_host_payout,
+            Object.keys(airbnbData).length ? JSON.stringify(airbnbData) : null,
+            guest_special_request || null,
+            convertedStatus,
+            icalRow.id
+          ]
+        );
+        existing = icalCheck;
+      }
+    }
+
     // Annulation
     if (booking_status === 'cancelled' || booking_status === 'canceled') {
       if (existing.rows.length > 0) {
