@@ -1281,6 +1281,31 @@ if (sender_type === 'owner' && (message && message.trim())) {
   });
 
   // ============================================
+  // 6c. DÉSESCALADE MANUELLE D'UNE CONVERSATION
+  // ============================================
+  app.post('/api/chat/deescalate/:conversationId', authenticateAny, async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+      const userId = await getRealUserId(pool, req);
+      const agencyIds = await getAgencyUserIds(req, userId);
+      const conv = await pool.query(
+        'SELECT id FROM conversations WHERE id = $1 AND user_id = ANY($2::text[])',
+        [conversationId, agencyIds]
+      );
+      if (!conv.rows.length) return res.status(404).json({ error: 'Conversation non trouvée' });
+      await pool.query(
+        'UPDATE conversations SET escalated = FALSE, escalated_at = NULL, updated_at = NOW() WHERE id = $1',
+        [conversationId]
+      );
+      console.log(`✅ [DEESCALADE] Conv ${conversationId} désescaladée manuellement (user ${userId})`);
+      res.json({ success: true });
+    } catch (e) {
+      console.error('❌ deescalate:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ============================================
   // 7. GÉNÉRER LE MESSAGE POUR AIRBNB/BOOKING
   // ============================================
   

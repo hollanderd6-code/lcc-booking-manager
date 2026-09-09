@@ -7256,24 +7256,36 @@ async function handleDepositPaid(depositId, io) {
       if (resResult.rows.length > 0) {
         const startDate = resResult.rows[0].start_date;
         
+        // Scope agence : le dépôt peut porter le user_id du gestionnaire (template owner)
+        // alors que la conversation appartient au compte délégant. On cherche les deux.
         const convResult = await pool.query(`
           SELECT c.*, p.name as property_name
           FROM conversations c
           LEFT JOIN properties p ON p.id = c.property_id
-          WHERE c.property_id = $1 AND DATE(c.reservation_start_date) = DATE($2) AND c.user_id = $3
+          WHERE c.property_id = $1 AND DATE(c.reservation_start_date) = DATE($2)
+            AND c.user_id IN (
+              SELECT $3::text
+              UNION SELECT delegator_user_id FROM account_delegations
+               WHERE delegate_user_id = $3::text AND status = 'accepted'
+            )
           ORDER BY c.created_at DESC LIMIT 1
         `, [deposit.property_id, startDate, deposit.user_id]);
         conv = convResult.rows[0] || null;
       }
     }
-    
-    // Fallback : par property_id seul (dernier en date)
+
+    // Fallback : par property_id seul (dernier en date), même périmètre agence
     if (!conv && deposit.property_id) {
       const convResult = await pool.query(`
         SELECT c.*, p.name as property_name
         FROM conversations c
         LEFT JOIN properties p ON p.id = c.property_id
-        WHERE c.property_id = $1 AND c.user_id = $2
+        WHERE c.property_id = $1
+          AND c.user_id IN (
+            SELECT $2::text
+            UNION SELECT delegator_user_id FROM account_delegations
+             WHERE delegate_user_id = $2::text AND status = 'accepted'
+          )
         ORDER BY c.created_at DESC LIMIT 1
       `, [deposit.property_id, deposit.user_id]);
       conv = convResult.rows[0] || null;
@@ -32406,7 +32418,13 @@ async function runTemplatesCron(triggerTypes) {
                     ).catch(() => ({ rows: [] }));
                     const depStatus = dep.rows[0]?.status;
                     if (depStatus !== 'captured' && depStatus !== 'authorized') {
-                      console.log(`  ↳ ⏭️ Caution non validée (status=${depStatus || 'aucune'}) pour conv ${conv.id} → on_arrival bloqué`);
+                      const reason = `caution non validée (status=${depStatus || 'aucune'})`;
+                      console.log(`  ↳ ⏭️ ${reason} pour conv ${conv.id} → on_arrival bloqué`);
+                      pool.query(
+                        `INSERT INTO message_template_logs (user_id, template_id, template_title, conversation_id, guest_name, trigger_type, message, status, error_message)
+                         VALUES ($1,$2,$3,$4,$5,$6,'',$7,$8)`,
+                        [tmpl.user_id, tmpl.id, tmpl.title, conv.id, conv.guest_name || null, tmpl.trigger_type, 'blocked', reason]
+                      ).catch(e => console.warn('⚠️ [TPL LOG blocked]', e.message));
                       continue;
                     }
                   }
@@ -32436,7 +32454,13 @@ async function runTemplatesCron(triggerTypes) {
                 const isForeign = gc !== '' && gc !== 'FR';
                 const regDone   = regInfo.rows[0]?.done === true;
                 if (isForeign && !regDone) {
-                  console.log(`  ↳ ⏭️ Enregistrement (fiche de police) non complété — voyageur étranger (${gc}) conv ${conv.id} → on_arrival bloqué`);
+                  const reason = `fiche de police non complétée (pays=${gc})`;
+                  console.log(`  ↳ ⏭️ ${reason} conv ${conv.id} → on_arrival bloqué`);
+                  pool.query(
+                    `INSERT INTO message_template_logs (user_id, template_id, template_title, conversation_id, guest_name, trigger_type, message, status, error_message)
+                     VALUES ($1,$2,$3,$4,$5,$6,'',$7,$8)`,
+                    [tmpl.user_id, tmpl.id, tmpl.title, conv.id, conv.guest_name || null, tmpl.trigger_type, 'blocked', reason]
+                  ).catch(e => console.warn('⚠️ [TPL LOG blocked]', e.message));
                   continue;
                 }
               } catch(regErr) {
