@@ -304,6 +304,7 @@ router.post(
       parkingInfo: body.parkingInfo || '',
       wifiSSID: body.wifiSSID || '',
       wifiPassword: body.wifiPassword || '',
+      checkinTime: body.checkinTime || '',
       checkoutTime: body.checkoutTime || '',
       checkoutInstructions: body.checkoutInstructions || '',
       importantRules: body.importantRules || '',

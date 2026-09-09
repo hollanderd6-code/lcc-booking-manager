@@ -29885,6 +29885,18 @@ app.get('/welcome/:uniqueId', async (req, res) => {
     
     const d = result.rows[0].data || {};
 
+    // Fallback heure d'arrivée : si le livret ne stocke pas checkinTime,
+    // on lit arrival_time sur le logement lié (via welcome_book_url).
+    let propArrivalTime = '';
+    try {
+      const propRow = await pool.query(
+        `SELECT arrival_time FROM properties WHERE welcome_book_url LIKE $1 LIMIT 1`,
+        [`%/welcome/${uniqueId}`]
+      );
+      propArrivalTime = propRow.rows[0]?.arrival_time || '';
+    } catch(_) {}
+    const checkinTime = d.checkinTime || propArrivalTime;
+
     // 2. Préparation des variables (Correction du Titre ici)
     // On s'assure que si une info manque, on met un texte vide
     const title = d.propertyName || "Mon Livret d'Accueil";
@@ -29917,7 +29929,7 @@ app.get('/welcome/:uniqueId', async (req, res) => {
 
     // Key info sidebar
     const keyItems = [
-      '<div class="key-item"><div class="key-lbl key-lbl-arrival">Arrivée</div><div class="key-val key-val-arrival">Dès 15h00</div></div>',
+      '<div class="key-item"><div class="key-lbl key-lbl-arrival">Arrivée</div><div class="key-val key-val-arrival">' + (checkinTime ? 'Dès ' + checkinTime : '—') + '</div></div>',
       '<div class="key-item"><div class="key-lbl key-lbl-departure">Départ</div><div class="key-val">Avant ' + (d.checkoutTime || '11h00') + '</div></div>',
       iif(d.keyboxCode, '<div class="key-item"><div class="key-lbl key-lbl-keybox">Boîte à clés</div><div class="key-val">' + (d.keyboxCode || '') + '</div></div>'),
       iif(d.contactPhone, '<div class="key-item"><div class="key-lbl key-lbl-host">Votre hôte</div><div class="key-val" style="font-size:1rem">' + (d.contactPhone || '') + '</div></div>'),

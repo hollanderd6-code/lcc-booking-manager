@@ -1084,7 +1084,11 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
           </div>
           <hr class="wiz-divider"/>
           <div class="wiz-subsection">
-            <div class="wiz-subsection-title"><i class="fas fa-clipboard-list"></i> Consignes de départ</div>
+            <div class="wiz-subsection-title"><i class="fas fa-clipboard-list"></i> Horaires &amp; consignes de départ</div>
+            <div class="wiz-group">
+              <label class="wiz-label">Heure d'arrivée<span class="wiz-hint">Ex: 15h, 16h</span></label>
+              <input class="wiz-input" name="checkinTime" placeholder="15h" type="text"/>
+            </div>
             <div class="wiz-group">
               <label class="wiz-label">Heure de départ<span class="wiz-hint">Ex: 11h, 10h30</span></label>
               <input class="wiz-input" name="checkoutTime" placeholder="11h" type="text"/>
@@ -1651,7 +1655,7 @@ async function collectFormData(avecFichiers = true) {
     'propertyName','welcomeDescription','contactPhone',
     'address','postalCode','city','keyboxCode',
     'accessInstructions','parkingInfo','wifiSSID',
-    'wifiPassword','checkoutTime','checkoutInstructions',
+    'wifiPassword','checkinTime','checkoutTime','checkoutInstructions',
     'equipmentList','importantRules','transportInfo','shopsList',
     'extraNotesAccess','extraNotesLogement','extraNotesPractical','extraNotesAround'
   ];
@@ -2385,7 +2389,7 @@ function fillFormWithData(data) {
     'propertyName', 'welcomeDescription', 'contactPhone',
     'address', 'postalCode', 'city', 'keyboxCode',
     'accessInstructions', 'parkingInfo', 'wifiSSID',
-    'wifiPassword', 'checkoutTime', 'checkoutInstructions',
+    'wifiPassword', 'checkinTime', 'checkoutTime', 'checkoutInstructions',
     'equipmentList', 'importantRules', 'transportInfo', 'shopsList'
   ];
 
