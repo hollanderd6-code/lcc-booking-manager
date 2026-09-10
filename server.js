@@ -2918,6 +2918,29 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ channex_logs:', e.message);
     }
 
+    // ✅ Migration : table webhook_events (traçabilité des webhooks Channex)
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS webhook_events (
+          id BIGSERIAL PRIMARY KEY,
+          received_at TIMESTAMPTZ DEFAULT NOW(),
+          event_type TEXT,
+          booking_id TEXT,
+          property_id TEXT,
+          payload JSONB,
+          status TEXT DEFAULT 'pending',
+          error_message TEXT,
+          retry_count INTEGER DEFAULT 0,
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_webhook_events_status ON webhook_events(status)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_webhook_events_received_at ON webhook_events(received_at DESC)`);
+      console.log('✅ Table webhook_events OK');
+    } catch (e) {
+      console.log('ℹ️ webhook_events:', e.message);
+    }
+
     // ✅ Migration : tables pricing
     try {
       await pool.query(`
@@ -34682,6 +34705,237 @@ cron.schedule('*/15 * * * *', async () => {
 }, { timezone: 'Europe/Paris' });
 
 console.log('CRON alerte ménage configuré (toutes les 15 min)');
+
+// ============================================
+// CHANNEX — FILET DE RATTRAPAGE RÉSERVATIONS
+//
+// Passe espacée  : logements "suspects", toutes les CHANNEX_PULL_INTERVAL_H heures
+//   → pull OTA + wait + sync (arrivées 30j)
+//   Suspects = pas d'arrivée dans les 7j en DB  OU  pas de résa reçue depuis 48h
+//
+// Passe nocturne : tous les logements à 4h Paris, historique complet depuis 2020
+//   → pull OTA + wait + sync complet
+//
+// Compteur d'impact : channex_logs log uniquement les nouvelles réservations
+// importées (imported > 0) ou les erreurs — pas les simples mises à jour.
+// ============================================
+
+const _channexNightlyRunning  = new Set(); // property_id → nocturne en cours
+const _channexPeriodicRunning = new Set(); // property_id → passe espacée en cours
+
+// Délai entre pull OTA et sync (l'UI attend 8s ; on prend 15s en fond de tâche).
+const _pullWaitRaw = parseInt(process.env.CHANNEX_PULL_WAIT_MS, 10);
+const CHANNEX_PULL_WAIT_MS = Number.isFinite(_pullWaitRaw) && _pullWaitRaw >= 0 ? _pullWaitRaw : 15000;
+
+// Intervalle de la passe espacée en heures. Entier validé entre 1 et 24 ; retombe sur 3 si absent ou invalide.
+const _pullIntervalRaw = parseInt(process.env.CHANNEX_PULL_INTERVAL_H, 10);
+const CHANNEX_PULL_INTERVAL_H = Number.isFinite(_pullIntervalRaw) && _pullIntervalRaw >= 1 && _pullIntervalRaw <= 24
+  ? _pullIntervalRaw : 3;
+const CHANNEX_PULL_CRON = `5 */${CHANNEX_PULL_INTERVAL_H} * * *`;
+
+// ── Cœur : pull OTA puis sync pour un logement ───────────────────────────
+// prop          : { id, channex_property_id, name, user_id }
+// dateParams    : filtres Channex API transmis tels quels (filter[*])
+// arrivalMaxDate: filtre JS client-side arrival_date <= valeur (passe espacée)
+// logLabel      : 'PERIODIC' | 'NIGHTLY' (pour les logs)
+async function runChannexPullAndSync(prop, { dateParams, arrivalMaxDate = null, logLabel }) {
+  const { channexAPI, processChannexBooking, bookingAcknowledge } = require('./channex');
+
+  // 1. Pull OTA — demande à Channex d'aller chercher les réservations sur les OTA
+  let channelsPulled = 0;
+  try {
+    const channelsRes = await channexAPI.get('/channels', {
+      params: { 'filter[property_id]': prop.channex_property_id }
+    });
+    const channels = (channelsRes.data?.data || []).filter(ch => ch.id);
+    for (const ch of channels) {
+      try {
+        await channexAPI.post(`/channels/${ch.id}/execute/load_future_reservations`);
+        channelsPulled++;
+      } catch (pullErr) {
+        console.warn(`⚠️ [CHANNEX ${logLabel}] pull channel ${ch.id} (${prop.name}):`, pullErr.message);
+      }
+    }
+    if (channelsPulled > 0) {
+      console.log(`📡 [CHANNEX ${logLabel}] ${prop.name} — pull OTA OK (${channelsPulled} channel(s))`);
+    }
+  } catch (e) {
+    console.warn(`⚠️ [CHANNEX ${logLabel}] ${prop.name} — channels inaccessibles:`, e.message);
+  }
+
+  // 2. Attente : laisse le temps à l'OTA de pousser ses réservations vers Channex
+  if (channelsPulled > 0) {
+    await new Promise(r => setTimeout(r, CHANNEX_PULL_WAIT_MS));
+  }
+
+  // 3. Sync — pagine les bookings que Channex a désormais
+  let bookings = [];
+  let page = 1;
+  while (true) {
+    const params = { 'pagination[page_size]': 100, 'pagination[page]': page, ...dateParams };
+    const response = await channexAPI.get('/bookings', { params });
+    const data = response.data?.data || [];
+    bookings = bookings.concat(data);
+    if (data.length < 100) break;
+    if (++page > 20) break;
+  }
+
+  // Channex ignore filter[property_id] → filtrer côté serveur
+  bookings = bookings.filter(b => (b.attributes || b).property_id === prop.channex_property_id);
+
+  // Filtre JS sur arrival_date (passe espacée — les filtres API Channex ne sont pas garantis)
+  if (arrivalMaxDate) {
+    const maxArr = new Date(arrivalMaxDate);
+    bookings = bookings.filter(b => {
+      const arrStr = (b.attributes || b).arrival_date;
+      return arrStr && new Date(arrStr) <= maxArr;
+    });
+  }
+
+  let imported = 0, updated = 0, errors = 0;
+
+  for (const booking of bookings) {
+    try {
+      const attrs = booking.attributes || booking;
+      const booking_id = attrs.booking_id || booking.id;
+      const existing = await pool.query(
+        'SELECT id FROM reservations WHERE channex_booking_id = $1', [booking_id]
+      );
+      await processChannexBooking(pool, attrs);
+      if (existing.rows.length > 0) updated++; else imported++;
+      const revisionId = booking.id || attrs.revision_id;
+      if (revisionId) await bookingAcknowledge(revisionId).catch(() => {});
+    } catch (e) {
+      console.error(`❌ [CHANNEX ${logLabel}] Booking ${booking.id || '?'}:`, e.message);
+      errors++;
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  return { imported, updated, errors };
+}
+
+// ── Passe espacée — logements suspects ───────────────────────────────────
+// Expression cron : 5 minutes après chaque multiple de CHANNEX_PULL_INTERVAL_H.
+// L'offset de 5 min évite toute collision avec la nocturne si l'intervalle
+// divise 24 et tomberait exactement sur 4h00.
+cron.schedule(CHANNEX_PULL_CRON, async () => {
+  try {
+    const today  = new Date().toISOString().slice(0, 10);
+    const plus30 = new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10);
+    const plus60 = new Date(Date.now() + 60 * 86400_000).toISOString().slice(0, 10);
+
+    // Suspects : pas d'arrivée dans les 7j  OU  pas de réservation créée depuis 48h.
+    // Logique inversée : un logement qui reçoit régulièrement des réservations
+    // est correctement synchronisé — c'est le logement silencieux qui est à risque.
+    const { rows: suspects } = await pool.query(`
+      SELECT p.id, p.channex_property_id, p.name, p.user_id
+      FROM properties p
+      WHERE p.channex_enabled = true AND p.channex_property_id IS NOT NULL
+        AND (
+          NOT EXISTS (
+            SELECT 1 FROM reservations r
+            WHERE r.property_id = p.id
+              AND r.status NOT IN ('cancelled', 'completed')
+              AND DATE(r.start_date) BETWEEN CURRENT_DATE AND CURRENT_DATE + 7
+          )
+          OR NOT EXISTS (
+            SELECT 1 FROM reservations r
+            WHERE r.property_id = p.id
+              AND r.created_at > NOW() - INTERVAL '48 hours'
+          )
+        )
+    `);
+
+    if (suspects.length === 0) return; // rien à faire, pas de log
+    console.log(`🔍 [CHANNEX PERIODIC] ${suspects.length} logement(s) suspect(s) détecté(s)`);
+
+    for (const prop of suspects) {
+      const propId = String(prop.id);
+      if (_channexNightlyRunning.has(propId)) {
+        console.log(`⏭️ [CHANNEX PERIODIC] ${prop.name} — nocturne en cours, skip`);
+        continue;
+      }
+      if (_channexPeriodicRunning.has(propId)) continue;
+      _channexPeriodicRunning.add(propId);
+      try {
+        const { imported, updated, errors } = await runChannexPullAndSync(prop, {
+          logLabel: 'PERIODIC',
+          arrivalMaxDate: plus30,
+          dateParams: {
+            'filter[arrival_date][gte]': today,
+            'filter[arrival_date][lte]': plus30,
+            'filter[departure_date][gte]': today,
+            'filter[departure_date][lte]': plus60
+          }
+        });
+        // Compteur d'impact : log uniquement si réservation réellement nouvelle ou erreur
+        if (imported > 0 || errors > 0) {
+          console.log(`✅ [CHANNEX PERIODIC] ${prop.name} — ${imported} nouvelle(s), ${updated} màj, ${errors} erreur(s)`);
+          await logChannex(pool, {
+            user_id: prop.user_id, property_id: propId,
+            channex_property_id: prop.channex_property_id,
+            event_type: 'periodic_sync', direction: 'inbound',
+            payload: { imported, updated, errors },
+            status: errors > 0 && imported === 0 ? 'error' : 'success'
+          });
+        }
+      } catch (e) {
+        console.error(`❌ [CHANNEX PERIODIC] ${prop.name}:`, e.message);
+      } finally {
+        _channexPeriodicRunning.delete(propId);
+      }
+      await new Promise(r => setTimeout(r, 1500)); // pause entre logements
+    }
+  } catch (e) {
+    console.error('❌ [CHANNEX PERIODIC] Erreur générale:', e.message);
+  }
+}, { timezone: 'Europe/Paris' });
+console.log(`CRON Channex periodic sync configuré — "${CHANNEX_PULL_CRON}" (${CHANNEX_PULL_INTERVAL_H}h, Europe/Paris)`);
+
+// ── Passe nocturne — tous les logements ──────────────────────────────────
+// Pull OTA + sync historique complet depuis 2020.
+// Séquentiel ; un échec par logement ne bloque pas les suivants.
+cron.schedule('0 4 * * *', async () => {
+  try {
+    const { rows: props } = await pool.query(
+      `SELECT id, channex_property_id, name, user_id FROM properties
+       WHERE channex_enabled = true AND channex_property_id IS NOT NULL`
+    );
+    console.log(`🌙 [CHANNEX NIGHTLY] Démarrage — ${props.length} logement(s)`);
+
+    for (const prop of props) {
+      const propId = String(prop.id);
+      _channexNightlyRunning.add(propId);
+      try {
+        const { imported, updated, errors } = await runChannexPullAndSync(prop, {
+          logLabel: 'NIGHTLY',
+          dateParams: { 'filter[departure_date][gte]': '2020-01-01' }
+        });
+        if (imported > 0 || errors > 0) {
+          console.log(`✅ [CHANNEX NIGHTLY] ${prop.name} — ${imported} nouvelle(s), ${updated} màj, ${errors} erreur(s)`);
+          await logChannex(pool, {
+            user_id: prop.user_id, property_id: propId,
+            channex_property_id: prop.channex_property_id,
+            event_type: 'nightly_sync', direction: 'inbound',
+            payload: { imported, updated, errors },
+            status: errors > 0 && imported === 0 ? 'error' : 'success'
+          });
+        }
+      } catch (e) {
+        console.error(`❌ [CHANNEX NIGHTLY] ${prop.name}:`, e.message);
+      } finally {
+        _channexNightlyRunning.delete(propId);
+      }
+      await new Promise(r => setTimeout(r, 2000)); // pause entre logements
+    }
+    console.log('✅ [CHANNEX NIGHTLY] Terminé');
+  } catch (e) {
+    console.error('❌ [CHANNEX NIGHTLY] Erreur générale:', e.message);
+  }
+}, { timezone: 'Europe/Paris' });
+console.log('CRON Channex nightly sync configuré (4h00, Europe/Paris)');
+
 // ============================================
 // CHARGER LES RÉSERVATIONS MANUELLES DEPUIS LA DB
 // ============================================
@@ -39635,6 +39889,44 @@ app.get('/api/channex/property-status/:property_id', authenticateToken, async (r
   }
 });
 
+// ── Retry asynchrone pour les webhooks dont la récupération de révision a échoué ──
+// La réponse 200 a déjà été envoyée à Channex ; ce traitement est purement en arrière-plan.
+// Délais : 2 min puis 5 min. Si tout échoue, l'event reste en 'error' pour le cron nocturne.
+async function retryWebhookRevision(webhookEventId, revisionId, bookingId, attempt) {
+  const MAX_ATTEMPTS = 3;
+  const RETRY_DELAYS_MS = [2 * 60_000, 5 * 60_000];
+  try {
+    const { channexAPI, processChannexBooking } = require('./channex');
+    const endpoint = revisionId ? `/booking_revisions/${revisionId}` : `/bookings/${bookingId}`;
+    const revRes = await channexAPI.get(endpoint);
+    const fullBooking = revRes.data?.data || null;
+    if (!fullBooking) throw new Error('Booking vide après récupération');
+    await processChannexBooking(pool, fullBooking);
+    await pool.query(
+      `UPDATE webhook_events SET status = 'ok', error_message = NULL, updated_at = NOW() WHERE id = $1`,
+      [webhookEventId]
+    ).catch(() => {});
+    console.log(`✅ [WEBHOOK RETRY] Tentative ${attempt} réussie — booking ${bookingId}`);
+  } catch (err) {
+    console.warn(`⚠️ [WEBHOOK RETRY] Tentative ${attempt} échouée — booking ${bookingId}: ${err.message}`);
+    const nextAttempt = attempt + 1;
+    if (nextAttempt <= MAX_ATTEMPTS) {
+      const delay = RETRY_DELAYS_MS[attempt - 1] ?? RETRY_DELAYS_MS.at(-1);
+      await pool.query(
+        `UPDATE webhook_events SET retry_count = $1, error_message = $2, updated_at = NOW() WHERE id = $3`,
+        [attempt, err.message, webhookEventId]
+      ).catch(() => {});
+      setTimeout(() => retryWebhookRevision(webhookEventId, revisionId, bookingId, nextAttempt), delay);
+    } else {
+      await pool.query(
+        `UPDATE webhook_events SET status = 'error', retry_count = $1, error_message = $2, updated_at = NOW() WHERE id = $3`,
+        [attempt, err.message, webhookEventId]
+      ).catch(() => {});
+      console.error(`❌ [WEBHOOK RETRY] Toutes tentatives épuisées — booking ${bookingId}`);
+    }
+  }
+}
+
 // ── Webhook Channex — réception des réservations ─────────────
 // ── Dédup webhook Channex (évite double traitement si 2 webhooks enregistrés) ──
 const _processedChannexRevisions = new Set();
@@ -39666,6 +39958,21 @@ app.post('/api/channex/webhook', async (req, res) => {
 
     console.log(`📦 [CHANNEX] booking_id=${bookingId} revision_id=${revisionId}`);
 
+    // ── Persister l'événement AVANT tout traitement ──────────
+    // Garantit une trace même si la suite échoue (réseau, crash, timeout Channex).
+    let _webhookEventId = null;
+    try {
+      const _evType = payload.event || payload.event_type || 'booking';
+      const _evRow = await pool.query(
+        `INSERT INTO webhook_events (received_at, event_type, booking_id, payload, status)
+         VALUES (NOW(), $1, $2, $3, 'pending') RETURNING id`,
+        [_evType, bookingId, JSON.stringify(payload)]
+      );
+      _webhookEventId = _evRow.rows[0]?.id ?? null;
+    } catch (_evErr) {
+      console.warn('⚠️ [WEBHOOK EVENTS] Erreur persistance:', _evErr.message);
+    }
+
     // ── Récupérer le booking complet via Booking Revisions ──
     let fullBooking = null;
     try {
@@ -39678,11 +39985,25 @@ app.post('/api/channex/webhook', async (req, res) => {
       if (fullBooking) console.log(`✅ [CHANNEX] Booking récupéré via ${endpoint}`);
     } catch (revErr) {
       console.error(`❌ [CHANNEX] Impossible de récupérer le booking:`, revErr.message);
+      if (_webhookEventId) {
+        await pool.query(
+          `UPDATE webhook_events SET status = 'error', error_message = $1, updated_at = NOW() WHERE id = $2`,
+          [revErr.message, _webhookEventId]
+        ).catch(() => {});
+        setTimeout(() => retryWebhookRevision(_webhookEventId, revisionId, bookingId, 1), 2 * 60_000);
+        console.log(`🔄 [WEBHOOK RETRY] Retry programmé dans 2 min — booking ${bookingId} (event #${_webhookEventId})`);
+      }
       return res.json({ success: true });
     }
 
     if (!fullBooking) {
       console.warn('⚠️ [CHANNEX WEBHOOK] Booking vide après récupération');
+      if (_webhookEventId) {
+        await pool.query(
+          `UPDATE webhook_events SET status = 'error', error_message = 'Booking vide', updated_at = NOW() WHERE id = $1`,
+          [_webhookEventId]
+        ).catch(() => {});
+      }
       return res.json({ success: true });
     }
 
@@ -40416,6 +40737,12 @@ app.post('/api/channex/webhook', async (req, res) => {
       }
     }
 
+    if (_webhookEventId) {
+      await pool.query(
+        `UPDATE webhook_events SET status = 'ok', updated_at = NOW() WHERE id = $1`,
+        [_webhookEventId]
+      ).catch(() => {});
+    }
     res.status(200).json({ success: true });
   } catch (e) {
     console.error('❌ [CHANNEX WEBHOOK]', e.message);
@@ -42197,6 +42524,28 @@ app.get('/api/channex/logs', authenticateToken, async (req, res) => {
     const result = await pool.query(
       'SELECT * FROM channex_logs WHERE user_id = ANY($1::text[]) ORDER BY created_at DESC LIMIT 50',
       [agencyIds]
+    );
+    res.json(result.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Événements webhook — consultation et diagnostic ───────────
+// GET /api/channex/webhook-events?status=error&limit=100
+app.get('/api/channex/webhook-events', authenticateToken, async (req, res) => {
+  const { status, limit = '100' } = req.query;
+  try {
+    const params = [];
+    let where = '';
+    if (status) { params.push(status); where = `WHERE status = $1`; }
+    params.push(Math.min(parseInt(limit, 10) || 100, 500));
+    const result = await pool.query(
+      `SELECT id, received_at, event_type, booking_id, property_id,
+              status, error_message, retry_count, updated_at
+       FROM webhook_events ${where}
+       ORDER BY received_at DESC LIMIT $${params.length}`,
+      params
     );
     res.json(result.rows);
   } catch (e) {
