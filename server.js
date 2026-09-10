@@ -18007,6 +18007,162 @@ app.delete('/api/pricing/overrides/:property_id/:date', authenticateAny, require
 });
 
 // ============================================
+// GET /api/pricing/calendar — calendrier multi-logements en un appel
+// ?from=YYYY-MM-DD&to=YYYY-MM-DD&agency=all[&property_id=prop_abc]
+// Renvoie prix/réservations/blocages groupés par logement.
+// 4 requêtes SQL au total (base, overrides, règles, réservations), quelle que
+// soit le nombre de logements — pas de boucle par logement.
+// ============================================
+app.get('/api/pricing/calendar', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { from, to, property_id } = req.query;
+    if (!from || !to) return res.status(400).json({ error: 'Paramètres from et to requis (YYYY-MM-DD)' });
+    if (from > to) return res.status(400).json({ error: 'from doit être antérieur ou égal à to' });
+
+    const daysDiff = Math.round((new Date(to) - new Date(from)) / 86400000);
+    if (daysDiff > 366) return res.status(400).json({ error: 'Plage maximale : 366 jours' });
+
+    const agencyIds = await getAgencyUserIds(req, user.id);
+
+    let properties = PROPERTIES.filter(p => agencyIds.includes(p.userId));
+    if (property_id) properties = properties.filter(p => p.id === property_id);
+    if (properties.length === 0) return res.json({ from, to, properties: {} });
+
+    const propertyIds = properties.map(p => p.id);
+
+    // 1 — Prix de base
+    const basePricesRes = await pool.query(
+      `SELECT id, base_price, weekend_price FROM properties WHERE id = ANY($1)`,
+      [propertyIds]
+    );
+    const basePricesMap = {};
+    basePricesRes.rows.forEach(r => {
+      basePricesMap[r.id] = {
+        base:    r.base_price    != null ? parseFloat(r.base_price)    : null,
+        weekend: r.weekend_price != null ? parseFloat(r.weekend_price) : null
+      };
+    });
+
+    // 2 — Overrides manuels sur la plage demandée
+    const overridesRes = await pool.query(
+      `SELECT property_id, TO_CHAR(date, 'YYYY-MM-DD') AS date, price
+       FROM pricing_overrides
+       WHERE property_id = ANY($1) AND user_id = ANY($2)
+         AND date >= $3::date AND date <= $4::date`,
+      [propertyIds, agencyIds, from, to]
+    );
+    const overridesMap = {};
+    overridesRes.rows.forEach(r => {
+      if (!overridesMap[r.property_id]) overridesMap[r.property_id] = {};
+      overridesMap[r.property_id][r.date] = parseFloat(r.price);
+    });
+
+    // 3 — Règles tarifaires actives (période + jour de semaine)
+    const rulesRes = await pool.query(
+      `SELECT property_id, rule_type,
+              TO_CHAR(start_date, 'YYYY-MM-DD') AS start_date,
+              TO_CHAR(end_date,   'YYYY-MM-DD') AS end_date,
+              days_of_week, price, priority
+       FROM pricing_rules
+       WHERE property_id = ANY($1) AND user_id = ANY($2) AND active = true
+       ORDER BY priority DESC`,
+      [propertyIds, agencyIds]
+    );
+    const rulesMap = {};
+    rulesRes.rows.forEach(r => {
+      if (!rulesMap[r.property_id]) rulesMap[r.property_id] = { period: [], weekday: [] };
+      if (r.rule_type === 'period')  rulesMap[r.property_id].period.push(r);
+      if (r.rule_type === 'weekday') rulesMap[r.property_id].weekday.push(r);
+    });
+
+    // 4 — Réservations et blocages qui chevauchent la plage
+    const resasRes = await pool.query(
+      `SELECT uid, property_id, guest_name, platform, source, notes,
+              TO_CHAR(start_date, 'YYYY-MM-DD') AS start,
+              TO_CHAR(end_date,   'YYYY-MM-DD') AS end
+       FROM reservations
+       WHERE property_id = ANY($1)
+         AND status NOT IN ('cancelled')
+         AND start_date < $3::date
+         AND end_date   > $2::date`,
+      [propertyIds, from, to]
+    );
+    const bookedMap  = {};
+    const blockedMap = {};
+    resasRes.rows.forEach(r => {
+      const isBlock = (r.source === 'BLOCK');
+      if (isBlock) {
+        if (!blockedMap[r.property_id]) blockedMap[r.property_id] = [];
+        blockedMap[r.property_id].push({ start: r.start, end: r.end, uid: r.uid, reason: r.notes || null });
+      } else {
+        if (!bookedMap[r.property_id]) bookedMap[r.property_id] = [];
+        bookedMap[r.property_id].push({ start: r.start, end: r.end, uid: r.uid, guest: r.guest_name || null, platform: r.platform || null });
+      }
+    });
+
+    // Calcul des prix par date — même priorité que getCalendarPricesForRange :
+    // override manuel > règle période > règle jour de semaine > base/weekend
+    const result = {};
+    for (const prop of properties) {
+      const pid = prop.id;
+      const { base: basePrice, weekend: weekendPrice } = basePricesMap[pid] || { base: null, weekend: null };
+      const propOverrides = overridesMap[pid] || {};
+      const periodRules   = (rulesMap[pid] || {}).period  || [];
+      const weekdayRules  = (rulesMap[pid] || {}).weekday || [];
+
+      const prices = {};
+      for (let d = new Date(from + 'T00:00:00Z'); d <= new Date(to + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        const dow = d.getUTCDay();
+        let price = null;
+
+        if (propOverrides[dateStr] != null) {
+          price = propOverrides[dateStr];
+        } else {
+          for (const rule of periodRules) {
+            if (rule.start_date && rule.end_date && rule.price != null) {
+              if (dateStr >= rule.start_date && dateStr <= rule.end_date) {
+                price = parseFloat(rule.price); break;
+              }
+            }
+          }
+          if (price === null) {
+            for (const rule of weekdayRules) {
+              if (rule.days_of_week && rule.price != null && rule.days_of_week.includes(dow)) {
+                price = parseFloat(rule.price); break;
+              }
+            }
+          }
+          if (price === null) {
+            const isPremium = (dow === 5 || dow === 6);
+            price = isPremium && weekendPrice != null ? weekendPrice : basePrice;
+          }
+        }
+
+        if (price != null) prices[dateStr] = price;
+      }
+
+      result[pid] = {
+        basePrice,
+        weekendPrice,
+        prices,
+        booked:  bookedMap[pid]  || [],
+        blocked: blockedMap[pid] || []
+      };
+    }
+
+    res.json({ from, to, properties: result });
+
+  } catch (err) {
+    console.error('❌ GET /api/pricing/calendar:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
 // PRICING RULES — Règles de tarification
 // ============================================
 
