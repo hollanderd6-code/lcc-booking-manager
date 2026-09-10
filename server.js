@@ -10111,39 +10111,81 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
 
     console.log(`🗑️ Suppression réservation: ${uid} | user: ${req.user.id} | owner: ${realOwnerId} | isSubAccount: ${req.user.isSubAccount}`);
 
-    // ✅ SUPPRESSION RÉELLE DE LA DB (pas juste UPDATE status)
+    // Construire les IDs autorisés
+    let agencyIdsForDelete;
+    try {
+      const delegations = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [realOwnerId]
+      );
+      agencyIdsForDelete = [realOwnerId, ...delegations.rows.map(d => d.delegator_user_id)];
+    } catch(e) {
+      agencyIdsForDelete = [realOwnerId];
+    }
+    dbg(`🔍 IDs autorisés pour suppression:`, agencyIdsForDelete);
+
+    // Vérifier la réservation et bloquer les OTA avant toute modification
+    const resaFetch = await pool.query(
+      `SELECT uid, source, property_id,
+              TO_CHAR(start_date, 'YYYY-MM-DD') AS start_date,
+              TO_CHAR(end_date,   'YYYY-MM-DD') AS end_date
+       FROM reservations WHERE uid = $1 AND user_id = ANY($2::text[])`,
+      [uid, agencyIdsForDelete]
+    );
+    if (!resaFetch.rows[0]) {
+      return res.status(404).json({ error: 'Réservation non trouvée' });
+    }
+    const resaRow = resaFetch.rows[0];
+
+    if (resaRow.source === 'channex') {
+      return res.status(403).json({
+        error: "Cette réservation provient d'une plateforme externe. L'annulation doit être effectuée sur la plateforme. Si elle y est déjà annulée, lancez une resynchronisation."
+      });
+    }
+
+    // Libérer la caution AVANT suppression — abort si erreur Stripe d'infrastructure
+    const depsForBooking = await pool.query(
+      `SELECT id FROM deposits WHERE reservation_uid = $1 AND status NOT IN ('released','cancelled','refunded')`,
+      [uid]
+    );
+    try {
+      for (const dep of depsForBooking.rows) {
+        await releaseDeposit(dep.id);
+      }
+    } catch (depositErr) {
+      console.error('❌ Erreur libération caution, suppression annulée:', depositErr.message);
+      return res.status(500).json({ error: "Impossible de libérer la caution associée. La réservation n'a pas été supprimée." });
+    }
+
+    // Supprimer les assignations de ménage
+    const cleaningKeyBooking = `${resaRow.property_id}_${resaRow.start_date}_${resaRow.end_date}`;
+    await pool.query('DELETE FROM cleaning_assignments WHERE reservation_key = $1', [cleaningKeyBooking]);
+
+    // Supprimer la réservation
     let deleted = false;
     let deletedReservation = null;
     let propertyName = 'Logement';
 
     try {
-      // Construire la liste de tous les user_ids autorisés :
-      // le propriétaire principal + tous les comptes délégués (agence)
-      let agencyIdsForDelete;
-      try {
-        const delegations = await pool.query(
-          `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
-          [realOwnerId]
-        );
-        agencyIdsForDelete = [realOwnerId, ...delegations.rows.map(d => d.delegator_user_id)];
-      } catch(e) {
-        agencyIdsForDelete = [realOwnerId];
-      }
-      dbg(`🔍 IDs autorisés pour suppression:`, agencyIdsForDelete);
-
       const deleteResult = await pool.query(
-        `DELETE FROM reservations 
-         WHERE uid = $1 AND user_id = ANY($2::text[]) 
+        `DELETE FROM reservations
+         WHERE uid = $1 AND user_id = ANY($2::text[])
          RETURNING *, (SELECT name FROM properties WHERE id = reservations.property_id) as property_name`,
         [uid, agencyIdsForDelete]
       );
-      
+
       deleted = deleteResult.rowCount > 0;
-      
+
       if (deleted) {
         deletedReservation = deleteResult.rows[0];
         propertyName = deletedReservation.property_name || 'Logement';
         console.log(`✅ Réservation ${uid} supprimée de PostgreSQL`);
+
+        // Marquer la conversation comme annulée
+        await pool.query(
+          `UPDATE conversations SET status = 'cancelled', updated_at = NOW() WHERE reservation_uid = $1`,
+          [uid]
+        ).catch(e => console.warn('⚠️ Erreur update conversation après suppression:', e.message));
       } else {
         console.log(`⚠️ Réservation ${uid} non trouvée`);
         return res.status(404).json({ error: 'Réservation non trouvée' });
@@ -29811,7 +29853,43 @@ app.post('/api/manual-reservations/delete', authenticateAny, async (req, res) =>
       return res.status(404).json({ error: 'Logement non trouvé' });
     }
 
-    // ✅ SUPPRIMER DE LA DB EN PREMIER (source de vérité)
+    // Bloquer les OTA + récupérer les données nécessaires au nettoyage
+    const resaLookup = await pool.query(
+      `SELECT source, property_id,
+              TO_CHAR(start_date, 'YYYY-MM-DD') AS start_date,
+              TO_CHAR(end_date,   'YYYY-MM-DD') AS end_date
+       FROM reservations WHERE uid = $1 AND user_id = ANY($2::text[])`,
+      [uid, allUserIds]
+    );
+    const resaToDelete = resaLookup.rows[0] || null;
+
+    if (resaToDelete?.source === 'channex') {
+      return res.status(403).json({
+        error: "Cette réservation provient d'une plateforme externe. L'annulation doit être effectuée sur la plateforme. Si elle y est déjà annulée, lancez une resynchronisation."
+      });
+    }
+
+    // Libérer la caution AVANT suppression — abort si erreur Stripe d'infrastructure
+    if (resaToDelete) {
+      const depsToRelease = await pool.query(
+        `SELECT id FROM deposits WHERE reservation_uid = $1 AND status NOT IN ('released','cancelled','refunded')`,
+        [uid]
+      );
+      try {
+        for (const dep of depsToRelease.rows) {
+          await releaseDeposit(dep.id);
+        }
+      } catch (depositErr) {
+        console.error('❌ Erreur libération caution, suppression annulée:', depositErr.message);
+        return res.status(500).json({ error: "Impossible de libérer la caution associée. La réservation n'a pas été supprimée." });
+      }
+
+      // Supprimer les assignations de ménage
+      const cleaningKey = `${resaToDelete.property_id}_${resaToDelete.start_date}_${resaToDelete.end_date}`;
+      await pool.query('DELETE FROM cleaning_assignments WHERE reservation_key = $1', [cleaningKey]);
+    }
+
+    // Supprimer la réservation
     let deleted = false;
     let deletedRow = null;
     try {
@@ -29819,30 +29897,36 @@ app.post('/api/manual-reservations/delete', authenticateAny, async (req, res) =>
         'DELETE FROM reservations WHERE uid = $1 AND user_id = ANY($2::text[]) RETURNING *',
         [uid, allUserIds]
       );
-      
+
       deleted = deleteResult.rowCount > 0;
       if (deleteResult.rows[0]) deletedRow = deleteResult.rows[0];
-      
+
       if (deleted) {
         console.log(`✅ Réservation ${uid} supprimée de PostgreSQL`);
-        
+
+        // Marquer la conversation comme annulée (cohérent avec les annulations Channex)
+        await pool.query(
+          `UPDATE conversations SET status = 'cancelled', updated_at = NOW() WHERE reservation_uid = $1`,
+          [uid]
+        ).catch(e => console.warn('⚠️ Erreur update conversation après suppression:', e.message));
+
         // 📩 ENVOYER NOTIFICATION D'ANNULATION (pas pour les blocages manuels)
         const isBlockDeletion = deleteResult.rows[0] && (deleteResult.rows[0].source === 'BLOCK' || (deleteResult.rows[0].uid || '').startsWith('block_') || deleteResult.rows[0].reservation_type === 'block');
         if (!isBlockDeletion && await shouldSendNotification(user.id, 'notif_reservation_cancelled')) {
         try {
           const deletedReservation = deleteResult.rows[0];
-          
+
           const tokensResult = await pool.query(
             'SELECT fcm_token, device_type FROM user_fcm_tokens WHERE user_id = $1',
             [user.id]
           );
-          
+
           if (tokensResult.rows.length > 0) {
             const cancelDate = new Date(deletedReservation.start_date).toLocaleDateString('fr-FR', {
               day: 'numeric',
               month: 'short'
             });
-            
+
             for (const tokenRow of tokensResult.rows) {
               await sendNotificationLogged(
                 tokenRow.fcm_token,
@@ -29854,7 +29938,7 @@ app.post('/api/manual-reservations/delete', authenticateAny, async (req, res) =>
                   property_name: displayName(property)
                 }
               );
-              
+
               console.log(`📩 Notification annulation envoyée au ${tokenRow.device_type}`);
             }
           }
@@ -47290,11 +47374,40 @@ app.post('/api/guest/cancel-reservation', authenticateAny, async (req, res) => {
     if (!uid) return res.status(400).json({ error: 'uid requis' });
 
     const resaRes = await pool.query(
-      'SELECT r.*, p.name as prop_name, p.user_id as owner_user_id FROM reservations r LEFT JOIN properties p ON p.id = r.property_id WHERE r.uid = $1',
+      `SELECT r.uid, r.source, r.property_id, r.guest_name,
+              TO_CHAR(r.start_date, 'YYYY-MM-DD') AS start_date,
+              TO_CHAR(r.end_date,   'YYYY-MM-DD') AS end_date,
+              p.name AS prop_name, p.user_id AS owner_user_id
+       FROM reservations r LEFT JOIN properties p ON p.id = r.property_id
+       WHERE r.uid = $1`,
       [uid]
     );
     if (!resaRes.rows[0]) return res.status(404).json({ error: 'Réservation introuvable' });
     const resa = resaRes.rows[0];
+
+    if (resa.source === 'channex') {
+      return res.status(403).json({
+        error: "Cette réservation provient d'une plateforme externe. L'annulation doit être effectuée sur la plateforme. Si elle y est déjà annulée, lancez une resynchronisation."
+      });
+    }
+
+    // Libérer la caution AVANT annulation — abort si erreur Stripe d'infrastructure
+    const guestDeps = await pool.query(
+      `SELECT id FROM deposits WHERE reservation_uid = $1 AND status NOT IN ('released','cancelled','refunded')`,
+      [uid]
+    );
+    try {
+      for (const dep of guestDeps.rows) {
+        await releaseDeposit(dep.id);
+      }
+    } catch (depositErr) {
+      console.error('❌ [GUEST] Erreur libération caution, annulation bloquée:', depositErr.message);
+      return res.status(500).json({ error: "Impossible de libérer la caution associée. La réservation n'a pas été annulée." });
+    }
+
+    // Supprimer les assignations de ménage
+    const guestRKey = `${resa.property_id}_${resa.start_date}_${resa.end_date}`;
+    await pool.query('DELETE FROM cleaning_assignments WHERE reservation_key = $1', [guestRKey]);
 
     await pool.query("UPDATE reservations SET status = 'cancelled' WHERE uid = $1", [uid]);
 
