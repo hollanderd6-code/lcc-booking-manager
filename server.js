@@ -445,6 +445,16 @@ function calcMinStay(minStayRules, dateStr, dow) {
   return null;
 }
 
+// Retourne { min_stay, min_stay_scope } toujours défini (1/'through' par défaut).
+// Sans cette valeur explicite, Channex conserve l'ancienne valeur même quand
+// aucune règle ne s'applique plus — ce qui laisse des restrictions orphelines.
+function buildMinStayFields(minStayRules, dateStr, dow) {
+  const ms = calcMinStay(minStayRules, dateStr, dow);
+  return ms
+    ? { min_stay: ms.min_nights, min_stay_scope: ms.scope }
+    : { min_stay: 1, min_stay_scope: 'through' };
+}
+
 async function triggerChannexRatesSync(propertyId, userId) {
   try {
     const propResult = await pool.query(
@@ -532,8 +542,7 @@ async function triggerChannexRatesSync(propertyId, userId) {
 
       if (appliedPrice != null) rates.push({ date: dateStr, price: appliedPrice });
 
-      const ms = calcMinStay(minStayRules, dateStr, dow);
-      if (ms != null) restrictions.push({ date: dateStr, min_stay: ms.min_nights, min_stay_scope: ms.scope });
+      restrictions.push({ date: dateStr, ...buildMinStayFields(minStayRules, dateStr, dow) });
     }
 
     if (rates.length > 0 && !prop.external_pricing) {
@@ -18536,15 +18545,7 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, requir
 
       // ── CALCUL DES RESTRICTIONS (min_stay + stop_sell + CTA/CTD) ──
 
-      const restrictionEntry = { date: dateStr };
-      let hasRestriction = false;
-
-      const _ms = calcMinStay(minStayRules, dateStr, dow);
-      if (_ms !== null) {
-        restrictionEntry.min_stay = _ms.min_nights;
-        restrictionEntry.min_stay_scope = _ms.scope;
-        hasRestriction = true;
-      }
+      const restrictionEntry = { date: dateStr, ...buildMinStayFields(minStayRules, dateStr, dow) };
 
       // stop_sell via pricing_rules de type stop_sell
       const stopSellRules = rules.filter(r => r.rule_type === 'stop_sell');
@@ -18552,15 +18553,12 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, requir
         if (rule.start_date && rule.end_date) {
           if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
             restrictionEntry.stop_sell = true;
-            hasRestriction = true;
             break;
           }
         }
       }
 
-      if (hasRestriction) {
-        restrictions.push(restrictionEntry);
-      }
+      restrictions.push(restrictionEntry);
     }
 
     // ── PUSH VERS CHANNEX ───────────────────────────────────────
@@ -36925,9 +36923,7 @@ app.post('/api/diffusion/sync-all', authenticateAny, async (req, res) => {
             }
             if (price != null) entry.rate = price;
 
-            const _msEntry = calcMinStay(minStayRules, dateStr, dow);
-            entry.min_stay = _msEntry ? _msEntry.min_nights : 1;
-            if (_msEntry) entry.min_stay_scope = _msEntry.scope;
+            Object.assign(entry, buildMinStayFields(minStayRules, dateStr, dow));
 
             for (const rule of stopSellRules) {
               if (rule.start_date && rule.end_date &&
@@ -41867,9 +41863,7 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
       if (price != null) entry.rate = price; // rate inclus dans la restriction (format ARI Channex)
 
       // ── min_stay ──
-      const _msSync = calcMinStay(minStayRules, dateStr, dow);
-      entry.min_stay = _msSync ? _msSync.min_nights : 1; // défaut requis par Channex
-      if (_msSync) entry.min_stay_scope = _msSync.scope;
+      Object.assign(entry, buildMinStayFields(minStayRules, dateStr, dow));
 
       // ── stop_sell ──
       for (const rule of stopSellRules) {
