@@ -402,57 +402,51 @@ async function getCalendarPricesForRange(propertyId, userId, days = 500) {
 // Appelé après chaque modif de prix/règle/override
 // ============================================================
 
-// Calcule le min_stay applicable pour une date donnée.
-// Priorité : plage de dates (la plus étroite) > jour de semaine > global.
-// Si une plage de dates ET un jour de semaine couvrent la même date,
-// la plage de dates gagne — c'est un override saisonnier explicite.
-// Retourne { min_nights: N, scope: 'arrival'|'through' } ou null.
-function calcMinStay(minStayRules, dateStr, dow) {
+// Priority per scope: date-range (narrowest span) > day-of-week > global.
+// Within a level, the DELETE logic at save time ensures no two rules share the same scope+DOW,
+// so "first match" is never ambiguous except for date ranges (narrowest wins).
+// Retourne min_nights (number) ou null.
+function calcMinStay(minStayRules, dateStr, dow, scope) {
   const toStr = d => new Date(d).toISOString().split('T')[0];
+  const rules = minStayRules.filter(r => (r.min_stay_scope || 'through') === scope);
 
   // 1. Plage de dates — la plus étroite l'emporte
   let result = null;
   let minSpan = Infinity;
-  for (const rule of minStayRules) {
+  for (const rule of rules) {
     if (rule.min_nights == null || !rule.start_date || !rule.end_date) continue;
     const rs = toStr(rule.start_date), re = toStr(rule.end_date);
     if (dateStr >= rs && dateStr <= re) {
       const span = new Date(re) - new Date(rs);
-      if (span < minSpan) {
-        minSpan = span;
-        result = { min_nights: rule.min_nights, scope: rule.min_stay_scope || 'through' };
-      }
+      if (span < minSpan) { minSpan = span; result = rule.min_nights; }
     }
   }
-  if (result) return result;
+  if (result != null) return result;
 
-  // 2. Jour de semaine (règle sans plage de dates)
-  for (const rule of minStayRules) {
+  // 2. Jour de semaine (sans plage de dates)
+  for (const rule of rules) {
     if (rule.min_nights == null || !rule.days_of_week) continue;
-    if (!rule.start_date && !rule.end_date && rule.days_of_week.includes(dow)) {
-      return { min_nights: rule.min_nights, scope: rule.min_stay_scope || 'through' };
-    }
+    if (!rule.start_date && !rule.end_date && rule.days_of_week.includes(dow)) return rule.min_nights;
   }
 
-  // 3. Règle globale (sans dates ni jours de semaine)
-  for (const rule of minStayRules) {
+  // 3. Règle globale (sans dates ni jours)
+  for (const rule of rules) {
     if (rule.min_nights == null) continue;
-    if (!rule.start_date && !rule.end_date && !rule.days_of_week) {
-      return { min_nights: rule.min_nights, scope: rule.min_stay_scope || 'through' };
-    }
+    if (!rule.start_date && !rule.end_date && !rule.days_of_week) return rule.min_nights;
   }
 
   return null;
 }
 
-// Retourne { min_stay, min_stay_scope } toujours défini (1/'through' par défaut).
-// Sans cette valeur explicite, Channex conserve l'ancienne valeur même quand
-// aucune règle ne s'applique plus — ce qui laisse des restrictions orphelines.
+// Retourne { min_stay_arrival, min_stay_through } toujours définis (1 par défaut).
+// Sans valeur explicite, Channex conserve l'ancienne valeur même quand aucune règle
+// ne s'applique plus — ce qui laisse des restrictions orphelines.
+// Les deux scopes sont calculés indépendamment : arrival et through sont des champs Channex distincts.
 function buildMinStayFields(minStayRules, dateStr, dow) {
-  const ms = calcMinStay(minStayRules, dateStr, dow);
-  return ms
-    ? { min_stay: ms.min_nights, min_stay_scope: ms.scope }
-    : { min_stay: 1, min_stay_scope: 'through' };
+  return {
+    min_stay_arrival: calcMinStay(minStayRules, dateStr, dow, 'arrival') ?? 1,
+    min_stay_through: calcMinStay(minStayRules, dateStr, dow, 'through') ?? 1,
+  };
 }
 
 async function triggerChannexRatesSync(propertyId, userId) {
@@ -565,7 +559,7 @@ async function triggerChannexRatesSync(propertyId, userId) {
 
     console.log(`✅ [CHANNEX RATES SYNC] ${rates.length} tarifs + ${restrictions.length} restrictions synchronisés`);
     if (restrictions.length > 0) {
-      dbg(`🔍 [CHANNEX RATES SYNC] Détail restrictions:`, restrictions.map(r => `${r.date}→min_stay=${r.min_stay}`).join(', '));
+      dbg(`🔍 [CHANNEX RATES SYNC] Détail restrictions:`, restrictions.map(r => `${r.date}→arr=${r.min_stay_arrival}/thr=${r.min_stay_through}`).join(', '));
     }
   } catch (e) {
     console.error('⚠️ [CHANNEX RATES SYNC] Erreur (non bloquante):', e.message);
@@ -18318,19 +18312,28 @@ app.post('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_man
     if (check.rows.length === 0) return res.status(403).json({ error: 'Logement introuvable' });
     const ownerId = check.rows[0].user_id; // compte propriétaire (compte délégué en mode agence)
 
-    // Upsert min_stay : supprimer les doublons existants (même type + même dates)
+    // Upsert min_stay : supprimer les règles qui chevauchent exactement.
+    // Deux règles se chevauchent ssi : même scope ET jours qui se recoupent (NULL = tous les jours)
+    // ET plages de dates qui se recoupent. arrival et through sur les mêmes jours peuvent coexister.
     if (rule_type === 'min_stay') {
+      const scope = min_stay_scope || 'through';
+      const dow_param = days_of_week || null;
       if (start_date && end_date) {
         await pool.query(
           `DELETE FROM pricing_rules WHERE user_id = $1 AND property_id = $2 AND rule_type = 'min_stay'
            AND start_date IS NOT NULL AND end_date IS NOT NULL
-           AND start_date <= $4 AND end_date >= $3`,
-          [ownerId, property_id, start_date, end_date]
+           AND start_date <= $4 AND end_date >= $3
+           AND COALESCE(min_stay_scope, 'through') = $5
+           AND (days_of_week IS NULL OR $6::int[] IS NULL OR days_of_week && $6::int[])`,
+          [ownerId, property_id, start_date, end_date, scope, dow_param]
         );
       } else {
         await pool.query(
-          `DELETE FROM pricing_rules WHERE user_id = $1 AND property_id = $2 AND rule_type = 'min_stay' AND start_date IS NULL AND end_date IS NULL`,
-          [ownerId, property_id]
+          `DELETE FROM pricing_rules WHERE user_id = $1 AND property_id = $2 AND rule_type = 'min_stay'
+           AND start_date IS NULL AND end_date IS NULL
+           AND COALESCE(min_stay_scope, 'through') = $3
+           AND (days_of_week IS NULL OR $4::int[] IS NULL OR days_of_week && $4::int[])`,
+          [ownerId, property_id, scope, dow_param]
         );
       }
     }

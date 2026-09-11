@@ -562,11 +562,8 @@ async function pushRestrictions(pool, { property_id, channex_property_id, channe
       rate_plan_id: channex_rate_plan_id,
       date: r.date,
       ...(r.rate            != null ? { rate: Math.round(r.rate * 100) }     : {}),
-      ...(r.min_stay != null ? (
-        r.min_stay_scope === 'arrival'
-          ? { min_stay_arrival: r.min_stay, min_stay_through: 1 }
-          : { min_stay_arrival: r.min_stay, min_stay_through: r.min_stay }
-      ) : {}),
+      min_stay_arrival: r.min_stay_arrival ?? 1,
+      min_stay_through: r.min_stay_through ?? 1,
       ...(r.max_stay        != null ? { max_stay: r.max_stay }               : {}),
       ...(r.stop_sell       != null ? { stop_sell: r.stop_sell }             : {}),
       ...(r.closed_to_arrival   != null ? { closed_to_arrival: r.closed_to_arrival }   : {}),
