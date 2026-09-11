@@ -401,6 +401,50 @@ async function getCalendarPricesForRange(propertyId, userId, days = 500) {
 // 💰 CHANNEX — Sync automatique des tarifs
 // Appelé après chaque modif de prix/règle/override
 // ============================================================
+
+// Calcule le min_stay applicable pour une date donnée.
+// Priorité : plage de dates (la plus étroite) > jour de semaine > global.
+// Si une plage de dates ET un jour de semaine couvrent la même date,
+// la plage de dates gagne — c'est un override saisonnier explicite.
+// Retourne { min_nights: N, scope: 'arrival'|'through' } ou null.
+function calcMinStay(minStayRules, dateStr, dow) {
+  const toStr = d => new Date(d).toISOString().split('T')[0];
+
+  // 1. Plage de dates — la plus étroite l'emporte
+  let result = null;
+  let minSpan = Infinity;
+  for (const rule of minStayRules) {
+    if (rule.min_nights == null || !rule.start_date || !rule.end_date) continue;
+    const rs = toStr(rule.start_date), re = toStr(rule.end_date);
+    if (dateStr >= rs && dateStr <= re) {
+      const span = new Date(re) - new Date(rs);
+      if (span < minSpan) {
+        minSpan = span;
+        result = { min_nights: rule.min_nights, scope: rule.min_stay_scope || 'through' };
+      }
+    }
+  }
+  if (result) return result;
+
+  // 2. Jour de semaine (règle sans plage de dates)
+  for (const rule of minStayRules) {
+    if (rule.min_nights == null || !rule.days_of_week) continue;
+    if (!rule.start_date && !rule.end_date && rule.days_of_week.includes(dow)) {
+      return { min_nights: rule.min_nights, scope: rule.min_stay_scope || 'through' };
+    }
+  }
+
+  // 3. Règle globale (sans dates ni jours de semaine)
+  for (const rule of minStayRules) {
+    if (rule.min_nights == null) continue;
+    if (!rule.start_date && !rule.end_date && !rule.days_of_week) {
+      return { min_nights: rule.min_nights, scope: rule.min_stay_scope || 'through' };
+    }
+  }
+
+  return null;
+}
+
 async function triggerChannexRatesSync(propertyId, userId) {
   try {
     const propResult = await pool.query(
@@ -488,29 +532,8 @@ async function triggerChannexRatesSync(propertyId, userId) {
 
       if (appliedPrice != null) rates.push({ date: dateStr, price: appliedPrice });
 
-      let minStay = null;
-      let minStaySpan = Infinity;
-      // Date-specific rules: la plage la plus étroite gagne
-      for (const rule of minStayRules) {
-        if (rule.min_nights == null) continue;
-        if (rule.start_date && rule.end_date) {
-          const rs = fmt(new Date(rule.start_date)), re = fmt(new Date(rule.end_date));
-          if (dateStr >= rs && dateStr <= re) {
-            const span = (new Date(re) - new Date(rs));
-            if (span < minStaySpan) { minStay = rule.min_nights; minStaySpan = span; }
-          }
-        }
-      }
-      // Fallback: global rule (sans dates)
-      if (minStay === null) {
-        for (const rule of minStayRules) {
-          if (rule.min_nights == null) continue;
-          if (!rule.start_date && !rule.end_date && !rule.days_of_week) {
-            minStay = rule.min_nights; break;
-          }
-        }
-      }
-      if (minStay != null) restrictions.push({ date: dateStr, min_stay: minStay });
+      const ms = calcMinStay(minStayRules, dateStr, dow);
+      if (ms != null) restrictions.push({ date: dateStr, min_stay: ms.min_nights, min_stay_scope: ms.scope });
     }
 
     if (rates.length > 0 && !prop.external_pricing) {
@@ -2972,6 +2995,9 @@ ON invoice_download_tokens(token);
         );
         CREATE INDEX IF NOT EXISTS idx_pricing_rules_user_property ON pricing_rules(user_id, property_id);
         CREATE INDEX IF NOT EXISTS idx_pricing_overrides_property_date ON pricing_overrides(property_id, date);
+      `);
+      await pool.query(`
+        ALTER TABLE pricing_rules ADD COLUMN IF NOT EXISTS min_stay_scope TEXT DEFAULT 'through';
       `);
       console.log('✅ Tables pricing OK');
     } catch (e) {
@@ -18268,6 +18294,7 @@ app.post('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_man
       days_of_week,
       price,
       min_nights,
+      min_stay_scope,
       discount_pct, discount_after_nights,
       priority = 0
     } = req.body;
@@ -18301,8 +18328,8 @@ app.post('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_man
 
     const result = await pool.query(`
       INSERT INTO pricing_rules
-        (user_id, property_id, name, rule_type, start_date, end_date, days_of_week, price, min_nights, discount_pct, discount_after_nights, priority)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+        (user_id, property_id, name, rule_type, start_date, end_date, days_of_week, price, min_nights, min_stay_scope, discount_pct, discount_after_nights, priority)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
       RETURNING *
     `, [
       ownerId, property_id, name, rule_type,
@@ -18310,6 +18337,7 @@ app.post('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_man
       days_of_week || null,
       price != null ? parseFloat(price) : null,
       min_nights || null,
+      min_stay_scope || 'through',
       discount_pct != null ? parseFloat(discount_pct) : null,
       discount_after_nights || null,
       priority
@@ -18332,7 +18360,7 @@ app.put('/api/pricing/rules/:id', authenticateAny, requirePermission(pool, 'can_
     const { id } = req.params;
     const {
       name, rule_type, start_date, end_date,
-      days_of_week, price, min_nights,
+      days_of_week, price, min_nights, min_stay_scope,
       discount_pct, discount_after_nights, priority, active
     } = req.body;
 
@@ -18344,11 +18372,12 @@ app.put('/api/pricing/rules/:id', authenticateAny, requirePermission(pool, 'can_
         days_of_week = $5,
         price = $6,
         min_nights = $7,
-        discount_pct = $8,
-        discount_after_nights = $9,
-        priority = COALESCE($10, priority),
-        active = COALESCE($11, active)
-      WHERE id = $12 AND user_id = ANY($13::text[])
+        min_stay_scope = COALESCE($8, min_stay_scope),
+        discount_pct = $9,
+        discount_after_nights = $10,
+        priority = COALESCE($11, priority),
+        active = COALESCE($12, active)
+      WHERE id = $13 AND user_id = ANY($14::text[])
       RETURNING *
     `, [
       name, rule_type,
@@ -18356,6 +18385,7 @@ app.put('/api/pricing/rules/:id', authenticateAny, requirePermission(pool, 'can_
       days_of_week || null,
       price != null ? parseFloat(price) : null,
       min_nights || null,
+      min_stay_scope || null,
       discount_pct != null ? parseFloat(discount_pct) : null,
       discount_after_nights || null,
       priority,
@@ -18509,29 +18539,10 @@ app.post('/api/pricing/rules/push-channex/:property_id', authenticateAny, requir
       const restrictionEntry = { date: dateStr };
       let hasRestriction = false;
 
-      // min_stay via pricing_rules — plage la plus étroite gagne, global en fallback
-      let _minStayVal = null;
-      let _minStaySpan = Infinity;
-      for (const rule of minStayRules) {
-        if (rule.min_nights == null) continue;
-        if (rule.start_date && rule.end_date) {
-          const rs = fmt(new Date(rule.start_date)), re = fmt(new Date(rule.end_date));
-          if (dateStr >= rs && dateStr <= re) {
-            const span = (new Date(re) - new Date(rs));
-            if (span < _minStaySpan) { _minStayVal = rule.min_nights; _minStaySpan = span; }
-          }
-        }
-      }
-      if (_minStayVal === null) {
-        for (const rule of minStayRules) {
-          if (rule.min_nights == null) continue;
-          if (!rule.start_date && !rule.end_date && !rule.days_of_week) {
-            _minStayVal = rule.min_nights; break;
-          }
-        }
-      }
-      if (_minStayVal !== null) {
-        restrictionEntry.min_stay = _minStayVal;
+      const _ms = calcMinStay(minStayRules, dateStr, dow);
+      if (_ms !== null) {
+        restrictionEntry.min_stay = _ms.min_nights;
+        restrictionEntry.min_stay_scope = _ms.scope;
         hasRestriction = true;
       }
 
@@ -36906,15 +36917,9 @@ app.post('/api/diffusion/sync-all', authenticateAny, async (req, res) => {
             }
             if (price != null) entry.rate = price;
 
-            for (const rule of minStayRules) {
-              if (rule.min_nights == null) continue;
-              if (!rule.start_date && !rule.end_date) { entry.min_stay = rule.min_nights; break; }
-              if (rule.start_date && rule.end_date &&
-                  dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
-                entry.min_stay = rule.min_nights; break;
-              }
-            }
-            if (entry.min_stay == null) entry.min_stay = 1;
+            const _msEntry = calcMinStay(minStayRules, dateStr, dow);
+            entry.min_stay = _msEntry ? _msEntry.min_nights : 1;
+            if (_msEntry) entry.min_stay_scope = _msEntry.scope;
 
             for (const rule of stopSellRules) {
               if (rule.start_date && rule.end_date &&
@@ -41854,18 +41859,9 @@ app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async
       if (price != null) entry.rate = price; // rate inclus dans la restriction (format ARI Channex)
 
       // ── min_stay ──
-      for (const rule of minStayRules) {
-        if (rule.min_nights == null) continue;
-        if (!rule.start_date && !rule.end_date) {
-          entry.min_stay = rule.min_nights; break;
-        }
-        if (rule.start_date && rule.end_date &&
-            dateStr >= fmt(new Date(rule.start_date)) &&
-            dateStr <= fmt(new Date(rule.end_date))) {
-          entry.min_stay = rule.min_nights; break;
-        }
-      }
-      if (entry.min_stay == null) entry.min_stay = 1; // défaut requis par Channex
+      const _msSync = calcMinStay(minStayRules, dateStr, dow);
+      entry.min_stay = _msSync ? _msSync.min_nights : 1; // défaut requis par Channex
+      if (_msSync) entry.min_stay_scope = _msSync.scope;
 
       // ── stop_sell ──
       for (const rule of stopSellRules) {

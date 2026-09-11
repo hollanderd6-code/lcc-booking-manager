@@ -2758,7 +2758,15 @@ function renderPricingRules() {
       const days = (rule.days_of_week || []).map(d => DAYS_LABELS[d]).join(', ');
       detail = `${days} · <strong>${rule.price}€/nuit</strong>`;
     } else if (rule.rule_type === 'min_stay') {
-      detail = `Minimum <strong>${rule.min_nights} nuits</strong>`;
+      const n = rule.min_nights;
+      const nightsLabel = `Min <strong>${n} nuit${n > 1 ? 's' : ''}</strong>`;
+      if (rule.days_of_week && rule.days_of_week.length > 0) {
+        const days = rule.days_of_week.map(d => DAYS_LABELS[d]).join(', ');
+        const scopeLabel = rule.min_stay_scope === 'arrival' ? 'arrivée' : 'traverse';
+        detail = `${nightsLabel} — ${scopeLabel} ${days}`;
+      } else {
+        detail = nightsLabel;
+      }
     } else if (rule.rule_type === 'long_stay') {
       detail = `<strong>-${rule.discount_pct}%</strong> à partir de ${rule.discount_after_nights} nuits`;
     }
@@ -2945,12 +2953,66 @@ function updatePricingRuleForm() {
       </div>
     `;
   } else if (type === 'min_stay') {
+    const selectedDays = rule.days_of_week || [];
+    const scope = rule.min_stay_scope || 'through';
+    const days = [
+      { val: 1, label: 'Lun' }, { val: 2, label: 'Mar' }, { val: 3, label: 'Mer' },
+      { val: 4, label: 'Jeu' }, { val: 5, label: 'Ven' }, { val: 6, label: 'Sam' }, { val: 0, label: 'Dim' }
+    ];
+    const scopeToggle = `
+      const s=this.value==='arrival';
+      document.getElementById('pr_scope_arr').style.borderColor=s?'#0E3B2E':'#E8E0D0';
+      document.getElementById('pr_scope_arr').style.background=s?'rgba(14,59,46,.05)':'#fff';
+      document.getElementById('pr_scope_thr').style.borderColor=s?'#E8E0D0':'#0E3B2E';
+      document.getElementById('pr_scope_thr').style.background=s?'#fff':'rgba(14,59,46,.05)';
+    `.replace(/\n\s*/g, '');
     container.innerHTML = `
       <div style="margin-bottom:14px;">
-        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Nombre de nuits minimum</label>
-        <input id="pr_min_nights" type="number" min="1" step="1" placeholder="Ex: 3" value="${rule.min_nights || ''}"
+        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Nuits minimum</label>
+        <input id="pr_min_nights" type="number" min="1" step="1" placeholder="Ex: 2" value="${rule.min_nights || ''}"
           style="width:100%;padding:10px 12px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:14px;box-sizing:border-box;" />
-        <small style="display:block;margin-top:4px;font-size:11px;color:#9CA3AF;">Les voyageurs ne pourront pas réserver moins de X nuits</small>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;">
+          Jours concernés
+          <span style="font-weight:400;text-transform:none;font-size:11px;margin-left:4px;">— vide = tous les jours</span>
+        </label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${days.map(d => `
+            <label style="display:flex;align-items:center;gap:4px;padding:7px 12px;border:1.5px solid ${selectedDays.includes(d.val) ? '#0E3B2E' : '#E8E0D0'};border-radius:8px;cursor:pointer;background:${selectedDays.includes(d.val) ? 'rgba(14,59,46,.08)' : '#fff'};font-size:13px;font-weight:500;">
+              <input type="checkbox" name="pr_day" value="${d.val}" ${selectedDays.includes(d.val) ? 'checked' : ''}
+                onchange="this.closest('label').style.borderColor=this.checked?'#0E3B2E':'#E8E0D0';this.closest('label').style.background=this.checked?'rgba(14,59,46,.08)':'#fff'"
+                style="accent-color:#0E3B2E;" />
+              ${d.label}
+            </label>
+          `).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;">Condition</label>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label id="pr_scope_arr" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1.5px solid ${scope === 'arrival' ? '#0E3B2E' : '#E8E0D0'};border-radius:10px;cursor:pointer;background:${scope === 'arrival' ? 'rgba(14,59,46,.05)' : '#fff'};">
+            <input type="radio" name="pr_scope" value="arrival" ${scope === 'arrival' ? 'checked' : ''}
+              onchange="${scopeToggle}"
+              style="margin-top:2px;accent-color:#0E3B2E;flex-shrink:0;" />
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#0D1117;">Si le séjour <u>commence</u> ce jour-là</div>
+              <div style="font-size:11px;color:#6B7280;margin-top:2px;">Ex : 2 nuits minimum si arrivée le vendredi</div>
+            </div>
+          </label>
+          <label id="pr_scope_thr" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1.5px solid ${scope === 'through' ? '#0E3B2E' : '#E8E0D0'};border-radius:10px;cursor:pointer;background:${scope === 'through' ? 'rgba(14,59,46,.05)' : '#fff'};">
+            <input type="radio" name="pr_scope" value="through" ${scope === 'through' ? 'checked' : ''}
+              onchange="${scopeToggle}"
+              style="margin-top:2px;accent-color:#0E3B2E;flex-shrink:0;" />
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#0D1117;">Si le séjour <u>couvre</u> ce jour</div>
+              <div style="font-size:11px;color:#6B7280;margin-top:2px;">Ex : aucun départ autorisé un vendredi</div>
+            </div>
+          </label>
+        </div>
+        <small style="display:block;margin-top:6px;font-size:11px;color:#9CA3AF;">"Commence" ne bloque que les arrivées ce jour. "Couvre" bloque aussi les séjours qui traversent ce jour sans y commencer — à utiliser avec précaution.</small>
       </div>
     `;
   } else if (type === 'long_stay') {
@@ -3035,6 +3097,9 @@ async function savePricingRule(ruleId) {
     payload.price = parseFloat(document.getElementById('pr_price')?.value) || null;
   } else if (type === 'min_stay') {
     payload.min_nights = parseInt(document.getElementById('pr_min_nights')?.value) || null;
+    const checkedDays = Array.from(document.querySelectorAll('input[name="pr_day"]:checked')).map(c => parseInt(c.value));
+    payload.days_of_week = checkedDays.length > 0 ? checkedDays : null;
+    payload.min_stay_scope = document.querySelector('input[name="pr_scope"]:checked')?.value || 'through';
   } else if (type === 'long_stay') {
     payload.discount_pct           = parseFloat(document.getElementById('pr_discount_pct')?.value) || null;
     payload.discount_after_nights  = parseInt(document.getElementById('pr_discount_nights')?.value) || null;
