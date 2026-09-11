@@ -31062,6 +31062,74 @@ async function regenExpiredStripeLinks(pool) {
 }
 
 // ============================================================
+// 🔁 RÉESSAI {checkin_link} — déclenché quand guest_country devient connu
+// Envoie les templates contenant {checkin_link} qui n'ont pas encore pu
+// partir (fenêtre ouverte, aucun envoi, aucun 'sent' log).
+// ============================================================
+async function retryCheckinLinkForConv(pool, io, convId) {
+  const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+  const pad = n => String(n).padStart(2, '0');
+  const todayStr = `${nowParis.getFullYear()}-${pad(nowParis.getMonth()+1)}-${pad(nowParis.getDate())}`;
+
+  const convRow = await pool.query(
+    `SELECT c.*,
+            COALESCE(r.guest_country, c.guest_country, '') as eff_guest_country,
+            COALESCE(r.guest_language, c.guest_language, '') as eff_guest_language
+     FROM conversations c
+     LEFT JOIN reservations r ON r.channex_booking_id = c.channex_booking_id
+       AND c.channex_booking_id IS NOT NULL
+       AND r.status != 'cancelled'
+     WHERE c.id = $1 LIMIT 1`,
+    [convId]
+  );
+  if (!convRow.rows[0]) return;
+  const base = convRow.rows[0];
+  const conv = { ...base, guest_country: base.eff_guest_country, guest_language: base.eff_guest_language };
+
+  const templates = await pool.query(
+    `SELECT mt.* FROM message_templates mt
+     WHERE mt.message ILIKE '%{checkin_link}%'
+       AND mt.active = TRUE
+       AND mt.user_id IN (
+         SELECT $1::text
+         UNION SELECT delegate_user_id FROM account_delegations
+          WHERE delegator_user_id = $1::text AND status = 'accepted'
+       )
+       AND (
+         mt.property_id IS NULL
+         OR mt.property_id::text = $2::text
+         OR (mt.property_ids IS NOT NULL AND mt.property_ids != '[]'::jsonb
+             AND mt.property_ids @> to_jsonb($2::text))
+       )`,
+    [conv.user_id, conv.property_id]
+  );
+
+  for (const tmpl of templates.rows) {
+    // Fenêtre d'envoi : before_arrival = start_date - offset ; on_booking = start_date
+    const offsetDays = tmpl.trigger_offset_days || 0;
+    const arrivalDate = new Date(conv.reservation_start_date);
+    const cutoff = new Date(arrivalDate.getTime() - offsetDays * 86400000);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+    if (todayStr > cutoffStr) {
+      console.log(`⏭️ [RETRY checkin_link] "${tmpl.title}" — fenêtre fermée (cutoff ${cutoffStr}) conv ${convId}`);
+      continue;
+    }
+    // Déjà envoyé ?
+    const alreadySent = await pool.query(
+      `SELECT id FROM message_template_logs
+       WHERE template_id = $1 AND conversation_id = $2 AND status = 'sent' LIMIT 1`,
+      [tmpl.id, convId]
+    ).catch(() => ({ rows: [] }));
+    if (alreadySent.rows.length > 0) continue;
+
+    const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [conv.property_id]);
+    await sendTemplateMessage(pool, io, { template: tmpl, conv, property: propRow.rows[0] || {} });
+    console.log(`✅ [RETRY checkin_link] "${tmpl.title}" envoyé — nationalité renseignée — conv ${convId}`);
+    await new Promise(r => setTimeout(r, 400));
+  }
+}
+
+// ============================================================
 // 🔒 HELPER CENTRALISÉ — Vérification send_condition
 // Retourne { skip: true, reason: '...' } si le template doit
 // être ignoré, ou { skip: false } si l'envoi est autorisé.
@@ -31115,7 +31183,7 @@ async function shouldSkipForDepositCondition(pool, conv, sendCond) {
       `SELECT r.uid, r.guest_country, p.deposit_amount
        FROM reservations r
        LEFT JOIN properties p ON p.id = r.property_id
-       WHERE ($3::text IS NOT NULL AND r.channex_booking_id = $3)
+       WHERE ($3::text IS NOT NULL AND r.channex_booking_id = $3 AND r.status != 'cancelled')
           OR (r.property_id = $1 AND DATE(r.start_date) = DATE($2) AND r.status != 'cancelled')
        ORDER BY (r.channex_booking_id = $3) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
       [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
@@ -31159,17 +31227,34 @@ async function shouldSkipForDepositCondition(pool, conv, sendCond) {
         }
       } else if (t === 'police_complete') {
         // Fiche de police — exigée uniquement pour les voyageurs étrangers
+        // ET seulement si le lien a pu être envoyé au voyageur.
+        // Si aucun template {checkin_link} n'a été envoyé, la condition est
+        // réputée satisfaite : on ne peut pas exiger une fiche que le voyageur
+        // n'a jamais eu l'occasion de signer.
         if (isForeigner) {
-          const pr = await pool.query(
-            `SELECT id FROM police_records
-             WHERE status = 'signed'
-               AND (conversation_id = $1 OR (reservation_uid IS NOT NULL AND reservation_uid = $2))
+          const linkSent = await pool.query(
+            `SELECT mtl.id FROM message_template_logs mtl
+             JOIN message_templates mt ON mt.id = mtl.template_id
+             WHERE mtl.conversation_id = $1
+               AND mtl.status = 'sent'
+               AND mt.message ILIKE '%{checkin_link}%'
              LIMIT 1`,
-            [conv.id || null, resaUid]
+            [conv.id || null]
           ).catch(() => ({ rows: [] }));
-          if (pr.rows.length === 0) {
-            return { skip: true, reason: 'fiche de police manquante (voyageur étranger)' };
+          if (linkSent.rows.length > 0) {
+            // Lien envoyé → vérifier la fiche
+            const pr = await pool.query(
+              `SELECT id FROM police_records
+               WHERE status = 'signed'
+                 AND (conversation_id = $1 OR (reservation_uid IS NOT NULL AND reservation_uid = $2))
+               LIMIT 1`,
+              [conv.id || null, resaUid]
+            ).catch(() => ({ rows: [] }));
+            if (pr.rows.length === 0) {
+              return { skip: true, reason: 'fiche de police manquante (voyageur étranger)' };
+            }
           }
+          // Lien jamais envoyé → ne pas bloquer
         }
       }
     } catch(e) {
@@ -31446,7 +31531,7 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
       try {
         const cRow = await pool.query(
           `SELECT guest_country FROM reservations
-           WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
+           WHERE ($3::text IS NOT NULL AND channex_booking_id = $3 AND status != 'cancelled')
               OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
            ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC
            LIMIT 1`,
@@ -31462,6 +31547,24 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
     if (!isForeigner) {
       const why = country ? `voyageur français (${country})` : 'nationalité inconnue';
       console.log(`🛂 [TPL police-gate] Fiche de police NON envoyée — ${why} — conv ${conv.id} (template "${template.title}")`);
+      // Nationalité inconnue : tracer la décision pour que shouldSkipForDepositCondition
+      // sache que le lien n'a jamais pu partir et ne l'exige pas plus tard.
+      if (!country && conv.id && template.id) {
+        pool.query(
+          `INSERT INTO message_template_logs
+             (user_id, template_id, template_title, conversation_id, guest_name,
+              trigger_type, message, status, error_message)
+           SELECT $1,$2,$3,$4,$5,$6,'','skipped_unknown_country',$7
+           WHERE NOT EXISTS (
+             SELECT 1 FROM message_template_logs
+             WHERE conversation_id = $4 AND template_id = $2
+               AND status = 'skipped_unknown_country'
+           )`,
+          [template.user_id || null, template.id, template.title || null,
+           conv.id, conv.guest_name || null, template.trigger_type || null,
+           'nationalité inconnue au moment de l\'envoi — lien fiche de police non envoyable']
+        ).catch(e => console.warn('⚠️ [TPL police-gate] Log skipped_unknown_country:', e.message));
+      }
       return { skipped: true, reason: `fiche de police non applicable (${why})` };
     }
   }
@@ -32599,8 +32702,8 @@ async function runTemplatesCron(triggerTypes) {
 
         const convs = await pool.query(
           `SELECT c.*,
-                  COALESCE(r.guest_country, '') as guest_country,
-                  COALESCE(r.guest_language, '') as guest_language
+                  COALESCE(r.guest_country, '') as resa_guest_country,
+                  COALESCE(r.guest_language, '') as resa_guest_language
            FROM conversations c
            LEFT JOIN reservations r ON (
              r.property_id = c.property_id
@@ -32773,7 +32876,9 @@ async function runTemplatesCron(triggerTypes) {
 
           await sendTemplateMessage(pool, io, {
             template: tmpl,
-            conv: { ...conv, user_id: tmpl.user_id },
+            conv: { ...conv, user_id: tmpl.user_id,
+                    guest_country: conv.resa_guest_country || '',
+                    guest_language: conv.resa_guest_language || '' },
             property
           });
           console.log(`  ↳ ✅ Template "${tmpl.title}" envoyé → conv ${conv.id} (${conv.guest_name})`);
@@ -40494,6 +40599,21 @@ app.post('/api/channex/webhook', async (req, res) => {
             );
           } catch(e) {
             console.warn('⚠️ [CHANNEX] Sync guest_language:', e.message);
+          }
+
+          // Si guest_country vient d'être renseigné et est étranger, réessayer les
+          // templates {checkin_link} dont la fenêtre d'envoi est encore ouverte.
+          try {
+            const newCountry = (result.guest_country || '').trim().toUpperCase();
+            const isForeignNow = newCountry && newCountry !== 'FR' && newCountry !== 'FRA' && newCountry !== 'FRANCE';
+            if (isForeignNow) {
+              setTimeout(() => {
+                retryCheckinLinkForConv(pool, io, convId)
+                  .catch(e => console.warn('⚠️ [CHANNEX] Réessai {checkin_link}:', e.message));
+              }, 3000);
+            }
+          } catch(e) {
+            console.warn('⚠️ [CHANNEX] Check réessai {checkin_link}:', e.message);
           }
 
           // Message de confirmation désactivé — géré par les templates on_booking
