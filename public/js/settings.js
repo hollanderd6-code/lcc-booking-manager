@@ -2959,13 +2959,6 @@ function updatePricingRuleForm() {
       { val: 1, label: 'Lun' }, { val: 2, label: 'Mar' }, { val: 3, label: 'Mer' },
       { val: 4, label: 'Jeu' }, { val: 5, label: 'Ven' }, { val: 6, label: 'Sam' }, { val: 0, label: 'Dim' }
     ];
-    const scopeToggle = `
-      const s=this.value==='arrival';
-      document.getElementById('pr_scope_arr').style.borderColor=s?'#0E3B2E':'#E8E0D0';
-      document.getElementById('pr_scope_arr').style.background=s?'rgba(14,59,46,.05)':'#fff';
-      document.getElementById('pr_scope_thr').style.borderColor=s?'#E8E0D0':'#0E3B2E';
-      document.getElementById('pr_scope_thr').style.background=s?'#fff':'rgba(14,59,46,.05)';
-    `.replace(/\n\s*/g, '');
     container.innerHTML = `
       <div style="margin-bottom:14px;">
         <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">Nuits minimum</label>
@@ -2992,27 +2985,20 @@ function updatePricingRuleForm() {
 
       <div style="margin-bottom:14px;">
         <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;">Condition</label>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <label id="pr_scope_arr" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1.5px solid ${scope === 'arrival' ? '#0E3B2E' : '#E8E0D0'};border-radius:10px;cursor:pointer;background:${scope === 'arrival' ? 'rgba(14,59,46,.05)' : '#fff'};">
-            <input type="radio" name="pr_scope" value="arrival" ${scope === 'arrival' ? 'checked' : ''}
-              onchange="${scopeToggle}"
-              style="margin-top:2px;accent-color:#0E3B2E;flex-shrink:0;" />
-            <div>
-              <div style="font-size:13px;font-weight:600;color:#0D1117;">Si le séjour <u>commence</u> ce jour-là</div>
-              <div style="font-size:11px;color:#6B7280;margin-top:2px;">Ex : 2 nuits minimum si arrivée le vendredi</div>
-            </div>
-          </label>
-          <label id="pr_scope_thr" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1.5px solid ${scope === 'through' ? '#0E3B2E' : '#E8E0D0'};border-radius:10px;cursor:pointer;background:${scope === 'through' ? 'rgba(14,59,46,.05)' : '#fff'};">
-            <input type="radio" name="pr_scope" value="through" ${scope === 'through' ? 'checked' : ''}
-              onchange="${scopeToggle}"
-              style="margin-top:2px;accent-color:#0E3B2E;flex-shrink:0;" />
-            <div>
-              <div style="font-size:13px;font-weight:600;color:#0D1117;">Si le séjour <u>couvre</u> ce jour</div>
-              <div style="font-size:11px;color:#6B7280;margin-top:2px;">Ex : aucun départ autorisé un vendredi</div>
-            </div>
-          </label>
+        <div class="pr-scope-group" style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${[
+            { val: 'arrival', label: 'Commence ce jour' },
+            { val: 'through', label: 'Couvre ce jour' }
+          ].map(s => `
+            <label style="display:flex;align-items:center;gap:4px;padding:7px 12px;border:1.5px solid ${scope === s.val ? '#0E3B2E' : '#E8E0D0'};border-radius:8px;cursor:pointer;background:${scope === s.val ? 'rgba(14,59,46,.08)' : '#fff'};font-size:13px;font-weight:500;">
+              <input type="radio" name="pr_scope" value="${s.val}" ${scope === s.val ? 'checked' : ''}
+                onchange="this.closest('.pr-scope-group').querySelectorAll('label').forEach(l=>{l.style.borderColor='#E8E0D0';l.style.background='#fff'});this.closest('label').style.borderColor='#0E3B2E';this.closest('label').style.background='rgba(14,59,46,.08)'"
+                style="accent-color:#0E3B2E;" />
+              ${s.label}
+            </label>
+          `).join('')}
         </div>
-        <small style="display:block;margin-top:6px;font-size:11px;color:#9CA3AF;">"Commence" ne bloque que les arrivées ce jour. "Couvre" bloque aussi les séjours qui traversent ce jour sans y commencer — à utiliser avec précaution.</small>
+        <small style="display:block;margin-top:6px;font-size:11px;color:#9CA3AF;">"Commence ce jour" : s'applique uniquement si le voyageur arrive ce jour-là. "Couvre ce jour" : s'applique aussi aux séjours qui traversent ce jour sans y commencer.</small>
       </div>
     `;
   } else if (type === 'long_stay') {
