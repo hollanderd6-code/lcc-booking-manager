@@ -45,23 +45,6 @@
       window.history.replaceState({}, document.title, cleanUrl);
     }
   })();
-
-  // ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
-  (function() {
-    var _origFetch = window.fetch;
-    window.fetch = function(url, opts) {
-      /* bh_agency_view_purge : pendant l'impersonation d'un compte gere
-         (lcc_agency_token present), on n'agrege JAMAIS. Sans cette garde,
-         le drapeau laisse par la vue agence faisait reclamer agency=all
-         avec le jeton du client gere — qui voyait alors les clients de
-         l'agence. */
-      var _impers = !!localStorage.getItem('lcc_agency_token');
-      if (typeof url === 'string' && !_impers && localStorage.getItem('bh_agency_view') === 'all' && url.includes('/api/') && !url.includes('agency=')) {
-        url += (url.includes('?') ? '&' : '?') + 'agency=all';
-      }
-      return _origFetch.call(this, url, opts);
-    };
-  })();
 </script>
     
 

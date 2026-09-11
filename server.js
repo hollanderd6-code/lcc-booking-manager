@@ -27604,16 +27604,24 @@ async function sendPushForDynamicPricing(userId, { title, body, data }) {
 // POST /api/pricing/analyze-now/:propertyId  (auth utilisateur)
 app.post('/api/pricing/analyze-now/:propertyId', authenticateAny, async (req, res) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
     const propertyId = req.params.propertyId;
     const force = req.query.force === '1' || req.body?.force === true;
+
+    const agencyIds = await getAgencyUserIds(req, user.id);
+    const propResult = await pool.query(
+      'SELECT user_id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+      [propertyId, agencyIds]
+    );
+    if (propResult.rows.length === 0) return res.status(404).json({ error: 'Logement introuvable' });
+    const ownerId = propResult.rows[0].user_id;
 
     // Réponse immédiate : le scrape tourne en arrière-plan (Apify peut prendre 1-2 min)
     res.status(202).json({ success: true, message: 'Analyse marché lancée en arrière-plan' });
 
     runDynamicPricingForOneProperty(pool, {
-      userId, propertyId, sendPushNotification: sendPushForDynamicPricing, force
+      userId: ownerId, propertyId, sendPushNotification: sendPushForDynamicPricing, force
     })
       .then(r => {
         if (r.skipped) console.log(`ℹ️ [DP-ONE] ${propertyId} ignoré: ${r.reason}`);

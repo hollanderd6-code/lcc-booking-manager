@@ -1917,18 +1917,6 @@ html[data-theme-v3="1"] .include-toggle:has(input[type="checkbox"]:not(:checked)
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
 
 <script>
-// ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
-(function() {
-  var _origFetch = window.fetch;
-  window.fetch = function(url, opts) {
-    if (typeof url === 'string' && localStorage.getItem('bh_agency_view') === 'all' && url.includes('/api/') && !url.includes('agency=')) {
-      url += (url.includes('?') ? '&' : '?') + 'agency=all';
-    }
-    return _origFetch.call(this, url, opts);
-  };
-})();
-</script>
-<script>
 // ── Navigation sections ──
 let currentSection = 1;
 const totalSections = 6;

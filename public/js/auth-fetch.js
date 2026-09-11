@@ -309,10 +309,20 @@
         return originalFetch(input, init);
       }
 
-      console.log('🎯 [AUTH-FETCH] Interception appel API:', urlStr);
+      // ── Intercepteur agency : ajoute ?agency=all si le mode agence est actif ──
+      // Garde impersonation : si lcc_agency_token ou lcc_managed_user est présent,
+      // on n'agrège jamais (le token courant est celui du compte géré, pas de l'agence).
+      let agencyUrl = urlStr;
+      if (!_impersonationActive() &&
+          localStorage.getItem('bh_agency_view') === 'all' &&
+          !urlStr.includes('agency=')) {
+        agencyUrl = urlStr + (urlStr.includes('?') ? '&' : '?') + 'agency=all';
+      }
+
+      console.log('🎯 [AUTH-FETCH] Interception appel API:', agencyUrl);
 
       // Résoudre l'URL (web vs mobile)
-      const resolvedUrl = resolveUrl(urlStr);
+      const resolvedUrl = resolveUrl(agencyUrl);
 
       // Route publique ?
       const isPublic = isPublicRoute(urlStr);

@@ -445,6 +445,7 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
   <link rel="stylesheet" href="/css/menu-plus-fixes.css?v=13677c32">
   <link rel="stylesheet" href="/css/menu-active-button.css?v=f21f319b">
   <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+<script src="/js/auth-fetch.js?v=cd78753d"></script>
 </head>
 
 <body data-back-href="/app.html" data-back-label="Retour au dashboard" data-kicker="Facturation" data-page="reporting" data-subtitle="Analyse de vos performances financières" data-title="Revenus">
@@ -690,18 +691,6 @@ html[data-theme-v3="1"] .header-actions .btn.btn-ghost { display: none !importan
 </div>
 </div><!-- /app-container -->
 
-<script>
-// ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
-(function() {
-  var _origFetch = window.fetch;
-  window.fetch = function(url, opts) {
-    if (typeof url === 'string' && localStorage.getItem('bh_agency_view') === 'all' && url.includes('/api/') && !url.includes('agency=')) {
-      url += (url.includes('?') ? '&' : '?') + 'agency=all';
-    }
-    return _origFetch.call(this, url, opts);
-  };
-})();
-</script>
 <script>
   // Auth guard
   const _tok = localStorage.getItem('lcc_token');

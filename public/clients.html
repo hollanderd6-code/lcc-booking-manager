@@ -38,17 +38,8 @@ window.bhFullyCredited = function (inv, map) {
   return t > 0 && c >= t - 0.01;
 };
 
-// ── Intercepteur agency : ajoute ?agency=all aux requêtes API si le mode est actif ──
-(function() {
-  var _origFetch = window.fetch;
-  window.fetch = function(url, opts) {
-    if (typeof url === 'string' && localStorage.getItem('bh_agency_view') === 'all' && url.includes('/api/') && !url.includes('agency=')) {
-      url += (url.includes('?') ? '&' : '?') + 'agency=all';
-    }
-    return _origFetch.call(this, url, opts);
-  };
-})();
 </script>
+<script src="/js/auth-fetch.js?v=cd78753d"></script>
 <script>
 // Script pour désactiver pull-to-refresh sur iOS
 (function() {
