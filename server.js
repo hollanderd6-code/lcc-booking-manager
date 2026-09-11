@@ -33471,7 +33471,7 @@ app.post('/api/chat/send', async (req, res) => {
       io.to(`conversation_${conversation_id}`).emit('new_message', savedMessage);
     }
 
-    // ✅ Désescalade automatique 1h après une réponse manuelle du proprio
+    // ✅ Désescalade immédiate dès qu'un message hôte est enregistré
     if (sender_type === 'owner' || sender_type === 'property') {
       try {
         const escResult = await pool.query(
@@ -33479,21 +33479,14 @@ app.post('/api/chat/send', async (req, res) => {
           [conversation_id]
         );
         if (escResult.rows[0]?.escalated) {
-          console.log(`⏳ [DESESCALADE] Conv ${conversation_id} — bot réactivé dans 1h`);
-          setTimeout(async () => {
-            try {
-              await pool.query(
-                `UPDATE conversations SET escalated = FALSE, escalated_at = NULL, updated_at = NOW() WHERE id = $1`,
-                [conversation_id]
-              );
-              console.log(`✅ [DESESCALADE] Conv ${conversation_id} — bot réactivé`);
-            } catch(e) {
-              console.error('❌ [DESESCALADE] Erreur reset:', e.message);
-            }
-          }, 60 * 60 * 1000); // 1 heure
+          await pool.query(
+            `UPDATE conversations SET escalated = FALSE, escalated_at = NULL, updated_at = NOW() WHERE id = $1`,
+            [conversation_id]
+          );
+          console.log(`✅ [DESESCALADE] Conv ${conversation_id} — bot réactivé immédiatement`);
         }
       } catch(e) {
-        console.error('❌ [DESESCALADE] Erreur vérif:', e.message);
+        console.error('❌ [DESESCALADE] Erreur reset:', e.message);
       }
     }
 
@@ -41492,6 +41485,23 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
     );
 
     const savedMsg = msgResult.rows[0];
+
+    // Désescalade immédiate dès qu'un message hôte est enregistré
+    try {
+      const escResult = await pool.query(
+        'SELECT escalated FROM conversations WHERE id = $1',
+        [conversationId]
+      );
+      if (escResult.rows[0]?.escalated) {
+        await pool.query(
+          `UPDATE conversations SET escalated = FALSE, escalated_at = NULL, updated_at = NOW() WHERE id = $1`,
+          [conversationId]
+        );
+        console.log(`✅ [DESESCALADE] Conv ${conversationId} — bot réactivé (send-platform)`);
+      }
+    } catch(e) {
+      console.error('❌ [DESESCALADE] Erreur reset send-platform:', e.message);
+    }
 
     // Notifier via Socket.io
     if (io) {
