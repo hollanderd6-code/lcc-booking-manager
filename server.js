@@ -29327,25 +29327,32 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
     if (typeof quickReplies === 'string') { try { quickReplies = JSON.parse(quickReplies); } catch(e) { quickReplies = []; } }
     if (!Array.isArray(quickReplies)) quickReplies = [];
 
+    console.log(`[qc-diag] conv=${convId} | property_id=${row.property_id} | deposit_amount=${row.deposit_amount} | channex_booking_id=${row.channex_booking_id} | reservation_start_date=${row.reservation_start_date} | reservation_uid=${row.reservation_uid}`);
+
     let depositUrl = null, depositAmountCents = null;
 
     // 1. Chercher un deposit existant
     if (row.reservation_uid) {
       const dep = await pool.query(
-        `SELECT checkout_url, amount_cents FROM deposits
+        `SELECT id, checkout_url, amount_cents, status FROM deposits
          WHERE reservation_uid = $1
-           AND status NOT IN ('cancelled','failed','expired')
          ORDER BY CASE status WHEN 'captured' THEN 5 WHEN 'paid' THEN 5
                               WHEN 'authorized' THEN 4 WHEN 'processing' THEN 2
                               WHEN 'pending' THEN 1 ELSE 0 END DESC,
-                  created_at DESC
-         LIMIT 1`,
+                  created_at DESC`,
         [row.reservation_uid]
       );
-      if (dep.rows.length) {
-        depositUrl = dep.rows[0].checkout_url;
-        depositAmountCents = dep.rows[0].amount_cents;
+      console.log(`[qc-diag] dépôts trouvés pour res_uid=${row.reservation_uid}: ${dep.rows.length} | statuts: ${dep.rows.map(d => d.status).join(', ') || 'aucun'}`);
+      const validDep = dep.rows.find(d => !['cancelled','failed','expired'].includes(d.status));
+      if (validDep) {
+        depositUrl = validDep.checkout_url;
+        depositAmountCents = validDep.amount_cents;
+        console.log(`[qc-diag] dépôt retenu: id=${validDep.id} status=${validDep.status} url=${depositUrl ? 'présente' : 'NULL'}`);
+      } else {
+        console.log(`[qc-diag] aucun dépôt valide (tous exclus ou liste vide)`);
       }
+    } else {
+      console.log(`[qc-diag] reservation_uid=NULL → recherche dépôt ignorée`);
     }
 
     // 2. Si pas de deposit mais logement a un deposit_amount → créer automatiquement

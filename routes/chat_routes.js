@@ -358,6 +358,8 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
           r.host_payout,
           r.days_breakdown,
           r.currency,
+          r.uid,
+          r.notes,
           (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id AND is_read = FALSE AND sender_type = 'guest') as unread_count,
           (SELECT message FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
           (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_time
@@ -687,8 +689,9 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
 
       const convCheck = await pool.query(
         `SELECT c.id, c.user_id, c.property_id,
-                c.guest_first_name, c.guest_last_name, c.guest_phone, c.platform 
-         FROM conversations c 
+                c.guest_first_name, c.guest_last_name, c.guest_phone, c.platform,
+                c.escalated, c.ai_disabled
+         FROM conversations c
          WHERE c.id = $1`,
         [conversationId]
       );
@@ -755,9 +758,11 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
           guest_display_name: conversation.guest_first_name 
             ? `${conversation.guest_first_name} ${conversation.guest_last_name || ''}`.trim()
             : `Voyageur ${conversation.platform || 'Booking'}`,
-          guest_initial: conversation.guest_first_name 
-            ? conversation.guest_first_name.charAt(0).toUpperCase() 
-            : 'V'
+          guest_initial: conversation.guest_first_name
+            ? conversation.guest_first_name.charAt(0).toUpperCase()
+            : 'V',
+          escalated: conversation.escalated,
+          ai_disabled: conversation.ai_disabled
         }
       });
 
