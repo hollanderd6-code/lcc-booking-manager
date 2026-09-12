@@ -14554,6 +14554,16 @@ app.get('/api/cleaning/state-certificate', async (req, res) => {
   }
 })();
 
+// Migration — colonne photo_sources pour tracer l'origine camera/galerie
+(async () => {
+  try {
+    await pool.query(`ALTER TABLE cleaning_checklists ADD COLUMN IF NOT EXISTS photo_sources JSONB`);
+    console.log('✅ Colonne cleaning_checklists.photo_sources OK');
+  } catch(e) {
+    console.error('❌ Migration photo_sources:', e.message);
+  }
+})();
+
 // Migration — distinguer incident "maintenance" et "dégradation" (lien caution)
 (async () => {
   try {
@@ -14579,7 +14589,7 @@ app.get('/api/cleaning/state-certificate', async (req, res) => {
 
 app.post('/api/cleaning/checklist', async (req, res) => {
   try {
-    const { pinCode, reservationKey, propertyId, tasks, photos, notes, duration, startedAt, completedAt, signatureData, certifiedAt } = req.body;
+    const { pinCode, reservationKey, propertyId, tasks, photos, photoSources, notes, duration, startedAt, completedAt, signatureData, certifiedAt } = req.body;
     const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
     
     if (!pinCode || !reservationKey || !propertyId) {
@@ -14636,19 +14646,29 @@ app.post('/api/cleaning/checklist', async (req, res) => {
 
     const guestName = reservation ? (reservation.guestName || reservation.name || reservation.guest_name || '') : '';
     console.log(`🧹 Checklist POST — propertyId: ${propertyId}, checkout: ${checkoutDate}, guestName: "${guestName}", match: ${!!reservation}`);
-    
+
+    // Valider photoSources : doit être un tableau de même longueur que photos,
+    // avec des valeurs dans ['camera','gallery']. Absent ou invalide → null.
+    const validSrc = new Set(['camera', 'gallery']);
+    const cleanPhotoSources = (
+      Array.isArray(photoSources) &&
+      photoSources.length === photos.length &&
+      photoSources.every(s => validSrc.has(s))
+    ) ? photoSources : null;
+
     // Insérer ou mettre à jour la checklist (avec duration + started_at + owner_status)
     const result = await pool.query(
-      `INSERT INTO cleaning_checklists 
-       (user_id, property_id, reservation_key, cleaner_id, guest_name, checkout_date, 
-        tasks, photos, notes, duration_seconds, started_at, completed_at, 
+      `INSERT INTO cleaning_checklists
+       (user_id, property_id, reservation_key, cleaner_id, guest_name, checkout_date,
+        tasks, photos, photo_sources, notes, duration_seconds, started_at, completed_at,
         owner_status, created_at, updated_at,
         signature_data, signature_ip, certified_at, cleaner_certified)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), 'pending', NOW(), NOW(), $12, $13, $14, $15)
-       ON CONFLICT (reservation_key) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), 'pending', NOW(), NOW(), $13, $14, $15, $16)
+       ON CONFLICT (reservation_key)
        DO UPDATE SET
          tasks = EXCLUDED.tasks,
          photos = EXCLUDED.photos,
+         photo_sources = EXCLUDED.photo_sources,
          notes = EXCLUDED.notes,
          duration_seconds = EXCLUDED.duration_seconds,
          started_at = EXCLUDED.started_at,
@@ -14662,9 +14682,11 @@ app.post('/api/cleaning/checklist', async (req, res) => {
          cleaner_certified = EXCLUDED.cleaner_certified
        RETURNING id`,
       [
-        cleaner.user_id, propertyId, reservationKey, cleaner.id, 
+        cleaner.user_id, propertyId, reservationKey, cleaner.id,
         guestName, checkoutDate,
-        JSON.stringify(tasks), JSON.stringify(photos), notes,
+        JSON.stringify(tasks), JSON.stringify(photos),
+        cleanPhotoSources ? JSON.stringify(cleanPhotoSources) : null,
+        notes,
         duration || null,
         startedAt || null,
         signatureData || null,

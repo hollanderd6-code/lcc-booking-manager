@@ -4141,7 +4141,16 @@ function formatDateFr(dateStr) {
           var tasks = typeof c.tasks === 'string' ? JSON.parse(c.tasks) : (c.tasks || []);
           document.getElementById('detailTasks').innerHTML = tasks.map(function(t){ return '<div class="task-row-display"><div class="task-check-icon ' + (t.checked?'checked':'unchecked') + '"><i class="fas ' + (t.checked?'fa-check':'fa-times') + '"></i></div><span>' + (t.name||t.title||'Tâche') + '</span></div>'; }).join('') || '<p class="text-secondary">Aucune tâche</p>';
           var photos = typeof c.photos === 'string' ? JSON.parse(c.photos) : (c.photos || []);
-          document.getElementById('detailPhotos').innerHTML = photos.map(function(p,i){ return '<img src="' + p + '" alt="Photo" onclick="window.open(\'' + p + '\',\'_blank\')"/>'; }).join('') || '<p class="text-secondary">Aucune photo</p>';
+          var photoSources = Array.isArray(c.photo_sources) ? c.photo_sources
+            : (typeof c.photo_sources === 'string' ? JSON.parse(c.photo_sources) : null);
+          document.getElementById('detailPhotos').innerHTML = photos.map(function(p, i) {
+            var badge = (photoSources && photoSources[i] === 'gallery')
+              ? '<span style="position:absolute;bottom:4px;left:4px;font-size:9px;font-weight:700;background:rgba(0,0,0,0.55);color:#fff;padding:2px 5px;border-radius:4px;pointer-events:none;">Galerie</span>'
+              : '';
+            return '<div style="position:relative;display:inline-block;">'
+              + '<img src="' + p + '" alt="Photo" onclick="window.open(\'' + p + '\',\'_blank\')"/>'
+              + badge + '</div>';
+          }).join('') || '<p class="text-secondary">Aucune photo</p>';
           document.getElementById('detailNotesSection').style.display = (c.notes && c.notes.trim()) ? 'block' : 'none';
           if (c.notes) document.getElementById('detailNotes').textContent = c.notes;
           document.getElementById('detailOwnerNotesSection').style.display = (c.owner_notes && c.owner_notes.trim()) ? 'block' : 'none';
@@ -4231,6 +4240,8 @@ function formatDateFr(dateStr) {
         var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         var tasks = typeof c.tasks === 'string' ? JSON.parse(c.tasks) : (c.tasks || []);
         var photos = typeof c.photos === 'string' ? JSON.parse(c.photos) : (c.photos || []);
+        var photoSources = Array.isArray(c.photo_sources) ? c.photo_sources
+          : (typeof c.photo_sources === 'string' ? JSON.parse(c.photo_sources) : null);
         var margin = 15, y = 20, pageW = 210;
         var completedAt = c.completed_at ? new Date(c.completed_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
         var checkoutDate = c.checkout_date ? c.checkout_date.slice(0,10).split('-').reverse().join('/') : '—';
@@ -4290,6 +4301,11 @@ function formatDateFr(dateStr) {
           for (var i=0; i<photos.length; i++) {
             if (y+photoH>282) { doc.addPage(); y=20; col=0; }
             try { var imgData = await loadImageAsDataURL(photos[i]); doc.addImage(imgData,'JPEG',margin+col*(photoW+5),y,photoW,photoH); } catch(e){}
+            if (photoSources && photoSources[i] === 'gallery') {
+              doc.setFontSize(7); doc.setTextColor(120,120,120); doc.setFont('helvetica','italic');
+              doc.text('(galerie)', margin+col*(photoW+5), y+photoH+3.5);
+              doc.setFont('helvetica','normal'); doc.setTextColor(50,50,50);
+            }
             col++; if (col>=perRow) { col=0; y+=photoH+5; }
           }
           if (col>0) y+=photoH+5;
