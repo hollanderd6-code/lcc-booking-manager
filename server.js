@@ -14876,6 +14876,246 @@ app.get('/api/cleaning/checklists/:id', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
+// GET /api/cleaning/checklists/:id/pdf — Rapport de ménage certifié (PDF serveur, iOS + web)
+app.get('/api/cleaning/checklists/:id/pdf', async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const { id } = req.params;
+    const agencyIds = await getAgencyUserIds(req, user.id);
+
+    const result = await pool.query(
+      `SELECT cc.*, c.name AS cleaner_name,
+              p.name AS property_name, p.internal_name AS property_internal_name
+       FROM cleaning_checklists cc
+       LEFT JOIN cleaners c ON c.id = cc.cleaner_id
+       LEFT JOIN properties p ON p.id = cc.property_id
+       WHERE cc.id = $1 AND cc.user_id = ANY($2::text[])`,
+      [id, agencyIds]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Checklist non trouvée' });
+    const c = result.rows[0];
+
+    const tasks = Array.isArray(c.tasks) ? c.tasks
+      : (typeof c.tasks === 'string' ? JSON.parse(c.tasks) : []);
+    const photos = Array.isArray(c.photos) ? c.photos
+      : (typeof c.photos === 'string' ? JSON.parse(c.photos) : []);
+    const photoSources = Array.isArray(c.photo_sources) ? c.photo_sources
+      : (typeof c.photo_sources === 'string' ? JSON.parse(c.photo_sources) : null);
+
+    const checkoutDate = c.checkout_date
+      ? new Date(c.checkout_date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : '—';
+    const completedAt = c.completed_at
+      ? new Date(c.completed_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : '—';
+    const propLabel = (c.property_internal_name && String(c.property_internal_name).trim())
+      ? String(c.property_internal_name).trim()
+      : (c.property_name || 'Logement');
+    const statusLabel = c.owner_status === 'validated' ? 'Validé' : c.owner_status === 'rejected' ? 'Rejeté' : 'En attente';
+    const statusColor = c.owner_status === 'validated' ? '#10B981' : c.owner_status === 'rejected' ? '#EF4444' : '#F59E0B';
+
+    // Logo (pattern factures : users.logo_url, vérification PNG/JPEG)
+    let logoBuffer = null;
+    try {
+      const uRes = await pool.query('SELECT logo_url FROM users WHERE id = $1', [c.user_id]);
+      const dbLogoUrl = uRes.rows[0]?.logo_url;
+      if (dbLogoUrl) {
+        const lr = await axios.get(dbLogoUrl, { responseType: 'arraybuffer', timeout: 5000 });
+        if (lr.data.byteLength > 0) logoBuffer = Buffer.from(lr.data);
+      }
+    } catch (e) { console.error('[PDF ménage] logo:', e.message); }
+    if (logoBuffer) {
+      const isPng  = logoBuffer[0] === 0x89 && logoBuffer[1] === 0x50;
+      const isJpeg = logoBuffer[0] === 0xFF && logoBuffer[1] === 0xD8;
+      if (!isPng && !isJpeg) { console.warn('[PDF ménage] format logo non supporté (PNG/JPEG requis), omis'); logoBuffer = null; }
+    }
+
+    // Pré-chargement photos (doit précéder doc.pipe pour éviter l'interleaving async)
+    const photoBuffers = await Promise.allSettled(
+      photos.map(url => axios.get(url, { responseType: 'arraybuffer', timeout: 8000 }).then(r => Buffer.from(r.data)))
+    );
+
+    const doc = new PDFDocument({ size: 'A4', margin: 0 });
+    res.setHeader('Content-Type', 'application/pdf');
+    const dateSlug = checkoutDate.replace(/\//g, '-');
+    const cleanerSlug = (c.cleaner_name || 'cleaner').replace(/\s+/g, '-');
+    res.setHeader('Content-Disposition', `attachment; filename="menage-certifie-${dateSlug}-${cleanerSlug}.pdf"`);
+    doc.pipe(res);
+
+    const W = 595, mg = 40, CW = W - mg * 2; // CW = 515
+    const GREEN = '#1A7A5E', DARK = '#111827', GRAY = '#6B7280', LIGHT = '#F3F4F6', BORDER = '#E5E7EB';
+    const T_GREEN = '#10B981', T_RED = '#EF4444';
+
+    // ── En-tête ──
+    doc.rect(0, 0, W, 68).fill(GREEN);
+    if (logoBuffer) {
+      try { doc.image(logoBuffer, W - mg - 90, 14, { fit: [90, 40] }); } catch (_) {}
+    }
+    doc.font('Helvetica-Bold').fontSize(18).fillColor('#FFFFFF').text('Rapport de ménage certifié', mg, 20);
+    doc.font('Helvetica').fontSize(11).fillColor('#CFE3DB').text(propLabel, mg, 44);
+    let y = 76;
+
+    // ── Bloc infos (3 colonnes) ──
+    doc.rect(0, y, W, 54).fill(LIGHT);
+    const iCW = CW / 3;
+    doc.font('Helvetica').fontSize(7).fillColor(GRAY).text('DATE DE DÉPART', mg, y + 8);
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(checkoutDate, mg, y + 18);
+    doc.font('Helvetica').fontSize(7).fillColor(GRAY).text('INTERVENANT', mg, y + 33);
+    doc.font('Helvetica').fontSize(9).fillColor(DARK).text(c.cleaner_name || '—', mg, y + 43, { width: iCW - 8 });
+
+    const c2x = mg + iCW;
+    doc.font('Helvetica').fontSize(7).fillColor(GRAY).text('SOUMIS LE', c2x, y + 8);
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(completedAt, c2x, y + 18);
+
+    const c3x = mg + iCW * 2;
+    const pillW = iCW - 8, pillH = 22;
+    doc.roundedRect(c3x, y + 16, pillW, pillH, 4).fill(statusColor);
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('#FFFFFF').text(statusLabel, c3x, y + 22, { width: pillW, align: 'center' });
+    y += 54 + 16;
+
+    // ── Tâches ──
+    if (tasks.length > 0) {
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(GREEN).text('TÂCHES EFFECTUÉES', mg, y);
+      doc.rect(mg, y + 14, CW, 1).fill(GREEN);
+      y += 22;
+
+      // Mesure la hauteur max d'une tâche en demi-largeur pour décider 1 ou 2 colonnes.
+      // Si la plus longue tâche dépasse 2 lignes en 2-colonnes, on reste sur 1 colonne.
+      doc.font('Helvetica').fontSize(9);
+      const COL2_TW = (CW - 15) / 2 - 10;
+      const maxTaskH = tasks.reduce((mx, t) => Math.max(mx, doc.heightOfString(t.name || t.title || '', { width: COL2_TW })), 0);
+      const twoCol = maxTaskH <= 13; // ≤ ~2 lignes
+
+      if (twoCol) {
+        const half = Math.ceil(tasks.length / 2);
+        const colW2 = (CW - 15) / 2;
+        const rxBase = mg + colW2 + 15;
+        let yL = y, yR = y;
+        for (let i = 0; i < half; i++) {
+          const t = tasks[i];
+          const lbl = t.name || t.title || '';
+          const h = doc.heightOfString(lbl, { width: COL2_TW });
+          if (yL + h > 790) { doc.addPage(); yL = 20; }
+          doc.rect(mg, yL, 5, 5).fill(t.checked ? T_GREEN : T_RED);
+          doc.fillColor(DARK).font('Helvetica').fontSize(9).text(lbl, mg + 9, yL, { width: COL2_TW });
+          yL += h + 2;
+        }
+        for (let i = half; i < tasks.length; i++) {
+          const t = tasks[i];
+          const lbl = t.name || t.title || '';
+          const h = doc.heightOfString(lbl, { width: COL2_TW });
+          if (yR + h > 790) { doc.addPage(); yR = 20; }
+          doc.rect(rxBase, yR, 5, 5).fill(t.checked ? T_GREEN : T_RED);
+          doc.fillColor(DARK).font('Helvetica').fontSize(9).text(lbl, rxBase + 9, yR, { width: COL2_TW });
+          yR += h + 2;
+        }
+        y = Math.max(yL, yR) + 10;
+      } else {
+        const TW = CW - 10;
+        tasks.forEach(t => {
+          const lbl = t.name || t.title || '';
+          const h = doc.heightOfString(lbl, { width: TW });
+          if (y + h > 790) { doc.addPage(); y = 20; }
+          doc.rect(mg, y, 5, 5).fill(t.checked ? T_GREEN : T_RED);
+          doc.fillColor(DARK).font('Helvetica').fontSize(9).text(lbl, mg + 9, y, { width: TW });
+          y += h + 2;
+        });
+        y += 10;
+      }
+    }
+
+    // ── Notes ──
+    if (c.notes && c.notes.trim()) {
+      if (y > 740) { doc.addPage(); y = 30; }
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(GREEN).text('NOTES', mg, y);
+      doc.rect(mg, y + 14, CW, 1).fill(GREEN);
+      y += 22;
+      const notesTxt = c.notes.trim();
+      doc.font('Helvetica').fontSize(9);
+      const notesH = doc.heightOfString(notesTxt, { width: CW });
+      if (y + notesH > 790) { doc.addPage(); y = 30; }
+      doc.fillColor(DARK).text(notesTxt, mg, y, { width: CW });
+      y += notesH + 14;
+    }
+
+    // ── Photos ──
+    const validPhotos = photoBuffers.reduce((acc, r, i) => {
+      if (r.status === 'fulfilled') acc.push({ buf: r.value, src: photoSources ? photoSources[i] : null });
+      return acc;
+    }, []);
+    if (validPhotos.length > 0) {
+      if (y > 720) { doc.addPage(); y = 30; }
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(GREEN).text(`PHOTOS (${validPhotos.length})`, mg, y);
+      doc.rect(mg, y + 14, CW, 1).fill(GREEN);
+      y += 22;
+      const PW = Math.floor((CW - 10) / 3), PH = 120, CAP_H = 14;
+      let col = 0;
+      for (let i = 0; i < validPhotos.length; i++) {
+        if (col === 0 && y + PH + CAP_H > 800) { doc.addPage(); y = 30; }
+        const px = mg + col * (PW + 5);
+        doc.rect(px, y, PW, PH).fill(LIGHT);
+        try { doc.image(validPhotos[i].buf, px, y, { fit: [PW, PH], align: 'center', valign: 'center' }); } catch (_) {}
+        if (validPhotos[i].src === 'gallery') {
+          doc.font('Helvetica-Oblique').fontSize(7).fillColor(GRAY).text('(galerie)', px, y + PH + 2, { width: PW, align: 'center' });
+        }
+        col++;
+        if (col >= 3) { col = 0; y += PH + CAP_H + 6; }
+      }
+      if (col > 0) y += PH + CAP_H + 6;
+      y += 8;
+    }
+
+    // ── Certification (2 colonnes : texte gauche, signature droite) ──
+    if (c.cleaner_certified && c.signature_data) {
+      if (y > 660) { doc.addPage(); y = 0; }
+      doc.rect(0, y, W, 30).fill(GREEN);
+      doc.font('Helvetica-Bold').fontSize(13).fillColor('#FFFFFF').text('CERTIFICATION DU MÉNAGE', mg, y + 9);
+      y += 38;
+
+      const LEFT_W = Math.floor(CW * 0.55);
+      const SIG_X = mg + LEFT_W + 15, SIG_W = CW - LEFT_W - 15, SIG_H = 80;
+
+      const certDate = c.certified_at
+        ? new Date(c.certified_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : '—';
+      let ly = y;
+      [['Certifié le', certDate], ['Adresse IP', c.signature_ip || '—'], ['Intervenant', c.cleaner_name || '—']].forEach(([lbl, val]) => {
+        doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(lbl + ' :', mg, ly);
+        doc.font('Helvetica-Bold').fontSize(9).fillColor(DARK).text(val, mg + 76, ly);
+        ly += 14;
+      });
+      ly += 4;
+      const phrase = 'Je certifie avoir effectué toutes les tâches de ménage listées dans cette checklist.';
+      doc.font('Helvetica-Oblique').fontSize(8);
+      const phraseH = doc.heightOfString(phrase, { width: LEFT_W });
+      doc.fillColor(GRAY).text(phrase, mg, ly, { width: LEFT_W });
+      ly += phraseH + 4;
+
+      doc.roundedRect(SIG_X, y, SIG_W, SIG_H, 4).fillAndStroke('#FFFFFF', BORDER);
+      if (typeof c.signature_data === 'string' && c.signature_data.startsWith('data:image')) {
+        try {
+          const sigBuf = Buffer.from(c.signature_data.split(',')[1], 'base64');
+          doc.image(sigBuf, SIG_X + 6, y + 6, { fit: [SIG_W - 12, SIG_H - 12], align: 'center', valign: 'center' });
+        } catch (_) {}
+      }
+      y = Math.max(ly, y + SIG_H) + 18;
+
+      const badgeW = 160, badgeH = 24;
+      const badgeX = mg + (CW - badgeW) / 2;
+      if (y + badgeH > 820) { doc.addPage(); y = 30; }
+      doc.roundedRect(badgeX, y, badgeW, badgeH, 6).fill(T_GREEN);
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#FFFFFF').text('Document certifié', badgeX, y + 7, { width: badgeW, align: 'center' });
+    }
+
+    doc.end();
+  } catch (err) {
+    console.error('Erreur GET /api/cleaning/checklists/:id/pdf :', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // GET - Récupérer une checklist par reservation_key
 app.get('/api/cleaning/checklist/:reservationKey', async (req, res) => {
   try {
