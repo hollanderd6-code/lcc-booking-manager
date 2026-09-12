@@ -3,6 +3,7 @@
 // ============================================
 
 const crypto = require('crypto');
+const { comptesAutorises } = require('../utils/agency');
 
 // ============================================
 // 🤖 IMPORTS SYSTÈME ONBOARDING + RÉPONSES AUTO
@@ -172,30 +173,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
     } catch(e) { return [userId]; }
   }
 
-  /* Les comptes pour lesquels cet utilisateur a le droit d'agir : le sien, et
-     ceux qui le lui ont délégué.
-
-     Distinct de getAgencyUserIds ci-dessus, qui n'élargit que si la requête
-     porte ?agency=all — un opt-in d'affichage, absent des POST. Pour un
-     contrôle d'accès, la délégation doit être lue dans tous les cas : un
-     gestionnaire qui répond à un voyageur sur un logement délégué en a le
-     droit, qu'il ait passé ce paramètre ou non. */
-  async function comptesAutorises(userId) {
-    if (!userId) return [];
-    try {
-      const { rows } = await pool.query(
-        `SELECT delegator_user_id FROM account_delegations
-          WHERE delegate_user_id = $1 AND status = 'accepted'`,
-        [userId]
-      );
-      return [userId, ...rows.map(d => d.delegator_user_id)];
-    } catch (e) {
-      /* On n'ouvre rien de plus que son propre compte : mieux vaut un accès
-         refusé a tort qu'une conversation ouverte au mauvais compte. */
-      console.error('⚠️ [CHAT] delegations illisibles pour', userId, ':', e.message);
-      return [userId];
-    }
-  }
+  // comptesAutorises(pool, userId) est importé depuis utils/agency.js
 
   // ============================================
   // MIDDLEWARE D'AUTHENTIFICATION OPTIONNELLE
@@ -713,7 +691,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
            qui lui sont délégués : comparer au seul user_id de la conversation
            l'aurait refusé. Tant que la vérification du token échouait, ce
            contrôle n'était jamais atteint et le défaut restait invisible. */
-        const comptes = await comptesAutorises(realUserId);
+        const comptes = await comptesAutorises(pool, realUserId);
 
         if (!comptes.includes(conversation.user_id)) {
           // Vérifier si sous-compte avec accès à cette propriété
@@ -825,7 +803,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
 
         /* Comme pour la lecture : un gestionnaire répond légitimement sur un
            logement que le propriétaire lui a délégué. */
-        const comptes = await comptesAutorises(realUserId);
+        const comptes = await comptesAutorises(pool, realUserId);
 
         if (!comptes.includes(conversation.user_id)) {
           return res.status(403).json({ error: 'Accès refusé' });
@@ -1266,7 +1244,7 @@ if (sender_type === 'owner' && (message && message.trim())) {
       /* Et les comptes délégués : couper l'IA sur une conversation d'un logement
          confié par un propriétaire est légitime. Avec le seul user_id, la
          conversation était introuvable et l'interrupteur restait sans effet. */
-      const comptes = await comptesAutorises(userId);
+      const comptes = await comptesAutorises(pool, userId);
       // Vérifier que la conversation appartient à l'utilisateur
       const conv = await pool.query('SELECT id, ai_disabled FROM conversations WHERE id = $1 AND user_id = ANY($2::text[])', [conversationId, comptes]);
       if (!conv.rows.length) return res.status(404).json({ error: 'Conversation non trouvée' });
