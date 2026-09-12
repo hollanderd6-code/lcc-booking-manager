@@ -16780,7 +16780,9 @@ async function sendArrivalWelcomeTours(io) {
        LEFT JOIN properties p ON p.id = c.property_id
        WHERE DATE(c.reservation_start_date) = $1
          AND c.status != 'cancelled'
-         AND NOT EXISTS (SELECT 1 FROM arrival_checkins a WHERE a.conversation_id = c.id)`,
+         AND NOT EXISTS (SELECT 1 FROM arrival_checkins a WHERE a.conversation_id = c.id)
+         AND c.ai_disabled IS NOT TRUE
+         AND (c.escalated IS NOT TRUE OR c.escalated_at < NOW() - INTERVAL '4 hours')`,
       [today]
     )).rows;
 
@@ -41404,12 +41406,23 @@ app.post('/api/channex/webhook-message', async (req, res) => {
           const handled = await handleIncomingMessageDebounced(savedMsg, conversation, pool, io);
           console.log(`🤖 [CHANNEX MSG] handleIncomingMessage retourné: ${handled}`);
 
-          // Notif push si AUCUNE réponse auto (escalade, pause, etc.).
+          // Notif push si AUCUNE réponse auto (escalade, pause, ai_disabled, etc.).
           // ⚠️ handleIncomingMessageDebounced retourne toujours true (debounce) : on ne peut
-          // pas se fier à `handled` seul. Si la conv est escaladée, l'IA NE répondra pas →
-          // il FAUT notifier le proprio à chaque message voyageur.
-          if (!handled || conversation.escalated) {
-            console.log(`📱 [CHANNEX MSG] ${conversation.escalated ? 'Conv escaladée' : 'Pas de réponse auto'} → notif push propriétaire`);
+          // pas se fier à `handled` seul. On relit ai_disabled depuis la DB pour couvrir
+          // le cas où l'hôte a repris la main (ai_disabled=true) — le debounce sort
+          // silencieusement dans ce cas, la notif immédiate (Bug C) ne couvre pas ai_disabled.
+          let _needsNotif = !handled || conversation.escalated;
+          if (!_needsNotif) {
+            try {
+              const _aiCheck = await pool.query('SELECT ai_disabled FROM conversations WHERE id = $1', [conversation_id]);
+              if (_aiCheck.rows[0]?.ai_disabled) {
+                _needsNotif = true;
+                console.log(`📱 [CHANNEX MSG] ai_disabled=true → notif push propriétaire`);
+              }
+            } catch(e) {}
+          }
+          if (_needsNotif) {
+            console.log(`📱 [CHANNEX MSG] ${conversation.escalated ? 'Conv escaladée' : 'Pas de réponse auto (ai_disabled ou non géré)'} → notif push propriétaire`);
             const tokensRes = await pool.query(
               'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
               [user_id]

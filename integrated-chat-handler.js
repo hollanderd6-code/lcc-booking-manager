@@ -132,6 +132,32 @@ async function handleIncomingMessageDebounced(message, conversation, pool, io) {
     }
   } catch {}
 
+  // ─── Notification immédiate — premier message d'un burst ──────────────────
+  // L'IA traitera après le debounce (90 s) : on notifie tout de suite pour que
+  // l'hôte ne découvre jamais un incident en retard.
+  // • ai_disabled et escaladée < 4h ont déjà quitté ci-dessus (avec leur propre
+  //   logique de notification).
+  // • Les messages suivants d'un même burst passent par la branche `existing`
+  //   en haut de la fonction → pas de doublon.
+  try {
+    const { sendNotification } = require('./services/notifications-service');
+    const propName = conversation.bh_prop_internal || conversation.bh_prop_name || null;
+    const guestLabel = conversation.guest_name || 'Voyageur';
+    const title = `💬 ${guestLabel}${propName ? ' — ' + propName : ''}`;
+    const body = (message._rawMessage || message.message || '').substring(0, 80);
+    const tokRes = await pool.query(
+      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL AND sub_account_id IS NULL',
+      [conversation.user_id]
+    );
+    for (const tok of tokRes.rows) {
+      await sendNotification(tok.fcm_token, title, body, {
+        type: 'new_guest_message',
+        conversation_id: String(convId)
+      });
+    }
+    console.log(`📱 [DEBOUNCE] Notif immédiate envoyée — conv ${convId}`);
+  } catch(e) { console.warn('⚠️ [DEBOUNCE] Erreur notif immédiate:', e.message); }
+
   return true;
 }
 
