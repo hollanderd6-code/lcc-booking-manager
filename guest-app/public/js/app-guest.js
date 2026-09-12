@@ -2489,7 +2489,7 @@ async function applyPromo() {
     const res = await fetch(`${API_URL}/api/guest/promo/check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, amount: total })
+      body: JSON.stringify({ code, amount: total, property_id: state.currentProperty?.id })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);

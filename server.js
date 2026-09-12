@@ -47050,6 +47050,21 @@ pool.query(`
   )
 `).catch(e => console.error('❌ guest_promo_codes table:', e.message));
 
+// Migration : user_id sur guest_promo_codes (backfill via Supabase avant déploiement)
+(async () => {
+  try {
+    await pool.query(`ALTER TABLE guest_promo_codes ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id) ON DELETE SET NULL`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_guest_promo_codes_user_id ON guest_promo_codes(user_id)`);
+    // Index partiel sur account_delegations — couvre uniquement status='accepted' (les 'revoked' exclus)
+    // Utilisé par le EXISTS dans /api/guest/promo/check ; la condition WHERE status='accepted' dans
+    // la requête permet à Postgres de retenir cet index partiel.
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_account_delegations_delegate_accepted
+      ON account_delegations(delegate_user_id, delegator_user_id)
+      WHERE status = 'accepted'`);
+    console.log('✅ guest_promo_codes.user_id + idx_account_delegations_delegate_accepted OK');
+  } catch(e) { console.log('ℹ️ guest_promo_codes.user_id:', e.message); }
+})();
+
 // ── Vérifier un code promo ───────────────────────────────────
 
 // ============================================
@@ -47282,16 +47297,32 @@ app.delete('/api/guest/hold/:token', authenticateAny, async (req, res) => {
 
 app.post('/api/guest/promo/check', async (req, res) => {
   try {
-    const { code, amount } = req.body;
-    if (!code) return res.status(400).json({ error: 'Code requis' });
+    const { code, amount, property_id } = req.body;
+    if (!code || !property_id) return res.status(400).json({ error: 'code et property_id requis' });
 
+    // Valide si le créateur du code est propriétaire du logement OU délégué accepté de ce propriétaire.
+    // L'index partiel idx_account_delegations_delegate_accepted (WHERE status='accepted') est retenu
+    // par Postgres grâce à la condition explicite ad.status = 'accepted' dans le EXISTS.
+    // Comportement large voulu : un code agence fonctionne sur tous les logements de ses délégants.
+    // Pour restreindre par logement, ajouter une colonne property_ids JSONB sur guest_promo_codes.
     const result = await pool.query(`
-      SELECT * FROM guest_promo_codes
-      WHERE UPPER(code) = UPPER($1)
-        AND active = TRUE
-        AND (expires_at IS NULL OR expires_at > NOW())
-        AND (max_uses IS NULL OR uses_count < max_uses)
-    `, [code.trim()]);
+      SELECT gpc.*
+      FROM guest_promo_codes gpc
+      JOIN properties p ON (
+        p.user_id = gpc.user_id
+        OR EXISTS (
+          SELECT 1 FROM account_delegations ad
+          WHERE ad.delegate_user_id = gpc.user_id
+            AND ad.delegator_user_id = p.user_id
+            AND ad.status = 'accepted'
+        )
+      )
+      WHERE UPPER(gpc.code) = UPPER($1)
+        AND p.id = $2
+        AND gpc.active = TRUE
+        AND (gpc.expires_at IS NULL OR gpc.expires_at > NOW())
+        AND (gpc.max_uses IS NULL OR gpc.uses_count < gpc.max_uses)
+    `, [code.trim(), property_id]);
 
     if (!result.rows[0]) {
       return res.status(404).json({ error: 'Code promo invalide ou expiré' });
@@ -48636,8 +48667,10 @@ app.post('/api/guest/dedup-force', authenticateToken, async (req, res) => {
 // ── Admin : gérer les codes promo ────────────────────────────
 app.get('/api/guest/promo/list', authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const result = await pool.query(
-      'SELECT * FROM guest_promo_codes ORDER BY created_at DESC'
+      'SELECT * FROM guest_promo_codes WHERE user_id = $1 ORDER BY created_at DESC',
+      [userId]
     );
     res.json(result.rows);
   } catch (e) {
@@ -48736,15 +48769,16 @@ app.post('/api/upsell/manual', authenticateAny, async (req, res) => {
 
 app.post('/api/guest/promo/create', authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.id;
     const { code, discount_type, discount_value, max_uses, expires_at, description } = req.body;
     if (!code || !discount_type || !discount_value) {
       return res.status(400).json({ error: 'code, discount_type et discount_value requis' });
     }
     const result = await pool.query(`
-      INSERT INTO guest_promo_codes (code, discount_type, discount_value, max_uses, expires_at, description)
-      VALUES (UPPER($1), $2, $3, $4, $5, $6)
+      INSERT INTO guest_promo_codes (code, discount_type, discount_value, max_uses, expires_at, description, user_id)
+      VALUES (UPPER($1), $2, $3, $4, $5, $6, $7)
       RETURNING *
-    `, [code.trim(), discount_type, discount_value, max_uses || null, expires_at || null, description || null]);
+    `, [code.trim(), discount_type, discount_value, max_uses || null, expires_at || null, description || null, userId]);
     res.json({ success: true, promo: result.rows[0] });
   } catch (e) {
     if (e.code === '23505') return res.status(409).json({ error: 'Ce code existe déjà' });
@@ -48754,7 +48788,12 @@ app.post('/api/guest/promo/create', authenticateToken, async (req, res) => {
 
 app.delete('/api/guest/promo/:id', authenticateToken, async (req, res) => {
   try {
-    await pool.query('UPDATE guest_promo_codes SET active = FALSE WHERE id = $1', [req.params.id]);
+    const userId = req.user.id;
+    const result = await pool.query(
+      'UPDATE guest_promo_codes SET active = FALSE WHERE id = $1 AND user_id = $2 RETURNING id',
+      [req.params.id, userId]
+    );
+    if (result.rowCount === 0) return res.status(403).json({ error: 'Accès refusé ou code introuvable' });
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
