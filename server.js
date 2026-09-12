@@ -33798,10 +33798,12 @@ app.post('/api/chat/send', async (req, res) => {
         );
         const channexBookingId = chxRow.rows[0]?.channex_booking_id || null;
         if (channexBookingId) {
-          await sendBookingMessage(channexBookingId, message);
-          await pool.query('UPDATE messages SET delivered_at = NOW() WHERE id = $1', [savedMessage.id]);
-          delivered = true;
-          console.log(`✅ [CHAT/SEND] Conv ${conversation_id} → Channex booking ${channexBookingId}`);
+          const chxResult = await sendBookingMessage(channexBookingId, message);
+          delivered = chxResult !== null;
+          if (delivered) {
+            await pool.query('UPDATE messages SET delivered_at = NOW() WHERE id = $1', [savedMessage.id]);
+          }
+          console.log(`${delivered ? '✅' : 'ℹ️'} [CHAT/SEND] Conv ${conversation_id} → Channex booking ${channexBookingId} (delivered: ${delivered})`);
         }
       } catch (err) {
         console.error(`⚠️ [CHAT/SEND] Transmission Channex échouée (conv ${conversation_id}):`, err.message);
@@ -41797,14 +41799,18 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
       }
     }
 
-    // Toujours essayer d'envoyer via Channex
+    // Envoyer via Channex — null = messagerie non autorisée (403/404), exception = erreur réseau
+    let delivered = false;
+    let deliveryError = null;
     try {
-      await sendBookingMessage(channex_booking_id, finalMessage);
+      const chxResult = await sendBookingMessage(channex_booking_id, finalMessage);
+      delivered = chxResult !== null;
     } catch(channexErr) {
       console.warn(`⚠️ [send-platform] Channex error:`, channexErr.message);
+      deliveryError = channexErr.message;
     }
 
-    // Sauvegarder en DB
+    // Sauvegarder en DB — toujours, même si Channex a échoué
     const msgResult = await pool.query(
       `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
        VALUES ($1, 'property', 'Hôte', $2, TRUE, NOW())
@@ -41813,6 +41819,11 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
     );
 
     const savedMsg = msgResult.rows[0];
+
+    if (delivered) {
+      await pool.query('UPDATE messages SET delivered_at = NOW() WHERE id = $1', [savedMsg.id])
+        .catch(e => console.warn('⚠️ [send-platform] delivered_at:', e.message));
+    }
 
     // Désescalade immédiate dès qu'un message hôte est enregistré
     try {
@@ -41836,7 +41847,12 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
       io.to(`conversation_${conversationId}`).emit('new_message', savedMsg);
     }
 
-    res.json({ success: true, message: savedMsg });
+    res.json({
+      success: true,
+      message: savedMsg,
+      delivered,
+      ...(deliveryError ? { delivery_error: deliveryError } : {})
+    });
 
   } catch (err) {
     console.error('❌ POST send-platform:', err);
