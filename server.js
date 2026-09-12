@@ -25950,17 +25950,36 @@ app.get('/api/invoice/history',
     const invoices = rows.map(row => {
       let meta = {};
       try { meta = JSON.parse(row.file_path || '{}'); } catch(e) {}
+      const rentAmount       = parseFloat(meta.rentAmount       || 0);
+      const touristTaxAmount = parseFloat(meta.touristTaxAmount || 0);
+      const cleaningFee      = parseFloat(meta.cleaningFee      || 0);
+      const vatRate          = parseFloat(meta.vatRate          || 0);
+      const subtotal         = rentAmount + touristTaxAmount + cleaningFee;
+      const vatAmount        = subtotal * (vatRate / 100);
       return {
-        invoiceNumber: row.invoice_number,
-        createdAt: row.created_at,
-        clientName: meta.clientName || '',
-        clientEmail: meta.clientEmail || '',
-        propertyName: meta.propertyName || '',
-        checkinDate: meta.checkinDate || '',
-        checkoutDate: meta.checkoutDate || '',
-        total: parseFloat(meta.rentAmount || 0) + parseFloat(meta.touristTaxAmount || 0) + parseFloat(meta.cleaningFee || 0),
-        conversationId: meta.conversationId ?? row.conversation_id ?? null,
-        reservationUid: meta.reservationUid ?? row.reservation_uid ?? null
+        invoiceNumber:    row.invoice_number,
+        createdAt:        row.created_at,
+        clientName:       meta.clientName       || '',
+        clientEmail:      meta.clientEmail      || '',
+        clientNationality:meta.clientNationality|| '',
+        clientAddress:    meta.clientAddress    || '',
+        clientPostalCode: meta.clientPostalCode || '',
+        clientCity:       meta.clientCity       || '',
+        clientCompany:    meta.clientCompany    || '',
+        clientSiret:      meta.clientSiret      || '',
+        platform:         meta.platform         || '',
+        propertyName:     meta.propertyName     || '',
+        checkinDate:      meta.checkinDate      || '',
+        checkoutDate:     meta.checkoutDate     || '',
+        nights:           meta.nights           || 0,
+        rentAmount,
+        touristTaxAmount,
+        cleaningFee,
+        vatRate,
+        vatAmount,
+        total:            subtotal + vatAmount,
+        conversationId:   meta.conversationId ?? row.conversation_id ?? null,
+        reservationUid:   meta.reservationUid  ?? row.reservation_uid ?? null
       };
     });
 

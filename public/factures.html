@@ -827,18 +827,72 @@ html[data-theme-v3="1"] .btn-ghost {
 .history-empty { text-align:center; padding:40px 20px; color:#9ca3af; font-size:14px; }
 .history-empty i { font-size:32px; margin-bottom:10px; display:block; }
 .history-table { display:none !important; }
-.history-resend-btn { background:none; border:1px solid var(--bh-vert); color:var(--bh-vert); padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer; transition:all 0.15s; }
-.history-resend-btn:hover { background:var(--bh-vert); color:white; }
-/* Cartes mobile */
-.history-card { border-bottom:1px solid var(--bh-cote); padding:14px 16px; }
-.history-card:last-child { border-bottom:none; }
-.history-card-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-.history-card-num { font-weight:700; color:var(--bh-vert); font-size:14px; }
-.history-card-total { font-weight:700; color:#111827; font-size:15px; }
-.history-card-mid { font-size:13px; color:#374151; margin-bottom:4px; }
-.history-card-bottom { font-size:12px; color:#9ca3af; margin-bottom:10px; }
-.history-card-actions { display:flex; gap:8px; }
-.history-card-actions .history-resend-btn { flex:1; text-align:center; padding:7px 0; }
+/* Cartes facture — gabarit Réservation */
+.history-cards { display:flex; flex-direction:column; gap:8px; padding:4px 0; }
+.history-card {
+  background:white; border-radius:14px; padding:13px 15px;
+  box-shadow:0 1px 4px rgba(0,0,0,.07);
+  display:flex; align-items:center; gap:11px;
+  cursor:pointer; transition:box-shadow .15s;
+}
+.history-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.12); }
+.history-card-icon {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  background:rgba(14,59,46,.08); display:flex; align-items:center; justify-content:center;
+  color:var(--bh-vert); font-size:14px;
+}
+.history-card-mid { flex:1; min-width:0; }
+.history-card-num { font-size:14px; font-weight:700; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.history-card-sub { font-size:11px; color:#9ca3af; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.history-card-right { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0; }
+.history-card-total { font-weight:700; color:#111827; font-size:14px; }
+.history-card-chevron { color:#9ca3af; font-size:11px; }
+
+/* Bottom sheet — fiche facture lecture seule */
+#invSheet {
+  display:none; position:fixed; inset:0;
+  background:rgba(13,17,23,.6); backdrop-filter:blur(4px);
+  z-index:9999; align-items:flex-end; justify-content:center;
+}
+#invSheet.active { display:flex; }
+#invSheetInner {
+  background:#FBFBFA; border:1px solid #EAE9E5;
+  border-radius:20px 20px 0 0; width:100%; max-width:620px;
+  max-height:calc(92vh - env(safe-area-inset-bottom,0px));
+  display:flex; flex-direction:column; overflow:hidden;
+  box-shadow:0 -8px 40px rgba(0,0,0,.18);
+}
+#invSheetBody {
+  overflow-y:auto; padding:0 20px 8px; flex:1;
+  -webkit-overflow-scrolling:touch;
+}
+.inv-sh-label {
+  font-size:10px; font-weight:700; color:#9CA3AF;
+  text-transform:uppercase; letter-spacing:.06em;
+  margin-bottom:4px; display:block;
+}
+.inv-sh-val {
+  font-size:14px; font-weight:500; color:#111827;
+  padding:9px 12px; background:rgba(255,255,255,.7);
+  border:1.5px solid rgba(200,184,154,.4); border-radius:10px;
+  min-height:38px;
+}
+.inv-sh-val.empty { color:#9CA3AF; font-style:italic; }
+.inv-sh-field { margin-bottom:10px; }
+.inv-sh-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.inv-sh-section {
+  font-size:10px; font-weight:700; color:#9CA3AF;
+  text-transform:uppercase; letter-spacing:.06em;
+  margin:16px 0 8px; display:flex; align-items:center; gap:6px;
+}
+.inv-sh-section:first-child { margin-top:8px; }
+.inv-sh-amounts { background:rgba(14,59,46,.04); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+.inv-sh-amounts-row { display:flex; justify-content:space-between; font-size:13px; padding:4px 0; color:#374151; }
+.inv-sh-amounts-row.total { font-weight:700; font-size:15px; color:#111827; border-top:1px solid rgba(200,184,154,.4); margin-top:6px; padding-top:8px; }
+.inv-sh-notice {
+  font-size:12px; color:#9CA3AF; text-align:center;
+  padding:10px 0 4px; font-style:italic;
+}
 
 
 </style>
@@ -1772,25 +1826,27 @@ html[data-theme-v3="1"] .btn-ghost {
           return;
         }
 
+        // Stocker les objets pour le bottom sheet (évite JSON dans onclick)
+        window._invSheetData = {};
+
         const rows = filtered.map(inv => {
+          window._invSheetData[inv.invoiceNumber] = inv;
           const date = inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric'}) : '—';
           const checkin = inv.checkinDate ? new Date(inv.checkinDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'}) : '';
           const checkout = inv.checkoutDate ? new Date(inv.checkoutDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'short'}) : '';
           const sejour = checkin && checkout ? checkin + ' → ' + checkout : '—';
           const total = inv.total ? parseFloat(inv.total).toFixed(2) + ' €' : '—';
-          const resendBtn = inv.clientEmail 
-            ? `<button class="history-resend-btn" onclick="resendInvoice('${inv.invoiceNumber}', '${inv.clientEmail}')"><i class="fas fa-paper-plane"></i> Renvoyer</button>`
-            : '';
-          const dlBtn = `<button class="history-resend-btn" style="border-color:#6366f1;color:#6366f1;" onclick="downloadInvoiceByNumber('${inv.invoiceNumber}')"><i class="fas fa-download"></i> PDF</button>`;
-          
-          return `<div class="history-card">
-            <div class="history-card-top">
-              <span class="history-card-num">${inv.invoiceNumber || '—'}</span>
-              <span class="history-card-total">${total}</span>
+
+          return `<div class="history-card" onclick="openInvSheet(window._invSheetData['${inv.invoiceNumber}'])">
+            <div class="history-card-icon"><i class="fas fa-file-invoice"></i></div>
+            <div class="history-card-mid">
+              <div class="history-card-num">${inv.invoiceNumber || '—'}</div>
+              <div class="history-card-sub">${inv.clientName ? inv.clientName + ' · ' : ''}${sejour}</div>
             </div>
-            <div class="history-card-mid">${inv.clientName || '—'} · ${inv.propertyName || '—'}</div>
-            <div class="history-card-bottom">${sejour} · ${date}</div>
-            <div class="history-card-actions">${resendBtn}${dlBtn}</div>
+            <div class="history-card-right">
+              <span class="history-card-total">${total}</span>
+              <span class="history-card-chevron"><i class="fas fa-chevron-right"></i></span>
+            </div>
           </div>`;
         });
 
@@ -2058,7 +2114,6 @@ html[data-theme-v3="1"] button[type=submit] {
 }
 html[data-theme-v3="1"] .btn-secondary,
 html[data-theme-v3="1"] .btn-ghost { border-radius: 999px !important; }
-.history-resend-btn { border-radius: 999px !important; }
 
 /* ── Historique : titres et montants serif ── */
 .history-title {
@@ -2067,19 +2122,156 @@ html[data-theme-v3="1"] .btn-ghost { border-radius: 999px !important; }
   font-weight: 400 !important;
   letter-spacing: .01em !important;
 }
-.history-card { border-bottom-color: rgba(200,184,154,.35) !important; }
 .history-card-num {
   font-family: 'Instrument Serif', serif !important;
-  font-size: 15.5px !important;
+  font-size: 15px !important;
   font-weight: 400 !important;
 }
 .history-card-total {
   font-family: 'Instrument Serif', serif !important;
-  font-size: 17px !important;
+  font-size: 15px !important;
   font-weight: 400 !important;
   color: var(--bh-vert) !important;
 }
 </style>
+
+<!-- Bottom sheet — fiche facture lecture seule -->
+<div id="invSheet">
+  <div id="invSheetInner">
+    <div style="display:flex;justify-content:center;padding:10px 0 4px;">
+      <div style="width:36px;height:4px;border-radius:99px;background:rgba(0,0,0,.15);"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 20px 12px;">
+      <h2 id="invSheetTitle" style="font-size:12px;font-weight:600;color:#8B8B84;margin:0;letter-spacing:.1em;text-transform:uppercase;">Facture</h2>
+      <button onclick="closeInvSheet()" style="background:transparent;border:1px solid #EAE9E5;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#5A5A54;">×</button>
+    </div>
+    <div id="invSheetBody"></div>
+    <div style="padding:12px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:7px;border-top:1px solid #F1F0EC;background:#FBFBFA;">
+      <div style="display:flex;gap:8px;">
+        <button id="invSheetPdfBtn" onclick="invSheetPdf()" style="flex:1;height:40px;border-radius:10px;font-size:13px;font-weight:600;background:#0E3B2E;border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <i class="fas fa-file-pdf" style="font-size:12px;"></i> Voir le PDF
+        </button>
+        <button id="invSheetResendBtn" onclick="invSheetResend()" style="flex:1;height:40px;border-radius:10px;font-size:13px;font-weight:600;background:white;border:1px solid rgba(0,0,0,.12);color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <i class="fas fa-paper-plane" style="font-size:12px;"></i> Renvoyer
+        </button>
+      </div>
+      <p class="inv-sh-notice"><i class="fas fa-lock" style="font-size:10px;margin-right:4px;"></i>Une facture émise n'est pas modifiable</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  let _currentInv = null;
+
+  const platformLabels = {
+    direct:'Réservation directe', airbnb:'Airbnb', bookingcom:'Booking.com',
+    abritel:'Abritel / VRBO', expedia:'Expedia', hotels:'Hotels.com',
+    gites:'Gîtes de France', guest_app:'BHGuest'
+  };
+
+  function val(v, fallback) {
+    return (v !== null && v !== undefined && v !== '' && v !== 0) ? String(v) : (fallback || '');
+  }
+
+  function fmtDate(d) {
+    if (!d) return '';
+    try { return new Date(d).toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'}); }
+    catch(e) { return d; }
+  }
+
+  function fmtAmt(n) {
+    const f = parseFloat(n);
+    return isNaN(f) ? '' : f.toFixed(2) + ' €';
+  }
+
+  function field(label, v) {
+    const empty = !v;
+    return `<div class="inv-sh-field">
+      <span class="inv-sh-label">${label}</span>
+      <div class="inv-sh-val${empty ? ' empty' : ''}">${v || '—'}</div>
+    </div>`;
+  }
+
+  window.openInvSheet = function(inv) {
+    _currentInv = inv;
+    document.getElementById('invSheetTitle').textContent = inv.invoiceNumber || 'Facture';
+
+    const hasPdf = !!inv.invoiceNumber;
+    const hasEmail = !!inv.clientEmail;
+    document.getElementById('invSheetPdfBtn').disabled = !hasPdf;
+    document.getElementById('invSheetResendBtn').disabled = !hasEmail;
+
+    const subtotal = (parseFloat(inv.rentAmount)||0) + (parseFloat(inv.touristTaxAmount)||0) + (parseFloat(inv.cleaningFee)||0);
+    const vatRate  = parseFloat(inv.vatRate) || 0;
+    const vatAmt   = parseFloat(inv.vatAmount) || 0;
+    const total    = subtotal + vatAmt;
+    const pltLabel = platformLabels[inv.platform] || inv.platform || '';
+
+    const companyLine = inv.clientCompany
+      ? `<div class="inv-sh-row">${field('Société', inv.clientCompany)}${field('SIRET', inv.clientSiret)}</div>`
+      : '';
+    const vatLine = vatRate > 0
+      ? `<div class="inv-sh-amounts-row"><span>TVA ${vatRate}%</span><span>${fmtAmt(vatAmt)}</span></div>`
+      : '';
+
+    const adresseLine = inv.clientAddress
+      ? `${field('Adresse', inv.clientAddress)}
+         <div class="inv-sh-row">${field('Code postal', inv.clientPostalCode)}${field('Ville', inv.clientCity)}</div>`
+      : '';
+
+    document.getElementById('invSheetBody').innerHTML = `
+      <p class="inv-sh-section"><i class="fas fa-user"></i> Client</p>
+      ${field('Nom complet', inv.clientName)}
+      ${field('Email', inv.clientEmail)}
+      ${field('Nationalité', inv.clientNationality)}
+      ${adresseLine}
+      ${companyLine}
+
+      <p class="inv-sh-section"><i class="fas fa-home"></i> Séjour</p>
+      ${field('Logement', inv.propertyName)}
+      <div class="inv-sh-row">
+        ${field('Arrivée', fmtDate(inv.checkinDate))}
+        ${field('Départ', fmtDate(inv.checkoutDate))}
+      </div>
+      ${inv.nights ? field('Nuitées', inv.nights + (inv.nights > 1 ? ' nuits' : ' nuit')) : ''}
+      ${pltLabel ? field('Plateforme', pltLabel) : ''}
+
+      <p class="inv-sh-section"><i class="fas fa-euro-sign"></i> Montants</p>
+      <div class="inv-sh-amounts">
+        ${subtotal > 0 ? `<div class="inv-sh-amounts-row"><span>Séjour</span><span>${fmtAmt(inv.rentAmount)}</span></div>` : ''}
+        ${(parseFloat(inv.touristTaxAmount)||0) > 0 ? `<div class="inv-sh-amounts-row"><span>Taxe de séjour</span><span>${fmtAmt(inv.touristTaxAmount)}</span></div>` : ''}
+        ${(parseFloat(inv.cleaningFee)||0) > 0 ? `<div class="inv-sh-amounts-row"><span>Frais de ménage</span><span>${fmtAmt(inv.cleaningFee)}</span></div>` : ''}
+        ${vatLine}
+        <div class="inv-sh-amounts-row total"><span>Total</span><span>${fmtAmt(total)}</span></div>
+      </div>
+    `;
+
+    const sheet = document.getElementById('invSheet');
+    sheet.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.closeInvSheet = function() {
+    document.getElementById('invSheet').classList.remove('active');
+    document.body.style.overflow = '';
+  };
+
+  window.invSheetPdf = function() {
+    if (_currentInv?.invoiceNumber) downloadInvoiceByNumber(_currentInv.invoiceNumber);
+  };
+
+  window.invSheetResend = async function() {
+    if (!_currentInv?.invoiceNumber || !_currentInv?.clientEmail) return;
+    await resendInvoice(_currentInv.invoiceNumber, _currentInv.clientEmail);
+  };
+
+  // Fermer en cliquant sur l'overlay
+  document.getElementById('invSheet').addEventListener('click', function(e) {
+    if (e.target === this) closeInvSheet();
+  });
+})();
+</script>
 
 <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
 <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
