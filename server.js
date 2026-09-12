@@ -16379,6 +16379,7 @@ app.get('/api/checkin/:token', async (req, res) => {
              AND DATE(r.start_date) = DATE(c.reservation_start_date))
        )
        WHERE c.unique_token = $1
+       ORDER BY (r.end_date = c.reservation_end_date) DESC NULLS LAST, r.created_at DESC NULLS LAST
        LIMIT 1`,
       [req.params.token]
     );
@@ -16441,6 +16442,7 @@ app.post('/api/checkin/:token', async (req, res) => {
              AND DATE(r.start_date) = DATE(c.reservation_start_date))
        )
        WHERE c.unique_token = $1
+       ORDER BY (r.end_date = c.reservation_end_date) DESC NULLS LAST, r.created_at DESC NULLS LAST
        LIMIT 1`,
       [req.params.token]
     );
@@ -28034,7 +28036,7 @@ app.post('/api/sms/incoming', async (req, res) => {
              AND DATE(r.start_date) = DATE(c.reservation_start_date))
        )
        WHERE (c.guest_phone = ANY($1) OR r.guest_phone = ANY($1))
-       ORDER BY c.updated_at DESC
+       ORDER BY c.updated_at DESC, (r.end_date = c.reservation_end_date) DESC NULLS LAST, r.created_at DESC NULLS LAST
        LIMIT 1`,
       [phoneVariants]
     );
@@ -29317,6 +29319,7 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
          OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date))
        )
        WHERE c.id = $1 AND c.user_id = ANY($2::text[])
+       ORDER BY (r.end_date = c.reservation_end_date) DESC NULLS LAST, r.created_at DESC NULLS LAST
        LIMIT 1`,
       [convId, comptes]
     );
@@ -33771,6 +33774,41 @@ app.post('/api/chat/send', async (req, res) => {
       }
     }
 
+    // ── Transmission vers la plateforme OTA si message hôte ──
+    // Ne transmet pas pour sender_type guest/system, ni si aucun channex_booking_id résolvable
+    // (conversations BHGuest, iCal, manuelles). L'insertion est toujours conservée en base.
+    let delivered = false;
+    let deliveryError = null;
+    if (sender_type === 'owner') {
+      try {
+        const chxRow = await pool.query(
+          `SELECT COALESCE(c.channex_booking_id, r.channex_booking_id) AS channex_booking_id
+           FROM conversations c
+           LEFT JOIN reservations r ON (
+             c.channex_booking_id IS NULL
+             AND r.property_id = c.property_id
+             AND DATE(r.start_date) = DATE(c.reservation_start_date)
+             AND r.channex_booking_id IS NOT NULL
+             AND r.status != 'cancelled'
+           )
+           WHERE c.id = $1
+           ORDER BY (r.end_date = c.reservation_end_date) DESC NULLS LAST, r.created_at DESC NULLS LAST
+           LIMIT 1`,
+          [conversation_id]
+        );
+        const channexBookingId = chxRow.rows[0]?.channex_booking_id || null;
+        if (channexBookingId) {
+          await sendBookingMessage(channexBookingId, message);
+          await pool.query('UPDATE messages SET delivered_at = NOW() WHERE id = $1', [savedMessage.id]);
+          delivered = true;
+          console.log(`✅ [CHAT/SEND] Conv ${conversation_id} → Channex booking ${channexBookingId}`);
+        }
+      } catch (err) {
+        console.error(`⚠️ [CHAT/SEND] Transmission Channex échouée (conv ${conversation_id}):`, err.message);
+        deliveryError = err.message;
+      }
+    }
+
     // 🤖 TRAITER AUTOMATIQUEMENT (Onboarding + Réponses auto)
     if (sender_type === 'guest') {
       // Récupérer la conversation complète
@@ -33781,7 +33819,7 @@ app.post('/api/chat/send', async (req, res) => {
 
       if (convResult.rows.length > 0) {
         const conversation = convResult.rows[0];
-        
+
         // Traiter le message (onboarding + réponses auto)
         const msgNotifAllowed = await shouldSendNotification(conversation.user_id, 'notif_new_message');
         const botHandled = await handleIncomingMessage(savedMessage, conversation, pool, io);
@@ -33820,7 +33858,12 @@ app.post('/api/chat/send', async (req, res) => {
       }
     }
 
-    res.json({ success: true, message: savedMessage });
+    res.json({
+      success: true,
+      message: savedMessage,
+      delivered,
+      ...(deliveryError ? { delivery_error: deliveryError } : {})
+    });
 
   } catch (error) {
     console.error('❌ Erreur /api/chat/send:', error);
@@ -40521,11 +40564,14 @@ app.post('/api/channex/webhook', async (req, res) => {
                 `UPDATE conversations
                  SET reservation_start_date = $1,
                      reservation_end_date   = $2,
+                     channex_booking_id     = COALESCE(channex_booking_id, $3),
                      updated_at             = NOW()
-                 WHERE channex_booking_id = $3
-                 AND DATE(reservation_start_date) != DATE($1)
+                 WHERE (channex_booking_id = $3 AND DATE(reservation_start_date) != DATE($1))
+                    OR (channex_booking_id IS NULL
+                        AND property_id = $4
+                        AND DATE(reservation_start_date) = DATE($1))
                  RETURNING id, reservation_start_date, reservation_end_date`,
-                [result.start_date, result.end_date, result.channex_booking_id || result.uid]
+                [result.start_date, result.end_date, result.channex_booking_id || result.uid, result.property_id]
               );
               if (convUpdateResult.rows.length > 0) {
                 console.log(`✏️ [CHANNEX] Conversation(s) mise(s) à jour avec nouvelles dates: ${convUpdateResult.rows.map(r => `#${r.id} → ${r.reservation_start_date}`).join(', ')}`);
@@ -41701,6 +41747,7 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
              AND DATE(r.start_date) = DATE(c.reservation_start_date))
        )
        WHERE c.id = $1 AND r.channex_booking_id IS NOT NULL
+       ORDER BY (r.end_date = c.reservation_end_date) DESC NULLS LAST, r.created_at DESC NULLS LAST
        LIMIT 1`,
       [conversationId]
     );
@@ -41828,6 +41875,7 @@ app.post('/api/chat/conversations/:conversationId/send-sms', authenticateAny, as
              AND DATE(r.start_date) = DATE(c.reservation_start_date))
        )
        WHERE c.id = $1
+       ORDER BY (r.end_date = c.reservation_end_date) DESC NULLS LAST, r.created_at DESC NULLS LAST
        LIMIT 1`,
       [conversationId]
     );
@@ -45206,6 +45254,10 @@ pool.query(`ALTER TABLE account_delegations ADD COLUMN IF NOT EXISTS billing_ove
 pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'platform'`)
   .then(() => console.log('✅ Colonne messages.source OK'))
   .catch(e => console.log('ℹ️ messages.source:', e.message));
+
+// ── Colonne delivered_at sur messages (transmission OTA confirmée) ──
+pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ`)
+  .catch(e => console.log('ℹ️ messages.delivered_at:', e.message));
 
 // ── Middleware : réserver le mode agence au plan Pro ─────────────
 async function requireProPlan(req, res, next) {
