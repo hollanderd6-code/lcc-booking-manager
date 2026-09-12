@@ -33728,6 +33728,45 @@ app.post('/api/translate', authenticateAny, async (req, res) => {
   }
 });
 
+// ── transmitToChannex ─────────────────────────────────────────────────────────
+// Résout le channex_booking_id d'une conversation, envoie le message via Channex,
+// et met à jour delivered_at sur le message si l'envoi réussit.
+// Retourne { delivered, deliveryError }. N'écrit jamais en base si channex_booking_id
+// est absent (conversations BHGuest / iCal / manuelles) : delivered = false, pas d'erreur.
+async function transmitToChannex(pool, conversationId, message, messageId) {
+  try {
+    const chxRow = await pool.query(
+      `SELECT COALESCE(c.channex_booking_id, r.channex_booking_id) AS channex_booking_id
+       FROM conversations c
+       LEFT JOIN reservations r ON (
+         c.channex_booking_id IS NULL
+         AND r.property_id = c.property_id
+         AND DATE(r.start_date) = DATE(c.reservation_start_date)
+         AND r.channex_booking_id IS NOT NULL
+         AND r.status != 'cancelled'
+       )
+       WHERE c.id = $1
+       ORDER BY (r.end_date = c.reservation_end_date) DESC NULLS LAST, r.created_at DESC NULLS LAST
+       LIMIT 1`,
+      [conversationId]
+    );
+    const channexBookingId = chxRow.rows[0]?.channex_booking_id || null;
+    if (!channexBookingId) return { delivered: false, deliveryError: null };
+
+    const chxResult = await sendBookingMessage(channexBookingId, message);
+    const delivered = chxResult !== null;
+    if (delivered) {
+      await pool.query('UPDATE messages SET delivered_at = NOW() WHERE id = $1', [messageId])
+        .catch(e => console.warn('⚠️ [transmitToChannex] delivered_at:', e.message));
+    }
+    console.log(`${delivered ? '✅' : 'ℹ️'} [CHANNEX] Conv ${conversationId} → booking ${channexBookingId} (delivered: ${delivered})`);
+    return { delivered, deliveryError: null };
+  } catch (err) {
+    console.error(`⚠️ [CHANNEX] Transmission échouée (conv ${conversationId}):`, err.message);
+    return { delivered: false, deliveryError: err.message };
+  }
+}
+
 // ============================================
 // 🤖 ENDPOINT ENVOI MESSAGE AVEC TRAITEMENT AUTO
 // ============================================
@@ -33775,40 +33814,10 @@ app.post('/api/chat/send', async (req, res) => {
     }
 
     // ── Transmission vers la plateforme OTA si message hôte ──
-    // Ne transmet pas pour sender_type guest/system, ni si aucun channex_booking_id résolvable
-    // (conversations BHGuest, iCal, manuelles). L'insertion est toujours conservée en base.
     let delivered = false;
     let deliveryError = null;
     if (sender_type === 'owner') {
-      try {
-        const chxRow = await pool.query(
-          `SELECT COALESCE(c.channex_booking_id, r.channex_booking_id) AS channex_booking_id
-           FROM conversations c
-           LEFT JOIN reservations r ON (
-             c.channex_booking_id IS NULL
-             AND r.property_id = c.property_id
-             AND DATE(r.start_date) = DATE(c.reservation_start_date)
-             AND r.channex_booking_id IS NOT NULL
-             AND r.status != 'cancelled'
-           )
-           WHERE c.id = $1
-           ORDER BY (r.end_date = c.reservation_end_date) DESC NULLS LAST, r.created_at DESC NULLS LAST
-           LIMIT 1`,
-          [conversation_id]
-        );
-        const channexBookingId = chxRow.rows[0]?.channex_booking_id || null;
-        if (channexBookingId) {
-          const chxResult = await sendBookingMessage(channexBookingId, message);
-          delivered = chxResult !== null;
-          if (delivered) {
-            await pool.query('UPDATE messages SET delivered_at = NOW() WHERE id = $1', [savedMessage.id]);
-          }
-          console.log(`${delivered ? '✅' : 'ℹ️'} [CHAT/SEND] Conv ${conversation_id} → Channex booking ${channexBookingId} (delivered: ${delivered})`);
-        }
-      } catch (err) {
-        console.error(`⚠️ [CHAT/SEND] Transmission Channex échouée (conv ${conversation_id}):`, err.message);
-        deliveryError = err.message;
-      }
+      ({ delivered, deliveryError } = await transmitToChannex(pool, conversation_id, message, savedMessage.id));
     }
 
     // 🤖 TRAITER AUTOMATIQUEMENT (Onboarding + Réponses auto)
@@ -41799,31 +41808,16 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
       }
     }
 
-    // Envoyer via Channex — null = messagerie non autorisée (403/404), exception = erreur réseau
-    let delivered = false;
-    let deliveryError = null;
-    try {
-      const chxResult = await sendBookingMessage(channex_booking_id, finalMessage);
-      delivered = chxResult !== null;
-    } catch(channexErr) {
-      console.warn(`⚠️ [send-platform] Channex error:`, channexErr.message);
-      deliveryError = channexErr.message;
-    }
-
-    // Sauvegarder en DB — toujours, même si Channex a échoué
+    // Sauvegarder en DB d'abord — le message est conservé même si Channex échoue
     const msgResult = await pool.query(
       `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
        VALUES ($1, 'property', 'Hôte', $2, TRUE, NOW())
        RETURNING *`,
       [conversationId, finalMessage]
     );
-
     const savedMsg = msgResult.rows[0];
 
-    if (delivered) {
-      await pool.query('UPDATE messages SET delivered_at = NOW() WHERE id = $1', [savedMsg.id])
-        .catch(e => console.warn('⚠️ [send-platform] delivered_at:', e.message));
-    }
+    const { delivered, deliveryError } = await transmitToChannex(pool, conversationId, finalMessage, savedMsg.id);
 
     // Désescalade immédiate dès qu'un message hôte est enregistré
     try {

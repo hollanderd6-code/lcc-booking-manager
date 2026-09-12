@@ -85,3 +85,15 @@ The same `public/` folder is served by the iOS and Android Capacitor apps (see `
 ### Adding a New Property
 
 Properties live in the `properties` database table (not hardcoded). Set `channex_enabled`, `channex_property_id`, `channex_room_type_id`, `channex_rate_plan_id` columns to enable OTA sync. `displayName(property)` (defined in `server.js`) returns `internal_name` if set, otherwise `name`.
+
+### Messaging — two routes, one shared function
+
+`POST /api/chat/send` and `POST /api/chat/conversations/:id/send-platform` both transmit to Channex for OTA conversations. They coexist intentionally:
+
+| | `/api/chat/send` | `/api/chat/conversations/:id/send-platform` |
+|---|---|---|
+| Auth | None (guest-accessible) | `authenticateAny` required |
+| No OTA booking | Silent skip, `delivered: false` | 400 — caller must handle |
+| Extras | — | `{caution_url}` resolution |
+
+The Channex transmission logic (resolve `channex_booking_id`, call `sendBookingMessage`, update `delivered_at`) lives in a single function `transmitToChannex(pool, conversationId, message, messageId)` called by both routes. Any change to transmission behaviour goes there only.
