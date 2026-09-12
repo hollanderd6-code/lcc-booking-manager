@@ -3379,7 +3379,10 @@ const DEFAULT_NOTIFICATION_SETTINGS = {
   notif_new_message: true,
   notif_new_invoice: true,
   notif_cleaning_alert: true,
-  notif_template_failed: true
+  notif_template_failed: true,
+  // Niveau de notification pour les messages voyageurs :
+  // 'all' = chaque message, 'ai_off' = seulement quand l'IA ne répond pas, 'escalation' = escalades uniquement
+  notif_message_level: 'ai_off',
 };
 
 function getEmailTransporter() {
@@ -3573,6 +3576,7 @@ async function getNotificationSettings(userId) {
     notif_new_invoice: typeof raw.notif_new_invoice === 'boolean' ? raw.notif_new_invoice : DEFAULT_NOTIFICATION_SETTINGS.notif_new_invoice,
     notif_cleaning_alert: typeof raw.notif_cleaning_alert === 'boolean' ? raw.notif_cleaning_alert : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_alert,
     notif_template_failed: typeof raw.notif_template_failed === 'boolean' ? raw.notif_template_failed : DEFAULT_NOTIFICATION_SETTINGS.notif_template_failed,
+    notif_message_level: ['all','ai_off','escalation'].includes(raw.notif_message_level) ? raw.notif_message_level : DEFAULT_NOTIFICATION_SETTINGS.notif_message_level,
   };
 }
 
@@ -3610,6 +3614,7 @@ async function saveNotificationSettings(userId, settings) {
     notif_new_invoice: typeof settings.notif_new_invoice === 'boolean' ? settings.notif_new_invoice : DEFAULT_NOTIFICATION_SETTINGS.notif_new_invoice,
     notif_cleaning_alert: typeof settings.notif_cleaning_alert === 'boolean' ? settings.notif_cleaning_alert : DEFAULT_NOTIFICATION_SETTINGS.notif_cleaning_alert,
     notif_template_failed: typeof settings.notif_template_failed === 'boolean' ? settings.notif_template_failed : DEFAULT_NOTIFICATION_SETTINGS.notif_template_failed,
+    notif_message_level: ['all','ai_off','escalation'].includes(settings.notif_message_level) ? settings.notif_message_level : DEFAULT_NOTIFICATION_SETTINGS.notif_message_level,
   };
 
   await pool.query(
@@ -12369,6 +12374,7 @@ app.post('/api/settings/notifications', async (req, res) => {
       if (typeof body[key] === 'boolean') merged[key] = body[key];
     }
     if (typeof body.whatsappNumber === 'string') merged.whatsappNumber = body.whatsappNumber;
+    if (['all','ai_off','escalation'].includes(body.notif_message_level)) merged.notif_message_level = body.notif_message_level;
 
     const saved = await saveNotificationSettings(user.id, merged);
 
@@ -41386,9 +41392,11 @@ app.post('/api/channex/webhook-message', async (req, res) => {
       // Récupérer la conversation complète pour le handler
       const convResult = await pool.query(
         `SELECT c.*, p.auto_responses_enabled,
-                p.name AS bh_prop_name, p.internal_name AS bh_prop_internal
+                p.name AS bh_prop_name, p.internal_name AS bh_prop_internal,
+                COALESCE(us.notifications->>'notif_message_level', 'ai_off') AS notif_message_level
          FROM conversations c
          LEFT JOIN properties p ON p.id = c.property_id
+         LEFT JOIN user_settings us ON us.user_id::text = c.user_id::text
          WHERE c.id = $1`,
         [conversation_id]
       );
@@ -41411,13 +41419,16 @@ app.post('/api/channex/webhook-message', async (req, res) => {
           // pas se fier à `handled` seul. On relit ai_disabled depuis la DB pour couvrir
           // le cas où l'hôte a repris la main (ai_disabled=true) — le debounce sort
           // silencieusement dans ce cas, la notif immédiate (Bug C) ne couvre pas ai_disabled.
-          let _needsNotif = !handled || conversation.escalated;
+          const _notifLevel = conversation.notif_message_level || 'ai_off';
+          // Conv déjà escaladée + nouveau message voyageur : notif sauf pour 'escalation'
+          // (l'escalade initiale a déjà notifié, les follow-ups deviendraient trop bruyants).
+          let _needsNotif = !handled || (conversation.escalated && _notifLevel !== 'escalation');
           if (!_needsNotif) {
             try {
               const _aiCheck = await pool.query('SELECT ai_disabled FROM conversations WHERE id = $1', [conversation_id]);
-              if (_aiCheck.rows[0]?.ai_disabled) {
+              if (_aiCheck.rows[0]?.ai_disabled && _notifLevel !== 'escalation') {
                 _needsNotif = true;
-                console.log(`📱 [CHANNEX MSG] ai_disabled=true → notif push propriétaire`);
+                console.log(`📱 [CHANNEX MSG] ai_disabled=true (niveau ${_notifLevel}) → notif push propriétaire`);
               }
             } catch(e) {}
           }

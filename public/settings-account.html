@@ -1816,7 +1816,35 @@ html[data-theme-v3="1"] .subscription-card {
       </div>
       <div class="notif-group">
         <div class="notif-group-title"><i class="fas fa-comment"></i> Messages</div>
-        <div class="notif-row"><div class="notif-info"><span class="notif-label">Nouveau message</span><span class="notif-desc">Quand un voyageur envoie un message</span></div><label class="toggle-switch"><input type="checkbox" id="notif_new_message" checked><span class="toggle-slider"></span></label></div>
+        <div class="notif-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
+          <div class="notif-info">
+            <span class="notif-label">Notifications messages voyageurs</span>
+            <span class="notif-desc">Quand recevoir une notification pour les messages entrants</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;width:100%;">
+            <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+              <input type="radio" name="notif_message_level" value="all" style="margin-top:3px;accent-color:#0E3B2E;">
+              <span>
+                <strong>Tous les messages</strong>
+                <span class="notif-desc" style="display:block;">Une notification dès qu'un voyageur écrit, même si l'IA répond</span>
+              </span>
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+              <input type="radio" name="notif_message_level" value="ai_off" style="margin-top:3px;accent-color:#0E3B2E;" checked>
+              <span>
+                <strong>Seulement quand l'IA ne répond pas</strong>
+                <span class="notif-desc" style="display:block;">Escalades, pause manuelle active, IA désactivée sur la conversation <span style="background:#EDF7F1;color:#0E3B2E;font-size:11px;padding:1px 6px;border-radius:10px;font-weight:600;">Recommandé</span></span>
+              </span>
+            </label>
+            <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+              <input type="radio" name="notif_message_level" value="escalation" style="margin-top:3px;accent-color:#0E3B2E;">
+              <span>
+                <strong>Seulement les escalades</strong>
+                <span class="notif-desc" style="display:block;">Uniquement quand l'IA passe explicitement la main</span>
+              </span>
+            </label>
+          </div>
+        </div>
         <div class="notif-row"><div class="notif-info"><span class="notif-label"><i class="fas fa-exclamation-triangle" style="color:#D97706;"></i> Échec message automatique</span><span class="notif-desc">Quand un template de message n'a pas pu être envoyé</span></div><label class="toggle-switch"><input type="checkbox" id="notif_template_failed" checked><span class="toggle-slider"></span></label></div>
       </div>
       <div class="notif-group">
@@ -4195,6 +4223,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const NOTIF_KEYS = ['notif_new_reservation', 'notif_reservation_cancelled', 'notif_daily_summary', 'notif_reminder_j1', 'notif_cleaning_reminder', 'notif_cleaning_completed', 'notif_cleaning_alert', 'notif_checklist_done', 'notif_deposit_request', 'notif_new_message', 'notif_new_invoice', 'notif_template_failed'];
     const tokenNotif = localStorage.getItem('lcc_token');
 
+    function applyMessageLevel(level) {
+      var radios = document.querySelectorAll('input[name="notif_message_level"]');
+      radios.forEach(function(r) { r.checked = r.value === (level || 'ai_off'); });
+    }
+
+    function readMessageLevel() {
+      var checked = document.querySelector('input[name="notif_message_level"]:checked');
+      return checked ? checked.value : 'ai_off';
+    }
+
     async function loadNotificationSettings() {
       try {
         const res = await fetch('/api/settings/notifications', {
@@ -4206,6 +4244,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const el = document.getElementById(key);
             if (el && data[key] !== undefined) el.checked = data[key];
           });
+          applyMessageLevel(data.notif_message_level);
           localStorage.setItem('lcc_settings_notif', JSON.stringify(data));
           return;
         }
@@ -4218,6 +4257,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const el = document.getElementById(key);
             if (el && data[key] !== undefined) el.checked = data[key];
           });
+          applyMessageLevel(data.notif_message_level);
         } catch(e) {}
       }
     }
@@ -4232,6 +4272,7 @@ document.addEventListener('DOMContentLoaded', function() {
           const el = document.getElementById(key);
           if (el) prefs[key] = el.checked;
         });
+        prefs.notif_message_level = readMessageLevel();
         localStorage.setItem('lcc_settings_notif', JSON.stringify(prefs));
         try {
           await fetch('/api/settings/notifications', {

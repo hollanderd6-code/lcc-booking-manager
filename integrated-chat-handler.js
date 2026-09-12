@@ -133,30 +133,31 @@ async function handleIncomingMessageDebounced(message, conversation, pool, io) {
   } catch {}
 
   // ─── Notification immédiate — premier message d'un burst ──────────────────
-  // L'IA traitera après le debounce (90 s) : on notifie tout de suite pour que
-  // l'hôte ne découvre jamais un incident en retard.
-  // • ai_disabled et escaladée < 4h ont déjà quitté ci-dessus (avec leur propre
-  //   logique de notification).
-  // • Les messages suivants d'un même burst passent par la branche `existing`
-  //   en haut de la fonction → pas de doublon.
-  try {
-    const { sendNotification } = require('./services/notifications-service');
-    const propName = conversation.bh_prop_internal || conversation.bh_prop_name || null;
-    const guestLabel = conversation.guest_name || 'Voyageur';
-    const title = `💬 ${guestLabel}${propName ? ' — ' + propName : ''}`;
-    const body = (message._rawMessage || message.message || '').substring(0, 80);
-    const tokRes = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL AND sub_account_id IS NULL',
-      [conversation.user_id]
-    );
-    for (const tok of tokRes.rows) {
-      await sendNotification(tok.fcm_token, title, body, {
-        type: 'new_guest_message',
-        conversation_id: String(convId)
-      });
-    }
-    console.log(`📱 [DEBOUNCE] Notif immédiate envoyée — conv ${convId}`);
-  } catch(e) { console.warn('⚠️ [DEBOUNCE] Erreur notif immédiate:', e.message); }
+  // Seulement pour le niveau 'all' : l'IA n'a pas encore traité, titre neutre.
+  // 'ai_off' et 'escalation' attendent la décision de l'IA (escalateToOwner,
+  // pause 2h, ai_disabled) pour notifier avec plus de signal.
+  // • ai_disabled et escaladée < 4h ont déjà quitté ci-dessus.
+  // • Les messages suivants d'un même burst passent par la branche `existing` → pas de doublon.
+  if ((conversation.notif_message_level || 'ai_off') === 'all') {
+    try {
+      const { sendNotification } = require('./services/notifications-service');
+      const propName = conversation.bh_prop_internal || conversation.bh_prop_name || null;
+      const guestLabel = conversation.guest_name || 'Voyageur';
+      const title = `💬 ${guestLabel}${propName ? ' — ' + propName : ''}`;
+      const body = (message._rawMessage || message.message || '').substring(0, 80);
+      const tokRes = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL AND sub_account_id IS NULL',
+        [conversation.user_id]
+      );
+      for (const tok of tokRes.rows) {
+        await sendNotification(tok.fcm_token, title, body, {
+          type: 'new_guest_message',
+          conversation_id: String(convId)
+        });
+      }
+      console.log(`📱 [DEBOUNCE] Notif immédiate envoyée — conv ${convId} (niveau all)`);
+    } catch(e) { console.warn('⚠️ [DEBOUNCE] Erreur notif immédiate:', e.message); }
+  }
 
   return true;
 }
@@ -500,22 +501,26 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         [conversation.id]
       );
       if (ownerRecentReply.rows.length > 0) {
-        console.log(`🤫 [HANDLER] Pause 2h active → bot silencieux, notif proprio`);
-        try {
-          const tokensRes = await pool.query(
-            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL AND sub_account_id IS NULL',
-            [conversation.user_id]
-          );
-          const { sendNotification } = require('./services/notifications-service');
-          for (const tok of tokensRes.rows) {
-            await sendNotification(
-              tok.fcm_token,
-              `💬 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''}`,
-              (message._rawMessage || message.message || '').substring(0, 80),
-              { type: 'new_guest_message', conversation_id: String(conversation.id) }
+        const _pauseLevel = conversation.notif_message_level || 'ai_off';
+        console.log(`🤫 [HANDLER] Pause 2h active → bot silencieux${_pauseLevel !== 'escalation' ? ', notif proprio' : ' (niveau escalation → pas de notif)'}`);
+        // 'escalation' = seulement les vraies escalades → la pause 2h n'en est pas une.
+        if (_pauseLevel !== 'escalation') {
+          try {
+            const tokensRes = await pool.query(
+              'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL AND sub_account_id IS NULL',
+              [conversation.user_id]
             );
-          }
-        } catch(e) { console.warn('⚠️ [HANDLER] Erreur notif pause owner:', e.message); }
+            const { sendNotification } = require('./services/notifications-service');
+            for (const tok of tokensRes.rows) {
+              await sendNotification(
+                tok.fcm_token,
+                `💬 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''}`,
+                (message._rawMessage || message.message || '').substring(0, 80),
+                { type: 'new_guest_message', conversation_id: String(conversation.id) }
+              );
+            }
+          } catch(e) { console.warn('⚠️ [HANDLER] Erreur notif pause owner:', e.message); }
+        }
         return false;
       }
     } catch(e) { console.warn('⚠️ [HANDLER] Erreur vérif pause owner:', e.message); }
