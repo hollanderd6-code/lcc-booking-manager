@@ -29298,11 +29298,13 @@ app.put('/api/properties/:propertyId/quick-replies', authenticateAny, async (req
 });
 
 app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async (req, res) => {
+  console.log(`[qc-entry] convId=${req.params.convId} (type=${typeof req.params.convId}) | req.user.id=${req.user?.id} | req.user.type=${req.user?.type || 'main'} | isSubAccount=${req.user?.isSubAccount || false}`);
   try {
     const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
       : (await getUserFromRequest(req))?.id;
     const agencyIds = await getAgencyUserIds(req, userId);
+    console.log(`[qc-agency] userId=${userId} | agencyIds=${JSON.stringify(agencyIds)}`);
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const { convId } = req.params;
@@ -29320,7 +29322,11 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
       [convId, agencyIds]
     );
 
-    if (!convResult.rows.length) return res.json({ quickReplies: [], depositUrl: null });
+    if (!convResult.rows.length) {
+      console.log(`[qc-row] rows=0 | SORTIE ANTICIPÉE — conversation non trouvée ou hors périmètre | convId=${convId} | agencyIds=${JSON.stringify(agencyIds)}`);
+      return res.json({ quickReplies: [], depositUrl: null });
+    }
+    console.log(`[qc-row] rows=${convResult.rows.length} | conv trouvée=oui | conv.user_id=${convResult.rows[0].user_id} | property_id=${convResult.rows[0].property_id}`);
 
     const row = convResult.rows[0];
     let quickReplies = row.quick_replies || [];
