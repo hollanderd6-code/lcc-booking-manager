@@ -2809,6 +2809,19 @@ ON invoice_download_tokens(token);
     } catch (e) {
       console.log('ℹ️ sub_account_id cleaners déjà existante:', e.message);
     }
+    // ✅ Index unique partiel : un sous-compte cleaner ne peut être lié qu'à un
+    // seul compte ménage. Partiel (WHERE sub_account_id IS NOT NULL) pour ne
+    // pas contraindre les valeurs NULL existantes.
+    try {
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_cleaners_sub_account_id_unique
+        ON cleaners(sub_account_id)
+        WHERE sub_account_id IS NOT NULL;
+      `);
+      console.log('✅ Index unique cleaners.sub_account_id créé');
+    } catch (e) {
+      console.log('ℹ️ Index unique cleaners.sub_account_id déjà existant:', e.message);
+    }
     try {
       await pool.query(`ALTER TABLE cleaners ADD COLUMN IF NOT EXISTS sms_recap_enabled BOOLEAN NOT NULL DEFAULT FALSE`);
       console.log('✅ Colonne sms_recap_enabled ajoutée à cleaners');
@@ -15201,13 +15214,37 @@ app.get('/api/cleaning/checklists',
   loadSubAccountData(pool),
   async (req, res) => {
   try {
-    const userId = req.user.isSubAccount 
+    const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
       : (await getUserFromRequest(req))?.id;
-    
+
     if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
+
+    // Filtre cleaner : un sous-compte cleaner ne voit que ses propres checklists.
+    // Si aucune ligne cleaners n'est associée (compte créé avant la migration ou
+    // lien non défini), renvoyer 403 explicite plutôt qu'une liste vide silencieuse.
+    let cleanerIdFilter = null;
+    if (req.user.isSubAccount && req.subAccountData?.role === 'cleaner') {
+      const { rows: cr } = await pool.query(
+        'SELECT id FROM cleaners WHERE sub_account_id = $1',
+        [req.user.subAccountId]
+      );
+      if (cr.length === 0) {
+        return res.status(403).json({
+          error: 'Aucun compte ménage n\'est associé à ce sous-compte. Demandez à votre administrateur de relier votre sous-compte à un agent ménage.',
+          code: 'cleaner_not_linked'
+        });
+      }
+      cleanerIdFilter = cr[0].id;
+    }
+
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const params = [agencyIds];
+    const cleanerClause = cleanerIdFilter
+      ? (params.push(cleanerIdFilter), `AND cc.cleaner_id = $${params.length}`)
+      : '';
 
     const result = await pool.query(
       `SELECT
@@ -15270,12 +15307,12 @@ app.get('/api/cleaning/checklists',
          ORDER BY conv.id DESC
          LIMIT 1
        ) conv ON TRUE
-       WHERE cc.user_id = ANY($1::text[])
+       WHERE cc.user_id = ANY($1::text[]) ${cleanerClause}
        ORDER BY
          CASE WHEN (cc.owner_status = 'pending' OR cc.owner_status IS NULL) AND cc.completed_at IS NOT NULL THEN 0 ELSE 1 END ASC,
          cc.checkout_date DESC NULLS LAST
        LIMIT 100`,
-      [await getAgencyUserIds(req, userId)]
+      params
     );
 
     // ✅ Filtrer par propriétés si sous-compte
@@ -15329,35 +15366,59 @@ app.get('/api/cleaning/assignments',
   async (req, res) => {
   try {
     // ✅ Support des sous-comptes
-    const userId = req.user.isSubAccount 
+    const userId = req.user.isSubAccount
       ? (await getRealUserId(pool, req))
       : (await getUserFromRequest(req))?.id;
-    
+
     if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
+    // Filtre cleaner : même logique que /api/cleaning/checklists.
+    let cleanerIdFilter = null;
+    if (req.user.isSubAccount && req.subAccountData?.role === 'cleaner') {
+      const { rows: cr } = await pool.query(
+        'SELECT id FROM cleaners WHERE sub_account_id = $1',
+        [req.user.subAccountId]
+      );
+      if (cr.length === 0) {
+        return res.status(403).json({
+          error: 'Aucun compte ménage n\'est associé à ce sous-compte.',
+          code: 'cleaner_not_linked'
+        });
+      }
+      cleanerIdFilter = cr[0].id;
+    }
+
     const agencyIds = await getAgencyUserIds(req, userId);
-    
+
+    const assignParams = [agencyIds];
+    const assignClause = cleanerIdFilter
+      ? (assignParams.push(cleanerIdFilter), `AND ca.cleaner_id = $${assignParams.length}`)
+      : '';
+
     const result = await pool.query(
-      `SELECT 
+      `SELECT
         ca.*,
         c.name as cleaner_name,
         c.phone as cleaner_phone,
         c.email as cleaner_email
       FROM cleaning_assignments ca
       LEFT JOIN cleaners c ON ca.cleaner_id = c.id
-      WHERE ca.user_id = ANY($1::text[])
+      WHERE ca.user_id = ANY($1::text[]) ${assignClause}
       ORDER BY ca.created_at DESC`,
-      [agencyIds]
+      assignParams
     );
 
-    // ✅ Aussi charger les cleaners par défaut (property_default_cleaners)
-    // et les exposer comme assignations virtuelles par logement
+    // ✅ Charger les cleaners par défaut, restreints au cleaner courant si besoin
     let defaultRows = [];
     try {
+      const defaultParams = [agencyIds];
+      const defaultClause = cleanerIdFilter
+        ? (defaultParams.push(cleanerIdFilter), `AND pdc.cleaner_id = $${defaultParams.length}`)
+        : '';
       const defaultsResult = await pool.query(
-        `SELECT 
+        `SELECT
           pdc.property_id,
           pdc.cleaner_id,
           c.name as cleaner_name,
@@ -15365,8 +15426,8 @@ app.get('/api/cleaning/assignments',
           c.email as cleaner_email
         FROM property_default_cleaners pdc
         LEFT JOIN cleaners c ON c.id = pdc.cleaner_id
-        WHERE pdc.user_id = ANY($1::text[])`,
-        [agencyIds]
+        WHERE pdc.user_id = ANY($1::text[]) ${defaultClause}`,
+        defaultParams
       );
       defaultRows = defaultsResult.rows;
     } catch(e) { console.error('Erreur defaults cleaning:', e.message); }
@@ -17157,6 +17218,22 @@ app.get('/api/cleaning/stats',
         return res.status(401).json({ error: 'Non autorisé' });
       }
 
+      // Filtre cleaner : stats limitées aux checklists du cleaner concerné.
+      let cleanerIdFilter = null;
+      if (req.user.isSubAccount && req.subAccountData?.role === 'cleaner') {
+        const { rows: cr } = await pool.query(
+          'SELECT id FROM cleaners WHERE sub_account_id = $1',
+          [req.user.subAccountId]
+        );
+        if (cr.length === 0) {
+          return res.status(403).json({
+            error: 'Aucun compte ménage n\'est associé à ce sous-compte.',
+            code: 'cleaner_not_linked'
+          });
+        }
+        cleanerIdFilter = cr[0].id;
+      }
+
       const agencyIds = await getAgencyUserIds(req, userId);
       const { period, month } = req.query;
 
@@ -17172,18 +17249,25 @@ app.get('/api/cleaning/stats',
         dateFilter = `AND cc.completed_at >= NOW() - INTERVAL '365 days'`;
       }
 
+      // Paramètres et clause SQL partagés par les trois requêtes
+      const statsParams = [agencyIds];
+      const cleanerClause = cleanerIdFilter
+        ? (statsParams.push(cleanerIdFilter), `AND cc.cleaner_id = $${statsParams.length}`)
+        : '';
+
       const globalStats = await pool.query(`
-        SELECT 
+        SELECT
           COUNT(*) as total_checklists,
           COUNT(CASE WHEN owner_status = 'validated' THEN 1 END) as validated,
           COUNT(CASE WHEN owner_status = 'pending' THEN 1 END) as pending,
           COUNT(CASE WHEN owner_status = 'rejected' THEN 1 END) as rejected
         FROM cleaning_checklists cc
-        WHERE cc.user_id = ANY($1::text[]) ${dateFilter}
-      `, [agencyIds]);
+        WHERE cc.user_id = ANY($1::text[]) ${cleanerClause} ${dateFilter}
+      `, statsParams);
 
-      const cleanerStats = await pool.query(`
-        SELECT 
+      // byCleaner : omis pour un cleaner (il ne doit pas voir les volumes de ses collègues)
+      const cleanerStats = cleanerIdFilter ? null : await pool.query(`
+        SELECT
           c.id as cleaner_id,
           c.name as cleaner_name,
           COUNT(cc.id) as total,
@@ -17197,16 +17281,17 @@ app.get('/api/cleaning/stats',
         ORDER BY total DESC
       `, [agencyIds]);
 
+      // byProperty calculé après le filtre cleaner — ne révèle que ses logements
       const propertyStats = await pool.query(`
-        SELECT 
+        SELECT
           cc.property_id,
           COUNT(cc.id) as total,
           MAX(cc.completed_at) as last_completed_at
         FROM cleaning_checklists cc
-        WHERE cc.user_id = ANY($1::text[]) ${dateFilter}
+        WHERE cc.user_id = ANY($1::text[]) ${cleanerClause} ${dateFilter}
         GROUP BY cc.property_id
         ORDER BY total DESC
-      `, [agencyIds]);
+      `, statsParams);
 
       const enrichedPropertyStats = propertyStats.rows.map(row => {
         const property = PROPERTIES.find(p => p.id === row.property_id);
@@ -17227,13 +17312,100 @@ app.get('/api/cleaning/stats',
           rejected: parseInt(global.rejected) || 0,
           validationRate: global.total_checklists > 0
             ? Math.round((global.validated / global.total_checklists) * 100) : 0,
-          byCleaner: cleanerStats.rows,
+          byCleaner: cleanerStats ? cleanerStats.rows : undefined,
           byProperty: enrichedPropertyStats
         }
       });
 
     } catch (err) {
       console.error('Erreur GET /api/cleaning/stats :', err);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
+// ============================================
+// GET /api/cleaning/property-names
+// Renvoie { properties: [{ id, name, internal_name, arrival_time, departure_time, color }] }
+// pour les logements où le cleaner a au moins un ménage.
+// Accessible avec can_view_cleaning uniquement (pas can_view_properties) : un cleaner
+// a besoin des noms pour afficher ses cartes mais pas de la fiche complète.
+// ============================================
+app.get('/api/cleaning/property-names',
+  authenticateAny,
+  requirePermission(pool, 'can_view_cleaning'),
+  loadSubAccountData(pool),
+  async (req, res) => {
+    try {
+      const userId = req.user.isSubAccount
+        ? (await getRealUserId(pool, req))
+        : (await getUserFromRequest(req))?.id;
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+      let cleanerIdFilter = null;
+      if (req.user.isSubAccount && req.subAccountData?.role === 'cleaner') {
+        const { rows: cr } = await pool.query(
+          'SELECT id FROM cleaners WHERE sub_account_id = $1',
+          [req.user.subAccountId]
+        );
+        if (cr.length === 0) {
+          return res.status(403).json({
+            error: 'Aucun compte ménage n\'est associé à ce sous-compte.',
+            code: 'cleaner_not_linked'
+          });
+        }
+        cleanerIdFilter = cr[0].id;
+      }
+
+      const agencyIds = await getAgencyUserIds(req, userId);
+
+      let query, params;
+      if (cleanerIdFilter) {
+        // Logements où ce cleaner a au moins une assignation ou une checklist
+        query = `
+          SELECT DISTINCT p.id, p.name, p.internal_name, p.arrival_time, p.departure_time, p.color
+          FROM properties p
+          WHERE p.user_id = ANY($1::text[])
+            AND (
+              EXISTS (
+                SELECT 1 FROM cleaning_checklists cc
+                WHERE cc.property_id = p.id AND cc.cleaner_id = $2
+              )
+              OR EXISTS (
+                SELECT 1 FROM cleaning_assignments ca
+                WHERE ca.property_id = p.id AND ca.cleaner_id = $2
+              )
+              OR EXISTS (
+                SELECT 1 FROM property_default_cleaners pdc
+                WHERE pdc.property_id = p.id AND pdc.cleaner_id = $2
+              )
+            )
+          ORDER BY p.name
+        `;
+        params = [agencyIds, cleanerIdFilter];
+      } else {
+        query = `
+          SELECT id, name, internal_name, arrival_time, departure_time, color
+          FROM properties
+          WHERE user_id = ANY($1::text[])
+          ORDER BY name
+        `;
+        params = [agencyIds];
+      }
+
+      const { rows } = await pool.query(query, params);
+      res.json({
+        properties: rows.map(p => ({
+          id:            p.id,
+          name:          p.internal_name || p.name,
+          internal_name: p.internal_name || null,
+          arrival_time:  p.arrival_time  || null,
+          departure_time:p.departure_time|| null,
+          color:         p.color         || null,
+        }))
+      });
+    } catch (err) {
+      console.error('Erreur GET /api/cleaning/property-names :', err);
       res.status(500).json({ error: 'Erreur serveur' });
     }
   }

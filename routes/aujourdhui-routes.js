@@ -37,7 +37,7 @@ module.exports = function setupAujourdhuiRoutes(app, pool, authenticateAny, chec
   app.get('/api/aujourdhui/etats',
     authenticateAny,
     checkSubscription,
-    requirePermission(pool, 'can_view_reservations'),
+    requirePermission(pool, 'can_view_calendar'),
     loadSubAccountData(pool),
     async (req, res) => {
       try {
@@ -117,13 +117,24 @@ module.exports = function setupAujourdhuiRoutes(app, pool, authenticateAny, chec
         // Filtrage sous-compte : ne renvoyer que les logements accessibles
         const visibles = filterByAccessibleProperties(rows, req);
 
+        // Un cleaner a can_view_calendar=true (accès à son planning) mais ne
+        // doit jamais recevoir nom, téléphone, plateforme ni durée de séjour.
+        const isCleaner = req.user.isSubAccount && req.subAccountData?.role === 'cleaner';
+
         // Un séjour d'une nuit arrive et part le même jour : il doit
         // apparaître dans les deux listes, pas dans une seule.
         const arrivees = [];
         const departs  = [];
 
         for (const r of visibles) {
-          const base = {
+          // Champs PII uniquement pour les non-cleaners — filtrage côté serveur,
+          // les champs absents ne voyagent pas dans la réponse HTTP.
+          const base = isCleaner ? {
+            reservation_uid:   r.uid,
+            property_id:       r.property_id,
+            property_name:     r.property_label,
+            status:            r.status || null,
+          } : {
             reservation_uid:   r.uid,
             conversation_id:   r.conversation_id || null,
             property_id:       r.property_id,
@@ -141,13 +152,12 @@ module.exports = function setupAujourdhuiRoutes(app, pool, authenticateAny, chec
             ai_disabled:       r.ai_disabled === true
           };
 
-          // Ce qui bloque réellement, et rien d'inventé : on ne signale
-          // que ce dont on a la preuve en base.
+          // blocking : code d'accès manquant visible du cleaner, PII exclus.
           const blocking = [];
-          if (!r.conversation_id)   blocking.push('pas_de_conversation');
-          if (r.escalated === true) blocking.push('ia_a_passe_la_main');
-          if (r.unread_count > 0)   blocking.push('message_non_lu');
-          if (!r.access_code)       blocking.push('code_acces_manquant');
+          if (!isCleaner && !r.conversation_id)   blocking.push('pas_de_conversation');
+          if (!isCleaner && r.escalated === true)  blocking.push('ia_a_passe_la_main');
+          if (!isCleaner && r.unread_count > 0)    blocking.push('message_non_lu');
+          if (!r.access_code)                      blocking.push('code_acces_manquant');
           if (['hold', 'pending_approval'].includes(r.status)) blocking.push('reservation_non_confirmee');
 
           if (r.start_date === jour) {

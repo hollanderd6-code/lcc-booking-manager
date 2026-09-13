@@ -124,9 +124,16 @@ function requirePermission(pool, permission) {
       const permissions = rows[0];
       
       // 🔧 Mapping des permissions (frontend → DB)
+      //
+      // IMPORTANT : 'can_view_reservations' n'est plus un alias de 'can_view_calendar'.
+      // L'alias accordait l'accès aux données voyageurs à tout compte ayant
+      // can_view_calendar=true, y compris les cleaners. La seule route qui
+      // utilisait cet alias (/api/aujourdhui/etats) a été migrée vers
+      // requirePermission('can_view_calendar') avec projection des champs PII
+      // côté cleaner. Tout futur code qui passerait 'can_view_reservations' à
+      // requirePermission tombera sur la colonne DB du même nom (inexistante) et
+      // renverra 403 — comportement sûr par défaut.
       const permissionMapping = {
-        // Calendrier & Réservations (existant)
-        'can_view_reservations': 'can_view_calendar',
         'can_manage_cleaning': 'can_assign_cleaning',
         
         // Messages

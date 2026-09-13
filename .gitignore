@@ -30,6 +30,11 @@ boostinghost-poc/node_modules/
 # ── Environnement ──
 .env
 .env.local
+
+# ── Scripts de test avec credentials — ne jamais versionner ──
+outils/test-cleaner-security.sh
+outils/*.secrets.env
+outils/.secrets.env
 .corbeille-lot5/
 *.bak
 server.js.avant-comptes-geres
