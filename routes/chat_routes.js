@@ -344,11 +344,17 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
         FROM conversations c
         LEFT JOIN properties p ON c.property_id = p.id
         LEFT JOIN reservations r ON (
-          (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+          (c.reservation_uid IS NOT NULL AND r.uid = c.reservation_uid)
+          OR (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
           OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
-              AND DATE(r.start_date) = DATE(c.reservation_start_date))
+              AND DATE(r.start_date) = DATE(c.reservation_start_date)
+              AND r.status != 'cancelled')
         )
         WHERE c.user_id = ANY($1::text[])
+          AND NOT (
+            COALESCE(r.reservation_type, '') = 'block'
+            OR c.guest_name ~* '(not[[:space:]]*available|closed|indisponible|blocage|unavailable|blocked)'
+          )
       `;
 
       const params = [agencyIds];
@@ -457,9 +463,11 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
           FROM conversations c
           LEFT JOIN properties p ON c.property_id = p.id
           LEFT JOIN reservations r ON (
-            (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+            (c.reservation_uid IS NOT NULL AND r.uid = c.reservation_uid)
+            OR (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
             OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
-                AND DATE(r.start_date) = DATE(c.reservation_start_date))
+                AND DATE(r.start_date) = DATE(c.reservation_start_date)
+                AND r.status != 'cancelled')
           )
           WHERE c.id = $1 AND c.user_id = ANY($2::text[])
           ORDER BY c.id, last_message_time DESC NULLS LAST, c.created_at DESC

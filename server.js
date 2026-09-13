@@ -40918,6 +40918,23 @@ app.post('/api/channex/webhook', async (req, res) => {
           const guestName  = [guest.name, guest.surname].filter(Boolean).join(' ') || 'Voyageur';
           const guestFirst = guest.name || guestName.split(' ')[0] || '';
 
+          // Détection blocage OTA — deux signaux concordants requis
+          const blockNameRx = /not\s*available|closed|indisponible|blocage|unavailable|blocked/i;
+          const nameIsBlock = blockNameRx.test(guestName);
+          const amountIsZero = parseFloat(result.amount_total || 0) === 0;
+          if (nameIsBlock && amountIsZero) {
+            console.log(`🚫 [CHANNEX] Blocage OTA (${guestName}, amount=0) — conversation non créée`);
+            if (result.channex_booking_id) {
+              await pool.query(
+                `UPDATE reservations SET reservation_type = 'block' WHERE channex_booking_id = $1`,
+                [result.channex_booking_id]
+              );
+            }
+          } else {
+            if (nameIsBlock || amountIsZero) {
+              console.warn(`⚠️ [CHANNEX] Signal ambigu (nom="${guestName}", amount=${result.amount_total}) — conv créée par précaution`);
+            }
+
           // 1. Chercher une conversation existante
           let convId = null;
           // Ne réutiliser une conv existante que si le channex_booking_id correspond exactement
@@ -41048,6 +41065,7 @@ app.post('/api/channex/webhook', async (req, res) => {
               console.warn('⚠️ [CHANNEX] Erreur injection demande spéciale:', noteErr.message);
             }
           }
+          } // end else (!isBlockBooking)
 
         } catch (confirmErr) {
           console.error('⚠️ [CHANNEX WEBHOOK] Erreur conversation/message:', confirmErr.message);
@@ -42656,6 +42674,20 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
           );
           const resa = resaRow.rows[0];
           if (resa) {
+            // Détection blocage OTA — deux signaux concordants requis
+            const blockNameRxS = /not\s*available|closed|indisponible|blocage|unavailable|blocked/i;
+            const nameIsBlockS = blockNameRxS.test(guestName);
+            const amountIsZeroS = parseFloat(resa.amount_total || 0) === 0;
+            if (nameIsBlockS && amountIsZeroS) {
+              console.log(`🚫 [CHANNEX SYNC] Blocage OTA (${guestName}, amount=0) — conversation non créée`);
+              await pool.query(
+                `UPDATE reservations SET reservation_type = 'block' WHERE channex_booking_id = $1`,
+                [booking_id]
+              );
+            } else {
+              if (nameIsBlockS || amountIsZeroS) {
+                console.warn(`⚠️ [CHANNEX SYNC] Signal ambigu (nom="${guestName}", amount=${resa.amount_total}) — conv créée par précaution`);
+              }
             // Chercher conversation existante
             const existingConv = await pool.query(
               `SELECT id FROM conversations
@@ -42698,6 +42730,7 @@ app.post('/api/channex/sync-bookings/:property_id', authenticateToken, async (re
               convId = convResult.rows[0].id;
               console.log(`✅ [CHANNEX SYNC] Conversation créée: ${convId}`);
             }
+            } // end else (!isBlockBooking)
           }
         } catch (convErr) {
           console.warn(`⚠️ [CHANNEX SYNC] Erreur conversation booking ${booking_id}:`, convErr.message);
