@@ -2451,8 +2451,27 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         titleEl.textContent = guestName;
       }
 
-      // 1. Afficher le panel inline (rend #chatMessages visible)
+      // 1. Afficher le panel inline immédiatement avec les données en mémoire
       showInlineChat(conv || { id: conversationId });
+
+      // Rafraîchir depuis le serveur en arrière-plan : corrige les notes périmées
+      // (cas typique : note écrite depuis la page Détail de réservation, puis
+      // retour sur Messages — allConversations n'a pas été mis à jour).
+      var _refreshToken = localStorage.getItem('lcc_token');
+      fetch('/api/chat/conversations/' + conversationId, {
+        headers: { 'Authorization': 'Bearer ' + _refreshToken }
+      }).then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(fresh) {
+          if (!fresh) return;
+          // Mettre à jour allConversations pour les accès suivants
+          var _list = window.allConversations || [];
+          var _idx = _list.findIndex(function(c) { return String(c.id) === String(conversationId); });
+          if (_idx !== -1) _list[_idx] = fresh;
+          // Si c'est toujours la même conv active, corriger le badge et l'en-tête
+          if (String(window.currentConversationId) === String(conversationId)) {
+            showInlineChat(fresh);
+          }
+        }).catch(function() {});
 
       // 2. Charger et afficher les messages directement
       var token = localStorage.getItem('lcc_token');

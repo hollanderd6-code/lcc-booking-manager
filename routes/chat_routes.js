@@ -402,6 +402,97 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
     }
   });
 
+  // ── GET /api/chat/conversations/:convId ──────────────────────────────────
+  // Retourne une seule conversation avec le même shape que la liste — utilisé
+  // par messages.html pour rafraîchir les données en mémoire à l'ouverture
+  // (note interne, badge, etc.) sans attendre le prochain loadConversations().
+  app.get('/api/chat/conversations/:convId',
+    authenticateToken,
+    checkSubscription,
+    requirePermission(pool, 'can_view_conversations'),
+    loadSubAccountData(pool),
+    async (req, res) => {
+      try {
+        const userId = await getRealUserId(pool, req);
+        let agencyIds;
+        try {
+          const delegations = await pool.query(
+            `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+            [userId]
+          );
+          agencyIds = [userId, ...delegations.rows.map(d => d.delegator_user_id)];
+        } catch(e) {
+          agencyIds = [userId];
+        }
+        const { convId } = req.params;
+
+        const result = await pool.query(`
+          SELECT DISTINCT ON (c.id)
+            c.*,
+            (c.owner_suggestion IS NOT NULL AND c.owner_suggestion <> ''
+             AND c.owner_suggestion_status = 'pending') AS has_suggestion,
+            c.guest_first_name,
+            c.guest_last_name,
+            c.guest_phone,
+            p.name as property_name,
+            p.color as property_color,
+            r.guest_country,
+            r.guest_language,
+            r.guest_city,
+            r.occupancy_adults,
+            r.occupancy_children,
+            r.amount_total,
+            r.amount_rooms,
+            r.amount_taxes,
+            r.amount_cleaning,
+            r.ota_commission,
+            r.host_payout,
+            r.days_breakdown,
+            r.currency,
+            r.uid,
+            r.notes,
+            (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id AND is_read = FALSE AND sender_type = 'guest') as unread_count,
+            (SELECT message   FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
+            (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_time
+          FROM conversations c
+          LEFT JOIN properties p ON c.property_id = p.id
+          LEFT JOIN reservations r ON (
+            (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+            OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
+                AND DATE(r.start_date) = DATE(c.reservation_start_date))
+          )
+          WHERE c.id = $1 AND c.user_id = ANY($2::text[])
+          ORDER BY c.id, last_message_time DESC NULLS LAST, c.created_at DESC
+          LIMIT 1
+        `, [convId, agencyIds]);
+
+        if (!result.rows.length) {
+          return res.status(404).json({ error: 'Conversation non trouvée' });
+        }
+
+        const conv = result.rows[0];
+        res.json({
+          ...conv,
+          guest_display_name: conv.guest_first_name
+            ? `${conv.guest_first_name} ${conv.guest_last_name || ''}`.trim()
+            : conv.guest_name || `Voyageur ${conv.platform || 'Booking'}`,
+          guest_initial: conv.guest_first_name
+            ? conv.guest_first_name.charAt(0).toUpperCase()
+            : (conv.guest_name ? conv.guest_name.charAt(0).toUpperCase() : 'V'),
+          amount_total:    conv.amount_total    ? parseFloat(conv.amount_total)    : null,
+          amount_rooms:    conv.amount_rooms    ? parseFloat(conv.amount_rooms)    : null,
+          amount_taxes:    conv.amount_taxes    ? parseFloat(conv.amount_taxes)    : null,
+          amount_cleaning: conv.amount_cleaning ? parseFloat(conv.amount_cleaning) : null,
+          ota_commission:  conv.ota_commission  ? parseFloat(conv.ota_commission)  : null,
+          host_payout:     conv.host_payout     ? parseFloat(conv.host_payout)     : null,
+        });
+      } catch (error) {
+        console.error('❌ Erreur GET /api/chat/conversations/:convId:', error);
+        res.status(500).json({ error: 'Erreur serveur' });
+      }
+    }
+  );
+
   // ============================================
   // 3. VÉRIFICATION ET ACCÈS AU CHAT (VOYAGEUR)
   // ============================================
