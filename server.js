@@ -3206,6 +3206,7 @@ ON invoice_download_tokens(token);
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS amount_taxes NUMERIC(10,2);
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS amount_cleaning NUMERIC(10,2);
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ota_commission NUMERIC(10,2);
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ota_notes TEXT;
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS days_breakdown JSONB;
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS services_raw JSONB;
         ALTER TABLE reservations ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'EUR';
@@ -9619,6 +9620,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           r.end_date,
           r.ota_name,
           r.notes,
+          r.ota_notes,
           r.created_at,
           c.onboarding_completed,
           c.id as conversation_id,
@@ -9751,6 +9753,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
             ? dbData.guest_first_name.charAt(0).toUpperCase()
             : null,
           notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null,
+          ota_notes: dbData.ota_notes || null,
           createdAt: dbData.created_at ? new Date(dbData.created_at).toISOString() : null,
           payments: dbData.payments || []
         };
@@ -9795,6 +9798,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
               ota_commission:  dbData.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
               currency:        dbData.currency        || 'EUR',
               notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null,
+              ota_notes: dbData.ota_notes || null,
               onboarding_completed: dbData.onboarding_completed || false,
               createdAt: dbData.created_at ? new Date(dbData.created_at).toISOString() : null,
               guest_display_name: dbData.guest_first_name
@@ -9862,6 +9866,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
             guest_initial: dbData.guest_first_name
               ? dbData.guest_first_name.charAt(0).toUpperCase() : null,
             notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null,
+            ota_notes: dbData.ota_notes || null,
             createdAt: dbData.created_at ? new Date(dbData.created_at).toISOString() : null
           });
           storeUids.add(dbData.uid);

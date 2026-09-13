@@ -896,7 +896,7 @@ async function processChannexBooking(pool, bookingData) {
             currency            = $27,
             host_payout         = $28,
             airbnb_data         = $29,
-            notes               = COALESCE($30, notes),
+            ota_notes           = COALESCE($30, ota_notes),
             status              = $31,
             updated_at          = NOW()
            WHERE id = $32`,
@@ -969,7 +969,7 @@ async function processChannexBooking(pool, bookingData) {
           amount_cleaning = $15, ota_commission = $16,
           days_breakdown = $17, services_raw = $18,
           currency = $19, host_payout = $20, airbnb_data = $21,
-          notes = COALESCE($22, notes),
+          ota_notes = COALESCE($22, ota_notes),
           status = CASE WHEN status = 'cancelled' THEN 'confirmed' ELSE status END,
           updated_at = NOW()
          WHERE channex_booking_id = $23`,
@@ -1009,7 +1009,7 @@ async function processChannexBooking(pool, bookingData) {
          host_payout, airbnb_data,
          platform, source, status,
          channex_booking_id, channex_revision_id, ota_name, ota_reservation_id,
-         notes)
+         ota_notes)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35)
        RETURNING *`,
       [
