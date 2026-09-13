@@ -9248,11 +9248,23 @@ app.put('/api/reservations/manual/:uid', authenticateAny, async (req, res) => {
 // Sauvegarde la note interne d'une réservation (toutes sources).
 // Si notes est vide/null → stocke NULL en base (suppression).
 // ─────────────────────────────────────────────────────────────
-app.patch('/api/reservations/:uid/note', authenticateToken, async (req, res) => {
+app.patch('/api/reservations/:uid/note', authenticateAny, async (req, res) => {
   try {
+    if (req.user.isSubAccount) {
+      return res.status(403).json({ error: 'Réservé aux comptes principaux' });
+    }
     const { uid } = req.params;
     const userId = req.user.id;
-    const agencyIds = await getAgencyUserIds(req, userId);
+    let agencyIds;
+    try {
+      const delegations = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [userId]
+      );
+      agencyIds = [userId, ...delegations.rows.map(d => d.delegator_user_id)];
+    } catch(e) {
+      agencyIds = [userId];
+    }
     const rawNote = (req.body.notes || '').trim();
     // Stocker NULL si la note est vide (suppression propre)
     const noteToStore = rawNote.length > 0 ? rawNote : null;
@@ -10328,18 +10340,26 @@ app.delete('/api/bookings/:uid', authenticateAny, checkSubscription, async (req,
 });
 
 // POST - Créer un blocage manuel (dates bloquées)
-app.post('/api/blocks', async (req, res) => {
+app.post('/api/blocks', authenticateAny, async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Non autorisé' });
+    if (req.user.isSubAccount) {
+      return res.status(403).json({ error: 'Réservé aux comptes principaux' });
     }
+    const userId = req.user.id;
     const { propertyId, start, end, reason } = req.body || {};
     if (!propertyId || !start || !end) {
       return res.status(400).json({ error: 'propertyId, start et end sont requis' });
     }
-    // Mode agence : autoriser aussi les logements des comptes délégués
-    const agencyIds = await getAgencyUserIds(req, user.id);
+    let agencyIds;
+    try {
+      const delegations = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [userId]
+      );
+      agencyIds = [userId, ...delegations.rows.map(d => d.delegator_user_id)];
+    } catch(e) {
+      agencyIds = [userId];
+    }
     const property = PROPERTIES.find(p => p.id === propertyId && agencyIds.includes(p.userId));
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
@@ -10417,7 +10437,7 @@ app.post('/api/blocks', async (req, res) => {
 
     // ✅ Notifier le front via Socket.io pour rafraîchissement immédiat du calendrier
     if (io) {
-      io.to('user_' + user.id).emit('calendar:block_added', {
+      io.to('user_' + userId).emit('calendar:block_added', {
         block,
         propertyId
       });
@@ -10433,7 +10453,7 @@ app.post('/api/blocks', async (req, res) => {
       await triggerChannexAvailabilitySync(propertyId);
       // Notifier le front que le store est à jour (évite double action)
       if (io) {
-        io.to('user_' + user.id).emit('reservations:updated', { propertyId });
+        io.to('user_' + userId).emit('reservations:updated', { propertyId });
       }
     });
 
@@ -18180,12 +18200,22 @@ app.post('/api/pricing/overrides/batch', authenticateAny, requirePermission(pool
 // DELETE /api/blocks/:id — Suppression d'un blocage par ID
 app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (req.user.isSubAccount) {
+      return res.status(403).json({ error: 'Réservé aux comptes principaux' });
+    }
+    const userId = req.user.id;
     const id = decodeURIComponent(req.params.id);
-    console.log(`🔓 DELETE /api/blocks/${id} user=${user.id}`);
-    // Mode agence : autoriser la suppression des blocages des comptes délégués
-    const agencyIdsForBlock = await getAgencyUserIds(req, user.id);
+    console.log(`🔓 DELETE /api/blocks/${id} user=${userId}`);
+    let agencyIdsForBlock;
+    try {
+      const delegations = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [userId]
+      );
+      agencyIdsForBlock = [userId, ...delegations.rows.map(d => d.delegator_user_id)];
+    } catch(e) {
+      agencyIdsForBlock = [userId];
+    }
     // Supprimer par id numérique OU par uid (ex: block_1746123456789)
     const result = await pool.query(
       `DELETE FROM reservations 
@@ -18212,7 +18242,7 @@ app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
 
     // ✅ Notifier le front via Socket.io pour rafraîchissement immédiat du calendrier
     if (io) {
-      io.to('user_' + user.id).emit('calendar:block_removed', { uid: row.uid, propertyId: pid });
+      io.to('user_' + userId).emit('calendar:block_removed', { uid: row.uid, propertyId: pid });
     }
 
     res.json({ success: true, deleted: row.id });
@@ -18229,7 +18259,7 @@ app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
         await triggerChannexAvailabilitySync(pid, targetDates.length > 0 ? targetDates : null);
         syncAllCalendars();
         if (io) {
-          io.to('user_' + user.id).emit('reservations:updated', { propertyId: pid });
+          io.to('user_' + userId).emit('reservations:updated', { propertyId: pid });
         }
       } catch (bgErr) {
         console.error('⚠️ Sync Channex après suppression bloc:', bgErr.message);
@@ -18243,10 +18273,12 @@ app.delete('/api/blocks/:id', authenticateAny, async (req, res) => {
 });
 
 // POST /api/blocks/batch — Édition groupée blocage
-app.post('/api/blocks/batch', async (req, res) => {
+app.post('/api/blocks/batch', authenticateAny, async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (req.user.isSubAccount) {
+      return res.status(403).json({ error: 'Réservé aux comptes principaux' });
+    }
+    const userId = req.user.id;
 
     const { property_ids, date_from, date_to, reason, action, weekdays } = req.body;
     // action = 'block' ou 'unblock'
@@ -18256,7 +18288,16 @@ app.post('/api/blocks/batch', async (req, res) => {
       return res.status(400).json({ error: 'property_ids, date_from et date_to sont requis' });
     }
 
-    const agencyIds = await getAgencyUserIds(req, user.id);
+    let agencyIds;
+    try {
+      const delegations = await pool.query(
+        `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
+        [userId]
+      );
+      agencyIds = [userId, ...delegations.rows.map(d => d.delegator_user_id)];
+    } catch(e) {
+      agencyIds = [userId];
+    }
     const propCheck = await pool.query(
       'SELECT id, user_id FROM properties WHERE id = ANY($1) AND user_id = ANY($2)',
       [property_ids, agencyIds]
@@ -18324,10 +18365,10 @@ app.post('/api/blocks/batch', async (req, res) => {
     // ✅ Notifier le front + sync Channex en arrière-plan
     if (io) {
       for (const property_id of property_ids) {
-        io.to('user_' + user.id).emit('reservations:updated', { propertyId: property_id });
+        io.to('user_' + userId).emit('reservations:updated', { propertyId: property_id });
         // Pour un unblock, émettre aussi block_removed avec uid générique pour forcer le refresh calendrier
         if (action === 'unblock') {
-          io.to('user_' + user.id).emit('calendar:block_removed', { uid: null, propertyId: property_id });
+          io.to('user_' + userId).emit('calendar:block_removed', { uid: null, propertyId: property_id });
         }
       }
     }
