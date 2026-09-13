@@ -134,6 +134,8 @@ module.exports = function setupAujourdhuiRoutes(app, pool, authenticateAny, chec
             property_id:       r.property_id,
             property_name:     r.property_label,
             status:            r.status || null,
+            guest_name:        r.guest_name || 'Voyageur',
+            platform:          r.platform,
           } : {
             reservation_uid:   r.uid,
             conversation_id:   r.conversation_id || null,
