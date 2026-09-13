@@ -6416,6 +6416,7 @@ function publicUser(user) {
 }
 
 // Cherche l'utilisateur en base à partir du token dans Authorization: Bearer
+// Pour un JWT sous-compte, résout et retourne l'utilisateur parent.
 async function getUserFromRequest(req) {
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
@@ -6425,17 +6426,29 @@ async function getUserFromRequest(req) {
     const secret = process.env.JWT_SECRET || 'dev-secret-change-me';
     const payload = jwt.verify(token, secret);
 
+    let userId;
+    if (payload.type === 'sub_account') {
+      const subResult = await pool.query(
+        'SELECT parent_user_id FROM sub_accounts WHERE id = $1',
+        [payload.subAccountId]
+      );
+      if (subResult.rows.length === 0) return null;
+      userId = subResult.rows[0].parent_user_id;
+    } else {
+      userId = payload.id;
+    }
+
     const result = await pool.query(
       `SELECT id, company, first_name, last_name, email, password_hash, created_at, stripe_account_id, logo_url
        FROM users
        WHERE id = $1`,
-      [payload.id]
+      [userId]
     );
 
     if (result.rows.length === 0) return null;
 
     const row = result.rows[0];
-    const user = {
+    return {
       id: row.id,
       company: row.company,
       firstName: row.first_name,
@@ -6443,12 +6456,10 @@ async function getUserFromRequest(req) {
       email: row.email,
       passwordHash: row.password_hash,
       createdAt: row.created_at,
-       stripeAccountId: row.stripe_account_id,
-       logoUrl: row.logo_url || null,
-       isExternalHost: row.is_external_host === true
+      stripeAccountId: row.stripe_account_id,
+      logoUrl: row.logo_url || null,
+      isExternalHost: row.is_external_host === true
     };
-
-    return user;
   } catch (err) {
     return null;
   }
@@ -10769,8 +10780,9 @@ async function uploadPhotoToCloudinary(file) {
 // ============================================
 // À ajouter dans server.js après les routes existantes
 
-app.get('/api/user/profile', async (req, res) => {
+app.get('/api/user/profile', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
@@ -10838,6 +10850,7 @@ app.get('/api/user/profile', async (req, res) => {
 // PATCH - Mettre à jour use_bh_stripe uniquement
 app.patch('/api/user/profile', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
@@ -10859,8 +10872,9 @@ app.patch('/api/user/profile', authenticateAny, async (req, res) => {
 });
 
 // PUT - Mettre à jour le profil complet de l'utilisateur
-app.put('/api/user/profile', upload.single('logo'), async (req, res) => {
+app.put('/api/user/profile', authenticateAny, upload.single('logo'), async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
@@ -11193,6 +11207,7 @@ app.get('/api/sms/logs', authenticateAny, async (req, res) => {
 // ============================================
 app.post('/api/billing/sms/subscribe', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
     if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
@@ -11275,6 +11290,7 @@ app.post('/api/billing/sms/subscribe', authenticateAny, async (req, res) => {
 // ============================================
 app.delete('/api/billing/sms/unsubscribe', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
     if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
@@ -11317,6 +11333,7 @@ app.delete('/api/billing/sms/unsubscribe', authenticateAny, async (req, res) => 
 // ============================================
 app.post('/api/billing/droits/subscribe', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
     if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
@@ -11370,6 +11387,7 @@ app.post('/api/billing/droits/subscribe', authenticateAny, async (req, res) => {
 // DELETE /api/billing/droits/unsubscribe
 app.delete('/api/billing/droits/unsubscribe', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
     if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
@@ -11402,6 +11420,7 @@ app.delete('/api/billing/droits/unsubscribe', authenticateAny, async (req, res) 
 // GET /api/billing/droits/status
 app.get('/api/billing/droits/status', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
@@ -12358,7 +12377,8 @@ app.post('/api/checklists/:reservationUid/complete', authenticateAny, checkSubsc
 // ROUTES API - PARAMÈTRES NOTIFICATIONS (par user)
 // ============================================
 
-app.get('/api/settings/notifications', async (req, res) => {
+app.get('/api/settings/notifications', authenticateAny, async (req, res) => {
+  if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
   const user = await getUserFromRequest(req);
   if (!user) {
     return res.status(401).json({ error: 'Non autorisé' });
@@ -12373,7 +12393,8 @@ app.get('/api/settings/notifications', async (req, res) => {
   }
 });
 
-app.post('/api/settings/notifications', async (req, res) => {
+app.post('/api/settings/notifications', authenticateAny, async (req, res) => {
+  if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
   const user = await getUserFromRequest(req);
   if (!user) {
     return res.status(401).json({ error: 'Non autorisé' });
@@ -15262,15 +15283,18 @@ app.get('/api/cleaning/checklists',
       ? result.rows.filter(c => req.subAccountData.accessible_property_ids.includes(c.property_id))
       : result.rows;
 
-    // ✅ Enrichir avec les noms de voyageurs depuis reservationsStore
+    // ✅ Enrichir avec property_name et noms de voyageurs depuis reservationsStore
     const enrichedChecklists = filteredChecklists.map(cl => {
+      const property = PROPERTIES.find(p => p.id === cl.property_id);
+      cl.property_name = property ? (property.internal_name || property.name) : 'Logement inconnu';
+
       // Si guest_name déjà rempli, on garde
       if (cl.guest_name && cl.guest_name.trim() !== '') return cl;
 
       // Chercher la réservation correspondante dans le store
       const propertyReservations = reservationsStore.properties[cl.property_id] || [];
       const checkoutStr = cl.checkout_date ? String(cl.checkout_date).slice(0, 10) : '';
-      
+
       const match = propertyReservations.find(r => {
         const rEnd = String(r.end || '').slice(0, 10);
         return rEnd === checkoutStr;
@@ -15377,6 +15401,7 @@ app.get('/api/cleaning/assignments',
         if (specificKeys.has(key)) continue; // déjà une assignation spécifique
         const def = defaultRows.find(d => String(d.property_id) === String(resa.property_id));
         if (!def) continue;
+        const vProp = PROPERTIES.find(p => p.id === resa.property_id);
         virtualAssignments.push({
           reservation_key: key,
           property_id: resa.property_id,
@@ -15384,6 +15409,8 @@ app.get('/api/cleaning/assignments',
           cleaner_name: def.cleaner_name,
           cleaner_phone: def.cleaner_phone,
           cleaner_email: def.cleaner_email,
+          property_name: vProp ? (vProp.internal_name || vProp.name) : 'Logement inconnu',
+          property_color: vProp?.color || '#999999',
           is_default: true
         });
       }
@@ -24155,8 +24182,9 @@ app.post('/api/reservations/:reservationUid/generate-checklists', async (req, re
 // ============================================
 
 // GET - Vérifier si un downgrade vers un plan est possible (nombre de logements)
-app.get('/api/billing/check-downgrade', async (req, res) => {
+app.get('/api/billing/check-downgrade', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
@@ -24203,8 +24231,9 @@ app.get('/api/billing/check-downgrade', async (req, res) => {
 });
 
 // POST - Créer un lien vers le portail client Stripe
-app.post('/api/billing/create-portal-session', async (req, res) => {
+app.post('/api/billing/create-portal-session', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ error: 'Non autorise' });
@@ -28478,8 +28507,9 @@ function calculateTotalCost(plan, propertyCount) {
 // POST /api/billing/create-checkout-session
 // Créer une session de paiement Stripe
 // ============================================
-app.post('/api/billing/create-checkout-session', async (req, res) => {
+app.post('/api/billing/create-checkout-session', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ error: 'Non autorisé' });
@@ -41829,6 +41859,7 @@ app.get('/c/:code', async (req, res) => {
 // ── POST envoyer un message vers la plateforme via Channex ────
 app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
@@ -41945,6 +41976,7 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
 // ── POST /api/chat/conversations/:id/send-sms — Envoyer un message via SMS ──
 app.post('/api/chat/conversations/:conversationId/send-sms', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     const agencyIds = await getAgencyUserIds(req, user.id);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
@@ -42155,6 +42187,7 @@ app.get('/api/properties/:id/upsell', authenticateAny, async (req, res) => {
 // PUT — enregistrer la config upsell d'un logement
 app.put('/api/properties/:id/upsell', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
     const ids = await getAgencyUserIds(req, user.id);
@@ -42525,6 +42558,7 @@ app.post('/api/channex/sync-revisions/:property_id', authenticateToken, async (r
 // ── Push disponibilités complet (toutes dates ouvertes sauf réservations existantes) ──
 app.post('/api/channex/push-availability/:property_id', authenticateAny, async (req, res) => {
   try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non authentifié' });
 
