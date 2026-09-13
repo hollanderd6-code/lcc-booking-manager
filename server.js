@@ -49021,7 +49021,7 @@ app.get('/api/search', authenticateAny, async (req, res) => {
 
         // 1. Réservations — uid actionnable pour ouvrir la fiche
         pool.query(`
-          SELECT uid, guest_name, start_date, end_date, property_id, source AS platform
+          SELECT uid, guest_name, start_date, end_date, property_id, COALESCE(NULLIF(platform, ''), source) AS platform
           FROM reservations
           WHERE user_id = ANY($2::text[])
             AND (${cmp('guest_name')} OR ${cmp('uid')})
