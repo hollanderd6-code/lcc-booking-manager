@@ -939,6 +939,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     // ─── Appel Groq ───────────────────────────────────────────────
     console.log('🚀 [HANDLER] → Groq AI');
     let aiResponse = await getGroqResponse(message.message, context, messageHistory, fewShotExamples);
+    console.log(`🤖 [HANDLER] Groq brut: ${aiResponse}`);
 
     if (aiResponse) {
       if (aiResponse.trim() === '[ESCALADE]' || aiResponse.includes('[ESCALADE]')) {
