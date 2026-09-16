@@ -2546,6 +2546,24 @@ ON invoice_download_tokens(token);
     } catch(e) {
       console.log('ℹ️ message_template_logs:', e.message);
     }
+    // ✅ Phase B migration — idempotency + Channex tracking on on_arrival logs
+    try {
+      await pool.query(`
+        ALTER TABLE message_template_logs
+          ADD COLUMN IF NOT EXISTS idempotency_key TEXT NULL,
+          ADD COLUMN IF NOT EXISTS channex_message_id TEXT NULL,
+          ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ NULL;
+      `);
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_tpl_logs_idempotency
+        ON message_template_logs(idempotency_key)
+        WHERE idempotency_key IS NOT NULL;
+      `);
+      console.log('✅ Phase B migration message_template_logs OK');
+    } catch(e) {
+      // CRITICAL: idempotency is non-operational if this fails — on_arrival doubles become possible
+      console.error('❌ [CRITICAL] Phase B migration failed — on_arrival idempotency NOT operational:', e.message);
+    }
     } catch(e) {
       console.log('ℹ️ message_templates:', e.message);
     }
@@ -7396,38 +7414,34 @@ async function handleDepositPaid(depositId, io) {
     if (isArrivalToday && isAfter7am) {
       console.log(`📨 Caution validée + Jour J → déclenchement template on_arrival pour conv ${conv.id}`);
       try {
-        // Anti-doublon : vérifier que on_arrival n'a pas déjà été envoyé dans les 23h
-        const alreadySent = await pool.query(
-          `SELECT 1 FROM message_template_logs
-           WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
-           AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
-          [conv.id]
-        );
-        if (alreadySent.rows.length > 0) {
-          console.log(`⏭️ [Stripe webhook] on_arrival déjà envoyé pour conv ${conv.id} — skip`);
+        // ✅ Caution vient d'être validée — vérifier que la fiche police
+        // n'est pas un prérequis encore en attente avant d'envoyer le on_arrival.
+        const eligibility = await evaluateArrivalEligibility(pool, conv);
+        if (!eligibility.allowed) {
+          console.log(`⏭️ [Stripe webhook] on_arrival bloqué — ${eligibility.reason} conv ${conv.id} (le cron réévaluera automatiquement)`);
         } else {
-        const templates = await pool.query(
-          `SELECT mt.* FROM message_templates mt
-           WHERE mt.user_id IN (
-             /* agence : le proprietaire ET ses gestionnaires */
-             SELECT $1::text
-             UNION SELECT delegate_user_id FROM account_delegations
-              WHERE delegator_user_id = $1::text AND status = 'accepted'
-           ) AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE
-           AND (
-             mt.property_id IS NULL
-             OR mt.property_id::text = $2::text
-             OR (mt.property_ids IS NOT NULL AND mt.property_ids != '[]'::jsonb
-                 AND mt.property_ids @> to_jsonb($2::text))
-           )`,
-          [conv.user_id, conv.property_id]
-        );
-        for (const tmpl of templates.rows) {
-          const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [conv.property_id]);
-          await sendTemplateMessage(pool, io, { template: tmpl, conv, property: propRow.rows[0] || {} });
+          const templates = await pool.query(
+            `SELECT mt.* FROM message_templates mt
+             WHERE mt.user_id IN (
+               /* agence : le proprietaire ET ses gestionnaires */
+               SELECT $1::text
+               UNION SELECT delegate_user_id FROM account_delegations
+                WHERE delegator_user_id = $1::text AND status = 'accepted'
+             ) AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE
+             AND (
+               mt.property_id IS NULL
+               OR mt.property_id::text = $2::text
+               OR (mt.property_ids IS NOT NULL AND mt.property_ids != '[]'::jsonb
+                   AND mt.property_ids @> to_jsonb($2::text))
+             )`,
+            [conv.user_id, conv.property_id]
+          );
+          for (const tmpl of templates.rows) {
+            const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [conv.property_id]);
+            await sendOnArrivalIdempotently(pool, io, { template: tmpl, conv, property: propRow.rows[0] || {} });
             await new Promise(r => setTimeout(r, 400));
           }
-        } // fin else anti-doublon
+        }
       } catch (tplErr) {
         console.error('⚠️ Erreur template on_arrival immédiat:', tplErr.message);
       }
@@ -31666,7 +31680,11 @@ async function retryCheckinLinkForConv(pool, io, convId) {
     if (alreadySent.rows.length > 0) continue;
 
     const propRow = await pool.query('SELECT * FROM properties WHERE id = $1', [conv.property_id]);
-    await sendTemplateMessage(pool, io, { template: tmpl, conv, property: propRow.rows[0] || {} });
+    if (tmpl.trigger_type === 'on_arrival') {
+      await sendOnArrivalIdempotently(pool, io, { template: tmpl, conv, property: propRow.rows[0] || {} });
+    } else {
+      await sendTemplateMessage(pool, io, { template: tmpl, conv, property: propRow.rows[0] || {} });
+    }
     console.log(`✅ [RETRY checkin_link] "${tmpl.title}" envoyé — nationalité renseignée — conv ${convId}`);
     await new Promise(r => setTimeout(r, 400));
   }
@@ -31809,6 +31827,132 @@ async function shouldSkipForDepositCondition(pool, conv, sendCond) {
   return { skip: false };
 }
 
+// ============================================================
+// 🎯 evaluateArrivalEligibility — source de vérité unique pour on_arrival
+// ============================================================
+// Règle inconditionnelle, indépendante de template.send_condition.
+// Appelée par runTemplatesCron, handleDepositPaid et le chemin Channex
+// last-minute. Toute modification de la règle métier on_arrival doit
+// se faire ICI et nulle part ailleurs.
+//
+// Conditions (hors Airbnb) :
+//   1. Caution : si deposit_amount > 0, la dernière caution doit être
+//      'authorized' ou 'captured'.
+//   2. Police  : si le voyageur est étranger ET qu'un template
+//      {checkin_link} lui a été envoyé, la fiche doit être signée.
+//      Voyageur étranger SANS {checkin_link} envoyé → pas de blocage.
+//      Voyageur français ou pays inconnu → jamais bloqué.
+//
+// Retourne { allowed, reason, depositRequired, depositSatisfied,
+//            policeRequired, policeSatisfied, checkinLinkSent }
+// ============================================================
+async function evaluateArrivalEligibility(pool, conv) {
+  const platformRaw = (conv.platform || conv.channex_platform || conv.ota_name || '')
+    .toLowerCase().replace(/[_\-\s]/g, '');
+  const isAirbnb = platformRaw.includes('airbnb') || platformRaw === 'abb';
+
+  if (isAirbnb) {
+    return { allowed: true, reason: null,
+             depositRequired: false, depositSatisfied: true,
+             policeRequired: false, policeSatisfied: true, checkinLinkSent: false };
+  }
+
+  // ── 1. Réservation + montant caution + fiche police (une seule requête) ──
+  let resa = null;
+  try {
+    let resDbErr = false;
+    const resRow = await pool.query(
+      `SELECT r.uid, r.guest_country, p.deposit_amount,
+              EXISTS (SELECT 1 FROM police_records pr
+                       WHERE pr.conversation_id = $1 AND pr.status = 'signed') AS police_done
+       FROM reservations r
+       JOIN properties p ON p.id = r.property_id
+       WHERE ($3::text IS NOT NULL AND r.channex_booking_id = $3 AND r.status != 'cancelled')
+          OR (r.property_id = $2 AND DATE(r.start_date) = DATE($4) AND r.status != 'cancelled')
+       ORDER BY ($3::text IS NOT NULL AND r.channex_booking_id = $3) DESC NULLS LAST,
+                r.created_at DESC
+       LIMIT 1`,
+      [conv.id, conv.property_id, conv.channex_booking_id || null, conv.reservation_start_date]
+    ).catch((e) => { resDbErr = true; console.warn('⚠️ [eligibility] Erreur DB conv', conv.id, ':', e.message); return { rows: [] }; });
+    if (resDbErr) {
+      // fail-closed : erreur DB ≠ absence de réservation — on ne peut pas vérifier les gardes
+      console.warn('⚠️ [eligibility] fail-closed — on_arrival bloqué par précaution (conv', conv.id, ')');
+      return { allowed: false, reason: 'eligibility_error',
+               depositRequired: false, depositSatisfied: false,
+               policeRequired: false, policeSatisfied: false, checkinLinkSent: false };
+    }
+    resa = resRow.rows[0] || null;
+  } catch (e) {
+    console.warn('⚠️ [eligibility] Exception inattendue conv', conv.id, ':', e.message, '— fail-closed');
+    return { allowed: false, reason: 'eligibility_error',
+             depositRequired: false, depositSatisfied: false,
+             policeRequired: false, policeSatisfied: false, checkinLinkSent: false };
+  }
+
+  const resaUid = resa?.uid || null;
+
+  // ── 2. Garde caution ─────────────────────────────────────────────────────
+  const depositAmount = resa?.deposit_amount ? parseFloat(resa.deposit_amount) : 0;
+  const depositRequired = depositAmount > 0;
+  let depositSatisfied = true;
+
+  if (depositRequired && resaUid) {
+    const dep = await pool.query(
+      `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
+      [resaUid]
+    ).catch(() => ({ rows: [] }));
+    const depStatus = dep.rows[0]?.status;
+    depositSatisfied = depStatus === 'authorized' || depStatus === 'captured';
+  }
+  // depositRequired && !resaUid → réservation non trouvée → ne pas bloquer
+
+  if (!depositSatisfied) {
+    return { allowed: false, reason: 'deposit_pending',
+             depositRequired, depositSatisfied,
+             policeRequired: false, policeSatisfied: true, checkinLinkSent: false };
+  }
+
+  // ── 3. Garde police ──────────────────────────────────────────────────────
+  // Priorité sur le pays : enrichissement runTemplatesCron (resa_guest_country)
+  // > champ conv direct > résultat de la requête réservation ci-dessus.
+  const gc = (conv.resa_guest_country || conv.guest_country || resa?.guest_country || '')
+    .toUpperCase().trim();
+  const policeRequired = gc !== '' && gc !== 'FR';
+  let policeSatisfied = true;
+  let checkinLinkSent = false;
+
+  if (policeRequired) {
+    const policeDone = resa?.police_done === true;
+    if (!policeDone) {
+      // Bloquer UNIQUEMENT si le lien {checkin_link} a déjà été envoyé.
+      // Sans lien envoyé, on ne peut pas exiger une fiche jamais demandée.
+      const linkRow = await pool.query(
+        `SELECT 1 FROM message_template_logs mtl
+         JOIN message_templates mt ON mt.id = mtl.template_id
+         WHERE mtl.conversation_id = $1
+           AND mtl.status = 'sent'
+           AND mt.message ILIKE '%{checkin_link}%'
+         LIMIT 1`,
+        [conv.id]
+      ).catch(() => ({ rows: [] }));
+      checkinLinkSent = linkRow.rows.length > 0;
+      if (checkinLinkSent) {
+        policeSatisfied = false;
+      }
+      // Lien jamais envoyé → policeSatisfied reste true
+    }
+  }
+
+  return {
+    allowed: policeSatisfied,
+    reason: !policeSatisfied ? 'police_pending' : null,
+    depositRequired,
+    depositSatisfied,
+    policeRequired,
+    policeSatisfied,
+    checkinLinkSent
+  };
+}
 
 // ============================================================
 // 📱 SMS GATEWAY — Envoi SMS via Android (api.sms-gate.app)
@@ -32053,7 +32197,7 @@ async function resolveOrGenerateLockCode(pool, propertyId, userId, reservationUi
   }
 }
 
-async function sendTemplateMessage(pool, io, { template, conv, property }) {
+async function sendTemplateMessage(pool, io, { template, conv, property, skipLog = false }) {
   const { sendBookingMessage } = require('./channex');
 
   // ══════════════════════════════════════════════════════════════
@@ -32271,6 +32415,10 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
 
   let status = 'sent';
   let errorMessage = null;
+  let channexOtaRejected = false;
+  let channexAmbiguous = false;
+  let channexMessageId = null;
+  let channexError = null;
 
   try {
     // Sauvegarder en DB d'abord
@@ -32284,16 +32432,28 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
     // Envoyer via Channex si booking_id disponible (non bloquant)
     if (conv.channex_booking_id) {
       try {
-        await sendBookingMessage(conv.channex_booking_id, msg);
-        console.log(`✅ [TPL SEND] Message envoyé via Channex (booking ${conv.channex_booking_id})`);
+        const cxRes = await sendBookingMessage(conv.channex_booking_id, msg);
+        if (cxRes === null) {
+          // sendBookingMessage absorbe 403/404 et retourne null explicitement.
+          // null est la sentinelle OTA-rejected — pas un succès sans corps de réponse.
+          channexOtaRejected = true;
+          console.log(`ℹ️ [TPL SEND] OTA refusé (Channex 403/404) — conv ${conv.id}`);
+        } else {
+          channexMessageId = cxRes?.id || cxRes?.data?.id || null;
+          console.log(`✅ [TPL SEND] Message envoyé via Channex (booking ${conv.channex_booking_id})`);
+        }
       } catch(channexErr) {
+        channexError = channexErr;
         const isThreadMissing = JSON.stringify(channexErr.response?.data || '').includes('thread_id');
-        const isForbidden = channexErr.response?.status === 403;
+        const httpStatus = channexErr.response?.status;
         if (isThreadMissing) {
           console.log(`ℹ️ [TPL SEND] Pas de thread Channex pour ce booking`);
-        } else if (isForbidden) {
-          console.log(`ℹ️ [TPL SEND] 403 Channex — URL bloquée par l'OTA, message sauvé en DB`);
+        } else if (httpStatus === 403 || httpStatus === 404) {
+          // Défensif : si channex.js évolue vers un throw sur 403/404
+          channexOtaRejected = true;
+          console.log(`ℹ️ [TPL SEND] ${httpStatus} Channex — OTA refusé (conv ${conv.id})`);
         } else {
+          channexAmbiguous = true;
           console.warn(`⚠️ [TPL SEND] Channex error:`, channexErr.message);
         }
       }
@@ -32405,21 +32565,23 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
     console.error(`❌ [TPL SEND] Template ${template.id} conv ${conv.id}:`, e.message);
   }
 
-  // Logger
-  try {
-    await pool.query(
-      `INSERT INTO message_template_logs
-        (user_id, template_id, template_title, conversation_id, guest_name, property_name, trigger_type, message, status, error_message)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [
-        conv.user_id, template.id, template.title,
-        conv.id, conv.guest_name || null,
-        conv.property_name || property?.name || null,
-        template.trigger_type, msg, status, errorMessage
-      ]
-    );
-  } catch(e) {
-    console.warn('⚠️ [TPL LOG]', e.message);
+  // Logger — skipped when skipLog:true (Phase B: sendOnArrivalIdempotently owns the log row)
+  if (!skipLog) {
+    try {
+      await pool.query(
+        `INSERT INTO message_template_logs
+          (user_id, template_id, template_title, conversation_id, guest_name, property_name, trigger_type, message, status, error_message)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [
+          conv.user_id, template.id, template.title,
+          conv.id, conv.guest_name || null,
+          conv.property_name || property?.name || null,
+          template.trigger_type, msg, status, errorMessage
+        ]
+      );
+    } catch(e) {
+      console.warn('⚠️ [TPL LOG]', e.message);
+    }
   }
 
   // 🔔 Notification push si le template a échoué
@@ -32442,7 +32604,287 @@ async function sendTemplateMessage(pool, io, { template, conv, property }) {
     }
   }
 
-  return { status, message: msg };
+  return { status, message: msg, channexOtaRejected, channexAmbiguous, channexMessageId, channexError, errorMessage };
+}
+
+// ============================================================
+// 🔒 sendOnArrivalIdempotently — envoi atomique idempotent pour on_arrival
+// Clé : on_arrival:{template_id}:{conversation_id}:{arrival_date_paris}
+// Le déclencheur (cron, Stripe, Channex, Airbnb, BHGuest) n'entre PAS dans la clé.
+// Règle : le caller est responsable de l'éligibilité métier.
+//         Cette fonction est responsable du claim atomique + envoi + statut final.
+// États finaux : sent / error (retryable) / delivery_unknown / ota_rejected / blocked
+// ============================================================
+async function sendOnArrivalIdempotently(pool, io, { template, conv, property }) {
+  // Calcul de la date d'arrivée en heure Paris
+  let arrivalDate;
+  if (conv.reservation_start_date) {
+    const d = new Date(conv.reservation_start_date);
+    const dParis = new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const pad = n => String(n).padStart(2, '0');
+    arrivalDate = `${dParis.getFullYear()}-${pad(dParis.getMonth()+1)}-${pad(dParis.getDate())}`;
+  } else {
+    const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const pad = n => String(n).padStart(2, '0');
+    arrivalDate = `${nowParis.getFullYear()}-${pad(nowParis.getMonth()+1)}-${pad(nowParis.getDate())}`;
+  }
+
+  const idempotencyKey = `on_arrival:${template.id}:${conv.id}:${arrivalDate}`;
+
+  // Claim atomique : INSERT status='sending' ou DO UPDATE WHERE status='error' (retry)
+  // Deux workers concurrents → PostgreSQL sérialise → un seul obtient RETURNING id.
+  // Si le record existant est 'sending'/'sent'/'delivery_unknown'/'ota_rejected'/'blocked',
+  // DO UPDATE WHERE status='error' ne correspond pas → 0 lignes → l'autre worker skip.
+  let logId;
+  try {
+    const claim = await pool.query(
+      `INSERT INTO message_template_logs (
+         user_id, template_id, template_title, conversation_id, guest_name, property_name,
+         trigger_type, message, status, idempotency_key
+       ) VALUES ($1,$2,$3,$4,$5,$6,'on_arrival','',$7,$8)
+       ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL
+       DO UPDATE SET status='sending', sent_at=NOW()
+       WHERE message_template_logs.status='error'
+       RETURNING id`,
+      [
+        conv.user_id || template.user_id,
+        template.id, template.title || null,
+        conv.id, conv.guest_name || null,
+        conv.property_name || property?.name || null,
+        'sending', idempotencyKey
+      ]
+    );
+    if (claim.rows.length === 0) {
+      console.log(`⏭️ [on_arrival] Déjà réclamé/envoyé — ${idempotencyKey}`);
+      return { skipped: true, reason: 'already_claimed', idempotencyKey };
+    }
+    logId = claim.rows[0].id;
+  } catch(claimErr) {
+    console.error(`❌ [on_arrival] Erreur claim atomique (${idempotencyKey}):`, claimErr.message);
+    return { status: 'error', error: claimErr.message };
+  }
+
+  // Appel sendTemplateMessage avec skipLog:true — la couche Phase B est maître du log
+  let result;
+  try {
+    result = await sendTemplateMessage(pool, io, { template, conv, property, skipLog: true });
+  } catch(sendErr) {
+    await pool.query(
+      `UPDATE message_template_logs SET status='error', error_message=$1 WHERE id=$2`,
+      [sendErr.message, logId]
+    ).catch(() => {});
+    console.error(`❌ [on_arrival] Erreur sendTemplateMessage (${idempotencyKey}):`, sendErr.message);
+    return { status: 'error', error: sendErr.message, logId, idempotencyKey };
+  }
+
+  // Résolution du statut final
+  let finalStatus, errorMsg = null, channexMsgId = null;
+  if (result.skipped) {
+    finalStatus = 'blocked';
+    errorMsg = result.reason || 'skipped_by_template';
+  } else if (result.status === 'error') {
+    finalStatus = 'error';
+    errorMsg = result.errorMessage || null;
+  } else if (result.channexOtaRejected) {
+    finalStatus = 'ota_rejected';
+    errorMsg = `Channex ${result.channexError?.response?.status || 'OTA'} refusé`;
+  } else if (result.channexAmbiguous) {
+    finalStatus = 'delivery_unknown';
+    errorMsg = result.channexError?.message || 'réseau ambigu';
+  } else {
+    finalStatus = 'sent';
+    channexMsgId = result.channexMessageId || null;
+  }
+
+  await pool.query(
+    `UPDATE message_template_logs
+     SET status=$1, message=$2, channex_message_id=$3, error_message=$4, delivered_at=$5
+     WHERE id=$6`,
+    [
+      finalStatus,
+      result.message || '',
+      channexMsgId,
+      errorMsg,
+      (finalStatus === 'sent' && channexMsgId) ? new Date() : null,
+      logId
+    ]
+  ).catch(e => console.warn('⚠️ [on_arrival] Update log status:', e.message));
+
+  const icon = finalStatus === 'sent' ? '✅' : finalStatus === 'ota_rejected' ? '⚠️' : finalStatus === 'delivery_unknown' ? '❓' : '❌';
+  console.log(`${icon} [on_arrival] ${finalStatus} — ${idempotencyKey}`);
+  return { status: finalStatus, logId, idempotencyKey };
+}
+
+// ============================================================
+// 🧹 markStaleOnArrivalSendingAsUnknown
+// Convertit les records on_arrival status='sending' depuis plus de 15 min
+// en status='delivery_unknown'.
+// SCOPE STRICT : trigger_type='on_arrival' AND idempotency_key IS NOT NULL AND status='sending'
+// Ne touche jamais aux logs des autres trigger_types ni aux logs sans clé idempotente.
+// ============================================================
+async function markStaleOnArrivalSendingAsUnknown(pool) {
+  try {
+    const res = await pool.query(`
+      UPDATE message_template_logs
+      SET status = 'delivery_unknown',
+          error_message = COALESCE(error_message, 'sending_timeout_15min')
+      WHERE trigger_type = 'on_arrival'
+        AND idempotency_key IS NOT NULL
+        AND status = 'sending'
+        AND sent_at < NOW() - INTERVAL '15 minutes'
+      RETURNING id, idempotency_key
+    `);
+    if (res.rows.length > 0) {
+      console.log(`🕐 [on_arrival stale] ${res.rows.length} record(s) sending→delivery_unknown:`,
+        res.rows.map(r => r.idempotency_key).join(', '));
+    }
+    return res.rows.length;
+  } catch (e) {
+    console.error('❌ [on_arrival stale] Erreur markStaleOnArrivalSendingAsUnknown:', e.message);
+    return 0;
+  }
+}
+
+// ============================================================
+// 🔍 reconcileOnArrivalDeliveryUnknown
+// Pour chaque log on_arrival status='delivery_unknown' sans channex_message_id,
+// tente de retrouver le message via getBookingMessages() en cherchant :
+//   - sender === 'host'
+//   - contenu normalisé correspondant
+//   - inserted_at dans une fenêtre ±2h autour de sent_at
+//
+// Résultats possibles par record :
+//   A) Message trouvé → status='sent', channex_message_id=id, delivered_at=inserted_at
+//   B) Message introuvable ET sent_at > 90 min → error_message='reconciliation_unresolved',
+//      notif hôte (une seule fois), status RESTE delivery_unknown
+//   C) Erreur API Channex → status inchangé (delivery_unknown), retry au prochain cycle
+//
+// SCOPE STRICT : trigger_type='on_arrival' AND status='delivery_unknown'
+//                AND idempotency_key IS NOT NULL AND channex_message_id IS NULL
+// ============================================================
+async function reconcileOnArrivalDeliveryUnknown(pool) {
+  let resolved = 0;
+  let notified = 0;
+  let errors = 0;
+
+  let records;
+  try {
+    const res = await pool.query(`
+      SELECT mtl.id, mtl.idempotency_key, mtl.message, mtl.sent_at,
+             mtl.conversation_id, mtl.user_id, mtl.template_title,
+             mtl.error_message,
+             c.channex_booking_id, c.guest_name, c.property_name
+      FROM message_template_logs mtl
+      LEFT JOIN conversations c ON c.id = mtl.conversation_id
+      WHERE mtl.trigger_type = 'on_arrival'
+        AND mtl.status = 'delivery_unknown'
+        AND mtl.idempotency_key IS NOT NULL
+        AND mtl.channex_message_id IS NULL
+      ORDER BY mtl.sent_at ASC
+    `);
+    records = res.rows;
+  } catch (e) {
+    console.error('❌ [on_arrival reconcile] Erreur requête records:', e.message);
+    return { resolved, notified, errors };
+  }
+
+  if (records.length === 0) return { resolved, notified, errors };
+  console.log(`🔍 [on_arrival reconcile] ${records.length} record(s) delivery_unknown à réconcilier`);
+
+  for (const rec of records) {
+    if (!rec.channex_booking_id) {
+      // Pas de booking Channex — on ne peut pas réconcilier, on laisse delivery_unknown
+      continue;
+    }
+
+    let channexMessages;
+    try {
+      channexMessages = await getBookingMessages(rec.channex_booking_id);
+    } catch (e) {
+      // Erreur API → on ne touche pas au status, on réessaiera au prochain cycle
+      console.warn(`⚠️ [on_arrival reconcile] Erreur getBookingMessages booking ${rec.channex_booking_id}:`, e.message);
+      errors++;
+      continue;
+    }
+
+    const sentAt = rec.sent_at ? new Date(rec.sent_at) : null;
+    const windowMs = 2 * 60 * 60 * 1000; // ±2h
+    const normalize = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const normalizedLocalMsg = normalize(rec.message);
+
+    // Cherche le message côté Channex : sender=host, contenu normalisé, ±2h autour de sent_at
+    const match = channexMessages.find(m => {
+      if (m.sender !== 'host') return false;
+      if (normalize(m.message) !== normalizedLocalMsg) return false;
+      if (sentAt && m.inserted_at) {
+        const cxAt = new Date(m.inserted_at);
+        if (Math.abs(cxAt - sentAt) > windowMs) return false;
+      }
+      return true;
+    });
+
+    if (match) {
+      // Cas A — message retrouvé
+      try {
+        await pool.query(`
+          UPDATE message_template_logs
+          SET status = 'sent',
+              channex_message_id = $1,
+              delivered_at = $2,
+              error_message = NULL
+          WHERE id = $3
+        `, [match.id, match.inserted_at ? new Date(match.inserted_at) : new Date(), rec.id]);
+        console.log(`✅ [on_arrival reconcile] Réconcilié — log ${rec.id} → sent (channex_msg ${match.id})`);
+        resolved++;
+      } catch (e) {
+        console.error(`❌ [on_arrival reconcile] Erreur UPDATE log ${rec.id}:`, e.message);
+        errors++;
+      }
+      continue;
+    }
+
+    // Cas B — message introuvable
+    if (!sentAt) continue;
+    const ageMin = (Date.now() - sentAt.getTime()) / 60000;
+    if (ageMin < 90) {
+      // Trop récent — on attend encore
+      continue;
+    }
+
+    // > 90 min, toujours introuvable — notif hôte (une seule fois, détectée par error_message)
+    if (rec.error_message === 'reconciliation_unresolved') {
+      // Déjà notifié — on ne notifie pas deux fois
+      continue;
+    }
+
+    try {
+      await pool.query(`
+        UPDATE message_template_logs
+        SET error_message = 'reconciliation_unresolved'
+        WHERE id = $1
+      `, [rec.id]);
+
+      if (rec.user_id && await shouldSendNotification(rec.user_id, 'notif_template_failed')) {
+        const { sendNotificationByUserId } = require('./services/notifications-service');
+        const propName = rec.property_name || 'Logement';
+        const guestLabel = rec.guest_name || 'Voyageur';
+        await sendNotificationByUserId(
+          rec.user_id,
+          '⚠️ Message automatique non confirmé',
+          `Le message "${rec.template_title || 'on_arrival'}" envoyé à ${guestLabel} (${propName}) n'a pas pu être confirmé — vérification manuelle recommandée.`,
+          { type: 'template_delivery_unknown', conversationId: String(rec.conversation_id) }
+        );
+        console.log(`🔔 [on_arrival reconcile] Notif hôte envoyée — log ${rec.id} (${rec.idempotency_key})`);
+        notified++;
+      }
+    } catch (e) {
+      console.error(`❌ [on_arrival reconcile] Erreur notif/update log ${rec.id}:`, e.message);
+      errors++;
+    }
+  }
+
+  console.log(`🔍 [on_arrival reconcile] Terminé — resolved=${resolved} notified=${notified} errors=${errors}`);
+  return { resolved, notified, errors };
 }
 
 // ============================================================
@@ -33314,97 +33756,43 @@ async function runTemplatesCron(triggerTypes) {
             continue;
           }
 
-          // Anti-doublon : check dans message_template_logs
-          const alreadySentLog = await pool.query(
-            `SELECT id FROM message_template_logs
-             WHERE template_id = $1 AND conversation_id = $2
-             AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent'`,
-            [tmpl.id, conv.id]
-          );
-          if (alreadySentLog.rows.length > 0) {
-            console.log(`  ↳ Conv ${conv.id} déjà traitée (log), skip`);
-            continue;
-          }
-          // ✅ Vérification caution pour on_arrival UNIQUEMENT
-          // before_arrival = envoi de la caution elle-même → pas de vérif caution
-          if (tmpl.trigger_type === 'on_arrival') {
-            const platform = (conv.platform || '').toLowerCase();
-            const isAirbnb = platform.includes('airbnb') || platform === 'abb';
-            if (!isAirbnb) {
-              try {
-                // Vérifier d'abord si le logement a une caution configurée
-                const propDepositRow = await pool.query(
-                  `SELECT deposit_amount FROM properties WHERE id = $1`,
-                  [conv.property_id]
-                );
-                const hasDepositConfig = propDepositRow.rows[0]?.deposit_amount > 0;
-
-                // Si le logement n'a pas de caution configurée → pas de blocage
-                if (hasDepositConfig) {
-                  // Récupérer l'uid de la réservation via channex_booking_id (priorité) ou property+date
-                  const resRow = await pool.query(
-                    `SELECT uid FROM reservations
-                     WHERE ($3::text IS NOT NULL AND channex_booking_id = $3)
-                        OR (property_id = $1 AND DATE(start_date) = DATE($2) AND status != 'cancelled')
-                     ORDER BY (channex_booking_id = $3) DESC NULLS LAST, created_at DESC LIMIT 1`,
-                    [conv.property_id, conv.reservation_start_date, conv.channex_booking_id || null]
-                  );
-                  if (resRow.rows[0]) {
-                    const dep = await pool.query(
-                      `SELECT status FROM deposits WHERE reservation_uid = $1 ORDER BY created_at DESC LIMIT 1`,
-                      [resRow.rows[0].uid]
-                    ).catch(() => ({ rows: [] }));
-                    const depStatus = dep.rows[0]?.status;
-                    if (depStatus !== 'captured' && depStatus !== 'authorized') {
-                      const reason = `caution non validée (status=${depStatus || 'aucune'})`;
-                      console.log(`  ↳ ⏭️ ${reason} pour conv ${conv.id} → on_arrival bloqué`);
-                      pool.query(
-                        `INSERT INTO message_template_logs (user_id, template_id, template_title, conversation_id, guest_name, trigger_type, message, status, error_message)
-                         VALUES ($1,$2,$3,$4,$5,$6,'',$7,$8)`,
-                        [tmpl.user_id, tmpl.id, tmpl.title, conv.id, conv.guest_name || null, tmpl.trigger_type, 'blocked', reason]
-                      ).catch(e => console.warn('⚠️ [TPL LOG blocked]', e.message));
-                      continue;
-                    }
-                  }
-                } else {
-                  console.log(`  ↳ ℹ️ Logement ${conv.property_id} sans caution configurée → on_arrival autorisé`);
-                }
-              } catch(depErr) {
-                console.warn(`  ↳ ⚠️ Erreur vérif caution conv ${conv.id}:`, depErr.message);
-              }
+          // Anti-doublon : check 23h pour les types non-on_arrival.
+          // Pour on_arrival, le claim atomique (sendOnArrivalIdempotently) prend le relais.
+          if (tmpl.trigger_type !== 'on_arrival') {
+            const alreadySentLog = await pool.query(
+              `SELECT id FROM message_template_logs
+               WHERE template_id = $1 AND conversation_id = $2
+               AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent'`,
+              [tmpl.id, conv.id]
+            );
+            if (alreadySentLog.rows.length > 0) {
+              console.log(`  ↳ Conv ${conv.id} déjà traitée (log), skip`);
+              continue;
             }
-
-            // 🛂 Vérification enregistrement (fiche de police) — voyageurs ÉTRANGERS uniquement
-            // Un voyageur étranger n'ayant pas complété sa fiche de police ne reçoit pas
-            // les infos d'accès à 7h (mêmes infos protégées côté IA). Français / inconnu → pas de blocage.
-            if (!isAirbnb) {
-              try {
-                const regInfo = await pool.query(
-                  `SELECT r.guest_country,
-                          EXISTS (SELECT 1 FROM police_records pr WHERE pr.conversation_id = $1) AS done
-                     FROM reservations r
-                    WHERE ($3::text IS NOT NULL AND r.channex_booking_id = $3)
-                       OR (r.property_id = $2 AND DATE(r.start_date) = DATE($4) AND r.status != 'cancelled')
-                    ORDER BY (r.channex_booking_id = $3) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
-                  [conv.id, conv.property_id, conv.channex_booking_id || null, conv.reservation_start_date]
-                );
-                const gc = (regInfo.rows[0]?.guest_country || '').toUpperCase().trim();
-                const isForeign = gc !== '' && gc !== 'FR';
-                const regDone   = regInfo.rows[0]?.done === true;
-                if (isForeign && !regDone) {
-                  const reason = `fiche de police non complétée (pays=${gc})`;
-                  console.log(`  ↳ ⏭️ ${reason} conv ${conv.id} → on_arrival bloqué`);
-                  pool.query(
-                    `INSERT INTO message_template_logs (user_id, template_id, template_title, conversation_id, guest_name, trigger_type, message, status, error_message)
-                     VALUES ($1,$2,$3,$4,$5,$6,'',$7,$8)`,
-                    [tmpl.user_id, tmpl.id, tmpl.title, conv.id, conv.guest_name || null, tmpl.trigger_type, 'blocked', reason]
-                  ).catch(e => console.warn('⚠️ [TPL LOG blocked]', e.message));
-                  continue;
-                }
-              } catch(regErr) {
-                console.warn(`  ↳ ⚠️ Erreur vérif enregistrement conv ${conv.id}:`, regErr.message);
-                // fail-open : ne pas bloquer l'envoi sur erreur
-              }
+          }
+          // ✅ Éligibilité on_arrival — évaluée via evaluateArrivalEligibility()
+          // (caution + police ; règle inconditionnelle, indépendante de send_condition)
+          if (tmpl.trigger_type === 'on_arrival') {
+            const eligibility = await evaluateArrivalEligibility(pool, conv);
+            if (!eligibility.allowed) {
+              const gc = (conv.resa_guest_country || conv.guest_country || '?').toUpperCase();
+              const logReason = eligibility.reason === 'deposit_pending'
+                ? `caution non validée — logement ${conv.property_id}`
+                : `fiche de police non complétée (pays=${gc})`;
+              console.log(`  ↳ ⏭️ ${logReason} → on_arrival bloqué conv ${conv.id}`);
+              // blocked sans idempotency_key (règle 8 Phase B)
+              pool.query(
+                `INSERT INTO message_template_logs (user_id, template_id, template_title, conversation_id, guest_name, trigger_type, message, status, error_message)
+                 VALUES ($1,$2,$3,$4,$5,$6,'',$7,$8)`,
+                [tmpl.user_id, tmpl.id, tmpl.title, conv.id, conv.guest_name || null, tmpl.trigger_type, 'blocked', eligibility.reason]
+              ).catch(e => console.warn('⚠️ [TPL LOG blocked]', e.message));
+              continue;
+            }
+            if (!eligibility.depositRequired) {
+              console.log(`  ↳ ℹ️ Logement ${conv.property_id} sans caution configurée → on_arrival autorisé`);
+            }
+            if (eligibility.policeRequired && !eligibility.checkinLinkSent) {
+              console.log(`  ↳ ℹ️ Voyageur étranger sans {checkin_link} envoyé → on_arrival autorisé conv ${conv.id}`);
             }
           }
 
@@ -33417,13 +33805,14 @@ async function runTemplatesCron(triggerTypes) {
           );
           const property = propRow.rows[0] || {};
 
-          await sendTemplateMessage(pool, io, {
-            template: tmpl,
-            conv: { ...conv, user_id: tmpl.user_id,
-                    guest_country: conv.resa_guest_country || '',
-                    guest_language: conv.resa_guest_language || '' },
-            property
-          });
+          const effConvCron = { ...conv, user_id: tmpl.user_id,
+                  guest_country: conv.resa_guest_country || '',
+                  guest_language: conv.resa_guest_language || '' };
+          if (tmpl.trigger_type === 'on_arrival') {
+            await sendOnArrivalIdempotently(pool, io, { template: tmpl, conv: effConvCron, property });
+          } else {
+            await sendTemplateMessage(pool, io, { template: tmpl, conv: effConvCron, property });
+          }
           console.log(`  ↳ ✅ Template "${tmpl.title}" envoyé → conv ${conv.id} (${conv.guest_name})`);
           await new Promise(r => setTimeout(r, 500)); // Éviter surcharge Channex
         }
@@ -33870,6 +34259,26 @@ cron.schedule('*/30 * * * *', async () => {
   } catch(e) { /* silencieux */ }
 });
 console.log('✅ Cron job rappels caution initialisé');
+
+// ============================================================
+// 🔒 Cron on_arrival — récupération des orphelins sending + réconciliation
+// Toutes les 30 min :
+//   A) markStaleOnArrivalSendingAsUnknown — sending >15min → delivery_unknown
+//   B) reconcileOnArrivalDeliveryUnknown  — retrouver les messages via Channex
+// ============================================================
+cron.schedule('*/30 * * * *', async () => {
+  try {
+    await markStaleOnArrivalSendingAsUnknown(pool);
+  } catch(e) {
+    console.error('❌ [on_arrival cron] markStale:', e.message);
+  }
+  try {
+    await reconcileOnArrivalDeliveryUnknown(pool);
+  } catch(e) {
+    console.error('❌ [on_arrival cron] reconcile:', e.message);
+  }
+}, { timezone: 'Europe/Paris' });
+console.log('✅ Cron on_arrival stale+reconcile initialisé');
 
 // ============================================
 // ✅ INITIALISATION DES ROUTES SOUS-COMPTES
@@ -41394,76 +41803,82 @@ app.post('/api/channex/webhook', async (req, res) => {
                   continue;
                 }
 
-                // Vérifier si c'est un template caution et si Airbnb (déjà filtré mais sécurité)
-                const isCautionTpl = tpl.message && (
-                  tpl.message.includes('{caution_url}') ||
-                  tpl.message.toLowerCase().includes('caution') ||
-                  tpl.title.toLowerCase().includes('caution')
-                );
-
-                // Vérifier que le template n'a pas déjà été envoyé dans les 23h
-                const alreadySent = await pool.query(
-                  `SELECT 1 FROM message_template_logs
-                   WHERE conversation_id = $1 AND template_id = $2
-                   AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
-                  [conv.id, tpl.id]
-                );
-                if (alreadySent.rows.length > 0) {
-                  console.log(`⏭️ [TPL last-minute] "${tpl.title}" déjà envoyé récemment — conv ${conv.id}`);
-                  continue;
-                }
-
-                // ✅ Vérifier send_condition (ex: deposit_active → attendre caution)
-                // Pour before_arrival contenant {caution_url} : toujours envoyer (c'est le template qui ENVOIE la caution)
-                const isDepositTpl = tpl.message && tpl.message.includes('{caution_url}');
-                if (!isDepositTpl) {
-                  const lmCondCheck = await shouldSkipForDepositCondition(pool, conv, tpl.send_condition || 'always');
-                  if (lmCondCheck.skip) {
-                    console.log(`⏭️ [TPL last-minute] "${tpl.title}" skip — ${lmCondCheck.reason}`);
+                // Anti-doublon 23h pour les non-on_arrival.
+                // Pour on_arrival, le claim atomique prend le relais.
+                if (!isOnArrival) {
+                  const alreadySent = await pool.query(
+                    `SELECT 1 FROM message_template_logs
+                     WHERE conversation_id = $1 AND template_id = $2
+                     AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
+                    [conv.id, tpl.id]
+                  );
+                  if (alreadySent.rows.length > 0) {
+                    console.log(`⏭️ [TPL last-minute] "${tpl.title}" déjà envoyé récemment — conv ${conv.id}`);
                     continue;
                   }
                 }
 
-                await sendTemplateMessage(pool, io, { template: tpl, conv, property });
+                if (isOnArrival) {
+                  // Garde inconditionnelle on_arrival — même règle que runTemplatesCron
+                  const eligibility = await evaluateArrivalEligibility(pool, conv);
+                  if (!eligibility.allowed) {
+                    console.log(`⏭️ [TPL last-minute] "${tpl.title}" on_arrival bloqué — ${eligibility.reason} conv ${conv.id}`);
+                    // blocked sans idempotency_key (règle 8 Phase B)
+                    pool.query(
+                      `INSERT INTO message_template_logs (user_id, template_id, template_title, conversation_id, guest_name, trigger_type, message, status, error_message)
+                       VALUES ($1,$2,$3,$4,$5,$6,'',$7,$8)`,
+                      [tpl.user_id, tpl.id, tpl.title, conv.id, conv.guest_name || null, tpl.trigger_type, 'blocked', eligibility.reason]
+                    ).catch(e => console.warn('⚠️ [TPL LOG last-minute blocked]', e.message));
+                    continue;
+                  }
+                } else {
+                  // Pour before_arrival : respecter send_condition
+                  // (sauf templates caution {caution_url} qui s'envoient toujours)
+                  const isDepositTpl = tpl.message && tpl.message.includes('{caution_url}');
+                  if (!isDepositTpl) {
+                    const lmCondCheck = await shouldSkipForDepositCondition(pool, conv, tpl.send_condition || 'always');
+                    if (lmCondCheck.skip) {
+                      console.log(`⏭️ [TPL last-minute] "${tpl.title}" skip — ${lmCondCheck.reason}`);
+                      continue;
+                    }
+                  }
+                }
+
+                if (isOnArrival) {
+                  await sendOnArrivalIdempotently(pool, io, { template: tpl, conv, property });
+                } else {
+                  await sendTemplateMessage(pool, io, { template: tpl, conv, property });
+                }
                 console.log(`✅ [TPL last-minute] "${tpl.title}" envoyé (J-${daysUntilArrival}, offset=${tplOffsetDays}j) — conv ${conv.id}`);
                 await new Promise(r => setTimeout(r, 400));
               }
 
             } else {
               // ── AIRBNB : on_arrival uniquement le jour J (pas de caution BH) ──
+              // Airbnb est exempté des gardes caution/police mais passe par le claim atomique.
               if (!isArrivalToday) {
                 console.log(`⏭️ [TPL on_arrival Airbnb] Arrivée le ${arrivalStr}, pas aujourd'hui (${todayStr}) → cron s'en chargera`);
               } else {
-                const alreadySentArrival = await pool.query(
-                  `SELECT 1 FROM message_template_logs
-                   WHERE conversation_id = $1 AND trigger_type = 'on_arrival'
-                   AND sent_at > NOW() - INTERVAL '23 hours' AND status = 'sent' LIMIT 1`,
-                  [conv.id]
+                const arrivalTpls = await pool.query(
+                  `SELECT * FROM message_templates
+                   WHERE user_id IN (
+           /* agence : le proprietaire ET ses gestionnaires */
+           SELECT $1::text
+           UNION SELECT delegate_user_id FROM account_delegations
+            WHERE delegator_user_id = $1::text AND status = 'accepted'
+         ) AND trigger_type = 'on_arrival' AND active = TRUE
+                   AND (
+                     property_id IS NULL
+                     OR property_id::text = $2::text
+                     OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
+                         AND property_ids @> to_jsonb($2::text))
+                   )`,
+                  [result.user_id, result.property_id]
                 );
-                if (alreadySentArrival.rows.length === 0) {
-                  const arrivalTpls = await pool.query(
-                    `SELECT * FROM message_templates
-                     WHERE user_id IN (
-             /* agence : le proprietaire ET ses gestionnaires */
-             SELECT $1::text
-             UNION SELECT delegate_user_id FROM account_delegations
-              WHERE delegator_user_id = $1::text AND status = 'accepted'
-           ) AND trigger_type = 'on_arrival' AND active = TRUE
-                     AND (
-                       property_id IS NULL
-                       OR property_id::text = $2::text
-                       OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
-                           AND property_ids @> to_jsonb($2::text))
-                     )`,
-                    [result.user_id, result.property_id]
-                  );
-                  for (const tmpl of arrivalTpls.rows) {
-                    await sendTemplateMessage(pool, io, { template: tmpl, conv, property });
-                    console.log(`✅ [TPL on_arrival Airbnb last-minute] Envoyé — conv ${conv.id}`);
-                    await new Promise(r => setTimeout(r, 400));
-                  }
-                } else {
-                  console.log(`⏭️ [TPL on_arrival Airbnb] Déjà envoyé — conv ${conv.id}`);
+                for (const tmpl of arrivalTpls.rows) {
+                  await sendOnArrivalIdempotently(pool, io, { template: tmpl, conv, property });
+                  console.log(`✅ [TPL on_arrival Airbnb last-minute] Envoyé — conv ${conv.id}`);
+                  await new Promise(r => setTimeout(r, 400));
                 }
               }
             }
@@ -45250,11 +45665,12 @@ app.post('/api/guest/book', async (req, res) => {
           if (propInfo.rows[0]) {
             for (const tmpl of templates.rows) {
               try {
-                await sendTemplateMessage(pool, io, {
-                  template: tmpl,
-                  conv: { ...conv, user_id: prop.owner_user_id, guest_phone: conv.r_phone || guest_phone },
-                  property: propInfo.rows[0]
-                });
+                const effConvBhg = { ...conv, user_id: prop.owner_user_id, guest_phone: conv.r_phone || guest_phone };
+                if (tmpl.trigger_type === 'on_arrival') {
+                  await sendOnArrivalIdempotently(pool, io, { template: tmpl, conv: effConvBhg, property: propInfo.rows[0] });
+                } else {
+                  await sendTemplateMessage(pool, io, { template: tmpl, conv: effConvBhg, property: propInfo.rows[0] });
+                }
                 console.log(`✅ [TPL ${tmpl.trigger_type} BHGuest] "${tmpl.title}" → conv ${conv.id}`);
               } catch(tplErr) {
                 console.warn(`⚠️ [TPL ${tmpl.trigger_type} BHGuest]:`, tplErr.message);
@@ -48496,11 +48912,12 @@ N'hésitez pas à nous contacter via cette messagerie pour toute question. Bon s
             if (propInfo.rows[0]) {
               for (const tmpl of templates.rows) {
                 try {
-                  await sendTemplateMessage(pool, io, {
-                    template: tmpl,
-                    conv: { ...conv, user_id: prop.owner_user_id, guest_phone: conv.r_phone || guest_phone },
-                    property: propInfo.rows[0]
-                  });
+                  const effConvBhg2 = { ...conv, user_id: prop.owner_user_id, guest_phone: conv.r_phone || guest_phone };
+                  if (tmpl.trigger_type === 'on_arrival') {
+                    await sendOnArrivalIdempotently(pool, io, { template: tmpl, conv: effConvBhg2, property: propInfo.rows[0] });
+                  } else {
+                    await sendTemplateMessage(pool, io, { template: tmpl, conv: effConvBhg2, property: propInfo.rows[0] });
+                  }
                   console.log(`✅ [TPL ${tmpl.trigger_type} BHGuest] "${tmpl.title}" → conv ${conv.id}`);
                 } catch(tplErr) {
                   console.warn(`⚠️ [TPL ${tmpl.trigger_type} BHGuest]:`, tplErr.message);

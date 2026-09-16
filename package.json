@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "install-deps": "npm install"
+    "install-deps": "npm install",
+    "test": "node tests/on_arrival_guards.test.js"
   },
   "keywords": [
     "reservation",
