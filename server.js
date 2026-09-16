@@ -2941,6 +2941,14 @@ ON invoice_download_tokens(token);
     // ✅ Migration : notif_template_failed dans user_settings (JSONB — pas de migration nécessaire)
     // La clé est ajoutée dynamiquement dans le JSONB notifications lors de la prochaine sauvegarde
 
+    // ✅ Migration : colonne preferences dans user_settings
+    try {
+      await pool.query(`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS preferences JSONB NOT NULL DEFAULT '{}'`);
+      console.log('✅ Colonne preferences ajoutée à user_settings');
+    } catch (e) {
+      console.log('ℹ️ Colonne preferences user_settings:', e.message);
+    }
+
     // ✅ Migration : channex_booking_id dans reservations (si pas déjà là)
     try {
       await pool.query(`
@@ -6640,6 +6648,27 @@ async function getSubscriptionInfo(req, res, next) {
 // PROPERTIES (logements) - stockées en base
 // ============================================
 
+// Normalise ical_urls quelle que soit la forme stockée en DB :
+// tableau JS, JSON string, objet seul, null, undefined, chaîne vide → toujours un tableau.
+function normalizeIcalUrls(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    const t = raw.trim();
+    if (t === '' || t === '[]') return [];
+    try {
+      const parsed = JSON.parse(t);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object') return [parsed]; // objet isolé → envelopper
+      return [];
+    } catch (_) {
+      return []; // JSON invalide → []
+    }
+  }
+  if (typeof raw === 'object') return [raw]; // objet non-tableau
+  return [];
+}
+
 // PROPERTIES est créé par affectation dans loadProperties (variable globale implicite)
 async function loadProperties() {
   try {
@@ -6693,16 +6722,7 @@ async function loadProperties() {
       ORDER BY display_order ASC, created_at ASC
     `);
     PROPERTIES = result.rows.map(row => {
-      // ✅ Parser ical_urls si c'est une string JSON
-      let icalUrls = row.ical_urls || [];
-      if (typeof icalUrls === 'string') {
-        try {
-          icalUrls = JSON.parse(icalUrls);
-        } catch (e) {
-          console.error('❌ Erreur parse ical_urls pour ${row.name}:', e.message);
-          icalUrls = [];
-        }
-      }
+      const icalUrls = normalizeIcalUrls(row.ical_urls);
       
       return {
         id: row.id,
@@ -12463,6 +12483,191 @@ app.post('/api/settings/notifications', authenticateAny, async (req, res) => {
 });
 
 // ============================================
+// PRÉFÉRENCES UTILISATEUR (carte de configuration + onboarding)
+// ============================================
+
+// ─── Helpers onboarding (fonctions pures, testables) ────────────────────────
+
+// Résout le status onboarding initial pour un compte sans champ onboarding.
+// Comportement fail-closed : si epoch absente/invalide → completed pour TOUS
+// les comptes (aucun ne voit le first launch jusqu'à config explicite de l'epoch).
+function resolveOnboardingInjection(userCreatedAt, deployEpochMs) {
+  const epochValid = typeof deployEpochMs === 'number'
+    && !isNaN(deployEpochMs)
+    && deployEpochMs > 0;
+  if (!epochValid) {
+    // Fail-closed : epoch non configurée → personne ne voit le first launch
+    return { status: 'completed', completedAt: null };
+  }
+  const userMs = userCreatedAt ? new Date(userCreatedAt).getTime() : 0;
+  const isExisting = userMs < deployEpochMs;
+  // Les comptes antérieurs à la release sont marqués completed (completedAt null
+  // volontairement : ils n'ont pas "terminé" l'onboarding, ils le sautent).
+  return { status: isExisting ? 'completed' : 'notStarted', completedAt: null };
+}
+
+// Règle de monotonie : notStarted(0) < inProgress(1) < skipped(2) < completed(3)
+// Un status plus avancé ne peut jamais être rétrogradé.
+const ONBOARDING_STATUS_ORDER = { notStarted: 0, inProgress: 1, skipped: 2, completed: 3 };
+function mergeOnboardingStatus(newStatus, currentStatus) {
+  const nr = ONBOARDING_STATUS_ORDER[newStatus]    ?? -1;
+  const cr = ONBOARDING_STATUS_ORDER[currentStatus] ?? 0;
+  return nr >= cr ? newStatus : currentStatus;
+}
+
+// Valide et normalise le patch onboarding reçu dans PUT.
+// Retourne { error: string } ou { clean: { status, completedAt } }.
+function validateOnboardingPatch(ob) {
+  if (!ob || typeof ob !== 'object' || Array.isArray(ob)) {
+    return { error: 'onboarding doit être un objet' };
+  }
+  const validStatuses = ['notStarted', 'inProgress', 'skipped', 'completed'];
+  if (!validStatuses.includes(ob.status)) {
+    return { error: 'onboarding.status invalide' };
+  }
+  if (ob.completedAt !== null && ob.completedAt !== undefined) {
+    if (typeof ob.completedAt !== 'string' || isNaN(Date.parse(ob.completedAt))) {
+      return { error: 'onboarding.completedAt doit être null ou une date ISO valide' };
+    }
+  }
+  return { clean: { status: ob.status, completedAt: ob.completedAt ?? null } };
+}
+
+// ─── Fin helpers ─────────────────────────────────────────────────────────────
+
+// GET /api/user/preferences — lit le JSONB preferences de user_settings
+// JOIN users pour accéder à users.created_at (date réelle de création du compte,
+// utilisée pour la rétrocompatibilité onboarding).
+app.get('/api/user/preferences', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    // LEFT JOIN : si user_settings n'existe pas encore → preferences = NULL
+    const result = await pool.query(
+      `SELECT us.preferences, u.created_at AS user_created_at
+       FROM users u
+       LEFT JOIN user_settings us ON us.user_id = u.id
+       WHERE u.id = $1`,
+      [user.id]
+    );
+
+    if (!result.rows.length) return res.status(404).json({ error: 'Compte introuvable' });
+    const row = result.rows[0];
+    const raw = (row.preferences && typeof row.preferences === 'object')
+      ? { ...row.preferences }
+      : {};
+
+    // ── Injection rétrocompat onboarding (fail-closed) ────────────────────────
+    // Si le champ onboarding est absent des préférences existantes :
+    // calculer le status initial selon la date de déploiement et persister.
+    if (raw.onboarding === undefined || raw.onboarding === null) {
+      const epochRaw = process.env.ONBOARDING_DEPLOY_EPOCH;
+      const deployEpochMs = epochRaw ? parseInt(epochRaw, 10) : NaN;
+      raw.onboarding = resolveOnboardingInjection(row.user_created_at, deployEpochMs);
+
+      // Persister pour ne pas recalculer à chaque requête
+      await pool.query(
+        `INSERT INTO user_settings (user_id, preferences, created_at, updated_at)
+         VALUES ($1, $2::jsonb, NOW(), NOW())
+         ON CONFLICT (user_id) DO UPDATE
+           SET preferences = user_settings.preferences || $2::jsonb,
+               updated_at = NOW()`,
+        [user.id, JSON.stringify({ onboarding: raw.onboarding })]
+      );
+    }
+    // ── Fin injection ─────────────────────────────────────────────────────────
+
+    const validStepIDsGet = ['platforms', 'messages', 'cleaning', 'team', 'payments', 'welcomeBook'];
+    const sanitized = { ...raw };
+    if (Array.isArray(sanitized.setupStepsNotApplicable)) {
+      sanitized.setupStepsNotApplicable = sanitized.setupStepsNotApplicable.filter(
+        v => validStepIDsGet.includes(v)
+      );
+    }
+
+    res.json({ preferences: sanitized });
+  } catch (err) {
+    console.error('Erreur GET /api/user/preferences :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/user/preferences — fusionne le patch dans le JSONB preferences
+// Champs acceptés : setupCardDismissed, setupStepsNotApplicable, onboarding.
+// Le JSONB || opérateur fusionne au niveau supérieur (chaque clé se remplace) —
+// les champs non inclus dans le patch sont préservés.
+app.put('/api/user/preferences', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    const patch = req.body && req.body.preferences ? req.body.preferences : (req.body || {});
+
+    const validStepIDsPut = ['platforms', 'messages', 'cleaning', 'team', 'payments', 'welcomeBook'];
+    const clean = {};
+
+    if ('setupCardDismissed' in patch) {
+      if (typeof patch.setupCardDismissed !== 'boolean') {
+        return res.status(400).json({ error: 'setupCardDismissed doit être un booléen' });
+      }
+      clean.setupCardDismissed = patch.setupCardDismissed;
+    }
+
+    if ('setupStepsNotApplicable' in patch) {
+      if (!Array.isArray(patch.setupStepsNotApplicable) ||
+          !patch.setupStepsNotApplicable.every(
+            v => typeof v === 'string' && validStepIDsPut.includes(v)
+          )) {
+        return res.status(400).json({ error: 'setupStepsNotApplicable invalide' });
+      }
+      clean.setupStepsNotApplicable = patch.setupStepsNotApplicable;
+    }
+
+    if ('onboarding' in patch) {
+      const validation = validateOnboardingPatch(patch.onboarding);
+      if (validation.error) {
+        return res.status(400).json({ error: validation.error });
+      }
+
+      // Règle de monotonie : lire l'état actuel avant d'écrire.
+      // Empêche deux appareils de rétrograder mutuellement le status.
+      const currentResult = await pool.query(
+        'SELECT preferences FROM user_settings WHERE user_id = $1',
+        [user.id]
+      );
+      const currentPrefs = currentResult.rows[0]?.preferences ?? {};
+      const currentStatus = currentPrefs.onboarding?.status ?? 'notStarted';
+      const finalStatus = mergeOnboardingStatus(validation.clean.status, currentStatus);
+      const finalCompletedAt = finalStatus === validation.clean.status
+        ? validation.clean.completedAt
+        : (currentPrefs.onboarding?.completedAt ?? null);
+
+      clean.onboarding = { status: finalStatus, completedAt: finalCompletedAt };
+    }
+
+    // Aucun champ reconnu → succès sans écriture
+    if (Object.keys(clean).length === 0) {
+      return res.json({ success: true });
+    }
+
+    await pool.query(
+      `INSERT INTO user_settings (user_id, preferences, created_at, updated_at)
+       VALUES ($1, $2::jsonb, NOW(), NOW())
+       ON CONFLICT (user_id) DO UPDATE
+         SET preferences = user_settings.preferences || $2::jsonb,
+             updated_at = NOW()`,
+      [user.id, JSON.stringify(clean)]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erreur PUT /api/user/preferences :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
 // ROUTE ICS EXPORT - Calendrier Boostinghost
 // ============================================
 
@@ -17663,32 +17868,17 @@ app.get('/api/properties',
     }
     
     const properties = userProps.map(p => {
-      const rawIcal = p.icalUrls || p.ical_urls || [];
-      // On reconstruit un tableau d'objets { url, platform }
-      const icalUrls = Array.isArray(rawIcal)
-        ? rawIcal
-            .map(item => {
-              // Ancien format : tableau de strings
-              if (typeof item === 'string') {
-                return {
-                  url: item,
-                  platform:
-                    'iCal'
-                };
-              }
-              // Nouveau format éventuel : déjà un objet
-              if (item && typeof item === 'object' && item.url) {
-                return {
-                  url: item.url,
-                  platform:
-                    item.platform ||
-                    ('iCal')
-                };
-              }
-              return null;
-            })
-            .filter(Boolean)
-        : [];
+      // Normalise ical_urls quelle que soit la forme dans le cache,
+      // puis reconstruit des objets { url, platform } propres.
+      const icalUrls = normalizeIcalUrls(p.icalUrls)
+        .map(item => {
+          if (typeof item === 'string') return { url: item, platform: 'iCal' };
+          if (item && typeof item === 'object' && item.url) {
+            return { url: item.url, platform: item.platform || 'iCal' };
+          }
+          return null;
+        })
+        .filter(Boolean);
       return {
         id: p.id,
         name: p.name,
@@ -40748,6 +40938,9 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
         console.warn('⚠️ [CHANNEX] Erreur enregistrement webhooks (non bloquant):', whErr.message);
       }
     }
+
+    // Rafraîchit le cache après toute modification de channex_enabled.
+    await loadProperties();
 
     res.json({
       success: true,
