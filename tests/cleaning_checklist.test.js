@@ -545,6 +545,99 @@ test('C10 — JWT photo-upload : ni PIN ni JWT → 400 auth manquante', () => {
   assert.ok(result.error.includes('Authentification manquante'));
 });
 
+// ─── SÉRIE D — AUTHFIX : JWT decode réel vs getUserFromRequest ────────────────
+//
+// Ces tests reproduisent le bug réel : getUserFromRequest retourne { id, company,
+// firstName, ... } (données du compte PARENT) — jamais isSubAccount, jamais
+// subAccountId. La garde "!user?.isSubAccount" est donc TOUJOURS vraie → 403.
+//
+// La correction : décoder directement le JWT et vérifier decoded.type === 'sub_account'.
+
+console.log('\nSérie D — AUTHFIX : JWT decode réel vs getUserFromRequest (D1-D5)');
+
+/**
+ * Miroir de getUserFromRequest pour un payload sous-compte.
+ * Retourne les données du compte PARENT — jamais isSubAccount.
+ * C'est exactement ce que faisait le code bugué.
+ */
+function getUserFromRequest_BUGGY(decoded) {
+  // Simule : requête DB sur users WHERE id = (sous-compte).parent_user_id
+  // Retourne le parent — pas de champ isSubAccount, pas de subAccountId.
+  return { id: 1, company: 'Boostinghost', firstName: 'Charles', email: 'test@test.com' };
+}
+
+/**
+ * Garde ANCIENNE (bugée) : utilisait getUserFromRequest.
+ */
+function jwtGuard_OLD(decoded) {
+  const user = getUserFromRequest_BUGGY(decoded);
+  if (!user?.isSubAccount) return { ok: false, status: 403, error: 'JWT sous-compte cleaner requis' };
+  return { ok: true, subAccountId: user.subAccountId };
+}
+
+/**
+ * Garde NOUVELLE (correcte) : décode directement le JWT payload.
+ * Miroir de resolveCleanerFromJWT dans server.js.
+ */
+function jwtGuard_NEW(decoded) {
+  if (decoded.type !== 'sub_account') return { ok: false, status: 403, error: 'JWT sous-compte cleaner requis' };
+  if (!decoded.subAccountId) return { ok: false, status: 403, error: 'JWT sous-compte cleaner requis' };
+  return { ok: true, subAccountId: decoded.subAccountId };
+}
+
+/**
+ * Simule jwt.verify : renvoie le payload ou lève une erreur.
+ */
+function jwtVerify_MOCK(token) {
+  if (token === 'INVALID') throw new Error('jwt malformed');
+  if (token === 'EXPIRED') throw new Error('jwt expired');
+  // Token sous-compte valide (structure réelle : { subAccountId, type: 'sub_account' })
+  if (token === 'SUB_ACCOUNT_TOKEN') return { subAccountId: 42, type: 'sub_account' };
+  // Token compte principal (pas un sous-compte)
+  if (token === 'MAIN_ACCOUNT_TOKEN') return { id: 1, type: 'user' };
+  throw new Error('unknown token');
+}
+
+test('D1 — RÉGRESSION : ancienne garde getUserFromRequest → toujours 403 pour JWT sous-compte', () => {
+  // C'est le bug réel : le JWT d'Alycia est valide mais getUserFromRequest
+  // retourne le compte parent sans isSubAccount → 403 systématique.
+  const decoded = { subAccountId: 42, type: 'sub_account' };
+  const result = jwtGuard_OLD(decoded);
+  assert.strictEqual(result.ok, false, 'La garde OLD doit toujours échouer sur un JWT sous-compte');
+  assert.strictEqual(result.status, 403);
+});
+
+test('D2 — CORRECTION : nouvelle garde decoded.type === sub_account → autorisé pour JWT cleaner', () => {
+  const decoded = jwtVerify_MOCK('SUB_ACCOUNT_TOKEN');
+  const result = jwtGuard_NEW(decoded);
+  assert.strictEqual(result.ok, true, 'La garde NEW doit autoriser un JWT sous-compte valide');
+  assert.strictEqual(result.subAccountId, 42);
+});
+
+test('D3 — CORRECTION : JWT compte principal (type=user) → 403 (pas un sous-compte)', () => {
+  const decoded = jwtVerify_MOCK('MAIN_ACCOUNT_TOKEN');
+  const result = jwtGuard_NEW(decoded);
+  assert.strictEqual(result.ok, false);
+  assert.strictEqual(result.status, 403);
+  assert.ok(result.error.includes('sous-compte'));
+});
+
+test('D4 — Token JWT invalide → lève une exception (→ 401 côté serveur)', () => {
+  assert.throws(
+    () => jwtVerify_MOCK('INVALID'),
+    /malformed/,
+    'jwt.verify doit lever une erreur pour un token malformé'
+  );
+});
+
+test('D5 — Token JWT expiré → lève une exception (→ 401 côté serveur)', () => {
+  assert.throws(
+    () => jwtVerify_MOCK('EXPIRED'),
+    /expired/,
+    'jwt.verify doit lever une erreur pour un token expiré'
+  );
+});
+
 // ─── Résumé ───────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);

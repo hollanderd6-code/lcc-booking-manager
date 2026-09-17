@@ -14612,6 +14612,37 @@ app.post('/api/cleaning/maintenance/:pinCode', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+// ── resolveCleanerFromJWT ──
+// Decode + validate sub-account JWT, lookup cleaner row.
+// Returns the cleaner object {id, user_id, name} or null (after sending error response).
+// Used by JWT-only cleaning routes that cannot use authenticateAny middleware
+// because they also support PIN auth on the same endpoint.
+async function resolveCleanerFromJWT(req, res) {
+  let decoded;
+  try {
+    decoded = jwt.verify(
+      req.headers.authorization.slice(7),
+      process.env.JWT_SECRET || 'dev-secret-change-me'
+    );
+  } catch (e) {
+    res.status(401).json({ error: 'Token invalide' });
+    return null;
+  }
+  if (decoded.type !== 'sub_account') {
+    res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
+    return null;
+  }
+  const { rows: cr } = await pool.query(
+    'SELECT id, user_id, name FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
+    [decoded.subAccountId]
+  );
+  if (cr.length === 0) {
+    res.status(403).json({ error: 'Aucun compte ménage associé.', code: 'cleaner_not_linked' });
+    return null;
+  }
+  return cr[0];
+}
+
 // POST - Soumettre une checklist complétée (avec timer + notification propriétaire)
 // Route upload photo ménage (upload immédiat vers Cloudinary pour éviter crash mémoire iOS)
 app.post('/api/cleaning/photo-upload', async (req, res) => {
@@ -14631,14 +14662,8 @@ app.post('/api/cleaning/photo-upload', async (req, res) => {
       cleaner = acces.cleaner;
     } else if (hasJWT) {
       if (!propertyId) return res.status(400).json({ error: 'propertyId requis' });
-      const user = await getUserFromRequest(req);
-      if (!user?.isSubAccount) return res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
-      const { rows: cr } = await pool.query(
-        'SELECT id, user_id, name FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
-        [user.subAccountId]
-      );
-      if (cr.length === 0) return res.status(403).json({ error: 'Aucun compte ménage associé.', code: 'cleaner_not_linked' });
-      cleaner = cr[0];
+      cleaner = await resolveCleanerFromJWT(req, res);
+      if (!cleaner) return;
       const { rows: propCheck } = await pool.query(
         'SELECT 1 FROM properties WHERE id = $1 AND user_id = $2',
         [propertyId, cleaner.user_id]
@@ -14721,14 +14746,8 @@ app.get('/api/cleaning/consumables', async (req, res) => {
   try {
     const { propertyId } = req.query;
     if (!propertyId) return res.status(400).json({ error: 'propertyId requis' });
-    const user = await getUserFromRequest(req);
-    if (!user?.isSubAccount) return res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
-    const { rows: cr } = await pool.query(
-      'SELECT id, user_id FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
-      [user.subAccountId]
-    );
-    if (cr.length === 0) return res.status(403).json({ error: 'Aucun compte ménage associé.', code: 'cleaner_not_linked' });
-    const cleaner = cr[0];
+    const cleaner = await resolveCleanerFromJWT(req, res);
+    if (!cleaner) return;
     const { rows: propCheck } = await pool.query(
       'SELECT 1 FROM properties WHERE id = $1 AND user_id = $2',
       [propertyId, cleaner.user_id]
@@ -14757,14 +14776,8 @@ app.post('/api/cleaning/maintenance', async (req, res) => {
     if (!propertyId || !title || !title.trim()) {
       return res.status(400).json({ error: 'Données manquantes' });
     }
-    const user = await getUserFromRequest(req);
-    if (!user?.isSubAccount) return res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
-    const { rows: cr } = await pool.query(
-      'SELECT id, user_id, name FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
-      [user.subAccountId]
-    );
-    if (cr.length === 0) return res.status(403).json({ error: 'Aucun compte ménage associé.', code: 'cleaner_not_linked' });
-    const cleaner = cr[0];
+    const cleaner = await resolveCleanerFromJWT(req, res);
+    if (!cleaner) return;
     const { rows: propCheck } = await pool.query(
       'SELECT 1 FROM properties WHERE id = $1 AND user_id = $2',
       [propertyId, cleaner.user_id]
@@ -15050,21 +15063,8 @@ app.post('/api/cleaning/checklist', async (req, res) => {
       cleaner = acces.cleaner;
     } else if (hasJWT) {
       // ── Nouveau chemin : JWT sous-compte cleaner ──
-      const user = await getUserFromRequest(req);
-      if (!user?.isSubAccount) {
-        return res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
-      }
-      const { rows: cr } = await pool.query(
-        'SELECT id, user_id FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
-        [user.subAccountId]
-      );
-      if (cr.length === 0) {
-        return res.status(403).json({
-          error: 'Aucun compte ménage associé à ce sous-compte.',
-          code: 'cleaner_not_linked'
-        });
-      }
-      cleaner = cr[0];
+      cleaner = await resolveCleanerFromJWT(req, res);
+      if (!cleaner) return;
       // IDOR: vérifier que propertyId appartient bien au compte du cleaner
       const { rows: propCheck } = await pool.query(
         'SELECT 1 FROM properties WHERE id = $1 AND user_id = $2',
@@ -15834,14 +15834,8 @@ app.get('/api/cleaning/checklists/:reservationKey/draft', async (req, res) => {
       if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
       cleaner = acces.cleaner;
     } else if (hasJWT) {
-      const user = await getUserFromRequest(req);
-      if (!user?.isSubAccount) return res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
-      const { rows: cr } = await pool.query(
-        'SELECT id, user_id FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
-        [user.subAccountId]
-      );
-      if (cr.length === 0) return res.status(403).json({ error: 'Aucun compte ménage associé.', code: 'cleaner_not_linked' });
-      cleaner = cr[0];
+      cleaner = await resolveCleanerFromJWT(req, res);
+      if (!cleaner) return;
     } else {
       return res.status(401).json({ error: 'Authentification requise' });
     }
@@ -15892,14 +15886,8 @@ app.patch('/api/cleaning/checklists/:reservationKey/draft', async (req, res) => 
       if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
       cleaner = acces.cleaner;
     } else if (hasJWT) {
-      const user = await getUserFromRequest(req);
-      if (!user?.isSubAccount) return res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
-      const { rows: cr } = await pool.query(
-        'SELECT id, user_id FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
-        [user.subAccountId]
-      );
-      if (cr.length === 0) return res.status(403).json({ error: 'Aucun compte ménage associé.', code: 'cleaner_not_linked' });
-      cleaner = cr[0];
+      cleaner = await resolveCleanerFromJWT(req, res);
+      if (!cleaner) return;
       // IPHONEFIX-3: autorisation par intervention, pas par logement seul.
       // Explicite : cleaning_assignments.reservation_key = cette intervention.
       // Virtuel   : aucune assignation explicite pour cette intervention ET
