@@ -101,11 +101,11 @@ function applyTaskChanges(tasks, taskChanges) {
 }
 
 /**
- * Miroir de l'ajout de photo (addPhoto : {id, data}).
+ * Miroir de l'ajout de photo (addPhoto : {id, data, source}).
  */
 function applyAddPhoto(photos, addPhoto) {
   if (!addPhoto || !addPhoto.id || !addPhoto.data) return photos;
-  return [...photos, { id: addPhoto.id, data: addPhoto.data }];
+  return [...photos, { id: addPhoto.id, data: addPhoto.data, source: addPhoto.source || null }];
 }
 
 /**
@@ -123,17 +123,75 @@ function coalesceStartedAt(existingStartedAt, newStartedAt) {
   return existingStartedAt ?? newStartedAt;
 }
 
+// ─── Fonctions miroir — sources de photos ────────────────────────────────────
+
+/**
+ * Miroir de la résolution des sources dans la transaction POST /checklist.
+ * draftPhotoObjs : tableau de {id,data,source} (photos JSONB du brouillon).
+ * fallbackPhotoSources : photoSources du body client (repli si pas de brouillon).
+ * photosCount : longueur du tableau photos du body (pour valider le repli).
+ */
+function resolvePhotoSources(draftPhotoObjs, fallbackPhotoSources, photosCount) {
+  if (draftPhotoObjs !== null) {
+    return Array.isArray(draftPhotoObjs)
+      ? draftPhotoObjs.map(p => (p && typeof p === 'object' ? (p.source || null) : null))
+      : [];
+  }
+  const validSrc = new Set(['camera', 'gallery']);
+  return (
+    Array.isArray(fallbackPhotoSources) &&
+    fallbackPhotoSources.length === photosCount &&
+    fallbackPhotoSources.every(s => validSrc.has(s))
+  ) ? fallbackPhotoSources : Array(photosCount).fill(null);
+}
+
+/**
+ * Miroir du comptage cameraCount dans la transaction et dans le portail web.
+ */
+function getCameraCountFromSources(sources) {
+  return sources.filter(s => s === 'camera').length;
+}
+
+/**
+ * Miroir du getCameraCount() du portail web : compte depuis checklistPhotos.
+ */
+function webGetCameraCount(checklistPhotos) {
+  return checklistPhotos.filter(p => p.source === 'camera').length;
+}
+
+/**
+ * Miroir de toPhotoDraft (iOS DraftPhotoRaw) :
+ * objet {id,data,source} → {id, data, source: PhotoSource}.
+ */
+function toPhotoDraftMirror(raw) {
+  if (typeof raw === 'string') {
+    return { id: 'gen-' + raw.slice(0, 8), data: raw, source: 'unknown' };
+  }
+  const srcRaw = raw.source || '';
+  const source = ['camera', 'gallery', 'unknown'].includes(srcRaw) ? srcRaw : 'unknown';
+  return { id: raw.id || 'gen', data: raw.data || '', source };
+}
+
 // ─── Fonctions miroir — validation finale ─────────────────────────────────────
 
-function validateFinalSubmit({ photos, tasks }) {
-  if (!photos || photos.length < 5) {
-    return { ok: false, error: 'Minimum 5 photos requises' };
+function validateFinalSubmit({ photos, tasks, draftPhotoObjs, fallbackPhotoSources }) {
+  if (!Array.isArray(photos) || photos.length === 0) {
+    return { ok: false, error: 'Aucune photo fournie' };
+  }
+  const sources = resolvePhotoSources(
+    draftPhotoObjs !== undefined ? draftPhotoObjs : null,
+    fallbackPhotoSources,
+    photos.length
+  );
+  const camCount = getCameraCountFromSources(sources);
+  if (camCount < 5) {
+    return { ok: false, error: 'Au moins 5 photos prises sur place sont requises.', code: 'minimum_camera_photos' };
   }
   const allChecked = Array.isArray(tasks) && tasks.every(t => t.checked === true);
   if (!allChecked) {
     return { ok: false, error: 'Toutes les tâches doivent être complétées' };
   }
-  return { ok: true };
+  return { ok: true, resolvedSources: sources };
 }
 
 // ─── Fonctions miroir — résolution cleaner JWT ────────────────────────────────
@@ -373,19 +431,23 @@ test('B29 — POST final : moins de 5 photos → rejet', () => {
   assert.ok(result.error.includes('5'));
 });
 
-test('B30 — POST final : tâche non cochée → rejet', () => {
+test('B30 — POST final : tâche non cochée → rejet (même avec 5 photos camera)', () => {
+  const draftPhotos = makeDraftPhotos(['camera','camera','camera','camera','camera']);
   const result = validateFinalSubmit({
     photos: ['p1', 'p2', 'p3', 'p4', 'p5'],
-    tasks: [{ checked: true }, { checked: false }]
+    tasks: [{ checked: true }, { checked: false }],
+    draftPhotoObjs: draftPhotos,
   });
   assert.strictEqual(result.ok, false);
   assert.ok(result.error.includes('tâches'));
 });
 
-test('B31 — POST final : 5 photos + toutes tâches cochées → ok', () => {
+test('B31 — POST final : 5 photos camera + toutes tâches cochées → ok', () => {
+  const draftPhotos = makeDraftPhotos(['camera','camera','camera','camera','camera']);
   const result = validateFinalSubmit({
     photos: ['p1', 'p2', 'p3', 'p4', 'p5'],
-    tasks: [{ checked: true }, { checked: true }, { checked: true }]
+    tasks: [{ checked: true }, { checked: true }, { checked: true }],
+    draftPhotoObjs: draftPhotos,
   });
   assert.strictEqual(result.ok, true);
 });
@@ -918,6 +980,282 @@ test('E20 — RAS → damage → RAS : aucun ticket damage au final', () => {
   const result = simulateFinalize({ existing: null, draftMeta: dm, bodyRestock: [], consumableItems: CONSUMABLES });
   assert.strictEqual(result.ok, true);
   assert.strictEqual(result.ticketsDamage.length, 0, 'Aucun ticket damage si état final = RAS');
+});
+
+// ─── SÉRIE P : PHOTOFIX — sources camera/gallery + validation 5 photos sur place ──
+
+console.log('\nSérie P — Photo sources (P1-P15)');
+
+const TASKS_ALL_CHECKED = [
+  { id: 't1', name: 'Aspirateur', room: 'living', checked: true },
+  { id: 't2', name: 'Poussière',  room: 'living', checked: true },
+];
+
+function makePhotos(count) {
+  return Array.from({ length: count }, (_, i) => `data:image/jpeg;base64,/photo${i}`);
+}
+
+function makeDraftPhotos(sources) {
+  return sources.map((src, i) => ({ id: `p${i}`, data: `data:image/jpeg;base64,/photo${i}`, source: src }));
+}
+
+// P1 — 5 photos camera → OK
+test('P1 — 5 photos camera dans le brouillon → finalisation acceptée', () => {
+  const result = validateFinalSubmit({
+    photos: makePhotos(5),
+    tasks: TASKS_ALL_CHECKED,
+    draftPhotoObjs: makeDraftPhotos(['camera','camera','camera','camera','camera']),
+  });
+  assert.strictEqual(result.ok, true);
+});
+
+// P2 — 4 photos camera → rejet
+test('P2 — 4 photos camera → rejet code minimum_camera_photos', () => {
+  const result = validateFinalSubmit({
+    photos: makePhotos(4),
+    tasks: TASKS_ALL_CHECKED,
+    draftPhotoObjs: makeDraftPhotos(['camera','camera','camera','camera']),
+  });
+  assert.strictEqual(result.ok, false);
+  assert.strictEqual(result.code, 'minimum_camera_photos');
+});
+
+// P3 — 4 camera + 10 gallery → rejet (total 14 mais seulement 4 sur place)
+test('P3 — 4 camera + 10 gallery → rejet malgré 14 photos au total', () => {
+  const sources = ['camera','camera','camera','camera', ...Array(10).fill('gallery')];
+  const result = validateFinalSubmit({
+    photos: makePhotos(14),
+    tasks: TASKS_ALL_CHECKED,
+    draftPhotoObjs: makeDraftPhotos(sources),
+  });
+  assert.strictEqual(result.ok, false);
+  assert.strictEqual(result.code, 'minimum_camera_photos');
+});
+
+// P4 — 5 camera + 3 gallery → OK
+test('P4 — 5 camera + 3 gallery → finalisation acceptée', () => {
+  const sources = ['camera','camera','camera','camera','camera','gallery','gallery','gallery'];
+  const result = validateFinalSubmit({
+    photos: makePhotos(8),
+    tasks: TASKS_ALL_CHECKED,
+    draftPhotoObjs: makeDraftPhotos(sources),
+  });
+  assert.strictEqual(result.ok, true);
+});
+
+// P5 — 4 camera + 1 unknown → rejet (unknown ne compte pas)
+test('P5 — 4 camera + 1 unknown → rejet (unknown ne compte pas)', () => {
+  const result = validateFinalSubmit({
+    photos: makePhotos(5),
+    tasks: TASKS_ALL_CHECKED,
+    draftPhotoObjs: makeDraftPhotos(['camera','camera','camera','camera','unknown']),
+  });
+  assert.strictEqual(result.ok, false);
+  assert.strictEqual(result.code, 'minimum_camera_photos');
+});
+
+// P6 — ancienne photo sans source → source 'unknown' côté iOS
+test('P6 — photo JSON sans champ source → toPhotoDraft retourne source "unknown"', () => {
+  const raw = { id: 'abc', data: 'data:image/jpeg;base64,aaa' };
+  const draft = toPhotoDraftMirror(raw);
+  assert.strictEqual(draft.source, 'unknown');
+});
+
+// P6b — ancienne photo chaîne brute → source 'unknown'
+test('P6b — photo chaîne brute (legacy string) → source "unknown"', () => {
+  const draft = toPhotoDraftMirror('data:image/jpeg;base64,aaa');
+  assert.strictEqual(draft.source, 'unknown');
+});
+
+// P7 — PATCH addPhoto source camera → source dans l'objet JSONB
+test('P7 — addPhoto source camera → objet {id,data,source:"camera"} dans le JSONB', () => {
+  const before = [];
+  const after = applyAddPhoto(before, { id: 'p1', data: 'data:img', source: 'camera' });
+  assert.strictEqual(after.length, 1);
+  assert.strictEqual(after[0].source, 'camera');
+});
+
+// P8 — PATCH addPhoto source gallery → source dans le JSONB
+test('P8 — addPhoto source gallery → objet {id,data,source:"gallery"} dans le JSONB', () => {
+  const before = [{ id: 'p0', data: 'data:img0', source: 'camera' }];
+  const after = applyAddPhoto(before, { id: 'p1', data: 'data:img1', source: 'gallery' });
+  assert.strictEqual(after.length, 2);
+  assert.strictEqual(after[1].source, 'gallery');
+  assert.strictEqual(after[0].source, 'camera', 'La photo existante est inchangée');
+});
+
+// P9 — GET draft → source restaurée au rechargement
+test('P9 — rechargement brouillon : sources restituées fidèlement par toPhotoDraftMirror', () => {
+  const saved = [
+    { id: 'p1', data: 'data:img1', source: 'camera' },
+    { id: 'p2', data: 'data:img2', source: 'gallery' },
+    { id: 'p3', data: 'data:img3', source: 'unknown' },
+  ];
+  const restored = saved.map(toPhotoDraftMirror);
+  assert.deepStrictEqual(restored.map(r => r.source), ['camera', 'gallery', 'unknown']);
+});
+
+// P10 — suppression photo → source correcte supprimée au bon index
+test('P10 — removePhoto supprime la bonne source à l\'index correct', () => {
+  const photos = [
+    { id: 'p1', data: 'd1', source: 'camera' },
+    { id: 'p2', data: 'd2', source: 'gallery' },
+    { id: 'p3', data: 'd3', source: 'camera' },
+  ];
+  const after = applyRemovePhoto(photos, 'p2');
+  assert.strictEqual(after.length, 2);
+  assert.deepStrictEqual(after.map(p => p.source), ['camera', 'camera']);
+  assert.deepStrictEqual(after.map(p => p.id), ['p1', 'p3']);
+});
+
+// P11 — photos et resolvedSources ont le même ordre/index après finalisation
+test('P11 — resolvedSources a la même longueur et le même ordre que les photos du brouillon', () => {
+  const draftPhotos = makeDraftPhotos(['camera','gallery','camera','camera','camera','camera']);
+  const result = validateFinalSubmit({
+    photos: makePhotos(6),
+    tasks: TASKS_ALL_CHECKED,
+    draftPhotoObjs: draftPhotos,
+  });
+  assert.strictEqual(result.ok, true);
+  assert.deepStrictEqual(result.resolvedSources, ['camera','gallery','camera','camera','camera','camera']);
+});
+
+// P12 — retry/reload : sources inchangées après re-soumission
+test('P12 — retry : resolvedSources identiques à la 1re et 2e tentative', () => {
+  const draftPhotos = makeDraftPhotos(['camera','camera','camera','camera','camera','gallery']);
+  const r1 = validateFinalSubmit({ photos: makePhotos(6), tasks: TASKS_ALL_CHECKED, draftPhotoObjs: draftPhotos });
+  const r2 = validateFinalSubmit({ photos: makePhotos(6), tasks: TASKS_ALL_CHECKED, draftPhotoObjs: draftPhotos });
+  assert.deepStrictEqual(r1.resolvedSources, r2.resolvedSources);
+});
+
+// P13 — portail web getCameraCount compte uniquement les photos camera
+test('P13 — portail web getCameraCount : compte uniquement les photos source=camera', () => {
+  const photos = [
+    { id: '1', source: 'camera' },
+    { id: '2', source: 'gallery' },
+    { id: '3', source: 'camera' },
+    { id: '4', source: 'unknown' },
+    { id: '5', source: 'camera' },
+  ];
+  assert.strictEqual(webGetCameraCount(photos), 3);
+});
+
+// P14 — client envoie fake photoSources mais le brouillon a gallery → backend utilise le brouillon
+test('P14 — photoSources client falsifié : backend utilise les sources du brouillon (gallery)', () => {
+  // Le brouillon contient 4 photos gallery + 1 camera
+  const draftPhotos = makeDraftPhotos(['gallery','gallery','gallery','gallery','camera']);
+  const fakePhotoSources = ['camera','camera','camera','camera','camera']; // falsifié
+  const sources = resolvePhotoSources(draftPhotos, fakePhotoSources, 5);
+  const camCount = getCameraCountFromSources(sources);
+  // Le backend doit utiliser le brouillon, pas les fakePhotoSources → seulement 1 camera → rejet
+  assert.strictEqual(camCount, 1, 'Sources lues depuis le brouillon, pas du client');
+  assert.ok(camCount < 5, 'Doit être rejeté');
+});
+
+// P15 — checklists historiques (completed_at non null) ne sont pas affectées
+test('P15 — checklist avec completed_at non null → 409 already_submitted (inchangé)', () => {
+  const existingFinalized = { id: 42, completed_at: '2026-09-01T10:00:00Z', photos: [] };
+  const guard = postFinalGuard(existingFinalized);
+  assert.strictEqual(guard.ok, false);
+  assert.strictEqual(guard.code, 'already_submitted');
+});
+
+// ─── SÉRIE R : RELOAD SOURCE — restauration web après rechargement ──────────
+
+console.log('\nSérie R — Reload source web (R1-R5)');
+
+/**
+ * Miroir de la restauration draft photos dans cleaning-tasks.html (corrigée).
+ * Mappe draft.photos → checklistPhotos avec la bonne source.
+ */
+function restoreDraftPhotos(draftPhotos) {
+  return draftPhotos
+    .map(p => typeof p === 'string'
+      ? { id: 'gen', data: p, source: 'unknown' }
+      : { id: p.id || 'gen', data: p.data || '', source: p.source || 'unknown' }
+    )
+    .filter(p => p.data);
+}
+
+// R1 — camera → save → reload → camera
+test('R1 — camera → save → reload → source camera conservée', () => {
+  const draftPhotos = [{ id: 'p1', data: 'data:img', source: 'camera' }];
+  const restored = restoreDraftPhotos(draftPhotos);
+  assert.strictEqual(restored[0].source, 'camera');
+});
+
+// R2 — gallery → save → reload → gallery
+test('R2 — gallery → save → reload → source gallery conservée', () => {
+  const draftPhotos = [{ id: 'p1', data: 'data:img', source: 'gallery' }];
+  const restored = restoreDraftPhotos(draftPhotos);
+  assert.strictEqual(restored[0].source, 'gallery');
+});
+
+// R3 — source absente → reload → unknown (jamais camera)
+test('R3 — source absente dans le JSONB → reload → unknown, jamais camera', () => {
+  const draftPhotos = [{ id: 'p1', data: 'data:img' }]; // pas de champ source
+  const restored = restoreDraftPhotos(draftPhotos);
+  assert.strictEqual(restored[0].source, 'unknown');
+  assert.notStrictEqual(restored[0].source, 'camera');
+});
+
+// R4 — ancien format String → reload → unknown
+test('R4 — photo chaîne brute (legacy) → reload → unknown', () => {
+  const draftPhotos = ['data:image/jpeg;base64,aaa'];
+  const restored = restoreDraftPhotos(draftPhotos);
+  assert.strictEqual(restored[0].source, 'unknown');
+  assert.notStrictEqual(restored[0].source, 'camera');
+});
+
+// R5 — 5 photos camera sauvegardées → reload → cameraCount = 5
+test('R5 — 5 photos camera sauvegardées → reload → getCameraCount() === 5', () => {
+  const draftPhotos = [
+    { id: 'p1', data: 'data:img1', source: 'camera' },
+    { id: 'p2', data: 'data:img2', source: 'camera' },
+    { id: 'p3', data: 'data:img3', source: 'camera' },
+    { id: 'p4', data: 'data:img4', source: 'camera' },
+    { id: 'p5', data: 'data:img5', source: 'camera' },
+  ];
+  const restored = restoreDraftPhotos(draftPhotos);
+  const camCount = webGetCameraCount(restored);
+  assert.strictEqual(camCount, 5);
+});
+
+// R6 — camera + gallery + unknown mixte → chaque source préservée
+test('R6 — camera/gallery/unknown mixte → toutes sources préservées après reload', () => {
+  const draftPhotos = [
+    { id: 'p1', data: 'd1', source: 'camera' },
+    { id: 'p2', data: 'd2', source: 'gallery' },
+    { id: 'p3', data: 'd3', source: 'unknown' },
+    { id: 'p4', data: 'd4' },  // source absente
+  ];
+  const restored = restoreDraftPhotos(draftPhotos);
+  assert.strictEqual(restored[0].source, 'camera');
+  assert.strictEqual(restored[1].source, 'gallery');
+  assert.strictEqual(restored[2].source, 'unknown');
+  assert.strictEqual(restored[3].source, 'unknown');
+  assert.strictEqual(webGetCameraCount(restored), 1);
+});
+
+// R7 — reload n'aurait PAS fonctionné avec l'ancien code (source: 'draft')
+test('R7 — preuve régression : ancien code source="draft" → cameraCount = 0', () => {
+  // Simule l'ANCIEN comportement (avant correctif)
+  const draftPhotos = [
+    { id: 'p1', data: 'd1', source: 'camera' },
+    { id: 'p2', data: 'd2', source: 'camera' },
+    { id: 'p3', data: 'd3', source: 'camera' },
+    { id: 'p4', data: 'd4', source: 'camera' },
+    { id: 'p5', data: 'd5', source: 'camera' },
+  ];
+  const oldRestored = draftPhotos.map(p =>
+    typeof p === 'string'
+      ? { id: 'gen', data: p, source: 'draft' }
+      : { id: p.id, data: p.data, source: 'draft' }  // BUG : hardcodé 'draft'
+  );
+  assert.strictEqual(webGetCameraCount(oldRestored), 0, 'Ancien code → cameraCount = 0 (bug confirmé)');
+  // Nouveau code correct :
+  const newRestored = restoreDraftPhotos(draftPhotos);
+  assert.strictEqual(webGetCameraCount(newRestored), 5, 'Nouveau code → cameraCount = 5 (corrigé)');
 });
 
 // ─── Résumé ───────────────────────────────────────────────────────────────────

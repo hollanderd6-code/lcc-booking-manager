@@ -15116,9 +15116,9 @@ app.post('/api/cleaning/checklist', async (req, res) => {
       return res.status(400).json({ error: 'Authentification manquante (PIN, token ou JWT requis)' });
     }
 
-    // Vérifier les photos (minimum 5)
-    if (!photos || photos.length < 5) {
-      return res.status(400).json({ error: 'Minimum 5 photos requises' });
+    // Vérifier la présence des photos (le compte camera >= 5 est validé dans la transaction)
+    if (!Array.isArray(photos) || photos.length === 0) {
+      return res.status(400).json({ error: 'Aucune photo fournie' });
     }
     
     // Vérifier que toutes les tâches sont cochées
@@ -15162,15 +15162,6 @@ app.post('/api/cleaning/checklist', async (req, res) => {
     const guestName = reservation ? (reservation.guestName || reservation.name || reservation.guest_name || '') : '';
     console.log(`🧹 Checklist POST — propertyId: ${propertyId}, checkout: ${checkoutDate}, guestName: "${guestName}", match: ${!!reservation}`);
 
-    // Valider photoSources : doit être un tableau de même longueur que photos,
-    // avec des valeurs dans ['camera','gallery']. Absent ou invalide → null.
-    const validSrc = new Set(['camera', 'gallery']);
-    const cleanPhotoSources = (
-      Array.isArray(photoSources) &&
-      photoSources.length === photos.length &&
-      photoSources.every(s => validSrc.has(s))
-    ) ? photoSources : null;
-
     // ============================
     // WORKFLOWFIX: transaction atomique — UPSERT + tickets + réassort
     // ============================
@@ -15182,14 +15173,41 @@ app.post('/api/cleaning/checklist', async (req, res) => {
       await txClient.query('BEGIN');
 
       // Verrou FOR UPDATE : empêche la double-finalisation concurrente
+      // On lit aussi les photos du brouillon pour en extraire les sources (autorité backend).
       const lockRes = await txClient.query(
-        `SELECT id, completed_at FROM cleaning_checklists
+        `SELECT id, completed_at, photos FROM cleaning_checklists
          WHERE reservation_key = $1 FOR UPDATE`,
         [reservationKey]
       );
       if (lockRes.rows.length > 0 && lockRes.rows[0].completed_at !== null) {
         await txClient.query('ROLLBACK');
         return res.status(409).json({ error: 'Checklist déjà soumise', code: 'already_submitted' });
+      }
+
+      // Résolution des sources depuis le brouillon (autorité backend).
+      // Si pas de brouillon, repli sur photoSources fourni par le client (ancien parcours).
+      let resolvedSources;
+      if (lockRes.rows.length > 0) {
+        const draftPhotoObjs = lockRes.rows[0].photos || [];
+        resolvedSources = Array.isArray(draftPhotoObjs)
+          ? draftPhotoObjs.map(p => (p && typeof p === 'object' ? (p.source || null) : null))
+          : [];
+      } else {
+        const validSrc = new Set(['camera', 'gallery']);
+        resolvedSources = (
+          Array.isArray(photoSources) &&
+          photoSources.length === photos.length &&
+          photoSources.every(s => validSrc.has(s))
+        ) ? photoSources : photos.map(() => null);
+      }
+
+      const cameraCount = resolvedSources.filter(s => s === 'camera').length;
+      if (cameraCount < 5) {
+        await txClient.query('ROLLBACK');
+        return res.status(400).json({
+          error: 'Au moins 5 photos prises sur place sont requises.',
+          code: 'minimum_camera_photos'
+        });
       }
 
       // UPSERT checklist — marque completed_at = NOW()
@@ -15221,7 +15239,7 @@ app.post('/api/cleaning/checklist', async (req, res) => {
           cleaner.user_id, propertyId, reservationKey, cleaner.id,
           guestName, checkoutDate,
           JSON.stringify(tasks), JSON.stringify(photos),
-          cleanPhotoSources ? JSON.stringify(cleanPhotoSources) : null,
+          resolvedSources.length > 0 ? JSON.stringify(resolvedSources) : null,
           notes,
           duration || null,
           startedAt || null,
@@ -16038,7 +16056,7 @@ app.patch('/api/cleaning/checklists/:reservationKey/draft', async (req, res) => 
       // ── INSERT initial : exige un snapshot complet des tâches ──
       const insertTasks  = Array.isArray(tasks) ? tasks : [];
       const insertPhotos = Array.isArray(photos) ? photos
-        : (addPhoto?.id && addPhoto?.data ? [{ id: addPhoto.id, data: addPhoto.data }] : []);
+        : (addPhoto?.id && addPhoto?.data ? [{ id: addPhoto.id, data: addPhoto.data, source: addPhoto.source || null }] : []);
 
       // Construire draft_meta initial si des champs meta sont déjà présents
       const initMeta = {};
@@ -16097,7 +16115,7 @@ app.patch('/api/cleaning/checklists/:reservationKey/draft', async (req, res) => 
           WHERE p->>'id' != $${params.length}
         )`);
       } else if (addPhoto?.id && addPhoto?.data) {
-        params.push(JSON.stringify({ id: addPhoto.id, data: addPhoto.data }));
+        params.push(JSON.stringify({ id: addPhoto.id, data: addPhoto.data, source: addPhoto.source || null }));
         setClauses.push(`photos = COALESCE(cleaning_checklists.photos, '[]'::jsonb) || $${params.length}::jsonb`);
       } else if (Array.isArray(photos)) {
         params.push(JSON.stringify(photos));

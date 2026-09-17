@@ -2058,12 +2058,12 @@ async function openChecklist(reservationKey) {
           }));
         }
 
-        // Restaurer les photos avec ID stables
+        // Restaurer les photos avec ID stables et source canonique du backend
         if (Array.isArray(draft.photos) && draft.photos.length > 0) {
           checklistPhotos = draft.photos
             .map(p => typeof p === 'string'
-              ? { id: generateId(), data: p, source: 'draft' }
-              : { id: p.id || generateId(), data: p.data || '', source: 'draft' }
+              ? { id: generateId(), data: p, source: 'unknown' }
+              : { id: p.id || generateId(), data: p.data || '', source: p.source || 'unknown' }
             )
             .filter(p => p.data);
         }
@@ -2499,13 +2499,14 @@ function updateProgress() {
   
   // Update submit button
   const allChecked = done === total && total > 0;
-  const hasEnoughPhotos = checklistPhotos.length >= 5;
+  const camCount = getCameraCount();
+  const hasEnoughPhotos = camCount >= 5;
   const canSubmit = allChecked && hasEnoughPhotos;
-  
+
   const btn = document.getElementById('submitBtn');
   const label = document.getElementById('submitLabel');
   if (!btn || !label) return;
-  
+
   if (canSubmit) {
     btn.className = 'submit-btn ready';
     label.textContent = 'Valider le ménage ✓';
@@ -2513,8 +2514,9 @@ function updateProgress() {
     btn.className = 'submit-btn not-ready';
     label.textContent = `Encore ${total - done} tâche${total - done > 1 ? 's' : ''} à cocher`;
   } else {
+    const missing = 5 - camCount;
     btn.className = 'submit-btn not-ready';
-    label.textContent = `Encore ${5 - checklistPhotos.length} photo${5 - checklistPhotos.length > 1 ? 's' : ''} requise${5 - checklistPhotos.length > 1 ? 's' : ''}`;
+    label.textContent = `Encore ${missing} photo${missing > 1 ? 's' : ''} prise${missing > 1 ? 's' : ''} sur place requise${missing > 1 ? 's' : ''}`;
   }
 }
 
@@ -2530,7 +2532,7 @@ function _addChecklistPhoto(file, source) {
       renderPhotosGrid();
       updateProgress();
       // CLEANFIX-10 : Ajout progressif
-      patchDraft({ addPhoto: { id: photo.id, data: photo.data } });
+      patchDraft({ addPhoto: { id: photo.id, data: photo.data, source: photo.source } });
     });
   };
   reader.readAsDataURL(file);
@@ -2578,18 +2580,19 @@ function renderPhotosGrid() {
   grid.innerHTML = checklistPhotos.map((photo, idx) => `
     <div class="photo-thumb">
       <img src="${photo.data}" alt="Photo ${idx + 1}" loading="lazy"/>
-      ${photo.source === 'gallery' ? '<span class="photo-source-badge">Galerie</span>' : ''}
+      ${photo.source === 'camera' ? '<span class="photo-source-badge camera">Sur place</span>' : (photo.source === 'gallery' ? '<span class="photo-source-badge gallery">Galerie</span>' : '')}
       <button class="photo-thumb-delete" onclick="event.stopPropagation(); removePhoto(${idx})">
         <i class="fas fa-times"></i>
       </button>
     </div>
   `).join('');
-  
+
   // Update counter
+  const camCount = getCameraCount();
   const counter = document.getElementById('photoCounter');
   if (counter) {
-    counter.textContent = `${checklistPhotos.length}/5 min.`;
-    counter.className = `photo-counter ${checklistPhotos.length >= 5 ? 'enough' : 'not-enough'}`;
+    counter.textContent = `${camCount}/5 sur place`;
+    counter.className = `photo-counter ${camCount >= 5 ? 'enough' : 'not-enough'}`;
   }
 }
 
@@ -2765,9 +2768,13 @@ function confirmSignature() {
 }
 
 // ===== SUBMIT =====
+function getCameraCount() {
+  return checklistPhotos.filter(p => p.source === 'camera').length;
+}
+
 async function handleSubmit() {
   const allChecked = checklistTasks.every(t => t.checked);
-  const hasEnoughPhotos = checklistPhotos.length >= 5;
+  const hasEnoughPhotos = getCameraCount() >= 5;
 
   // État du logement obligatoire
   if (damageState !== 'ras' && damageState !== 'reported') {
@@ -2787,7 +2794,8 @@ async function handleSubmit() {
   }
   
   if (!hasEnoughPhotos) {
-    showToast(`Ajoutez encore ${5 - checklistPhotos.length} photo(s)`, 'error');
+    const missing = 5 - getCameraCount();
+    showToast(`Ajoutez encore ${missing} photo${missing > 1 ? 's' : ''} prise${missing > 1 ? 's' : ''} sur place`, 'error');
     return;
   }
   // Ouvrir la modale de signature
