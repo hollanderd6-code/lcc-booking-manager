@@ -3135,14 +3135,32 @@ document.head.appendChild(style);
   function fmt(n) { return typeof n === 'number' ? Math.round(n) : String(n); }
 
   function update() {
+    var cs  = document.getElementById('checklistScreen');
+    var hdr = cs ? cs.querySelector('.checklist-header') : null;
     var sa  = document.querySelector('.checklist-scroll-area');
     var cb  = document.getElementById('checklistBody');
     var sb  = document.querySelector('.checklist-submit-bar');
     var vp  = window.visualViewport || null;
     var de  = document.documentElement;
-    var cbR = cb ? cb.getBoundingClientRect() : null;
-    var sbR = sb ? sb.getBoundingClientRect() : null;
-    var pt  = document.elementFromPoint(Math.round(window.innerWidth / 2), window.innerHeight - 100);
+
+    var csR  = cs  ? cs.getBoundingClientRect()  : null;
+    var hdrR = hdr ? hdr.getBoundingClientRect() : null;
+    var saR  = sa  ? sa.getBoundingClientRect()  : null;
+    var cbR  = cb  ? cb.getBoundingClientRect()  : null;
+    var sbR  = sb  ? sb.getBoundingClientRect()  : null;
+
+    var csC  = cs  ? window.getComputedStyle(cs)  : null;
+    var bodyC = window.getComputedStyle(document.body);
+
+    var pt = document.elementFromPoint(Math.round(window.innerWidth / 2), window.innerHeight - 100);
+
+    /* ── consistance flex ── */
+    var hH  = hdrR ? hdrR.height : 0;
+    var saH = saR  ? saR.height  : 0;
+    var sbH = sbR  ? sbR.height  : 0;
+    var childrenTotal = hH + saH + sbH;
+    var screenH = csR ? csR.height : 0;
+    var overflowDiff = childrenTotal - screenH;
 
     var rows = [
       ['s', '── VIEWPORT ──'],
@@ -3153,9 +3171,33 @@ document.head.appendChild(style);
       ['r', 'de.clientHeight',     fmt(de.clientHeight)],
       ['r', 'de.scrollHeight',     fmt(de.scrollHeight)],
       ['r', 'de.scrollTop',        fmt(de.scrollTop)],
-      ['r', 'de max',              fmt(de.scrollHeight - de.clientHeight)],
       ['r', 'body.scrollHeight',   fmt(document.body.scrollHeight)],
+      ['r', 'body computed height',bodyC ? bodyC.height : 'n/a'],
+      ['s', '── CHECKLIST SCREEN ──'],
+      ['r', 'cs rect.top',         csR ? fmt(csR.top) : 'null'],
+      ['r', 'cs rect.bottom',      csR ? fmt(csR.bottom) : 'null'],
+      ['r', 'cs rect.height',      csR ? fmt(csR.height) : 'null'],
+      ['r', 'cs.clientHeight',     cs ? fmt(cs.clientHeight) : 'null'],
+      ['r', 'cs.offsetHeight',     cs ? fmt(cs.offsetHeight) : 'null'],
+      ['r', 'cs computed height',  csC ? csC.height : 'null'],
+      ['r', 'cs computed minH',    csC ? csC.minHeight : 'null'],
+      ['r', 'cs computed maxH',    csC ? csC.maxHeight : 'null'],
+      ['r', 'cs computed pos',     csC ? csC.position : 'null'],
+      ['r', 'cs computed top',     csC ? csC.top : 'null'],
+      ['r', 'cs computed bottom',  csC ? csC.bottom : 'null'],
+      ['r', 'cs computed ptop',    csC ? csC.paddingTop : 'null'],
+      ['r', 'cs computed pbot',    csC ? csC.paddingBottom : 'null'],
+      ['r', 'cs computed boxSz',   csC ? csC.boxSizing : 'null'],
+      ['s', '── HEADER ──'],
+      ['r', 'hdr rect.top',        hdrR ? fmt(hdrR.top) : 'null'],
+      ['r', 'hdr rect.bottom',     hdrR ? fmt(hdrR.bottom) : 'null'],
+      ['r', 'hdr rect.height',     hdrR ? fmt(hdrR.height) : 'null'],
+      ['r', 'hdr.clientHeight',    hdr ? fmt(hdr.clientHeight) : 'null'],
+      ['r', 'hdr.offsetHeight',    hdr ? fmt(hdr.offsetHeight) : 'null'],
       ['s', '── SCROLL AREA ──'],
+      ['r', 'sa rect.top',         saR ? fmt(saR.top) : 'null'],
+      ['r', 'sa rect.bottom',      saR ? fmt(saR.bottom) : 'null'],
+      ['r', 'sa rect.height',      saR ? fmt(saR.height) : 'null'],
       ['r', 'sa.clientHeight',     sa ? fmt(sa.clientHeight) : 'null'],
       ['r', 'sa.scrollHeight',     sa ? fmt(sa.scrollHeight) : 'null'],
       ['r', 'sa.scrollTop',        sa ? fmt(sa.scrollTop) : 'null'],
@@ -3167,8 +3209,13 @@ document.head.appendChild(style);
       ['s', '── SUBMIT BAR ──'],
       ['r', 'sb rect.top',         sbR ? fmt(sbR.top) : 'null'],
       ['r', 'sb rect.bottom',      sbR ? fmt(sbR.bottom) : 'null'],
-      ['r', 'sb height',           sbR ? fmt(sbR.height) : 'null'],
-      ['s', '── HIT TEST (innerHeight-100) ──'],
+      ['r', 'sb rect.height',      sbR ? fmt(sbR.height) : 'null'],
+      ['r', 'sb.clientHeight',     sb ? fmt(sb.clientHeight) : 'null'],
+      ['s', '── FLEX CONSISTENCY ──'],
+      ['r', 'screenH',             fmt(screenH)],
+      ['r', 'hdr+sa+sb',           fmt(childrenTotal)],
+      ['r', 'overflow diff',       fmt(overflowDiff)],
+      ['s', '── HIT TEST (iH-100) ──'],
       ['r', 'elementFromPoint',    pt ? elDesc(pt) : 'null'],
       ['s', '── ÉVÉNEMENTS ──'],
       ['r', 'lastTouchTarget',     lastTouchTarget],
