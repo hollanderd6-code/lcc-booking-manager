@@ -489,7 +489,13 @@ html, body {
 .checklist-screen {
   display: none;
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: auto;
+  height: 100vh;
+  height: 100dvh;
+  box-sizing: border-box;
   z-index: 1000;
   background: var(--bg);
   overflow: hidden;
