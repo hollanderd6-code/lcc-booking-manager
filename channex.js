@@ -671,12 +671,15 @@ async function processChannexBooking(pool, bookingData) {
     const amount_total = parseFloat(attrs.amount || 0);
     const ota_commission = parseFloat(attrs.ota_commission || 0);
 
-    // Rooms : prix par nuit, taxes, services
+    // Structure room (sans amount_rooms encore — dépend de amount_cleaning)
     const room = (attrs.rooms || [])[0] || {};
-    const amount_rooms = parseFloat(room.amount || amount_total);
     const days_breakdown = room.days || {}; // { "2024-06-01": "120.00", ... }
 
-    // Taxes (ex: taxe de séjour)
+    // Platform — détecté tôt car nécessaire pour dériver amount_rooms correctement
+    const isBookingCom = (ota_name || '').toLowerCase().includes('booking');
+    const isAirbnb     = (ota_name || '').toLowerCase().includes('airbnb');
+
+    // Taxes brutes de la room (inclut ménage Booking et taxe de séjour)
     const taxes = room.taxes || [];
     const amount_taxes = taxes.reduce((sum, t) => sum + parseFloat(t.total_price || 0), 0);
 
@@ -703,6 +706,29 @@ async function processChannexBooking(pool, bookingData) {
         ? parseFloat(cleaning_from_taxes.total_price || 0)
         : 0;
 
+    // ── amount_rooms : montant nuits seules ──────────────────────────────────
+    // Si room.amount est fourni et valide, le conserver tel quel.
+    // Pour Booking.com : room.amount est souvent absent. Le fallback naïf sur
+    // amount_total inclurait le ménage (ex: 188.34 = 173.34 nuits + 15 ménage),
+    // causant un double-comptage à la facturation puisque amount_cleaning est
+    // stocké séparément. On corrige en déduisant amount_cleaning.
+    // La city tax Booking (bdc_city_tax) est HORS amount_total → pas à soustraire.
+    const roomAmountRaw = (room.amount != null && room.amount !== '')
+      ? parseFloat(room.amount)
+      : null;
+    let amount_rooms;
+    if (roomAmountRaw != null && !isNaN(roomAmountRaw)) {
+      // room.amount fourni par l'OTA : source fiable, conserver
+      amount_rooms = roomAmountRaw;
+    } else if (isBookingCom && amount_cleaning > 0 && amount_total > 0) {
+      // Booking.com sans room.amount : nuits = total − ménage
+      amount_rooms = Math.round((amount_total - amount_cleaning) * 100) / 100;
+    } else {
+      // Airbnb fournit toujours room.amount (branche roomAmountRaw ci-dessus).
+      // Direct/autre OTA sans rooms : fallback amount_total, cohérent avec l'usage.
+      amount_rooms = amount_total;
+    }
+
     // Taxes pures = tout sauf les Service Charge (frais de ménage)
     const pure_taxes = taxes.filter(t =>
       !/service.?charge/i.test(t.type || '') &&
@@ -710,18 +736,16 @@ async function processChannexBooking(pool, bookingData) {
     );
 
     // 🔍 Log détaillé pour debug Booking.com
-    const isBookingCom = (ota_name || '').toLowerCase().includes('booking');
     if (isBookingCom) {
       console.log(`🔍 [BDC] room.taxes:`, JSON.stringify(room.taxes || []));
       console.log(`🔍 [BDC] room.services:`, JSON.stringify(room_services));
       console.log(`🔍 [BDC] booking.services:`, JSON.stringify(booking_services));
       console.log(`🔍 [BDC] attrs.ota_commission:`, attrs.ota_commission);
-      console.log(`🔍 [BDC] amount_total:`, amount_total, '| amount_rooms:', amount_rooms);
+      console.log(`🔍 [BDC] amount_total:`, amount_total, '| room.amount:', room.amount, '| amount_cleaning:', amount_cleaning, '| amount_rooms (corrigé):', amount_rooms);
     }
 
     // Pour Airbnb : les montants détaillés sont dans notes
     const notes = attrs.notes || '';
-    const isAirbnb = (ota_name || '').toLowerCase().includes('airbnb');
     const airbnbData = isAirbnb ? parseAirbnbNotes(notes) : {};
 
     if (isAirbnb) {
@@ -735,7 +759,10 @@ async function processChannexBooking(pool, bookingData) {
     }
 
     // ── Booking.com : extraire taxe de séjour depuis taxes room ──────────────
-    // Booking.com envoie city_tax / CITYTAX dans room.taxes
+    // Booking.com envoie city_tax / CITYTAX dans room.taxes.
+    // IMPORTANT : cette city tax est HORS amount_total (Booking la perçoit
+    // séparément et la reverse à la commune). Elle ne doit PAS être soustraite
+    // de amount_total dans calcNetHote.
     let bdc_city_tax = 0;
     if (isBookingCom && pure_taxes.length > 0) {
       const cityTax = pure_taxes.find(t =>
@@ -749,8 +776,7 @@ async function processChannexBooking(pool, bookingData) {
       }
     }
 
-    // ── Booking.com : commission = différence total - rooms si ota_commission = 0 ──
-    // Booking.com ne communique pas toujours la commission dans le booking
+    // ── Booking.com : commission ──────────────────────────────────────────────
     let bdc_commission = parseFloat(attrs.ota_commission || 0);
     if (isBookingCom && bdc_commission === 0 && amount_total > 0 && amount_rooms > 0 && amount_rooms > amount_total) {
       // cas rare où amount_rooms inclut tout

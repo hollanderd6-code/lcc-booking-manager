@@ -9626,6 +9626,26 @@ function isRealNote(note) {
   return true;
 }
 
+// ── Filet historique amount_rooms ────────────────────────────────────────────
+// Pour les réservations Booking.com/Channex stockées avant le fix channex.js,
+// amount_rooms peut valoir amount_total (ménage inclus) car room.amount était
+// absent et le fallback naïf s'appliquait. On corrige à la volée pour l'API
+// sans toucher la DB (les factures déjà émises ne sont pas modifiées).
+// Condition sans ambiguïté : rooms ≈ total ET cleaning > 0 ET source Booking.
+function effectiveAmountRooms(r) {
+  const total    = r.amount_total    != null ? parseFloat(r.amount_total)    : null;
+  const rooms    = r.amount_rooms    != null ? parseFloat(r.amount_rooms)    : null;
+  const cleaning = r.amount_cleaning != null ? parseFloat(r.amount_cleaning) : null;
+  if (
+    total != null && rooms != null && cleaning != null && cleaning > 0 &&
+    Math.abs(rooms - total) < 0.01 &&
+    `${r.source||''} ${r.ota_name||''}`.toLowerCase().includes('booking')
+  ) {
+    return Math.round((total - cleaning) * 100) / 100;
+  }
+  return rooms;
+}
+
 app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res) => {
   try {
     let userId;
@@ -9860,9 +9880,9 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           occupancy_adults:  dbData.occupancy_adults  || null,
           occupancy_children:dbData.occupancy_children|| 0,
           onboarding_completed: dbData.onboarding_completed || false,
-          // Montants
+          // Montants — amount_rooms corrigé via filet historique (voir effectiveAmountRooms)
           amount_total:    dbData.amount_total    ? parseFloat(dbData.amount_total)    : null,
-          amount_rooms:    dbData.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
+          amount_rooms:    effectiveAmountRooms(dbData),
           amount_taxes:    dbData.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
           amount_cleaning: dbData.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
           ota_commission:  dbData.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
@@ -9974,9 +9994,9 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
             occupancy_adults:  dbData.occupancy_adults  || null,
             occupancy_children:dbData.occupancy_children|| 0,
             onboarding_completed: dbData.onboarding_completed || false,
-            // Montants
+            // Montants — amount_rooms corrigé via filet historique (voir effectiveAmountRooms)
             amount_total:    dbData.amount_total    ? parseFloat(dbData.amount_total)    : null,
-            amount_rooms:    dbData.amount_rooms    ? parseFloat(dbData.amount_rooms)    : null,
+            amount_rooms:    effectiveAmountRooms(dbData),
             amount_taxes:    dbData.amount_taxes    ? parseFloat(dbData.amount_taxes)    : null,
             amount_cleaning: dbData.amount_cleaning ? parseFloat(dbData.amount_cleaning) : null,
             ota_commission:  dbData.ota_commission  ? parseFloat(dbData.ota_commission)  : null,
@@ -10691,9 +10711,17 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
       const hostPayout= parseFloat(row.host_payout)    || 0;
       const payFee    = calcPayFee(row, otaCom, total);
 
-      // Loyer fiable : total - ménage - taxes (amount_rooms parfois corrompu avec le brut total)
+      // Pour Booking.com : amount_taxes contient la city tax qui est HORS amount_total
+      // (Booking la collecte séparément et la reverse à la commune ; elle n'est jamais
+      // dans attrs.amount). La soustraire d'une base qui ne l'inclut pas sous-estime le
+      // net hôte. On ne la soustrait donc pas pour Booking.com.
+      const src = `${row.source||''} ${row.platform||''} ${row.ota_name||''}`.toLowerCase();
+      const taxesInTotal = src.includes('booking') ? 0 : taxes;
+
+      // Loyer fiable : total - ménage - taxes incluses dans total
+      // (amount_rooms peut valoir amount_total pour les anciennes lignes Booking → filet en B)
       let rent = 0;
-      if (total > 0)      rent = total - cleaning - taxes;
+      if (total > 0)      rent = total - cleaning - taxesInTotal;
       else if (rooms > 0) rent = rooms;
 
       // Priorité 1 : host_payout (Channex) = revenu - commission, MAIS sans les frais de paiement
@@ -27245,8 +27273,11 @@ app.get('/api/invoice/download-by-number/:invoiceNumber',
 
     const { invoiceNumber } = req.params;
 
-    // Mode agence : chercher dans le compte agence + comptes clients délégués
-    const agencyIds = await getAgencyUserIds(req, userId);
+    // Scope agence complet — on n'exige PAS ?agency=all car iOS ne l'envoie pas.
+    // On récupère toujours les IDs délégués pour que l'opérateur agence puisse
+    // télécharger la facture d'un client dont il gère le logement.
+    // Le contrôle d'accès reste en place : user_id = ANY(agencyIds).
+    const agencyIds = await getAgencyUserIds({ ...req, query: { ...req.query, agency: 'all' } }, userId);
     const result = await pool.query(
       `SELECT file_path, user_id FROM invoice_download_tokens WHERE user_id = ANY($1::text[]) AND invoice_number = $2 ORDER BY created_at DESC LIMIT 1`,
       [agencyIds, invoiceNumber]
@@ -27311,26 +27342,71 @@ app.get('/api/invoice/history',
 
     const agencyIds = await getAgencyUserIds(req, userId);
 
-    const result = await pool.query(
-      `SELECT sub.invoice_number, sub.file_path, sub.created_at, ir.conversation_id, ir.reservation_uid
-       FROM (
-         SELECT DISTINCT ON (invoice_number) invoice_number, file_path, created_at
-         FROM invoice_download_tokens
-         WHERE user_id = ANY($1::text[]) AND file_path LIKE '{%'
-         ORDER BY invoice_number, created_at DESC
-       ) sub
-       LEFT JOIN LATERAL (
-         SELECT conversation_id, reservation_uid
-         FROM invoice_requests
-         WHERE invoice_number = sub.invoice_number
-           AND user_id = ANY($1::text[])
-         ORDER BY sent_at DESC NULLS LAST, id DESC
-         LIMIT 1
-       ) ir ON TRUE
-       ORDER BY sub.created_at DESC
-       LIMIT 100`,
-      [agencyIds]
-    );
+    const filterReservationUid = req.query.reservationUid || null;
+
+    // Filtrage server-side par reservationUid si fourni (nouvelles factures).
+    // Pour les anciennes factures sans reservationUid dans les métadonnées, le
+    // client garde son fallback (correspondance par nom logement + dates).
+    let result;
+    if (filterReservationUid) {
+      result = await pool.query(
+        `SELECT sub.invoice_number, sub.file_path, sub.created_at, ir.conversation_id, ir.reservation_uid
+         FROM (
+           SELECT DISTINCT ON (invoice_number) invoice_number, file_path, created_at
+           FROM invoice_download_tokens
+           WHERE user_id = ANY($1::text[]) AND file_path LIKE '{%'
+             AND (
+               file_path::jsonb->>'reservationUid' = $2
+             )
+           ORDER BY invoice_number, created_at DESC
+         ) sub
+         LEFT JOIN LATERAL (
+           SELECT conversation_id, reservation_uid
+           FROM invoice_requests
+           WHERE invoice_number = sub.invoice_number
+             AND user_id = ANY($1::text[])
+           ORDER BY sent_at DESC NULLS LAST, id DESC
+           LIMIT 1
+         ) ir ON TRUE
+         ORDER BY sub.created_at DESC
+         LIMIT 100`,
+        [agencyIds, filterReservationUid]
+      );
+      // Fallback : chercher aussi dans invoice_requests si rien dans les tokens
+      if (result.rows.length === 0) {
+        result = await pool.query(
+          `SELECT t.invoice_number, t.file_path, t.created_at, ir.conversation_id, ir.reservation_uid
+           FROM invoice_requests ir
+           JOIN invoice_download_tokens t ON t.invoice_number = ir.invoice_number
+             AND t.user_id = ANY($1::text[]) AND t.file_path LIKE '{%'
+           WHERE ir.reservation_uid = $2 AND ir.user_id = ANY($1::text[])
+             AND ir.status = 'sent' AND ir.invoice_number IS NOT NULL
+           ORDER BY t.created_at DESC LIMIT 100`,
+          [agencyIds, filterReservationUid]
+        );
+      }
+    } else {
+      result = await pool.query(
+        `SELECT sub.invoice_number, sub.file_path, sub.created_at, ir.conversation_id, ir.reservation_uid
+         FROM (
+           SELECT DISTINCT ON (invoice_number) invoice_number, file_path, created_at
+           FROM invoice_download_tokens
+           WHERE user_id = ANY($1::text[]) AND file_path LIKE '{%'
+           ORDER BY invoice_number, created_at DESC
+         ) sub
+         LEFT JOIN LATERAL (
+           SELECT conversation_id, reservation_uid
+           FROM invoice_requests
+           WHERE invoice_number = sub.invoice_number
+             AND user_id = ANY($1::text[])
+           ORDER BY sent_at DESC NULLS LAST, id DESC
+           LIMIT 1
+         ) ir ON TRUE
+         ORDER BY sub.created_at DESC
+         LIMIT 100`,
+        [agencyIds]
+      );
+    }
 
     // Si rien dans invoice_download_tokens, fallback sur owner_invoices (factures voyageurs uniquement)
     let rows = result.rows;
@@ -27418,28 +27494,112 @@ app.post('/api/invoice/create',
     const user = profileResult.rows[0];
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    const { 
-      clientName, 
+    const {
+      clientName,
       clientEmail,
-      clientAddress, 
-      clientPostalCode, 
-      clientCity, 
+      clientAddress,
+      clientPostalCode,
+      clientCity,
       clientSiret,
       clientCompany,
       freeNote,
       clientNationality,
       platform,
-      propertyName, 
+      propertyName,
       propertyAddress,
       checkinDate,
       checkoutDate,
       nights,
-      rentAmount, 
-      touristTaxAmount, 
+      rentAmount,
+      touristTaxAmount,
       cleaningFee,
       vatRate,
-      sendEmail
+      sendEmail,
+      reservationUid: rawReservationUid,
+      conversationId: rawConversationId
     } = req.body;
+
+    const reservationUid  = rawReservationUid  || null;
+    const linkedConvId    = rawConversationId  ? parseInt(rawConversationId, 10) : null;
+
+    const agencyIds = await getAgencyUserIds({ ...req, query: { ...req.query, agency: 'all' } }, userId);
+
+    // ── Anti-doublon idempotent — pré-vol (fast path avant advisory lock) ────────
+    // Si reservationUid est fourni et qu'une facture existe déjà, on retourne un
+    // succès idempotent 200 avec le downloadUrl existant — pas un 409.
+    // Un retry légitime (perte réseau) aboutit exactement comme une création réussie.
+    // La re-vérification définitive sous advisory lock protège contre la concurrence.
+    const _appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+
+    async function _findExistingInvoice(db) {
+      // Cherche dans invoice_download_tokens (nouvelles factures avec reservationUid dans meta)
+      const tokRes = await db.query(
+        `SELECT t.invoice_number, t.file_path, tok2.token
+         FROM invoice_download_tokens t
+         LEFT JOIN LATERAL (
+           SELECT token FROM invoice_download_tokens
+           WHERE invoice_number = t.invoice_number
+             AND user_id = ANY($1::text[])
+             AND expires_at > NOW()
+           ORDER BY created_at DESC LIMIT 1
+         ) tok2 ON TRUE
+         WHERE t.user_id = ANY($1::text[]) AND t.file_path LIKE '{%'
+           AND t.file_path::jsonb->>'reservationUid' = $2
+         ORDER BY t.created_at DESC LIMIT 1`,
+        [agencyIds, reservationUid]
+      );
+      if (tokRes.rows.length > 0) {
+        const r = tokRes.rows[0];
+        let m = {};
+        try { m = JSON.parse(r.file_path); } catch(_) {}
+        return {
+          invoiceNumber: r.invoice_number,
+          conversationId: m.conversationId ?? null,
+          downloadUrl: r.token ? `${_appUrl}/api/invoice/download/${r.token}` : null
+        };
+      }
+      // Fallback : invoice_requests (factures auto via buildAndSendInvoiceToConversation)
+      const reqRes = await db.query(
+        `SELECT ir.invoice_number, tok.token, tok.file_path
+         FROM invoice_requests ir
+         LEFT JOIN LATERAL (
+           SELECT token, file_path FROM invoice_download_tokens
+           WHERE invoice_number = ir.invoice_number
+             AND user_id = ANY($1::text[])
+             AND expires_at > NOW()
+           ORDER BY created_at DESC LIMIT 1
+         ) tok ON TRUE
+         WHERE ir.reservation_uid = $2 AND ir.user_id = ANY($1::text[])
+           AND ir.status = 'sent' AND ir.invoice_number IS NOT NULL
+         ORDER BY ir.sent_at DESC LIMIT 1`,
+        [agencyIds, reservationUid]
+      );
+      if (reqRes.rows.length > 0) {
+        const r = reqRes.rows[0];
+        let m = {};
+        try { m = JSON.parse(r.file_path || '{}'); } catch(_) {}
+        return {
+          invoiceNumber: r.invoice_number,
+          conversationId: m.conversationId ?? null,
+          downloadUrl: r.token ? `${_appUrl}/api/invoice/download/${r.token}` : null
+        };
+      }
+      return null;
+    }
+
+    if (reservationUid) {
+      const preflight = await _findExistingInvoice(pool);
+      if (preflight) {
+        console.log(`🔄 [INVOICE] Idempotent pré-vol — reservationUid=${reservationUid} → ${preflight.invoiceNumber}`);
+        return res.json({
+          success: true, existing: true, duplicate: true,
+          invoiceNumber: preflight.invoiceNumber,
+          reservationUid,
+          conversationId: preflight.conversationId,
+          downloadUrl: preflight.downloadUrl
+        });
+      }
+    }
 
     // ── Mode agence : la facture appartient au PROPRIÉTAIRE du logement ──
     // On résout le compte propriétaire (émetteur + numérotation lui appartiennent),
@@ -27473,10 +27633,50 @@ app.post('/api/invoice/create',
       console.error('Erreur résolution propriétaire (mode agence):', e.message);
     }
 
-    // Générer le numéro de facture lisible : FACT-2026-0001
-    // Compteur UNIFIÉ (manuel + auto), scopé au COMPTE PROPRIÉTAIRE → numérotation continue, sans doublon
-    const yearStr = new Date().getFullYear();
-    const invoiceNumber = await getNextInvoiceNumber(pool, billingUserId, yearStr);
+    // ── Numéro de facture avec advisory lock ─────────────────────────────────
+    // Même protection que buildAndSendInvoiceToConversation : transaction +
+    // pg_advisory_xact_lock pour que deux appels concurrents n'obtiennent jamais
+    // le même MAX(seq)+1.
+    // Re-vérification du doublon SOUS le lock : deux requêtes simultanées passent
+    // toutes les deux le pré-vol (aucune facture encore existante), mais la seconde
+    // voit la facture commitée par la première et retourne le résultat idempotent.
+    const yearStr = String(new Date().getFullYear());
+    let invoiceNumber;
+    let _innerIdempotent = null;
+    {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query('SELECT pg_advisory_xact_lock(1001, hashtext($1))', [billingUserId]);
+
+        if (reservationUid) {
+          const innerDup = await _findExistingInvoice(client);
+          if (innerDup) {
+            console.log(`🔄 [INVOICE] Idempotent sous lock — reservationUid=${reservationUid} → ${innerDup.invoiceNumber}`);
+            _innerIdempotent = innerDup;
+          }
+        }
+
+        if (!_innerIdempotent) {
+          invoiceNumber = await getNextInvoiceNumber(client, billingUserId, yearStr);
+        }
+        await client.query('COMMIT');
+      } catch(e) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
+      }
+    }
+    if (_innerIdempotent) {
+      return res.json({
+        success: true, existing: true, duplicate: true,
+        invoiceNumber: _innerIdempotent.invoiceNumber,
+        reservationUid,
+        conversationId: _innerIdempotent.conversationId,
+        downloadUrl: _innerIdempotent.downloadUrl
+      });
+    }
     const invoiceId = 'inv_' + Date.now();
 
     // Calculer les montants
@@ -27681,7 +27881,9 @@ app.post('/api/invoice/create',
           cleaningFee: cleaningFee || 0,
           vatRate: vatRate || 0,
           total: _total,
-          invoiceNumber: invoiceNumber
+          invoiceNumber: invoiceNumber,
+          reservationUid: reservationUid || null,
+          conversationId: linkedConvId || null
         });
         await pool.query(
           `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at) VALUES ($1, $2, $3, $4, $5)`,
@@ -27836,6 +28038,8 @@ app.post('/api/invoice/create',
         vatRate: vatRate || 0,
         total: dlTotal,
         invoiceNumber,
+        reservationUid: reservationUid || null,
+        conversationId: linkedConvId || null,
         emitterName: ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim()) : (user?.company || ''),
         emitterAddress: ownerInfo?.address || '',
         emitterPostalCode: ownerInfo?.postal_code || '',
@@ -27874,14 +28078,18 @@ app.post('/api/invoice/create',
       );
     } catch(e) { /* non bloquant */ }
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
+      existing: false,
+      duplicate: false,
       invoiceNumber,
       invoiceId,
       downloadUrl,
-      message: 'Facture créée avec succès' 
+      reservationUid: reservationUid || null,
+      conversationId: linkedConvId || null,
+      message: 'Facture créée avec succès'
     });
-    
+
   } catch (err) {
     console.error('Erreur création facture:', err);
     res.status(500).json({ error: 'Erreur serveur' });
