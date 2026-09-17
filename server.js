@@ -14617,13 +14617,54 @@ app.post('/api/cleaning/maintenance/:pinCode', async (req, res) => {
 app.post('/api/cleaning/photo-upload', async (req, res) => {
   try {
     const { pinCode, dataUrl, propertyId, reservationKey, kind } = req.body;
-    if (!pinCode || !dataUrl) {
+    if (!dataUrl) {
       return res.status(400).json({ error: 'Données manquantes' });
     }
-    // Vérifier l'accès (jeton ou PIN) — on récupère aussi user_id + nom pour le certificat
-    const acces = await resoudreAgentMenage(pinCode, req);
-    if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
-    const cleaner = acces.cleaner;
+
+    // IPHONEFIX-6: support JWT sous-compte cleaner en plus du PIN/token portail
+    let cleaner;
+    const hasPinOrToken = pinCode && String(pinCode).trim();
+    const hasJWT = req.headers.authorization?.startsWith('Bearer ');
+    if (hasPinOrToken) {
+      const acces = await resoudreAgentMenage(pinCode, req);
+      if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
+      cleaner = acces.cleaner;
+    } else if (hasJWT) {
+      if (!propertyId) return res.status(400).json({ error: 'propertyId requis' });
+      const user = await getUserFromRequest(req);
+      if (!user?.isSubAccount) return res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
+      const { rows: cr } = await pool.query(
+        'SELECT id, user_id, name FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
+        [user.subAccountId]
+      );
+      if (cr.length === 0) return res.status(403).json({ error: 'Aucun compte ménage associé.', code: 'cleaner_not_linked' });
+      cleaner = cr[0];
+      const { rows: propCheck } = await pool.query(
+        'SELECT 1 FROM properties WHERE id = $1 AND user_id = $2',
+        [propertyId, cleaner.user_id]
+      );
+      if (propCheck.length === 0) return res.status(403).json({ error: 'Logement non accessible pour ce compte.' });
+      if (reservationKey) {
+        const { rows: asgChk } = await pool.query(
+          `SELECT 1 WHERE EXISTS (
+             SELECT 1 FROM cleaning_assignments
+             WHERE reservation_key = $1 AND cleaner_id = $2
+           ) OR (
+             NOT EXISTS (SELECT 1 FROM cleaning_assignments WHERE reservation_key = $1)
+             AND EXISTS (
+               SELECT 1 FROM property_default_cleaners
+               WHERE property_id = $3 AND cleaner_id = $2
+             )
+           )`,
+          [reservationKey, cleaner.id, propertyId]
+        );
+        if (asgChk.length === 0) {
+          return res.status(403).json({ error: "Vous n'êtes pas assigné(e) à cette intervention." });
+        }
+      }
+    } else {
+      return res.status(400).json({ error: 'Authentification manquante (PIN, token ou JWT requis)' });
+    }
 
     // Convertir base64 en buffer
     const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
@@ -14671,6 +14712,123 @@ app.post('/api/cleaning/photo-upload', async (req, res) => {
   } catch (err) {
     console.error('❌ Erreur upload photo ménage:', err);
     res.status(500).json({ error: 'Erreur upload photo' });
+  }
+});
+
+// ── IPHONEFIX-8: GET /api/cleaning/consumables — JWT sous-compte cleaner ──
+// Même logique que GET /api/cleaning/consumables/:pinCode mais sans PIN dans l'URL.
+app.get('/api/cleaning/consumables', async (req, res) => {
+  try {
+    const { propertyId } = req.query;
+    if (!propertyId) return res.status(400).json({ error: 'propertyId requis' });
+    const user = await getUserFromRequest(req);
+    if (!user?.isSubAccount) return res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
+    const { rows: cr } = await pool.query(
+      'SELECT id, user_id FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
+      [user.subAccountId]
+    );
+    if (cr.length === 0) return res.status(403).json({ error: 'Aucun compte ménage associé.', code: 'cleaner_not_linked' });
+    const cleaner = cr[0];
+    const { rows: propCheck } = await pool.query(
+      'SELECT 1 FROM properties WHERE id = $1 AND user_id = $2',
+      [propertyId, cleaner.user_id]
+    );
+    if (propCheck.length === 0) return res.status(403).json({ error: 'Logement non accessible pour ce compte.' });
+    await ensureDefaultConsumables(cleaner.user_id);
+    const result = await pool.query(
+      `SELECT id, label, icon FROM consumable_items
+       WHERE user_id = $1 AND is_active = TRUE
+       AND (property_id IS NULL OR property_id = $2)
+       ORDER BY position ASC, id ASC`,
+      [cleaner.user_id, propertyId]
+    );
+    res.json({ success: true, items: result.rows });
+  } catch (err) {
+    console.error('Erreur GET /api/cleaning/consumables :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── IPHONEFIX-10: POST /api/cleaning/maintenance — JWT sous-compte cleaner ──
+// Même logique que POST /api/cleaning/maintenance/:pinCode mais sans PIN dans l'URL.
+app.post('/api/cleaning/maintenance', async (req, res) => {
+  try {
+    const { propertyId, title, description, priority, photos, reservationKey, kind } = req.body;
+    if (!propertyId || !title || !title.trim()) {
+      return res.status(400).json({ error: 'Données manquantes' });
+    }
+    const user = await getUserFromRequest(req);
+    if (!user?.isSubAccount) return res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
+    const { rows: cr } = await pool.query(
+      'SELECT id, user_id, name FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
+      [user.subAccountId]
+    );
+    if (cr.length === 0) return res.status(403).json({ error: 'Aucun compte ménage associé.', code: 'cleaner_not_linked' });
+    const cleaner = cr[0];
+    const { rows: propCheck } = await pool.query(
+      'SELECT 1 FROM properties WHERE id = $1 AND user_id = $2',
+      [propertyId, cleaner.user_id]
+    );
+    if (propCheck.length === 0) return res.status(403).json({ error: 'Logement non accessible pour ce compte.' });
+    if (reservationKey) {
+      const { rows: asgChk } = await pool.query(
+        `SELECT 1 WHERE EXISTS (
+           SELECT 1 FROM cleaning_assignments
+           WHERE reservation_key = $1 AND cleaner_id = $2
+         ) OR (
+           NOT EXISTS (SELECT 1 FROM cleaning_assignments WHERE reservation_key = $1)
+           AND EXISTS (
+             SELECT 1 FROM property_default_cleaners
+             WHERE property_id = $3 AND cleaner_id = $2
+           )
+         )`,
+        [reservationKey, cleaner.id, propertyId]
+      );
+      if (asgChk.length === 0) {
+        return res.status(403).json({ error: "Vous n'êtes pas assigné(e) à cette intervention." });
+      }
+    }
+    const prio = ['low','normal','high','urgent'].includes(priority) ? priority : 'normal';
+    const ticketKind = (kind === 'damage') ? 'damage' : 'maintenance';
+    const photoArr = Array.isArray(photos) ? photos.slice(0, 10) : [];
+    const result = await pool.query(
+      `INSERT INTO maintenance_tickets
+       (user_id, property_id, title, description, priority, photos, created_by, created_by_name, reservation_key, kind)
+       VALUES ($1, $2, $3, $4, $5, $6, 'cleaner', $7, $8, $9) RETURNING id`,
+      [cleaner.user_id, propertyId, title.trim().slice(0,140), (description||'').trim().slice(0,2000)||null,
+       prio, JSON.stringify(photoArr), cleaner.name, reservationKey || null, ticketKind]
+    );
+    try {
+      const property = PROPERTIES.find(p => p.id === propertyId);
+      const propName = displayName(property) || propertyId;
+      const isDamage = ticketKind === 'damage';
+      const prioTxt = prio === 'urgent' ? '🔴 URGENT — ' : '';
+      const ntitle = isDamage ? `⚠️ Dégradation — ${propName}` : `🔧 Incident — ${propName}`;
+      const nbody = isDamage
+        ? `${cleaner.name} a signalé une dégradation${photoArr.length ? ` (${photoArr.length} photo${photoArr.length>1?'s':''})` : ''}. Vérifie pour une éventuelle retenue sur la caution.`
+        : `${prioTxt}${cleaner.name} signale : ${title.trim()}`;
+      const pushData = { type: isDamage ? 'damage_report' : 'maintenance_ticket', propertyId,
+        ticketId: String(result.rows[0].id), click_action: '/cleaning.html', screen: 'cleaning' };
+      if (photoArr[0]) pushData.image = photoArr[0];
+      const tokRes = await pool.query(
+        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL', [cleaner.user_id]
+      );
+      if (tokRes.rows.length > 0) {
+        await sendNotificationToMultipleLogged(tokRes.rows.map(r => r.fcm_token), ntitle, nbody, pushData);
+      }
+      try {
+        await sendNotificationToSubAccountsOf(cleaner.user_id, 'can_view_cleaning', ntitle, nbody, pushData, 'notif_sub_cleaning_completed');
+      } catch(_) {}
+      if (typeof io !== 'undefined' && io) {
+        io.to(`user_${cleaner.user_id}`).emit('maintenance:new', { propertyId, title: title.trim(), kind: ticketKind });
+      }
+    } catch (notifErr) {
+      console.error('❌ [MAINT-JWT] Notif incident échouée:', notifErr.message);
+    }
+    res.status(201).json({ success: true, ticketId: result.rows[0].id, kind: ticketKind });
+  } catch (err) {
+    console.error('Erreur POST /api/cleaning/maintenance :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -14876,16 +15034,66 @@ app.post('/api/cleaning/checklist', async (req, res) => {
   try {
     const { pinCode, reservationKey, propertyId, tasks, photos, photoSources, notes, duration, startedAt, completedAt, signatureData, certifiedAt } = req.body;
     const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-    
-    if (!pinCode || !reservationKey || !propertyId) {
+
+    if (!reservationKey || !propertyId) {
       return res.status(400).json({ error: 'Données manquantes' });
     }
-    
-    // Vérifier l'accès (jeton ou PIN)
-    const acces = await resoudreAgentMenage(pinCode, req);
-    if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
-    const cleaner = acces.cleaner;
-    
+
+    let cleaner;
+    const hasPinOrToken = pinCode && String(pinCode).trim();
+    const hasJWT        = req.headers.authorization?.startsWith('Bearer ');
+
+    if (hasPinOrToken) {
+      // ── Chemin existant : PIN ou access_token ── (inchangé)
+      const acces = await resoudreAgentMenage(pinCode, req);
+      if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
+      cleaner = acces.cleaner;
+    } else if (hasJWT) {
+      // ── Nouveau chemin : JWT sous-compte cleaner ──
+      const user = await getUserFromRequest(req);
+      if (!user?.isSubAccount) {
+        return res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
+      }
+      const { rows: cr } = await pool.query(
+        'SELECT id, user_id FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
+        [user.subAccountId]
+      );
+      if (cr.length === 0) {
+        return res.status(403).json({
+          error: 'Aucun compte ménage associé à ce sous-compte.',
+          code: 'cleaner_not_linked'
+        });
+      }
+      cleaner = cr[0];
+      // IDOR: vérifier que propertyId appartient bien au compte du cleaner
+      const { rows: propCheck } = await pool.query(
+        'SELECT 1 FROM properties WHERE id = $1 AND user_id = $2',
+        [propertyId, cleaner.user_id]
+      );
+      if (propCheck.length === 0) {
+        return res.status(403).json({ error: 'Logement non accessible pour ce compte.' });
+      }
+      // IPHONEFIX-3: même logique que PATCH /draft — per-reservation_key.
+      const { rows: assignCheck } = await pool.query(
+        `SELECT 1 WHERE EXISTS (
+           SELECT 1 FROM cleaning_assignments
+           WHERE reservation_key = $1 AND cleaner_id = $2
+         ) OR (
+           NOT EXISTS (SELECT 1 FROM cleaning_assignments WHERE reservation_key = $1)
+           AND EXISTS (
+             SELECT 1 FROM property_default_cleaners
+             WHERE property_id = $3 AND cleaner_id = $2
+           )
+         )`,
+        [reservationKey, cleaner.id, propertyId]
+      );
+      if (assignCheck.length === 0) {
+        return res.status(403).json({ error: "Vous n'êtes pas assigné(e) à cette intervention." });
+      }
+    } else {
+      return res.status(400).json({ error: 'Authentification manquante (PIN, token ou JWT requis)' });
+    }
+
     // Vérifier les photos (minimum 5)
     if (!photos || photos.length < 5) {
       return res.status(400).json({ error: 'Minimum 5 photos requises' });
@@ -14956,7 +15164,7 @@ app.post('/api/cleaning/checklist', async (req, res) => {
          photo_sources = EXCLUDED.photo_sources,
          notes = EXCLUDED.notes,
          duration_seconds = EXCLUDED.duration_seconds,
-         started_at = EXCLUDED.started_at,
+         started_at = COALESCE(cleaning_checklists.started_at, EXCLUDED.started_at),
          completed_at = NOW(),
          owner_status = CASE WHEN cleaning_checklists.owner_status = 'validated' THEN 'validated' ELSE 'pending' END,
          owner_notes = CASE WHEN cleaning_checklists.owner_status = 'validated' THEN cleaning_checklists.owner_notes ELSE NULL END,
@@ -15127,35 +15335,68 @@ app.post('/api/cleaning/checklist', async (req, res) => {
   }
 });
 // GET - Détails d'une checklist spécifique
-app.get('/api/cleaning/checklists/:id', async (req, res) => {
+app.get('/api/cleaning/checklists/:id',
+  authenticateAny,
+  loadSubAccountData(pool),
+  async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
+    const { id } = req.params;
+
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+
+    if (!userId) {
       return res.status(401).json({ error: 'Non autorisé' });
     }
 
-    const { id } = req.params;
-    const agencyIds = await getAgencyUserIds(req, user.id);
+    const agencyIds = await getAgencyUserIds(req, userId);
+
+    // Sous-compte cleaner : restreindre à son propre cleaner_id (IDOR guard).
+    const params = [id, agencyIds];
+    let cleanerClause = '';
+    if (req.user.isSubAccount && req.subAccountData?.role === 'cleaner') {
+      const { rows: cr } = await pool.query(
+        'SELECT id FROM cleaners WHERE sub_account_id = $1',
+        [req.user.subAccountId]
+      );
+      if (cr.length === 0) {
+        return res.status(403).json({
+          error: 'Aucun compte ménage associé à ce sous-compte.',
+          code: 'cleaner_not_linked'
+        });
+      }
+      params.push(cr[0].id);
+      cleanerClause = `AND cc.cleaner_id = $3`;
+    }
+
+    // Sous-compte non-cleaner avec propriétés restreintes : filtrer par accessible_property_ids
+    let propClause = '';
+    if (req.user.isSubAccount && req.subAccountData?.role !== 'cleaner') {
+      const accessiblePropIds = req.subAccountData?.accessiblePropertyIds;
+      if (Array.isArray(accessiblePropIds) && accessiblePropIds.length > 0) {
+        params.push(accessiblePropIds);
+        propClause = `AND cc.property_id = ANY($${params.length}::text[])`;
+      }
+    }
 
     const result = await pool.query(
-      `SELECT 
+      `SELECT
         cc.*,
-        c.name as cleaner_name,
-        c.email as cleaner_email,
-        c.phone as cleaner_phone
+        c.name  AS cleaner_name,
+        c.email AS cleaner_email,
+        c.phone AS cleaner_phone
        FROM cleaning_checklists cc
        LEFT JOIN cleaners c ON c.id = cc.cleaner_id
-       WHERE cc.id = $1 AND cc.user_id = ANY($2::text[])`,
-      [id, agencyIds]
+       WHERE cc.id = $1 AND cc.user_id = ANY($2::text[]) ${cleanerClause} ${propClause}`,
+      params
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Checklist non trouvée' });
     }
 
-    res.json({
-      checklist: result.rows[0]
-    });
+    res.json({ checklist: result.rows[0] });
   } catch (err) {
     console.error('Erreur GET /api/cleaning/checklists/:id :', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -15576,6 +15817,219 @@ app.get('/api/cleaning/checklists',
   }
 });
 // ============================================
+// GET /api/cleaning/checklists/:reservationKey/draft
+// Retourne le brouillon en cours (completed_at IS NULL) pour une réservation.
+// Auth : PIN/token (portail) ou JWT sous-compte cleaner (iOS).
+// ============================================
+app.get('/api/cleaning/checklists/:reservationKey/draft', async (req, res) => {
+  try {
+    const { reservationKey } = req.params;
+    const pin = req.query.pin || req.query.pinCode;
+
+    let cleaner;
+    const hasJWT = req.headers.authorization?.startsWith('Bearer ');
+
+    if (pin) {
+      const acces = await resoudreAgentMenage(pin, req);
+      if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
+      cleaner = acces.cleaner;
+    } else if (hasJWT) {
+      const user = await getUserFromRequest(req);
+      if (!user?.isSubAccount) return res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
+      const { rows: cr } = await pool.query(
+        'SELECT id, user_id FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
+        [user.subAccountId]
+      );
+      if (cr.length === 0) return res.status(403).json({ error: 'Aucun compte ménage associé.', code: 'cleaner_not_linked' });
+      cleaner = cr[0];
+    } else {
+      return res.status(401).json({ error: 'Authentification requise' });
+    }
+
+    const { rows } = await pool.query(
+      `SELECT tasks, photos, notes, started_at, updated_at
+       FROM cleaning_checklists
+       WHERE reservation_key = $1 AND cleaner_id = $2 AND completed_at IS NULL
+       LIMIT 1`,
+      [reservationKey, cleaner.id]
+    );
+
+    if (rows.length === 0) return res.status(404).json({ error: 'Aucun brouillon trouvé' });
+
+    res.json({ draft: rows[0] });
+  } catch (err) {
+    console.error('Erreur GET /api/cleaning/checklists/:rk/draft :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PATCH /api/cleaning/checklists/:reservationKey/draft
+// Sauvegarde intermédiaire — JWT sous-compte cleaner OU PIN/access_token (portail).
+// Pas de validation photos/tâches complètes ; completed_at reste NULL.
+// Supports mutations ciblées : taskChanges, addPhoto, removePhotoId.
+// ============================================
+app.patch('/api/cleaning/checklists/:reservationKey/draft', async (req, res) => {
+  try {
+    const { reservationKey } = req.params;
+    const {
+      propertyId, notes, startedAt,
+      tasks, taskChanges,          // mutations tâches
+      photos, addPhoto, removePhotoId,  // mutations photos
+      pinCode                      // auth portail
+    } = req.body;
+
+    if (!reservationKey || !propertyId) {
+      return res.status(400).json({ error: 'reservationKey et propertyId requis' });
+    }
+
+    // ── Auth ──
+    let cleaner;
+    const hasPinOrToken = pinCode && String(pinCode).trim();
+    const hasJWT = req.headers.authorization?.startsWith('Bearer ');
+
+    if (hasPinOrToken) {
+      const acces = await resoudreAgentMenage(pinCode, req);
+      if (!acces.ok) return res.status(acces.status).json({ error: acces.error });
+      cleaner = acces.cleaner;
+    } else if (hasJWT) {
+      const user = await getUserFromRequest(req);
+      if (!user?.isSubAccount) return res.status(403).json({ error: 'JWT sous-compte cleaner requis' });
+      const { rows: cr } = await pool.query(
+        'SELECT id, user_id FROM cleaners WHERE sub_account_id = $1 AND is_active = TRUE',
+        [user.subAccountId]
+      );
+      if (cr.length === 0) return res.status(403).json({ error: 'Aucun compte ménage associé.', code: 'cleaner_not_linked' });
+      cleaner = cr[0];
+      // IPHONEFIX-3: autorisation par intervention, pas par logement seul.
+      // Explicite : cleaning_assignments.reservation_key = cette intervention.
+      // Virtuel   : aucune assignation explicite pour cette intervention ET
+      //             cleaner dans property_default_cleaners pour ce logement.
+      const { rows: asgChk } = await pool.query(
+        `SELECT 1 WHERE EXISTS (
+           SELECT 1 FROM cleaning_assignments
+           WHERE reservation_key = $1 AND cleaner_id = $2
+         ) OR (
+           NOT EXISTS (SELECT 1 FROM cleaning_assignments WHERE reservation_key = $1)
+           AND EXISTS (
+             SELECT 1 FROM property_default_cleaners
+             WHERE property_id = $3 AND cleaner_id = $2
+           )
+         )`,
+        [reservationKey, cleaner.id, propertyId]
+      );
+      if (asgChk.length === 0) {
+        return res.status(403).json({ error: "Vous n'êtes pas assigné(e) à cette intervention." });
+      }
+    } else {
+      return res.status(400).json({ error: 'Authentification manquante (PIN, token ou JWT requis)' });
+    }
+
+    // CLEANFIX-1: Refus si la checklist est déjà soumise (completed_at IS NOT NULL)
+    const { rows: existing } = await pool.query(
+      'SELECT id, completed_at FROM cleaning_checklists WHERE reservation_key = $1 AND cleaner_id = $2',
+      [reservationKey, cleaner.id]
+    );
+    if (existing.length > 0 && existing[0].completed_at !== null) {
+      return res.status(409).json({ error: 'Cette checklist a déjà été soumise.', code: 'already_submitted' });
+    }
+    const rowExists = existing.length > 0;
+
+    const ckDate = (() => {
+      const parts = reservationKey.split('_');
+      return parts.length >= 2 ? parts[parts.length - 1] : null;
+    })();
+
+    if (!rowExists) {
+      // ── INSERT initial : exige un snapshot complet des tâches ──
+      const insertTasks  = Array.isArray(tasks) ? tasks : [];
+      const insertPhotos = Array.isArray(photos) ? photos
+        : (addPhoto?.id && addPhoto?.data ? [{ id: addPhoto.id, data: addPhoto.data }] : []);
+
+      await pool.query(
+        `INSERT INTO cleaning_checklists
+           (user_id, property_id, reservation_key, cleaner_id,
+            checkout_date, tasks, photos, notes, started_at, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
+        [
+          cleaner.user_id, propertyId, reservationKey, cleaner.id,
+          ckDate,
+          JSON.stringify(insertTasks),
+          JSON.stringify(insertPhotos),
+          notes ?? null,
+          startedAt ?? null
+        ]
+      );
+    } else {
+      // ── UPDATE ciblé : on ne touche que les champs présents dans le body ──
+      const setClauses = [];
+      const params = [reservationKey, cleaner.id]; // $1, $2 toujours réservés au WHERE
+
+      // Tasks
+      if (Array.isArray(taskChanges) && taskChanges.length > 0) {
+        // Mutation ciblée par ID
+        const changesMap = {};
+        taskChanges.forEach(tc => { changesMap[tc.id] = tc.checked; });
+        params.push(JSON.stringify(changesMap));
+        const n = params.length;
+        setClauses.push(`tasks = (
+          SELECT COALESCE(jsonb_agg(
+            CASE WHEN ($${n}::jsonb) ? (t->>'id')
+            THEN t || jsonb_build_object('checked', (($${n}::jsonb)->>(t->>'id'))::boolean)
+            ELSE t END
+          ), cleaning_checklists.tasks)
+          FROM jsonb_array_elements(COALESCE(cleaning_checklists.tasks, '[]'::jsonb)) t
+        )`);
+      } else if (Array.isArray(tasks)) {
+        params.push(JSON.stringify(tasks));
+        setClauses.push(`tasks = $${params.length}::jsonb`);
+      }
+
+      // Photos
+      if (removePhotoId) {
+        params.push(String(removePhotoId));
+        setClauses.push(`photos = (
+          SELECT COALESCE(jsonb_agg(p), '[]'::jsonb)
+          FROM jsonb_array_elements(COALESCE(cleaning_checklists.photos, '[]'::jsonb)) p
+          WHERE p->>'id' != $${params.length}
+        )`);
+      } else if (addPhoto?.id && addPhoto?.data) {
+        params.push(JSON.stringify({ id: addPhoto.id, data: addPhoto.data }));
+        setClauses.push(`photos = COALESCE(cleaning_checklists.photos, '[]'::jsonb) || $${params.length}::jsonb`);
+      } else if (Array.isArray(photos)) {
+        params.push(JSON.stringify(photos));
+        setClauses.push(`photos = $${params.length}::jsonb`);
+      }
+
+      // Notes
+      if (notes !== undefined && notes !== null) {
+        params.push(notes);
+        setClauses.push(`notes = $${params.length}`);
+      }
+
+      // started_at — préserver la première valeur
+      if (startedAt) {
+        params.push(startedAt);
+        setClauses.push(`started_at = COALESCE(cleaning_checklists.started_at, $${params.length})`);
+      }
+
+      if (setClauses.length > 0) {
+        setClauses.push('updated_at = NOW()');
+        await pool.query(
+          `UPDATE cleaning_checklists SET ${setClauses.join(', ')}
+           WHERE reservation_key = $1 AND cleaner_id = $2 AND completed_at IS NULL`,
+          params
+        );
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Erreur PATCH /api/cleaning/checklists/:rk/draft :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ============================================
 // ROUTE GET : Récupérer les assignations de ménage
 // ============================================
 app.get('/api/cleaning/assignments', 
@@ -15713,6 +16167,52 @@ app.get('/api/cleaning/assignments',
     });
   }
 });
+// ============================================
+// GET /api/cleaning/me/access — Accès ménage du sous-compte cleaner
+// ============================================
+
+app.get('/api/cleaning/me/access',
+  authenticateAny,
+  async (req, res) => {
+  try {
+    if (!req.user?.isSubAccount) {
+      return res.status(403).json({ error: 'Réservé aux sous-comptes' });
+    }
+
+    const { rows } = await pool.query(
+      `SELECT id, name, pin_code, access_token, is_active
+       FROM cleaners
+       WHERE sub_account_id = $1 AND is_active = TRUE
+       LIMIT 1`,
+      [req.user.subAccountId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        error: 'Aucun compte ménage associé à ce sous-compte.',
+        code: 'cleaner_not_linked'
+      });
+    }
+
+    const cleaner = rows[0];
+    const base = process.env.SITE_BASE_URL || 'https://www.boostinghost.fr';
+    const accessUrl = cleaner.access_token
+      ? `${base}/cleaning-tasks.html?t=${cleaner.access_token}`
+      : `${base}/cleaning-tasks.html`;
+
+    res.json({
+      cleanerId:  cleaner.id,
+      name:       cleaner.name,
+      pinCode:    cleaner.pin_code,
+      accessUrl,
+      isActive:   cleaner.is_active
+    });
+  } catch (err) {
+    console.error('Erreur GET /api/cleaning/me/access :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ============================================
 // 🧹 NOUVELLES ROUTES MÉNAGE — Templates, Validation, Stats, QR
 // ============================================

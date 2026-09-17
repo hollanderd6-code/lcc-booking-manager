@@ -1633,7 +1633,13 @@ let cleanerData = null;
 let tasks = [];
 let currentTask = null;
 let checklistTasks = [];
-let checklistPhotos = []; // [{data: base64, source: 'camera'|'gallery'}]
+let checklistPhotos = []; // [{id: uuid, data: base64, source: 'camera'|'gallery'|'draft'}]
+
+function generateId() {
+  return (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
 // État du logement / dégradations (bloc obligatoire en haut de checklist)
 let damageState = '';     // '' (non renseigné) | 'ras' | 'reported'
 let damagePhotos = [];    // [{data: base64, source: 'camera'|'gallery'}]
@@ -1996,20 +2002,64 @@ function renderTaskCard(task, type) {
 async function openChecklist(reservationKey) {
   currentTask = tasks.find(t => t.reservationKey === reservationKey);
   if (!currentTask) return;
-  
+
   // Reset state
   checklistPhotos = [];
   damageState = '';
   damagePhotos = [];
   timerSeconds = 0;
   startedAt = new Date();
-  
+
   // Load template tasks (or default)
   checklistTasks = await loadChecklistTemplate(currentTask);
-  
+
+  // CLEANFIX-9 : Restaurer le brouillon existant avant le rendu
+  let draftNotes = '';
+  if (currentPin && !currentTask.completed) {
+    try {
+      const draftRes = await fetch(
+        `${API_URL}/api/cleaning/checklists/${encodeURIComponent(reservationKey)}/draft?pin=${encodeURIComponent(currentPin)}`
+      );
+      if (draftRes.ok) {
+        const { draft } = await draftRes.json();
+
+        // Restaurer les états des tâches
+        if (Array.isArray(draft.tasks) && draft.tasks.length > 0) {
+          const checkedById = {};
+          draft.tasks.forEach(t => { if (t.id) checkedById[t.id] = !!t.checked; });
+          checklistTasks = checklistTasks.map(t => ({
+            ...t,
+            checked: (t.id in checkedById) ? checkedById[t.id] : t.checked
+          }));
+        }
+
+        // Restaurer les photos avec ID stables
+        if (Array.isArray(draft.photos) && draft.photos.length > 0) {
+          checklistPhotos = draft.photos
+            .map(p => typeof p === 'string'
+              ? { id: generateId(), data: p, source: 'draft' }
+              : { id: p.id || generateId(), data: p.data || '', source: 'draft' }
+            )
+            .filter(p => p.data);
+        }
+
+        // Notes
+        if (draft.notes) draftNotes = draft.notes;
+
+        // started_at — durée finale correcte, timer affiché repart de 0
+        if (draft.started_at) {
+          const d = new Date(draft.started_at);
+          if (!isNaN(d.getTime())) startedAt = d;
+        }
+      }
+    } catch (e) {
+      console.warn('[draft] Chargement échoué:', e);
+    }
+  }
+
   // Update header
   document.getElementById('checklistPropertyName').textContent = currentTask.propertyName || 'Logement';
-  document.getElementById('checklistSubtitle').textContent = 
+  document.getElementById('checklistSubtitle').textContent =
     `Départ le ${formatDateFr(currentTask.checkoutDate)}${currentTask.guestName ? ' — ' + currentTask.guestName : ''}`;
 
   const noteEl = document.getElementById('checklistNote');
@@ -2023,11 +2073,29 @@ async function openChecklist(reservationKey) {
       noteEl.innerHTML = '';
     }
   }
-  
-  // Render
+
+  // Render — checklistTasks et checklistPhotos déjà restaurés
   renderChecklistBody();
+
+  // Restaurer la note (textarea présent après renderChecklistBody)
+  if (draftNotes) {
+    const notesEl = document.getElementById('cleaningNotes');
+    if (notesEl) notesEl.value = draftNotes;
+  }
+
+  // CLEANFIX-10 : Listener debounce notes
+  ;(function() {
+    const notesEl = document.getElementById('cleaningNotes');
+    if (!notesEl) return;
+    let notesTimer = null;
+    notesEl.addEventListener('input', () => {
+      clearTimeout(notesTimer);
+      notesTimer = setTimeout(() => patchDraft({ notes: notesEl.value }), 1000);
+    });
+  })();
+
   updateProgress();
-  
+
   // Start timer
   startTimer();
 
@@ -2050,6 +2118,27 @@ async function loadConsumables(propertyId) {
     renderRestockSection();
   } catch (e) {
     console.warn('Consommables non chargés:', e);
+  }
+}
+
+// CLEANFIX-10 : Sauvegarde progressive du brouillon (PIN auth)
+async function patchDraft(changes) {
+  if (!currentPin || !currentTask || currentTask.completed) return;
+  try {
+    await fetch(
+      `${API_URL}/api/cleaning/checklists/${encodeURIComponent(currentTask.reservationKey)}/draft`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pinCode:    currentPin,
+          propertyId: currentTask.propertyId,
+          ...changes
+        })
+      }
+    );
+  } catch (e) {
+    console.warn('[draft] PATCH échoué:', e);
   }
 }
 
@@ -2336,9 +2425,9 @@ function renderChecklistBody() {
 function toggleTask(taskId) {
   const task = checklistTasks.find(t => t.id === taskId);
   if (!task) return;
-  
+
   task.checked = !task.checked;
-  
+
   // Update DOM
   const row = document.querySelector(`[data-task-id="${taskId}"]`);
   if (row) {
@@ -2346,18 +2435,21 @@ function toggleTask(taskId) {
     const checkbox = row.querySelector('.task-checkbox');
     checkbox.innerHTML = task.checked ? '<i class="fas fa-check"></i>' : '';
   }
-  
+
   // Update room count
   const room = task.room || 'general';
   const roomTasks = checklistTasks.filter(t => (t.room || 'general') === room);
   const doneCount = roomTasks.filter(t => t.checked).length;
   const countEl = document.getElementById(`roomCount_${room}`);
   if (countEl) countEl.textContent = `${doneCount}/${roomTasks.length}`;
-  
+
   updateProgress();
-  
+
   // Haptic feedback
   if (navigator.vibrate) navigator.vibrate(10);
+
+  // CLEANFIX-10 : Mutation ciblée
+  patchDraft({ taskChanges: [{ id: taskId, checked: task.checked }] });
 }
 
 function updateProgress() {
@@ -2396,12 +2488,16 @@ function updateProgress() {
 // ===== PHOTOS =====
 function _addChecklistPhoto(file, source) {
   if (!file.type.startsWith('image/')) return;
+  const photoId = generateId(); // ID stable avant compression
   const reader = new FileReader();
   reader.onload = (ev) => {
     compressImage(ev.target.result, 800, 0.6, (compressed) => {
-      checklistPhotos.push({ data: compressed, source });
+      const photo = { id: photoId, data: compressed, source };
+      checklistPhotos.push(photo);
       renderPhotosGrid();
       updateProgress();
+      // CLEANFIX-10 : Ajout progressif
+      patchDraft({ addPhoto: { id: photo.id, data: photo.data } });
     });
   };
   reader.readAsDataURL(file);
@@ -2465,9 +2561,12 @@ function renderPhotosGrid() {
 }
 
 function removePhoto(idx) {
+  const removed = checklistPhotos[idx];
   checklistPhotos.splice(idx, 1);
   renderPhotosGrid();
   updateProgress();
+  // CLEANFIX-10 : Suppression progressive par ID
+  if (removed?.id) patchDraft({ removePhotoId: removed.id });
 }
 
 // ── État du logement / dégradations ──
