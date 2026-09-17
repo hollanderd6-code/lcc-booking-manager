@@ -3386,6 +3386,60 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Tables help:', e.message);
     }
 
+    // ── A1 : welcome_books_v2 — colonne property_id (livret unifié) ──────────
+    try {
+      await pool.query(`
+        ALTER TABLE welcome_books_v2
+          ADD COLUMN IF NOT EXISTS property_id TEXT REFERENCES properties(id) ON DELETE SET NULL;
+      `);
+      console.log('✅ Colonne welcome_books_v2.property_id OK');
+    } catch (e) {
+      console.log('ℹ️ welcome_books_v2.property_id:', e.message);
+    }
+
+    // ── A1 : backfill safe des associations legacy via welcome_book_url ──────
+    try {
+      await pool.query(`
+        WITH candidates AS (
+          SELECT p.id AS property_id, p.user_id,
+                 (regexp_match(p.welcome_book_url, '/welcome/([a-zA-Z0-9_-]+)'))[1] AS unique_id
+          FROM properties p
+          WHERE p.welcome_book_url IS NOT NULL AND p.welcome_book_url != ''
+        ),
+        with_counts AS (
+          SELECT *, COUNT(*) OVER (PARTITION BY user_id, unique_id) AS prop_count
+          FROM candidates
+          WHERE unique_id IS NOT NULL
+        ),
+        unambiguous AS (
+          SELECT property_id, unique_id FROM with_counts WHERE prop_count = 1
+        )
+        UPDATE welcome_books_v2 wb
+        SET property_id = u.property_id
+        FROM unambiguous u
+        JOIN welcome_books_v2 wb2
+          ON wb2.unique_id = u.unique_id AND wb2.user_id::text IN (
+            SELECT p2.user_id FROM properties p2 WHERE p2.id = u.property_id
+          )
+        WHERE wb.unique_id = u.unique_id AND wb.property_id IS NULL;
+      `);
+      console.log('✅ Backfill welcome_books_v2.property_id OK');
+    } catch (e) {
+      console.log('ℹ️ Backfill welcome_books_v2.property_id:', e.message);
+    }
+
+    // ── A1 : index unique partiel (uniquement après backfill sûr) ────────────
+    try {
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_wb_v2_property_id_unique
+        ON welcome_books_v2 (property_id)
+        WHERE property_id IS NOT NULL;
+      `);
+      console.log('✅ Index unique welcome_books_v2.property_id OK');
+    } catch (e) {
+      console.log('ℹ️ Index welcome_books_v2.property_id:', e.message);
+    }
+
   } catch (err) {
     console.error('❌ Erreur initDb (Postgres):', err);
     process.exit(1);
@@ -31532,29 +31586,60 @@ app.get('/welcome-debug/:uniqueId', async (req, res) => {
 app.get('/welcome/:uniqueId', async (req, res) => {
   try {
     const { uniqueId } = req.params;
-    
-    // 1. Récupération des données
+
+    // 1. Récupération des données — JOIN property si property_id est lié
     const result = await pool.query(
-      `SELECT data FROM welcome_books_v2 WHERE unique_id = $1`, 
+      `SELECT wb.data, wb.property_id,
+              p.wifi_name, p.wifi_password, p.access_code, p.access_instructions,
+              p.arrival_time, p.departure_time, p.practical_info
+       FROM welcome_books_v2 wb
+       LEFT JOIN properties p ON wb.property_id = p.id
+       WHERE wb.unique_id = $1`,
       [uniqueId]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).send("<h1>Livret introuvable</h1>");
     }
-    
-    const d = result.rows[0].data || {};
 
-    // Fallback heure d'arrivée : si le livret ne stocke pas checkinTime,
-    // on lit arrival_time sur le logement lié (via welcome_book_url).
+    const row = result.rows[0];
+    let d = row.data || {};
+
+    // Property-first : pour les champs communs, la valeur Property l'emporte
+    // sur la valeur stockée dans data (sauf si la valeur Property est vide/null)
+    if (row.property_id) {
+      const propVal = (pv, dv) => (pv !== null && pv !== undefined && String(pv).trim() !== '') ? pv : dv;
+      let pi = {};
+      try {
+        pi = typeof row.practical_info === 'string'
+          ? JSON.parse(row.practical_info)
+          : (row.practical_info || {});
+      } catch(_) {}
+      d = {
+        ...d,
+        wifiSSID:           propVal(row.wifi_name,          d.wifiSSID),
+        wifiPassword:       propVal(row.wifi_password,       d.wifiPassword),
+        keyboxCode:         propVal(row.access_code,         d.keyboxCode),
+        accessInstructions: propVal(row.access_instructions, d.accessInstructions),
+        checkinTime:        propVal(row.arrival_time,        d.checkinTime),
+        checkoutTime:       propVal(row.departure_time,      d.checkoutTime),
+        parkingInfo:        propVal(pi.parkingDetails,       d.parkingInfo),
+        transportInfo:      propVal(pi.publicTransport,      d.transportInfo),
+        shopsList:          propVal(pi.nearbyShops,          d.shopsList),
+      };
+    }
+
+    // Fallback legacy : si pas de property_id, tenter via welcome_book_url
     let propArrivalTime = '';
-    try {
-      const propRow = await pool.query(
-        `SELECT arrival_time FROM properties WHERE welcome_book_url LIKE $1 LIMIT 1`,
-        [`%/welcome/${uniqueId}`]
-      );
-      propArrivalTime = propRow.rows[0]?.arrival_time || '';
-    } catch(_) {}
+    if (!row.property_id) {
+      try {
+        const propRow = await pool.query(
+          `SELECT arrival_time FROM properties WHERE welcome_book_url LIKE $1 LIMIT 1`,
+          [`%/welcome/${uniqueId}`]
+        );
+        propArrivalTime = propRow.rows[0]?.arrival_time || '';
+      } catch(_) {}
+    }
     const checkinTime = d.checkinTime || propArrivalTime;
 
     // 2. Préparation des variables (Correction du Titre ici)
