@@ -3087,17 +3087,19 @@ document.head.appendChild(style);
 </style>
 
 <script>
-/* ===== SCROLL DEBUG MODE — actif uniquement si ?scrollDebug=1 ===== */
+/* ===== SCROLL DEBUG MODE — temporaire, panneau auto checklist ===== */
 (function () {
-  if (new URLSearchParams(location.search).get('scrollDebug') !== '1') return;
 
   /* ── Styles du panneau ── */
   var s = document.createElement('style');
   s.textContent = [
-    '#__sd{position:fixed;top:0;left:0;right:0;z-index:999999;',
-    'background:rgba(0,0,0,.88);color:#0f0;font:11px/1.4 monospace;',
-    'padding:6px 8px;max-height:52vh;overflow-y:auto;',
-    'border-bottom:2px solid #0f0;-webkit-overflow-scrolling:touch;}',
+    '#__sd{position:fixed;top:0;right:0;width:52vw;max-width:260px;z-index:999999;',
+    'background:rgba(0,0,0,.82);color:#0f0;font:10px/1.35 monospace;',
+    'padding:5px 6px;max-height:40vh;overflow-y:auto;',
+    'border-bottom:2px solid #0f0;border-left:2px solid #0f0;',
+    'border-radius:0 0 0 6px;-webkit-overflow-scrolling:touch;',
+    'pointer-events:none;}',
+    '#__sd button,#__sd .sdbtn{pointer-events:auto;}',
     '#__sd table{width:100%;border-collapse:collapse;}',
     '#__sd td{padding:1px 4px;vertical-align:top;}',
     '#__sd td:first-child{color:#8ff;white-space:nowrap;}',
