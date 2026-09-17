@@ -493,7 +493,7 @@ html, body {
   z-index: 1000;
   background: var(--bg);
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
 }
 
 .checklist-screen.active { display: block; }
@@ -2137,7 +2137,6 @@ async function openChecklist(reservationKey) {
 
   // Show screen
   document.getElementById('checklistScreen').classList.add('active');
-  document.body.style.overflow = 'hidden';
 
   // Charger les consommables du logement (réassort) en arrière-plan
   restockSelected = new Set();
