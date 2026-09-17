@@ -1240,6 +1240,56 @@ test('P58 — reconcile : record sans channex_booking_id → skippé (delivery_u
   assert.strictEqual(notifications.length, 0);
 });
 
+// ── P59 : Régression SQL — reconcile doit sélectionner mtl.property_name (pas c.property_name) ──
+//
+// Ce test lit le fichier server.js et inspecte le texte de la requête SQL dans
+// reconcileOnArrivalDeliveryUnknown. Il aurait échoué avec c.property_name et
+// passe uniquement avec mtl.property_name.
+//
+// Stratégie : l'erreur de production était une hypothèse de schéma SQL incorrecte
+// (colonnes de `conversations` vs `message_template_logs`). Le seul moyen de
+// protéger cela sans base de données réelle est de valider que la chaîne SQL
+// construite référence la bonne table pour chaque colonne.
+test('P59 — SQL régression : reconcile sélectionne mtl.property_name, jamais c.property_name', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs.readFileSync(
+    path.join(__dirname, '..', 'server.js'),
+    'utf8'
+  );
+
+  // Extraire le bloc de la fonction reconcileOnArrivalDeliveryUnknown
+  const fnStart = src.indexOf('async function reconcileOnArrivalDeliveryUnknown(pool)');
+  assert.notStrictEqual(fnStart, -1, 'reconcileOnArrivalDeliveryUnknown introuvable dans server.js');
+
+  // La fonction se termine à la prochaine ligne "}" de niveau 0.
+  // On extrait les 3000 premiers caractères, largement suffisant pour couvrir la requête.
+  const fnSlice = src.slice(fnStart, fnStart + 3000);
+
+  // Règle 1 : la requête doit référencer mtl.property_name
+  assert(
+    fnSlice.includes('mtl.property_name'),
+    'La requête doit sélectionner mtl.property_name (colonne de message_template_logs)'
+  );
+
+  // Règle 2 : la requête ne doit PAS contenir c.property_name
+  // (c = conversations, qui n'a pas de colonne property_name)
+  assert(
+    !fnSlice.includes('c.property_name'),
+    'La requête ne doit PAS référencer c.property_name — conversations n\'a pas cette colonne'
+  );
+
+  // Règle 3 : la JOIN conversations reste présente (c.channex_booking_id et c.guest_name toujours utilisés)
+  assert(
+    fnSlice.includes('LEFT JOIN conversations c'),
+    'La JOIN conversations doit rester pour c.channex_booking_id et c.guest_name'
+  );
+
+  // Règle 4 : c.channex_booking_id et c.guest_name restent sélectionnés depuis conversations
+  assert(fnSlice.includes('c.channex_booking_id'), 'c.channex_booking_id doit rester sélectionné');
+  assert(fnSlice.includes('c.guest_name'), 'c.guest_name doit rester sélectionné');
+});
+
 // ─── Résumé ───────────────────────────────────────────────────────────────────
 console.log('');
 if (failed === 0) {

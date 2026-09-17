@@ -32963,7 +32963,7 @@ async function reconcileOnArrivalDeliveryUnknown(pool) {
       SELECT mtl.id, mtl.idempotency_key, mtl.message, mtl.sent_at,
              mtl.conversation_id, mtl.user_id, mtl.template_title,
              mtl.error_message,
-             c.channex_booking_id, c.guest_name, c.property_name
+             c.channex_booking_id, c.guest_name, mtl.property_name
       FROM message_template_logs mtl
       LEFT JOIN conversations c ON c.id = mtl.conversation_id
       WHERE mtl.trigger_type = 'on_arrival'

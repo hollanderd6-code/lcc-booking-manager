@@ -3565,7 +3565,7 @@ function renderIcalUrls() {
 function initIcalExportUrl(propertyId) {
   const input = document.getElementById('icalExportUrl');
   if (!input || !propertyId) return;
-  input.value = `https://app.boostinghost.fr/ical/property/${propertyId}.ics`;
+  input.value = `${getBaseUrl()}/ical/property/${propertyId}.ics`;
 }
 
 function copyIcalExportUrl() {
