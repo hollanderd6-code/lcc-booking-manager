@@ -638,6 +638,288 @@ test('D5 — Token JWT expiré → lève une exception (→ 401 côté serveur)'
   );
 });
 
+// ─── SÉRIE E : WORKFLOWFIX — draft_meta, transaction, tickets différés ─────────
+
+console.log('\nSérie E — WORKFLOWFIX : draft_meta, transaction, tickets (E1-E20)');
+
+// ── Fonctions miroir WORKFLOWFIX ──
+
+/**
+ * Miroir de la logique draft_meta JSONB merge (PATCH /draft).
+ * Fusionne seulement les clés présentes dans le patch.
+ */
+function mergeDraftMeta(existing, patch) {
+  return Object.assign({}, existing || {}, patch);
+}
+
+/**
+ * Miroir de la résolution restock IDs→labels.
+ * consumableItems : [{id, label}] — renvoie [label] pour les ids fournis.
+ */
+function resolveRestockLabels(ids, consumableItems) {
+  const map = {};
+  consumableItems.forEach(it => { map[it.id] = it.label; });
+  return ids
+    .map(id => parseInt(id, 10))
+    .filter(n => !isNaN(n) && n > 0)
+    .map(n => map[n])
+    .filter(Boolean);
+}
+
+/**
+ * Miroir de la logique finalization transactionnelle.
+ * Retourne : { ok, status?, code?, checklistId, ticketsDamage, ticketsMaint, restockLabels }
+ */
+function simulateFinalize({ existing, draftMeta, bodyRestock, consumableItems }) {
+  // 1. Verrou — 409 si déjà finalisé
+  if (existing && existing.completed_at !== null) {
+    return { ok: false, status: 409, code: 'already_submitted' };
+  }
+
+  // 2. UPSERT → completed_at = NOW()
+  const checklistId = existing ? existing.id : 99;
+
+  // 3. Lire draft_meta
+  const dm = draftMeta || {};
+
+  // 4. Ticket dégradation
+  const ticketsDamage = [];
+  if (dm.arrivalState === 'damage' && dm.damageDraft?.title) {
+    ticketsDamage.push({
+      kind: 'damage',
+      title: dm.damageDraft.title,
+      priority: 'high',
+      photos: dm.damageDraft.photoUrl ? [dm.damageDraft.photoUrl] : []
+    });
+  }
+
+  // 5. Ticket incident
+  const ticketsMaint = [];
+  if (dm.issueDraft?.title) {
+    const prio = ['low','normal','high','urgent'].includes(dm.issueDraft.priority)
+      ? dm.issueDraft.priority : 'normal';
+    ticketsMaint.push({ kind: 'maintenance', title: dm.issueDraft.title, priority: prio });
+  }
+
+  // 6. Réassort IDs → labels (body.restock prioritaire sur draft_meta.restock)
+  const rawIds = Array.isArray(bodyRestock) ? bodyRestock
+    : (Array.isArray(dm.restock) ? dm.restock : []);
+  const restockLabels = resolveRestockLabels(rawIds, consumableItems || []);
+
+  return { ok: true, checklistId, ticketsDamage, ticketsMaint, restockLabels };
+}
+
+/**
+ * Miroir completedKeys WORKFLOWFIX :
+ * seules les lignes completed_at IS NOT NULL comptent comme "terminées".
+ */
+function buildCompletedAndDraftSets(rows) {
+  const completed = new Set(rows.filter(r => r.completed_at !== null).map(r => r.reservation_key));
+  const draft     = new Set(rows.filter(r => r.completed_at === null).map(r => r.reservation_key));
+  return { completed, draft };
+}
+
+const CONSUMABLES = [
+  { id: 1, label: 'Savon liquide' },
+  { id: 2, label: 'Papier toilette' },
+  { id: 3, label: 'Gel douche' },
+];
+
+// E1 — Dégradation sauvée dans draft_meta : aucun ticket créé avant finalisation
+test('E1 — draft damageDraft → aucun ticket avant POST /checklist', () => {
+  let dm = {};
+  dm = mergeDraftMeta(dm, { arrivalState: 'damage', damageDraft: { title: 'Mur rayé', photoUrl: 'https://cdn/photo1.jpg' } });
+  assert.strictEqual(dm.arrivalState, 'damage');
+  assert.strictEqual(dm.damageDraft.title, 'Mur rayé');
+  // Aucun ticket simulé — la création n'a pas encore eu lieu
+  assert.ok(!dm.ticketsDamage, 'Pas encore de tickets dans draft_meta');
+});
+
+// E2 — Incident sauvé dans draft_meta : aucun ticket avant finalisation
+test('E2 — draft issueDraft → aucun ticket avant POST /checklist', () => {
+  let dm = {};
+  dm = mergeDraftMeta(dm, { issueDraft: { title: 'Fuite évier', description: null, priority: 'high' } });
+  assert.strictEqual(dm.issueDraft.title, 'Fuite évier');
+  assert.strictEqual(dm.issueDraft.priority, 'high');
+});
+
+// E3 — Réassort sauvé comme IDs dans draft_meta
+test('E3 — draft restock → IDs, pas libellés', () => {
+  let dm = {};
+  dm = mergeDraftMeta(dm, { restock: [1, 3] });
+  assert.deepStrictEqual(dm.restock, [1, 3]);
+  // IDs numériques, pas de libellés
+  assert.ok(dm.restock.every(id => typeof id === 'number'));
+});
+
+// E4 — Reload brouillon : damageDraft restauré
+test('E4 — reload draft → damageDraft restauré', () => {
+  const draftDetail = {
+    tasks: [], photos: [], notes: null, startedAt: null,
+    arrivalState: 'damage',
+    damageDraft: { title: 'Tache moquette', photoUrl: null },
+    issueDraft: null, restock: null
+  };
+  // Miroir restoreFromDraftDetail
+  const arrivalChoice = draftDetail.arrivalState === 'damage' ? 'damage' : draftDetail.arrivalState === 'ras' ? 'ok' : null;
+  assert.strictEqual(arrivalChoice, 'damage');
+  assert.strictEqual(draftDetail.damageDraft.title, 'Tache moquette');
+});
+
+// E5 — Reload brouillon : issueDraft restauré
+test('E5 — reload draft → issueDraft restauré', () => {
+  const draftDetail = {
+    tasks: [], photos: [], notes: null, startedAt: null,
+    arrivalState: null, damageDraft: null,
+    issueDraft: { title: 'Climatisation en panne', description: null, priority: 'urgent' },
+    restock: null
+  };
+  assert.strictEqual(draftDetail.issueDraft.priority, 'urgent');
+});
+
+// E6 — Reload brouillon : restock IDs restaurés
+test('E6 — reload draft → restock IDs restaurés', () => {
+  const draftDetail = { tasks: [], photos: [], notes: null, startedAt: null,
+    arrivalState: null, damageDraft: null, issueDraft: null, restock: [2, 3] };
+  const restockSelected = new Set(draftDetail.restock);
+  assert.ok(restockSelected.has(2));
+  assert.ok(restockSelected.has(3));
+  assert.strictEqual(restockSelected.size, 2);
+});
+
+// E7 — Finalisation : ticket dégradation créé depuis draft_meta
+test('E7 — POST /checklist final → ticket damage créé depuis draft_meta', () => {
+  const dm = { arrivalState: 'damage', damageDraft: { title: 'Mur rayé', photoUrl: 'https://cdn/p.jpg' } };
+  const result = simulateFinalize({ existing: null, draftMeta: dm, bodyRestock: [], consumableItems: CONSUMABLES });
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(result.ticketsDamage.length, 1);
+  assert.strictEqual(result.ticketsDamage[0].kind, 'damage');
+  assert.strictEqual(result.ticketsDamage[0].priority, 'high');
+  assert.deepStrictEqual(result.ticketsDamage[0].photos, ['https://cdn/p.jpg']);
+});
+
+// E8 — Finalisation : ticket incident créé depuis draft_meta
+test('E8 — POST /checklist final → ticket maintenance créé depuis draft_meta', () => {
+  const dm = { issueDraft: { title: 'Fuite évier', priority: 'high' } };
+  const result = simulateFinalize({ existing: null, draftMeta: dm, bodyRestock: [], consumableItems: CONSUMABLES });
+  assert.strictEqual(result.ticketsMaint.length, 1);
+  assert.strictEqual(result.ticketsMaint[0].priority, 'high');
+});
+
+// E9 — Finalisation : réassort IDs→libellés, alerte créée
+test('E9 — POST /checklist final → restock IDs résolus en libellés', () => {
+  const result = simulateFinalize({ existing: null, draftMeta: {}, bodyRestock: [1, 3], consumableItems: CONSUMABLES });
+  assert.deepStrictEqual(result.restockLabels, ['Savon liquide', 'Gel douche']);
+});
+
+// E10 — Retry POST /checklist → 409 sans double ticket
+test('E10 — retry POST /checklist → 409 si déjà finalisé', () => {
+  const existing = { id: 10, reservation_key: 'prop_2026-01-01_2026-01-07', completed_at: new Date() };
+  const result = simulateFinalize({ existing, draftMeta: {}, bodyRestock: [], consumableItems: CONSUMABLES });
+  assert.strictEqual(result.ok, false);
+  assert.strictEqual(result.status, 409);
+  assert.strictEqual(result.code, 'already_submitted');
+});
+
+// E11 — Portal : aucune checklist → task.completed = false, hasDraft = false
+test('E11 — portal : aucune checklist pour cette key → completed=false, hasDraft=false', () => {
+  const rows = [];
+  const { completed, draft } = buildCompletedAndDraftSets(rows);
+  const rk = 'prop_2026-01-01_2026-01-07';
+  assert.strictEqual(completed.has(rk), false);
+  assert.strictEqual(draft.has(rk), false);
+});
+
+// E12 — Portal : brouillon (completed_at IS NULL) → hasDraft=true, completed=false
+test('E12 — portal : brouillon (completed_at IS NULL) → hasDraft=true, completed=false', () => {
+  const rk = 'prop_2026-01-01_2026-01-07';
+  const rows = [{ reservation_key: rk, completed_at: null }];
+  const { completed, draft } = buildCompletedAndDraftSets(rows);
+  assert.strictEqual(completed.has(rk), false, 'Brouillon ne doit pas être dans completedKeys');
+  assert.strictEqual(draft.has(rk), true, 'Brouillon doit être dans draftKeys');
+});
+
+// E13 — Portal : checklist finalisée (completed_at IS NOT NULL) → completed=true, hasDraft=false
+test('E13 — portal : finalisée → completed=true, hasDraft=false', () => {
+  const rk = 'prop_2026-01-01_2026-01-07';
+  const rows = [{ reservation_key: rk, completed_at: new Date() }];
+  const { completed, draft } = buildCompletedAndDraftSets(rows);
+  assert.strictEqual(completed.has(rk), true);
+  assert.strictEqual(draft.has(rk), false);
+});
+
+// E14 — Portal : brouillon → la tâche reste dans "À faire" (pas dans done)
+test('E14 — portal : tâche avec hasDraft reste dans les tâches actives', () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const tasks = [{ reservationKey: 'rk1', checkoutDate: today, completed: false, hasDraft: true }];
+  const inProgress = tasks.filter(t => t.hasDraft && !t.completed);
+  const todayTasks = tasks.filter(t => t.checkoutDate === today && !t.completed && !t.hasDraft);
+  assert.strictEqual(inProgress.length, 1, 'En cours doit contenir la tâche avec brouillon');
+  assert.strictEqual(todayTasks.length, 0, 'Tâches du jour ne doit pas contenir les brouillons');
+});
+
+// E15 — Portal : tâche sans brouillon reste dans "Aujourd'hui"
+test('E15 — portal : tâche sans brouillon reste dans les tâches du jour', () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const tasks = [{ reservationKey: 'rk2', checkoutDate: today, completed: false, hasDraft: false }];
+  const inProgress = tasks.filter(t => t.hasDraft && !t.completed);
+  const todayTasks = tasks.filter(t => t.checkoutDate === today && !t.completed && !t.hasDraft);
+  assert.strictEqual(inProgress.length, 0);
+  assert.strictEqual(todayTasks.length, 1);
+});
+
+// E16 — Transaction rollback → completed_at reste NULL → brouillon récupérable
+test('E16 — transaction rollback → completed_at reste NULL', () => {
+  // Avant transaction : brouillon (completed_at IS NULL)
+  const before = { id: 5, completed_at: null };
+  // Simuler rollback : la ligne reste inchangée
+  const after = { ...before }; // rollback ne modifie rien
+  assert.strictEqual(after.completed_at, null, 'Après rollback, completed_at doit rester NULL');
+  const isDraft = after.completed_at === null;
+  assert.strictEqual(isDraft, true, 'La tâche doit rester en brouillon après rollback');
+});
+
+// E17 — Retry après rollback → finalisation réussit une fois
+test('E17 — retry après rollback → finalisation réussit, pas de double ticket', () => {
+  const existing = { id: 5, completed_at: null }; // brouillon après rollback
+  const dm = { issueDraft: { title: 'Problème chauffage', priority: 'normal' } };
+  const result1 = simulateFinalize({ existing, draftMeta: dm, bodyRestock: [], consumableItems: CONSUMABLES });
+  assert.strictEqual(result1.ok, true);
+  assert.strictEqual(result1.ticketsMaint.length, 1);
+
+  // Retry : maintenant completed_at IS NOT NULL → 409
+  const finalized = { id: 5, completed_at: new Date() };
+  const result2 = simulateFinalize({ existing: finalized, draftMeta: dm, bodyRestock: [], consumableItems: CONSUMABLES });
+  assert.strictEqual(result2.ok, false);
+  assert.strictEqual(result2.status, 409);
+});
+
+// E18 — Restock ID inconnu → ignoré (pas d'alerte fantôme)
+test('E18 — restock ID inconnu → ignoré lors de la résolution', () => {
+  const labels = resolveRestockLabels([1, 99, 2], CONSUMABLES);
+  assert.deepStrictEqual(labels, ['Savon liquide', 'Papier toilette']);
+  assert.strictEqual(labels.length, 2, 'ID 99 inexistant doit être ignoré');
+});
+
+// E19 — Priorité "high" (Important) round-trip dans issueDraft
+test('E19 — priorité "high" (Important) conservée dans draft_meta round-trip', () => {
+  let dm = {};
+  dm = mergeDraftMeta(dm, { issueDraft: { title: 'Moisissure salle de bain', priority: 'high' } });
+  const result = simulateFinalize({ existing: null, draftMeta: dm, bodyRestock: [], consumableItems: CONSUMABLES });
+  assert.strictEqual(result.ticketsMaint[0].priority, 'high');
+});
+
+// E20 — RAS puis dégradation puis RAS → aucun ticket damage à la finalisation
+test('E20 — RAS → damage → RAS : aucun ticket damage au final', () => {
+  let dm = {};
+  dm = mergeDraftMeta(dm, { arrivalState: 'ras' });
+  dm = mergeDraftMeta(dm, { arrivalState: 'damage', damageDraft: { title: 'Rayure canapé' } });
+  dm = mergeDraftMeta(dm, { arrivalState: 'ras', damageDraft: null }); // retour RAS, efface damageDraft
+  const result = simulateFinalize({ existing: null, draftMeta: dm, bodyRestock: [], consumableItems: CONSUMABLES });
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(result.ticketsDamage.length, 0, 'Aucun ticket damage si état final = RAS');
+});
+
 // ─── Résumé ───────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);

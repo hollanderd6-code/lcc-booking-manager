@@ -14498,19 +14498,31 @@ if (reservation_key && reservation_key !== null) {
     // Vérifier quelles checklists existent déjà
     const existingChecklists = await pool.query(
       `SELECT reservation_key, completed_at, owner_status, owner_notes
-       FROM cleaning_checklists 
+       FROM cleaning_checklists
        WHERE cleaner_id = $1`,
       [cleaner.id]
     );
-    
-    const completedKeys = new Set(existingChecklists.rows.map(c => c.reservation_key));
+
+    // WORKFLOWFIX: seules les lignes avec completed_at IS NOT NULL sont "terminées".
+    // Les brouillons (completed_at IS NULL) génèrent hasDraft = true côté client.
+    const completedKeys = new Set(
+      existingChecklists.rows
+        .filter(c => c.completed_at !== null)
+        .map(c => c.reservation_key)
+    );
+    const draftKeys = new Set(
+      existingChecklists.rows
+        .filter(c => c.completed_at === null)
+        .map(c => c.reservation_key)
+    );
     const checklistByKey = {};
     existingChecklists.rows.forEach(c => { checklistByKey[c.reservation_key] = c; });
-    
-    // Marquer les tâches complétées + statut propriétaire
+
+    // Marquer les tâches complétées + statut propriétaire + brouillon en cours
     tasks.forEach(task => {
       const cl = checklistByKey[task.reservationKey];
-      task.completed = completedKeys.has(task.reservationKey);
+      task.completed   = completedKeys.has(task.reservationKey);
+      task.hasDraft    = !task.completed && draftKeys.has(task.reservationKey);
       task.ownerStatus = cl?.owner_status || null;
       task.ownerNotes  = cl?.owner_notes  || null;
     });
@@ -15020,6 +15032,16 @@ app.get('/api/cleaning/state-certificate', async (req, res) => {
   }
 })();
 
+// Migration — brouillon étendu : état arrivée, dégradation, incident, réassort
+(async () => {
+  try {
+    await pool.query(`ALTER TABLE cleaning_checklists ADD COLUMN IF NOT EXISTS draft_meta JSONB`);
+    console.log('✅ Colonne cleaning_checklists.draft_meta OK');
+  } catch(e) {
+    console.error('❌ Migration draft_meta:', e.message);
+  }
+})();
+
 // Migration — distinguer incident "maintenance" et "dégradation" (lien caution)
 (async () => {
   try {
@@ -15149,112 +15171,182 @@ app.post('/api/cleaning/checklist', async (req, res) => {
       photoSources.every(s => validSrc.has(s))
     ) ? photoSources : null;
 
-    // Insérer ou mettre à jour la checklist (avec duration + started_at + owner_status)
-    const result = await pool.query(
-      `INSERT INTO cleaning_checklists
-       (user_id, property_id, reservation_key, cleaner_id, guest_name, checkout_date,
-        tasks, photos, photo_sources, notes, duration_seconds, started_at, completed_at,
-        owner_status, created_at, updated_at,
-        signature_data, signature_ip, certified_at, cleaner_certified)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), 'pending', NOW(), NOW(), $13, $14, $15, $16)
-       ON CONFLICT (reservation_key)
-       DO UPDATE SET
-         tasks = EXCLUDED.tasks,
-         photos = EXCLUDED.photos,
-         photo_sources = EXCLUDED.photo_sources,
-         notes = EXCLUDED.notes,
-         duration_seconds = EXCLUDED.duration_seconds,
-         started_at = COALESCE(cleaning_checklists.started_at, EXCLUDED.started_at),
-         completed_at = NOW(),
-         owner_status = CASE WHEN cleaning_checklists.owner_status = 'validated' THEN 'validated' ELSE 'pending' END,
-         owner_notes = CASE WHEN cleaning_checklists.owner_status = 'validated' THEN cleaning_checklists.owner_notes ELSE NULL END,
-         updated_at = NOW(),
-         signature_data = EXCLUDED.signature_data,
-         signature_ip = EXCLUDED.signature_ip,
-         certified_at = EXCLUDED.certified_at,
-         cleaner_certified = EXCLUDED.cleaner_certified
-       RETURNING id`,
-      [
-        cleaner.user_id, propertyId, reservationKey, cleaner.id,
-        guestName, checkoutDate,
-        JSON.stringify(tasks), JSON.stringify(photos),
-        cleanPhotoSources ? JSON.stringify(cleanPhotoSources) : null,
-        notes,
-        duration || null,
-        startedAt || null,
-        signatureData || null,
-        clientIp,
-        certifiedAt || new Date().toISOString(),
-        signatureData ? true : false
-      ]
-    );
-
-    const checklistId = result.rows[0].id;
-
     // ============================
-    // 🛒 SIGNALEMENTS DE RÉASSORT (consommables cochés par l'agent)
+    // WORKFLOWFIX: transaction atomique — UPSERT + tickets + réassort
     // ============================
+    let checklistId;
+    let restockLabelsForNotif = [];
+
+    const txClient = await pool.connect();
     try {
-      const restock = Array.isArray(req.body.restock) ? req.body.restock : [];
-      const cleanRestock = restock
-        .map(s => String(s || '').trim())
-        .filter(Boolean)
+      await txClient.query('BEGIN');
+
+      // Verrou FOR UPDATE : empêche la double-finalisation concurrente
+      const lockRes = await txClient.query(
+        `SELECT id, completed_at FROM cleaning_checklists
+         WHERE reservation_key = $1 FOR UPDATE`,
+        [reservationKey]
+      );
+      if (lockRes.rows.length > 0 && lockRes.rows[0].completed_at !== null) {
+        await txClient.query('ROLLBACK');
+        return res.status(409).json({ error: 'Checklist déjà soumise', code: 'already_submitted' });
+      }
+
+      // UPSERT checklist — marque completed_at = NOW()
+      const upsertRes = await txClient.query(
+        `INSERT INTO cleaning_checklists
+         (user_id, property_id, reservation_key, cleaner_id, guest_name, checkout_date,
+          tasks, photos, photo_sources, notes, duration_seconds, started_at, completed_at,
+          owner_status, created_at, updated_at,
+          signature_data, signature_ip, certified_at, cleaner_certified)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), 'pending', NOW(), NOW(), $13, $14, $15, $16)
+         ON CONFLICT (reservation_key)
+         DO UPDATE SET
+           tasks = EXCLUDED.tasks,
+           photos = EXCLUDED.photos,
+           photo_sources = EXCLUDED.photo_sources,
+           notes = EXCLUDED.notes,
+           duration_seconds = EXCLUDED.duration_seconds,
+           started_at = COALESCE(cleaning_checklists.started_at, EXCLUDED.started_at),
+           completed_at = NOW(),
+           owner_status = CASE WHEN cleaning_checklists.owner_status = 'validated' THEN 'validated' ELSE 'pending' END,
+           owner_notes = CASE WHEN cleaning_checklists.owner_status = 'validated' THEN cleaning_checklists.owner_notes ELSE NULL END,
+           updated_at = NOW(),
+           signature_data = EXCLUDED.signature_data,
+           signature_ip = EXCLUDED.signature_ip,
+           certified_at = EXCLUDED.certified_at,
+           cleaner_certified = EXCLUDED.cleaner_certified
+         RETURNING id`,
+        [
+          cleaner.user_id, propertyId, reservationKey, cleaner.id,
+          guestName, checkoutDate,
+          JSON.stringify(tasks), JSON.stringify(photos),
+          cleanPhotoSources ? JSON.stringify(cleanPhotoSources) : null,
+          notes,
+          duration || null,
+          startedAt || null,
+          signatureData || null,
+          clientIp,
+          certifiedAt || new Date().toISOString(),
+          signatureData ? true : false
+        ]
+      );
+      checklistId = upsertRes.rows[0].id;
+
+      // Lire draft_meta pour créer les tickets différés
+      const dmRes = await txClient.query(
+        'SELECT draft_meta FROM cleaning_checklists WHERE id = $1',
+        [checklistId]
+      );
+      const dm = dmRes.rows[0]?.draft_meta || {};
+
+      // Ticket dégradation depuis draft_meta
+      if (dm.arrivalState === 'damage' && dm.damageDraft?.title) {
+        const dd = dm.damageDraft;
+        const photoArr = dd.photoUrl ? [dd.photoUrl] : [];
+        await txClient.query(
+          `INSERT INTO maintenance_tickets
+           (user_id, property_id, title, description, priority, photos, created_by, created_by_name, reservation_key, kind)
+           VALUES ($1, $2, $3, $4, 'high', $5, 'cleaner', $6, $7, 'damage')`,
+          [
+            cleaner.user_id, propertyId,
+            dd.title.trim().slice(0, 140),
+            (dd.description || 'Dégradation constatée lors du ménage.').trim().slice(0, 2000),
+            JSON.stringify(photoArr), cleaner.name, reservationKey
+          ]
+        );
+      }
+
+      // Ticket incident depuis draft_meta
+      if (dm.issueDraft?.title) {
+        const id_ = dm.issueDraft;
+        const prio = ['low','normal','high','urgent'].includes(id_.priority) ? id_.priority : 'normal';
+        await txClient.query(
+          `INSERT INTO maintenance_tickets
+           (user_id, property_id, title, description, priority, photos, created_by, created_by_name, reservation_key, kind)
+           VALUES ($1, $2, $3, $4, $5, '[]', 'cleaner', $6, $7, 'maintenance')`,
+          [
+            cleaner.user_id, propertyId,
+            id_.title.trim().slice(0, 140),
+            ((id_.description || '').trim().slice(0, 2000)) || null,
+            prio, cleaner.name, reservationKey
+          ]
+        );
+      }
+
+      // Réassort : IDs depuis req.body.restock ou draft_meta.restock → résolution en libellés
+      const rawRestockIds = Array.isArray(req.body.restock) ? req.body.restock
+        : (Array.isArray(dm.restock) ? dm.restock : []);
+      const cleanRestockIds = rawRestockIds
+        .map(s => parseInt(s, 10))
+        .filter(n => !isNaN(n) && n > 0)
         .slice(0, 40);
 
-      if (cleanRestock.length > 0) {
-        for (const label of cleanRestock) {
-          // Éviter les doublons : ne pas recréer une alerte ouverte identique
-          const dup = await pool.query(
+      if (cleanRestockIds.length > 0) {
+        const lblRes = await txClient.query(
+          'SELECT id, label FROM consumable_items WHERE id = ANY($1::int[])',
+          [cleanRestockIds]
+        );
+        for (const row of lblRes.rows) {
+          const label = String(row.label || '').trim().slice(0, 80);
+          if (!label) continue;
+          const dup = await txClient.query(
             `SELECT 1 FROM consumable_alerts
              WHERE user_id = $1 AND property_id = $2 AND item_label = $3 AND status = 'open' LIMIT 1`,
-            [cleaner.user_id, propertyId, label.slice(0, 80)]
+            [cleaner.user_id, propertyId, label]
           );
           if (dup.rows.length > 0) continue;
-          await pool.query(
+          await txClient.query(
             `INSERT INTO consumable_alerts
              (user_id, property_id, item_label, cleaner_id, cleaner_name, reservation_key, status)
              VALUES ($1, $2, $3, $4, $5, $6, 'open')`,
-            [cleaner.user_id, propertyId, label.slice(0, 80), cleaner.id, cleaner.name, reservationKey]
+            [cleaner.user_id, propertyId, label, cleaner.id, cleaner.name, reservationKey]
           );
-        }
-
-        // Notif push à l'hôte (+ sous-comptes can_view_cleaning)
-        try {
-          const property = PROPERTIES.find(p => p.id === propertyId);
-          const propName = displayName(property) || propertyId;
-          const title = `🛒 Réassort — ${propName}`;
-          const body = `${cleaner.name} signale : ${cleanRestock.join(', ')}`;
-          const pushData = { type: 'consumable_restock', propertyId, click_action: '/cleaning.html' };
-
-          const tokRes = await pool.query(
-            'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-            [cleaner.user_id]
-          );
-          if (tokRes.rows.length > 0) {
-            await sendNotificationToMultipleLogged(tokRes.rows.map(r => r.fcm_token), title, body, pushData);
-          }
-          try {
-            await sendNotificationToSubAccountsOf(
-              cleaner.user_id, 'can_view_cleaning', title, body, pushData, 'notif_sub_cleaning_completed'
-            );
-          } catch(_) {}
-          if (typeof io !== 'undefined' && io) {
-            io.to(`user_${cleaner.user_id}`).emit('consumable:restock', { propertyId, items: cleanRestock });
-          }
-          // 👤 Notifier le RESPONSABLE DES ACHATS désigné (push si sous-compte, sinon email+SMS)
-          try {
-            const responsible = await resolveRestockResponsible(cleaner.user_id, propertyId);
-            await notifyRestockResponsible(responsible, propName, cleanRestock);
-          } catch (respErr) {
-            console.error('❌ [CONSO] Notif responsable achats échouée:', respErr.message);
-          }
-          console.log(`🛒 [CONSO] ${cleanRestock.length} signalement(s) pour ${propName} par ${cleaner.name}`);
-        } catch (notifErr) {
-          console.error('❌ [CONSO] Notif réassort échouée:', notifErr.message);
+          restockLabelsForNotif.push(label);
         }
       }
-    } catch (restockErr) {
-      console.error('❌ [CONSO] Enregistrement réassort échoué:', restockErr.message);
+
+      await txClient.query('COMMIT');
+    } catch (txErr) {
+      await txClient.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      txClient.release();
+    }
+
+    // Notifications réassort post-commit (best-effort)
+    if (restockLabelsForNotif.length > 0) {
+      try {
+        const property = PROPERTIES.find(p => p.id === propertyId);
+        const propName = displayName(property) || propertyId;
+        const title = `🛒 Réassort — ${propName}`;
+        const body = `${cleaner.name} signale : ${restockLabelsForNotif.join(', ')}`;
+        const pushData = { type: 'consumable_restock', propertyId, click_action: '/cleaning.html' };
+        const tokRes = await pool.query(
+          'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
+          [cleaner.user_id]
+        );
+        if (tokRes.rows.length > 0) {
+          await sendNotificationToMultipleLogged(tokRes.rows.map(r => r.fcm_token), title, body, pushData);
+        }
+        try {
+          await sendNotificationToSubAccountsOf(
+            cleaner.user_id, 'can_view_cleaning', title, body, pushData, 'notif_sub_cleaning_completed'
+          );
+        } catch(_) {}
+        if (typeof io !== 'undefined' && io) {
+          io.to(`user_${cleaner.user_id}`).emit('consumable:restock', { propertyId, items: restockLabelsForNotif });
+        }
+        try {
+          const responsible = await resolveRestockResponsible(cleaner.user_id, propertyId);
+          await notifyRestockResponsible(responsible, propName, restockLabelsForNotif);
+        } catch (respErr) {
+          console.error('❌ [CONSO] Notif responsable achats échouée:', respErr.message);
+        }
+        console.log(`🛒 [CONSO] ${restockLabelsForNotif.length} signalement(s) pour ${propName} par ${cleaner.name}`);
+      } catch (notifErr) {
+        console.error('❌ [CONSO] Notif réassort échouée:', notifErr.message);
+      }
     }
 
 
@@ -15841,7 +15933,7 @@ app.get('/api/cleaning/checklists/:reservationKey/draft', async (req, res) => {
     }
 
     const { rows } = await pool.query(
-      `SELECT tasks, photos, notes, started_at, updated_at
+      `SELECT tasks, photos, notes, started_at, updated_at, draft_meta
        FROM cleaning_checklists
        WHERE reservation_key = $1 AND cleaner_id = $2 AND completed_at IS NULL
        LIMIT 1`,
@@ -15850,7 +15942,21 @@ app.get('/api/cleaning/checklists/:reservationKey/draft', async (req, res) => {
 
     if (rows.length === 0) return res.status(404).json({ error: 'Aucun brouillon trouvé' });
 
-    res.json({ draft: rows[0] });
+    const row = rows[0];
+    const dm = row.draft_meta || {};
+    res.json({
+      draft: {
+        tasks:       row.tasks,
+        photos:      row.photos,
+        notes:       row.notes,
+        started_at:  row.started_at,
+        updated_at:  row.updated_at,
+        arrivalState: dm.arrivalState ?? null,
+        damageDraft:  dm.damageDraft  ?? null,
+        issueDraft:   dm.issueDraft   ?? null,
+        restock:      dm.restock      ?? null,
+      }
+    });
   } catch (err) {
     console.error('Erreur GET /api/cleaning/checklists/:rk/draft :', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -15867,9 +15973,10 @@ app.patch('/api/cleaning/checklists/:reservationKey/draft', async (req, res) => 
     const { reservationKey } = req.params;
     const {
       propertyId, notes, startedAt,
-      tasks, taskChanges,          // mutations tâches
-      photos, addPhoto, removePhotoId,  // mutations photos
-      pinCode                      // auth portail
+      tasks, taskChanges,                       // mutations tâches
+      photos, addPhoto, removePhotoId,          // mutations photos
+      arrivalState, damageDraft, issueDraft, restock,  // WORKFLOWFIX: draft_meta
+      pinCode                                   // auth portail
     } = req.body;
 
     if (!reservationKey || !propertyId) {
@@ -15933,18 +16040,27 @@ app.patch('/api/cleaning/checklists/:reservationKey/draft', async (req, res) => 
       const insertPhotos = Array.isArray(photos) ? photos
         : (addPhoto?.id && addPhoto?.data ? [{ id: addPhoto.id, data: addPhoto.data }] : []);
 
+      // Construire draft_meta initial si des champs meta sont déjà présents
+      const initMeta = {};
+      if (arrivalState !== undefined) initMeta.arrivalState = arrivalState;
+      if (damageDraft  !== undefined) initMeta.damageDraft  = damageDraft;
+      if (issueDraft   !== undefined) initMeta.issueDraft   = issueDraft;
+      if (restock      !== undefined) initMeta.restock      = restock;
+      const initMetaJson = Object.keys(initMeta).length > 0 ? JSON.stringify(initMeta) : null;
+
       await pool.query(
         `INSERT INTO cleaning_checklists
            (user_id, property_id, reservation_key, cleaner_id,
-            checkout_date, tasks, photos, notes, started_at, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
+            checkout_date, tasks, photos, notes, started_at, draft_meta, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())`,
         [
           cleaner.user_id, propertyId, reservationKey, cleaner.id,
           ckDate,
           JSON.stringify(insertTasks),
           JSON.stringify(insertPhotos),
           notes ?? null,
-          startedAt ?? null
+          startedAt ?? null,
+          initMetaJson
         ]
       );
     } else {
@@ -15998,6 +16114,17 @@ app.patch('/api/cleaning/checklists/:reservationKey/draft', async (req, res) => 
       if (startedAt) {
         params.push(startedAt);
         setClauses.push(`started_at = COALESCE(cleaning_checklists.started_at, $${params.length})`);
+      }
+
+      // WORKFLOWFIX: draft_meta — merge ciblé pour ne pas écraser les clés absentes
+      const metaPatch = {};
+      if (arrivalState !== undefined) metaPatch.arrivalState = arrivalState;
+      if (damageDraft  !== undefined) metaPatch.damageDraft  = damageDraft;
+      if (issueDraft   !== undefined) metaPatch.issueDraft   = issueDraft;
+      if (restock      !== undefined) metaPatch.restock      = restock;
+      if (Object.keys(metaPatch).length > 0) {
+        params.push(JSON.stringify(metaPatch));
+        setClauses.push(`draft_meta = COALESCE(draft_meta, '{}'::jsonb) || $${params.length}::jsonb`);
       }
 
       if (setClauses.length > 0) {

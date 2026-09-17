@@ -367,6 +367,16 @@ html, body {
   box-shadow: 0 4px 20px rgba(245,158,11,0.13);
 }
 
+.badge-inprogress {
+  background: #dbeafe;
+  color: #1d4ed8;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+.task-card.is-inprogress {
+  border-left: 4px solid #3b82f6;
+}
+
 .complement-banner {
   margin: 0 16px 14px;
   padding: 10px 14px;
@@ -932,6 +942,8 @@ html, body {
   font-family: var(--font); font-size: 13px; font-weight: 600; transition: all .15s;
 }
 .maint-prio.on { border-color: #dc2626; background: #fef2f2; color: #b91c1c; }
+.maint-prio[data-p="normal"].on  { border-color: #6b7280; background: #f3f4f6; color: #374151; }
+.maint-prio[data-p="high"].on    { border-color: #d97706; background: #fffbeb; color: #92400e; }
 .maint-send {
   width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer;
   background: #f59e0b; color: #fff; font-family: var(--font); font-size: 14.5px; font-weight: 700;
@@ -1644,7 +1656,7 @@ function generateId() {
 let damageState = '';     // '' (non renseigné) | 'ras' | 'reported'
 let damagePhotos = [];    // [{data: base64, source: 'camera'|'gallery'}]
 let consumableItems = [];       // catalogue du logement (label/icon)
-let restockSelected = new Set(); // libellés cochés "à racheter"
+let restockSelected = new Set(); // IDs (Int) cochés "à racheter" — WORKFLOWFIX
 let startedAt = null;
 
 // ===== PIN LOGIN =====
@@ -1797,21 +1809,23 @@ function renderTasks() {
   const today = new Date().toISOString().slice(0, 10);
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
-  // Séparer : aujourd'hui, demain, à venir, complément demandé, terminé
-  const todayTasks = tasks.filter(t => t.checkoutDate === today && !t.completed);
-  const tomorrowTasks = tasks.filter(t => t.checkoutDate === tomorrow && !t.completed);
-  const upcomingTasks = tasks.filter(t => t.checkoutDate > tomorrow && !t.completed);
+  // Séparer : en cours (hasDraft), aujourd'hui, demain, à venir, complément demandé, terminé
+  // WORKFLOWFIX: hasDraft = brouillon en cours (completed_at IS NULL côté serveur)
+  const inProgressTasks = tasks.filter(t => t.hasDraft && !t.completed);
+  const todayTasks = tasks.filter(t => t.checkoutDate === today && !t.completed && !t.hasDraft);
+  const tomorrowTasks = tasks.filter(t => t.checkoutDate === tomorrow && !t.completed && !t.hasDraft);
+  const upcomingTasks = tasks.filter(t => t.checkoutDate > tomorrow && !t.completed && !t.hasDraft);
   const complementTasks = tasks.filter(t => t.completed && t.ownerStatus === 'rejected');
   const doneTasks = tasks.filter(t => t.completed && t.ownerStatus !== 'rejected');
 
   // ── Récap (pastilles du hero) ──
-  setText('recapToday', todayTasks.length);
+  setText('recapToday', todayTasks.length + inProgressTasks.filter(t => t.checkoutDate === today).length);
   setText('recapTomorrow', tomorrowTasks.length);
   setText('recapValidate', complementTasks.length);
 
   // ── Compteurs des onglets ──
-  updateTabCount('today', todayTasks.length + complementTasks.length);
-  updateTabCount('tomorrow', tomorrowTasks.length);
+  updateTabCount('today', todayTasks.length + inProgressTasks.filter(t => t.checkoutDate === today).length + complementTasks.length);
+  updateTabCount('tomorrow', tomorrowTasks.length + inProgressTasks.filter(t => t.checkoutDate === tomorrow).length);
   updateTabCount('all', tasks.filter(t => !t.completed).length);
   updateTabCount('done', doneTasks.length);
 
@@ -1847,10 +1861,12 @@ function renderTasks() {
   };
 
   if (activeFilter === 'today') {
+    html += section('<i class="fas fa-spinner" style="color:#3b82f6;"></i> En cours', inProgressTasks.filter(t => t.checkoutDate === today || t.checkoutDate < today), 'inprogress');
     html += section("<span style=\"display:inline-block;width:9px;height:9px;border-radius:50%;background:#0E3B2E;margin-right:2px;\"></span> Aujourd'hui", todayTasks, 'today');
     html += section('<i class="fas fa-exclamation-triangle" style="color:#D97706;"></i> Complément demandé', complementTasks, 'complement');
     if (!html) html = emptyState('coffee', 'Rien pour aujourd\'hui', 'Aucun ménage à faire aujourd\'hui. Consultez « Tous » pour les prochains.');
   } else if (activeFilter === 'tomorrow') {
+    html += section('<i class="fas fa-spinner" style="color:#3b82f6;"></i> En cours', inProgressTasks.filter(t => t.checkoutDate === tomorrow), 'inprogress');
     html += section('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#F97316;margin-right:2px;"></span> Demain', tomorrowTasks, 'tomorrow');
     if (!html) html = emptyState('calendar', 'Rien pour demain', 'Aucun ménage prévu demain.');
   } else if (activeFilter === 'done') {
@@ -1858,6 +1874,7 @@ function renderTasks() {
     if (!html) html = emptyState('check', 'Aucun ménage terminé', 'Les ménages validés apparaîtront ici.');
   } else {
     // 'all'
+    html += section('<i class="fas fa-spinner" style="color:#3b82f6;"></i> En cours', inProgressTasks, 'inprogress');
     html += section("<span style=\"display:inline-block;width:9px;height:9px;border-radius:50%;background:#0E3B2E;margin-right:2px;\"></span> Aujourd'hui", todayTasks, 'today');
     html += section('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#F97316;margin-right:2px;"></span> Demain', tomorrowTasks, 'tomorrow');
     html += section('<i class="far fa-calendar-alt" style="color:#6B7280;"></i> À venir', upcomingTasks, 'upcoming');
@@ -1931,6 +1948,12 @@ function renderTaskCard(task, type) {
   let badgeClass, badgeText, cardClass = '', actionBtn;
   
   switch(type) {
+    case 'inprogress':
+      badgeClass = 'badge-inprogress';
+      badgeText = '<i class="fas fa-spinner fa-spin"></i> En cours';
+      cardClass = 'is-inprogress';
+      actionBtn = `<button class="task-card-btn btn-start" onclick="openChecklist('${task.reservationKey}')"><i class="fas fa-play"></i> Continuer</button>`;
+      break;
     case 'today':
       badgeClass = 'badge-today';
       badgeText = "Aujourd'hui";
@@ -2009,6 +2032,8 @@ async function openChecklist(reservationKey) {
   damagePhotos = [];
   timerSeconds = 0;
   startedAt = new Date();
+  window._restoredIssueDraft   = null;
+  window._restoredDamageDraft  = null;
 
   // Load template tasks (or default)
   checklistTasks = await loadChecklistTemplate(currentTask);
@@ -2051,6 +2076,17 @@ async function openChecklist(reservationKey) {
           const d = new Date(draft.started_at);
           if (!isNaN(d.getTime())) startedAt = d;
         }
+
+        // WORKFLOWFIX: restaurer draft_meta (état arrivée, dégradation, incident, réassort)
+        if (draft.arrivalState === 'ras' || draft.arrivalState === 'reported') {
+          damageState = draft.arrivalState === 'ras' ? 'ras' : 'reported';
+        }
+        if (Array.isArray(draft.restock)) {
+          restockSelected = new Set(draft.restock.map(id => parseInt(id, 10)).filter(n => !isNaN(n)));
+        }
+        // issueDraft et damageDraft sont visuels uniquement — on affiche un résumé après chargement des templates
+        if (draft.issueDraft?.title) window._restoredIssueDraft   = draft.issueDraft;
+        if (draft.damageDraft?.title) window._restoredDamageDraft = draft.damageDraft;
       }
     } catch (e) {
       console.warn('[draft] Chargement échoué:', e);
@@ -2146,8 +2182,9 @@ function renderRestockSection() {
   const container = document.getElementById('restockSection');
   if (!container) return;
   if (!consumableItems.length) { container.innerHTML = ''; return; }
+  // WORKFLOWFIX: restockSelected est un Set d'IDs (Int), plus de libellés
   const chips = consumableItems.map((it, idx) => {
-    const on = restockSelected.has(it.label);
+    const on = restockSelected.has(it.id);
     return `<button type="button" class="restock-chip${on ? ' on' : ''}" onclick="toggleRestock(${idx})">
       <span class="restock-ico">${it.icon || '<i class="fas fa-box" style="color:#9CA3AF;"></i>'}</span>
       <span>${escapeHtml(it.label)}</span>
@@ -2165,13 +2202,17 @@ function renderRestockSection() {
 function toggleRestock(idx) {
   const it = consumableItems[idx];
   if (!it) return;
-  if (restockSelected.has(it.label)) restockSelected.delete(it.label);
-  else restockSelected.add(it.label);
+  // WORKFLOWFIX: stocker l'ID, pas le libellé
+  if (restockSelected.has(it.id)) restockSelected.delete(it.id);
+  else restockSelected.add(it.id);
   renderRestockSection();
+  // Persister dans le brouillon
+  patchDraft({ restock: Array.from(restockSelected) });
 }
 
 // ── Signalement d'incident (maintenance) ──
-let maintPrio = 'urgent';
+// WORKFLOWFIX: différé — stocké dans draft_meta.issueDraft, créé au POST /checklist final
+let maintPrio = 'normal';
 function toggleMaintForm() {
   const f = document.getElementById('maintForm');
   const ch = document.getElementById('maintChevron');
@@ -2186,31 +2227,23 @@ function setMaintPrio(p) {
 }
 async function sendMaintReport() {
   const title = (document.getElementById('maintTitle')?.value || '').trim();
-  const desc = (document.getElementById('maintDesc')?.value || '').trim();
+  const desc  = (document.getElementById('maintDesc')?.value  || '').trim();
   if (!title) { alert('Décrivez le problème en quelques mots.'); return; }
   const btn = document.getElementById('maintSendBtn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi…'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde…'; }
   try {
-    const res = await fetch(`${API_URL}/api/cleaning/maintenance/${currentPin}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        propertyId: currentTask.propertyId,
-        title, description: desc, priority: maintPrio,
-        reservationKey: currentTask.reservationKey
-      })
-    });
-    if (!res.ok) throw new Error('err');
+    // WORKFLOWFIX: persiste dans draft_meta.issueDraft — ticket créé au POST /checklist final
+    await patchDraft({ issueDraft: { title, description: desc || null, priority: maintPrio } });
     document.getElementById('maintTitle').value = '';
-    document.getElementById('maintDesc').value = '';
-    maintPrio = 'urgent'; setMaintPrio('urgent');
+    document.getElementById('maintDesc').value  = '';
+    maintPrio = 'normal'; setMaintPrio('normal');
     toggleMaintForm();
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Signalement envoyé !'; }
-    setTimeout(() => { if (btn) btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le signalement'; }, 2500);
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Enregistré dans le brouillon'; }
+    setTimeout(() => { if (btn) btn.innerHTML = '<i class="fas fa-paper-plane"></i> Signaler un problème'; }, 2500);
   } catch (e) {
     console.error(e);
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer le signalement'; }
-    alert('Erreur lors de l\'envoi. Réessayez.');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Signaler un problème'; }
+    alert('Erreur lors de la sauvegarde. Réessayez.');
   }
 }
 
@@ -2395,9 +2428,9 @@ function renderChecklistBody() {
         <input id="maintTitle" type="text" maxlength="140" placeholder="Quoi ? (ex : Fuite sous l'évier)" class="maint-field">
         <textarea id="maintDesc" rows="2" maxlength="2000" placeholder="Détails (optionnel)" class="maint-field"></textarea>
         <div class="maint-prio-row">
-          <button type="button" class="maint-prio" data-p="normal" onclick="setMaintPrio('normal')">Normal</button>
+          <button type="button" class="maint-prio on" data-p="normal" onclick="setMaintPrio('normal')">Normal</button>
           <button type="button" class="maint-prio" data-p="high" onclick="setMaintPrio('high')">Important</button>
-          <button type="button" class="maint-prio on" data-p="urgent" onclick="setMaintPrio('urgent')">Urgent</button>
+          <button type="button" class="maint-prio" data-p="urgent" onclick="setMaintPrio('urgent')">Urgent</button>
         </div>
         <button type="button" class="maint-send" id="maintSendBtn" onclick="sendMaintReport()">
           <i class="fas fa-paper-plane"></i> Envoyer le signalement
