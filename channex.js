@@ -668,12 +668,20 @@ async function processChannexBooking(pool, bookingData) {
       : (attrs.notes || null);
 
     // ── Montants ─────────────────────────────────────────────
+    // amount_total = niveau booking parent — en multi-room, inclut toutes les rooms
     const amount_total = parseFloat(attrs.amount || 0);
     const ota_commission = parseFloat(attrs.ota_commission || 0);
 
     // Structure room (sans amount_rooms encore — dépend de amount_cleaning)
     const room = (attrs.rooms || [])[0] || {};
     const days_breakdown = room.days || {}; // { "2024-06-01": "120.00", ... }
+
+    // Dates canoniques BH — room-level si disponibles, fallback booking parent.
+    // En mono-room (cas courant) room.checkin_date == arrival_date — comportement inchangé.
+    // En multi-room, arrival_date/departure_date couvrent le span total du booking ;
+    // rooms[0].checkin_date/checkout_date représentent la période réelle de ce logement.
+    const reservationStart = room.checkin_date  || arrival_date;
+    const reservationEnd   = room.checkout_date || departure_date;
 
     // Platform — détecté tôt car nécessaire pour dériver amount_rooms correctement
     const isBookingCom = (ota_name || '').toLowerCase().includes('booking');
@@ -788,7 +796,7 @@ async function processChannexBooking(pool, bookingData) {
     const final_amount_taxes     = airbnbData.airbnb_occupancy_tax || (isBookingCom ? bdc_city_tax : amount_taxes) || null;
     const final_host_payout      = airbnbData.airbnb_host_payout  || null;
 
-    console.log(`📥 [CHANNEX] Booking reçu: ${booking_id} | ${ota_name} | ${arrival_date} → ${departure_date} | ${guest_name} | ${guest_country || '?'}`);
+    console.log(`📥 [CHANNEX] Booking reçu: ${booking_id} | ${ota_name} | parent: ${arrival_date}→${departure_date} | rooms: ${(attrs.rooms||[]).length} | resa: ${reservationStart}→${reservationEnd} | ${guest_name} | ${guest_country||'?'}`);
 
     // Trouver le logement Boostinghost correspondant
     // Priorité : room_type_id (précis, indispensable en multi-appartements)
@@ -848,7 +856,7 @@ async function processChannexBooking(pool, bookingData) {
     }
 
     // 3. Fallback par dates : même logement + mêmes dates (Channex peut changer le booking_id lors d'une modif)
-    if (existing.rows.length === 0 && arrival_date && departure_date && property_id) {
+    if (existing.rows.length === 0 && reservationStart && reservationEnd && property_id) {
       const dupCheck = await pool.query(
         `SELECT id, uid FROM reservations
          WHERE property_id = $1
@@ -857,7 +865,7 @@ async function processChannexBooking(pool, bookingData) {
            AND status != 'cancelled'
            AND source = 'channex'
          ORDER BY created_at DESC LIMIT 1`,
-        [property_id, arrival_date, departure_date]
+        [property_id, reservationStart, reservationEnd]
       );
       if (dupCheck.rows.length > 0) {
         console.log(`⚠️ [CHANNEX] Doublon détecté par dates: booking_id=${booking_id} correspond à ${dupCheck.rows[0].uid} → mise à jour au lieu de créer`);
@@ -871,7 +879,7 @@ async function processChannexBooking(pool, bookingData) {
 
     // 4. Fallback élargi : ligne iCal chevauchant les mêmes dates (EN DERNIER — jamais avant les niveaux 1-3)
     //    Une re-livraison webhook retombe toujours sur sa propre ligne channex via les niveaux 1-3.
-    if (existing.rows.length === 0 && arrival_date && departure_date && property_id) {
+    if (existing.rows.length === 0 && reservationStart && reservationEnd && property_id) {
       const icalCheck = await pool.query(
         `SELECT id, uid, start_date, end_date FROM reservations
          WHERE property_id = $1
@@ -880,12 +888,12 @@ async function processChannexBooking(pool, bookingData) {
            AND start_date < $3
            AND end_date   > $2
          ORDER BY created_at DESC`,
-        [property_id, arrival_date, departure_date]
+        [property_id, reservationStart, reservationEnd]
       );
 
       if (icalCheck.rows.length > 1) {
         // Ambiguïté : plusieurs lignes iCal chevauchent — ne modifier aucune, créer normalement
-        console.warn(`⚠️ [CHANNEX] Ambiguïté iCal : ${icalCheck.rows.length} lignes chevauchant ${arrival_date}→${departure_date} sur property ${property_id} (${icalCheck.rows.map(r => r.uid).join(', ')}) — création normale pour éviter un écrasement incorrect`);
+        console.warn(`⚠️ [CHANNEX] Ambiguïté iCal : ${icalCheck.rows.length} lignes chevauchant ${reservationStart}→${reservationEnd} sur property ${property_id} (${icalCheck.rows.map(r => r.uid).join(', ')}) — création normale pour éviter un écrasement incorrect`);
       } else if (icalCheck.rows.length === 1) {
         const icalRow = icalCheck.rows[0];
         const convertedStatus = 'confirmed';
@@ -930,7 +938,7 @@ async function processChannexBooking(pool, bookingData) {
             booking_id, revision_id || null,
             ota_name || null, ota_reservation_code || null,
             ota_name || 'channex',
-            arrival_date, departure_date,
+            reservationStart, reservationEnd,
             guest_name, guest_first_name, guest_last_name,
             guest_email, guest_phone,
             guest_country, guest_language,
@@ -977,8 +985,8 @@ async function processChannexBooking(pool, bookingData) {
         property_id,
         user_id,
         status: 'cancelled',
-        start_date: arrival_date,
-        end_date: departure_date,
+        start_date: reservationStart,
+        end_date: reservationEnd,
         _not_in_db: true, // flag interne pour éviter des effets de bord
       };
     }
@@ -1000,7 +1008,7 @@ async function processChannexBooking(pool, bookingData) {
           updated_at = NOW()
          WHERE channex_booking_id = $23`,
         [
-          arrival_date, departure_date,
+          reservationStart, reservationEnd,
           guest_first_name, guest_last_name, guest_country,
           guest_language, guest_city, guest_address, guest_zip,
           occupancy_adults, occupancy_children,
@@ -1019,6 +1027,25 @@ async function processChannexBooking(pool, bookingData) {
         [booking_id]
       );
       console.log(`ℹ️ [CHANNEX] Réservation mise à jour: ${existing.rows[0].uid}`);
+      await logChannex(pool, {
+        user_id, property_id, channex_property_id,
+        event_type: 'update_booking',
+        direction: 'inbound',
+        payload: {
+          booking_id,
+          revision_id:          revision_id || null,
+          ota_reservation_code: ota_reservation_code || null,
+          parent_arrival:       arrival_date,
+          parent_departure:     departure_date,
+          rooms_count:          (attrs.rooms || []).length,
+          room0_type_id:        booking_room_type_id || null,
+          room0_checkin:        room.checkin_date  || null,
+          room0_checkout:       room.checkout_date || null,
+          reservation_start:    reservationStart,
+          reservation_end:      reservationEnd,
+          amount_total
+        }
+      }).catch(() => {});
       return fullRow.rows[0] || existing.rows[0];
     }
 
@@ -1040,7 +1067,7 @@ async function processChannexBooking(pool, bookingData) {
        RETURNING *`,
       [
         uid, property_id, user_id,
-        arrival_date, departure_date,
+        reservationStart, reservationEnd,
         guest_name, guest_first_name, guest_last_name, guest_email, guest_phone,
         guest_country, guest_language, guest_city, guest_address, guest_zip,
         occupancy_adults, occupancy_children,
@@ -1063,7 +1090,19 @@ async function processChannexBooking(pool, bookingData) {
       user_id, property_id, channex_property_id,
       event_type: 'receive_booking',
       direction: 'inbound',
-      payload: { booking_id, ota_name, arrival_date, departure_date, guest_country, amount_total }
+      payload: {
+        booking_id, ota_name,
+        parent_arrival:    arrival_date,
+        parent_departure:  departure_date,
+        rooms_count:       (attrs.rooms || []).length,
+        room0_type_id:     booking_room_type_id || null,
+        room0_checkin:     room.checkin_date  || null,
+        room0_checkout:    room.checkout_date || null,
+        reservation_start: reservationStart,
+        reservation_end:   reservationEnd,
+        guest_country,
+        amount_total
+      }
     });
 
     console.log(`✅ [CHANNEX] Réservation créée: ${uid} | ${guest_name} | ${guest_country} | ${amount_total}${currency}`);
