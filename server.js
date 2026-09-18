@@ -15703,6 +15703,18 @@ app.get('/api/cleaning/checklists',
       ? (params.push(cleanerIdFilter), `AND cc.cleaner_id = $${params.length}`)
       : '';
 
+    // ?since=YYYY-MM-DD : envoyé par l'iOS pour l'historique 30 jours.
+    // Lève le LIMIT 100 sur la plage demandée tout en retournant systématiquement
+    // les checklists "pending" (À valider) quelle que soit leur ancienneté.
+    const { since } = req.query;
+    let sinceClause = '';
+    let useLimitFallback = true;
+    if (since && /^\d{4}-\d{2}-\d{2}$/.test(since)) {
+      params.push(since);
+      sinceClause = `AND (cc.checkout_date >= $${params.length}::date OR cc.owner_status = 'pending')`;
+      useLimitFallback = false;
+    }
+
     const result = await pool.query(
       `SELECT
         -- Colonnes légères uniquement (pas de photos/signature_data : trop lourds
@@ -15764,11 +15776,11 @@ app.get('/api/cleaning/checklists',
          ORDER BY conv.id DESC
          LIMIT 1
        ) conv ON TRUE
-       WHERE cc.user_id = ANY($1::text[]) ${cleanerClause}
+       WHERE cc.user_id = ANY($1::text[]) ${cleanerClause} ${sinceClause}
        ORDER BY
          CASE WHEN (cc.owner_status = 'pending' OR cc.owner_status IS NULL) AND cc.completed_at IS NOT NULL THEN 0 ELSE 1 END ASC,
          cc.checkout_date DESC NULLS LAST
-       LIMIT 100`,
+       ${useLimitFallback ? 'LIMIT 100' : ''}`,
       params
     );
 

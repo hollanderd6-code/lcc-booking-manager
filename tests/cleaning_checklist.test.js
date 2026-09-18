@@ -1258,6 +1258,162 @@ test('R7 — preuve régression : ancien code source="draft" → cameraCount = 0
   assert.strictEqual(webGetCameraCount(newRestored), 5, 'Nouveau code → cameraCount = 5 (corrigé)');
 });
 
+// ─── SÉRIE F : CLEANSTATE-FIX — états dérivés + since + reservation_key ──────
+
+console.log('\nSérie F — CLEANSTATE-FIX : états dérivés, since, reservation_key (F1-F9)');
+
+// Miroir de CleaningExecutionState.effectiveCleaningState (Swift)
+function effectiveCleaningState({ checklistCompleted, checklistOwnerStatus, checklistHasDraft }) {
+  if (checklistCompleted) {
+    if (checklistOwnerStatus === 'validated') return 'validated';
+    if (checklistOwnerStatus === 'rejected')  return 'rejected';
+    return 'pendingValidation';
+  }
+  if (checklistHasDraft) return 'inProgress';
+  return 'notStarted';
+}
+
+// Miroir du filtre ?since= dans GET /api/cleaning/checklists.
+// sinceDate : "YYYY-MM-DD" | null.
+// Retourne true si la checklist doit être incluse dans les résultats.
+function checklistPassesSinceFilter(checklist, sinceDate) {
+  if (!sinceDate) return true; // pas de filtre → LIMIT 100 (testé indépendamment)
+  // Inclus si checkout_date >= since OU owner_status = 'pending'
+  if (checklist.owner_status === 'pending') return true;
+  if (!checklist.checkout_date) return false;
+  return checklist.checkout_date >= sinceDate;
+}
+
+// Miroir du format reservation_key produit par les deux chemins backend.
+// Chemin virtual assignments : TO_CHAR(start_date, 'YYYY-MM-DD')
+// Chemin POST /checklist (client) : `${propertyId}_${r.start}_${r.end}` (YYYY-MM-DD)
+function buildReservationKey(propertyId, startDate, endDate) {
+  // Les deux dates doivent être au format YYYY-MM-DD (sans timestamp).
+  const s = String(startDate).slice(0, 10);
+  const e = String(endDate).slice(0, 10);
+  return `${propertyId}_${s}_${e}`;
+}
+
+// F1 — assignment sans checklist → Pas commencé
+test('F1 — assignment sans checklist → état notStarted', () => {
+  const state = effectiveCleaningState({
+    checklistCompleted: false,
+    checklistOwnerStatus: null,
+    checklistHasDraft: false
+  });
+  assert.strictEqual(state, 'notStarted');
+});
+
+// F2 — checklist brouillon (completedAt IS NULL) → En cours, pas considérée comme terminée
+test('F2 — brouillon (completedAt IS NULL) → inProgress, non finalisé', () => {
+  const state = effectiveCleaningState({
+    checklistCompleted: false,   // completedAt IS NULL → checklistCompleted = false
+    checklistOwnerStatus: null,
+    checklistHasDraft: true
+  });
+  assert.strictEqual(state, 'inProgress');
+  assert.notStrictEqual(state, 'pendingValidation', 'Un brouillon ne doit jamais produire pendingValidation');
+});
+
+// F3 — completed_at IS NOT NULL + owner_status = "pending" → À valider (M8)
+test('F3 — completed_at + owner_status=pending → pendingValidation (cas M8)', () => {
+  const state = effectiveCleaningState({
+    checklistCompleted: true,
+    checklistOwnerStatus: 'pending',
+    checklistHasDraft: false
+  });
+  assert.strictEqual(state, 'pendingValidation');
+  assert.notStrictEqual(state, 'notStarted', 'Un ménage finalisé ne peut jamais afficher Pas commencé');
+});
+
+// F4 — owner_status = "validated" → Validé
+test('F4 — owner_status=validated → validated', () => {
+  const state = effectiveCleaningState({
+    checklistCompleted: true,
+    checklistOwnerStatus: 'validated',
+    checklistHasDraft: false
+  });
+  assert.strictEqual(state, 'validated');
+});
+
+// F5 — owner_status = "rejected" → Rejeté / Complément demandé
+test('F5 — owner_status=rejected → rejected', () => {
+  const state = effectiveCleaningState({
+    checklistCompleted: true,
+    checklistOwnerStatus: 'rejected',
+    checklistHasDraft: false
+  });
+  assert.strictEqual(state, 'rejected');
+});
+
+// F6 — ?since= : 101 checklists, le filtre since retourne toutes celles dans la plage + pending hors plage
+test('F6 — since : >100 checklists → résultats corrects dans la plage + pending anciens', () => {
+  const sinceDate = '2026-08-18'; // J-31
+  const checklists = [];
+  // 50 dans la plage (checkout_date >= since, owner_status validated)
+  for (let i = 0; i < 50; i++) {
+    checklists.push({ id: `in-${i}`, checkout_date: '2026-09-01', owner_status: 'validated', completed_at: new Date() });
+  }
+  // 60 hors plage (checkout_date < since, owner_status validated) → exclus
+  for (let i = 0; i < 60; i++) {
+    checklists.push({ id: `out-${i}`, checkout_date: '2026-07-01', owner_status: 'validated', completed_at: new Date() });
+  }
+  // 3 hors plage mais pending → inclus malgré date ancienne
+  for (let i = 0; i < 3; i++) {
+    checklists.push({ id: `pend-${i}`, checkout_date: '2026-07-01', owner_status: 'pending', completed_at: new Date() });
+  }
+
+  const filtered = checklists.filter(cl => checklistPassesSinceFilter(cl, sinceDate));
+  assert.strictEqual(filtered.length, 53, '50 dans la plage + 3 pending anciens');
+  assert.ok(filtered.every(cl => cl.checkout_date >= sinceDate || cl.owner_status === 'pending'),
+    'Tous les résultats respectent le filtre');
+  // Sans since (LIMIT 100) : 100 seraient retournées, pas 113
+  const withoutFilter = checklists.filter(cl => checklistPassesSinceFilter(cl, null));
+  assert.strictEqual(withoutFilter.length, checklists.length, 'Sans filtre : tout passe');
+});
+
+// F7 — reservation_key : format identique côté assignments (TO_CHAR) et côté checklist (client)
+test('F7 — reservation_key : même format YYYY-MM-DD dans les deux chemins', () => {
+  const propertyId = 'M9';
+  const startDate  = '2026-09-14';
+  const endDate    = '2026-09-17';
+
+  // Chemin assignments : TO_CHAR(start_date, 'YYYY-MM-DD') → String ISO
+  const keyFromAssignment = buildReservationKey(propertyId, startDate, endDate);
+
+  // Chemin checklist (client POST) : `${propertyId}_${r.start}_${r.end}` avec r.start = 'YYYY-MM-DD'
+  const keyFromChecklist = `${propertyId}_${startDate}_${endDate}`;
+
+  assert.strictEqual(keyFromAssignment, keyFromChecklist, 'Les deux clés doivent être identiques');
+  assert.strictEqual(keyFromAssignment, 'M9_2026-09-14_2026-09-17');
+});
+
+// F8 — workflow natif (JWT) et web (PIN) : même reservation_key pour la même resa
+test('F8 — workflow natif et web : reservation_key identique pour la même réservation', () => {
+  const propertyId = 'villa-cerise';
+  // Natif iOS : start/end vient de reservationsStore.r.start/r.end (string ISO)
+  const nativeKey = buildReservationKey(propertyId, '2026-09-20', '2026-09-25');
+  // Web PIN : même construction depuis la page de ménage
+  const webKey    = buildReservationKey(propertyId, '2026-09-20', '2026-09-25');
+  assert.strictEqual(nativeKey, webKey);
+  // Avec timestamp → slice(0,10) garantit le même résultat
+  const keyFromTimestamp = buildReservationKey(propertyId, '2026-09-20T00:00:00Z', '2026-09-25T00:00:00Z');
+  assert.strictEqual(keyFromTimestamp, nativeKey, 'slice(0,10) normalise les timestamps');
+});
+
+// F9 — isolation agency : filtre user_id = ANY(agencyIds) — non-régression
+test('F9 — isolation agency : checklists d\'un autre compte non accessibles', () => {
+  const agencyIds = ['owner-alice'];
+  const rows = [
+    { id: 'cl-1', user_id: 'owner-alice', owner_status: 'pending', checkout_date: '2026-09-10' },
+    { id: 'cl-2', user_id: 'owner-bob',   owner_status: 'pending', checkout_date: '2026-09-10' },
+    { id: 'cl-3', user_id: 'owner-alice', owner_status: 'validated', checkout_date: '2026-09-08' },
+  ];
+  const filtered = rows.filter(r => agencyIds.includes(r.user_id));
+  assert.strictEqual(filtered.length, 2, 'owner-bob doit être exclu');
+  assert.ok(filtered.every(r => r.user_id === 'owner-alice'));
+});
+
 // ─── Résumé ───────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);
