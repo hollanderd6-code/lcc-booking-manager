@@ -1257,6 +1257,23 @@ async function writeIcalSyncStatus(pool, propertyId, url, { ok, events = 0, erro
 }
 
 /**
+ * Retourne true si l'intervalle iCal [icalStart, icalEnd) est entièrement couvert
+ * par l'union des intervalles Channex fournis (algorithme de balayage O(n log n)).
+ * Sémantique checkout exclusive : end_date = premier jour LIBRE après le séjour.
+ */
+function isIcalCoveredByChannex(icalStart, icalEnd, chxRows) {
+  const end = new Date(icalEnd);
+  const sorted = [...chxRows].sort((a, b) => new Date(a.sd) - new Date(b.sd));
+  let frontier = new Date(icalStart);
+  for (const chx of sorted) {
+    if (new Date(chx.sd) > frontier) break; // gap — pas entièrement couvert
+    const ce = new Date(chx.ed);
+    if (ce > frontier) frontier = ce;
+  }
+  return frontier >= end;
+}
+
+/**
  * Synchronise une URL iCal pour un logement
  */
 async function syncSingleIcalUrl(pool, property, entry) {
@@ -1301,6 +1318,26 @@ async function syncSingleIcalUrl(pool, property, entry) {
       if (ex.source !== 'ical') {
         console.log(`⚠️ [ICAL] Doublon cross-source ignoré : property=${property.id}, dates ${startStr}→${endStr}, ligne existante uid=${ex.uid} source=${ex.source}`);
       }
+      skipped++;
+      continue;
+    }
+
+    // Vérification couverture Channex : un VEVENT dont la période est entièrement
+    // couverte par des réservations Channex existantes est redondant — le même séjour
+    // a déjà été importé via webhook avec données enrichies.
+    const chxOverlap = await pool.query(
+      `SELECT start_date::date AS sd, end_date::date AS ed
+       FROM reservations
+       WHERE property_id = $1
+         AND source = 'channex'
+         AND status != 'cancelled'
+         AND start_date::date < $3::date
+         AND end_date::date   > $2::date
+       ORDER BY start_date`,
+      [property.id, startStr, endStr]
+    );
+    if (chxOverlap.rows.length > 0 && isIcalCoveredByChannex(startStr, endStr, chxOverlap.rows)) {
+      console.log(`⏭️ [ICAL] Doublon Channex ignoré : property=${property.id}, dates ${startStr}→${endStr} entièrement couvert par ${chxOverlap.rows.length} réservation(s) CHX`);
       skipped++;
       continue;
     }
