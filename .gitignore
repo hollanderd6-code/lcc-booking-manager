@@ -31,6 +31,9 @@ boostinghost-poc/node_modules/
 .env
 .env.local
 
+# ── Previews générés localement ──
+tmp/
+
 # ── Scripts de test avec credentials — ne jamais versionner ──
 outils/test-cleaner-security.sh
 outils/*.secrets.env

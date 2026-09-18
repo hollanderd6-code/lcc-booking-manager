@@ -1,6 +1,8 @@
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 const moment = require('moment-timezone');
+const bhEmailTemplate = require('./email/emailLayout');
+const { escapeHtml, emailCard, emailBookingSummary } = require('./email/emailComponents');
 
 const timezone = process.env.TIMEZONE || 'Europe/Paris';
 
@@ -235,140 +237,28 @@ async function sendReminderToTeam(reservations, reminderType, daysFromNow) {
       break;
   }
   
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body {
-          font-family: 'Montserrat', -apple-system, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 20px;
-        }
-        .header {
-          background: linear-gradient(135deg, #E67E50 0%, #B87A5C 100%);
-          color: white;
-          padding: 30px;
-          border-radius: 10px;
-          text-align: center;
-          margin-bottom: 30px;
-        }
-        .header h1 {
-          margin: 0;
-          font-size: 28px;
-        }
-        .reservation-card {
-          background: #f9f9f9;
-          padding: 20px;
-          border-radius: 8px;
-          margin-bottom: 20px;
-          border-left: 4px solid #E67E50;
-        }
-        .property-name {
-          font-size: 18px;
-          font-weight: 700;
-          color: #E67E50;
-          margin-bottom: 10px;
-        }
-        .detail-row {
-          display: flex;
-          padding: 8px 0;
-          border-bottom: 1px solid #eee;
-        }
-        .detail-row:last-child {
-          border-bottom: none;
-        }
-        .detail-label {
-          font-weight: 600;
-          min-width: 120px;
-          color: #666;
-        }
-        .detail-value {
-          color: #333;
-        }
-        .action-needed {
-          background: #fff3cd;
-          border: 1px solid #ffc107;
-          padding: 15px;
-          border-radius: 8px;
-          margin-top: 10px;
-        }
-        .action-needed strong {
-          color: #856404;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>${title}</h1>
-        <p style="margin: 10px 0 0 0; opacity: 0.9;">${reservations.length} réservation(s)</p>
-      </div>
-      
-      ${reservations.map(r => `
-        <div class="reservation-card">
-          <div class="property-name">${r.propertyName}</div>
-          
-          <div class="detail-row">
-            <div class="detail-label">👤 Voyageur</div>
-            <div class="detail-value"><strong>${r.guestName}</strong></div>
-          </div>
-          
-          <div class="detail-row">
-            <div class="detail-label">📅 Arrivée</div>
-            <div class="detail-value">${moment(r.start).format('DD/MM/YYYY à HH:mm')}</div>
-          </div>
-          
-          <div class="detail-row">
-            <div class="detail-label">📅 Départ</div>
-            <div class="detail-value">${moment(r.end).format('DD/MM/YYYY à HH:mm')}</div>
-          </div>
-          
-          <div class="detail-row">
-            <div class="detail-label">🌙 Nuits</div>
-            <div class="detail-value">${r.nights}</div>
-          </div>
-          
-          <div class="detail-row">
-            <div class="detail-label">🌐 Plateforme</div>
-            <div class="detail-value">${r.source}</div>
-          </div>
-          
-          ${r.guestPhone ? `
-          <div class="detail-row">
-            <div class="detail-label">📱 Téléphone</div>
-            <div class="detail-value"><a href="tel:${r.guestPhone}">${r.guestPhone}</a></div>
-          </div>
-          ` : ''}
-          
-          ${reminderType.startsWith('checkin') ? `
-          <div class="action-needed">
-            <strong>✅ Actions à faire :</strong><br>
-            • Vérifier que le logement est prêt<br>
-            • Envoyer les instructions d'arrivée via ${r.source}<br>
-            • Communiquer le code d'accès
-          </div>
-          ` : ''}
-          
-          ${reminderType.startsWith('checkout') ? `
-          <div class="action-needed">
-            <strong>✅ Actions à faire :</strong><br>
-            • Planifier le ménage<br>
-            • Vérifier l'état du logement après départ
-          </div>
-          ` : ''}
-        </div>
-      `).join('')}
-      
-      <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
-        <p>LCC Booking Manager - La Conciergerie de Charles</p>
-      </div>
-    </body>
-    </html>
-  `;
-  
+  const htmlContent = bhEmailTemplate({
+    title,
+    tag: `${reservations.length} réservation${reservations.length > 1 ? 's' : ''}`,
+    bodyHtml: reservations.map(r => emailCard('info',
+      emailBookingSummary([
+        { label: '🏠 Logement', value: r.propertyName || '' },
+        { label: '👤 Voyageur', value: r.guestName || '' },
+        { label: '📅 Arrivée', value: moment(r.start).format('DD/MM/YYYY à HH:mm') },
+        { label: '📅 Départ', value: moment(r.end).format('DD/MM/YYYY à HH:mm') },
+        { label: '🌙 Nuits', value: String(r.nights || '') },
+        { label: '🌐 Plateforme', value: r.source || '' },
+        ...(r.guestPhone ? [{ label: '📱 Téléphone', value: r.guestPhone }] : [])
+      ]) +
+      (reminderType.startsWith('checkin')
+        ? `<p style="margin:10px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#5A5A54;">✅ Actions : vérifier le logement · envoyer les instructions · communiquer le code d'accès</p>`
+        : '') +
+      (reminderType.startsWith('checkout')
+        ? `<p style="margin:10px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#5A5A54;">✅ Actions : planifier le ménage · vérifier l'état du logement</p>`
+        : '')
+    )).join('')
+  });
+
   try {
     await transporter.sendMail({
       from: `"LCC Booking Manager" <${process.env.EMAIL_USER}>`,

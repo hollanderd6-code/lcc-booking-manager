@@ -12,6 +12,7 @@ const fsp = require('fs').promises;
 // icalService supprimé — remplacé par Channex
 const notificationService = require('./services/notifications-service');
 const messagingService = require('./services/messagingService');
+const { escapeHtml, emailButton, emailCTABlock, emailCard, emailDivider, emailBookingSummary } = require('./services/email/emailComponents');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
@@ -4194,13 +4195,9 @@ L'équipe Boostinghost`;
           title: 'Nouveau ménage à prévoir',
           tag: propertyName,
           bodyHtml: `
-            <p>${hello}</p>
-            <p>Un nouveau séjour vient d'être réservé pour le logement <strong>${propertyName}</strong>.</p>
-            <div class="info-card">
-              <strong>Voyageur :</strong> ${guest}<br>
-              <strong>Séjour :</strong> du ${start} au ${end}<br>
-              <strong>Ménage à prévoir :</strong> le ${end} après le départ
-            </div>
+            <p>${escapeHtml(hello)}</p>
+            <p>Un nouveau séjour vient d'être réservé pour le logement <strong>${escapeHtml(propertyName)}</strong>.</p>
+            ${emailCard('info', `<strong>Voyageur :</strong> ${escapeHtml(guest)}<br><strong>Séjour :</strong> du ${escapeHtml(start)} au ${escapeHtml(end)}<br><strong>Ménage à prévoir :</strong> le ${escapeHtml(end)} après le départ`)}
             <p>Heure exacte de check-out à confirmer avec la conciergerie.</p>
           `
         });
@@ -11221,39 +11218,31 @@ app.post('/api/sms/toggle', authenticateAny, async (req, res) => {
         await sendEmailViaBrevo({
           to: userEmail,
           subject: '✅ Option SMS activée sur votre compte Boostinghost',
-          html: `
-            <div style="font-family:'DM Sans',Arial,sans-serif;max-width:600px;margin:0 auto;color:#0D1117;">
-              <div style="background:#1A7A5E;padding:24px 32px;border-radius:12px 12px 0 0;">
-                <h1 style="color:white;margin:0;font-size:20px;">📱 Option SMS activée</h1>
-              </div>
-              <div style="background:#ffffff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;">
-                <p style="margin:0 0 16px;">Bonjour ${userName},</p>
-                <p style="margin:0 0 16px;">L'option <strong>SMS automatiques</strong> vient d'être activée sur votre compte Boostinghost.</p>
-                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px;margin:20px 0;">
-                  <p style="margin:0 0 8px;font-weight:600;color:#166534;">Ce qui est activé :</p>
-                  <ul style="margin:0;padding-left:20px;color:#374151;font-size:14px;">
-                    <li style="margin-bottom:6px;">SMS de demande de caution avec lien Stripe (J-2 avant l'arrivée)</li>
-                    <li style="margin-bottom:6px;">SMS d'informations d'arrivée le jour J (si caution validée)</li>
-                    <li>Pour toutes les plateformes sauf Airbnb</li>
-                  </ul>
-                </div>
-                ${basePlan !== 'pro' ? `<p style="margin:16px 0;font-size:13px;color:#6b7280;">Des frais de <strong>5,99€/mois</strong> s'appliquent à cette option. Vous pouvez la désactiver à tout moment depuis votre espace Boostinghost.</p>` : ''}
-                <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">L'équipe Boostinghost</p>
-              </div>
-            </div>
-          `
+          html: bhEmailTemplate({
+            title: 'Option SMS activée',
+            tag: 'Boostinghost',
+            bodyHtml: `
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Bonjour <strong>${escapeHtml(userName)}</strong>,</p>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">L'option <strong>SMS automatiques</strong> vient d'être activée sur votre compte Boostinghost.</p>
+              ${emailCard('success', 'Ce qui est activé :<br>• SMS de demande de caution avec lien Stripe (J-2 avant l\'arrivée)<br>• SMS d\'informations d\'arrivée le jour J (si caution validée)<br>• Pour toutes les plateformes sauf Airbnb')}
+              ${basePlan !== 'pro' ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#5A5A54;line-height:1.6;margin:14px 0 0;">Des frais de <strong>5,99€/mois</strong> s'appliquent à cette option. Vous pouvez la désactiver à tout moment depuis votre espace Boostinghost.</p>` : ''}
+            `
+          })
         }).catch(e => console.warn('⚠️ [SMS] Email utilisateur error:', e.message));
       }
 
       // Email de notification admin
       await sendEmailViaBrevo({
         to: 'charles.induni@gmail.com',
-        subject: `📱 Option SMS activée — ${userName} (${basePlan})`,
-        html: `
-          <p><strong>${userName}</strong> (${userEmail}) vient d'activer l'option SMS.</p>
-          <p>Plan : <strong>${basePlan}</strong> | User ID : ${userId}</p>
-          ${basePlan !== 'pro' ? '<p>⚠️ Plan Solo/Standard — facturation 5,99€/mois à vérifier.</p>' : '<p>Plan Pro — inclus.</p>'}
-        `
+        subject: `Option SMS activée — ${userName} (${basePlan})`,
+        html: bhEmailTemplate({
+          title: 'Option SMS activée',
+          tag: 'Notification admin',
+          bodyHtml: `
+            ${emailCard('info', `<strong>${escapeHtml(userName)}</strong> (${escapeHtml(userEmail || '')}) vient d'activer l'option SMS.<br>Plan : <strong>${escapeHtml(basePlan)}</strong> | User ID : ${userId}`)}
+            ${basePlan !== 'pro' ? emailCard('warning', '⚠️ Plan Solo/Standard — facturation 5,99€/mois à vérifier.') : emailCard('neutral', 'Plan Pro — inclus.')}
+          `
+        })
       }).catch(e => console.warn('⚠️ [SMS] Email admin error:', e.message));
     }
 
@@ -12834,153 +12823,7 @@ function generateVerificationToken() {
 // ============================================
 // HELPER : Template HTML commun pour tous les emails Boostinghost
 // ============================================
-function bhEmailTemplate({ icon, title, subtitle, tag, bodyHtml, footerNote, accentColor }) {
-  const year = new Date().getFullYear();
-  const accent = accentColor || '#1A7A5E';
-  const accentDark = accentColor ? accentColor : '#0A3D2B';
-  const tagLabel = tag || subtitle || '';
-  return `<!DOCTYPE html>
-<html lang="fr" xmlns="http://www.w3.org/1999/xhtml">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-  <style>
-    body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
-    body{margin:0;padding:0;background-color:#EDEAE3;font-family:Arial,Helvetica,sans-serif;}
-    table{border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;}
-    img{border:0;height:auto;line-height:100%;outline:none;text-decoration:none;}
-    .btn{display:inline-block;background:${accent};color:#ffffff !important;text-decoration:none;padding:13px 30px;border-radius:9px;font-size:14px;font-weight:700;font-family:Arial,Helvetica,sans-serif;mso-padding-alt:0;text-align:center;}
-    .cta-block{background:#F5F2EC;border:1px solid #E0DBD0;border-radius:12px;padding:22px;text-align:center;margin:22px 0;}
-    .cta-hint{font-size:12px;color:#9CA3AF;margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;}
-    .info-card{background:#F5F2EC;border-left:4px solid ${accent};padding:14px 18px;margin:18px 0;font-size:14px;color:#444444;line-height:1.65;font-family:Arial,Helvetica,sans-serif;}
-    .info-card strong{color:${accent};}
-    .alert-card{background:#FFFBEB;padding:16px 18px;margin:18px 0;font-size:14px;color:#92400E;border:1px solid #FDE68A;font-family:Arial,Helvetica,sans-serif;}
-    .danger-card{background:#FEF2F2;padding:16px 18px;margin:18px 0;font-size:14px;color:#991B1B;border:1px solid #FECACA;font-family:Arial,Helvetica,sans-serif;}
-    .success-card{background:#F0FAF5;border-left:4px solid ${accent};padding:14px 18px;margin:18px 0;font-size:14px;color:#166534;font-family:Arial,Helvetica,sans-serif;}
-    .plan-badge{display:inline-block;background:#E8F5F0;color:${accent};font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 14px;border-radius:20px;margin-bottom:10px;border:1px solid #C6E8D9;font-family:Arial,Helvetica,sans-serif;}
-    .amount-big{font-size:44px;font-weight:900;color:${accent};line-height:1;letter-spacing:-2px;margin:6px 0;font-family:Arial,Helvetica,sans-serif;}
-    .amount-sub{font-size:12px;color:#9CA3AF;margin-bottom:16px;font-family:Arial,Helvetica,sans-serif;}
-    .feat-row{display:table;width:100%;padding:10px 0;border-bottom:1px solid #F0EBE1;}
-    .feat-row:last-child{border-bottom:none;}
-    .feat-icon{display:table-cell;width:32px;vertical-align:middle;font-size:16px;}
-    .feat-text{display:table-cell;vertical-align:middle;font-size:14px;color:#374151;padding-left:6px;font-family:Arial,Helvetica,sans-serif;}
-    .feat-text strong{color:#111111;}
-    .divider{border:none;border-top:1px solid #F0EBE1;margin:20px 0;}
-    .link-fallback{font-size:11px;color:#C4BEAF;word-break:break-all;line-height:1.6;margin-top:14px;font-family:Arial,Helvetica,sans-serif;}
-    .link-fallback a{color:${accent};}
-    .signoff{font-size:13px;color:#9CA3AF;margin-top:22px;padding-top:16px;border-top:1px solid #F0EBE1;font-family:Arial,Helvetica,sans-serif;}
-    p{margin:0 0 14px;font-size:15px;color:#374151;line-height:1.75;font-family:Arial,Helvetica,sans-serif;}
-    p strong{color:#111111;}
-    ul{margin:0 0 14px;padding-left:18px;}
-    ul li{font-size:14px;color:#444444;line-height:1.8;font-family:Arial,Helvetica,sans-serif;}
-    .booking-grid{width:100%;border-collapse:separate;border-spacing:8px;margin:16px 0;}
-    .booking-cell{background:#F9F8F5;border:1px solid #EAE6DD;padding:10px 12px;}
-    .booking-lbl{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#9CA3AF;font-weight:700;display:block;margin-bottom:3px;font-family:Arial,Helvetica,sans-serif;}
-    .booking-val{font-size:14px;color:#111111;font-weight:700;font-family:Arial,Helvetica,sans-serif;}
-    .booking-val-green{font-size:14px;color:${accent};font-weight:700;font-family:Arial,Helvetica,sans-serif;}
-  </style>
-</head>
-<body style="margin:0;padding:0;background-color:#EDEAE3;">
-<!-- Preheader invisible -->
-<div style="display:none;font-size:1px;color:#EDEAE3;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${title}${tagLabel ? ' — ' + tagLabel : ''}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EDEAE3;">
-  <tr>
-    <td align="center" style="padding:28px 16px;">
-      <table role="presentation" width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background-color:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E0DBD0;">
-
-        <!-- HEADER -->
-        <tr>
-          <td style="background-color:${accentDark};padding:32px 32px 24px 32px;">
-            <!-- Logo row -->
-            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-              <tr>
-                <td>
-                  <table role="presentation" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td style="width:32px;height:32px;text-align:center;vertical-align:middle;">
-                        <span style="font-size:26px;font-weight:900;color:#ffffff;font-family:Arial,Helvetica,sans-serif;line-height:32px;">B</span>
-                      </td>
-                      <td style="padding-left:10px;vertical-align:middle;">
-                        <span style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.7);font-family:Arial,Helvetica,sans-serif;">Boostinghost</span>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-                <td align="right" style="vertical-align:top;">
-                  <!-- Platform icons -->
-                  <table role="presentation" cellpadding="0" cellspacing="4">
-                    <tr>
-                      <td style="background-color:#FF5A5F;border-radius:8px;width:32px;height:32px;text-align:center;vertical-align:middle;">
-                        <span style="font-size:15px;font-weight:900;color:#ffffff;font-family:Arial,Helvetica,sans-serif;">A</span>
-                      </td>
-                      <td style="background-color:#003580;border-radius:8px;width:32px;height:32px;text-align:center;vertical-align:middle;">
-                        <span style="font-size:13px;font-weight:900;color:#ffffff;font-family:Arial,Helvetica,sans-serif;">B.</span>
-                      </td>
-                      <td style="background-color:#F5A623;border-radius:8px;width:32px;height:32px;text-align:center;vertical-align:middle;">
-                        <span style="font-size:13px;font-weight:900;color:#ffffff;font-family:Arial,Helvetica,sans-serif;">E</span>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-            <!-- Tag + Title -->
-            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:20px;">
-              <tr>
-                <td>
-                  ${tagLabel ? `<div style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.85);background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);margin-bottom:12px;font-family:Arial,Helvetica,sans-serif;">${tagLabel}</div><br>` : ''}
-                  <span style="font-size:24px;font-weight:800;color:#ffffff;letter-spacing:-0.3px;line-height:1.2;font-family:Arial,Helvetica,sans-serif;">${title}</span>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <!-- BODY -->
-        <tr>
-          <td style="background-color:#ffffff;padding:32px 36px;">
-            ${bodyHtml}
-            <p class="signoff">L'équipe Boostinghost</p>
-          </td>
-        </tr>
-
-        <!-- FOOTER -->
-        <tr>
-          <td style="background-color:#F5F2EC;padding:18px 36px;text-align:center;border-top:1px solid #E8E4DC;">
-            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-              <tr>
-                <td align="center" style="padding-bottom:8px;">
-                  <table role="presentation" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td style="background-color:${accent};border-radius:5px;width:20px;height:20px;text-align:center;vertical-align:middle;">
-                        <span style="font-size:11px;font-weight:900;color:#ffffff;font-family:Arial,Helvetica,sans-serif;line-height:20px;">B</span>
-                      </td>
-                      <td style="padding-left:7px;vertical-align:middle;">
-                        <span style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#9CA3AF;font-family:Arial,Helvetica,sans-serif;">Boostinghost</span>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              ${footerNote ? `<tr><td align="center" style="font-size:11px;color:#B8B2A7;line-height:1.7;font-family:Arial,Helvetica,sans-serif;padding-bottom:4px;">${footerNote}</td></tr>` : ''}
-              <tr>
-                <td align="center" style="font-size:11px;color:#B8B2A7;line-height:1.7;font-family:Arial,Helvetica,sans-serif;">
-                  &copy; ${year} Boostinghost &middot; <a href="mailto:contact@boostinghost.fr" style="color:${accent};text-decoration:none;">contact@boostinghost.fr</a>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-      </table>
-    </td>
-  </tr>
-</table>
-</body>
-</html>`;
-}
+const bhEmailTemplate = require('./services/email/emailLayout');
 
 // ============================================
 // Fonction helper : Envoyer l'email de vérification
@@ -12999,16 +12842,11 @@ async function sendVerificationEmail(email, firstName, token) {
       subtitle: 'Une dernière étape avant de démarrer',
       footerNote: 'Si vous n\'avez pas créé de compte, ignorez cet email.',
       bodyHtml: `
-        <p>Bonjour <strong>${firstName || 'nouveau membre'}</strong>,</p>
+        <p>Bonjour <strong>${escapeHtml(firstName || 'nouveau membre')}</strong>,</p>
         <p>Merci de vous être inscrit sur Boostinghost. Pour activer votre compte, cliquez sur le bouton ci-dessous :</p>
-        <div class="cta-block">
-          <p>Lien valide pendant <strong>24 heures</strong></p>
-          <a href="${verificationUrl}" class="btn">Vérifier mon adresse email →</a>
-        </div>
-        <div class="info-card">
-          Une fois vérifié, vous accéderez à : calendrier unifié, messages automatiques IA, gestion du ménage, cautions Stripe, livrets d'accueil et bien plus.
-        </div>
-        <p class="link-fallback">Le bouton ne fonctionne pas ? Copiez ce lien :<br><a href="${verificationUrl}">${verificationUrl}</a></p>
+        ${emailCTABlock(verificationUrl, 'Vérifier mon adresse email', { title: 'Lien valide pendant 24 heures' })}
+        ${emailCard('info', 'Une fois vérifié, vous accéderez à : calendrier unifié, messages automatiques IA, gestion du ménage, cautions Stripe, livrets d\'accueil et bien plus.')}
+        <p style="font-size:11px;color:#878782;word-break:break-all;line-height:1.6;margin-top:14px;">Le bouton ne fonctionne pas ? Copiez ce lien :<br><a href="${verificationUrl}" style="color:#0E3B2E;">${verificationUrl}</a></p>
       `
     })
   };
@@ -13058,59 +12896,18 @@ async function logEmailSent(userId, emailType, emailData = {}) {
 // EMAIL 1 : BIENVENUE APRÈS INSCRIPTION
 // ============================================
 async function sendWelcomeEmail(email, firstName) {
+  const pricingUrl = `${process.env.APP_URL || 'https://boostinghost.fr'}/pricing.html`;
   const bodyHtml = `
-    <p>Bonjour <strong>${firstName}</strong>,</p>
-    <p>Votre compte est actif. Choisissez le plan qui vous convient et profitez de <strong style="color:#1A7A5E">14 jours d'essai gratuit</strong> — sans carte bancaire.</p>
-    <div class="cta-block">
-      <p>Démarrez dès maintenant</p>
-      <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/pricing.html" class="btn">Choisir mon plan →</a>
-    </div>
-    <div style="background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:12px;padding:20px 24px;margin:20px 0;text-align:center;">
-      <p style="font-size:16px;margin:0 0 6px;font-weight:700;color:#1C1C1C;">🎯 Démarrage accompagné offert</p>
-      <p style="font-size:13px;color:#555;margin:0 0 16px;line-height:1.6;">Prenez 45 minutes avec nous pour configurer votre compte ensemble — connexion des plateformes, paramétrage des logements, messagerie IA. Gratuit, inclus avec tous les plans.</p>
-      <a href="https://calendly.com/boostinghost/demarrage-accompagne" style="display:inline-block;background:#1A7A5E;color:white;font-weight:700;font-size:14px;padding:12px 28px;border-radius:10px;text-decoration:none;">📅 Réserver ma session →</a>
-    </div>
-    <hr class="divider">
-    <p style="font-weight:700;color:#1C1C1C;margin-bottom:12px;">Nos formules</p>
-    <table style="width:100%;border-collapse:separate;border-spacing:0 6px;font-size:14px;margin-bottom:24px;">
-      <tr>
-        <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:8px 0 0 8px;border-right:none;">
-          <strong>Solo</strong>
-          <span style="display:block;font-size:12px;color:#888;margin-top:2px;">1 logement inclus — Pour démarrer</span>
-        </td>
-        <td style="padding:12px 14px;text-align:right;font-weight:700;color:#1A7A5E;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:0 8px 8px 0;border-left:none;">15 €/mois</td>
-      </tr>
-      <tr>
-        <td style="padding:12px 14px;background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:8px 0 0 8px;border-right:none;">
-          <strong>Standard</strong>
-          <span style="background:linear-gradient(135deg,#1A7A5E,#145f4a);color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;letter-spacing:0.04em;text-transform:uppercase;">✦ Recommandé</span>
-          <span style="display:block;font-size:12px;color:#888;margin-top:2px;">Jusqu'à 3 logements · +7 €/logement supp.</span>
-        </td>
-        <td style="padding:12px 14px;text-align:right;font-weight:700;color:#1A7A5E;background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:0 8px 8px 0;border-left:none;">29 €/mois</td>
-      </tr>
-      <tr>
-        <td style="padding:12px 14px;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:8px 0 0 8px;border-right:none;">
-          <strong>Pro</strong>
-          <span style="display:block;font-size:12px;color:#888;margin-top:2px;">Jusqu'à 6 logements · +5 €/logement supp. — Pour conciergeries</span>
-        </td>
-        <td style="padding:12px 14px;text-align:right;font-weight:700;color:#1A7A5E;background:#FAFAF8;border:1px solid #E8E3DA;border-radius:0 8px 8px 0;border-left:none;">49 €/mois</td>
-      </tr>
-    </table>
-    <hr class="divider">
-    <p style="font-weight:700;color:#1C1C1C;margin-bottom:12px;">Tout inclus dans chaque plan</p>
-    <div class="feat-row"><span class="feat-icon">📅</span><span class="feat-text"><strong>Calendrier centralisé</strong> — Synchro Airbnb, Booking &amp; toutes plateformes</span></div>
-    <div class="feat-row"><span class="feat-icon">✦</span><span class="feat-text"><strong>Messagerie intelligente par IA</strong> — Messages automatiques, traduction multilingue</span></div>
-    <div class="feat-row"><span class="feat-icon">🧹</span><span class="feat-text"><strong>Gestion du ménage</strong> — Planning, checklists &amp; assignation des intervenants</span></div>
-    <div class="feat-row"><span class="feat-icon">🛡️</span><span class="feat-text"><strong>Cautions &amp; paiements directs</strong> — Liens Stripe en quelques secondes</span></div>
-    <div class="feat-row"><span class="feat-icon">📖</span><span class="feat-text"><strong>Livret d'accueil digital</strong> — Personnalisable par logement, accès QR Code</span></div>
-    <div class="feat-row"><span class="feat-icon">📄</span><span class="feat-text"><strong>Facturation complète</strong> — Voyageurs &amp; propriétaires, contrats PDF</span></div>
-    <div class="feat-row"><span class="feat-icon">📱</span><span class="feat-text"><strong>Application mobile iOS &amp; Android</strong> — Notifications push en temps réel</span></div>
-    <div class="feat-row"><span class="feat-icon">📊</span><span class="feat-text"><strong>Rapports &amp; statistiques</strong> — Revenus, attestation fiscale annuelle</span></div>
-    <div class="feat-row"><span class="feat-icon">🏡</span><span class="feat-text"><strong>App voyageur incluse</strong> — Réservations directes avec vos voyageurs</span></div>
-    <div class="feat-row"><span class="feat-icon">💬</span><span class="feat-text"><strong>Support 7j/7</strong> — Une équipe disponible tous les jours</span></div>
-    <div class="info-card" style="margin-top:24px;">
-      Une question ? Réponse rapide : <strong><a href="mailto:contact@boostinghost.fr" style="color:#1A7A5E;">contact@boostinghost.fr</a></strong>
-    </div>
+    <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Bonjour <strong>${escapeHtml(firstName)}</strong>,</p>
+    <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Votre compte est actif. Profitez de <strong>14 jours d'essai gratuit</strong> — sans carte bancaire.</p>
+    ${emailCTABlock(pricingUrl, 'Choisir mon plan', { title: 'Démarrez dès maintenant' })}
+    ${emailCard('info', '<strong>🎯 Démarrage accompagné offert</strong><br>Prenez 45 minutes avec nous pour configurer votre compte ensemble — connexion des plateformes, paramétrage des logements, messagerie IA. Gratuit, inclus avec tous les plans.')}
+    ${emailBookingSummary([
+      { label: 'Solo — 1 logement', value: '15 €/mois' },
+      { label: 'Standard — jusqu\'à 3 logements', value: '29 €/mois' },
+      { label: 'Pro — jusqu\'à 6 logements', value: '49 €/mois' }
+    ])}
+    <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#5A5A54;line-height:1.6;margin:14px 0 0;">Une question ? <a href="mailto:contact@boostinghost.fr" style="color:#0E3B2E;">contact@boostinghost.fr</a></p>
   `;
 
   await sendEmailViaBrevo({
@@ -13143,24 +12940,18 @@ async function sendTrialStartedEmail(email, firstName, plan, amount) {
       subtitle: `Essai gratuit Plan ${planName} · 14 jours`,
       bodyHtml: `
         <p>Bonjour <strong>${firstName}</strong>,</p>
-        <p>Votre essai gratuit est actif. Vous avez accès à toutes les fonctionnalités sans aucune limitation pendant 14 jours.</p>
-        <div style="background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:10px;padding:20px 24px;text-align:center;margin:20px 0;">
-          <p class="plan-badge">Plan ${planName}</p>
-          <p class="amount-big">Gratuit</p>
-          <p class="amount-sub">pendant 14 jours · puis <strong>${price} €/mois</strong></p>
-        </div>
-        <div class="feat-row"><span class="feat-icon">📅</span><span class="feat-text"><strong>Calendrier unifié</strong> — Synchro iCal Airbnb &amp; Booking</span></div>
-        <div class="feat-row"><span class="feat-icon">✦</span><span class="feat-text"><strong>Messages automatiques IA</strong></span></div>
-        <div class="feat-row"><span class="feat-icon">🔑</span><span class="feat-text"><strong>Serrures Igloohome</strong></span></div>
-        <div class="feat-row"><span class="feat-icon">🧹</span><span class="feat-text"><strong>Gestion du ménage</strong></span></div>
-        <div class="feat-row"><span class="feat-icon">🛡️</span><span class="feat-text"><strong>Cautions &amp; paiements Stripe</strong></span></div>
-        <div class="feat-row"><span class="feat-icon">📄</span><span class="feat-text"><strong>Facturation complète</strong></span></div>
-        <div class="cta-block" style="margin-top:24px;">
-          <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/app.html" class="btn">Accéder à mon espace →</a>
-        </div>
-        <div class="alert-card">
-          À la fin de l'essai, votre abonnement démarrera automatiquement à <strong>${price} €/mois</strong>. Vous pouvez annuler à tout moment depuis vos paramètres.
-        </div>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Votre essai gratuit est actif. Vous avez accès à toutes les fonctionnalités sans aucune limitation pendant 14 jours.</p>
+        ${emailCard('success', `<strong>Plan ${escapeHtml(planName)}</strong> — Gratuit pendant 14 jours · puis <strong>${escapeHtml(price)} €/mois</strong>`)}
+        ${emailBookingSummary([
+          { label: '📅', value: 'Calendrier unifié — Synchro iCal Airbnb & Booking' },
+          { label: '✦', value: 'Messages automatiques IA' },
+          { label: '🔑', value: 'Serrures Igloohome' },
+          { label: '🧹', value: 'Gestion du ménage' },
+          { label: '🛡️', value: 'Cautions & paiements Stripe' },
+          { label: '📄', value: 'Facturation complète' }
+        ])}
+        ${emailButton(`${process.env.APP_URL || 'https://boostinghost.fr'}/app.html`, 'Accéder à mon espace')}
+        ${emailCard('warning', `À la fin de l'essai, votre abonnement démarrera automatiquement à <strong>${escapeHtml(price)} €/mois</strong>. Vous pouvez annuler à tout moment depuis vos paramètres.`)}
       `
     })
   };
@@ -13296,25 +13087,11 @@ async function sendSubscriptionConfirmedEmail(email, firstName, plan, amount) {
       title: 'Abonnement confirmé !',
       subtitle: `Merci pour votre confiance`,
       bodyHtml: `
-        <p>Bonjour <strong>${firstName}</strong>,</p>
-        <p>Votre abonnement Boostinghost est maintenant actif.</p>
-        <div style="background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:10px;padding:20px 24px;text-align:center;margin:20px 0;">
-          <p class="plan-badge">Plan ${planName}</p>
-          <p class="amount-big">${price} €<span style="font-size:18px;font-weight:400;color:#666;">/mois</span></p>
-        </div>
-        <div class="feat-row"><span class="feat-icon">📅</span><span class="feat-text"><strong>Calendrier unifié</strong> — Synchro iCal Airbnb &amp; Booking</span></div>
-        <div class="feat-row"><span class="feat-icon">✦</span><span class="feat-text"><strong>Messages automatiques IA</strong></span></div>
-        <div class="feat-row"><span class="feat-icon">🔑</span><span class="feat-text"><strong>Serrures Igloohome</strong></span></div>
-        <div class="feat-row"><span class="feat-icon">🧹</span><span class="feat-text"><strong>Gestion du ménage</strong></span></div>
-        <div class="feat-row"><span class="feat-icon">🛡️</span><span class="feat-text"><strong>Cautions &amp; paiements Stripe</strong></span></div>
-        <div class="feat-row"><span class="feat-icon">📄</span><span class="feat-text"><strong>Facturation complète</strong></span></div>
-        <div class="feat-row"><span class="feat-icon">💬</span><span class="feat-text"><strong>Support ${plan === 'business' ? 'téléphone' : plan === 'pro' ? 'prioritaire' : 'email'}</strong></span></div>
-        <div class="cta-block" style="margin-top:24px;">
-          <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/app.html" class="btn">Accéder à mon espace →</a>
-        </div>
-        <div class="info-card">
-          Passez à l'abonnement annuel et économisez <strong>17%</strong> — 2 mois offerts !
-        </div>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Bonjour <strong>${escapeHtml(firstName)}</strong>,</p>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Votre abonnement Boostinghost est maintenant actif.</p>
+        ${emailCard('success', `Plan <strong>${escapeHtml(planName)}</strong> — <strong>${price}&nbsp;€/mois</strong>`)}
+        ${emailButton(`${process.env.APP_URL || 'https://boostinghost.fr'}/app.html`, 'Accéder à mon espace')}
+        ${emailCard('neutral', 'Passez à l\'abonnement annuel et économisez <strong>17%</strong> — 2 mois offerts !')}
       `
     })
   };
@@ -13344,20 +13121,11 @@ async function sendRenewalReminderEmail(email, firstName, plan, amount, renewalD
       title: 'Renouvellement dans 3 jours',
       subtitle: `Plan ${planName} · ${price} €`,
       bodyHtml: `
-        <p>Bonjour <strong>${firstName}</strong>,</p>
-        <p>Votre abonnement <strong>Plan ${planName}</strong> sera automatiquement renouvelé dans 3 jours.</p>
-        <div style="background:#F0F8F5;border:1.5px solid #1A7A5E;border-radius:10px;padding:20px 24px;text-align:center;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1A7A5E;">Prochain prélèvement</p>
-          <p class="amount-big">${price} €</p>
-          <p class="amount-sub">Le <strong>${formattedDate}</strong></p>
-        </div>
-        <p>Aucune action requise — le paiement sera effectué automatiquement.</p>
-        <div class="info-card">
-          Passez à l'abonnement annuel et économisez <strong>17%</strong> — 2 mois offerts !
-        </div>
-        <div class="cta-block">
-          <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
-        </div>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Bonjour <strong>${escapeHtml(firstName)}</strong>,</p>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Votre abonnement <strong>Plan ${escapeHtml(planName)}</strong> sera automatiquement renouvelé dans 3 jours.</p>
+        ${emailCard('info', `<strong>Prochain prélèvement :</strong> ${price}&nbsp;€ — le <strong>${escapeHtml(formattedDate)}</strong>`)}
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Aucune action requise — le paiement sera effectué automatiquement.</p>
+        ${emailButton(`${process.env.APP_URL || 'https://boostinghost.fr'}/settings-account.html`, 'Gérer mon abonnement')}
       `
     })
   };
@@ -16920,18 +16688,19 @@ async function notifyRestockResponsible(responsible, propName, items) {
   // Email (pour un contact, ou en complément pour un sous-compte si renseigné)
   if (responsible.contact_email) {
     try {
-      const html = `
-        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
-          <h2 style="color:#1A7A5E;">Articles à racheter</h2>
-          <p>Bonjour ${responsible.contact_name || ''},</p>
-          <p>Pour le logement <strong>${propName}</strong>, les articles suivants sont à racheter :</p>
-          <p style="font-size:15px;font-weight:600;">${list}</p>
-          <p style="margin-top:18px;color:#888;font-size:12px;">Envoyé via Boostinghost</p>
-        </div>`;
+      const html = bhEmailTemplate({
+        title: 'Articles à racheter',
+        tag: escapeHtml(propName),
+        bodyHtml: `
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Bonjour <strong>${escapeHtml(responsible.contact_name || '')}</strong>,</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Pour le logement <strong>${escapeHtml(propName)}</strong>, les articles suivants sont à racheter :</p>
+          ${emailCard('warning', `<strong>${escapeHtml(list)}</strong>`)}
+        `
+      });
       await sendEmail({
         from: process.env.EMAIL_FROM ? `Boostinghost <${process.env.EMAIL_FROM}>` : undefined,
         to: responsible.contact_email,
-        subject: `🛒 Achats à prévoir — ${propName}`,
+        subject: `Articles à racheter — ${propName}`,
         html
       });
     } catch (e) { console.warn('⚠️ [CONSO] Email responsable échoué:', e.message); }
@@ -17078,23 +16847,27 @@ async function notifyArtisanAssigned(ownerId, ticket, artisan) {
 
   if (artisan.email) {
     try {
-      const html = `
-        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
-          <h2 style="color:#1A7A5E;">Nouvelle intervention demandée</h2>
-          <p>Bonjour ${artisan.name || ''},</p>
-          <p>Une intervention vous est assignée :</p>
-          <table style="border-collapse:collapse;width:100%;font-size:14px;">
-            <tr><td style="padding:6px 0;color:#666;">Logement</td><td style="padding:6px 0;font-weight:600;">${propName}</td></tr>
-            <tr><td style="padding:6px 0;color:#666;">Objet</td><td style="padding:6px 0;font-weight:600;">${ticket.title}</td></tr>
-            <tr><td style="padding:6px 0;color:#666;">Priorité</td><td style="padding:6px 0;font-weight:600;">${prioLabel}</td></tr>
-            ${ticket.description ? `<tr><td style="padding:6px 0;color:#666;vertical-align:top;">Détails</td><td style="padding:6px 0;">${String(ticket.description).replace(/</g,'&lt;')}</td></tr>` : ''}
-          </table>
-          <p style="margin-top:18px;color:#888;font-size:12px;">Envoyé via Boostinghost</p>
-        </div>`;
+      const descriptionRows = ticket.description
+        ? [{ label: 'Détails', value: String(ticket.description).slice(0, 400) }]
+        : [];
+      const html = bhEmailTemplate({
+        title: 'Nouvelle intervention',
+        tag: escapeHtml(propName),
+        bodyHtml: `
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Bonjour <strong>${escapeHtml(artisan.name || '')}</strong>,</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Une intervention vous est assignée :</p>
+          ${emailBookingSummary([
+            { label: 'Logement', value: propName },
+            { label: 'Objet', value: ticket.title },
+            { label: 'Priorité', value: prioLabel },
+            ...descriptionRows
+          ])}
+        `
+      });
       await sendEmail({
         from: process.env.EMAIL_FROM ? `Boostinghost <${process.env.EMAIL_FROM}>` : undefined,
         to: artisan.email,
-        subject: `🔧 Intervention — ${propName} : ${ticket.title}`,
+        subject: `Intervention — ${propName} : ${ticket.title}`,
         html
       });
     } catch (e) { console.warn('⚠️ [MAINT] Email artisan échoué:', e.message); }
@@ -21994,13 +21767,10 @@ app.post('/api/auth/register', async (req, res) => {
         subtitle: 'Une dernière étape avant de démarrer',
         footerNote: 'Si vous n\'avez pas créé de compte, ignorez cet email.',
         bodyHtml: `
-          <p>Bonjour <strong>${firstName}</strong>,</p>
+          <p>Bonjour <strong>${escapeHtml(firstName)}</strong>,</p>
           <p>Merci de vous être inscrit sur Boostinghost. Pour activer votre compte, cliquez sur le bouton ci-dessous :</p>
-          <div class="cta-block">
-            <p>Lien valide pendant <strong>24 heures</strong></p>
-            <a href="${verificationUrl}" class="btn">Vérifier mon adresse email →</a>
-          </div>
-          <p class="link-fallback">Le bouton ne fonctionne pas ? Copiez ce lien :<br><a href="${verificationUrl}">${verificationUrl}</a></p>
+          ${emailCTABlock(verificationUrl, 'Vérifier mon adresse email', { title: 'Lien valide pendant 24 heures' })}
+          <p style="font-size:11px;color:#878782;word-break:break-all;line-height:1.6;margin-top:14px;">Le bouton ne fonctionne pas ? Copiez ce lien :<br><a href="${verificationUrl}" style="color:#0E3B2E;">${verificationUrl}</a></p>
         `
       })
     };
@@ -22026,13 +21796,7 @@ app.post('/api/auth/register', async (req, res) => {
           title: 'Nouvelle inscription',
           tag: 'Notification admin',
           bodyHtml: `
-            <div class="info-card">
-              <strong>Nom :</strong> ${firstName} ${lastName}<br>
-              <strong>Email :</strong> ${email}<br>
-              <strong>Société :</strong> ${company || '—'}<br>
-              <strong>Date :</strong> ${new Date().toLocaleString('fr-FR')}<br>
-              <strong>Trial jusqu'au :</strong> ${new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')}
-            </div>
+            ${emailCard('info', `<strong>Nom :</strong> ${escapeHtml(firstName)} ${escapeHtml(lastName)}<br><strong>Email :</strong> ${escapeHtml(email)}<br><strong>Société :</strong> ${escapeHtml(company || '—')}<br><strong>Date :</strong> ${new Date().toLocaleString('fr-FR')}<br><strong>Trial jusqu'au :</strong> ${new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')}`)}
           `
         })
       });
@@ -22116,13 +21880,10 @@ app.post('/api/host/register', async (req, res) => {
           subtitle: 'Une dernière étape pour devenir hôte',
           footerNote: 'Si vous n\'avez pas créé de compte, ignorez cet email.',
           bodyHtml: `
-            <p>Bonjour <strong>${firstName}</strong>,</p>
-            <p>Merci de rejoindre BHGuest en tant qu'hôte. Pour activer votre compte et commencer à publier vos logements, cliquez ci-dessous :</p>
-            <div class="cta-block">
-              <p>Lien valide pendant <strong>24 heures</strong></p>
-              <a href="${verificationUrl}" class="btn">Vérifier mon adresse email →</a>
-            </div>
-            <p class="link-fallback">Le bouton ne fonctionne pas ? Copiez ce lien :<br><a href="${verificationUrl}">${verificationUrl}</a></p>
+            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour <strong>${escapeHtml(firstName)}</strong>,</p>
+            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Merci de rejoindre BHGuest en tant qu'hôte. Pour activer votre compte et commencer à publier vos logements, cliquez ci-dessous :</p>
+            ${emailCTABlock(verificationUrl, 'Vérifier mon adresse email', { title: 'Lien valide pendant 24 heures' })}
+            <p style="font-size:11px;color:#878782;word-break:break-all;line-height:1.6;margin-top:14px;font-family:Arial,Helvetica,sans-serif;">Le bouton ne fonctionne pas ? Copiez ce lien :<br><a href="${verificationUrl}" style="color:#0E3B2E;">${verificationUrl}</a></p>
           `
         })
       });
@@ -22139,7 +21900,10 @@ app.post('/api/host/register', async (req, res) => {
         html: bhEmailTemplate({
           icon: '🏠',
           title: 'Nouvel hôte marketplace',
-          bodyHtml: `<p><strong>${firstName} ${lastName}</strong> (${email}, ${phone}) s'est inscrit comme hôte externe.</p>`
+          tag: 'Notification admin',
+          bodyHtml: `
+            ${emailCard('info', `<strong>${escapeHtml(firstName)} ${escapeHtml(lastName)}</strong> (${escapeHtml(email)}, ${escapeHtml(String(phone || ''))}) s'est inscrit comme hôte externe.`)}
+          `
         })
       });
     } catch (nErr) { console.warn('⚠️ [HOST] Notif interne:', nErr.message); }
@@ -22756,9 +22520,10 @@ cron.schedule('0 8 * * *', async () => {
             text: `Votre carte a été débitée de ${(d.amount_cents / 100).toFixed(2)}€.`,
             html: bhEmailTemplate({
               icon: '💳', title: 'Paiement effectué', subtitle: 'Votre séjour est réglé',
-              bodyHtml: `<p>Bonjour ${d.guest_name || ''},</p>
-                <p>Comme prévu, votre carte vient d'être débitée de <strong>${(d.amount_cents / 100).toFixed(2)}€</strong> pour votre séjour.</p>
-                <p>Ce séjour n'est désormais plus annulable. Bon voyage !</p>`,
+              bodyHtml: `
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(d.guest_name || '')},</p>
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Comme prévu, votre carte vient d'être débitée de <strong>${(d.amount_cents / 100).toFixed(2)}€</strong> pour votre séjour.</p>
+                ${emailCard('success', 'Ce séjour n\'est désormais plus annulable. Bon voyage !')}`,
               footerNote: 'BHGuest'
             })
           });
@@ -22780,10 +22545,9 @@ cron.schedule('0 8 * * *', async () => {
               text: `Le paiement de votre séjour a échoué. Mettez à jour votre carte.`,
               html: bhEmailTemplate({
                 icon: '⚠️', title: 'Paiement refusé', subtitle: 'Action requise',
-                bodyHtml: `<p>Bonjour ${d.guest_name || ''},</p>
+                bodyHtml: `<p>Bonjour ${escapeHtml(d.guest_name || '')},</p>
                   <p>Le prélèvement de <strong>${(d.amount_cents / 100).toFixed(2)}€</strong> pour votre séjour a été refusé par votre banque.</p>
-                  <p>Nous réessaierons demain. <strong>Sans paiement sous ${3 - attempts} jour(s), votre réservation sera annulée.</strong></p>
-                  <p>Vérifiez votre carte (provision, expiration) ou contactez votre hôte.</p>`,
+                  ${emailCard('danger', `Nous réessaierons demain. <strong>Sans paiement sous ${3 - attempts} jour(s), votre réservation sera annulée.</strong><br>Vérifiez votre carte (provision, expiration) ou contactez votre hôte.`)}`,
                 footerNote: 'BHGuest'
               })
             });
@@ -22803,9 +22567,8 @@ cron.schedule('0 8 * * *', async () => {
               text: `Votre réservation a été annulée faute de paiement.`,
               html: bhEmailTemplate({
                 icon: '❌', title: 'Réservation annulée', subtitle: 'Paiement impossible',
-                bodyHtml: `<p>Bonjour ${d.guest_name || ''},</p>
-                  <p>Après 3 tentatives, le paiement de votre séjour n'a pas pu être effectué. Votre réservation est annulée et les dates sont remises à la disposition d'autres voyageurs.</p>
-                  <p>Vous pouvez réserver à nouveau avec un autre moyen de paiement.</p>`,
+                bodyHtml: `<p>Bonjour ${escapeHtml(d.guest_name || '')},</p>
+                  ${emailCard('danger', 'Après 3 tentatives, le paiement de votre séjour n\'a pas pu être effectué. Votre réservation est annulée et les dates sont remises à la disposition d\'autres voyageurs.')}<p>Vous pouvez réserver à nouveau avec un autre moyen de paiement.</p>`,
                 footerNote: 'BHGuest'
               })
             });
@@ -22817,8 +22580,8 @@ cron.schedule('0 8 * * *', async () => {
                 text: `Une réservation a été annulée faute de paiement. Les dates sont libérées.`,
                 html: bhEmailTemplate({
                   icon: '📅', title: 'Réservation annulée', subtitle: 'Paiement refusé',
-                  bodyHtml: `<p>Bonjour ${hr.rows[0].first_name || ''},</p>
-                    <p>Le paiement de la réservation de <strong>${d.guest_name || 'un voyageur'}</strong> a été refusé après 3 tentatives. La réservation est annulée et <strong>les dates sont à nouveau disponibles</strong>.</p>`,
+                  bodyHtml: `<p>Bonjour ${escapeHtml(hr.rows[0].first_name || '')},</p>
+                    <p>Le paiement de la réservation de <strong>${escapeHtml(d.guest_name || 'un voyageur')}</strong> a été refusé après 3 tentatives. La réservation est annulée et <strong>les dates sont à nouveau disponibles</strong>.</p>`,
                   footerNote: 'BHGuest'
                 })
               });
@@ -22922,10 +22685,11 @@ app.post('/api/guest/reservations/:uid/cancel', async (req, res) => {
           subject: `Annulation confirmée — ${resa.property_name}`,
           text: 'Votre annulation est confirmée. Aucun montant n\'a été débité.',
           html: bhEmailTemplate({
-            icon: '✅', title: 'Annulation confirmée', subtitle: resa.property_name,
-            bodyHtml: `<p>Bonjour ${resa.guest_name || ''},</p>
-              <p>Votre séjour du <strong>${fmtD0(resa.start_date)}</strong> au <strong>${fmtD0(resa.end_date)}</strong> est annulé.</p>
-              <div style="background:#DCFCE7;color:#166534;border-radius:10px;padding:12px 14px;"><strong>Aucun montant n'a été débité</strong> — votre carte n'a jamais été prélevée. Rien ne vous sera facturé.</div>`,
+            icon: '✅', title: 'Annulation confirmée', subtitle: escapeHtml(resa.property_name),
+            bodyHtml: `
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(resa.guest_name || '')},</p>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Votre séjour du <strong>${fmtD0(resa.start_date)}</strong> au <strong>${fmtD0(resa.end_date)}</strong> est annulé.</p>
+              ${emailCard('success', '<strong>Aucun montant n\'a été débité</strong> — votre carte n\'a jamais été prélevée. Rien ne vous sera facturé.')}`,
             footerNote: 'BHGuest'
           })
         });
@@ -22938,10 +22702,11 @@ app.post('/api/guest/reservations/:uid/cancel', async (req, res) => {
             subject: `Annulation voyageur — ${resa.property_name}`,
             text: 'Un voyageur a annulé. Les dates sont à nouveau disponibles.',
             html: bhEmailTemplate({
-              icon: '📅', title: 'Annulation voyageur', subtitle: resa.property_name,
-              bodyHtml: `<p>Bonjour ${hr.rows[0].first_name || ''},</p>
-                <p><strong>${resa.guest_name || 'Un voyageur'}</strong> a annulé son séjour du ${fmtD0(resa.start_date)} au ${fmtD0(resa.end_date)}, avant la date de prélèvement.</p>
-                <p>Aucun paiement n'avait été encaissé, donc <strong>aucun frais bancaire</strong> pour vous. Les dates sont à nouveau disponibles.</p>`,
+              icon: '📅', title: 'Annulation voyageur', subtitle: escapeHtml(resa.property_name),
+              bodyHtml: `
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(hr.rows[0].first_name || '')},</p>
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;"><strong>${escapeHtml(resa.guest_name || 'Un voyageur')}</strong> a annulé son séjour du ${fmtD0(resa.start_date)} au ${fmtD0(resa.end_date)}, avant la date de prélèvement.</p>
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Aucun paiement n'avait été encaissé, donc <strong>aucun frais bancaire</strong> pour vous. Les dates sont à nouveau disponibles.</p>`,
               footerNote: 'BHGuest'
             })
           });
@@ -23003,12 +22768,13 @@ app.post('/api/guest/reservations/:uid/cancel', async (req, res) => {
         subject: `Annulation confirmée — ${resa.property_name}`,
         text: `Votre annulation est confirmée.`,
         html: bhEmailTemplate({
-          icon: '✅', title: 'Annulation confirmée', subtitle: resa.property_name,
-          bodyHtml: `<p>Bonjour ${resa.guest_name || ''},</p>
-            <p>Votre séjour du <strong>${fmtD(resa.start_date)}</strong> au <strong>${fmtD(resa.end_date)}</strong> est annulé.</p>
+          icon: '✅', title: 'Annulation confirmée', subtitle: escapeHtml(resa.property_name),
+          bodyHtml: `
+            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(resa.guest_name || '')},</p>
+            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Votre séjour du <strong>${fmtD(resa.start_date)}</strong> au <strong>${fmtD(resa.end_date)}</strong> est annulé.</p>
             ${pol.refundable
-              ? `<p><strong>Remboursement : ${pol.refundAmount.toFixed(2)}€</strong> (${pol.feeAmount.toFixed(2)}€ de frais de traitement retenus) — sur votre compte sous 5 à 10 jours ouvrés.</p>`
-              : `<p>Votre annulation intervient à moins de ${GUEST_CANCEL_FREE_DAYS} jours de l'arrivée : conformément à la politique d'annulation, ce séjour n'est pas remboursable.</p>`}`,
+              ? emailCard('success', `<strong>Remboursement : ${pol.refundAmount.toFixed(2)}€</strong> (${pol.feeAmount.toFixed(2)}€ de frais de traitement retenus) — sur votre compte sous 5 à 10 jours ouvrés.`)
+              : emailCard('warning', `Votre annulation intervient à moins de ${GUEST_CANCEL_FREE_DAYS} jours de l'arrivée : conformément à la politique d'annulation, ce séjour n'est pas remboursable.`)}`,
           footerNote: 'BHGuest'
         })
       });
@@ -23022,13 +22788,14 @@ app.post('/api/guest/reservations/:uid/cancel', async (req, res) => {
           subject: `Annulation voyageur — ${resa.property_name}`,
           text: `${resa.guest_name || 'Un voyageur'} a annulé son séjour. Les dates sont à nouveau disponibles.`,
           html: bhEmailTemplate({
-            icon: '📅', title: 'Annulation voyageur', subtitle: resa.property_name,
-            bodyHtml: `<p>Bonjour ${host.first_name || ''},</p>
-              <p><strong>${resa.guest_name || 'Un voyageur'}</strong> a annulé son séjour du ${fmtD(resa.start_date)} au ${fmtD(resa.end_date)}.</p>
-              <p>Les dates sont <strong>à nouveau disponibles à la réservation</strong> sur votre calendrier.</p>
+            icon: '📅', title: 'Annulation voyageur', subtitle: escapeHtml(resa.property_name),
+            bodyHtml: `
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(host.first_name || '')},</p>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;"><strong>${escapeHtml(resa.guest_name || 'Un voyageur')}</strong> a annulé son séjour du ${fmtD(resa.start_date)} au ${fmtD(resa.end_date)}.</p>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Les dates sont <strong>à nouveau disponibles à la réservation</strong> sur votre calendrier.</p>
               ${pol.refundable
-                ? `<p>Le voyageur est remboursé à 97% ; les 3% retenus restent sur votre compte et couvrent les frais bancaires du paiement initial.</p>`
-                : `<p>Annulation hors délai : <strong>le montant du séjour vous reste intégralement acquis</strong>.</p>`}`,
+                ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Le voyageur est remboursé à 97% ; les 3% retenus restent sur votre compte et couvrent les frais bancaires du paiement initial.</p>`
+                : emailCard('success', 'Annulation hors délai : <strong>le montant du séjour vous reste intégralement acquis</strong>.')}`,
             footerNote: 'BHGuest'
           })
         });
@@ -23182,14 +22949,15 @@ app.post('/api/host/reservations/:uid/cancel', authenticateToken, async (req, re
           subject: `Votre réservation à ${resa.property_name} a été annulée`,
           text: `Votre hôte a annulé votre séjour du ${fmtD(resa.start_date)}. Vous êtes intégralement remboursé.`,
           html: bhEmailTemplate({
-            icon: '❌', title: 'Réservation annulée par l\'hôte', subtitle: resa.property_name,
-            bodyHtml: `<p>Bonjour ${resa.guest_name || ''},</p>
-              <p>Votre hôte a dû annuler votre séjour du <strong>${fmtD(resa.start_date)}</strong> au <strong>${fmtD(resa.end_date)}</strong>.</p>
-              <p style="background:#FBEDE7;border-radius:10px;padding:12px 14px;">Motif : « ${reasonTxt} »</p>
-              <p>${refunded
-                ? '<strong>Vous êtes intégralement remboursé</strong> — le montant réapparaîtra sur votre compte sous 5 à 10 jours ouvrés.'
-                : 'Le remboursement est en cours de traitement — notre équipe vous confirme sous 24h.'}</p>
-              <p>Nous sommes désolés pour ce contretemps. D'autres logements sont disponibles sur BHGuest pour ces dates.</p>`,
+            icon: '❌', title: 'Réservation annulée par l\'hôte', subtitle: escapeHtml(resa.property_name),
+            bodyHtml: `
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(resa.guest_name || '')},</p>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Votre hôte a dû annuler votre séjour du <strong>${fmtD(resa.start_date)}</strong> au <strong>${fmtD(resa.end_date)}</strong>.</p>
+              ${emailCard('warning', `Motif : « ${escapeHtml(reasonTxt)} »`)}
+              ${refunded
+                ? emailCard('success', '<strong>Vous êtes intégralement remboursé</strong> — le montant réapparaîtra sur votre compte sous 5 à 10 jours ouvrés.')
+                : `<p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Le remboursement est en cours de traitement — notre équipe vous confirme sous 24h.</p>`}
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Nous sommes désolés pour ce contretemps. D'autres logements sont disponibles sur BHGuest pour ces dates.</p>`,
             footerNote: 'BHGuest'
           })
         });
@@ -23204,18 +22972,21 @@ app.post('/api/host/reservations/:uid/cancel', authenticateToken, async (req, re
           subject: suspended ? '🚫 Vos logements ont été suspendus' : `Annulation confirmée — ${resa.property_name}`,
           text: suspended ? 'Trop d\'annulations : vos logements sont masqués de la marketplace.' : 'Votre annulation est confirmée.',
           html: bhEmailTemplate({
-            icon: suspended ? '🚫' : '✅', title: suspended ? 'Logements suspendus' : 'Annulation confirmée', subtitle: resa.property_name,
+            icon: suspended ? '🚫' : '✅', title: suspended ? 'Logements suspendus' : 'Annulation confirmée', subtitle: escapeHtml(resa.property_name),
             bodyHtml: suspended
-              ? `<p>Bonjour ${host.first_name || ''},</p>
-                 <p>Vous avez annulé <strong>${cancelCount} réservations en 12 mois</strong>. Conformément à nos règles, vos logements sont retirés de la marketplace.</p>
-                 <p>Contactez-nous pour réactiver votre compte.</p>`
+              ? `
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(host.first_name || '')},</p>
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Vous avez annulé <strong>${cancelCount} réservations en 12 mois</strong>. Conformément à nos règles, vos logements sont retirés de la marketplace.</p>
+                ${emailCard('danger', 'Contactez-nous pour réactiver votre compte.')}`
               : isGraceRefusal
-                ? `<p>Bonjour ${host.first_name || ''},</p>
-                   <p>Vous avez décliné la réservation de <strong>${resa.guest_name || 'ce voyageur'}</strong> (${fmtD(resa.start_date)} → ${fmtD(resa.end_date)}). Le voyageur est intégralement remboursé.</p>
-                   <p style="color:#166534;background:#DCFCE7;border-radius:10px;padding:12px 14px;">✅ Vous étiez dans le délai de ${HOST_REFUSAL_HOURS}h : ce refus <strong>ne compte pas</strong> dans votre quota d'annulations et n'apparaîtra pas dans votre taux public.</p>`
-                : `<p>Bonjour ${host.first_name || ''},</p>
-                   <p>L'annulation du séjour de <strong>${resa.guest_name || 'votre voyageur'}</strong> (${fmtD(resa.start_date)} → ${fmtD(resa.end_date)}) est confirmée. Le voyageur est intégralement remboursé et les dates restent bloquées sur votre calendrier.</p>
-                   <p style="color:#92400E;background:#FEF3C7;border-radius:10px;padding:12px 14px;">⚠️ Annulation ${cancelCount} sur ${HOST_CANCEL_LIMIT} autorisées par période de 12 mois. Au-delà, vos logements seront suspendus.</p>`,
+                ? `
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(host.first_name || '')},</p>
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Vous avez décliné la réservation de <strong>${escapeHtml(resa.guest_name || 'ce voyageur')}</strong> (${fmtD(resa.start_date)} → ${fmtD(resa.end_date)}). Le voyageur est intégralement remboursé.</p>
+                ${emailCard('success', `Vous étiez dans le délai de ${HOST_REFUSAL_HOURS}h : ce refus <strong>ne compte pas</strong> dans votre quota d'annulations et n'apparaîtra pas dans votre taux public.`)}`
+                : `
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(host.first_name || '')},</p>
+                <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">L'annulation du séjour de <strong>${escapeHtml(resa.guest_name || 'votre voyageur')}</strong> (${fmtD(resa.start_date)} → ${fmtD(resa.end_date)}) est confirmée. Le voyageur est intégralement remboursé et les dates restent bloquées sur votre calendrier.</p>
+                ${emailCard('warning', `Annulation ${cancelCount} sur ${HOST_CANCEL_LIMIT} autorisées par période de 12 mois. Au-delà, vos logements seront suspendus.`)}`,
             footerNote: 'BHGuest'
           })
         });
@@ -27196,14 +26967,14 @@ app.post('/api/invoice/resend',
       subject: `Facture ${invoiceNumber} – Séjour à ${meta.propertyName || ''}${meta.checkinDate ? ' du ' + new Date(meta.checkinDate).toLocaleDateString('fr-FR') : ''}`,
       html: bhEmailTemplate({
         icon: '📄',
-        title: `Facture ${invoiceNumber}`,
-        subtitle: `${meta.propertyName || ''}${checkinFr ? ' · du ' + checkinFr + ' au ' + checkoutFr : ''}`,
+        title: `Facture ${escapeHtml(invoiceNumber)}`,
+        subtitle: `${escapeHtml(meta.propertyName || '')}${checkinFr ? ' · du ' + escapeHtml(checkinFr) + ' au ' + escapeHtml(checkoutFr) : ''}`,
         bodyHtml: `
-          <p>Bonjour <strong>${meta.clientName || ''}</strong>,</p>
-          <p>Veuillez trouver ci-joint votre facture <strong>${invoiceNumber}</strong>${meta.propertyName ? ` pour votre séjour à <strong>${meta.propertyName}</strong>` : ''}${checkinFr ? ` du ${checkinFr} au ${checkoutFr}` : ''}.</p>
-          <div class="success-card">📎 Votre facture PDF est jointe à cet email.</div>
-          <p>Pour toute question, n'hésitez pas à nous contacter.</p>
-          <p>Cordialement,<br><strong>${emitterName}</strong></p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour <strong>${escapeHtml(meta.clientName || '')}</strong>,</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Veuillez trouver ci-joint votre facture <strong>${escapeHtml(invoiceNumber)}</strong>${meta.propertyName ? ` pour votre séjour à <strong>${escapeHtml(meta.propertyName)}</strong>` : ''}${checkinFr ? ` du ${escapeHtml(checkinFr)} au ${escapeHtml(checkoutFr)}` : ''}.</p>
+          ${emailCard('success', '📎 Votre facture PDF est jointe à cet email.')}
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Pour toute question, n'hésitez pas à nous contacter.</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Cordialement,<br><strong>${escapeHtml(emitterName)}</strong></p>
         `
       }),
       attachments: [{ filename: `${invoiceNumber}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
@@ -27900,27 +27671,27 @@ app.post('/api/invoice/create',
 
       const emailHtml = bhEmailTemplate({
         icon: '📄',
-        title: `Facture ${invoiceNumber}`,
-        subtitle: `${propertyName}${checkinFr ? ' · du ' + checkinFr + ' au ' + checkoutFr : ''}`,
+        title: `Facture ${escapeHtml(invoiceNumber)}`,
+        subtitle: `${escapeHtml(propertyName)}${checkinFr ? ' · du ' + escapeHtml(checkinFr) + ' au ' + escapeHtml(checkoutFr) : ''}`,
         bodyHtml: `
-          <p>Bonjour <strong>${clientName}</strong>,</p>
-          <p>Veuillez trouver ci-joint votre facture pour votre séjour à <strong>${propertyName}</strong>${checkinFr ? ` du <strong>${checkinFr}</strong> au <strong>${checkoutFr}</strong>` : ''}.</p>
+          <p>Bonjour <strong>${escapeHtml(clientName)}</strong>,</p>
+          <p>Veuillez trouver ci-joint votre facture pour votre séjour à <strong>${escapeHtml(propertyName)}</strong>${checkinFr ? ` du <strong>${escapeHtml(checkinFr)}</strong> au <strong>${escapeHtml(checkoutFr)}</strong>` : ''}.</p>
           <div style="background:#F5F2EC;border:1px solid #DDD8CE;border-radius:8px;padding:18px 20px;margin:20px 0;font-size:14px;">
             <table style="width:100%;border-collapse:collapse;">
               ${checkinDate && checkoutDate ? `
-              <tr><td style="padding:5px 0;color:#666;">Séjour</td><td style="padding:5px 0;font-weight:600;text-align:right;">${checkinFr} → ${checkoutFr}</td></tr>
+              <tr><td style="padding:5px 0;color:#666;">Séjour</td><td style="padding:5px 0;font-weight:600;text-align:right;">${escapeHtml(checkinFr)} → ${escapeHtml(checkoutFr)}</td></tr>
               <tr><td style="padding:5px 0;color:#666;">Durée</td><td style="padding:5px 0;font-weight:600;text-align:right;">${nights} nuit${nights > 1 ? 's' : ''}</td></tr>` : ''}
               ${rentAmount > 0 ? `<tr><td style="padding:5px 0;color:#666;">Séjour${nights ? ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')' : ''}</td><td style="padding:5px 0;text-align:right;">${parseFloat(rentAmount).toFixed(2)} €</td></tr>` : ''}
               ${touristTaxAmount > 0 ? `<tr><td style="padding:5px 0;color:#666;">Taxe de séjour</td><td style="padding:5px 0;text-align:right;">${parseFloat(touristTaxAmount).toFixed(2)} €</td></tr>` : ''}
               ${cleaningFee > 0 ? `<tr><td style="padding:5px 0;color:#666;">Frais de ménage</td><td style="padding:5px 0;text-align:right;">${parseFloat(cleaningFee).toFixed(2)} €</td></tr>` : ''}
               ${vatAmount > 0 ? `<tr><td style="padding:5px 0;color:#666;">TVA (${vatRate}%)</td><td style="padding:5px 0;text-align:right;">${vatAmount.toFixed(2)} €</td></tr>` : ''}
             </table>
-            <table style="width:100%;border-top:2px solid #1A7A5E;margin-top:10px;border-collapse:collapse;">
-              <tr><td style="padding-top:10px;font-weight:700;font-size:16px;">TOTAL TTC</td><td style="padding-top:10px;font-weight:700;font-size:16px;color:#1A7A5E;text-align:right;">${total.toFixed(2)} €</td></tr>
+            <table style="width:100%;border-top:2px solid #0E3B2E;margin-top:10px;border-collapse:collapse;">
+              <tr><td style="padding-top:10px;font-weight:700;font-size:16px;">TOTAL TTC</td><td style="padding-top:10px;font-weight:700;font-size:16px;color:#0E3B2E;text-align:right;">${total.toFixed(2)} €</td></tr>
             </table>
           </div>
-          <div class="success-card">📎 Votre facture PDF est jointe à cet email.</div>
-          <p style="font-size:14px;color:#666;">Pour toute question, n'hésitez pas à nous contacter.<br>Cordialement, <strong>${emitterNameEmail}</strong></p>
+          ${emailCard('success', '📎 Votre facture PDF est jointe à cet email.')}
+          <p style="font-size:14px;color:#666;">Pour toute question, n'hésitez pas à nous contacter.<br>Cordialement, <strong>${escapeHtml(emitterNameEmail)}</strong></p>
         `
       });
 
@@ -27959,11 +27730,11 @@ app.post('/api/invoice/create',
           // Email de copie simplifié pour le propriétaire
           const ownerEmailHtml = bhEmailTemplate({
             icon: '📋',
-            title: `Copie — Facture ${invoiceNumber}`,
-            subtitle: `Envoyée à ${clientName} · ${propertyName}`,
+            title: `Copie — Facture ${escapeHtml(invoiceNumber)}`,
+            subtitle: `Envoyée à ${escapeHtml(clientName)} · ${escapeHtml(propertyName)}`,
             bodyHtml: `
               <p>Bonjour,</p>
-              <p>Voici la copie de la facture <strong>${invoiceNumber}</strong> envoyée à <strong>${clientName}</strong> (${clientEmail}) pour son séjour à <strong>${propertyName}</strong>.</p>
+              <p>Voici la copie de la facture <strong>${escapeHtml(invoiceNumber)}</strong> envoyée à <strong>${escapeHtml(clientName)}</strong> (${escapeHtml(clientEmail)}) pour son séjour à <strong>${escapeHtml(propertyName)}</strong>.</p>
               <p>La facture PDF est jointe à cet email.</p>
               <p style="font-size:13px;color:#888;">Ce message est une copie automatique destinée au propriétaire du logement.</p>
             `
@@ -28111,18 +27882,14 @@ app.post('/api/invoice/send-link', authenticateAny, async (req, res) => {
 
     const emailHtml = bhEmailTemplate({
       icon: '📄',
-      title: `Facture ${invoiceNumber || ''}`,
-      subtitle: propertyName || '',
+      title: `Facture ${escapeHtml(invoiceNumber || '')}`,
+      subtitle: escapeHtml(propertyName || ''),
       bodyHtml: `
-        <p>Bonjour <strong>${clientName || ''}</strong>,</p>
-        <p>Votre facture pour votre séjour à <strong>${propertyName || ''}</strong> est disponible en téléchargement :</p>
-        <div style="text-align:center;margin:24px 0;">
-          <a href="${downloadUrl}" style="display:inline-block;padding:14px 32px;background:#1A7A5E;color:white;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
-            📥 Télécharger ma facture
-          </a>
-        </div>
+        <p>Bonjour <strong>${escapeHtml(clientName || '')}</strong>,</p>
+        <p>Votre facture pour votre séjour à <strong>${escapeHtml(propertyName || '')}</strong> est disponible en téléchargement :</p>
+        ${emailButton(downloadUrl, 'Télécharger ma facture')}
         <p style="font-size:12px;color:#9ca3af;text-align:center;">Lien valable 1 an</p>
-        <p style="font-size:14px;color:#666;">Cordialement, <strong>${user?.company || 'Boostinghost'}</strong></p>
+        <p style="font-size:14px;color:#666;">Cordialement, <strong>${escapeHtml(user?.company || 'Boostinghost')}</strong></p>
       `
     });
 
@@ -28925,25 +28692,25 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
   // ── Template email HTML (identique à invoice/create) ──
   const emailHtml = bhEmailTemplate({
     icon: '📄',
-    title: `Facture ${invoiceNumber || 'BROUILLON'}`,
-    subtitle: `${fromName}${period ? ' · ' + period : ''}`,
+    title: `Facture ${escapeHtml(invoiceNumber || 'BROUILLON')}`,
+    subtitle: `${escapeHtml(fromName)}${period ? ' · ' + escapeHtml(period) : ''}`,
     bodyHtml: `
-      <p>Bonjour <strong>${clientName || ''}</strong>,</p>
-      <p>Veuillez trouver ci-joint votre facture${period ? ` pour la période <strong>${period}</strong>` : ''}.</p>
+      <p>Bonjour <strong>${escapeHtml(clientName || '')}</strong>,</p>
+      <p>Veuillez trouver ci-joint votre facture${period ? ` pour la période <strong>${escapeHtml(period)}</strong>` : ''}.</p>
       <div style="background:#F5F2EC;border:1px solid #DDD8CE;border-radius:8px;padding:18px 20px;margin:20px 0;font-size:14px;">
         <table style="width:100%;border-collapse:collapse;">
           ${(items||[]).map(item => {
             const total = parseFloat(item.total || 0);
-            return `<tr><td style="padding:5px 0;color:#666;">${item.description || 'Prestation'}</td><td style="padding:5px 0;font-weight:600;text-align:right;">${total.toFixed(2)} €</td></tr>`;
+            return `<tr><td style="padding:5px 0;color:#666;">${escapeHtml(item.description || 'Prestation')}</td><td style="padding:5px 0;font-weight:600;text-align:right;">${total.toFixed(2)} €</td></tr>`;
           }).join('')}
           ${vatAmt > 0 ? `<tr><td style="padding:5px 0;color:#666;">TVA (${vatRate}%)</td><td style="padding:5px 0;text-align:right;">${vatAmt.toFixed(2)} €</td></tr>` : ''}
         </table>
-        <table style="width:100%;border-top:2px solid #1A7A5E;margin-top:10px;border-collapse:collapse;">
-          <tr><td style="padding-top:10px;font-weight:700;font-size:16px;">TOTAL TTC</td><td style="padding-top:10px;font-weight:700;font-size:16px;color:#1A7A5E;text-align:right;">${ttc.toFixed(2)} €</td></tr>
+        <table style="width:100%;border-top:2px solid #0E3B2E;margin-top:10px;border-collapse:collapse;">
+          <tr><td style="padding-top:10px;font-weight:700;font-size:16px;">TOTAL TTC</td><td style="padding-top:10px;font-weight:700;font-size:16px;color:#0E3B2E;text-align:right;">${ttc.toFixed(2)} €</td></tr>
         </table>
       </div>
-      <div class="success-card">📎 Votre facture PDF est jointe à cet email.</div>
-      <p style="font-size:14px;color:#666;">Pour toute question, n'hésitez pas à nous contacter.<br>Cordialement, <strong>${fromName}</strong></p>
+      ${emailCard('success', '📎 Votre facture PDF est jointe à cet email.')}
+      <p style="font-size:14px;color:#666;">Pour toute question, n'hésitez pas à nous contacter.<br>Cordialement, <strong>${escapeHtml(fromName)}</strong></p>
     `
   });
 
@@ -28965,10 +28732,10 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
     const copyHtml = bhEmailTemplate({
       icon: '📋',
       title: 'Copie — Facture envoyée',
-      subtitle: `Facture ${invoiceNumber || ''} · ${clientName}`,
+      subtitle: `Facture ${escapeHtml(invoiceNumber || '')} · ${escapeHtml(clientName)}`,
       bodyHtml: `
-        <p>La facture <strong>${invoiceNumber || ''}</strong> a bien été envoyée à <strong>${clientName}</strong> (${clientEmail}).</p>
-        <div class="info-card">Le PDF est joint à cet email pour vos archives.</div>
+        <p>La facture <strong>${escapeHtml(invoiceNumber || '')}</strong> a bien été envoyée à <strong>${escapeHtml(clientName)}</strong> (${escapeHtml(clientEmail)}).</p>
+        ${emailCard('info', 'Le PDF est joint à cet email pour vos archives.')}
       `
     });
     await sendEmail({
@@ -31056,11 +30823,11 @@ cron.schedule('0 11 * * *', async () => {
           subject: `Comment s'est passé votre séjour à ${r.property_name} ?`,
           text: `Laissez un avis sur votre séjour : ${link}`,
           html: bhEmailTemplate({
-            icon:'⭐', title:'Votre avis compte', subtitle:r.property_name,
-            bodyHtml:`<p>Bonjour ${r.guest_name || ''},</p>
-              <p>Nous espérons que votre séjour s'est bien passé${r.host_first_name ? ' chez ' + r.host_first_name : ''}.
-              Prenez une minute pour laisser un avis — il aide les futurs voyageurs et votre hôte.</p>
-              <div style="text-align:center;margin:24px 0;"><a href="${link}" style="display:inline-block;padding:14px 32px;background:#C2410C;color:white;border-radius:10px;font-weight:700;text-decoration:none;">⭐ Laisser un avis</a></div>`,
+            icon:'⭐', title:'Votre avis compte', subtitle:escapeHtml(r.property_name),
+            bodyHtml:`
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(r.guest_name || '')},</p>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Nous espérons que votre séjour s'est bien passé${r.host_first_name ? ' chez ' + escapeHtml(r.host_first_name) : ''}. Prenez une minute pour laisser un avis — il aide les futurs voyageurs et votre hôte.</p>
+              ${emailButton(link, 'Laisser un avis')}`,
             footerNote:'BHGuest'
           })
         });
@@ -31179,10 +30946,11 @@ app.post('/api/host/reviews/:id/reply', authenticateToken, async (req, res) => {
           subject: `💬 ${hostFirst} a répondu à votre avis — ${pName}`,
           text: `${hostFirst} a répondu à votre avis sur ${pName}.`,
           html: bhEmailTemplate({
-            icon: '💬', title: `${hostFirst} a répondu à votre avis`, subtitle: pName,
-            bodyHtml: `<p>Bonjour ${before.rows[0].guest_name || ''},</p>
-              <p style="background:#FBEDE7;border-radius:10px;padding:12px 14px;">« ${txt.slice(0, 250)}${txt.length > 250 ? '…' : ''} »</p>
-              <div style="text-align:center;margin:24px 0;"><a href="${appUrl}/guest-app/public/index.html" style="display:inline-block;padding:14px 32px;background:#C2410C;color:white;border-radius:10px;font-weight:700;text-decoration:none;">Voir sur BHGuest</a></div>`,
+            icon: '💬', title: `${escapeHtml(hostFirst)} a répondu à votre avis`, subtitle: escapeHtml(pName),
+            bodyHtml: `
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(before.rows[0].guest_name || '')},</p>
+              ${emailCard('neutral', `« ${escapeHtml(txt.slice(0, 250))}${txt.length > 250 ? '…' : ''} »`)}
+              ${emailButton(`${appUrl}/guest-app/public/index.html`, 'Voir sur BHGuest')}`,
             footerNote: 'BHGuest'
           })
         });
@@ -31267,12 +31035,13 @@ app.post('/api/guest/reviews/submit/:token', async (req, res) => {
           subject: `${starsTxt} Nouvel avis ${globalRating}/5 — ${pName}`,
           text: `${row.guest_name || 'Un voyageur'} a laissé un avis ${globalRating}/5 sur ${pName}.`,
           html: bhEmailTemplate({
-            icon: '⭐', title: `Nouvel avis : ${globalRating}/5`, subtitle: pName,
-            bodyHtml: `<p>Bonjour ${host.first_name || ''},</p>
-              <p><strong>${row.guest_name || 'Un voyageur'}</strong> vient de laisser un avis sur son séjour.</p>
-              ${cmt ? `<p style="background:#FBEDE7;border-radius:10px;padding:12px 14px;">« ${cmt.slice(0, 250)}${cmt.length > 250 ? '…' : ''} »</p>` : ''}
-              <p>Répondre publiquement montre votre sérieux aux futurs voyageurs — surtout quand la note est moyenne.</p>
-              <div style="text-align:center;margin:24px 0;"><a href="${appUrl}/guest-app/public/host-reviews.html" style="display:inline-block;padding:14px 32px;background:#C2410C;color:white;border-radius:10px;font-weight:700;text-decoration:none;">Voir et répondre</a></div>`,
+            icon: '⭐', title: `Nouvel avis : ${globalRating}/5`, subtitle: escapeHtml(pName),
+            bodyHtml: `
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(host.first_name || '')},</p>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;"><strong>${escapeHtml(row.guest_name || 'Un voyageur')}</strong> vient de laisser un avis sur son séjour.</p>
+              ${cmt ? emailCard('neutral', `« ${escapeHtml(cmt.slice(0, 250))}${cmt.length > 250 ? '…' : ''} »`) : ''}
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Répondre publiquement montre votre sérieux aux futurs voyageurs — surtout quand la note est moyenne.</p>
+              ${emailButton(`${appUrl}/guest-app/public/host-reviews.html`, 'Voir et répondre')}`,
             footerNote: 'BHGuest'
           })
         });
@@ -31332,10 +31101,11 @@ cron.schedule('*/15 * * * *', async () => {
           text: `Vous avez ${total} message(s) non lu(s) sur BHGuest.`,
           html: bhEmailTemplate({
             icon: '💬', title: `${total} nouveau${total > 1 ? 'x' : ''} message${total > 1 ? 's' : ''}`, subtitle: 'Vos voyageurs vous attendent',
-            bodyHtml: `<p>Bonjour ${h.first || ''},</p>` + convList.map(c =>
-              `<div class="feat-row"><div class="feat-icon">👤</div><div class="feat-text"><strong>${c.guest || 'Voyageur'}</strong> · ${c.prop || ''}<br>« ${String(c.last).slice(0, 120)}${String(c.last).length > 120 ? '…' : ''} »</div></div>`
-            ).join('') +
-              `<div style="text-align:center;margin:24px 0;"><a href="${appUrl}/guest-app/public/host-messages.html" style="display:inline-block;padding:14px 32px;background:#C2410C;color:white;border-radius:10px;font-weight:700;text-decoration:none;">Répondre</a></div>`,
+            bodyHtml: `<p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(h.first || '')},</p>` +
+              convList.map(c =>
+                emailCard('info', `<strong>${escapeHtml(c.guest || 'Voyageur')}</strong> · ${escapeHtml(c.prop || '')}<br>« ${escapeHtml(String(c.last).slice(0, 120))}${String(c.last).length > 120 ? '…' : ''} »`)
+              ).join('') +
+              emailButton(`${appUrl}/guest-app/public/host-messages.html`, 'Répondre'),
             footerNote: 'BHGuest'
           })
         });
@@ -31373,13 +31143,16 @@ cron.schedule('0 10 * * *', async () => {
           subject: `🧳 C'est demain ! Votre séjour à ${r.property_name}`,
           text: `Votre séjour à ${r.property_name} commence demain (${fmtD(r.start_date)}).`,
           html: bhEmailTemplate({
-            icon:'🧳', title:"C'est demain !", subtitle:r.property_name,
-            bodyHtml:`<p>Bonjour ${r.guest_name || ''},</p>
-              <p>Votre séjour commence <strong>demain</strong>. Voici l'essentiel :</p>
-              <div class="feat-row"><div class="feat-icon">📅</div><div class="feat-text"><strong>Arrivée</strong><br>${fmtD(r.start_date)}${r.arrival_time ? ' à partir de ' + r.arrival_time : ''}</div></div>
-              ${addr ? `<div class="feat-row"><div class="feat-icon">📍</div><div class="feat-text"><strong>Adresse</strong><br>${addr}</div></div>` : ''}
-              <p>${r.host_first_name ? r.host_first_name + ' vous attend' : 'Votre hôte vous attend'} — pour toute question, répondez-lui directement depuis la messagerie de votre réservation.</p>
-              <p class="signoff">Bon séjour,<br>L'équipe BHGuest</p>`,
+            icon:'🧳', title:"C'est demain !", subtitle:escapeHtml(r.property_name),
+            bodyHtml:`
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(r.guest_name || '')},</p>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Votre séjour commence <strong>demain</strong>. Voici l'essentiel :</p>
+              ${emailBookingSummary([
+                { label: '📅 Arrivée', value: `${fmtD(r.start_date)}${r.arrival_time ? ' à partir de ' + r.arrival_time : ''}` },
+                ...(addr ? [{ label: '📍 Adresse', value: addr }] : [])
+              ])}
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">${r.host_first_name ? escapeHtml(r.host_first_name) + ' vous attend' : 'Votre hôte vous attend'} — pour toute question, répondez-lui directement depuis la messagerie de votre réservation.</p>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bon séjour,<br>L'équipe BHGuest</p>`,
             footerNote:'BHGuest'
           })
         });
@@ -33664,9 +33437,9 @@ async function sendTemplateMessage(pool, io, { template, conv, property, skipLog
           subject: `Votre séjour${propName ? ' — ' + propName : ''}`,
           html: bhEmailTemplate({
             icon: '💬',
-            title: propName || 'Votre séjour',
+            title: escapeHtml(propName || 'Votre séjour'),
             subtitle: '',
-            bodyHtml: `<p>${htmlMsg}</p>`
+            bodyHtml: `<p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;word-break:break-word;">${htmlMsg}</p>`
           })
         });
         console.log(`📧 [TPL EMAIL] Envoyé à ${guestEmail} (conv ${conv.id})`);
@@ -35270,18 +35043,14 @@ async function runInvoiceQueue(mode) {
 
         const emailHtml = bhEmailTemplate({
           icon: '📄',
-          title: `Facture ${invoiceNumber}`,
-          subtitle: req.property_name || '',
+          title: `Facture ${escapeHtml(invoiceNumber)}`,
+          subtitle: escapeHtml(req.property_name || ''),
           bodyHtml: `
-            <p>Bonjour <strong>${clientName}</strong>,</p>
-            <p>Comme convenu, veuillez trouver ci-joint votre facture pour votre séjour à <strong>${req.property_name || ''}</strong> du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date(req.end_date).toLocaleDateString('fr-FR')}.</p>
-            <div style="text-align:center;margin:24px 0;">
-              <a href="${downloadUrl}" style="display:inline-block;padding:14px 32px;background:#1A7A5E;color:white;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">
-                📥 Télécharger ma facture
-              </a>
-            </div>
-            <p style="font-size:12px;color:#9ca3af;text-align:center;">Lien valable 1 an</p>
-            <p style="font-size:14px;color:#666;">Cordialement,</p>
+            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour <strong>${escapeHtml(clientName)}</strong>,</p>
+            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Comme convenu, veuillez trouver ci-joint votre facture pour votre séjour à <strong>${escapeHtml(req.property_name || '')}</strong> du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date(req.end_date).toLocaleDateString('fr-FR')}.</p>
+            ${emailButton(downloadUrl, 'Télécharger ma facture')}
+            <p style="font-size:12px;color:#9ca3af;text-align:center;font-family:Arial,Helvetica,sans-serif;">Lien valable 1 an</p>
+            <p style="font-size:14px;color:#5A5A54;font-family:Arial,Helvetica,sans-serif;">Cordialement,</p>
           `
         });
 
@@ -37265,10 +37034,10 @@ app.delete('/api/account/delete', authenticateToken, async (req, res) => {
             title: 'Compte supprimé',
             tag: 'Confirmation de suppression',
             bodyHtml: `
-              <p>Bonjour <strong>${userName}</strong>,</p>
-              <p>Votre compte Boostinghost associé à l'adresse <strong>${userEmail}</strong> a bien été supprimé le ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
-              <p>Toutes vos données ont été définitivement effacées de nos serveurs conformément à votre demande.</p>
-              <div class="danger-card">Si vous n'êtes pas à l'origine de cette action, contactez-nous immédiatement à <a href="mailto:support@boostinghost.fr" style="color:#1A7A5E;">support@boostinghost.fr</a>.</div>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour <strong>${escapeHtml(userName)}</strong>,</p>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Votre compte Boostinghost associé à l'adresse <strong>${escapeHtml(userEmail)}</strong> a bien été supprimé le ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Toutes vos données ont été définitivement effacées de nos serveurs conformément à votre demande.</p>
+              ${emailCard('danger', 'Si vous n\'êtes pas à l\'origine de cette action, contactez-nous immédiatement à <a href="mailto:support@boostinghost.fr" style="color:#0E3B2E;">support@boostinghost.fr</a>.')}
             `,
             footerNote: 'Cet email confirme la suppression définitive de votre compte.'
           })
@@ -37538,20 +37307,17 @@ app.post('/api/contrat/send', authenticateAny, async (req, res) => {
     const emailHtml = bhEmailTemplate({
       icon: '📄',
       title: 'Contrat de location',
-      subtitle: `${propertyName}${checkinFr !== '—' ? ' · du ' + checkinFr + ' au ' + checkoutFr : ''}`,
+      subtitle: `${escapeHtml(propertyName)}${checkinFr !== '—' ? ' · du ' + escapeHtml(checkinFr) + ' au ' + escapeHtml(checkoutFr) : ''}`,
       bodyHtml: `
-        <p>Bonjour <strong>${guestFirstName} ${guestLastName}</strong>,</p>
-        <p>Veuillez trouver ci-joint votre contrat de location pour votre séjour à <strong>${propertyName}</strong>${checkinFr !== '—' ? ` du <strong>${checkinFr}</strong> au <strong>${checkoutFr}</strong>` : ''}.</p>
-        <div style="background:#F5F2EC;border:1px solid #DDD8CE;border-radius:8px;padding:18px 20px;margin:20px 0;font-size:14px;">
-          <table style="width:100%;border-collapse:collapse;">
-            ${checkin && checkout ? `<tr><td style="padding:5px 0;color:#666;">Séjour</td><td style="padding:5px 0;font-weight:600;text-align:right;">${checkinFr} → ${checkoutFr}</td></tr>
-            <tr><td style="padding:5px 0;color:#666;">Durée</td><td style="padding:5px 0;font-weight:600;text-align:right;">${nights} nuit${nights > 1 ? 's' : ''}</td></tr>` : ''}
-            <tr><td style="padding:5px 0;color:#666;">Loyer total</td><td style="padding:5px 0;font-weight:700;color:#1A7A5E;text-align:right;">${parseFloat(totalPrice || 0).toFixed(2)} €</td></tr>
-            ${deposit && parseFloat(deposit) > 0 ? `<tr><td style="padding:5px 0;color:#666;">Dépôt de garantie</td><td style="padding:5px 0;text-align:right;">${parseFloat(deposit).toFixed(2)} €</td></tr>` : ''}
-          </table>
-        </div>
-        <div class="success-card">📎 Votre contrat PDF est joint à cet email.</div>
-        <p style="font-size:14px;color:#666;">Pour toute question, n'hésitez pas à contacter le bailleur.<br>Cordialement, <strong>${[ownerFirstName, ownerLastName].filter(Boolean).join(' ')}</strong></p>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour <strong>${escapeHtml(guestFirstName)} ${escapeHtml(guestLastName)}</strong>,</p>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Veuillez trouver ci-joint votre contrat de location pour votre séjour à <strong>${escapeHtml(propertyName)}</strong>${checkinFr !== '—' ? ` du <strong>${escapeHtml(checkinFr)}</strong> au <strong>${escapeHtml(checkoutFr)}</strong>` : ''}.</p>
+        ${emailBookingSummary([
+          ...(checkin && checkout ? [{ label: 'Séjour', value: `${checkinFr} → ${checkoutFr}` }, { label: 'Durée', value: `${nights} nuit${nights > 1 ? 's' : ''}` }] : []),
+          { label: 'Loyer total', value: `${parseFloat(totalPrice || 0).toFixed(2)} €` },
+          ...(deposit && parseFloat(deposit) > 0 ? [{ label: 'Dépôt de garantie', value: `${parseFloat(deposit).toFixed(2)} €` }] : [])
+        ])}
+        ${emailCard('success', '📎 Votre contrat PDF est joint à cet email.')}
+        <p style="font-size:14px;color:#5A5A54;font-family:Arial,Helvetica,sans-serif;">Pour toute question, n'hésitez pas à contacter le bailleur.<br>Cordialement, <strong>${escapeHtml([ownerFirstName, ownerLastName].filter(Boolean).join(' '))}</strong></p>
       `
     });
 
@@ -37609,18 +37375,13 @@ app.post('/api/contrat/send', authenticateAny, async (req, res) => {
       const signEmailHtml = bhEmailTemplate({
         icon: '✍️',
         title: 'Signature de votre contrat',
-        subtitle: `${propertyName}${checkin ? ' · du ' + new Date(checkin).toLocaleDateString('fr-FR') : ''}`,
+        subtitle: `${escapeHtml(propertyName)}${checkin ? ' · du ' + new Date(checkin).toLocaleDateString('fr-FR') : ''}`,
         bodyHtml: `
-          <p>Bonjour <strong>${guestFirstName} ${guestLastName}</strong>,</p>
-          <p>Votre contrat de location pour <strong>${propertyName}</strong> est prêt. Il ne reste plus qu'à le signer électroniquement.</p>
-          <div class="cta-block">
-            <p>Cliquez sur le bouton ci-dessous pour consulter et signer votre contrat :</p>
-            <a href="${signUrl}" class="btn" style="display:inline-block;background:#1A7A5E;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;">
-              ✍️ Signer mon contrat
-            </a>
-          </div>
-          <div class="alert-card">⏰ Ce lien est valable <strong>7 jours</strong>. Passé ce délai, contactez votre bailleur pour un nouveau lien.</div>
-          <p style="font-size:13px;color:#666;">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br><a href="${signUrl}" style="color:#1A7A5E;word-break:break-all;">${signUrl}</a></p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour <strong>${escapeHtml(guestFirstName)} ${escapeHtml(guestLastName)}</strong>,</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Votre contrat de location pour <strong>${escapeHtml(propertyName)}</strong> est prêt. Il ne reste plus qu'à le signer électroniquement.</p>
+          ${emailCTABlock(signUrl, 'Signer mon contrat', { title: 'Cliquez sur le bouton ci-dessous pour consulter et signer votre contrat' })}
+          ${emailCard('warning', '⏰ Ce lien est valable <strong>7 jours</strong>. Passé ce délai, contactez votre bailleur pour un nouveau lien.')}
+          <p style="font-size:13px;color:#878782;word-break:break-all;line-height:1.6;margin-top:14px;font-family:Arial,Helvetica,sans-serif;">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br><a href="${signUrl}" style="color:#0E3B2E;word-break:break-all;">${signUrl}</a></p>
         `
       });
 
@@ -38006,15 +37767,11 @@ app.post('/api/contrat/sign/:token', async (req, res) => {
     const signedEmailHtml = bhEmailTemplate({
       icon: '✅',
       title: isMandat ? 'Mandat de gestion signé' : 'Contrat signé',
-      subtitle: docLabel,
+      subtitle: escapeHtml(docLabel),
       bodyHtml: `
-        <p>${isMandat ? 'Le mandat de gestion' : 'Le contrat de location'} a été signé par les deux parties.</p>
-        <div class="success-card">📎 Le document signé est joint à cet email.</div>
-        <div class="info-card">
-          <strong>${isMandat ? 'Propriétaire' : 'Locataire'} :</strong> ${signerFirstName} ${signerLastName}<br>
-          <strong>Signé le :</strong> ${fmtDate(signedAt)}<br>
-          ${isMandat ? `<strong>Bien confié :</strong> ${data.propAddress || '—'}` : `<strong>Logement :</strong> ${data.propertyName}`}
-        </div>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">${isMandat ? 'Le mandat de gestion' : 'Le contrat de location'} a été signé par les deux parties.</p>
+        ${emailCard('success', '📎 Le document signé est joint à cet email.')}
+        ${emailCard('info', `<strong>${isMandat ? 'Propriétaire' : 'Locataire'} :</strong> ${escapeHtml(signerFirstName || '')} ${escapeHtml(signerLastName || '')}<br><strong>Signé le :</strong> ${fmtDate(signedAt)}<br>${isMandat ? `<strong>Bien confié :</strong> ${escapeHtml(data.propAddress || '—')}` : `<strong>Logement :</strong> ${escapeHtml(data.propertyName || '')}`}`)}
       `
     });
 
@@ -38221,18 +37978,13 @@ app.post('/api/contrats/:id/resend-sign', authenticateAny, async (req, res) => {
     const signEmailHtml = bhEmailTemplate({
       icon: '✍️',
       title: 'Nouveau lien de signature',
-      subtitle: subjectLabel,
+      subtitle: escapeHtml(subjectLabel),
       bodyHtml: `
-        <p>Bonjour <strong>${recipientFirstName} ${recipientLastName}</strong>,</p>
-        <p>Un nouveau lien de signature vous a été envoyé pour ${isMandat ? 'votre mandat de gestion' : `votre contrat de location à <strong>${d.propertyName}</strong>`}.</p>
-        <div class="cta-block">
-          <p>Cliquez ci-dessous pour signer votre contrat :</p>
-          <a href="${signUrl}" class="btn" style="display:inline-block;background:#1A7A5E;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;">
-            ✍️ Signer mon contrat
-          </a>
-        </div>
-        <div class="alert-card">⏰ Ce lien est valable <strong>7 jours</strong>.</div>
-        <p style="font-size:13px;color:#666;">Lien direct : <a href="${signUrl}" style="color:#1A7A5E;word-break:break-all;">${signUrl}</a></p>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour <strong>${escapeHtml(recipientFirstName || '')} ${escapeHtml(recipientLastName || '')}</strong>,</p>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Un nouveau lien de signature vous a été envoyé pour ${isMandat ? 'votre mandat de gestion' : `votre contrat de location à <strong>${escapeHtml(d.propertyName || '')}</strong>`}.</p>
+        ${emailCTABlock(signUrl, 'Signer mon contrat', { title: 'Cliquez ci-dessous pour signer votre contrat' })}
+        ${emailCard('warning', '⏰ Ce lien est valable <strong>7 jours</strong>.')}
+        <p style="font-size:13px;color:#878782;word-break:break-all;line-height:1.6;margin-top:14px;font-family:Arial,Helvetica,sans-serif;">Lien direct : <a href="${signUrl}" style="color:#0E3B2E;word-break:break-all;">${signUrl}</a></p>
       `
     });
 
@@ -40434,19 +40186,14 @@ app.post('/api/mandat/send', authenticateAny, async (req, res) => {
     const signEmailHtml = bhEmailTemplate({
       icon: '✍️',
       title: 'Signature de votre mandat de gestion',
-      subtitle: companyName || 'Votre conciergerie',
+      subtitle: escapeHtml(companyName || 'Votre conciergerie'),
       bodyHtml: `
-        <p>Bonjour <strong>${ownerFirstName} ${ownerLastName}</strong>,</p>
-        <p>Un contrat de mandat de gestion vous a été préparé par <strong>${companyName || 'votre conciergerie'}</strong> pour le bien situé au :</p>
-        <div class="info-card"><strong>${propAddress || '—'}</strong></div>
-        <div class="cta-block">
-          <p>Cliquez ci-dessous pour consulter et signer votre contrat :</p>
-          <a href="${signUrl}" class="btn" style="display:inline-block;background:#1A7A5E;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;">
-            ✍️ Signer le mandat
-          </a>
-        </div>
-        <div class="alert-card">⏰ Ce lien est valable <strong>7 jours</strong>.</div>
-        <p style="font-size:13px;color:#666;">Lien direct : <a href="${signUrl}" style="color:#1A7A5E;word-break:break-all;">${signUrl}</a></p>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour <strong>${escapeHtml(ownerFirstName || '')} ${escapeHtml(ownerLastName || '')}</strong>,</p>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Un contrat de mandat de gestion vous a été préparé par <strong>${escapeHtml(companyName || 'votre conciergerie')}</strong> pour le bien situé au :</p>
+        ${emailCard('info', `<strong>${escapeHtml(propAddress || '—')}</strong>`)}
+        ${emailCTABlock(signUrl, 'Signer le mandat', { title: 'Cliquez ci-dessous pour consulter et signer votre contrat' })}
+        ${emailCard('warning', '⏰ Ce lien est valable <strong>7 jours</strong>.')}
+        <p style="font-size:13px;color:#878782;word-break:break-all;line-height:1.6;margin-top:14px;font-family:Arial,Helvetica,sans-serif;">Lien direct : <a href="${signUrl}" style="color:#0E3B2E;word-break:break-all;">${signUrl}</a></p>
       `
     });
 
@@ -45611,14 +45358,14 @@ app.post('/api/attestation/send', authenticateAny, requireFeature('attestation_c
 
     const htmlBody = bhEmailTemplate({
       icon: '🧾',
-      title: `Attestation fiscale ${resolvedYear}`,
+      title: `Attestation fiscale ${escapeHtml(resolvedYear)}`,
       tag: 'Services à la personne',
       bodyHtml: `
-        <p>Bonjour,</p>
-        <p>Veuillez trouver en pièce jointe votre <strong>attestation fiscale pour l'année ${resolvedYear}</strong> concernant les services à la personne fournis par <strong>${fromName}</strong>.</p>
-        <p>Ce document vous permettra de bénéficier du <strong>crédit d'impôt pour l'emploi d'un salarié à domicile</strong> (art. 199 sexdecies du CGI) lors de votre déclaration de revenus.</p>
-        <div class="info-card">💡 <strong>Conseil :</strong> Conservez ce document pour votre déclaration de revenus ${parseInt(resolvedYear) + 1}.</div>
-        <p>Pour toute question, n'hésitez pas à nous contacter.<br>Cordialement, <strong>${fromName}</strong></p>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour,</p>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Veuillez trouver en pièce jointe votre <strong>attestation fiscale pour l'année ${escapeHtml(resolvedYear)}</strong> concernant les services à la personne fournis par <strong>${escapeHtml(fromName)}</strong>.</p>
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Ce document vous permettra de bénéficier du <strong>crédit d'impôt pour l'emploi d'un salarié à domicile</strong> (art. 199 sexdecies du CGI) lors de votre déclaration de revenus.</p>
+        ${emailCard('info', `💡 <strong>Conseil :</strong> Conservez ce document pour votre déclaration de revenus ${parseInt(resolvedYear) + 1}.`)}
+        <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Pour toute question, n'hésitez pas à nous contacter.<br>Cordialement, <strong>${escapeHtml(fromName)}</strong></p>
       `
     });
 
@@ -46620,29 +46367,14 @@ app.post('/api/guest/book', async (req, res) => {
             title: 'Nouvelle réservation BHGuest',
             tag: 'Réservation directe',
             bodyHtml: `
-              <div class="info-card">
-                <strong>Réservation reçue !</strong><br>
-                Un voyageur vient de réserver directement via Boostinghost Guest.
-              </div>
-
-              <div class="feat-row">
-                <div class="feat-icon">👤</div>
-                <div class="feat-text"><strong>Voyageur</strong><br>${guest_name}${guest_email ? '<br>' + guest_email : ''}${guest_phone ? '<br>' + guest_phone : ''}</div>
-              </div>
-              <div class="feat-row">
-                <div class="feat-icon">🏠</div>
-                <div class="feat-text"><strong>Logement</strong><br>${displayName(prop)}</div>
-              </div>
-              <div class="feat-row">
-                <div class="feat-icon">📅</div>
-                <div class="feat-text"><strong>Dates</strong><br>${fmtDate(checkin)} → ${fmtDate(checkout)} (${nights} nuit${nights > 1 ? 's' : ''})</div>
-              </div>
-              <div class="feat-row">
-                <div class="feat-icon">💶</div>
-                <div class="feat-text"><strong>Montant reversé</strong><br>${(totalBase - commission).toFixed(2)}€ (après commission ${feePct}%)</div>
-              </div>
-
-              <p class="signoff">Référence : ${uid}</p>
+              ${emailCard('info', '<strong>Réservation reçue !</strong><br>Un voyageur vient de réserver directement via Boostinghost Guest.')}
+              ${emailBookingSummary([
+                { label: '👤 Voyageur', value: `${escapeHtml(guest_name)}${guest_email ? ' · ' + escapeHtml(guest_email) : ''}${guest_phone ? ' · ' + escapeHtml(guest_phone) : ''}` },
+                { label: '🏠 Logement', value: escapeHtml(displayName(prop)) },
+                { label: '📅 Dates', value: `${fmtDate(checkin)} → ${fmtDate(checkout)} (${nights} nuit${nights > 1 ? 's' : ''})` },
+                { label: '💶 Reversé', value: `${(totalBase - commission).toFixed(2)}€ (après commission ${feePct}%)` },
+                { label: 'Référence', value: escapeHtml(uid) }
+              ])}
             `,
             footerNote: 'Boostinghost — Tableau de bord hôte'
           })
@@ -46928,32 +46660,14 @@ app.post('/api/guest/auth/request', async (req, res) => {
         title: 'Connexion à votre espace',
         subtitle: 'Boostinghost Guest',
         bodyHtml: `
-          <p>Bonjour,</p>
-          <p>Cliquez sur le bouton ci-dessous pour vous connecter à votre espace voyageur. Ce lien est valable <strong>15 minutes</strong>.</p>
-
-          <div class="cta-block">
-            <p>Un seul clic, aucun mot de passe à retenir</p>
-            <a href="${magicLink}" class="btn">Se connecter maintenant</a>
-          </div>
-
-          ${hasBookings ? `
-          <div class="info-card">
-            <strong>Vos réservations vous attendent</strong><br>
-            Retrouvez l'historique de vos séjours directement après connexion.
-          </div>` : `
-          <div class="info-card">
-            <strong>Première fois ?</strong><br>
-            Découvrez tous les logements disponibles et réservez en direct, sans commission.
-          </div>`}
-
-          <p style="font-size:13px;color:#888;margin-top:20px;">
-            Si vous n'avez pas demandé ce lien, ignorez simplement cet email.
-          </p>
-
-          <p class="link-fallback">
-            Lien de connexion : <a href="${magicLink}">${magicLink}</a>
-          </p>
-          <p class="signoff">L'équipe Boostinghost</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour,</p>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Cliquez sur le bouton ci-dessous pour vous connecter à votre espace voyageur. Ce lien est valable <strong>15 minutes</strong>.</p>
+          ${emailCTABlock(magicLink, 'Se connecter maintenant', { title: 'Un seul clic, aucun mot de passe à retenir' })}
+          ${hasBookings
+            ? emailCard('info', '<strong>Vos réservations vous attendent</strong><br>Retrouvez l\'historique de vos séjours directement après connexion.')
+            : emailCard('info', '<strong>Première fois ?</strong><br>Découvrez tous les logements disponibles et réservez en direct, sans commission.')}
+          <p style="font-size:13px;color:#878782;margin-top:20px;font-family:Arial,Helvetica,sans-serif;">Si vous n'avez pas demandé ce lien, ignorez simplement cet email.</p>
+          <p style="font-size:11px;color:#878782;word-break:break-all;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">Lien de connexion : <a href="${magicLink}" style="color:#0E3B2E;">${magicLink}</a></p>
         `,
         footerNote: 'Lien valable 15 minutes · Ne partagez pas ce lien'
       })
@@ -47166,17 +46880,11 @@ app.post('/api/agency/invite', authenticateAny, async (req, res) => {
         html: bhEmailTemplate({
           icon: '🏢',
           title: 'Invitation gestionnaire',
-          subtitle: `${delegatorName} vous donne accès à son espace Boostinghost`,
+          subtitle: `${escapeHtml(delegatorName)} vous donne accès à son espace Boostinghost`,
           tag: 'Compte Agence',
           bodyHtml: `
-            <div class="feat-row">
-              <div class="feat-icon">🏠</div>
-              <div class="feat-text"><strong>${delegatorName}</strong> vous invite à gérer ses logements sur Boostinghost en tant que gestionnaire.</div>
-            </div>
-            <div class="cta-block">
-              <p>${delegateUserId ? 'Connectez-vous à votre compte Boostinghost pour accéder à cet espace.' : "Créez un compte Boostinghost ou connectez-vous, puis cliquez sur le lien ci-dessous."}</p>
-              <a href="${appUrl}/app.html?agency_token=${invitationToken}" class="btn">Accéder à l'espace</a>
-            </div>
+            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;"><strong>${escapeHtml(delegatorName)}</strong> vous invite à gérer ses logements sur Boostinghost en tant que gestionnaire.</p>
+            ${emailCTABlock(`${appUrl}/app.html?agency_token=${invitationToken}`, "Accéder à l'espace", { text: delegateUserId ? 'Connectez-vous à votre compte Boostinghost pour accéder à cet espace.' : "Créez un compte Boostinghost ou connectez-vous, puis cliquez sur le lien ci-dessous." })}
           `,
           footerNote: "Si vous n'avez pas de compte Boostinghost, créez-en un d'abord puis revenez sur ce lien."
         })
@@ -47197,20 +46905,9 @@ app.post('/api/agency/invite', authenticateAny, async (req, res) => {
           title: 'Invitation gestionnaire envoyée',
           tag: 'Compte Agence',
           bodyHtml: `
-            <div class="feat-row">
-              <div class="feat-icon">✅</div>
-              <div class="feat-text">
-                <strong>Votre invitation a bien été envoyée à ${email}</strong><br>
-                ${delegateUserId ? 'Ce gestionnaire a un compte Boostinghost — il peut déjà accéder à votre espace.' : "Un email d'invitation lui a été envoyé. Il devra créer un compte Boostinghost pour accepter."}
-              </div>
-            </div>
-            <div class="feat-row">
-              <div class="feat-icon">🔐</div>
-              <div class="feat-text">Vous pouvez révoquer cet accès à tout moment depuis vos paramètres → Compte Agence.</div>
-            </div>
-            <div class="cta-block">
-              <a href="${appUrl}/settings-account.html" class="btn">Gérer mes accès</a>
-            </div>
+            ${emailCard('success', `<strong>Votre invitation a bien été envoyée à ${escapeHtml(email)}</strong><br>${delegateUserId ? 'Ce gestionnaire a un compte Boostinghost — il peut déjà accéder à votre espace.' : "Un email d'invitation lui a été envoyé. Il devra créer un compte Boostinghost pour accepter."}`)}
+            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">🔐 Vous pouvez révoquer cet accès à tout moment depuis vos paramètres → Compte Agence.</p>
+            ${emailButton(`${appUrl}/settings-account.html`, 'Gérer mes accès')}
           `,
           footerNote: 'Boostinghost — Gestion locative intelligente'
         })
@@ -47994,8 +47691,10 @@ app.post('/api/guest/auth/forgot-password', async (req, res) => {
       to: normalizedEmail,
       subject: 'Réinitialisation de votre mot de passe — BHGuest',
       html: bhEmailTemplate({ icon: '🔑', title: 'Réinitialiser votre mot de passe', subtitle: 'BHGuest',
-        bodyHtml: `<p>Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe. Valable <strong>15 minutes</strong>.</p>
-          <div style="text-align:center;margin:24px 0;"><a href="${resetLink}" style="display:inline-block;padding:14px 32px;background:#C2410C;color:white;border-radius:10px;font-weight:700;text-decoration:none;">Réinitialiser mon mot de passe</a></div>`
+        footerNote: 'Lien valable 15 minutes · Si vous n\'avez pas demandé cette réinitialisation, ignorez cet email.',
+        bodyHtml: `
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe. Valable <strong>15 minutes</strong>.</p>
+          ${emailCTABlock(resetLink, 'Réinitialiser mon mot de passe')}`
       })
     });
     res.json({ success: true });
@@ -48714,9 +48413,10 @@ app.post('/api/host/conversations/:id/send', authenticateToken, async (req, res)
             subject: `💬 ${senderName} vous a répondu — ${conv.property_name || 'BHGuest'}`,
             text: `${senderName} vous a envoyé un message. Consultez votre conversation sur BHGuest.`,
             html: bhEmailTemplate({
-              icon: '💬', title: `${senderName} vous a répondu`, subtitle: conv.property_name || 'BHGuest',
-              bodyHtml: `<p>« ${String(message).trim().slice(0, 180)}${String(message).trim().length > 180 ? '…' : ''} »</p>
-                <div style="text-align:center;margin:24px 0;"><a href="${appUrl}/guest-app/public/index.html" style="display:inline-block;padding:14px 32px;background:#C2410C;color:white;border-radius:10px;font-weight:700;text-decoration:none;">Ouvrir la conversation</a></div>`,
+              icon: '💬', title: `${escapeHtml(senderName)} vous a répondu`, subtitle: escapeHtml(conv.property_name || 'BHGuest'),
+              bodyHtml: `
+                ${emailCard('neutral', `« ${escapeHtml(String(message).trim().slice(0, 180))}${String(message).trim().length > 180 ? '…' : ''} »`)}
+                ${emailButton(`${appUrl}/guest-app/public/index.html`, 'Ouvrir la conversation')}`,
               footerNote: 'BHGuest'
             })
           });
@@ -49117,7 +48817,15 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
           to: guest_email,
           subject: `🏠 Votre lien de réservation — ${propName}`,
           text: `Bonjour,\n\nVoici votre lien de réservation pour ${propName} du ${fmtDate(checkin)} au ${fmtDate(checkout)}.\n\nLien : ${bookingUrl}\n\nCe lien et les dates sont réservés pour vous pendant 4 heures.`,
-          html: `<p>Bonjour,</p><p>Voici votre lien de réservation pour <strong>${propName}</strong> du <strong>${fmtDate(checkin)}</strong> au <strong>${fmtDate(checkout)}</strong>.</p>${fixed_price ? `<p>Prix total : <strong>${fixed_price}€</strong></p>` : ''}<p><a href="${bookingUrl}" style="display:inline-block;background:#1A7A5E;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">Réserver maintenant</a></p><p style="color:#6B7280;font-size:12px;">Ce lien expire dans 4 heures.</p>`
+          html: bhEmailTemplate({
+            title: 'Votre lien de réservation',
+            tag: escapeHtml(propName),
+            bodyHtml: `
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Voici votre lien de réservation pour <strong>${escapeHtml(propName)}</strong> du <strong>${escapeHtml(fmtDate(checkin))}</strong> au <strong>${escapeHtml(fmtDate(checkout))}</strong>.</p>
+              ${fixed_price ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Prix total : <strong>${escapeHtml(String(fixed_price))}€</strong></p>` : ''}
+              ${emailCTABlock(bookingUrl, 'Réserver maintenant', { title: 'Ce lien expire dans 4 heures.' })}
+            `
+          })
         });
         console.log(`📧 [HOLD] Email envoyé à ${guest_email}`);
       } catch(emailErr) {
@@ -49775,13 +49483,15 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
         subject: `✅ Réservation confirmée — ${prop.name}`,
         text: `Votre réservation est confirmée pour ${prop.name} du ${fmtDate(checkin)} au ${fmtDate(checkout)}.`,
         html: bhEmailTemplate({
-          icon: '🏠', title: 'Réservation confirmée !', subtitle: prop.name,
+          icon: '🏠', title: 'Réservation confirmée !', subtitle: escapeHtml(prop.name),
           bodyHtml: `
-            <div class="success-card"><strong>Paiement reçu ✓</strong><br>Référence : ${uid}</div>
-            <div class="feat-row"><div class="feat-icon">📅</div><div class="feat-text"><strong>Arrivée</strong><br>${fmtDate(checkin)}</div></div>
-            <div class="feat-row"><div class="feat-icon">📅</div><div class="feat-text"><strong>Départ</strong><br>${fmtDate(checkout)}</div></div>
-            <div class="feat-row"><div class="feat-icon">💶</div><div class="feat-text"><strong>Total payé</strong><br>${totalTTC}€</div></div>
-            <p class="signoff">À très bientôt,<br>L'équipe Boostinghost</p>
+            ${emailCard('success', `<strong>Paiement reçu ✓</strong><br>Référence : ${escapeHtml(uid)}`)}
+            ${emailBookingSummary([
+              { label: 'Arrivée', value: fmtDate(checkin) },
+              { label: 'Départ', value: fmtDate(checkout) },
+              { label: 'Total payé', value: `${totalTTC}€` }
+            ])}
+            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">À très bientôt,<br>L'équipe Boostinghost</p>
           `,
           footerNote: 'Boostinghost Guest'
         })
@@ -50658,10 +50368,14 @@ app.post('/api/upsell/manual', authenticateAny, async (req, res) => {
         await sendEmail({
           to: email,
           subject: `${KIND_LABELS[kind]}${property && property.name ? ' — ' + property.name : ''}`,
-          html: `<p>Bonjour,</p>`
-              + `<p>Voici votre lien pour <strong>${KIND_LABELS[kind].toLowerCase()}</strong>${reqLabel ? ' (' + reqLabel + ')' : ''} :</p>`
-              + `<p><a href="${link.url}" style="display:inline-block;background:#1A7A5E;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;">Payer ${(amountCents/100).toFixed(2)} €</a></p>`
-              + `<p style="color:#6B7280;font-size:13px;">Ou copiez ce lien : ${link.url}</p>`,
+          html: bhEmailTemplate({
+            title: escapeHtml(KIND_LABELS[kind]),
+            tag: property && property.name ? escapeHtml(property.name) : '',
+            bodyHtml: `
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Voici votre lien pour <strong>${escapeHtml(KIND_LABELS[kind].toLowerCase())}${reqLabel ? ' (' + escapeHtml(reqLabel) + ')' : ''}</strong> :</p>
+              ${emailCTABlock(link.url, `Payer ${(amountCents/100).toFixed(2)} €`)}
+            `
+          }),
         });
         sentEmail = true;
       } catch (e) { console.warn('⚠️ [UPSELL manuel] email:', e.message); }
