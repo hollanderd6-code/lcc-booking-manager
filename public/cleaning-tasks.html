@@ -489,16 +489,16 @@ html, body {
 .checklist-screen {
   display: none;
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: auto;
-  height: 100vh;
-  height: 100dvh;
+  /* inset:0 au lieu de height:100dvh : sur iOS le dvh est recalcule
+     quand la barre d'outils Safari se replie, ce qui redimensionnait
+     l'overlay en pleine action et laissait voir la page du dessous. */
+  inset: 0;
+  height: auto;
   box-sizing: border-box;
   z-index: 1000;
   background: var(--bg);
   overflow: hidden;
+  overscroll-behavior: contain;
   flex-direction: column;
 }
 
@@ -519,7 +519,21 @@ html, body {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Verrou de defilement du document quand un calque plein ecran est ouvert.
+   Sans lui, le body continue de defiler derriere l'overlay fixed et iOS
+   peint le calque a un offset perime (page precedente visible en bas). */
+html.bh-locked, body.bh-locked {
+  overflow: hidden !important;
+  height: 100% !important;
   overscroll-behavior: none;
+}
+body.bh-locked {
+  position: fixed;
+  inset: 0;
+  width: 100%;
 }
 
 .checklist-header-top {
@@ -1141,6 +1155,8 @@ html, body {
   align-items: flex-end;
   justify-content: center;
   padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .sig-modal-overlay.open { display: flex; }
 .sig-modal {
@@ -1151,6 +1167,13 @@ html, body {
   max-width: 540px;
   box-shadow: 0 -8px 40px rgba(32,34,31,.2);
   animation: slideUp .25s ease;
+  /* garde-fou : la feuille ne peut plus depasser le viewport et
+     disparaitre hors ecran en ne laissant que le fond floute. */
+  max-height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 @keyframes slideUp {
   from { transform: translateY(60px); opacity: 0; }
@@ -2147,6 +2170,7 @@ async function openChecklist(reservationKey) {
 
   // Show screen
   document.getElementById('checklistScreen').classList.add('active');
+  bhLockScroll();
 
   // Charger les consommables du logement (réassort) en arrière-plan
   restockSelected = new Set();
@@ -2753,9 +2777,34 @@ function updateSigState() {
   btn.className = 'sig-confirm-btn' + (ready ? ' ready' : '');
 }
 
+// ===== VERROU DE DEFILEMENT (iOS-safe) =====
+// Compteur : la modale signature s'ouvre par-dessus la checklist, sa
+// fermeture ne doit pas dereverrouiller le document.
+let bhLockCount = 0;
+let bhLockScrollY = 0;
+
+function bhLockScroll() {
+  if (++bhLockCount > 1) return;
+  bhLockScrollY = window.scrollY || window.pageYOffset || 0;
+  document.body.style.top = `-${bhLockScrollY}px`;
+  document.documentElement.classList.add('bh-locked');
+  document.body.classList.add('bh-locked');
+}
+
+function bhUnlockScroll(force) {
+  if (force) bhLockCount = 0;
+  else if (--bhLockCount > 0) return;
+  bhLockCount = 0;
+  document.documentElement.classList.remove('bh-locked');
+  document.body.classList.remove('bh-locked');
+  document.body.style.top = '';
+  document.body.style.overflow = '';
+  window.scrollTo(0, bhLockScrollY);
+}
+
 function openSigModal() {
   document.getElementById('sigModalOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  bhLockScroll();
   // Reset état
   document.getElementById('sigCertifyCheck').checked = false;
   clearSignature();
@@ -2766,7 +2815,7 @@ function openSigModal() {
 
 function closeSigModal() {
   document.getElementById('sigModalOverlay').classList.remove('open');
-  document.body.style.overflow = '';
+  bhUnlockScroll();
 }
 
 function confirmSignature() {
@@ -2781,6 +2830,16 @@ function getCameraCount() {
   return checklistPhotos.filter(p => p.source === 'camera').length;
 }
 
+// Defile la zone scrollable de la checklist, jamais le document :
+// scrollIntoView remontait le body verrouille et cassait l'overlay fixed.
+function bhScrollChecklistTo(id) {
+  const el = document.getElementById(id);
+  const area = document.querySelector('.checklist-scroll-area');
+  if (!el || !area) return;
+  const top = el.getBoundingClientRect().top - area.getBoundingClientRect().top;
+  area.scrollTo({ top: area.scrollTop + top - area.clientHeight / 3, behavior: 'smooth' });
+}
+
 async function handleSubmit() {
   const allChecked = checklistTasks.every(t => t.checked);
   const hasEnoughPhotos = getCameraCount() >= 5;
@@ -2788,12 +2847,12 @@ async function handleSubmit() {
   // État du logement obligatoire
   if (damageState !== 'ras' && damageState !== 'reported') {
     showToast("Indiquez l'état du logement : RAS ou signaler une dégradation", 'error');
-    document.getElementById('damageCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    bhScrollChecklistTo('damageCard');
     return;
   }
   if (damageState === 'reported' && damagePhotos.length < 2) {
     showToast(`Dégradation : ajoutez au moins ${2 - damagePhotos.length} photo(s)`, 'error');
-    document.getElementById('damageCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    bhScrollChecklistTo('damageCard');
     return;
   }
 
@@ -2931,14 +2990,14 @@ async function doSubmit() {
 function closeChecklist() {
   stopTimer();
   document.getElementById('checklistScreen').classList.remove('active');
-  document.body.style.overflow = '';
+  bhUnlockScroll(true);
   renderTasks();
 }
 
 function closeSuccess() {
   document.getElementById('successOverlay').classList.remove('active');
   document.getElementById('checklistScreen').classList.remove('active');
-  document.body.style.overflow = '';
+  bhUnlockScroll(true);
   renderTasks();
 }
 
