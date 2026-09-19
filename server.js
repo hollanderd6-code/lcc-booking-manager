@@ -41122,6 +41122,19 @@ console.log('✅ Service de notifications initialisé');
   console.log('📧 EMAIL_FROM configuré     :', process.env.EMAIL_FROM  ? '✅ ' + process.env.EMAIL_FROM : '⚠️  NON (défaut: no-reply@boostinghost.fr)');
   console.log('💳 Stripe configuré :', STRIPE_SECRET_KEY ? '✅ OUI' : '⚠️  NON (pas de création de cautions possible)');
   console.log('');
+
+  // ── Benchmark Groq Traveler AI V2 (shadow mode) ──────────────────────────────
+  // Activé UNIQUEMENT si RUN_TRAVELER_AI_V2_BENCHMARK=true.
+  // Sans cette variable (ou toute autre valeur) : aucun effet, aucun import.
+  // setImmediate garantit que le serveur HTTP est pleinement opérationnel avant le benchmark.
+  // Ne crée aucun cron, aucune route, aucun webhook.
+  if (process.env.RUN_TRAVELER_AI_V2_BENCHMARK === 'true') {
+    setImmediate(() => {
+      require('./scripts/run-traveler-v2-once').run().catch(err => {
+        console.error('❌ [V2-BENCH] Erreur non bloquante:', err.message);
+      });
+    });
+  }
 });
 
 // ============================================
