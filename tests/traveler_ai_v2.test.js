@@ -15,6 +15,7 @@ const {
   buildTravelerSystemPrompt,
   validateTravelerDecision,
   callGroqTravelerV2,
+  loadBenchmarkFewShotExamples,
   formatBenchmarkReport,
   formatGoldenReport,
   runGoldenSetBenchmark,
@@ -24,6 +25,8 @@ const {
   _resolveHistoricalReply,
   _buildFactsProvenance,
   _estimateCallTokens,
+  _isFewShotNoisy,
+  _isFewShotTemplate,
   _setDelay,
   VALID_ACTIONS,
   GOLDEN_IDS,
@@ -1070,6 +1073,167 @@ test('T65 — formatGoldenReport : TOTAL=6, GOLDEN SET SUMMARY, MANUAL REVIEW', 
   assert.ok(report.includes(`MISSING_MESSAGE_ID: ${GOLDEN_IDS[0]}`), 'MISSING_MESSAGE_ID GOLDEN-001 affiché');
 });
 
+// ─── Série V2.1 : Calibration — Anti-contamination, Multi-action, Few-shot ───
+
+console.log('\n── Série V2.1 : Calibration — Anti-contamination, Multi-action, Few-shot ─────');
+
+test('T68 — Prompt contient SOURCE HIÉRARCHIE et avertissement anti-contamination', () => {
+  const ctx = buildTravelerContextFromRawData({
+    conversation: makeConv(), property: makeProp(), welcomeBook: makeWelcomeBook(),
+    deposit: { status: 'authorized', amount_cents: 0 },
+    registration: { done: true, guest_country: 'FR', unique_token: null },
+    atTimestamp: AT_BEFORE,
+  });
+  ctx._fewShot = [];
+  const prompt = buildTravelerSystemPrompt(ctx, { language: 'fr' });
+  assert.ok(prompt.includes('SOURCES — HIÉRARCHIE ET RÔLES'), 'section SOURCES — HIÉRARCHIE présente');
+  assert.ok(prompt.includes('NE PAS contaminer'),             'avertissement NE PAS contaminer présent');
+  assert.ok(prompt.includes('LATE_CHECKOUT_REQUEST'),         'exemple de contamination mentionné dans le prompt');
+});
+
+test('T69 — validateTravelerDecision : multi-action EARLY+LATE → actions contient les deux', () => {
+  const result = validateTravelerDecision({
+    primary_action: 'EARLY_CHECKIN_REQUEST',
+    actions: ['EARLY_CHECKIN_REQUEST', 'LATE_CHECKOUT_REQUEST'],
+    action: 'EARLY_CHECKIN_REQUEST',
+    confidence: 0.9,
+    hallucination_risk: 'LOW',
+  });
+  assert.strictEqual(result.primary_action, 'EARLY_CHECKIN_REQUEST', 'primary_action correct');
+  assert.strictEqual(result.action,         'EARLY_CHECKIN_REQUEST', 'action (compat) correct');
+  assert.ok(result.actions.includes('EARLY_CHECKIN_REQUEST'), 'actions inclut EARLY_CHECKIN_REQUEST');
+  assert.ok(result.actions.includes('LATE_CHECKOUT_REQUEST'),  'actions inclut LATE_CHECKOUT_REQUEST');
+  assert.strictEqual(result.actions.length, 2, '2 actions retournées');
+});
+
+test('T70 — validateTravelerDecision : action unique → primary_action et actions=[action]', () => {
+  const result = validateTravelerDecision({
+    action: 'INVOICE_REQUEST',
+    confidence: 0.85,
+    hallucination_risk: 'LOW',
+  });
+  assert.strictEqual(result.primary_action, 'INVOICE_REQUEST');
+  assert.deepStrictEqual(result.actions, ['INVOICE_REQUEST']);
+  assert.strictEqual(result.action, 'INVOICE_REQUEST', 'rétrocompatibilité .action préservée');
+});
+
+test('T71 — Prompt contient "UNKNOWN" avec sémantique non-absence explicite', () => {
+  const ctx = buildTravelerContextFromRawData({
+    conversation: makeConv(), property: makeProp(), welcomeBook: makeWelcomeBook(),
+    deposit: { status: 'authorized', amount_cents: 0 },
+    registration: { done: true, guest_country: 'FR', unique_token: null },
+    atTimestamp: AT_BEFORE,
+  });
+  ctx._fewShot = [];
+  const prompt = buildTravelerSystemPrompt(ctx, { language: 'fr' });
+  assert.ok(prompt.includes('UNKNOWN'), 'UNKNOWN présent dans le prompt');
+  assert.ok(
+    prompt.includes('UNKNOWN ≠ FALSE') || prompt.includes('ne jamais en déduire une'),
+    'sémantique UNKNOWN ≠ absence explicite'
+  );
+});
+
+test('T72 — _isFewShotNoisy("Imported Booking") → true', () => {
+  assert.strictEqual(_isFewShotNoisy('Imported Booking'), true);
+});
+
+test('T73 — _isFewShotNoisy("THIS RESERVATION HAS BEEN PRE-PAID") → true', () => {
+  assert.strictEqual(_isFewShotNoisy('THIS RESERVATION HAS BEEN PRE-PAID'), true);
+});
+
+test('T74 — _isFewShotNoisy("BOOKING NOTE: client spécial") → true', () => {
+  assert.strictEqual(_isFewShotNoisy('BOOKING NOTE: client spécial'), true);
+});
+
+test('T74b — _isFewShotNoisy("Bonjour, nous arriverons vers 18h") → false (message normal)', () => {
+  assert.strictEqual(_isFewShotNoisy('Bonjour, nous arriverons vers 18h'), false);
+});
+
+test('T75 — _isFewShotTemplate : "tpl_welcome" → true, "Charles" → false', () => {
+  assert.strictEqual(_isFewShotTemplate('tpl_welcome'), true,  'tpl_ → true');
+  assert.strictEqual(_isFewShotTemplate('tpl_'),        true,  'tpl_ seul → true');
+  assert.strictEqual(_isFewShotTemplate('Charles'),     false, 'nom humain → false');
+  assert.strictEqual(_isFewShotTemplate(null),          false, 'null → false');
+  assert.strictEqual(_isFewShotTemplate(''),            false, 'chaîne vide → false');
+});
+
+test('T76 — loadBenchmarkFewShotExamples : 6 lignes valides → max 3 retournés (seconde requête non appelée)', async () => {
+  const makeRow = (i) => ({
+    guest_msg:   `Bonjour voyageur ${i}, question normale`,
+    host_msg:    `Bonjour, voici la réponse ${i}`,
+    sender_type: 'owner',
+    sender_name: 'Charles',
+  });
+  const rows1 = Array.from({ length: 6 }, (_, i) => makeRow(i));
+  let secondQueryCalled = false;
+  const mockPool = {
+    query: async (_sql, _params) => {
+      if (_params.length === 2) {
+        return { rows: rows1 };
+      }
+      secondQueryCalled = true;
+      return { rows: [] };
+    },
+  };
+  const examples = await loadBenchmarkFewShotExamples(mockPool, 1, 'prop-1', new Date());
+  assert.strictEqual(examples.length, 3, 'max 3 exemples retenus (MAX_FEW_SHOT=3)');
+  assert.strictEqual(secondQueryCalled, false, 'seconde requête non appelée quand 3 exemples déjà obtenus');
+});
+
+test('T77 — buildTravelerSystemPrompt sans few-shot → prompt valide, section EXEMPLES absente', () => {
+  const ctx = buildTravelerContextFromRawData({
+    conversation: makeConv(), property: makeProp(), welcomeBook: makeWelcomeBook(),
+    deposit: { status: 'authorized', amount_cents: 0 },
+    registration: { done: true, guest_country: 'FR', unique_token: null },
+    atTimestamp: AT_BEFORE,
+  });
+  ctx._fewShot = [];
+  const prompt = buildTravelerSystemPrompt(ctx, { language: 'fr' });
+  assert.ok(typeof prompt === 'string' && prompt.length > 100, 'prompt est une string non vide');
+  assert.ok(!prompt.includes("EXEMPLES DE RÉPONSES DE L'HÔTE"), 'section EXEMPLES absente sans few-shots');
+});
+
+test('T78 — validateTravelerDecision préserve facts_used du modèle', () => {
+  const result = validateTravelerDecision({
+    action: 'REPLY',
+    reply: 'Le code est 1234.',
+    confidence: 0.95,
+    hallucination_risk: 'LOW',
+    facts_used: ['access_code', 'checkout_time'],
+  });
+  assert.deepStrictEqual(result.facts_used, ['access_code', 'checkout_time']);
+});
+
+test('T79 — validateTravelerDecision préserve missing_information pour ASK_OWNER', () => {
+  const result = validateTravelerDecision({
+    action: 'ASK_OWNER',
+    confidence: 0.8,
+    hallucination_risk: 'LOW',
+    missing_information: ['iron availability', 'blender availability'],
+  });
+  assert.deepStrictEqual(result.missing_information, ['iron availability', 'blender availability']);
+  assert.deepStrictEqual(result.facts_used, [], 'facts_used vide par défaut');
+});
+
+test('T80 — Prompt déclare few-shot comme style uniquement (non-factuel)', () => {
+  const ctx = buildTravelerContextFromRawData({
+    conversation: makeConv(), property: makeProp(), welcomeBook: makeWelcomeBook(),
+    deposit: { status: 'authorized', amount_cents: 0 },
+    registration: { done: true, guest_country: 'FR', unique_token: null },
+    atTimestamp: AT_BEFORE,
+  });
+  ctx._fewShot = [{ guest: 'Bonjour', host: 'Bonjour voyageur' }];
+  const prompt = buildTravelerSystemPrompt(ctx, { language: 'fr' });
+  assert.ok(
+    prompt.includes('pas source de vérité factuelle') || prompt.includes('style seulement'),
+    'few-shot déclaré comme non-factuel dans le bloc EXEMPLES'
+  );
+  assert.ok(
+    prompt.includes('Aucune valeur factuelle') || prompt.includes('style de réponse uniquement'),
+    'few-shot = style uniquement dans la hiérarchie SOURCES'
+  );
+});
+
 // ─── Résumé ───────────────────────────────────────────────────────────────────
 // Note : les tests async se terminent après ce bloc. Pour les suites async,
 // le process.exit est différé.
@@ -1079,5 +1243,5 @@ setImmediate(() => {
     console.log(`\n── Résultat ──────────────────────────────────────────────────────────────────`);
     console.log(`   ${passed} test(s) réussi(s)  |  ${failed} échec(s)\n`);
     if (failed > 0) process.exit(1);
-  }, 50);
+  }, 100);
 });
