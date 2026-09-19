@@ -30,6 +30,7 @@ const {
   _setDelay,
   VALID_ACTIONS,
   GOLDEN_IDS,
+  TRAVELER_DECISION_JSON_SCHEMA,
 } = require('../services/traveler-ai-v2');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -788,6 +789,33 @@ test('T33+T34+T49+T50+T51+T81-T85 — retry strategy 429, json_validate_failed, 
     assert.ok(!rK.failed_generation.includes('0612345678'), 'T85: numéro de téléphone masqué dans failed_generation');
     assert.ok(!rK.failed_generation.includes('spy@example.com'), 'T85: email masqué dans failed_generation');
 
+    // ── Scénario L (T86+T87+T88) : payload Groq contient json_schema strict ──
+    // Capture le body réellement sérialisé par _doFetch() pour vérifier A, B, C.
+    let capturedBodyL = null;
+    global.fetch = async (_url, opts) => {
+      capturedBodyL = JSON.parse(opts.body);
+      return {
+        status: 200, ok: true,
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify({
+            primary_action: 'NO_REPLY', action: 'NO_REPLY', actions: ['NO_REPLY'],
+            reply: null, confidence: 0.9, reasoning: 'schema test',
+            facts_used: [], missing_information: [], tags: [],
+            requires_human: false, hallucination_risk: 'LOW',
+          }) } }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }),
+      };
+    };
+    await callGroqTravelerV2({
+      systemPrompt: 'sys', history: [], guestMessage: 'hi',
+      apiKey: 'fake-key', label: 'T86',
+    });
+    assert.ok(capturedBodyL, 'T86: body fetch capturé');
+    assert.strictEqual(capturedBodyL.response_format?.type, 'json_schema',                   'T86 (A): response_format.type === json_schema');
+    assert.strictEqual(capturedBodyL.response_format?.json_schema?.strict, true,              'T87 (B): json_schema.strict === true');
+    assert.strictEqual(capturedBodyL.response_format?.json_schema?.name, 'traveler_decision', 'T88 (C): json_schema.name === traveler_decision');
+
   } finally {
     global.fetch = originalFetch;
     _setDelay(null);
@@ -1373,6 +1401,141 @@ test('T80 — Prompt déclare few-shot comme style uniquement (non-factuel)', ()
     prompt.includes('Aucune valeur factuelle') || prompt.includes('style de réponse uniquement'),
     'few-shot = style uniquement dans la hiérarchie SOURCES'
   );
+});
+
+// ─── Série V2.1.2 : Groq Strict Structured Outputs — TRAVELER_DECISION_JSON_SCHEMA ─
+
+console.log('\n── Série V2.1.2 : Groq Strict Structured Outputs — schema ──────────────────');
+
+test('T89 (D) — schema.type === "object"', () => {
+  assert.strictEqual(TRAVELER_DECISION_JSON_SCHEMA.type, 'object');
+});
+
+test('T90 (E) — schema.additionalProperties === false', () => {
+  assert.strictEqual(TRAVELER_DECISION_JSON_SCHEMA.additionalProperties, false);
+});
+
+test('T91 (F) — primary_action enum contient exactement VALID_ACTIONS', () => {
+  const schemaEnum = new Set(TRAVELER_DECISION_JSON_SCHEMA.properties.primary_action.enum);
+  assert.strictEqual(schemaEnum.size, VALID_ACTIONS.size, 'même nombre d\'actions');
+  for (const a of VALID_ACTIONS) {
+    assert.ok(schemaEnum.has(a), `primary_action enum contient ${a}`);
+  }
+  for (const a of schemaEnum) {
+    assert.ok(VALID_ACTIONS.has(a), `enum ne contient rien en dehors de VALID_ACTIONS (${a})`);
+  }
+});
+
+test('T92 (G) — actions.items.enum contient exactement VALID_ACTIONS', () => {
+  const itemsEnum = new Set(TRAVELER_DECISION_JSON_SCHEMA.properties.actions.items.enum);
+  assert.strictEqual(itemsEnum.size, VALID_ACTIONS.size);
+  for (const a of VALID_ACTIONS) {
+    assert.ok(itemsEnum.has(a), `actions.items.enum contient ${a}`);
+  }
+});
+
+test('T93 (H) — actions type === "array" (supporte plusieurs actions)', () => {
+  assert.strictEqual(TRAVELER_DECISION_JSON_SCHEMA.properties.actions.type, 'array');
+});
+
+test('T94 (I) — confidence type === "number"', () => {
+  assert.strictEqual(TRAVELER_DECISION_JSON_SCHEMA.properties.confidence.type, 'number');
+});
+
+test('T95 (J) — reply accepte string ET null (anyOf)', () => {
+  const anyOf = TRAVELER_DECISION_JSON_SCHEMA.properties.reply.anyOf;
+  assert.ok(Array.isArray(anyOf), 'reply.anyOf est un tableau');
+  const types = anyOf.map(e => e.type);
+  assert.ok(types.includes('string'), 'reply accepte string');
+  assert.ok(types.includes('null'),   'reply accepte null');
+});
+
+test('T96 (K) — facts_used array de string', () => {
+  const p = TRAVELER_DECISION_JSON_SCHEMA.properties.facts_used;
+  assert.strictEqual(p.type, 'array');
+  assert.strictEqual(p.items.type, 'string');
+});
+
+test('T97 (L) — missing_information array de string', () => {
+  const p = TRAVELER_DECISION_JSON_SCHEMA.properties.missing_information;
+  assert.strictEqual(p.type, 'array');
+  assert.strictEqual(p.items.type, 'string');
+});
+
+test('T98 (M) — requires_human boolean', () => {
+  assert.strictEqual(TRAVELER_DECISION_JSON_SCHEMA.properties.requires_human.type, 'boolean');
+});
+
+test('T99 (N) — hallucination_risk enum === [LOW, MEDIUM, HIGH]', () => {
+  const e = TRAVELER_DECISION_JSON_SCHEMA.properties.hallucination_risk.enum;
+  assert.deepStrictEqual([...e].sort(), ['HIGH', 'LOW', 'MEDIUM']);
+});
+
+test('T100 (O) — required contient exactement les champs décisionnels (sans alias/diagnostics)', () => {
+  const required = new Set(TRAVELER_DECISION_JSON_SCHEMA.required);
+  const expected = [
+    'primary_action', 'actions', 'reply',
+    'confidence', 'reasoning', 'facts_used', 'missing_information',
+    'requires_human', 'hallucination_risk',
+  ];
+  for (const f of expected) {
+    assert.ok(required.has(f), `"${f}" dans required`);
+  }
+  assert.strictEqual(required.size, expected.length, 'required contient exactement les champs attendus');
+  assert.ok(!required.has('action'), '"action" absent du schema (alias synthétisé par validateTravelerDecision)');
+  assert.ok(!required.has('tags'),   '"tags" absent du schema (diagnostic, défaut [] dans validateTravelerDecision)');
+});
+
+test('T101 (P) — validateTravelerDecision retourne action=primary_action même sans "action" du modèle', () => {
+  // Simule la sortie stricte Groq : "action" et "tags" absents (non dans le schema)
+  const r = validateTravelerDecision({
+    primary_action: 'ESCALATE',
+    actions: ['ESCALATE'],
+    // "action" intentionnellement absent — comme avec strict schema
+    reply: null, confidence: 0.95, reasoning: 'test',
+    requires_human: true, hallucination_risk: 'HIGH',
+    facts_used: [], missing_information: [],
+    // "tags" intentionnellement absent
+  });
+  assert.strictEqual(r.action, 'ESCALATE',        'action reconstruit depuis primary_action');
+  assert.strictEqual(r.action, r.primary_action,  'action === primary_action (alias)');
+  assert.deepStrictEqual(r.tags, [],              'tags = [] par défaut quand absent du modèle');
+});
+
+test('T102 (Q) — multi-action V2.1 toujours fonctionnel avec le nouveau schema', () => {
+  const r = validateTravelerDecision({
+    primary_action: 'EARLY_CHECKIN_REQUEST',
+    action: 'EARLY_CHECKIN_REQUEST',
+    actions: ['EARLY_CHECKIN_REQUEST', 'LATE_CHECKOUT_REQUEST'],
+    reply: null, confidence: 0.88, reasoning: 'multi', tags: [],
+    requires_human: false, hallucination_risk: 'LOW',
+    facts_used: [], missing_information: [],
+  });
+  assert.ok(r.actions.includes('EARLY_CHECKIN_REQUEST'), 'EARLY_CHECKIN_REQUEST dans actions');
+  assert.ok(r.actions.includes('LATE_CHECKOUT_REQUEST'),  'LATE_CHECKOUT_REQUEST dans actions');
+  assert.strictEqual(r.actions.length, 2, '2 actions');
+  assert.strictEqual(r.primary_action, 'EARLY_CHECKIN_REQUEST');
+});
+
+test('T103 (S) — module ne contient aucune fonction de production dans ses exports', () => {
+  const forbidden = ['sendBotMessage', 'transmitToChannex', 'escalateToOwner', 'sendNotification'];
+  const exports = require('../services/traveler-ai-v2');
+  for (const f of forbidden) {
+    assert.strictEqual(typeof exports[f], 'undefined', `${f} absent des exports (shadow only)`);
+  }
+  assert.ok(typeof exports.TRAVELER_DECISION_JSON_SCHEMA === 'object', 'TRAVELER_DECISION_JSON_SCHEMA exporté');
+});
+
+test('T104 — "action" absent du schema Groq : alias produit par validateTravelerDecision uniquement', () => {
+  const props = TRAVELER_DECISION_JSON_SCHEMA.properties;
+  assert.ok(!('action' in props), '"action" absent de properties (pas généré par Groq)');
+  assert.ok(!TRAVELER_DECISION_JSON_SCHEMA.required.includes('action'), '"action" absent de required');
+});
+
+test('T105 — "tags" absent du schema Groq : champ diagnostic, validateTravelerDecision retourne []', () => {
+  const props = TRAVELER_DECISION_JSON_SCHEMA.properties;
+  assert.ok(!('tags' in props), '"tags" absent de properties (non décisionnel)');
+  assert.ok(!TRAVELER_DECISION_JSON_SCHEMA.required.includes('tags'), '"tags" absent de required');
 });
 
 // ─── Résumé ───────────────────────────────────────────────────────────────────

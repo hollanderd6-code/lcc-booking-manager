@@ -31,6 +31,60 @@ const VALID_ACTIONS = new Set([
   'LATE_CHECKOUT_REQUEST', 'EARLY_CHECKIN_REQUEST', 'INVOICE_REQUEST', 'WELCOME_BASKET_REQUEST',
 ]);
 
+// ─── JSON Schema strict pour Groq Structured Outputs ─────────────────────────
+// Décrit CE QUE LE MODÈLE doit décider — pas les alias/champs de compatibilité.
+//
+// Champs EXCLUS intentionnellement du schema Groq :
+//   "action"  → alias backward compat, synthétisé par validateTravelerDecision
+//               (action = primaryAction) — le modèle ne doit pas le dupliquer.
+//   "tags"    → champ diagnostique optionnel, validateTravelerDecision retourne []
+//               par défaut — pas un champ décisionnel canonique.
+//
+// reply accepte string|null (null quand primary_action ≠ REPLY).
+const TRAVELER_DECISION_JSON_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'primary_action', 'actions', 'reply',
+    'confidence', 'reasoning', 'facts_used', 'missing_information',
+    'requires_human', 'hallucination_risk',
+  ],
+  properties: {
+    primary_action: {
+      type: 'string',
+      enum: [...VALID_ACTIONS],
+    },
+    actions: {
+      type: 'array',
+      items: { type: 'string', enum: [...VALID_ACTIONS] },
+    },
+    reply: {
+      anyOf: [{ type: 'string' }, { type: 'null' }],
+    },
+    confidence: {
+      type: 'number',
+    },
+    reasoning: {
+      type: 'string',
+    },
+    facts_used: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    missing_information: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    requires_human: {
+      type: 'boolean',
+    },
+    hallucination_risk: {
+      type: 'string',
+      enum: ['LOW', 'MEDIUM', 'HIGH'],
+    },
+  },
+};
+
 // Mêmes mots-clés d'urgence que requiresHumanIntervention() dans groq-ai.js
 const EMERGENCY_KEYWORDS = [
   'urgence','urgent','emergency','incendie','feu','fire','fuite','flood','inondation',
@@ -981,7 +1035,14 @@ async function callGroqTravelerV2({ systemPrompt, history, guestMessage, apiKey,
         messages,
         temperature: 0.2,
         max_tokens:  600,
-        response_format: { type: 'json_object' },
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name:   'traveler_decision',
+            strict: true,
+            schema: TRAVELER_DECISION_JSON_SCHEMA,
+          },
+        },
       }),
       signal: AbortSignal.timeout(30000),
     });
@@ -1930,4 +1991,5 @@ module.exports = {
   _setDelay,
   VALID_ACTIONS,
   GOLDEN_IDS,
+  TRAVELER_DECISION_JSON_SCHEMA,
 };
