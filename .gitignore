@@ -50,3 +50,8 @@ server.js.avant-caution-options
 server.js.avant-comptes-geres
 *.avant-double-createur
 *.avant-chevauchement
+
+# ── Résultats benchmark V2 (shadow mode) ──
+benchmark-results/*.json
+benchmark-results/*.txt
+benchmark-results/*.csv
