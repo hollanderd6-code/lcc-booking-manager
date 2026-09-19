@@ -1005,15 +1005,27 @@ async function callGroqTravelerV2({ systemPrompt, history, guestMessage, apiKey,
       res = await _doFetch();
     }
 
-    // ── 400 json_validate_failed — capture + 1 retry ──────────────
+    // ── 400 json_validate_failed / parsing failure — capture + 1 retry ──────
     if (res.status === 400) {
       let errPayload = null;
       try { errPayload = await res.json(); } catch (_e) { /* corps non JSON */ }
       const errCode   = errPayload?.error?.code;
+      const errMsg    = errPayload?.error?.message || 'Unknown 400 error';
       const rawFailed = errPayload?.error?.failed_generation || null;
       failedGenDiag   = rawFailed ? _maskSensitive(_safeDiagStr(rawFailed)).substring(0, 500) : null;
 
-      if (errCode === 'json_validate_failed') {
+      // Détecte toutes les variantes d'erreur de parsing Groq :
+      //   - error.code === 'json_validate_failed'  (variante historique)
+      //   - error.message contient 'parsing failed' (variante GOLDEN-003)
+      //   - error.message contient 'could not be parsed'
+      const isParsingFailure =
+        errCode === 'json_validate_failed'
+        || (typeof errMsg === 'string' && (
+            errMsg.toLowerCase().includes('parsing failed')
+            || errMsg.toLowerCase().includes('could not be parsed')
+          ));
+
+      if (isParsingFailure) {
         console.warn(`⚠️ ${tag} JSON_VALIDATE_FAILED`);
         if (failedGenDiag) console.warn(`   ${tag} failed_generation: ${failedGenDiag.substring(0, 200)}`);
         console.warn(`   ${tag} RETRY 1/1`);
@@ -1021,7 +1033,6 @@ async function callGroqTravelerV2({ systemPrompt, history, guestMessage, apiKey,
         // Si le retry échoue aussi, tombe dans le handler !res.ok ci-dessous
       } else {
         const latency_ms = Date.now() - startMs;
-        const errMsg = errPayload?.error?.message || 'Unknown 400 error';
         return _errResult(latency_ms, `HTTP 400: ${errMsg}`);
       }
     }

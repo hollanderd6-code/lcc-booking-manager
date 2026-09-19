@@ -531,9 +531,9 @@ test('T32d — _resolveHistoricalReply : property + is_bot_response=true → IA_
 
 console.log('\n── Série T9 : Rate limit 429 + json_validate_failed — retry ────────────────');
 
-// T33+T34+T49+T50+T51 sont groupés dans un seul test async pour éviter la race
+// T33+T34+T49+T50+T51+T81-T85 sont groupés dans un seul test async pour éviter la race
 // condition sur global.fetch (plusieurs tests async s'exécuteraient en concurrence).
-test('T33+T34+T49+T50+T51 — retry strategy 429 et json_validate_failed séquentiels', async () => {
+test('T33+T34+T49+T50+T51+T81-T85 — retry strategy 429, json_validate_failed, parsing_failed séquentiels', async () => {
   _setDelay(() => Promise.resolve());  // pas d'attente réelle en test
   const originalFetch = global.fetch;
 
@@ -646,6 +646,147 @@ test('T33+T34+T49+T50+T51 — retry strategy 429 et json_validate_failed séquen
     assert.ok(rF.error && rF.error.includes('400'), `T51: erreur HTTP 400 attendue, obtenu: ${rF.error}`);
     assert.strictEqual(rF.decision, null, 'T51: pas de décision sur double json_validate_failed');
     assert.strictEqual(rF.failed_generation, 'still broken json', 'T51: failed_generation capturé même sur double échec');
+
+    // ── Scénario G (T81) : HTTP 400 "Parsing failed" (message, sans code) → retry 1 fois → succès
+    let callCountG = 0;
+    global.fetch = async () => {
+      callCountG++;
+      if (callCountG === 1) {
+        return {
+          status: 400, ok: false,
+          json: async () => ({
+            error: {
+              message: 'Parsing failed. The model generated output that could not be parsed. Please adjust your prompt.',
+              failed_generation: 'malformed output g',
+            },
+          }),
+          text: async () => 'parsing error',
+        };
+      }
+      return {
+        status: 200, ok: true,
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify({
+            action: 'NO_REPLY', reply: null, confidence: 0.9,
+            reasoning: 'retry ok g', tags: [], requires_human: false, hallucination_risk: 'LOW',
+          }) } }],
+          usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 },
+        }),
+      };
+    };
+    const rG = await callGroqTravelerV2({
+      systemPrompt: 'sys', history: [], guestMessage: 'hi',
+      apiKey: 'fake-key', label: 'T81',
+    });
+    assert.strictEqual(callCountG, 2, 'T81: fetch appelé 2 fois (1 + 1 retry) sur "Parsing failed"');
+    assert.strictEqual(rG.error, null, 'T81: pas d\'erreur après retry réussi');
+    assert.strictEqual(rG.decision?.action, 'NO_REPLY', 'T81: décision correcte après retry');
+    assert.strictEqual(rG.failed_generation, 'malformed output g', 'T81: failed_generation capturé');
+
+    // ── Scénario H (T82) : HTTP 400 "could not be parsed" → retry 1 fois → succès ─
+    let callCountH = 0;
+    global.fetch = async () => {
+      callCountH++;
+      if (callCountH === 1) {
+        return {
+          status: 400, ok: false,
+          json: async () => ({
+            error: {
+              message: 'The output could not be parsed as valid JSON.',
+              failed_generation: 'malformed output h',
+            },
+          }),
+          text: async () => 'parsing error h',
+        };
+      }
+      return {
+        status: 200, ok: true,
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify({
+            action: 'ASK_OWNER', reply: null, confidence: 0.8,
+            reasoning: 'retry ok h', tags: [], requires_human: false, hallucination_risk: 'LOW',
+          }) } }],
+          usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 },
+        }),
+      };
+    };
+    const rH = await callGroqTravelerV2({
+      systemPrompt: 'sys', history: [], guestMessage: 'hi',
+      apiKey: 'fake-key', label: 'T82',
+    });
+    assert.strictEqual(callCountH, 2, 'T82: fetch appelé 2 fois sur "could not be parsed"');
+    assert.strictEqual(rH.error, null, 'T82: pas d\'erreur après retry');
+    assert.strictEqual(rH.decision?.action, 'ASK_OWNER', 'T82: décision correcte après retry');
+
+    // ── Scénario I (T83) : double "Parsing failed" → stop après 1 retry, pas d'exception ─
+    global.fetch = async () => ({
+      status: 400, ok: false,
+      json: async () => ({
+        error: {
+          message: 'Parsing failed. The model generated output that could not be parsed.',
+          failed_generation: 'double fail i',
+        },
+      }),
+      text: async () => 'still parsing error',
+    });
+    let didThrowI = false;
+    let rI;
+    try {
+      rI = await callGroqTravelerV2({
+        systemPrompt: 'sys', history: [], guestMessage: 'hi',
+        apiKey: 'fake-key', label: 'T83',
+      });
+    } catch (e) {
+      didThrowI = true;
+    }
+    assert.strictEqual(didThrowI, false, 'T83: pas d\'exception propagée sur double parsing failure');
+    assert.ok(rI.error && rI.error.includes('400'), `T83: erreur HTTP 400 après double parsing failure, obtenu: ${rI.error}`);
+    assert.strictEqual(rI.decision, null, 'T83: pas de décision sur double parsing failure');
+    assert.strictEqual(rI.failed_generation, 'double fail i', 'T83: failed_generation capturé sur double parsing failure');
+
+    // ── Scénario J (T84) : HTTP 400 non-parsing → PAS de retry ──────────────
+    let callCountJ = 0;
+    global.fetch = async () => {
+      callCountJ++;
+      return {
+        status: 400, ok: false,
+        json: async () => ({
+          error: {
+            code: 'invalid_api_key',
+            message: 'Invalid API key provided.',
+          },
+        }),
+        text: async () => 'invalid api key',
+      };
+    };
+    const rJ = await callGroqTravelerV2({
+      systemPrompt: 'sys', history: [], guestMessage: 'hi',
+      apiKey: 'fake-key', label: 'T84',
+    });
+    assert.strictEqual(callCountJ, 1, 'T84: fetch appelé exactement 1 fois sur 400 non-parsing (pas de retry)');
+    assert.ok(rJ.error && rJ.error.includes('400'), `T84: erreur HTTP 400 attendue, obtenu: ${rJ.error}`);
+    assert.ok(rJ.error && rJ.error.includes('Invalid API key'), `T84: message d\'erreur conservé, obtenu: ${rJ.error}`);
+    assert.strictEqual(rJ.decision, null, 'T84: pas de décision');
+
+    // ── Scénario K (T85) : failed_generation avec données sensibles → masquées ─
+    global.fetch = async () => ({
+      status: 400, ok: false,
+      json: async () => ({
+        error: {
+          code: 'json_validate_failed',
+          message: 'JSON validation failed',
+          failed_generation: 'Guest tel 0612345678 email spy@example.com blah blah',
+        },
+      }),
+      text: async () => 'bad',
+    });
+    const rK = await callGroqTravelerV2({
+      systemPrompt: 'sys', history: [], guestMessage: 'hi',
+      apiKey: 'fake-key', label: 'T85',
+    });
+    assert.ok(rK.failed_generation, 'T85: failed_generation présent');
+    assert.ok(!rK.failed_generation.includes('0612345678'), 'T85: numéro de téléphone masqué dans failed_generation');
+    assert.ok(!rK.failed_generation.includes('spy@example.com'), 'T85: email masqué dans failed_generation');
 
   } finally {
     global.fetch = originalFetch;
