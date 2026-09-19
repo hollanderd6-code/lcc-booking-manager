@@ -17,8 +17,10 @@ const {
   callGroqTravelerV2,
   formatBenchmarkReport,
   _maskSensitive,
+  _safeDiagStr,
   _resolveHistoricalReply,
   _buildFactsProvenance,
+  _estimateCallTokens,
   _setDelay,
   VALID_ACTIONS,
 } = require('../services/traveler-ai-v2');
@@ -520,16 +522,16 @@ test('T32d — _resolveHistoricalReply : property + is_bot_response=true → IA_
 
 // ─── Série T9 : Rate limit 429 ────────────────────────────────────────────────
 
-console.log('\n── Série T9 : Rate limit 429 — retry ────────────────────────────────────────');
+console.log('\n── Série T9 : Rate limit 429 + json_validate_failed — retry ────────────────');
 
-// T33 et T34 sont groupés dans un seul test async pour éviter la race condition
-// sur global.fetch (les deux s'exécuteraient en concurrence sinon).
-test('T33+T34 — 429 retry strategy : scénarios C et D séquentiels', async () => {
+// T33+T34+T49+T50+T51 sont groupés dans un seul test async pour éviter la race
+// condition sur global.fetch (plusieurs tests async s'exécuteraient en concurrence).
+test('T33+T34+T49+T50+T51 — retry strategy 429 et json_validate_failed séquentiels', async () => {
   _setDelay(() => Promise.resolve());  // pas d'attente réelle en test
   const originalFetch = global.fetch;
 
   try {
-    // ── Scénario C : 429 + retry-after → 1 retry → succès ────────────────
+    // ── Scénario C (T33) : 429 + retry-after → 1 retry → succès ─────────
     let callCount = 0;
     global.fetch = async () => {
       callCount++;
@@ -559,7 +561,7 @@ test('T33+T34 — 429 retry strategy : scénarios C et D séquentiels', async ()
     assert.strictEqual(rC.error, null, 'C: pas d\'erreur après retry');
     assert.strictEqual(rC.decision?.action, 'NO_REPLY', 'C: décision correcte après retry');
 
-    // ── Scénario D : 429 deux fois → erreur dans result, pas d'exception ─
+    // ── Scénario D (T34) : 429 deux fois → erreur dans result, pas d'exception ─
     global.fetch = async () => ({
       status: 429, ok: false,
       headers: { get: () => null },
@@ -571,6 +573,72 @@ test('T33+T34 — 429 retry strategy : scénarios C et D séquentiels', async ()
     });
     assert.ok(rD.error && rD.error.includes('429'), `D: erreur 429 attendue, obtenu: ${rD.error}`);
     assert.strictEqual(rD.decision, null, 'D: pas de décision');
+
+    // ── Scénario E (T49+T50) : json_validate_failed → retry 1 fois → succès ─
+    let callCountE = 0;
+    global.fetch = async () => {
+      callCountE++;
+      if (callCountE === 1) {
+        return {
+          status: 400, ok: false,
+          json: async () => ({
+            error: {
+              code: 'json_validate_failed',
+              message: 'JSON validation failed',
+              failed_generation: 'invalid json attempt',
+            },
+          }),
+          text: async () => 'bad request',
+        };
+      }
+      return {
+        status: 200, ok: true,
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify({
+            action: 'NO_REPLY', reply: null, confidence: 0.9,
+            reasoning: 'retry ok', tags: [], requires_human: false, hallucination_risk: 'LOW',
+          }) } }],
+          usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 },
+        }),
+      };
+    };
+    const rE = await callGroqTravelerV2({
+      systemPrompt: 'sys', history: [], guestMessage: 'hi',
+      apiKey: 'fake-key', label: 'T49',
+    });
+    // T49 : failed_generation capturé
+    assert.strictEqual(rE.failed_generation, 'invalid json attempt', 'T49: failed_generation capturé');
+    assert.strictEqual(rE.error, null, 'T49: pas d\'erreur après retry réussi');
+    assert.strictEqual(rE.decision?.action, 'NO_REPLY', 'T49: décision correcte après retry');
+    // T50 : exactement 2 appels fetch
+    assert.strictEqual(callCountE, 2, 'T50: fetch appelé exactement 2 fois (1 + 1 retry)');
+
+    // ── Scénario F (T51) : json_validate_failed deux fois → error, pas d'exception ─
+    global.fetch = async () => ({
+      status: 400, ok: false,
+      json: async () => ({
+        error: {
+          code: 'json_validate_failed',
+          message: 'Still invalid',
+          failed_generation: 'still broken json',
+        },
+      }),
+      text: async () => 'still bad',
+    });
+    let didThrowF = false;
+    let rF;
+    try {
+      rF = await callGroqTravelerV2({
+        systemPrompt: 'sys', history: [], guestMessage: 'hi',
+        apiKey: 'fake-key', label: 'T51',
+      });
+    } catch (e) {
+      didThrowF = true;
+    }
+    assert.strictEqual(didThrowF, false, 'T51: pas d\'exception propagée vers l\'appelant');
+    assert.ok(rF.error && rF.error.includes('400'), `T51: erreur HTTP 400 attendue, obtenu: ${rF.error}`);
+    assert.strictEqual(rF.decision, null, 'T51: pas de décision sur double json_validate_failed');
+    assert.strictEqual(rF.failed_generation, 'still broken json', 'T51: failed_generation capturé même sur double échec');
 
   } finally {
     global.fetch = originalFetch;
@@ -699,6 +767,128 @@ test('T39 — formatBenchmarkReport : sections diagnostic présentes', () => {
   assert.ok(report.includes('FACT   : checkout_time'), 'FACT/SOURCE/VALUE format présent');
   assert.ok(report.includes('SOURCE : property.departure_time'), 'SOURCE affiché');
   assert.ok(report.includes('VALUE  : 11:00'), 'VALUE affiché');
+});
+
+// ─── Série T12 : _safeDiagStr — sérialisation sûre ───────────────────────────
+
+console.log('\n── Série T12 : _safeDiagStr — sérialisation sûre ────────────────────────────');
+
+test('T40 — _safeDiagStr : string → inchangée', () => {
+  assert.strictEqual(_safeDiagStr('Bonjour voyageur'), 'Bonjour voyageur');
+});
+
+test('T41 — _safeDiagStr : number → string', () => {
+  assert.strictEqual(_safeDiagStr(42), '42');
+  assert.strictEqual(_safeDiagStr(3.14), '3.14');
+});
+
+test('T42 — _safeDiagStr : boolean → string', () => {
+  assert.strictEqual(_safeDiagStr(true), 'true');
+  assert.strictEqual(_safeDiagStr(false), 'false');
+});
+
+test('T43 — _safeDiagStr : null/undefined → chaîne vide', () => {
+  assert.strictEqual(_safeDiagStr(null), '');
+  assert.strictEqual(_safeDiagStr(undefined), '');
+});
+
+test('T44 — _safeDiagStr : objet JSONB → JSON string lisible', () => {
+  const obj = { amenities: ['wifi', 'parking'], floor: 3 };
+  const result = _safeDiagStr(obj);
+  assert.strictEqual(typeof result, 'string', 'résultat est une string');
+  assert.ok(result.includes('wifi'), 'contenu JSON présent');
+  assert.ok(!result.includes('[object Object]'), 'jamais [object Object]');
+});
+
+test('T45 — _safeDiagStr : array → JSON string', () => {
+  const arr = ['item1', 'item2'];
+  const result = _safeDiagStr(arr);
+  assert.ok(result.includes('item1'), 'item1 présent');
+  assert.ok(result.startsWith('['), 'commence par [');
+});
+
+test('T46 — _safeDiagStr : objet circulaire → "[UNSERIALIZABLE]"', () => {
+  const circ = {};
+  circ.self = circ;
+  assert.strictEqual(_safeDiagStr(circ), '[UNSERIALIZABLE]');
+});
+
+// ─── Série T13 : BUG 1 fix — null content ne crashe plus ─────────────────────
+
+console.log('\n── Série T13 : BUG 1 fix — null content ne crashe plus ─────────────────────');
+
+test('T47 — _buildFactsProvenance : practical_info objet JSONB → jamais [object Object]', () => {
+  const ctx = buildTravelerContextFromRawData({
+    conversation: makeConv({ platform: 'airbnb' }),
+    property: makeProp({ practical_info: { amenities: ['wifi', 'parking'], floor: 3 } }),
+    atTimestamp: AT_BEFORE,
+  });
+  const facts = _buildFactsProvenance(ctx);
+  const practical = facts.find(f => f.fact === 'practical_info');
+  assert.ok(practical, 'practical_info présent dans facts');
+  assert.ok(!practical.value.includes('[object Object]'), 'jamais [object Object]');
+  assert.ok(practical.value.includes('wifi') || practical.value.startsWith('{'), 'valeur JSON sérialisée');
+});
+
+test('T48 — null content : _maskSensitive(_safeDiagStr(null)).substring() ne lève jamais', () => {
+  let threw = false;
+  try {
+    const result = _maskSensitive(_safeDiagStr(null)).substring(0, 400);
+    assert.strictEqual(result, '', 'null → chaîne vide dans la chaîne complète');
+    _maskSensitive(_safeDiagStr(undefined)).substring(0, 400);
+    _maskSensitive(_safeDiagStr({ role: 'user', content: null })).substring(0, 400);
+  } catch (e) {
+    threw = true;
+  }
+  assert.strictEqual(threw, false, 'aucune exception avec null/undefined/objet (BUG 1 fix)');
+});
+
+// ─── Série T15 : Budget TPM pré-appel ────────────────────────────────────────
+
+console.log('\n── Série T15 : Budget TPM — _estimateCallTokens ─────────────────────────────');
+
+test('T52 — _estimateCallTokens : estimation conservative (chars/3 + 600)', () => {
+  // 300 + 150 + 150 = 600 chars history, 300 sys, 150 msg → total 750 → ceil(750/3)+600 = 250+600 = 850
+  const sys  = 'a'.repeat(300);
+  const hist = [{ role: 'user', content: 'b'.repeat(150) }, { role: 'assistant', content: 'c'.repeat(150) }];
+  const msg  = 'd'.repeat(150);
+  const est  = _estimateCallTokens(sys, hist, msg);
+  const expected = Math.ceil((300 + 300 + 150) / 3) + 600;  // 250 + 600 = 850
+  assert.strictEqual(est, expected, `estimation: ${est}, attendu: ${expected}`);
+
+  // Minimum absolu : inputs vides → 0 chars → ceil(0/3)+600 = 600
+  const min = _estimateCallTokens('', [], '');
+  assert.strictEqual(min, 600, 'minimum 600 (max_tokens output réservé même avec inputs vides)');
+
+  // Avec history contenant null content → pas d'exception (sécurité _safeDiagStr)
+  let threw = false;
+  try {
+    _estimateCallTokens('sys', [{ role: 'user', content: null }], 'msg');
+  } catch (e) {
+    threw = true;
+  }
+  assert.strictEqual(threw, false, 'null content dans history ne crashe pas _estimateCallTokens');
+});
+
+// ─── Série T16 : Few-shot metadata dans le rapport ───────────────────────────
+
+console.log('\n── Série T16 : Few-shot metadata — FEW_SHOT_SOURCE dans rapport ───────────────');
+
+test('T53 — formatBenchmarkReport : FEW_SHOT_SOURCE affiche source+sender_type+sender_name', () => {
+  const r = makeMockResult('CASE-001', 1);
+  r._diag.few_shot_sent_to_model = [
+    { idx: 1, guest: 'exemple', host: 'réponse', source: 'this_conv', sender_type: 'owner', sender_name: 'Charles' },
+    { idx: 2, guest: 'autre', host: 'autre hôte', source: 'other_conv', sender_type: 'system', sender_name: null },
+  ];
+  const report = formatBenchmarkReport([r]);
+  assert.ok(report.includes('FEW_SHOT_SOURCE:'), 'FEW_SHOT_SOURCE: présent dans rapport');
+  assert.ok(report.includes('source=this_conv'), 'source=this_conv affiché');
+  assert.ok(report.includes('sender_type=owner'), 'sender_type=owner affiché');
+  assert.ok(report.includes('sender_name=Charles'), 'sender_name=Charles affiché');
+  assert.ok(report.includes('source=other_conv'), 'source=other_conv affiché');
+  assert.ok(report.includes('sender_type=system'), 'sender_type=system affiché');
+  // sender_name null → affiche "—"
+  assert.ok(report.includes('sender_name=—'), 'sender_name null → "—" affiché');
 });
 
 // ─── Résumé ───────────────────────────────────────────────────────────────────

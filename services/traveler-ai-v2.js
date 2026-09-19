@@ -68,6 +68,29 @@ function _maskSensitive(text) {
     .replace(/https?:\/\/[^\s]*checkin\.html\?token=[^\s]*/gi, '[lien enregistrement masqué]');
 }
 
+// ─── Safe diagnostic serializer ───────────────────────────────────────────────
+
+/**
+ * Sérialise une valeur de manière sûre pour l'affichage dans les diagnostics.
+ * Ne lève jamais d'exception. Toujours retourne une string (jamais null).
+ *
+ * string         → string (inchangé)
+ * number/boolean → String(value)
+ * null/undefined → ""
+ * object/array   → JSON.stringify (tronqué)
+ * circulaire/non-sérialisable → "[UNSERIALIZABLE]"
+ */
+function _safeDiagStr(value) {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string')             return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch (_e) {
+    return '[UNSERIALIZABLE]';
+  }
+}
+
 // ─── Delay (injectable en test) ───────────────────────────────────────────────
 
 let _delay = (ms) => new Promise(r => setTimeout(r, ms));
@@ -82,8 +105,7 @@ function _setDelay(fn) {
  * voyageur cible — quelle que soit la nature de ce premier message.
  *
  * Règle : si le premier message suivant est lui-même 'guest', il n'y a pas de
- * réponse hôte directement associée au message cible (l'hôte répondait peut-être
- * au guest suivant, pas à celui-ci).
+ * réponse hôte directement associée au message cible.
  *
  * @param {object|null} nextRow  — première row messages après le message cible
  * @returns {{ reply: string|null, replyType: string }}
@@ -104,6 +126,7 @@ function _resolveHistoricalReply(nextRow) {
 /**
  * Retourne les champs KNOWN_TRUE du contexte avec leur source de données.
  * Usage : rapport diagnostic uniquement. Jamais injecté dans le prompt.
+ * Utilise _safeDiagStr pour sérialiser correctement les JSONB et autres types.
  */
 function _buildFactsProvenance(ctx) {
   const facts = [];
@@ -112,7 +135,7 @@ function _buildFactsProvenance(ctx) {
       facts.push({
         fact,
         source,
-        value: sensitive ? '[MASKED]' : _maskSensitive(String(value)).substring(0, 200),
+        value: sensitive ? '[MASKED]' : _maskSensitive(_safeDiagStr(value)).substring(0, 200),
       });
     }
   };
@@ -132,9 +155,9 @@ function _buildFactsProvenance(ctx) {
   add('contact_phone',         'welcome_book.contactPhone',                                      ctx.property.contact_phone,     true);
   for (const pf of (ctx.property_facts || [])) {
     facts.push({
-      fact:   `property_fact: ${pf.question.substring(0, 80)}`,
+      fact:   `property_fact: ${_safeDiagStr(pf.question).substring(0, 80)}`,
       source: 'property_facts (table)',
-      value:  _maskSensitive(pf.answer).substring(0, 200),
+      value:  _maskSensitive(_safeDiagStr(pf.answer)).substring(0, 200),
     });
   }
   return facts;
@@ -506,14 +529,14 @@ async function buildTravelerContext(pool, convId, opts = {}) {
 
 /**
  * Charge des exemples few-shot en respectant le filtre temporel
- * (anti-leakage : aucun message postérieur à beforeTs n'est inclus,
- * et la réponse à THIS message est exclue).
+ * (anti-leakage : aucun message postérieur à beforeTs n'est inclus).
+ * Chaque exemple inclut un champ _meta pour diagnostic (source, sender_type, sender_name).
  *
  * @param {object} pool
  * @param {number} convId
  * @param {string} propId
  * @param {Date}   beforeTs  — timestamp du message cible (exclusif)
- * @returns {Array<{guest:string, host:string}>}
+ * @returns {Array<{guest:string, host:string, _meta:object}>}
  */
 async function loadBenchmarkFewShotExamples(pool, convId, propId, beforeTs) {
   const examples = [];
@@ -526,7 +549,9 @@ async function loadBenchmarkFewShotExamples(pool, convId, propId, beforeTs) {
           AND m2.sender_type = 'guest'
           AND m2.created_at < m.created_at
           ORDER BY m2.created_at DESC LIMIT 1) AS guest_msg,
-         m.message AS host_msg
+         m.message AS host_msg,
+         m.sender_type,
+         m.sender_name
        FROM messages m
        WHERE m.conversation_id = $1
        AND m.sender_type IN ('owner', 'property')
@@ -540,7 +565,15 @@ async function loadBenchmarkFewShotExamples(pool, convId, propId, beforeTs) {
     );
     for (const row of thisConv.rows) {
       if (row.guest_msg && row.host_msg) {
-        examples.push({ guest: row.guest_msg.trim(), host: row.host_msg.trim() });
+        examples.push({
+          guest: row.guest_msg.trim(),
+          host:  row.host_msg.trim(),
+          _meta: {
+            source:      'this_conv',
+            sender_type: row.sender_type  || null,
+            sender_name: row.sender_name  || null,
+          },
+        });
       }
     }
 
@@ -553,7 +586,9 @@ async function loadBenchmarkFewShotExamples(pool, convId, propId, beforeTs) {
             AND m2.sender_type = 'guest'
             AND m2.created_at < m.created_at
             ORDER BY m2.created_at DESC LIMIT 1) AS guest_msg,
-           m.message AS host_msg
+           m.message AS host_msg,
+           m.sender_type,
+           m.sender_name
          FROM messages m
          JOIN conversations c ON c.id = m.conversation_id
          WHERE c.property_id = $1
@@ -570,7 +605,15 @@ async function loadBenchmarkFewShotExamples(pool, convId, propId, beforeTs) {
       );
       for (const row of otherConvs.rows) {
         if (row.guest_msg && row.host_msg && examples.length < 10) {
-          examples.push({ guest: row.guest_msg.trim(), host: row.host_msg.trim() });
+          examples.push({
+            guest: row.guest_msg.trim(),
+            host:  row.host_msg.trim(),
+            _meta: {
+              source:      'other_conv',
+              sender_type: row.sender_type  || null,
+              sender_name: row.sender_name  || null,
+            },
+          });
         }
       }
     }
@@ -753,29 +796,50 @@ ${fewShotBlock}
 `.trim();
 }
 
+// ─── Token estimation ────────────────────────────────────────────────────────
+
+/**
+ * Estime le coût en tokens d'un appel Groq (sans tokenizer).
+ * Conservateur : 1 token ≈ 3 caractères (UTF-8, mix FR/EN).
+ * Inclut max_tokens (600) pour la sortie.
+ *
+ * Utilisé pour le budget TPM pré-appel dans runTravelerBenchmark.
+ */
+function _estimateCallTokens(systemPrompt, history, guestMessage) {
+  const chars = (systemPrompt   || '').length
+    + (Array.isArray(history) ? history.reduce((s, h) => s + (_safeDiagStr(h.content) || '').length, 0) : 0)
+    + (guestMessage || '').length;
+  return Math.ceil(chars / 3) + 600;
+}
+
 // ─── Groq V2 Caller ──────────────────────────────────────────────────────────
 
 /**
  * Appelle Groq avec le prompt V2. Retourne le résultat brut + parsed + métriques.
  * En cas d'erreur, retourne {error: string} sans relancer.
- * Gère automatiquement 1 retry sur 429 (rate limit) avec respect du retry-after.
+ *
+ * Gère :
+ *   - 429 rate limit   → 1 retry avec retry-after (RATE_LIMIT / WAIT_MS / RETRY 1/1)
+ *   - 400 json_validate_failed → capture failed_generation + 1 retry (JSON_VALIDATE_FAILED / RETRY 1/1)
  *
  * @param {object} p
  * @param {string} p.systemPrompt
- * @param {Array}  p.history          — [{role, content}] AVANT le message cible
+ * @param {Array}  p.history
  * @param {string} p.guestMessage
  * @param {string} p.apiKey
  * @param {string} [p.model]
- * @param {string} [p.label]          — pour les logs
- * @returns {Promise<{raw:string|null, decision:object|null, latency_ms:number, tokens:object, error:string|null}>}
+ * @param {string} [p.label]
+ * @returns {Promise<{raw, decision, latency_ms, tokens, error, failed_generation}>}
  */
 async function callGroqTravelerV2({ systemPrompt, history, guestMessage, apiKey, model, label }) {
-  const startMs = Date.now();
+  const startMs  = Date.now();
   const useModel = model || GROQ_MODEL_V2;
+  const tag      = `[V2 ${label || '?'}]`;
+  let failedGenDiag = null;
 
   const messages = [
     { role: 'system', content: systemPrompt },
-    ...history.slice(-15),  // max 15 messages d'historique
+    ...history.slice(-15),
     { role: 'user', content: guestMessage },
   ];
 
@@ -797,12 +861,15 @@ async function callGroqTravelerV2({ systemPrompt, history, guestMessage, apiKey,
     });
   }
 
+  function _errResult(latency_ms, errMsg) {
+    return { raw: null, decision: null, latency_ms, tokens: {}, error: errMsg, failed_generation: failedGenDiag };
+  }
+
   try {
     let res = await _doFetch();
 
-    // 429 — 1 seul retry avec respect du retry-after
+    // ── 429 rate limit — 1 retry ──────────────────────────────────
     if (res.status === 429) {
-      const tag = `[V2 ${label || '?'}]`;
       console.warn(`⚠️ ${tag} RATE_LIMIT 429`);
       const retryAfterSec = parseInt(res.headers?.get?.('retry-after') || '0', 10);
       const waitMs = (retryAfterSec > 0 ? retryAfterSec * 1000 : 62000) + 2000;
@@ -812,11 +879,32 @@ async function callGroqTravelerV2({ systemPrompt, history, guestMessage, apiKey,
       res = await _doFetch();
     }
 
+    // ── 400 json_validate_failed — capture + 1 retry ──────────────
+    if (res.status === 400) {
+      let errPayload = null;
+      try { errPayload = await res.json(); } catch (_e) { /* corps non JSON */ }
+      const errCode   = errPayload?.error?.code;
+      const rawFailed = errPayload?.error?.failed_generation || null;
+      failedGenDiag   = rawFailed ? _maskSensitive(_safeDiagStr(rawFailed)).substring(0, 500) : null;
+
+      if (errCode === 'json_validate_failed') {
+        console.warn(`⚠️ ${tag} JSON_VALIDATE_FAILED`);
+        if (failedGenDiag) console.warn(`   ${tag} failed_generation: ${failedGenDiag.substring(0, 200)}`);
+        console.warn(`   ${tag} RETRY 1/1`);
+        res = await _doFetch();
+        // Si le retry échoue aussi, tombe dans le handler !res.ok ci-dessous
+      } else {
+        const latency_ms = Date.now() - startMs;
+        const errMsg = errPayload?.error?.message || 'Unknown 400 error';
+        return _errResult(latency_ms, `HTTP 400: ${errMsg}`);
+      }
+    }
+
     const latency_ms = Date.now() - startMs;
 
     if (!res.ok) {
       const errBody = await res.text().catch(() => '');
-      return { raw: null, decision: null, latency_ms, tokens: {}, error: `HTTP ${res.status}: ${errBody.substring(0, 200)}` };
+      return _errResult(latency_ms, `HTTP ${res.status}: ${errBody.substring(0, 200)}`);
     }
 
     const data = await res.json();
@@ -828,21 +916,21 @@ async function callGroqTravelerV2({ systemPrompt, history, guestMessage, apiKey,
     };
 
     if (!raw) {
-      return { raw: null, decision: null, latency_ms, tokens, error: 'Groq returned empty content' };
+      return { raw: null, decision: null, latency_ms, tokens, error: 'Groq returned empty content', failed_generation: failedGenDiag };
     }
 
     let decision = null;
     try {
       decision = validateTravelerDecision(raw);
     } catch (valErr) {
-      return { raw, decision: null, latency_ms, tokens, error: `Validation: ${valErr.message}` };
+      return { raw, decision: null, latency_ms, tokens, error: `Validation: ${valErr.message}`, failed_generation: failedGenDiag };
     }
 
-    return { raw, decision, latency_ms, tokens, error: null };
+    return { raw, decision, latency_ms, tokens, error: null, failed_generation: failedGenDiag };
 
   } catch (fetchErr) {
     const latency_ms = Date.now() - startMs;
-    return { raw: null, decision: null, latency_ms, tokens: {}, error: fetchErr.message };
+    return _errResult(latency_ms, fetchErr.message);
   }
 }
 
@@ -904,10 +992,10 @@ function validateTravelerDecision(raw) {
  * @param {object} pool
  * @param {object} opts
  * @param {number}  [opts.limit=5]
- * @param {string}  [opts.apiKey]     — défaut : GROQ_API_KEY env
+ * @param {string}  [opts.apiKey]
  * @param {string}  [opts.model]
  * @param {string}  [opts.baseUrl]
- * @returns {Promise<Array>}          — tableau de résultats par cas
+ * @returns {Promise<Array>}
  */
 async function runTravelerBenchmark(pool, opts = {}) {
   const limit  = opts.limit  || 5;
@@ -918,7 +1006,7 @@ async function runTravelerBenchmark(pool, opts = {}) {
     throw new Error('GROQ_API_KEY non disponible — benchmark annulé');
   }
 
-  // Budget TPM conservatif (Groq limite 8000 tokens/minute)
+  // Budget TPM (Groq limite 8000 tokens/minute)
   const TPM_SAFE_LIMIT = 7000;
   let tpmWindowStart  = Date.now();
   let tpmWindowTokens = 0;
@@ -941,14 +1029,13 @@ async function runTravelerBenchmark(pool, opts = {}) {
      AND c.property_id IS NOT NULL
      ORDER BY RANDOM()
      LIMIT $1`,
-    [limit * 3]  // sur-sélectionner, filtrer après
+    [limit * 3]
   );
 
   const candidates = msgRes.rows;
   const selected = [];
   const seenProps = new Set();
 
-  // Préférer la diversité de logements
   for (const m of candidates) {
     if (selected.length >= limit) break;
     if (!seenProps.has(m.property_id) || selected.length < limit) {
@@ -956,7 +1043,6 @@ async function runTravelerBenchmark(pool, opts = {}) {
       seenProps.add(m.property_id);
     }
   }
-  // Compléter si besoin
   for (const m of candidates) {
     if (selected.length >= limit) break;
     if (!selected.find(s => s.id === m.id)) selected.push(m);
@@ -981,8 +1067,6 @@ async function runTravelerBenchmark(pool, opts = {}) {
       message_at:      msg.created_at,
       guest_message:   msg.message,
       historical_reply: null,
-      // Property / welcome_book = état actuel (non versionné).
-      // L'historique des messages est reconstruit avec filtre temporel strict.
       historical_context_limitation: true,
       context:         null,
       decision:        null,
@@ -995,8 +1079,6 @@ async function runTravelerBenchmark(pool, opts = {}) {
 
     try {
       // Réponse historique — premier message de toute nature après le message cible.
-      // Si ce premier message est lui-même 'guest', il n'y a pas de réponse hôte
-      // directement associée au message cible (elle répondait au guest suivant).
       const histReply = await pool.query(
         `SELECT message, sender_type, sender_name, is_bot_response FROM messages
          WHERE conversation_id = $1
@@ -1020,23 +1102,23 @@ async function runTravelerBenchmark(pool, opts = {}) {
       const fewShot = await loadBenchmarkFewShotExamples(
         pool, msg.conversation_id, msg.property_id, new Date(msg.created_at)
       );
-      ctx._fewShot = fewShot;  // attaché au contexte pour le prompt
+      ctx._fewShot = fewShot;
 
       result.context = {
-        property_name: ctx.property.name,
-        stay_phase:    ctx.stay.phase,
-        checkin_date:  ctx.stay.checkin_date,
-        checkout_date: ctx.stay.checkout_date,
-        guest_lang:    ctx.guest.language,
-        access_code_known: !!ctx.access.code,
-        wifi_known:        !!ctx.wifi.password,
-        parking_known:     ctx.parking.known,
-        deposit_blocks:    ctx.deposit.blocks_access,
+        property_name:       ctx.property.name,
+        stay_phase:          ctx.stay.phase,
+        checkin_date:        ctx.stay.checkin_date,
+        checkout_date:       ctx.stay.checkout_date,
+        guest_lang:          ctx.guest.language,
+        access_code_known:   !!ctx.access.code,
+        wifi_known:          !!ctx.wifi.password,
+        parking_known:       ctx.parking.known,
+        deposit_blocks:      ctx.deposit.blocks_access,
         registration_blocks: ctx.registration.blocks_access,
-        few_shot_count:    fewShot.length,
+        few_shot_count:      fewShot.length,
       };
 
-      // Historique du message (avant le message cible)
+      // Historique (avant le message cible — filtre temporel strict)
       const histRes = await pool.query(
         `SELECT sender_type, message FROM messages
          WHERE conversation_id = $1
@@ -1053,22 +1135,39 @@ async function runTravelerBenchmark(pool, opts = {}) {
         content: m.message,
       }));
 
-      // Diagnostic — stocké pour le rapport, jamais envoyé à Groq
+      const systemPrompt = buildTravelerSystemPrompt(ctx);
+
+      // Diagnostic (stocké pour le rapport, jamais envoyé à Groq)
       result._diag = {
         stored_language:        msg.language || null,
         history_sent_to_model:  history.map(h => ({
           role:    h.role,
-          content: _maskSensitive(h.content).substring(0, 400),
+          content: _maskSensitive(_safeDiagStr(h.content)).substring(0, 400),
         })),
         few_shot_sent_to_model: fewShot.map((ex, i) => ({
-          idx:   i + 1,
-          guest: _maskSensitive(ex.guest).substring(0, 200),
-          host:  _maskSensitive(ex.host).substring(0, 200),
+          idx:         i + 1,
+          guest:       _maskSensitive(_safeDiagStr(ex.guest)).substring(0, 200),
+          host:        _maskSensitive(_safeDiagStr(ex.host)).substring(0, 200),
+          source:      ex._meta?.source      || 'unknown',
+          sender_type: ex._meta?.sender_type || null,
+          sender_name: ex._meta?.sender_name || null,
         })),
         facts_provenance: _buildFactsProvenance(ctx),
+        failed_generation: null,  // mis à jour après l'appel Groq
       };
 
-      const systemPrompt = buildTravelerSystemPrompt(ctx);
+      // Budget TPM pré-appel — estimation conservatrice
+      const estimatedTokens = _estimateCallTokens(systemPrompt, history, msg.message);
+      if (tpmWindowTokens + estimatedTokens >= TPM_SAFE_LIMIT) {
+        const elapsed = Date.now() - tpmWindowStart;
+        const waitMs  = Math.max(0, 62000 - elapsed);
+        if (waitMs > 0) {
+          console.log(`[V2-BENCH] TPM PRE-BUDGET (${tpmWindowTokens} utilisés + ~${estimatedTokens} estimés ≥ ${TPM_SAFE_LIMIT}) — pause ${waitMs}ms`);
+          await _delay(waitMs);
+        }
+        tpmWindowStart  = Date.now();
+        tpmWindowTokens = 0;
+      }
 
       const groqResult = await callGroqTravelerV2({
         systemPrompt,
@@ -1084,6 +1183,12 @@ async function runTravelerBenchmark(pool, opts = {}) {
       result.latency_ms   = groqResult.latency_ms;
       result.tokens       = groqResult.tokens;
       result.error        = groqResult.error;
+      result._diag.failed_generation = groqResult.failed_generation || null;
+
+      // Mise à jour du budget TPM avec les tokens réels
+      if (groqResult.tokens?.total) {
+        tpmWindowTokens += groqResult.tokens.total;
+      }
 
       if (groqResult.decision) {
         console.log(`   ✅ action=${groqResult.decision.action} conf=${groqResult.decision.confidence} risk=${groqResult.decision.hallucination_risk} (${groqResult.latency_ms}ms)`);
@@ -1097,21 +1202,6 @@ async function runTravelerBenchmark(pool, opts = {}) {
     }
 
     results.push(result);
-
-    // Budget TPM — pause préventive si on approche la limite (Groq 8000 TPM)
-    if (result.tokens?.total) {
-      tpmWindowTokens += result.tokens.total;
-      if (tpmWindowTokens >= TPM_SAFE_LIMIT) {
-        const elapsed = Date.now() - tpmWindowStart;
-        const waitMs  = Math.max(0, 62000 - elapsed);
-        if (waitMs > 0) {
-          console.log(`[V2-BENCH] TPM_SAFE_LIMIT (${tpmWindowTokens} tokens en ${Math.round(elapsed / 1000)}s) — pause ${waitMs}ms`);
-          await _delay(waitMs);
-        }
-        tpmWindowStart  = Date.now();
-        tpmWindowTokens = 0;
-      }
-    }
   }
 
   return results;
@@ -1121,14 +1211,12 @@ async function runTravelerBenchmark(pool, opts = {}) {
 
 /**
  * Formate les résultats benchmark en rapport texte lisible.
- * Masque les données sensibles (codes, téléphones, emails).
- * Toujours ordonné CASE-001 → CASE-00N.
+ * Masque les données sensibles. Toujours ordonné CASE-001 → CASE-00N.
  *
  * @param {Array} results
  * @returns {string}
  */
 function formatBenchmarkReport(results) {
-  // Ordre garanti CASE-001 → CASE-00N quelle que soit l'insertion
   const sorted = [...results].sort((a, b) => a.case_id.localeCompare(b.case_id));
 
   const lines = [
@@ -1154,11 +1242,11 @@ function formatBenchmarkReport(results) {
     }
     lines.push('');
     lines.push('CURRENT_GUEST_MESSAGE (envoyé au modèle) :');
-    lines.push(`  "${_maskSensitive(r.guest_message)}"`);
+    lines.push(`  "${_maskSensitive(_safeDiagStr(r.guest_message))}"`);
     lines.push('');
     if (r.historical_reply) {
       lines.push(`RÉPONSE HISTORIQUE (${r.historical_reply_type || '?'}) :`);
-      lines.push(`  "${_maskSensitive(r.historical_reply)}"`);
+      lines.push(`  "${_maskSensitive(_safeDiagStr(r.historical_reply))}"`);
     } else {
       lines.push(`RÉPONSE HISTORIQUE : (aucune — ${r.historical_reply_type || 'AUCUNE'})`);
     }
@@ -1169,11 +1257,16 @@ function formatBenchmarkReport(results) {
       lines.push(`  Action     : ${d.action} (confidence: ${d.confidence.toFixed(2)})`);
       lines.push(`  Reasoning  : ${d.reasoning}`);
       if (d.reply) {
-        lines.push(`  Reply      : "${_maskSensitive(d.reply)}"`);
+        lines.push(`  Reply      : "${_maskSensitive(_safeDiagStr(d.reply))}"`);
       }
       lines.push(`  H-Risk     : ${d.hallucination_risk} | Tags: ${d.tags.join(', ') || '—'} | requires_human: ${d.requires_human}`);
     } else {
       lines.push(`GROQ V2 : ERREUR — ${r.error || 'inconnue'}`);
+    }
+    if (r._diag?.failed_generation) {
+      lines.push('');
+      lines.push('JSON_FAILURE :');
+      lines.push(`  ${r._diag.failed_generation.replace(/\n/g, ' ').substring(0, 400)}`);
     }
     lines.push('');
     lines.push(`MÉTRIQUES : ${r.latency_ms}ms | tokens: ${r.tokens?.input || '?'} in / ${r.tokens?.output || '?'} out / ${r.tokens?.total || '?'} total`);
@@ -1190,7 +1283,7 @@ function formatBenchmarkReport(results) {
         lines.push('  (aucun)');
       } else {
         for (const h of hist) {
-          const preview = (h.content || '').substring(0, 200).replace(/\n/g, ' ');
+          const preview = (_safeDiagStr(h.content) || '').substring(0, 200).replace(/\n/g, ' ');
           lines.push(`  [${h.role}] "${preview}"`);
         }
       }
@@ -1204,6 +1297,7 @@ function formatBenchmarkReport(results) {
         for (const ex of fs) {
           lines.push(`  Ex ${ex.idx} — Voyageur: "${ex.guest}"`);
           lines.push(`          Hôte:    "${ex.host}"`);
+          lines.push(`          FEW_SHOT_SOURCE: source=${ex.source || '?'} sender_type=${ex.sender_type || '?'} sender_name=${ex.sender_name || '—'}`);
         }
       }
       lines.push('');
@@ -1253,8 +1347,10 @@ module.exports = {
   runTravelerBenchmark,
   formatBenchmarkReport,
   _maskSensitive,
+  _safeDiagStr,
   _resolveHistoricalReply,
   _buildFactsProvenance,
+  _estimateCallTokens,
   _setDelay,
   VALID_ACTIONS,
 };
