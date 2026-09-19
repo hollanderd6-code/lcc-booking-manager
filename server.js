@@ -47,6 +47,7 @@ const { generateWelcomeBookHTML } = require('./services/welcomeGenerator');
 // ============================================
 const { setupChatRoutes } = require('./routes/chat_routes');
 const { comptesAutorises } = require('./utils/agency');
+const { normalizeDateOnly, getOccupiedNights } = require('./utils/dates');
 const createSmartLocksRoutes = require('./routes/smart-locks-routes');
 
 // ============================================
@@ -42086,15 +42087,9 @@ app.post('/api/channex/webhook', async (req, res) => {
           if (prop && prop.channex_enabled && prop.channex_property_id) {
             // ✅ Channex veut seulement les dates qui changent, pas 500 jours
             // On envoie uniquement les dates de CETTE réservation
-            const dates_blocked = [];
-            if (result.start_date && result.end_date) {
-              let d = new Date(result.start_date);
-              const end = new Date(result.end_date);
-              while (d < end) {
-                dates_blocked.push(d.toISOString().substring(0, 10));
-                d.setDate(d.getDate() + 1);
-              }
-            }
+            const dates_blocked = (result.start_date && result.end_date)
+              ? getOccupiedNights(result.start_date, result.end_date)
+              : [];
             // Pour une annulation, les dates redeviennent disponibles (dates_blocked vide = disponible)
             // On envoie quand même les dates pour mettre à jour la dispo
             await pushAvailability(pool, {
@@ -42108,6 +42103,18 @@ app.post('/api/channex/webhook', async (req, res) => {
           }
         } catch (availErr) {
           console.warn(`⚠️ [CHANNEX SYNC] Erreur push availability (non bloquant):`, availErr.message);
+          // channex_logs : status='error' déjà inscrit par pushAvailability avant rethrow.
+          // Rattrapage dans 45s via triggerChannexAvailabilitySync — logique unique :
+          // reservations + bhguest_holds, AT TIME ZONE 'Europe/Paris'.
+          // N'utilise PAS dates_blocked du premier appel. Source de vérité = DB.
+          // LIMITATION : non-persistant si le process redémarre dans les 45s.
+          // Filet de sécurité final : cron quotidien 4h (L36951).
+          const _retryPropId = result.property_id;
+          const _retryUid    = result.uid;
+          setTimeout(async () => {
+            console.log(`🔁 [CHANNEX_AVAILABILITY_RETRY] property=${_retryPropId} uid=${_retryUid}`);
+            await triggerChannexAvailabilitySync(_retryPropId, null);
+          }, 45000);
         }
       }
 
@@ -42601,13 +42608,7 @@ app.post('/api/channex/webhook', async (req, res) => {
         try {
           const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
           const todayStr = nowParis.toISOString().split('T')[0];
-          // result.start_date peut être un objet Date (retour pg) ou une string "YYYY-MM-DD"
-          let arrivalStr = '';
-          if (result.start_date instanceof Date) {
-            arrivalStr = result.start_date.toISOString().slice(0, 10);
-          } else if (typeof result.start_date === 'string') {
-            arrivalStr = result.start_date.slice(0, 10);
-          }
+          const arrivalStr = normalizeDateOnly(result.start_date) || '';
           const isArrivalToday = arrivalStr === todayStr;
 
           // Calcul des jours avant arrivée pour détecter les résas last-minute
