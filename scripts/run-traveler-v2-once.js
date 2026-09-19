@@ -61,8 +61,20 @@ async function run() {
   let pool = null;
   try {
     const { Pool } = require('pg');
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    // Même config SSL que le pool principal server.js (L2066-2068) :
+    // Render Postgres utilise un certificat auto-signé → rejectUnauthorized: false en prod.
+    // rejectUnauthorized: false est scopé à ce pool uniquement — pas de changement TLS global.
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    });
 
+    // Diagnostic de connectivité DB avant tout appel benchmark
+    console.log('[V2-BENCH] STAGE: DB_CONNECT');
+    await pool.query('SELECT 1');
+    console.log('[V2-BENCH] STAGE: DB_QUERY — connexion OK');
+
+    console.log('[V2-BENCH] STAGE: GROQ_REQUEST — démarrage des cas');
     const results = await runTravelerBenchmark(pool, {
       limit:   BENCHMARK_LIMIT,
       model,

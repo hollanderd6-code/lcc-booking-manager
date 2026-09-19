@@ -182,6 +182,67 @@ test('L12 — run-traveler-v2-once.js n\'importe pas sendBotMessage ni transmitT
   assert.ok(!src.includes('escalateToOwner'),  'escalateToOwner absent du launcher');
 });
 
+// ─── Série L6 : Configuration SSL pool benchmark ──────────────────────────────
+
+console.log('\n── Série L6 : Configuration SSL — alignement avec production ────────────────');
+
+test('L13 — run-traveler-v2-once.js utilise la même config SSL que server.js', () => {
+  const fs   = require('fs');
+  const path = require('path');
+  const launcherSrc = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'run-traveler-v2-once.js'), 'utf8');
+  const serverSrc   = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+
+  // server.js utilise: ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  assert.ok(
+    serverSrc.includes("ssl: process.env.NODE_ENV === 'production'"),
+    'server.js utilise ssl conditionnel sur NODE_ENV'
+  );
+  assert.ok(
+    launcherSrc.includes("ssl: process.env.NODE_ENV === 'production'"),
+    'launcher utilise la même config SSL conditionnelle'
+  );
+  assert.ok(
+    launcherSrc.includes('rejectUnauthorized: false'),
+    'rejectUnauthorized: false présent (scopé au pool, pas global)'
+  );
+});
+
+test('L14 — benchmark-traveler-ai-v2.js utilise aussi la même config SSL', () => {
+  const fs   = require('fs');
+  const path = require('path');
+  const cliSrc = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'benchmark-traveler-ai-v2.js'), 'utf8');
+  assert.ok(
+    cliSrc.includes("ssl: process.env.NODE_ENV === 'production'"),
+    'CLI benchmark utilise la même config SSL conditionnelle'
+  );
+});
+
+test('L15 — NODE_TLS_REJECT_UNAUTHORIZED=0 absent de tous les fichiers benchmark', () => {
+  const fs   = require('fs');
+  const path = require('path');
+  const files = [
+    'scripts/run-traveler-v2-once.js',
+    'scripts/benchmark-traveler-ai-v2.js',
+    'services/traveler-ai-v2.js',
+  ];
+  for (const f of files) {
+    const src = fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+    assert.ok(
+      !src.includes('NODE_TLS_REJECT_UNAUTHORIZED'),
+      `NODE_TLS_REJECT_UNAUTHORIZED absent de ${f}`
+    );
+  }
+});
+
+test('L16 — launcher contient les logs de diagnostic par étape (DB_CONNECT, DB_QUERY, GROQ_REQUEST)', () => {
+  const fs   = require('fs');
+  const path = require('path');
+  const src  = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'run-traveler-v2-once.js'), 'utf8');
+  assert.ok(src.includes('DB_CONNECT'),    'log DB_CONNECT présent');
+  assert.ok(src.includes('DB_QUERY'),      'log DB_QUERY présent');
+  assert.ok(src.includes('GROQ_REQUEST'),  'log GROQ_REQUEST présent');
+});
+
 // ─── Résumé ───────────────────────────────────────────────────────────────────
 setImmediate(() => {
   console.log(`\n── Résultat ──────────────────────────────────────────────────────────────────`);

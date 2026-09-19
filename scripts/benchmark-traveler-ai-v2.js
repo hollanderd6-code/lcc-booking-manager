@@ -62,7 +62,11 @@ if (!fs.existsSync(resultsDir)) {
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  // Même config SSL que server.js production (rejectUnauthorized: false en prod).
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  });
 
   console.log(`\n🚀 Groq Traveler AI V2 — Shadow Mode Benchmark`);
   console.log(`   limit=${limit}  model=${model}`);
