@@ -68,6 +68,78 @@ function _maskSensitive(text) {
     .replace(/https?:\/\/[^\s]*checkin\.html\?token=[^\s]*/gi, '[lien enregistrement masqué]');
 }
 
+// ─── Delay (injectable en test) ───────────────────────────────────────────────
+
+let _delay = (ms) => new Promise(r => setTimeout(r, ms));
+function _setDelay(fn) {
+  _delay = (fn === null) ? ((ms) => new Promise(r => setTimeout(r, ms))) : fn;
+}
+
+// ─── Historical Reply — résolution pure ──────────────────────────────────────
+
+/**
+ * Résout la réponse historique à partir du PREMIER message suivant le message
+ * voyageur cible — quelle que soit la nature de ce premier message.
+ *
+ * Règle : si le premier message suivant est lui-même 'guest', il n'y a pas de
+ * réponse hôte directement associée au message cible (l'hôte répondait peut-être
+ * au guest suivant, pas à celui-ci).
+ *
+ * @param {object|null} nextRow  — première row messages après le message cible
+ * @returns {{ reply: string|null, replyType: string }}
+ */
+function _resolveHistoricalReply(nextRow) {
+  const isHostReply = nextRow && ['owner', 'property', 'system'].includes(nextRow.sender_type);
+  if (!isHostReply) return { reply: null, replyType: 'AUCUNE' };
+  let replyType;
+  if      (nextRow.sender_type === 'system')   replyType = 'IA_V1';
+  else if (nextRow.is_bot_response === true)   replyType = 'IA_AUTO';
+  else if (nextRow.sender_type === 'owner')    replyType = 'HUMAIN';
+  else                                         replyType = 'INCONNU';
+  return { reply: nextRow.message, replyType };
+}
+
+// ─── Facts Provenance ─────────────────────────────────────────────────────────
+
+/**
+ * Retourne les champs KNOWN_TRUE du contexte avec leur source de données.
+ * Usage : rapport diagnostic uniquement. Jamais injecté dans le prompt.
+ */
+function _buildFactsProvenance(ctx) {
+  const facts = [];
+  const add = (fact, source, value, sensitive = false) => {
+    if (value !== null && value !== undefined && value !== '') {
+      facts.push({
+        fact,
+        source,
+        value: sensitive ? '[MASKED]' : _maskSensitive(String(value)).substring(0, 200),
+      });
+    }
+  };
+  add('access_code',           'property.access_code / welcome_book.keyboxCode',                ctx.access.code,                true);
+  add('access_instructions',   'property.access_instructions / welcome_book.accessInstructions', ctx.access.instructions);
+  add('wifi_name',             'property.wifi_name / welcome_book.wifiSSID',                    ctx.wifi.name);
+  add('wifi_password',         'property.wifi_password / welcome_book.wifiPassword',            ctx.wifi.password,              true);
+  add('checkin_time',          'property.arrival_time',                                          ctx.stay.checkin_time);
+  add('checkout_time',         'property.departure_time / welcome_book.checkoutTime',            ctx.stay.checkout_time);
+  add('address',               'property.address / welcome_book.address+city',                   ctx.property.address);
+  add('practical_info',        'property.practical_info',                                        ctx.property.practical_info);
+  add('equipment_list',        'welcome_book.equipmentList',                                     ctx.equipment.list);
+  add('parking_info',          'welcome_book.parkingInfo',                                       ctx.parking.info);
+  add('important_rules',       'welcome_book.importantRules',                                    ctx.house_rules.important_rules);
+  add('checkout_instructions', 'welcome_book.checkoutInstructions',                              ctx.checkout.instructions);
+  add('welcome_description',   'welcome_book.welcomeDescription',                                ctx.property.welcome_description);
+  add('contact_phone',         'welcome_book.contactPhone',                                      ctx.property.contact_phone,     true);
+  for (const pf of (ctx.property_facts || [])) {
+    facts.push({
+      fact:   `property_fact: ${pf.question.substring(0, 80)}`,
+      source: 'property_facts (table)',
+      value:  _maskSensitive(pf.answer).substring(0, 200),
+    });
+  }
+  return facts;
+}
+
 // ─── Context Builder — pure ──────────────────────────────────────────────────
 
 /**
@@ -686,6 +758,7 @@ ${fewShotBlock}
 /**
  * Appelle Groq avec le prompt V2. Retourne le résultat brut + parsed + métriques.
  * En cas d'erreur, retourne {error: string} sans relancer.
+ * Gère automatiquement 1 retry sur 429 (rate limit) avec respect du retry-after.
  *
  * @param {object} p
  * @param {string} p.systemPrompt
@@ -706,8 +779,8 @@ async function callGroqTravelerV2({ systemPrompt, history, guestMessage, apiKey,
     { role: 'user', content: guestMessage },
   ];
 
-  try {
-    const res = await fetch(GROQ_API_URL, {
+  async function _doFetch() {
+    return fetch(GROQ_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -722,6 +795,22 @@ async function callGroqTravelerV2({ systemPrompt, history, guestMessage, apiKey,
       }),
       signal: AbortSignal.timeout(30000),
     });
+  }
+
+  try {
+    let res = await _doFetch();
+
+    // 429 — 1 seul retry avec respect du retry-after
+    if (res.status === 429) {
+      const tag = `[V2 ${label || '?'}]`;
+      console.warn(`⚠️ ${tag} RATE_LIMIT 429`);
+      const retryAfterSec = parseInt(res.headers?.get?.('retry-after') || '0', 10);
+      const waitMs = (retryAfterSec > 0 ? retryAfterSec * 1000 : 62000) + 2000;
+      console.warn(`   ${tag} WAIT_MS: ${waitMs}`);
+      await _delay(waitMs);
+      console.warn(`   ${tag} RETRY 1/1`);
+      res = await _doFetch();
+    }
 
     const latency_ms = Date.now() - startMs;
 
@@ -829,6 +918,11 @@ async function runTravelerBenchmark(pool, opts = {}) {
     throw new Error('GROQ_API_KEY non disponible — benchmark annulé');
   }
 
+  // Budget TPM conservatif (Groq limite 8000 tokens/minute)
+  const TPM_SAFE_LIMIT = 7000;
+  let tpmWindowStart  = Date.now();
+  let tpmWindowTokens = 0;
+
   // Sélection de messages diversifiés
   const msgRes = await pool.query(
     `SELECT m.id, m.message, m.created_at, m.conversation_id,
@@ -896,32 +990,25 @@ async function runTravelerBenchmark(pool, opts = {}) {
       latency_ms:      null,
       tokens:          null,
       error:           null,
+      _diag:           null,
     };
 
     try {
-      // Réponse historique (pour comparaison uniquement — jamais injectée dans le prompt)
-      // sender_type = 'system'           → IA_V1  (Groq via integrated-chat-handler sendBotMessage)
-      // sender_type = 'property' + is_bot_response = TRUE → IA_AUTO (cron/welcome/sendAutomatedMessage)
-      // sender_type = 'owner'            → HUMAIN  (réponse manuelle hôte)
-      // autres cas                       → INCONNU
+      // Réponse historique — premier message de toute nature après le message cible.
+      // Si ce premier message est lui-même 'guest', il n'y a pas de réponse hôte
+      // directement associée au message cible (elle répondait au guest suivant).
       const histReply = await pool.query(
         `SELECT message, sender_type, sender_name, is_bot_response FROM messages
          WHERE conversation_id = $1
-         AND sender_type IN ('owner', 'property', 'system')
-         AND sender_type != 'internal_note'
+         AND sender_type NOT IN ('internal_note')
          AND created_at > $2
          ORDER BY created_at ASC LIMIT 1`,
         [msg.conversation_id, msg.created_at]
       );
-      const hr = histReply.rows[0] || null;
-      result.historical_reply = hr?.message || null;
-      result.historical_reply_type = (() => {
-        if (!hr) return 'AUCUNE';
-        if (hr.sender_type === 'system') return 'IA_V1';
-        if (hr.is_bot_response === true) return 'IA_AUTO';
-        if (hr.sender_type === 'owner')  return 'HUMAIN';
-        return 'INCONNU';
-      })();
+      const { reply: histReplyMsg, replyType: histReplyType } =
+        _resolveHistoricalReply(histReply.rows[0] || null);
+      result.historical_reply      = histReplyMsg;
+      result.historical_reply_type = histReplyType;
 
       // Contexte au moment du message
       const ctx = await buildTravelerContext(pool, msg.conversation_id, {
@@ -966,6 +1053,21 @@ async function runTravelerBenchmark(pool, opts = {}) {
         content: m.message,
       }));
 
+      // Diagnostic — stocké pour le rapport, jamais envoyé à Groq
+      result._diag = {
+        stored_language:        msg.language || null,
+        history_sent_to_model:  history.map(h => ({
+          role:    h.role,
+          content: _maskSensitive(h.content).substring(0, 400),
+        })),
+        few_shot_sent_to_model: fewShot.map((ex, i) => ({
+          idx:   i + 1,
+          guest: _maskSensitive(ex.guest).substring(0, 200),
+          host:  _maskSensitive(ex.host).substring(0, 200),
+        })),
+        facts_provenance: _buildFactsProvenance(ctx),
+      };
+
       const systemPrompt = buildTravelerSystemPrompt(ctx);
 
       const groqResult = await callGroqTravelerV2({
@@ -995,6 +1097,21 @@ async function runTravelerBenchmark(pool, opts = {}) {
     }
 
     results.push(result);
+
+    // Budget TPM — pause préventive si on approche la limite (Groq 8000 TPM)
+    if (result.tokens?.total) {
+      tpmWindowTokens += result.tokens.total;
+      if (tpmWindowTokens >= TPM_SAFE_LIMIT) {
+        const elapsed = Date.now() - tpmWindowStart;
+        const waitMs  = Math.max(0, 62000 - elapsed);
+        if (waitMs > 0) {
+          console.log(`[V2-BENCH] TPM_SAFE_LIMIT (${tpmWindowTokens} tokens en ${Math.round(elapsed / 1000)}s) — pause ${waitMs}ms`);
+          await _delay(waitMs);
+        }
+        tpmWindowStart  = Date.now();
+        tpmWindowTokens = 0;
+      }
+    }
   }
 
   return results;
@@ -1005,11 +1122,15 @@ async function runTravelerBenchmark(pool, opts = {}) {
 /**
  * Formate les résultats benchmark en rapport texte lisible.
  * Masque les données sensibles (codes, téléphones, emails).
+ * Toujours ordonné CASE-001 → CASE-00N.
  *
  * @param {Array} results
  * @returns {string}
  */
 function formatBenchmarkReport(results) {
+  // Ordre garanti CASE-001 → CASE-00N quelle que soit l'insertion
+  const sorted = [...results].sort((a, b) => a.case_id.localeCompare(b.case_id));
+
   const lines = [
     `╔${'═'.repeat(70)}╗`,
     `║  GROQ TRAVELER AI V2 — SHADOW MODE BENCHMARK REPORT${' '.repeat(18)}║`,
@@ -1018,26 +1139,28 @@ function formatBenchmarkReport(results) {
     '',
   ];
 
-  for (const r of results) {
+  for (const r of sorted) {
     const msgAt = r.message_at ? new Date(r.message_at).toLocaleString('fr-FR') : '?';
     lines.push(`${'═'.repeat(72)}`);
     lines.push(`${r.case_id} | Conv #${r.conversation_id} | ${r.property_id || '?'} | ${msgAt}`);
     lines.push(`${'─'.repeat(72)}`);
     if (r.context) {
-      lines.push(`LOGEMENT  : ${r.context.property_name || 'inconnu'} (${r.property_id})`);
-      lines.push(`PHASE     : ${r.context.stay_phase} | J checkin=${r.context.checkin_date} checkout=${r.context.checkout_date}`);
-      lines.push(`VOYAGEUR  : ${r.guest_name || '?'} | ${r.context.guest_lang} | ${r.platform || '?'}`);
-      lines.push(`CONTEXTE  : code=${r.context.access_code_known?'OUI':'non'} wifi=${r.context.wifi_known?'OUI':'non'} parking=${r.context.parking_known?'OUI':'non'} few-shot=${r.context.few_shot_count}`);
+      lines.push(`LOGEMENT        : ${r.context.property_name || 'inconnu'} (${r.property_id})`);
+      lines.push(`PHASE           : ${r.context.stay_phase} | checkin=${r.context.checkin_date} checkout=${r.context.checkout_date}`);
+      lines.push(`VOYAGEUR        : ${r.guest_name || '?'} | ${r.platform || '?'}`);
+      const storedLang = r._diag?.stored_language || r.context.guest_lang || '?';
+      lines.push(`STORED_LANGUAGE : ${storedLang} (conversations.language — peut différer de la langue réelle du message)`);
+      lines.push(`CONTEXTE        : code=${r.context.access_code_known?'OUI':'non'} wifi=${r.context.wifi_known?'OUI':'non'} parking=${r.context.parking_known?'OUI':'non'} few-shot=${r.context.few_shot_count}`);
     }
     lines.push('');
-    lines.push('MESSAGE VOYAGEUR :');
+    lines.push('CURRENT_GUEST_MESSAGE (envoyé au modèle) :');
     lines.push(`  "${_maskSensitive(r.guest_message)}"`);
     lines.push('');
     if (r.historical_reply) {
       lines.push(`RÉPONSE HISTORIQUE (${r.historical_reply_type || '?'}) :`);
       lines.push(`  "${_maskSensitive(r.historical_reply)}"`);
     } else {
-      lines.push('RÉPONSE HISTORIQUE : (aucune)');
+      lines.push(`RÉPONSE HISTORIQUE : (aucune — ${r.historical_reply_type || 'AUCUNE'})`);
     }
     lines.push('');
     if (r.decision) {
@@ -1056,6 +1179,49 @@ function formatBenchmarkReport(results) {
     lines.push(`MÉTRIQUES : ${r.latency_ms}ms | tokens: ${r.tokens?.input || '?'} in / ${r.tokens?.output || '?'} out / ${r.tokens?.total || '?'} total`);
     lines.push(`HISTORICAL_CONTEXT_LIMITATION : ${r.historical_context_limitation ? 'OUI (property/welcome_book = état actuel)' : 'NON'}`);
     lines.push('');
+
+    // ── Diagnostic contexte ───────────────────────────────────────────────────
+    if (r._diag) {
+      lines.push('── DIAGNOSTIC CONTEXTE ──────────────────────────────────────────────────────');
+
+      const hist = r._diag.history_sent_to_model || [];
+      lines.push(`HISTORY_SENT_TO_MODEL (${hist.length} messages, 7 derniers jours, created_at < message cible) :`);
+      if (hist.length === 0) {
+        lines.push('  (aucun)');
+      } else {
+        for (const h of hist) {
+          const preview = (h.content || '').substring(0, 200).replace(/\n/g, ' ');
+          lines.push(`  [${h.role}] "${preview}"`);
+        }
+      }
+      lines.push('');
+
+      const fs = r._diag.few_shot_sent_to_model || [];
+      lines.push(`FEW_SHOT_SENT_TO_MODEL (${fs.length} exemples, created_at < message cible) :`);
+      if (fs.length === 0) {
+        lines.push('  (aucun)');
+      } else {
+        for (const ex of fs) {
+          lines.push(`  Ex ${ex.idx} — Voyageur: "${ex.guest}"`);
+          lines.push(`          Hôte:    "${ex.host}"`);
+        }
+      }
+      lines.push('');
+
+      const fp = r._diag.facts_provenance || [];
+      lines.push(`FACTS_PROVENANCE (${fp.length} champs KNOWN_TRUE dans le contexte) :`);
+      if (fp.length === 0) {
+        lines.push('  (aucun champ renseigné)');
+      } else {
+        for (const f of fp) {
+          lines.push(`  FACT   : ${f.fact}`);
+          lines.push(`  SOURCE : ${f.source}`);
+          lines.push(`  VALUE  : ${f.value}`);
+          lines.push('');
+        }
+      }
+    }
+
     lines.push('NOTE CHARLES: __/5   ERREUR FACTUELLE: __   INVENTION: __   MEILLEURE QUE V1: __   COMMENTAIRE: ');
     lines.push('');
   }
@@ -1087,5 +1253,8 @@ module.exports = {
   runTravelerBenchmark,
   formatBenchmarkReport,
   _maskSensitive,
+  _resolveHistoricalReply,
+  _buildFactsProvenance,
+  _setDelay,
   VALID_ACTIONS,
 };

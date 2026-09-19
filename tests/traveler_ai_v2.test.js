@@ -14,7 +14,12 @@ const {
   buildTravelerContextFromRawData,
   buildTravelerSystemPrompt,
   validateTravelerDecision,
+  callGroqTravelerV2,
+  formatBenchmarkReport,
   _maskSensitive,
+  _resolveHistoricalReply,
+  _buildFactsProvenance,
+  _setDelay,
   VALID_ACTIONS,
 } = require('../services/traveler-ai-v2');
 
@@ -476,11 +481,234 @@ test('T30 — _maskSensitive : null et undefined → inchangés', () => {
   assert.strictEqual(_maskSensitive(undefined), undefined);
 });
 
+// ─── Série T8 : Association question → réponse historique ────────────────────
+
+console.log('\n── Série T8 : Historical reply matching ──────────────────────────────────────');
+
+test('T31 — _resolveHistoricalReply : premier msg hôte → reply correctement associée', () => {
+  const row = { sender_type: 'owner', message: 'Bonjour, oui bien sûr !', is_bot_response: false };
+  const { reply, replyType } = _resolveHistoricalReply(row);
+  assert.strictEqual(reply, 'Bonjour, oui bien sûr !', 'message hôte retourné');
+  assert.strictEqual(replyType, 'HUMAIN', 'sender_type=owner → HUMAIN');
+});
+
+test('T32 — _resolveHistoricalReply : premier msg est guest → AUCUNE réponse associée', () => {
+  // guest1 → guest2 → host : le host ne répond pas à guest1
+  const row = { sender_type: 'guest', message: 'Ah merci ! Et le parking ?', is_bot_response: false };
+  const { reply, replyType } = _resolveHistoricalReply(row);
+  assert.strictEqual(reply, null, 'pas de reply si suivant est guest');
+  assert.strictEqual(replyType, 'AUCUNE', 'replyType AUCUNE');
+});
+
+test('T32b — _resolveHistoricalReply : null (aucun message suivant) → AUCUNE', () => {
+  const { reply, replyType } = _resolveHistoricalReply(null);
+  assert.strictEqual(reply, null);
+  assert.strictEqual(replyType, 'AUCUNE');
+});
+
+test('T32c — _resolveHistoricalReply : sender_type=system → IA_V1', () => {
+  const row = { sender_type: 'system', message: 'Réponse auto V1', is_bot_response: false };
+  const { replyType } = _resolveHistoricalReply(row);
+  assert.strictEqual(replyType, 'IA_V1');
+});
+
+test('T32d — _resolveHistoricalReply : property + is_bot_response=true → IA_AUTO', () => {
+  const row = { sender_type: 'property', message: 'Message auto', is_bot_response: true };
+  const { replyType } = _resolveHistoricalReply(row);
+  assert.strictEqual(replyType, 'IA_AUTO');
+});
+
+// ─── Série T9 : Rate limit 429 ────────────────────────────────────────────────
+
+console.log('\n── Série T9 : Rate limit 429 — retry ────────────────────────────────────────');
+
+// T33 et T34 sont groupés dans un seul test async pour éviter la race condition
+// sur global.fetch (les deux s'exécuteraient en concurrence sinon).
+test('T33+T34 — 429 retry strategy : scénarios C et D séquentiels', async () => {
+  _setDelay(() => Promise.resolve());  // pas d'attente réelle en test
+  const originalFetch = global.fetch;
+
+  try {
+    // ── Scénario C : 429 + retry-after → 1 retry → succès ────────────────
+    let callCount = 0;
+    global.fetch = async () => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          status: 429, ok: false,
+          headers: { get: (k) => k === 'retry-after' ? '1' : null },
+          text: async () => 'rate limit exceeded',
+        };
+      }
+      return {
+        status: 200, ok: true,
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify({
+            action: 'NO_REPLY', reply: null, confidence: 0.9,
+            reasoning: 'test', tags: [], requires_human: false, hallucination_risk: 'LOW',
+          }) } }],
+          usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 },
+        }),
+      };
+    };
+    const rC = await callGroqTravelerV2({
+      systemPrompt: 'sys', history: [], guestMessage: 'hi',
+      apiKey: 'fake-key', label: 'T33-C',
+    });
+    assert.strictEqual(callCount, 2, 'C: fetch appelé 2 fois (1 + 1 retry)');
+    assert.strictEqual(rC.error, null, 'C: pas d\'erreur après retry');
+    assert.strictEqual(rC.decision?.action, 'NO_REPLY', 'C: décision correcte après retry');
+
+    // ── Scénario D : 429 deux fois → erreur dans result, pas d'exception ─
+    global.fetch = async () => ({
+      status: 429, ok: false,
+      headers: { get: () => null },
+      text: async () => 'still rate limited',
+    });
+    const rD = await callGroqTravelerV2({
+      systemPrompt: 'sys', history: [], guestMessage: 'hi',
+      apiKey: 'fake-key', label: 'T33-D',
+    });
+    assert.ok(rD.error && rD.error.includes('429'), `D: erreur 429 attendue, obtenu: ${rD.error}`);
+    assert.strictEqual(rD.decision, null, 'D: pas de décision');
+
+  } finally {
+    global.fetch = originalFetch;
+    _setDelay(null);
+  }
+});
+
+// ─── Série T10 : Facts provenance ─────────────────────────────────────────────
+
+console.log('\n── Série T10 : Facts provenance ──────────────────────────────────────────────');
+
+test('T35 — _buildFactsProvenance : champs KNOWN_TRUE présents avec source', () => {
+  const ctx = buildTravelerContextFromRawData({
+    conversation: makeConv({ platform: 'airbnb' }),
+    property: makeProp({ arrival_time: '16:00', departure_time: '11:00', practical_info: 'Ascenseur' }),
+    atTimestamp: AT_BEFORE,
+  });
+  const facts = _buildFactsProvenance(ctx);
+  const checkin = facts.find(f => f.fact === 'checkin_time');
+  assert.ok(checkin, 'checkin_time présent');
+  assert.strictEqual(checkin.value, '16:00', 'valeur correcte');
+  assert.ok(checkin.source.includes('property.arrival_time'), 'source correcte');
+  const practical = facts.find(f => f.fact === 'practical_info');
+  assert.ok(practical, 'practical_info présent');
+  assert.strictEqual(practical.value, 'Ascenseur');
+});
+
+test('T36 — _buildFactsProvenance : champs null exclus', () => {
+  const ctx = buildTravelerContextFromRawData({
+    conversation: makeConv({ platform: 'airbnb' }),
+    property: makeProp({ practical_info: null }),
+    welcomeBook: makeWelcomeBook({ parkingInfo: null, equipmentList: null }),
+    atTimestamp: AT_BEFORE,
+  });
+  const facts = _buildFactsProvenance(ctx);
+  const parking  = facts.find(f => f.fact === 'parking_info');
+  const equipt   = facts.find(f => f.fact === 'equipment_list');
+  const practical = facts.find(f => f.fact === 'practical_info');
+  assert.strictEqual(parking,   undefined, 'parking_info null → absent de facts_provenance');
+  assert.strictEqual(equipt,    undefined, 'equipment_list null → absent');
+  assert.strictEqual(practical, undefined, 'practical_info null → absent');
+});
+
+test('T37 — _buildFactsProvenance : valeurs sensibles masquées', () => {
+  const ctx = buildTravelerContextFromRawData({
+    conversation: makeConv({ platform: 'airbnb' }),
+    property: makeProp({ access_code: 'SECRET_CODE', wifi_password: 'WIFI_SECRET' }),
+    atTimestamp: AT_BEFORE,
+  });
+  const facts = _buildFactsProvenance(ctx);
+  const codeFact = facts.find(f => f.fact === 'access_code');
+  const wifiFact = facts.find(f => f.fact === 'wifi_password');
+  assert.ok(codeFact, 'access_code présent');
+  assert.strictEqual(codeFact.value, '[MASKED]', 'access_code masqué');
+  assert.ok(wifiFact, 'wifi_password présent');
+  assert.strictEqual(wifiFact.value, '[MASKED]', 'wifi_password masqué');
+  // Valeur brute ne doit pas fuiter
+  assert.ok(!JSON.stringify(facts).includes('SECRET_CODE'), 'SECRET_CODE ne fuite pas');
+  assert.ok(!JSON.stringify(facts).includes('WIFI_SECRET'), 'WIFI_SECRET ne fuite pas');
+});
+
+// ─── Série T11 : Rapport — ordre et diagnostic ────────────────────────────────
+
+console.log('\n── Série T11 : formatBenchmarkReport — ordre et diagnostic ──────────────────');
+
+function makeMockResult(caseId, convId) {
+  return {
+    case_id:         caseId,
+    conversation_id: convId,
+    property_id:     'prop-test',
+    message_at:      new Date('2026-09-01T10:00:00Z'),
+    guest_name:      'Voyageur Test',
+    platform:        'direct',
+    guest_message:   'Bonjour, question test',
+    historical_reply: null,
+    historical_reply_type: 'AUCUNE',
+    decision: {
+      action: 'REPLY', reply: 'Bonjour !', confidence: 0.9,
+      reasoning: 'test', tags: ['greeting'], requires_human: false, hallucination_risk: 'LOW',
+    },
+    latency_ms: 1200,
+    tokens: { input: 500, output: 100, total: 600 },
+    error: null,
+    historical_context_limitation: true,
+    context: {
+      property_name: 'Test Apt', stay_phase: 'before',
+      checkin_date: '2026-10-01', checkout_date: '2026-10-05',
+      guest_lang: 'fr', access_code_known: false, wifi_known: true,
+      parking_known: false, few_shot_count: 2,
+    },
+    _diag: {
+      stored_language: 'fr',
+      history_sent_to_model: [
+        { role: 'user', content: 'Premier message guest' },
+        { role: 'assistant', content: 'Première réponse hôte' },
+      ],
+      few_shot_sent_to_model: [
+        { idx: 1, guest: 'exemple guest', host: 'exemple hôte' },
+      ],
+      facts_provenance: [
+        { fact: 'checkout_time', source: 'property.departure_time', value: '11:00' },
+      ],
+    },
+  };
+}
+
+test('T38 — formatBenchmarkReport : CASE-001 avant CASE-002 même si inversés en entrée', () => {
+  const r1 = makeMockResult('CASE-001', 1);
+  const r2 = makeMockResult('CASE-002', 2);
+  const report = formatBenchmarkReport([r2, r1]);  // inversé intentionnellement
+  const idx1 = report.indexOf('CASE-001');
+  const idx2 = report.indexOf('CASE-002');
+  assert.ok(idx1 >= 0, 'CASE-001 présent');
+  assert.ok(idx2 >= 0, 'CASE-002 présent');
+  assert.ok(idx1 < idx2, `CASE-001 (pos ${idx1}) avant CASE-002 (pos ${idx2})`);
+});
+
+test('T39 — formatBenchmarkReport : sections diagnostic présentes', () => {
+  const r = makeMockResult('CASE-001', 1);
+  const report = formatBenchmarkReport([r]);
+  assert.ok(report.includes('HISTORY_SENT_TO_MODEL'), 'section history présente');
+  assert.ok(report.includes('FEW_SHOT_SENT_TO_MODEL'), 'section few-shot présente');
+  assert.ok(report.includes('FACTS_PROVENANCE'), 'section facts_provenance présente');
+  assert.ok(report.includes('STORED_LANGUAGE'), 'stored_language présent');
+  assert.ok(report.includes('CURRENT_GUEST_MESSAGE'), 'current_guest_message présent');
+  assert.ok(report.includes('FACT   : checkout_time'), 'FACT/SOURCE/VALUE format présent');
+  assert.ok(report.includes('SOURCE : property.departure_time'), 'SOURCE affiché');
+  assert.ok(report.includes('VALUE  : 11:00'), 'VALUE affiché');
+});
+
 // ─── Résumé ───────────────────────────────────────────────────────────────────
 // Note : les tests async se terminent après ce bloc. Pour les suites async,
 // le process.exit est différé.
 setImmediate(() => {
-  console.log(`\n── Résultat ──────────────────────────────────────────────────────────────────`);
-  console.log(`   ${passed} test(s) réussi(s)  |  ${failed} échec(s)\n`);
-  if (failed > 0) process.exit(1);
+  // Attendre la résolution des tests async (microtasks déjà résolues ici)
+  setTimeout(() => {
+    console.log(`\n── Résultat ──────────────────────────────────────────────────────────────────`);
+    console.log(`   ${passed} test(s) réussi(s)  |  ${failed} échec(s)\n`);
+    if (failed > 0) process.exit(1);
+  }, 50);
 });
