@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Launcher ponctuel — Groq Traveler AI V2 Benchmark
+ * Launcher ponctuel — Groq Traveler AI V2 Benchmark (Golden Set Mode)
  *
  * Ce module N'EXÉCUTE RIEN à l'import : il exporte uniquement run().
  * Déclenchement uniquement si RUN_TRAVELER_AI_V2_BENCHMARK === 'true'.
@@ -14,18 +14,21 @@
  *   RUN_TRAVELER_AI_V2_BENCHMARK=true node scripts/run-traveler-v2-once.js
  *
  * Contraintes :
- *   - Limite forcée à 5 (non configurable depuis ce launcher)
+ *   - MODE GOLDEN SET : 6 messages fixes, aucun random
  *   - Aucun side effect : DB read-only, aucun message envoyé
  *   - Garde process-local contre double exécution
  *   - N'arrête JAMAIS le serveur en cas d'erreur
  */
 
-const { runTravelerBenchmark, formatBenchmarkReport } = require('../services/traveler-ai-v2');
+const {
+  runGoldenSetBenchmark,
+  formatGoldenReport,
+  GOLDEN_IDS,
+} = require('../services/traveler-ai-v2');
 
-const BENCHMARK_LIMIT = 5;  // figé pour cette mission
+const BENCHMARK_LIMIT = 5;  // conservé pour compatibilité avec les tests launcher existants
 
 // Garde process-local : empêche une double exécution dans le même process
-// (ex: Render qui appellerait listen() deux fois, ou require() en cache avec run() rappelé).
 let _running = false;
 
 /**
@@ -38,7 +41,7 @@ function shouldRun(env) {
 }
 
 /**
- * Lance le benchmark. Ne lève jamais d'exception vers l'appelant.
+ * Lance le benchmark golden set. Ne lève jamais d'exception vers l'appelant.
  * Retourne silencieusement si la variable n'est pas activée.
  */
 async function run() {
@@ -54,14 +57,15 @@ async function run() {
 
   console.log('');
   console.log('=== TRAVELER AI V2 BENCHMARK START ===');
+  console.log(`MODE       = GOLDEN_SET`);
+  console.log(`CASES      = ${GOLDEN_IDS.length}`);
   console.log(`MODEL USED = ${model}`);
-  console.log(`LIMIT      = ${BENCHMARK_LIMIT}`);
   console.log('');
 
   let pool = null;
   try {
     const { Pool } = require('pg');
-    // Même config SSL que le pool principal server.js (L2066-2068) :
+    // Même config SSL que le pool principal server.js :
     // Render Postgres utilise un certificat auto-signé → rejectUnauthorized: false en prod.
     // rejectUnauthorized: false est scopé à ce pool uniquement — pas de changement TLS global.
     pool = new Pool({
@@ -74,15 +78,14 @@ async function run() {
     await pool.query('SELECT 1');
     console.log('[V2-BENCH] STAGE: DB_QUERY — connexion OK');
 
-    console.log('[V2-BENCH] STAGE: GROQ_REQUEST — démarrage des cas');
-    const results = await runTravelerBenchmark(pool, {
-      limit:   BENCHMARK_LIMIT,
+    console.log('[V2-BENCH] STAGE: GROQ_REQUEST — démarrage des cas golden set');
+    const results = await runGoldenSetBenchmark(pool, {
       model,
       apiKey:  process.env.GROQ_API_KEY,
       baseUrl: process.env.APP_URL || 'https://www.boostinghost.fr',
     });
 
-    const report = formatBenchmarkReport(results);
+    const report = formatGoldenReport(results);
     console.log('\n' + report);
 
   } catch (err) {

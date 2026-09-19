@@ -16,6 +16,9 @@ const {
   validateTravelerDecision,
   callGroqTravelerV2,
   formatBenchmarkReport,
+  formatGoldenReport,
+  runGoldenSetBenchmark,
+  computeContextFingerprint,
   _maskSensitive,
   _safeDiagStr,
   _resolveHistoricalReply,
@@ -23,6 +26,7 @@ const {
   _estimateCallTokens,
   _setDelay,
   VALID_ACTIONS,
+  GOLDEN_IDS,
 } = require('../services/traveler-ai-v2');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -889,6 +893,181 @@ test('T53 — formatBenchmarkReport : FEW_SHOT_SOURCE affiche source+sender_type
   assert.ok(report.includes('sender_type=system'), 'sender_type=system affiché');
   // sender_name null → affiche "—"
   assert.ok(report.includes('sender_name=—'), 'sender_name null → "—" affiché');
+});
+
+// ─── Série T17 : Golden Set — structure et déterminisme ──────────────────────
+
+console.log('\n── Série T17 : Golden Set — GOLDEN_IDS, ordre, fingerprint ─────────────────');
+
+const fs   = require('fs');
+const path = require('path');
+
+test('T54 — GOLDEN_IDS contient exactement 6 message IDs numériques', () => {
+  assert.strictEqual(Array.isArray(GOLDEN_IDS), true, 'GOLDEN_IDS est un Array');
+  assert.strictEqual(GOLDEN_IDS.length, 6, '6 IDs exactement');
+  for (const id of GOLDEN_IDS) {
+    assert.strictEqual(typeof id, 'number', `ID ${id} doit être un number`);
+  }
+});
+
+test('T55 — GOLDEN_IDS ordre exact : 3139, 8786, 6072, 2592, 3749, 6913', () => {
+  assert.deepStrictEqual(GOLDEN_IDS, [3139, 8786, 6072, 2592, 3749, 6913]);
+});
+
+test('T56 — runGoldenSetBenchmark : aucun RANDOM() ni Math.random', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'services', 'traveler-ai-v2.js'), 'utf8');
+  const fnStart = src.indexOf('function runGoldenSetBenchmark');
+  const fnEnd   = src.indexOf('\nfunction formatBenchmarkReport');
+  assert.ok(fnStart >= 0, 'runGoldenSetBenchmark présente dans le source');
+  const goldenSrc = fnStart >= 0 ? src.substring(fnStart, fnEnd > fnStart ? fnEnd : undefined) : '';
+  assert.ok(!goldenSrc.includes('RANDOM()'),    'RANDOM() absent de runGoldenSetBenchmark');
+  assert.ok(!goldenSrc.includes('Math.random'), 'Math.random absent de runGoldenSetBenchmark');
+});
+
+test('T57 — runGoldenSetBenchmark : message manquant → MISSING_MESSAGE_ID + continuation', async () => {
+  const mockPool = { query: async () => ({ rows: [] }) };
+  const results  = await runGoldenSetBenchmark(mockPool, { apiKey: 'fake-key' });
+
+  assert.strictEqual(results.length, 6, '6 résultats retournés même si tous manquants');
+  for (let i = 0; i < 6; i++) {
+    assert.ok(results[i].error?.includes('MISSING_MESSAGE_ID'),
+      `${results[i].case_id}: MISSING_MESSAGE_ID dans error`);
+    assert.ok(results[i].error?.includes(String(GOLDEN_IDS[i])),
+      `${results[i].case_id}: ID ${GOLDEN_IDS[i]} cité dans l'erreur`);
+  }
+});
+
+test('T58 — runGoldenSetBenchmark : labels GOLDEN-001 à GOLDEN-006 stables', async () => {
+  const mockPool   = { query: async () => ({ rows: [] }) };
+  const results    = await runGoldenSetBenchmark(mockPool, { apiKey: 'fake-key' });
+  const expected   = ['GOLDEN-001', 'GOLDEN-002', 'GOLDEN-003', 'GOLDEN-004', 'GOLDEN-005', 'GOLDEN-006'];
+  for (let i = 0; i < 6; i++) {
+    assert.strictEqual(results[i].case_id, expected[i], `position ${i}: case_id correct`);
+  }
+});
+
+// ─── Série T18 : Context fingerprint ──────────────────────────────────────────
+
+console.log('\n── Série T18 : computeContextFingerprint — déterminisme et isolation ──────');
+
+test('T59 — computeContextFingerprint : contexte identique → fingerprint identique (16 hex)', () => {
+  const payload = {
+    guestMessage: 'Bonjour, à quelle heure puis-je arriver ?',
+    history:      [{ role: 'user', content: 'Premier message' }],
+    fewShot:      [{ guest: 'exemple', host: 'réponse' }],
+    systemPrompt: 'Vous êtes un assistant hôte.',
+  };
+  const fp1 = computeContextFingerprint(payload);
+  const fp2 = computeContextFingerprint(payload);
+  assert.strictEqual(fp1, fp2, 'fingerprint déterministe');
+  assert.strictEqual(fp1.length, 16, 'fingerprint = 16 caractères hex');
+  assert.ok(/^[0-9a-f]{16}$/.test(fp1), 'format hex valide');
+});
+
+test('T60 — computeContextFingerprint : guest message différent → fingerprint différent', () => {
+  const base = { guestMessage: 'Message A', history: [], fewShot: [], systemPrompt: 'sys' };
+  const fp1  = computeContextFingerprint(base);
+  const fp2  = computeContextFingerprint({ ...base, guestMessage: 'Message B entièrement différent' });
+  assert.notStrictEqual(fp1, fp2, 'fingerprint change quand guest message change');
+});
+
+test('T61 — computeContextFingerprint : history différente → fingerprint différent', () => {
+  const base = { guestMessage: 'Test', history: [{ role: 'user', content: 'msg A' }], fewShot: [], systemPrompt: 'sys' };
+  const fp1  = computeContextFingerprint(base);
+  const fp2  = computeContextFingerprint({ ...base, history: [{ role: 'user', content: 'msg B différent' }] });
+  assert.notStrictEqual(fp1, fp2, 'fingerprint change quand history change');
+});
+
+test('T62 — computeContextFingerprint : latency/tokens/reply exclus du calcul', () => {
+  const base = { guestMessage: 'Test', history: [], fewShot: [], systemPrompt: 'sys' };
+  const fp1  = computeContextFingerprint(base);
+  // Ces champs non-déterministes sont ignorés car non inclus dans le calcul
+  const fp2  = computeContextFingerprint({
+    ...base,
+    latency_ms:   9999,
+    tokens:       { input: 500, output: 100, total: 600 },
+    raw_response: '{"action":"REPLY","reply":"Bonjour"}',
+  });
+  assert.strictEqual(fp1, fp2, 'latency/tokens/reply n\'affectent pas le fingerprint');
+});
+
+// ─── Série T19 : Launcher golden mode ─────────────────────────────────────────
+
+console.log('\n── Série T19 : Launcher Render — golden mode ───────────────────────────────');
+
+test('T63 — launcher Render utilise runGoldenSetBenchmark et log MODE=GOLDEN_SET', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'run-traveler-v2-once.js'), 'utf8');
+  assert.ok(src.includes('runGoldenSetBenchmark'), 'runGoldenSetBenchmark importé dans le launcher');
+  assert.ok(src.includes('GOLDEN_SET'),            'log MODE=GOLDEN_SET présent');
+  assert.ok(src.includes('GOLDEN_IDS.length'),     'CASES = GOLDEN_IDS.length affiché');
+  assert.ok(!src.includes('runTravelerBenchmark'), 'runTravelerBenchmark plus utilisé dans le launcher');
+});
+
+test('T64 — traveler-ai-v2.js : aucune écriture DB dans runGoldenSetBenchmark', () => {
+  const src      = fs.readFileSync(path.join(__dirname, '..', 'services', 'traveler-ai-v2.js'), 'utf8');
+  const fnStart  = src.indexOf('function runGoldenSetBenchmark');
+  const fnEnd    = src.indexOf('\nfunction formatBenchmarkReport');
+  assert.ok(fnStart >= 0, 'runGoldenSetBenchmark présente');
+  const goldenSrc = src.substring(fnStart, fnEnd > fnStart ? fnEnd : src.length);
+  assert.ok(!/\bINSERT\s+INTO\b/i.test(goldenSrc),  'aucun INSERT INTO');
+  assert.ok(!/\bUPDATE\s+\w/i.test(goldenSrc),      'aucun UPDATE');
+  assert.ok(!/\bDELETE\s+FROM\b/i.test(goldenSrc),  'aucun DELETE FROM');
+});
+
+test('T66 — computeContextFingerprint : travelerContext différent → fingerprint différent', () => {
+  const base = { guestMessage: 'Test', history: [], fewShot: [], systemPrompt: 'sys' };
+  const fp1  = computeContextFingerprint({
+    ...base,
+    travelerContext: { stay: { checkin_date: '2026-10-01', checkout_date: '2026-10-05' } },
+  });
+  const fp2  = computeContextFingerprint({
+    ...base,
+    travelerContext: { stay: { checkin_date: '2026-11-01', checkout_date: '2026-11-05' } },
+  });
+  assert.notStrictEqual(fp1, fp2, 'fingerprint change si travelerContext change (ex: dates check-in/out)');
+});
+
+test('T67 — computeContextFingerprint : travelerContext key-order indépendant (canonique)', () => {
+  const base = { guestMessage: 'Test', history: [], fewShot: [], systemPrompt: 'sys' };
+  const fp1  = computeContextFingerprint({
+    ...base,
+    travelerContext: { a: 1, b: 2, stay: { checkin_date: '2026-10-01', wifi: 'TestWifi' } },
+  });
+  const fp2  = computeContextFingerprint({
+    ...base,
+    travelerContext: { b: 2, a: 1, stay: { wifi: 'TestWifi', checkin_date: '2026-10-01' } },
+  });
+  assert.strictEqual(fp1, fp2, 'fingerprint identique même si ordre des clés differ ({a,b} ≡ {b,a})');
+});
+
+test('T65 — formatGoldenReport : TOTAL=6, GOLDEN SET SUMMARY, MANUAL REVIEW', () => {
+  const mockResults = GOLDEN_IDS.map((id, i) => ({
+    case_id:               `GOLDEN-${String(i + 1).padStart(3, '0')}`,
+    message_id:            id,
+    conversation_id:       null,
+    property_id:           null,
+    guest_name:            null,
+    platform:              null,
+    message_at:            new Date('2026-09-01T10:00:00Z'),
+    guest_message:         null,
+    historical_reply:      null,
+    historical_reply_type: null,
+    historical_context_limitation: true,
+    context:               null,
+    context_fingerprint:   null,
+    decision:              null,
+    latency_ms:            null,
+    tokens:                null,
+    error:                 `MISSING_MESSAGE_ID: ${id}`,
+    _diag:                 null,
+  }));
+  const report = formatGoldenReport(mockResults);
+  assert.ok(report.includes('TOTAL :               6'), 'TOTAL=6 dans le résumé');
+  assert.ok(report.includes('GOLDEN SET SUMMARY'),       'section GOLDEN SET SUMMARY présente');
+  assert.ok(report.includes('MANUAL REVIEW'),            'section MANUAL REVIEW présente');
+  assert.ok(report.includes('GOLDEN-001 : __/5'),        'grille notation GOLDEN-001 présente');
+  assert.ok(report.includes('GOLDEN-006 : __/5'),        'grille notation GOLDEN-006 présente');
+  assert.ok(report.includes(`MISSING_MESSAGE_ID: ${GOLDEN_IDS[0]}`), 'MISSING_MESSAGE_ID GOLDEN-001 affiché');
 });
 
 // ─── Résumé ───────────────────────────────────────────────────────────────────

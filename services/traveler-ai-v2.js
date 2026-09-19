@@ -17,10 +17,14 @@
  *   runTravelerBenchmark             — orchestrateur benchmark (N cas)
  */
 
+const crypto             = require('crypto');
 const { normalizeDateOnly } = require('../utils/dates');
 
 const GROQ_API_URL  = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL_V2 = process.env.GROQ_MODEL_V2 || 'openai/gpt-oss-120b';
+
+// Golden set fixe — ordre déterministe garanti pour la reproductibilité du benchmark
+const GOLDEN_IDS = [3139, 8786, 6072, 2592, 3749, 6913];
 
 const VALID_ACTIONS = new Set([
   'REPLY', 'ASK_OWNER', 'ESCALATE', 'REQUEST_CLARIFICATION', 'NO_REPLY',
@@ -812,6 +816,54 @@ function _estimateCallTokens(systemPrompt, history, guestMessage) {
   return Math.ceil(chars / 3) + 600;
 }
 
+// ─── Context Fingerprint ──────────────────────────────────────────────────────
+
+/**
+ * Sérialise récursivement un objet avec clés triées alphabétiquement.
+ * Garantit que {a:1,b:2} et {b:2,a:1} produisent la même représentation.
+ * Ne lève jamais d'exception (objets non-sérialisables → null).
+ */
+function _canonicalizeForFingerprint(value) {
+  if (value === null || value === undefined) return value;
+  if (Array.isArray(value)) return value.map(_canonicalizeForFingerprint);
+  if (typeof value === 'object') {
+    const sorted = {};
+    for (const k of Object.keys(value).sort()) {
+      sorted[k] = _canonicalizeForFingerprint(value[k]);
+    }
+    return sorted;
+  }
+  return value;
+}
+
+/**
+ * Calcule un fingerprint déterministe du contexte envoyé au modèle.
+ * SHA-256 (16 premiers caractères hex) sur la représentation canonique de :
+ *   guestMessage, history, fewShot, travelerContext, systemPrompt.
+ *
+ * Sérialisation canonique (clés triées) : {a:1,b:2} ≡ {b:2,a:1}.
+ * EXCLU du calcul : latency_ms, tokens, raw_response, timestamps d'exécution.
+ *
+ * @param {object} p
+ * @param {string}  p.guestMessage
+ * @param {Array}   p.history           — [{role, content}]
+ * @param {Array}   p.fewShot           — [{guest, host}]
+ * @param {object}  p.travelerContext   — contexte structuré (sans _fewShot)
+ * @param {string}  p.systemPrompt
+ * @returns {string}  16 caractères hex
+ */
+function computeContextFingerprint({ guestMessage, history, fewShot, travelerContext, systemPrompt }) {
+  const payload = {
+    guestMessage:    guestMessage || '',
+    history:         (history  || []).map(h => ({ role: h.role, content: h.content })),
+    fewShot:         (fewShot  || []).map(ex => ({ guest: ex.guest, host: ex.host })),
+    travelerContext: travelerContext || {},
+    systemPrompt:    systemPrompt || '',
+  };
+  const canonical = JSON.stringify(_canonicalizeForFingerprint(payload));
+  return crypto.createHash('sha256').update(canonical, 'utf8').digest('hex').substring(0, 16);
+}
+
 // ─── Groq V2 Caller ──────────────────────────────────────────────────────────
 
 /**
@@ -1207,6 +1259,238 @@ async function runTravelerBenchmark(pool, opts = {}) {
   return results;
 }
 
+// ─── Golden Set Benchmark ────────────────────────────────────────────────────
+
+/**
+ * Lance le benchmark sur le golden set fixe (GOLDEN_IDS).
+ * Ordre déterministe garanti : GOLDEN-001…GOLDEN-006.
+ * Aucun random. Si un message est absent en DB : MISSING_MESSAGE_ID + continuation.
+ * Identique à runTravelerBenchmark pour toute la logique contexte/Groq/TPM.
+ * Aucune écriture DB. Shadow mode total.
+ *
+ * @param {object} pool
+ * @param {object} opts
+ * @param {string}  [opts.apiKey]
+ * @param {string}  [opts.model]
+ * @param {string}  [opts.baseUrl]
+ * @returns {Promise<Array>}
+ */
+async function runGoldenSetBenchmark(pool, opts = {}) {
+  const apiKey = opts.apiKey || process.env.GROQ_API_KEY;
+  const model  = opts.model  || GROQ_MODEL_V2;
+
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY non disponible — benchmark annulé');
+  }
+
+  const TPM_SAFE_LIMIT = 7000;
+  let tpmWindowStart  = Date.now();
+  let tpmWindowTokens = 0;
+
+  // Charger tous les golden messages en une seule requête (pas de random)
+  const msgRes = await pool.query(
+    `SELECT m.id, m.message, m.created_at, m.conversation_id,
+            c.property_id, c.user_id, c.guest_name, c.platform,
+            c.channex_booking_id, c.reservation_start_date, c.reservation_end_date,
+            c.language
+     FROM messages m
+     JOIN conversations c ON c.id = m.conversation_id
+     WHERE m.id = ANY($1::int[])`,
+    [GOLDEN_IDS]
+  );
+
+  const msgById = {};
+  for (const row of msgRes.rows) {
+    msgById[row.id] = row;
+  }
+
+  const results = [];
+
+  for (let i = 0; i < GOLDEN_IDS.length; i++) {
+    const msgId  = GOLDEN_IDS[i];
+    const caseId = `GOLDEN-${String(i + 1).padStart(3, '0')}`;
+
+    console.log(`\n🔍 [GOLDEN V2] ${caseId} — msg ${msgId}`);
+
+    let result = {
+      case_id:               caseId,
+      message_id:            msgId,
+      conversation_id:       null,
+      property_id:           null,
+      user_id:               null,
+      guest_name:            null,
+      platform:              null,
+      message_at:            null,
+      guest_message:         null,
+      historical_reply:      null,
+      historical_reply_type: null,
+      historical_context_limitation: true,
+      context:               null,
+      context_fingerprint:   null,
+      decision:              null,
+      raw_response:          null,
+      latency_ms:            null,
+      tokens:                null,
+      error:                 null,
+      _diag:                 null,
+    };
+
+    const msg = msgById[msgId];
+
+    if (!msg) {
+      console.warn(`⚠️  MISSING_MESSAGE_ID: ${msgId}`);
+      result.error = `MISSING_MESSAGE_ID: ${msgId}`;
+      results.push(result);
+      continue;
+    }
+
+    result.conversation_id = msg.conversation_id;
+    result.property_id     = msg.property_id;
+    result.user_id         = msg.user_id;
+    result.guest_name      = msg.guest_name;
+    result.platform        = msg.platform;
+    result.message_at      = msg.created_at;
+    result.guest_message   = msg.message;
+
+    try {
+      // Réponse historique
+      const histReply = await pool.query(
+        `SELECT message, sender_type, sender_name, is_bot_response FROM messages
+         WHERE conversation_id = $1
+         AND sender_type NOT IN ('internal_note')
+         AND created_at > $2
+         ORDER BY created_at ASC LIMIT 1`,
+        [msg.conversation_id, msg.created_at]
+      );
+      const { reply: histReplyMsg, replyType: histReplyType } =
+        _resolveHistoricalReply(histReply.rows[0] || null);
+      result.historical_reply      = histReplyMsg;
+      result.historical_reply_type = histReplyType;
+
+      // Contexte au moment du message
+      const ctx = await buildTravelerContext(pool, msg.conversation_id, {
+        atTimestamp: new Date(msg.created_at),
+        baseUrl: opts.baseUrl,
+      });
+
+      // Few-shot (anti-leakage : seulement avant le message)
+      const fewShot = await loadBenchmarkFewShotExamples(
+        pool, msg.conversation_id, msg.property_id, new Date(msg.created_at)
+      );
+      ctx._fewShot = fewShot;
+
+      result.context = {
+        property_name:       ctx.property.name,
+        stay_phase:          ctx.stay.phase,
+        checkin_date:        ctx.stay.checkin_date,
+        checkout_date:       ctx.stay.checkout_date,
+        guest_lang:          ctx.guest.language,
+        access_code_known:   !!ctx.access.code,
+        wifi_known:          !!ctx.wifi.password,
+        parking_known:       ctx.parking.known,
+        deposit_blocks:      ctx.deposit.blocks_access,
+        registration_blocks: ctx.registration.blocks_access,
+        few_shot_count:      fewShot.length,
+      };
+
+      // Historique (filtre temporel strict)
+      const histRes = await pool.query(
+        `SELECT sender_type, message FROM messages
+         WHERE conversation_id = $1
+         AND created_at < $2
+         AND created_at > $2::timestamptz - INTERVAL '7 days'
+         AND LENGTH(message) > 3
+         AND message NOT ILIKE '%THIS RESERVATION HAS BEEN PRE-PAID%'
+         AND message NOT ILIKE '%BOOKING NOTE%'
+         ORDER BY created_at ASC LIMIT 30`,
+        [msg.conversation_id, msg.created_at]
+      );
+      const history = histRes.rows.map(m => ({
+        role:    m.sender_type === 'guest' ? 'user' : 'assistant',
+        content: m.message,
+      }));
+
+      const systemPrompt = buildTravelerSystemPrompt(ctx);
+
+      // Fingerprint déterministe (exclu : latency/tokens/réponse Groq/_fewShot interne)
+      const { _fewShot: _fpIgnored, ...ctxForFingerprint } = ctx;
+      result.context_fingerprint = computeContextFingerprint({
+        guestMessage:    msg.message,
+        history,
+        fewShot,
+        travelerContext: ctxForFingerprint,
+        systemPrompt,
+      });
+
+      // Diagnostic
+      result._diag = {
+        stored_language:        msg.language || null,
+        history_sent_to_model:  history.map(h => ({
+          role:    h.role,
+          content: _maskSensitive(_safeDiagStr(h.content)).substring(0, 400),
+        })),
+        few_shot_sent_to_model: fewShot.map((ex, i) => ({
+          idx:         i + 1,
+          guest:       _maskSensitive(_safeDiagStr(ex.guest)).substring(0, 200),
+          host:        _maskSensitive(_safeDiagStr(ex.host)).substring(0, 200),
+          source:      ex._meta?.source      || 'unknown',
+          sender_type: ex._meta?.sender_type || null,
+          sender_name: ex._meta?.sender_name || null,
+        })),
+        facts_provenance:  _buildFactsProvenance(ctx),
+        failed_generation: null,
+      };
+
+      // Budget TPM pré-appel
+      const estimatedTokens = _estimateCallTokens(systemPrompt, history, msg.message);
+      if (tpmWindowTokens + estimatedTokens >= TPM_SAFE_LIMIT) {
+        const elapsed = Date.now() - tpmWindowStart;
+        const waitMs  = Math.max(0, 62000 - elapsed);
+        if (waitMs > 0) {
+          console.log(`[GOLDEN-BENCH] TPM PRE-BUDGET (${tpmWindowTokens}+~${estimatedTokens}≥${TPM_SAFE_LIMIT}) — pause ${waitMs}ms`);
+          await _delay(waitMs);
+        }
+        tpmWindowStart  = Date.now();
+        tpmWindowTokens = 0;
+      }
+
+      const groqResult = await callGroqTravelerV2({
+        systemPrompt,
+        history,
+        guestMessage: msg.message,
+        apiKey,
+        model,
+        label: caseId,
+      });
+
+      result.raw_response = groqResult.raw;
+      result.decision     = groqResult.decision;
+      result.latency_ms   = groqResult.latency_ms;
+      result.tokens       = groqResult.tokens;
+      result.error        = groqResult.error;
+      result._diag.failed_generation = groqResult.failed_generation || null;
+
+      if (groqResult.tokens?.total) {
+        tpmWindowTokens += groqResult.tokens.total;
+      }
+
+      if (groqResult.decision) {
+        console.log(`   ✅ action=${groqResult.decision.action} conf=${groqResult.decision.confidence} risk=${groqResult.decision.hallucination_risk} (${groqResult.latency_ms}ms)`);
+      } else {
+        console.warn(`   ⚠️  ${caseId} erreur: ${groqResult.error}`);
+      }
+
+    } catch (caseErr) {
+      result.error = caseErr.message;
+      console.error(`   ❌ ${caseId} erreur: ${caseErr.message}`);
+    }
+
+    results.push(result);
+  }
+
+  return results;
+}
+
 // ─── Report Formatter ────────────────────────────────────────────────────────
 
 /**
@@ -1337,6 +1621,187 @@ function formatBenchmarkReport(results) {
   return lines.join('\n');
 }
 
+// ─── Golden Report Formatter ─────────────────────────────────────────────────
+
+/**
+ * Formate les résultats du golden set benchmark.
+ * Ordre garanti : GOLDEN-001 → GOLDEN-006.
+ * Format structuré pour revue manuelle avec grille de notation.
+ *
+ * @param {Array} results
+ * @returns {string}
+ */
+function formatGoldenReport(results) {
+  const lines = [
+    `╔${'═'.repeat(70)}╗`,
+    `║  GROQ TRAVELER AI V2 — GOLDEN SET BENCHMARK REPORT${' '.repeat(19)}║`,
+    `║  Généré le ${new Date().toISOString()}${' '.repeat(Math.max(0, 27 - new Date().toISOString().length))}║`,
+    `╚${'═'.repeat(70)}╝`,
+    '',
+  ];
+
+  for (const r of results) {
+    const msgAt = r.message_at ? new Date(r.message_at).toLocaleString('fr-FR') : '?';
+    lines.push(`${'═'.repeat(72)}`);
+    lines.push('');
+    lines.push(r.case_id);
+    lines.push('');
+    lines.push(`MESSAGE_ID:        ${r.message_id}`);
+    lines.push(`CONVERSATION_ID:   ${r.conversation_id ?? '?'}`);
+    lines.push(`PROPERTY:          ${r.context?.property_name ?? '?'} (${r.property_id ?? '?'})`);
+    lines.push(`DATE:              ${msgAt}`);
+    lines.push('');
+    lines.push('CURRENT_GUEST_MESSAGE:');
+    lines.push(`  "${_maskSensitive(_safeDiagStr(r.guest_message))}"`);
+    lines.push('');
+
+    if (r.error?.startsWith('MISSING_MESSAGE_ID')) {
+      lines.push(`⚠️  ${r.error}`);
+      lines.push('');
+      lines.push('NOTE CHARLES: __/5   ERREUR FACTUELLE: __   INVENTION: __   MEILLEURE QUE V1: __   COMMENTAIRE: ');
+      lines.push('');
+      continue;
+    }
+
+    const storedLang = r._diag?.stored_language || r.context?.guest_lang || '?';
+    lines.push(`STORED_LANGUAGE:   ${storedLang}`);
+    lines.push('');
+
+    if (r.historical_reply) {
+      lines.push(`HISTORICAL_REPLY (${r.historical_reply_type ?? '?'}) :`);
+      lines.push(`  "${_maskSensitive(_safeDiagStr(r.historical_reply))}"`);
+    } else {
+      lines.push(`HISTORICAL_REPLY:  (aucune — ${r.historical_reply_type ?? 'AUCUNE'})`);
+    }
+    lines.push(`HISTORICAL_REPLY_TYPE: ${r.historical_reply_type ?? 'AUCUNE'}`);
+    lines.push('');
+
+    lines.push('CONTEXT_FINGERPRINT:');
+    lines.push(`  ${r.context_fingerprint ?? '?'}`);
+    lines.push('');
+
+    if (r._diag) {
+      const hist = r._diag.history_sent_to_model || [];
+      lines.push(`HISTORY_SENT_TO_MODEL (${hist.length} messages, 7j, created_at < message cible) :`);
+      if (hist.length === 0) {
+        lines.push('  (aucun)');
+      } else {
+        for (const h of hist) {
+          const preview = (_safeDiagStr(h.content) || '').substring(0, 200).replace(/\n/g, ' ');
+          lines.push(`  [${h.role}] "${preview}"`);
+        }
+      }
+      lines.push('');
+
+      const fs = r._diag.few_shot_sent_to_model || [];
+      lines.push(`FEW_SHOT_SENT_TO_MODEL (${fs.length} exemples, created_at < message cible) :`);
+      if (fs.length === 0) {
+        lines.push('  (aucun)');
+      } else {
+        for (const ex of fs) {
+          lines.push(`  Ex ${ex.idx} — Voyageur: "${ex.guest}"`);
+          lines.push(`          Hôte:    "${ex.host}"`);
+        }
+        lines.push('');
+        lines.push('FEW_SHOT_SOURCE:');
+        for (const ex of fs) {
+          lines.push(`  Ex ${ex.idx}: source=${ex.source ?? '?'} sender_type=${ex.sender_type ?? '?'} sender_name=${ex.sender_name ?? '—'}`);
+        }
+      }
+      lines.push('');
+
+      const fp = r._diag.facts_provenance || [];
+      lines.push(`FACTS_PROVENANCE (${fp.length} champs KNOWN_TRUE dans le contexte) :`);
+      if (fp.length === 0) {
+        lines.push('  (aucun champ renseigné)');
+      } else {
+        for (const f of fp) {
+          lines.push(`  FACT   : ${f.fact}`);
+          lines.push(`  SOURCE : ${f.source}`);
+          lines.push(`  VALUE  : ${f.value}`);
+          lines.push('');
+        }
+      }
+    }
+
+    lines.push('GROQ V2:');
+    lines.push('');
+    if (r.decision) {
+      const d = r.decision;
+      lines.push(`  ACTION:              ${d.action}`);
+      lines.push(`  CONFIDENCE:          ${d.confidence.toFixed(2)}`);
+      lines.push(`  REPLY:               ${d.reply ? `"${_maskSensitive(_safeDiagStr(d.reply))}"` : '(aucune)'}`);
+      lines.push(`  MISSING_INFORMATION: —`);
+      lines.push(`  FACTS_USED:          —`);
+      lines.push(`  REASONING:           ${d.reasoning}`);
+      lines.push(`  HALLUCINATION_RISK:  ${d.hallucination_risk}`);
+      lines.push(`  REQUIRES_HUMAN:      ${d.requires_human}`);
+    } else {
+      lines.push(`  ERREUR: ${r.error ?? 'inconnue'}`);
+    }
+
+    if (r._diag?.failed_generation) {
+      lines.push('');
+      lines.push('JSON_FAILURE:');
+      lines.push(`  ${r._diag.failed_generation.replace(/\n/g, ' ').substring(0, 400)}`);
+    }
+
+    lines.push('');
+    lines.push('METRICS:');
+    lines.push(`  latency:       ${r.latency_ms ?? '?'}ms`);
+    lines.push(`  input_tokens:  ${r.tokens?.input ?? '?'}`);
+    lines.push(`  output_tokens: ${r.tokens?.output ?? '?'}`);
+    lines.push(`  total_tokens:  ${r.tokens?.total ?? '?'}`);
+    lines.push('');
+    lines.push('HISTORICAL_CONTEXT_LIMITATION: OUI (property/welcome_book = état actuel)');
+    lines.push('');
+    lines.push('NOTE CHARLES: __/5   ERREUR FACTUELLE: __   INVENTION: __   MEILLEURE QUE V1: __   COMMENTAIRE: ');
+    lines.push('');
+  }
+
+  // ── Résumé ──
+  const ok     = results.filter(r => !r.error).length;
+  const err    = results.filter(r =>  r.error).length;
+  const avgMs  = ok > 0
+    ? Math.round(results.filter(r => r.latency_ms).reduce((s, r) => s + r.latency_ms, 0) / results.filter(r => r.latency_ms).length)
+    : 0;
+  const totalInput  = results.reduce((s, r) => s + (r.tokens?.input  || 0), 0);
+  const totalOutput = results.reduce((s, r) => s + (r.tokens?.output || 0), 0);
+  const totalTokens = results.reduce((s, r) => s + (r.tokens?.total  || 0), 0);
+
+  const actions = {};
+  for (const r of results) {
+    if (r.decision?.action) {
+      actions[r.decision.action] = (actions[r.decision.action] || 0) + 1;
+    }
+  }
+
+  lines.push(`${'═'.repeat(72)}`);
+  lines.push('');
+  lines.push('GOLDEN SET SUMMARY');
+  lines.push('');
+  lines.push(`TOTAL :               ${results.length}`);
+  lines.push(`SUCCESS :             ${ok}`);
+  lines.push(`ERROR :               ${err}`);
+  lines.push(`RATE_LIMIT_RETRY :    (voir logs)`);
+  lines.push(`JSON_RETRY :          (voir logs)`);
+  lines.push('');
+  lines.push(`ACTIONS :             ${Object.entries(actions).map(([a, n]) => `${a}×${n}`).join(', ') || '—'}`);
+  lines.push('');
+  lines.push(`AVG_LATENCY :         ${avgMs}ms`);
+  lines.push(`TOTAL_INPUT_TOKENS :  ${totalInput}`);
+  lines.push(`TOTAL_OUTPUT_TOKENS : ${totalOutput}`);
+  lines.push(`TOTAL_TOKENS :        ${totalTokens}`);
+  lines.push('');
+  lines.push('MANUAL REVIEW');
+  for (const r of results) {
+    lines.push(`${r.case_id} : __/5`);
+  }
+  lines.push('');
+
+  return lines.join('\n');
+}
+
 module.exports = {
   buildTravelerContextFromRawData,
   buildTravelerContext,
@@ -1345,7 +1810,10 @@ module.exports = {
   callGroqTravelerV2,
   validateTravelerDecision,
   runTravelerBenchmark,
+  runGoldenSetBenchmark,
   formatBenchmarkReport,
+  formatGoldenReport,
+  computeContextFingerprint,
   _maskSensitive,
   _safeDiagStr,
   _resolveHistoricalReply,
@@ -1353,4 +1821,5 @@ module.exports = {
   _estimateCallTokens,
   _setDelay,
   VALID_ACTIONS,
+  GOLDEN_IDS,
 };

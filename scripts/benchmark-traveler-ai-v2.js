@@ -4,6 +4,7 @@
  * Benchmark CLI — Groq Traveler AI V2 (Shadow Mode)
  *
  * Usage :
+ *   node scripts/benchmark-traveler-ai-v2.js --golden
  *   node scripts/benchmark-traveler-ai-v2.js [--limit 5] [--model llama-3.3-70b-versatile]
  *
  * Pré-requis :
@@ -20,16 +21,23 @@ const fs     = require('fs');
 const { Pool } = require('pg');
 const {
   runTravelerBenchmark,
+  runGoldenSetBenchmark,
   formatBenchmarkReport,
+  formatGoldenReport,
+  GOLDEN_IDS,
 } = require('../services/traveler-ai-v2');
 
 // ─── Parse args ──────────────────────────────────────────────────────────────
 
-const args  = process.argv.slice(2);
-let limit   = 5;
-let model   = process.env.GROQ_MODEL_V2 || 'llama-3.3-70b-versatile';
+const args   = process.argv.slice(2);
+let limit    = 5;
+let model    = process.env.GROQ_MODEL_V2 || 'openai/gpt-oss-120b';
+let golden   = false;
 
 for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--golden') {
+    golden = true;
+  }
   if (args[i] === '--limit' && args[i + 1]) {
     limit = Math.max(1, Math.min(50, parseInt(args[i + 1]) || 5));
     i++;
@@ -68,37 +76,69 @@ async function main() {
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   });
 
-  console.log(`\n🚀 Groq Traveler AI V2 — Shadow Mode Benchmark`);
-  console.log(`   limit=${limit}  model=${model}`);
-  console.log(`   DATABASE: ${(process.env.DATABASE_URL || '').replace(/:\/\/[^@]+@/, '://***@')}`);
-  console.log(`   GROQ_API_KEY: ${process.env.GROQ_API_KEY ? '✓' : '✗'}`);
-  console.log('');
-
   let results;
-  try {
-    results = await runTravelerBenchmark(pool, {
-      limit,
-      model,
-      apiKey:  process.env.GROQ_API_KEY,
-      baseUrl: process.env.APP_URL || 'https://www.boostinghost.fr',
-    });
-  } catch (err) {
-    console.error('❌ Erreur fatale benchmark:', err.message);
-    await pool.end();
-    process.exit(1);
+  let report;
+  let filePrefix;
+
+  if (golden) {
+    console.log(`\n🏅 Groq Traveler AI V2 — Golden Set Benchmark`);
+    console.log(`   MODE       = GOLDEN_SET`);
+    console.log(`   CASES      = ${GOLDEN_IDS.length}`);
+    console.log(`   IDs        = [${GOLDEN_IDS.join(', ')}]`);
+    console.log(`   model=${model}`);
+    console.log(`   DATABASE: ${(process.env.DATABASE_URL || '').replace(/:\/\/[^@]+@/, '://***@')}`);
+    console.log(`   GROQ_API_KEY: ${process.env.GROQ_API_KEY ? '✓' : '✗'}`);
+    console.log('');
+
+    try {
+      results = await runGoldenSetBenchmark(pool, {
+        model,
+        apiKey:  process.env.GROQ_API_KEY,
+        baseUrl: process.env.APP_URL || 'https://www.boostinghost.fr',
+      });
+    } catch (err) {
+      console.error('❌ Erreur fatale golden benchmark:', err.message);
+      await pool.end();
+      process.exit(1);
+    }
+
+    report    = formatGoldenReport(results);
+    filePrefix = 'golden-run';
+
+  } else {
+    console.log(`\n🚀 Groq Traveler AI V2 — Shadow Mode Benchmark`);
+    console.log(`   limit=${limit}  model=${model}`);
+    console.log(`   DATABASE: ${(process.env.DATABASE_URL || '').replace(/:\/\/[^@]+@/, '://***@')}`);
+    console.log(`   GROQ_API_KEY: ${process.env.GROQ_API_KEY ? '✓' : '✗'}`);
+    console.log('');
+
+    try {
+      results = await runTravelerBenchmark(pool, {
+        limit,
+        model,
+        apiKey:  process.env.GROQ_API_KEY,
+        baseUrl: process.env.APP_URL || 'https://www.boostinghost.fr',
+      });
+    } catch (err) {
+      console.error('❌ Erreur fatale benchmark:', err.message);
+      await pool.end();
+      process.exit(1);
+    }
+
+    report    = formatBenchmarkReport(results);
+    filePrefix = 'run';
   }
 
   await pool.end();
 
   // ─── Sérialisation ────────────────────────────────────────────────────────
-  const ts     = new Date().toISOString().replace(/[:.]/g, '-');
-  const jsonPath = path.join(resultsDir, `run-${ts}.json`);
-  const txtPath  = path.join(resultsDir, `run-${ts}.txt`);
+  const ts      = new Date().toISOString().replace(/[:.]/g, '-');
+  const jsonPath = path.join(resultsDir, `${filePrefix}-${ts}.json`);
+  const txtPath  = path.join(resultsDir, `${filePrefix}-${ts}.txt`);
 
   fs.writeFileSync(jsonPath, JSON.stringify(results, null, 2), 'utf8');
   console.log(`\n📄 Résultats JSON : ${jsonPath}`);
 
-  const report = formatBenchmarkReport(results);
   fs.writeFileSync(txtPath, report, 'utf8');
   console.log(`📄 Rapport texte : ${txtPath}`);
 
@@ -106,18 +146,20 @@ async function main() {
   console.log('\n' + '═'.repeat(72));
   for (const r of results) {
     const status = r.error ? '❌' : '✅';
-    const action = r.decision?.action || 'ERROR';
+    const action = r.decision?.action || (r.error?.startsWith('MISSING') ? 'MISSING' : 'ERROR');
     const conf   = r.decision ? r.decision.confidence.toFixed(2) : '—';
     const risk   = r.decision?.hallucination_risk || '—';
     const ms     = r.latency_ms ? `${r.latency_ms}ms` : '—';
-    console.log(`${status} ${r.case_id} | ${action} conf=${conf} risk=${risk} ${ms}`);
+    const fp     = r.context_fingerprint ? `fp=${r.context_fingerprint}` : '';
+    console.log(`${status} ${r.case_id} | ${action} conf=${conf} risk=${risk} ${ms} ${fp}`);
     if (r.error) console.log(`   ↳ ${r.error}`);
   }
   console.log('═'.repeat(72));
 
   const ok  = results.filter(r => !r.error).length;
-  const err = results.filter(r => r.error).length;
-  console.log(`\n✅ ${ok} OK  ❌ ${err} erreur(s)  — benchmark terminé\n`);
+  const err = results.filter(r =>  r.error).length;
+  const mode = golden ? 'GOLDEN SET' : 'RANDOM';
+  console.log(`\n✅ ${ok} OK  ❌ ${err} erreur(s)  [${mode}] — benchmark terminé\n`);
 }
 
 main().catch(err => {
