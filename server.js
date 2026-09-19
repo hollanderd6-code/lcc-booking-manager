@@ -5281,10 +5281,14 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                   // ✅ Convertir le hold associé (évite que le CRON le passe en "expired")
                   try {
                     const holdConvRes = await pool.query(
+                      /* HOLD_CONVERSION_SANS_COMPTE — ownerId est le proprietaire du
+                         logement ; le hold porte le compte qui a cree le lien, qui peut
+                         etre un compte agence. La comparaison echouait donc en mode
+                         agence, et le hold survivait jusqu'a son expiration (4h). */
                       `UPDATE bhguest_holds SET status='converted'
                          WHERE property_id=$1 AND checkin=$2 AND checkout=$3
-                           AND status='active' AND user_id=$4 RETURNING link_token`,
-                      [propId, startDate, endDate, ownerId]
+                           AND status='active' RETURNING link_token`,
+                      [propId, startDate, endDate]
                     );
                     // Supprimer l'ancienne réservation "Pré-résa" (HOLD_xxx)
                     for (const hold of holdConvRes.rows) {
@@ -46259,10 +46263,20 @@ app.post('/api/guest/book', async (req, res) => {
     // Libérer le hold associé à ces dates si existant
     try {
       const holdRes = await pool.query(
+        /* HOLD_CONVERSION_SANS_COMPTE — la condition « user_id = $4 » comparait
+           deux comptes legitimes mais differents : prop.owner_user_id est le
+           proprietaire du LOGEMENT, le hold porte le compte qui a cree le LIEN.
+           Ils coincident quand un proprietaire gere seul son compte — et
+           divergent des qu'une agence cree le lien pour le bien d'un client.
+           La conversion echouait alors en silence : le hold restait 'active'
+           jusqu'a son expiration (4h), et le calendrier affichait la
+           pre-reservation a cote de la reservation payee.
+           Logement + dates + status='active' identifient le hold sans
+           ambiguite : deux comptes ne peuvent pas tenir les memes nuits. */
         `UPDATE bhguest_holds SET status = 'converted'
          WHERE property_id = $1 AND checkin = $2 AND checkout = $3
-           AND status = 'active' AND user_id = $4 RETURNING link_token`,
-        [property_id, checkin, checkout, prop.owner_user_id]
+           AND status = 'active' RETURNING link_token`,
+        [property_id, checkin, checkout]
       );
       if (holdRes.rows.length > 0) {
         console.log(`✅ [HOLD] Converti en réservation pour ${property_id} ${checkin}→${checkout}`);
@@ -49496,10 +49510,20 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
     // Libérer le hold associé + rafraîchir calendrier BH
     try {
       const holdRes = await pool.query(
+        /* HOLD_CONVERSION_SANS_COMPTE — la condition « user_id = $4 » comparait
+           deux comptes legitimes mais differents : prop.owner_user_id est le
+           proprietaire du LOGEMENT, le hold porte le compte qui a cree le LIEN.
+           Ils coincident quand un proprietaire gere seul son compte — et
+           divergent des qu'une agence cree le lien pour le bien d'un client.
+           La conversion echouait alors en silence : le hold restait 'active'
+           jusqu'a son expiration (4h), et le calendrier affichait la
+           pre-reservation a cote de la reservation payee.
+           Logement + dates + status='active' identifient le hold sans
+           ambiguite : deux comptes ne peuvent pas tenir les memes nuits. */
         `UPDATE bhguest_holds SET status = 'converted'
          WHERE property_id = $1 AND checkin = $2 AND checkout = $3
-           AND status = 'active' AND user_id = $4 RETURNING link_token`,
-        [property_id, checkin, checkout, prop.owner_user_id]
+           AND status = 'active' RETURNING link_token`,
+        [property_id, checkin, checkout]
       );
       if (holdRes.rows.length > 0) {
         console.log(`✅ [HOLD] Converti (confirm-after-payment) pour ${property_id} ${checkin}→${checkout}`);
