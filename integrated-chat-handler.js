@@ -222,6 +222,31 @@ async function sendBotMessage(conversationId, message, pool, io, channexBookingI
 }
 
 // ============================================
+// 🔍 MÉMOIRE SCHEDULE — décision déjà prise pour cette réservation
+// Retourne {status, answer_text} si une décision answered_yes/no existe déjà
+// pour ce (conversationId, type, reqLabel), null sinon.
+// reqLabel doit être la forme canonique HHhMM (ex. "08h00").
+// ============================================
+async function checkExistingScheduleDecision(pool, conversationId, scheduleType, reqLabel) {
+  try {
+    const r = await pool.query(
+      `SELECT status, answer_text FROM ai_host_questions
+       WHERE conversation_id = $1
+         AND kind = 'schedule'
+         AND meta->>'type' = $2
+         AND meta->>'reqLabel' = $3
+         AND status IN ('answered_yes', 'answered_no')
+       ORDER BY answered_at DESC LIMIT 1`,
+      [conversationId, scheduleType, reqLabel]
+    );
+    return r.rows[0] || null;
+  } catch(e) {
+    console.error('❌ [SCHEDULE-MEM] checkExistingScheduleDecision:', e.message);
+    return null;
+  }
+}
+
+// ============================================
 // 🗒️ NOTE INTERNE dans la conversation (visible hôte uniquement)
 // Insérée en DB avec sender_type='internal_note' et JAMAIS envoyée à Channex.
 // ============================================
@@ -696,6 +721,22 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       } catch(e) { /* table absente au tout premier démarrage : ignorer */ }
     }
 
+    // ─── Décisions horaires pour cette réservation/conversation ─────
+    // Injectées dans le contexte Groq pour éviter de re-poser une question déjà tranchée.
+    let scheduleDecisions = [];
+    try {
+      const sdRes = await pool.query(
+        `SELECT kind, meta->>'type' AS type, meta->>'reqLabel' AS req_label,
+                meta->>'refLabel' AS ref_label, status, answer_text
+         FROM ai_host_questions
+         WHERE conversation_id = $1 AND kind = 'schedule'
+           AND status IN ('answered_yes', 'answered_no')
+         ORDER BY answered_at ASC`,
+        [conversation.id]
+      );
+      scheduleDecisions = sdRes.rows;
+    } catch(e) { /* table peut ne pas exister au premier démarrage */ }
+
     // ─── URL et statut lien caution ───────────────────────────────
     let depositLinkAlreadySent = false;
     let depositUrl = null;
@@ -860,6 +901,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       practicalInfo:     property.practical_info,
       customQRSummary,
       propertyFacts,
+      scheduleDecisions,
       // Caution
       depositAmount:      isAirbnbPlatform ? null : depositAmount,
       depositStatus:      isAirbnbPlatform ? 'not_applicable' : depositStatus,
@@ -991,13 +1033,14 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             es: `Estoy verificando este punto con el anfitrión y le responderé muy pronto 😊`,
             de: `Ich kläre das mit dem Gastgeber und melde mich sehr bald bei Ihnen 😊`,
           };
-          await sendBotMessage(conversation.id, cleanMsg || (fallbackMsg[language] || fallbackMsg.fr), pool, io, channexId);
+          const triggerMsg = await sendBotMessage(conversation.id, cleanMsg || (fallbackMsg[language] || fallbackMsg.fr), pool, io, channexId);
 
           // Créer la question + notifier l'hôte (sans escalader : l'IA reprendra dès la réponse)
           await createHostQuestion(conversation, pool, io, {
             question: hostQuestion,
             guestMessage: message.message,
-            language
+            language,
+            triggerMessageId: triggerMsg?.id ?? null
           });
           console.log(`❓ [HANDLER] Question à l'hôte créée : "${hostQuestion}"`);
           return true;
@@ -1107,7 +1150,31 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             }
           }
 
-          // Cas 3 : au-delà de la tolérance → refuser poliment + escalade
+          // Cas 3 : au-delà de la tolérance → vérifier mémoire de réservation d'abord
+          const prevLate = await checkExistingScheduleDecision(pool, conversation.id, 'late', reqLabel);
+          if (prevLate) {
+            const detail = prevLate.answer_text ? ` (${prevLate.answer_text})` : '';
+            const prevYes = {
+              fr: `Comme confirmé précédemment, vous pouvez partir à ${reqLabel} 😊`,
+              en: `As previously confirmed, you can check out at ${reqLabel} 😊`,
+              it: `Come già confermato, può partire alle ${reqLabel} 😊`,
+              es: `Como confirmado anteriormente, puede salir a las ${reqLabel} 😊`,
+              de: `Wie bereits bestätigt, können Sie um ${reqLabel} abreisen 😊`,
+            };
+            const prevNo = {
+              fr: `Comme mentionné précédemment, un départ à ${reqLabel} n'est malheureusement pas possible${detail}.`,
+              en: `As discussed earlier, a checkout at ${reqLabel} is unfortunately not possible${detail}.`,
+              it: `Come discusso in precedenza, una partenza alle ${reqLabel} purtroppo non è possibile${detail}.`,
+              es: `Como se comentó anteriormente, la salida a las ${reqLabel} lamentablemente no es posible${detail}.`,
+              de: `Wie bereits besprochen, ist ein Auschecken um ${reqLabel} leider nicht möglich${detail}.`,
+            };
+            const reply = prevLate.status === 'answered_yes' ? prevYes : prevNo;
+            await sendBotMessage(conversation.id, reply[language] || reply.fr, pool, io, channexId);
+            console.log(`🔁 [SCHEDULE-MEM] Départ tardif ${reqLabel} déjà ${prevLate.status} → réponse directe`);
+            return prevLate.status === 'answered_yes';
+          }
+
+          // Aucune décision existante → demander à l'hôte
           const tooLateMsg = {
             fr: `Je comprends votre demande de partir à ${reqLabel}. Je dois vérifier ce point avec l'hôte, qui reviendra vers vous rapidement pour confirmer. Merci de votre patience ! 🙏`,
             en: `I understand you'd like to leave at ${reqLabel}. I need to check this with the host, who'll get back to you shortly to confirm. Thank you for your patience! 🙏`,
@@ -1115,7 +1182,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             es: `Entiendo que quiere salir a las ${reqLabel}. Debo verificarlo con el anfitrión, que le responderá pronto para confirmar. ¡Gracias por su paciencia! 🙏`,
             de: `Ich verstehe, dass Sie um ${reqLabel} abreisen möchten. Ich muss das mit dem Gastgeber klären, der sich in Kürze bei Ihnen meldet. Vielen Dank für Ihre Geduld! 🙏`,
           };
-          await sendBotMessage(conversation.id, tooLateMsg[language] || tooLateMsg.fr, pool, io, channexId);
+          const lateTriggerMsg = await sendBotMessage(conversation.id, tooLateMsg[language] || tooLateMsg.fr, pool, io, channexId);
           // Note interne orange : demande en attente de validation
           await addInternalNote(conversation.id,
             `⏳ Départ tardif à ${reqLabel} demandé (prévu ${depLabel}) — HORS tolérance. En attente de votre validation (Oui/Non).`,
@@ -1126,7 +1193,8 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             guestMessage: message.message,
             language,
             kind: 'schedule',
-            meta: { type: 'late', reqLabel, refLabel: depLabel }
+            meta: { type: 'late', reqLabel, refLabel: depLabel },
+            triggerMessageId: lateTriggerMsg?.id ?? null
           });
           console.log(`🔄 [HANDLER] Late checkout ${reqLabel} > tolérance → question Oui/Non à l'hôte`);
           return false;
@@ -1229,7 +1297,31 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             }
           }
 
-          // Cas 3 : trop tôt → refuser poliment + escalade
+          // Cas 3 : trop tôt → vérifier mémoire de réservation d'abord
+          const prevEarly = await checkExistingScheduleDecision(pool, conversation.id, 'early', reqLabel);
+          if (prevEarly) {
+            const detail = prevEarly.answer_text ? ` (${prevEarly.answer_text})` : '';
+            const prevYes = {
+              fr: `Comme confirmé précédemment, vous pouvez arriver dès ${reqLabel} 😊`,
+              en: `As previously confirmed, you can arrive from ${reqLabel} 😊`,
+              it: `Come già confermato, può arrivare dalle ${reqLabel} 😊`,
+              es: `Como confirmado anteriormente, puede llegar desde las ${reqLabel} 😊`,
+              de: `Wie bereits bestätigt, können Sie ab ${reqLabel} anreisen 😊`,
+            };
+            const prevNo = {
+              fr: `Comme mentionné précédemment, une arrivée à ${reqLabel} n'est malheureusement pas possible${detail}.`,
+              en: `As discussed earlier, arriving at ${reqLabel} is unfortunately not possible${detail}.`,
+              it: `Come discusso in precedenza, arrivare alle ${reqLabel} purtroppo non è possibile${detail}.`,
+              es: `Como se comentó anteriormente, llegar a las ${reqLabel} lamentablemente no es posible${detail}.`,
+              de: `Wie bereits besprochen, ist eine Ankunft um ${reqLabel} leider nicht möglich${detail}.`,
+            };
+            const reply = prevEarly.status === 'answered_yes' ? prevYes : prevNo;
+            await sendBotMessage(conversation.id, reply[language] || reply.fr, pool, io, channexId);
+            console.log(`🔁 [SCHEDULE-MEM] Arrivée anticipée ${reqLabel} déjà ${prevEarly.status} → réponse directe`);
+            return prevEarly.status === 'answered_yes';
+          }
+
+          // Aucune décision existante → demander à l'hôte
           const tooEarlyMsg = {
             fr: `Je comprends votre souhait d'arriver à ${reqLabel}. L'arrivée est normalement prévue à partir de ${arrLabel}. Je vérifie avec l'hôte si une arrivée plus tôt est possible et reviens vers vous rapidement. Merci ! 🙏`,
             en: `I understand you'd like to arrive at ${reqLabel}. Check-in is normally from ${arrLabel}. I'll check with the host whether an earlier arrival is possible and get back to you shortly. Thank you! 🙏`,
@@ -1237,7 +1329,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             es: `Entiendo que quiere llegar a las ${reqLabel}. La entrada es normalmente a partir de las ${arrLabel}. Verifico con el anfitrión si es posible una llegada anticipada y le respondo pronto. ¡Gracias! 🙏`,
             de: `Ich verstehe, dass Sie um ${reqLabel} ankommen möchten. Der Check-in ist normalerweise ab ${arrLabel}. Ich kläre mit dem Gastgeber, ob eine frühere Ankunft möglich ist, und melde mich bald. Danke! 🙏`,
           };
-          await sendBotMessage(conversation.id, tooEarlyMsg[language] || tooEarlyMsg.fr, pool, io, channexId);
+          const earlyTriggerMsg = await sendBotMessage(conversation.id, tooEarlyMsg[language] || tooEarlyMsg.fr, pool, io, channexId);
           // Note interne orange : demande en attente de validation
           await addInternalNote(conversation.id,
             `⏳ Arrivée anticipée à ${reqLabel} demandée (prévu ${arrLabel}) — HORS tolérance. En attente de votre validation (Oui/Non).`,
@@ -1248,7 +1340,8 @@ async function handleIncomingMessage(message, conversation, pool, io) {
             guestMessage: message.message,
             language,
             kind: 'schedule',
-            meta: { type: 'early', reqLabel, refLabel: arrLabel }
+            meta: { type: 'early', reqLabel, refLabel: arrLabel },
+            triggerMessageId: earlyTriggerMsg?.id ?? null
           });
           console.log(`🔄 [HANDLER] Early check-in ${reqLabel} > tolérance → question Oui/Non à l'hôte`);
           return false;
@@ -1844,7 +1937,7 @@ async function escalateToOwner(conversation, pool, io, language, channexId = nul
 
 // Crée une question en attente + notifie l'hôte. Met l'IA en pause sur la conv
 // le temps de la réponse (réutilise le mécanisme d'escalade existant).
-async function createHostQuestion(conversation, pool, io, { question, guestMessage, language, kind, meta }) {
+async function createHostQuestion(conversation, pool, io, { question, guestMessage, language, kind, meta, triggerMessageId = null }) {
   kind = kind || 'factual';
   // Nom du logement (pour la notif)
   let propName = null;
@@ -1897,12 +1990,12 @@ async function createHostQuestion(conversation, pool, io, { question, guestMessa
     );
     const ins = await pool.query(
       `INSERT INTO ai_host_questions
-         (user_id, conversation_id, property_id, guest_name, question, guest_message, language, kind, meta, status, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', NOW(), NOW())
+         (user_id, conversation_id, property_id, guest_name, question, guest_message, language, kind, meta, status, trigger_message_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, NOW(), NOW())
        RETURNING id`,
       [conversation.user_id, conversation.id, conversation.property_id || null,
        conversation.guest_name || 'Voyageur', question, guestMessage || '', language || 'fr',
-       kind, JSON.stringify(enrichedMeta)]
+       kind, JSON.stringify(enrichedMeta), triggerMessageId || null]
     );
     questionId = ins.rows[0].id;
   } catch(e) {
@@ -2158,5 +2251,6 @@ module.exports = {
   createHostQuestion,
   relayHostAnswer,
   generateOwnerSuggestion,
-  confirmUpsellPaid
+  confirmUpsellPaid,
+  checkExistingScheduleDecision
 };

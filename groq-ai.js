@@ -237,6 +237,21 @@ function buildSystemPrompt(ctx, temporalCtx, fewShotExamples) {
     sections.push(`FAITS CONFIRMÉS PAR L'HÔTE (fiables, réponds directement sans escalader) :\n${factLines.join('\n')}`);
   }
 
+  if (ctx.scheduleDecisions && ctx.scheduleDecisions.length) {
+    const sdLines = ctx.scheduleDecisions.map(d => {
+      const typeLabel = d.type === 'early' ? 'Arrivée anticipée' : 'Départ tardif';
+      const outcome   = d.status === 'answered_yes' ? 'AUTORISÉ' : 'REFUSÉ';
+      const detail    = d.answer_text ? ` (${d.answer_text})` : '';
+      return `- ${typeLabel} à ${d.req_label} : ${outcome} par l'hôte${detail}`;
+    });
+    sections.push(
+      `DÉCISIONS HORAIRES POUR CETTE RÉSERVATION (déjà tranchées — SOURCE FIABLE) :\n` +
+      sdLines.join('\n') + '\n' +
+      `Si le voyageur redemande exactement le même horaire → réponds directement selon cette décision, ` +
+      `SANS émettre [EARLY_CHECKIN] ni [LATE_CHECKOUT]. Pour un horaire DIFFÉRENT → réévaluer normalement.`
+    );
+  }
+
   // ── Caution ────────────────────────────────
   if (!ctx.isAirbnb && ctx.depositAmount && parseFloat(ctx.depositAmount) > 0) {
     const amt = parseFloat(ctx.depositAmount);

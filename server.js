@@ -21369,15 +21369,34 @@ app.get('/api/properties-order/bulk', authenticateAny, async (req, res) => {
 // PUT - Sauvegarder l'ordre complet des logements
 app.put('/api/properties-order/bulk', authenticateAny, async (req, res) => {
   try {
-    const userId = req.user.isSubAccount
-      ? (await getRealUserId(pool, req))
-      : (await getUserFromRequest(req))?.id;
+    if (req.user.isSubAccount) {
+      return res.status(403).json({ error: 'Non autorisé' });
+    }
+
+    const userId = (await getUserFromRequest(req))?.id;
     const agencyIds = await getAgencyUserIds(req, userId);
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
     const { order } = req.body;
     if (!Array.isArray(order) || !order.length) {
       return res.status(400).json({ error: 'Ordre invalide' });
+    }
+
+    // Reject duplicates
+    if (new Set(order).size !== order.length) {
+      return res.status(400).json({ error: 'Ordre invalide : doublons détectés' });
+    }
+
+    // Reject IDs that don't belong to this account
+    const agencySet = new Set(agencyIds);
+    const ownerCheck = await pool.query(
+      `SELECT id FROM properties WHERE id = ANY($1::text[]) AND user_id = ANY($2::text[])`,
+      [order, agencyIds]
+    );
+    const ownedIds = new Set(ownerCheck.rows.map(r => String(r.id)));
+    const foreign = order.filter(id => !ownedIds.has(String(id)));
+    if (foreign.length > 0) {
+      return res.status(400).json({ error: 'Ordre invalide : identifiants inconnus' });
     }
 
     // Mise à jour en 2 temps dans une transaction pour ne jamais violer
@@ -21408,6 +21427,9 @@ app.put('/api/properties-order/bulk', authenticateAny, async (req, res) => {
     } finally {
       client.release();
     }
+
+    // Refresh in-memory cache so the new order is immediately visible
+    await loadProperties();
 
     console.log(`✅ [REORDER] Ordre sauvegardé pour user ${userId}: ${order.join(', ')}`);
     res.json({ success: true });
@@ -39546,6 +39568,8 @@ async function ensureHostQuestionsTable() {
         ON ai_host_questions (user_id, status);
       ALTER TABLE ai_host_questions ADD COLUMN IF NOT EXISTS kind TEXT DEFAULT 'factual';
       ALTER TABLE ai_host_questions ADD COLUMN IF NOT EXISTS meta JSONB;
+      ALTER TABLE ai_host_questions ADD COLUMN IF NOT EXISTS trigger_message_id BIGINT;
+      CREATE INDEX IF NOT EXISTS idx_ai_host_questions_conversation ON ai_host_questions (conversation_id);
     `);
     console.log('✅ Table ai_host_questions prête');
   } catch (e) {
@@ -39699,30 +39723,96 @@ app.get('/api/host-questions/pending', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/host-questions/conversation/:conversationId — toutes les questions non-annulées
+// de cette conversation (pending + answered) pour affichage inline iOS.
+app.get('/api/host-questions/conversation/:conversationId', authenticateToken, async (req, res) => {
+  try {
+    const convId  = parseInt(req.params.conversationId);
+    const agencyIds = await getAgencyUserIds(req, req.user.id);
+
+    // Vérification d'accès à la conversation
+    const convCheck = await pool.query(
+      'SELECT id FROM conversations WHERE id = $1 AND user_id = ANY($2::text[])',
+      [convId, agencyIds]
+    );
+    if (!convCheck.rows.length) return res.status(403).json({ error: 'Accès refusé' });
+
+    const result = await pool.query(
+      `SELECT q.id, q.conversation_id, q.property_id, q.guest_name, q.question, q.guest_message,
+              q.language, q.kind, q.meta, q.status, q.answer_text, q.created_at, q.answered_at,
+              q.trigger_message_id,
+              prev_r.end_date   AS prev_checkout,
+              next_r.start_date AS next_checkin
+       FROM ai_host_questions q
+       LEFT JOIN conversations c ON c.id = q.conversation_id
+       LEFT JOIN LATERAL (
+         SELECT r.end_date FROM reservations r
+         WHERE r.property_id = q.property_id
+           AND r.status NOT IN ('cancelled','hold')
+           AND c.reservation_start_date IS NOT NULL
+           AND r.start_date < c.reservation_start_date
+           AND r.end_date <= c.reservation_start_date
+         ORDER BY r.end_date DESC LIMIT 1
+       ) prev_r ON true
+       LEFT JOIN LATERAL (
+         SELECT r.start_date FROM reservations r
+         WHERE r.property_id = q.property_id
+           AND r.status NOT IN ('cancelled','hold')
+           AND c.reservation_end_date IS NOT NULL
+           AND r.start_date >= c.reservation_end_date
+           AND r.start_date > c.reservation_start_date
+         ORDER BY r.start_date ASC LIMIT 1
+       ) next_r ON true
+       WHERE q.conversation_id = $1
+         AND q.status NOT IN ('cancelled')
+       ORDER BY q.created_at ASC`,
+      [convId]
+    );
+    res.json({ questions: result.rows });
+  } catch (e) {
+    console.error('GET /api/host-questions/conversation:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // POST /api/host-questions/:id/answer — l'hôte répond (yes | no | self), texte optionnel
+// Protection concurrence : UPDATE atomique WHERE status='pending' pour éviter double réponse.
 app.post('/api/host-questions/:id/answer', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const agencyIds = await getAgencyUserIds(req, userId);
+    const agencyIds = await getAgencyUserIds(req, req.user.id);
     const { answer, text } = req.body; // answer ∈ {'yes','no','self'}
     if (!['yes', 'no', 'self'].includes(answer)) {
       return res.status(400).json({ error: 'answer invalide (yes|no|self)' });
     }
 
-    const qRes = await pool.query(
-      `SELECT * FROM ai_host_questions WHERE id = $1 AND user_id = ANY($2::text[]) AND status = 'pending'`,
+    // Claim atomique : passe status 'pending' → 'processing'. Si rowCount=0,
+    // la question a déjà été prise en charge (concurrence ou double tap).
+    const claim = await pool.query(
+      `UPDATE ai_host_questions SET status = 'processing', updated_at = NOW()
+       WHERE id = $1 AND user_id = ANY($2::text[]) AND status = 'pending'
+       RETURNING *`,
       [req.params.id, agencyIds]
     );
-    if (!qRes.rows[0]) return res.status(404).json({ error: 'Question introuvable ou déjà traitée' });
+    if (!claim.rows[0]) {
+      return res.status(409).json({ error: 'Question déjà traitée', alreadyAnswered: true });
+    }
 
     const { relayHostAnswer } = require('./integrated-chat-handler');
-    const result = await relayHostAnswer(pool, io, {
-      questionRow: qRes.rows[0],
-      answerType: answer,
-      freeText: (text || '').trim() || null
-    });
-
-    res.json({ success: true, sent: result.sent, message: result.message || null });
+    try {
+      const result = await relayHostAnswer(pool, io, {
+        questionRow: claim.rows[0],
+        answerType: answer,
+        freeText: (text || '').trim() || null
+      });
+      res.json({ success: true, sent: result.sent, message: result.message || null });
+    } catch (relayErr) {
+      // En cas d'erreur, repasser en pending pour permettre une nouvelle tentative
+      await pool.query(
+        `UPDATE ai_host_questions SET status = 'pending', updated_at = NOW() WHERE id = $1 AND status = 'processing'`,
+        [req.params.id]
+      );
+      throw relayErr;
+    }
   } catch (e) {
     console.error('POST /api/host-questions/:id/answer:', e);
     res.status(500).json({ error: 'Erreur serveur' });
