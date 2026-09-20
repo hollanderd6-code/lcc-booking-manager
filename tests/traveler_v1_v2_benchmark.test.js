@@ -775,9 +775,10 @@ t('dry-run zero Groq calls (source check)', () => {
   assert.ok(dryBlock >= 0, 'dry-run branch must exist');
 });
 
-t('dry-run logs V1_est and V2_est per case (source check)', () => {
-  assert.ok(src.includes('V1_est=') && src.includes('V2_est='),
-    'dry-run must log V1_est and V2_est for each case');
+t('dry-run logs per-case estimates using system labels (source check)', () => {
+  // After blinding: uses ${v1Label}_est and ${v2Label}_est, not V1_est/V2_est literals
+  assert.ok(src.includes('${v1Label}_est=') && src.includes('${v2Label}_est='),
+    'dry-run must log estimates using neutral ${v1Label}_est / ${v2Label}_est');
 });
 
 t('run_valid still strict 25/25/25 after final TPM hardening', () => {
@@ -867,6 +868,102 @@ ta('budget correctly fits after waitIfNeeded completes', async () => {
   await budget.waitIfNeeded(20, 'test-fits-after');
   const used = budget.tokensLast60s();
   assert.ok(used + 20 <= 100, `after wait: used=${used} + 20 must be ≤ 100`);
+});
+
+// ─── Section 11: Console blinding — no V1/V2 leakage in terminal ─────────────
+
+console.log('\n── 11. Console blinding ─────────────────────────────────────────────────');
+
+t('Step 2 does not log "SYSTEM_A (V1)"', () => {
+  assert.ok(!src.includes('SYSTEM_A (V1)'),
+    '"SYSTEM_A (V1)" must not appear in console output');
+});
+
+t('Step 2 does not log "SYSTEM_A global default"', () => {
+  assert.ok(!src.includes('SYSTEM_A global default'),
+    '"SYSTEM_A global default" must not appear in console.log');
+});
+
+t('Per-case header does not log "V1→"', () => {
+  assert.ok(!src.includes('V1→'),
+    '"V1→" must not appear in any console output');
+});
+
+t('Call start logs use variable labels, not hardcoded V1/V2', () => {
+  assert.ok(!src.includes('`     🚀 V1'),
+    'hardcoded "🚀 V1" start log must not appear');
+  assert.ok(!src.includes('`     🚀 V2'),
+    'hardcoded "🚀 V2" start log must not appear');
+  // Neutral form must be present
+  assert.ok(src.includes('`     🚀 Generating ${v1Label}'),
+    'start log must use ${v1Label}');
+  assert.ok(src.includes('`     🚀 Generating ${v2Label}'),
+    'start log must use ${v2Label}');
+});
+
+t('Success logs do not contain hardcoded V1/V2 labels', () => {
+  // "V1 ✅" or "V2 ✅" as string literals must be absent
+  assert.ok(!/`\s+V1 ✅/.test(src), '"V1 ✅" literal must not appear in template strings');
+  assert.ok(!/`\s+V2 ✅/.test(src), '"V2 ✅" literal must not appear in template strings');
+  // Neutral form must be present
+  assert.ok(src.includes('`        ${v1Label} ✅'),
+    'success log must use ${v1Label}');
+  assert.ok(src.includes('`        ${v2Label} ✅'),
+    'success log must use ${v2Label}');
+});
+
+t('Success logs do not print generated response text', () => {
+  // Old: v1Response.substring(0,50) — must be gone
+  assert.ok(!src.includes('v1Response.substring(0, 50)'),
+    'response text must not be printed to terminal (blind integrity)');
+  // Old: action=${v2Result.decision.action} — must be gone
+  assert.ok(!src.includes('action=${v2Result.decision.action}'),
+    'decision action must not be printed to terminal (blind integrity)');
+});
+
+t('Error logs use variable labels not hardcoded V1/V2', () => {
+  assert.ok(!/`\s+V1 ❌/.test(src), '"V1 ❌" literal must not appear');
+  assert.ok(!/`\s+V2 ❌/.test(src), '"V2 ❌" literal must not appear');
+  assert.ok(src.includes('`        ${v1Label} ❌'), 'error log must use ${v1Label}');
+  assert.ok(src.includes('`        ${v2Label} ❌'), 'error log must use ${v2Label}');
+});
+
+t('Summary does not log "V1 SYSTEM_A:" assignment line', () => {
+  assert.ok(!src.includes('V1 SYSTEM_A:'),
+    '"V1 SYSTEM_A:" must not appear in summary');
+});
+
+t('Summary does not log "V1 success:" or "V2 success:"', () => {
+  assert.ok(!src.includes('V1 success:'),
+    '"V1 success:" must not appear in summary');
+  assert.ok(!src.includes('V2 success:'),
+    '"V2 success:" must not appear in summary');
+});
+
+t('Dry-run per-case log uses variable labels not V1_est/V2_est literals', () => {
+  assert.ok(!src.includes('V1_est='), '"V1_est=" must not appear as literal string');
+  assert.ok(!src.includes('V2_est='), '"V2_est=" must not appear as literal string');
+  // Neutral form uses template with v1Label/v2Label
+  assert.ok(src.includes('${v1Label}_est='), 'dry-run must use ${v1Label}_est');
+  assert.ok(src.includes('${v2Label}_est='), 'dry-run must use ${v2Label}_est');
+});
+
+t('Dry-run stats headers use neutral labels not V1/V2', () => {
+  assert.ok(!src.includes('V1 token stats'), '"V1 token stats" must not appear');
+  assert.ok(!src.includes('V2 token stats'), '"V2 token stats" must not appear');
+  assert.ok(src.includes('Call_1 token stats'), 'Call_1 token stats must be present');
+  assert.ok(src.includes('Call_2 token stats'), 'Call_2 token stats must be present');
+});
+
+t('KEY.json still retains V1/V2 mapping in source', () => {
+  // KEY_INFO.global_label must still map V1/V2 — it goes to KEY.json, not terminal
+  assert.ok(src.includes("'V1' : 'V2'") || src.includes("v1IsGlobalA ? 'V1' : 'V2'"),
+    'KEY_INFO must still contain V1/V2 mapping for KEY.json');
+});
+
+t('TPM limiter not modified: SAFE_TPM_BUDGET and INTER_CALL_COOLDOWN_MS unchanged', () => {
+  assert.strictEqual(SAFE_TPM_BUDGET, 6000);
+  assert.strictEqual(INTER_CALL_COOLDOWN_MS, 2500);
 });
 
 // ─── Summary ─────────────────────────────────────────────────────────────────

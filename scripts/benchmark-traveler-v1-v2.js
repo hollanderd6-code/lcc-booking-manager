@@ -755,7 +755,8 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
   const abAssignments = computeABAssignment(devCases, dataset.dataset_fingerprint);
   const countA = Object.values(abAssignments).filter(x => x === 'SYSTEM_A').length;
   const countB = Object.values(abAssignments).filter(x => x === 'SYSTEM_B').length;
-  console.log(`   ✅ SYSTEM_A (V1): ${countA} cases, SYSTEM_B (V1): ${countB} cases`);
+  console.log(`   ✅ Blind assignment generated`);
+  console.log(`   ✅ Balanced assignment: ${countA}/${countB}`);
 
   // Determine which label corresponds to which model globally (same seed, deterministic)
   const keyHash    = crypto.createHash('sha256')
@@ -768,7 +769,7 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
     global_label: { SYSTEM_A: v1IsGlobalA ? 'V1' : 'V2', SYSTEM_B: v1IsGlobalA ? 'V2' : 'V1' },
     note: 'per-case mapping: SYSTEM_A = model labeled V1 in some cases, V2 in others (see abAssignments)',
   };
-  console.log(`   ✅ Key generated (SYSTEM_A global default: ${KEY_INFO.global_label.SYSTEM_A})`);
+  console.log(`   ✅ Key generated separately`);
 
   // Step 2.5 — GROQ_API_KEY fail-fast (real runs only — dry-run skips Groq entirely)
   if (!dryRun) {
@@ -813,7 +814,7 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
 
     keyMapping[evalId] = { [v1Label]: 'V1', [v2Label]: 'V2' };
 
-    console.log(`  [${evalId}] msg=${evalCase.message_id} conv=${evalCase.conversation_id} cat=${evalCase.category} V1→${v1Label}`);
+    console.log(`  [${evalId}] msg=${evalCase.message_id} conv=${evalCase.conversation_id} cat=${evalCase.category}`);
 
     const raw = {
       eval_id:             evalId,
@@ -931,7 +932,7 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
         systemPrompt:    v2SystemPrompt,
       });
 
-      console.log(`     contexts built — V1 fp=${raw.v1_context_fp} V2 fp=${raw.v2_context_fp}`);
+      console.log(`     contexts built — ${v1Label} fp=${raw.v1_context_fp} ${v2Label} fp=${raw.v2_context_fp}`);
 
       if (dryRun) {
         const _estV1 = estimateV1Tokens(msg.message, v1History, v1Context, v1FewShot);
@@ -940,14 +941,14 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
         raw.v2_response         = '[DRY_RUN_NO_CALL]';
         raw.v1_estimated_tokens = _estV1;
         raw.v2_estimated_tokens = _estV2;
-        console.log(`     ✅ DRY-RUN: skipped Groq calls  V1_est=${_estV1}  V2_est=${_estV2}  combined=${_estV1 + _estV2}`);
+        console.log(`     ✅ DRY-RUN: skipped Groq calls  ${v1Label}_est=${_estV1}  ${v2Label}_est=${_estV2}  combined=${_estV1 + _estV2}`);
       } else {
-        // ── V1 call ──────────────────────────────────────────────
+        // ── First system call (v1Label) ───────────────────────────
         if (tokenBudget) {
           const _estV1 = estimateV1Tokens(msg.message, v1History, v1Context, v1FewShot);
-          await tokenBudget.waitIfNeeded(_estV1, `V1 ${evalId}`);
+          await tokenBudget.waitIfNeeded(_estV1, `${v1Label} ${evalId}`);
         }
-        console.log(`     🚀 V1...`);
+        console.log(`     🚀 Generating ${v1Label}...`);
         const v1Start = Date.now();
         try {
           const v1Response  = await getGroqResponse(msg.message, v1Context, v1History, v1FewShot, { now: targetTs });
@@ -960,10 +961,10 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
           const v1Valid = validateV1Response(v1Response);
           if (v1Valid.ok) {
             raw.v1_response = v1Response;
-            console.log(`        V1 ✅ (${raw.v1_latency_ms}ms) ${v1Response.substring(0, 50)}`);
+            console.log(`        ${v1Label} ✅ (${raw.v1_latency_ms}ms)`);
           } else {
             raw.v1_error = v1Valid.reason;
-            console.warn(`        V1 ❌ ${v1Valid.reason}`);
+            console.warn(`        ${v1Label} ❌ ${v1Valid.reason}`);
           }
         } catch(e) {
           raw.v1_error      = e.message;
@@ -973,15 +974,15 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
             tokenBudget.record(estimateV1Tokens(msg.message, v1History, v1Context, v1FewShot));
             await new Promise(r => setTimeout(r, INTER_CALL_COOLDOWN_MS));
           }
-          console.warn(`        V1 ❌ ${e.message}`);
+          console.warn(`        ${v1Label} ❌ ${e.message}`);
         }
 
-        // ── V2 call ──────────────────────────────────────────────
+        // ── Second system call (v2Label) ──────────────────────────
         if (tokenBudget) {
           const _estV2 = estimateV2Tokens(msg.message, v2History, v2SystemPrompt, v2FewShot);
-          await tokenBudget.waitIfNeeded(_estV2, `V2 ${evalId}`);
+          await tokenBudget.waitIfNeeded(_estV2, `${v2Label} ${evalId}`);
         }
-        console.log(`     🚀 V2...`);
+        console.log(`     🚀 Generating ${v2Label}...`);
         const v2Result = await callGroqTravelerV2({
           systemPrompt: v2SystemPrompt,
           history:      v2History,
@@ -999,9 +1000,9 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
           await new Promise(r => setTimeout(r, INTER_CALL_COOLDOWN_MS));
         }
         if (v2Result.decision) {
-          console.log(`        V2 ✅ (${v2Result.latency_ms}ms) action=${v2Result.decision.action}`);
+          console.log(`        ${v2Label} ✅ (${v2Result.latency_ms}ms)`);
         } else {
-          console.warn(`        V2 ❌ ${v2Result.error}`);
+          console.warn(`        ${v2Label} ❌ ${v2Result.error}`);
         }
       }
 
@@ -1085,13 +1086,13 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
   console.log(`\n${'═'.repeat(70)}`);
   console.log(`  SUMMARY`);
   console.log(`  Processed: ${rawResults.length}/${devCases.length} cases`);
-  console.log(`  V1 SYSTEM_A: ${countA}   V1 SYSTEM_B: ${countB}`);
-  console.log(`  Groq calls:  ${groqCallCount}${dryRun ? ' (dry-run: none)' : ''}`);
+  console.log(`  Assignment: ${countA}/${countB}`);
+  console.log(`  Groq calls: ${groqCallCount}${dryRun ? ' (dry-run: none)' : ''}`);
   if (!dryRun) {
-    console.log(`  V1 success:  ${_v1ok}/${rawResults.length}`);
-    console.log(`  V2 success:  ${_v2ok}/${rawResults.length}`);
+    console.log(`  System_1 success: ${_v1ok}/${rawResults.length}`);
+    console.log(`  System_2 success: ${_v2ok}/${rawResults.length}`);
     console.log(`  EXPERIMENTAL_RESULT_VALID: ${runValid ? 'OUI' : 'NON'}`);
-    if (!runValid) console.error('  ❌ Both V1 and V2 returned 0 successes — this run is invalid.');
+    if (!runValid) console.error('  ❌ One or both systems did not complete all 25 cases — this run is invalid.');
   }
 
   // Dry-run: print per-case token estimates and statistics
@@ -1106,7 +1107,7 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
       const _med  = arr => { const s = _sort(arr); const m = Math.floor(s.length / 2); return s.length % 2 === 0 ? (s[m-1]+s[m])/2 : s[m]; };
 
       console.log(`\n── DRY-RUN TOKEN ESTIMATES (per DEV case) ───────────────────────────────`);
-      console.log(`  ${'EVAL-ID'.padEnd(14)} ${'V1 est'.padStart(8)} ${'V2 est'.padStart(8)} ${'combined'.padStart(10)}`);
+      console.log(`  ${'EVAL-ID'.padEnd(14)} ${'Call_1'.padStart(8)} ${'Call_2'.padStart(8)} ${'combined'.padStart(10)}`);
       rawResults.forEach((r, i) => {
         const v1e = r.v1_estimated_tokens ?? 'N/A';
         const v2e = r.v2_estimated_tokens ?? 'N/A';
@@ -1114,11 +1115,11 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
         console.log(`  ${r.eval_id.padEnd(14)} ${String(v1e).padStart(8)} ${String(v2e).padStart(8)} ${String(cmb).padStart(10)}`);
       });
       const sv1 = _sort(v1Ests), sv2 = _sort(v2Ests), sc = _sort(combined);
-      console.log(`\n── V1 token stats ────────────────────────────────────────────────────────`);
+      console.log(`\n── Call_1 token stats ────────────────────────────────────────────────────`);
       console.log(`  min=${sv1[0]}  median=${_med(v1Ests)}  max=${sv1[sv1.length-1]}  mean=${Math.round(_mean(v1Ests))}`);
-      console.log(`\n── V2 token stats ────────────────────────────────────────────────────────`);
+      console.log(`\n── Call_2 token stats ────────────────────────────────────────────────────`);
       console.log(`  min=${sv2[0]}  median=${_med(v2Ests)}  max=${sv2[sv2.length-1]}  mean=${Math.round(_mean(v2Ests))}`);
-      console.log(`\n── Combined V1+V2 token stats ────────────────────────────────────────────`);
+      console.log(`\n── Combined token stats ──────────────────────────────────────────────────`);
       console.log(`  min=${sc[0]}  median=${_med(combined)}  max=${sc[sc.length-1]}  mean=${Math.round(_mean(combined))}`);
       console.log(`  SAFE_TPM_BUDGET=${SAFE_TPM_BUDGET}  cases_per_window≈${(SAFE_TPM_BUDGET/_mean(combined)).toFixed(1)}`);
     }
