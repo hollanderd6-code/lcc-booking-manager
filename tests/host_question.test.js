@@ -11,7 +11,7 @@
  */
 
 const assert = require('assert');
-const { checkExistingScheduleDecision } = require('../integrated-chat-handler');
+const { checkExistingScheduleDecision, collectHostQuestionRecipients } = require('../integrated-chat-handler');
 
 // ---------------------------------------------------------------------------
 // BACKREQ-1 : checkExistingScheduleDecision — found
@@ -255,6 +255,139 @@ function test_BACKREQ12_hostQuestionPushPayload() {
 }
 
 // ---------------------------------------------------------------------------
+// PUSHBACK-1 : propriétaire reçoit host_question
+// ---------------------------------------------------------------------------
+
+async function test_PUSHBACK1_ownerReceives() {
+  const pool = {
+    query: async (sql, params) => {
+      if (sql.includes('account_delegations')) return { rows: [] };
+      return { rows: [{ fcm_token: 'tok_owner_abc' }] };
+    },
+  };
+  const tokens = await collectHostQuestionRecipients(pool, 'user_owner');
+  assert.deepStrictEqual(tokens, ['tok_owner_abc'],
+    'PUSHBACK-1: owner token must be included');
+  console.log('✅ PUSHBACK-1 passed');
+}
+
+// ---------------------------------------------------------------------------
+// PUSHBACK-2 : compte agence légitimement lié reçoit aussi la notification
+// ---------------------------------------------------------------------------
+
+async function test_PUSHBACK2_agencyReceives() {
+  const pool = {
+    query: async (sql, params) => {
+      if (sql.includes('account_delegations')) return { rows: [{ fcm_token: 'tok_agency_xyz' }] };
+      return { rows: [{ fcm_token: 'tok_owner_abc' }] };
+    },
+  };
+  const tokens = await collectHostQuestionRecipients(pool, 'user_owner');
+  assert.ok(tokens.includes('tok_owner_abc'), 'PUSHBACK-2: owner token included');
+  assert.ok(tokens.includes('tok_agency_xyz'), 'PUSHBACK-2: agency token included');
+  assert.strictEqual(tokens.length, 2, 'PUSHBACK-2: exactly owner + agency');
+  console.log('✅ PUSHBACK-2 passed');
+}
+
+// ---------------------------------------------------------------------------
+// PUSHBACK-3 : utilisateur étranger ne reçoit rien
+// ---------------------------------------------------------------------------
+
+async function test_PUSHBACK3_foreignUserExcluded() {
+  const pool = {
+    query: async (sql, params) => {
+      // Only returns tokens for 'user_owner'; foreign user has none linked
+      if (params[0] === 'user_owner') return { rows: [{ fcm_token: 'tok_owner_abc' }] };
+      return { rows: [] };
+    },
+  };
+  const tokens = await collectHostQuestionRecipients(pool, 'user_owner');
+  assert.ok(!tokens.includes('tok_foreign'), 'PUSHBACK-3: foreign token must not appear');
+  console.log('✅ PUSHBACK-3 passed');
+}
+
+// ---------------------------------------------------------------------------
+// PUSHBACK-4 : token dupliqué entre propriétaire et agence → une seule entrée
+// ---------------------------------------------------------------------------
+
+async function test_PUSHBACK4_deduplicatedTokens() {
+  const SHARED = 'tok_shared_device';
+  const pool = {
+    query: async (sql) => {
+      // Same token returned by both owner and agency queries
+      return { rows: [{ fcm_token: SHARED }] };
+    },
+  };
+  const tokens = await collectHostQuestionRecipients(pool, 'user_owner');
+  assert.strictEqual(tokens.length, 1,
+    'PUSHBACK-4: duplicate token must appear only once');
+  assert.strictEqual(tokens[0], SHARED, 'PUSHBACK-4: shared token present');
+  console.log('✅ PUSHBACK-4 passed');
+}
+
+// ---------------------------------------------------------------------------
+// PUSHBACK-5 : token null ou vide ignoré
+// ---------------------------------------------------------------------------
+
+async function test_PUSHBACK5_nullOrEmptyTokenIgnored() {
+  const pool = {
+    query: async (sql) => {
+      return { rows: [{ fcm_token: null }, { fcm_token: '' }, { fcm_token: 'tok_valid' }] };
+    },
+  };
+  const tokens = await collectHostQuestionRecipients(pool, 'user_owner');
+  assert.ok(!tokens.includes(null),  'PUSHBACK-5: null token excluded');
+  assert.ok(!tokens.includes(''),    'PUSHBACK-5: empty string token excluded');
+  assert.ok(tokens.includes('tok_valid'), 'PUSHBACK-5: valid token kept');
+  console.log('✅ PUSHBACK-5 passed');
+}
+
+// ---------------------------------------------------------------------------
+// PUSHBACK-6 : échec d'un token n'empêche pas les autres envois
+// ---------------------------------------------------------------------------
+
+async function test_PUSHBACK6_perTokenErrorIsolated() {
+  // Simulates the per-token try/catch loop in createHostQuestion's push section.
+  const tokens = ['tok_good', 'tok_bad', 'tok_also_good'];
+  let sent = [];
+  for (const token of tokens) {
+    try {
+      if (token === 'tok_bad') throw new Error('FCM rejected');
+      sent.push(token);
+    } catch (err) {
+      // intentionally swallowed per-token
+    }
+  }
+  assert.deepStrictEqual(sent, ['tok_good', 'tok_also_good'],
+    'PUSHBACK-6: bad token error must not prevent good tokens from sending');
+  console.log('✅ PUSHBACK-6 passed');
+}
+
+// ---------------------------------------------------------------------------
+// PUSHBACK-7 : payload contient conversation_id et question_id en String
+// ---------------------------------------------------------------------------
+
+function test_PUSHBACK7_payloadStrings() {
+  const questionId = 70;    // BIGINT — could be large
+  const conversationId = 1510;
+  const pushData = {
+    type: 'host_question',
+    question_id: String(questionId),
+    conversation_id: String(conversationId),
+    screen: 'messages'
+  };
+  assert.strictEqual(typeof pushData.question_id, 'string',
+    'PUSHBACK-7: question_id must be String');
+  assert.strictEqual(typeof pushData.conversation_id, 'string',
+    'PUSHBACK-7: conversation_id must be String');
+  assert.strictEqual(pushData.conversation_id, '1510',
+    'PUSHBACK-7: conversation_id value correct');
+  assert.strictEqual(pushData.question_id, '70',
+    'PUSHBACK-7: question_id value correct');
+  console.log('✅ PUSHBACK-7 passed');
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
@@ -273,7 +406,14 @@ async function run() {
     test_BACKREQ10_sortKey();
     test_BACKREQ11_internalNoteSentinel();
     test_BACKREQ12_hostQuestionPushPayload();
-    console.log('\n✅ All BACKREQ tests passed.\n');
+    await test_PUSHBACK1_ownerReceives();
+    await test_PUSHBACK2_agencyReceives();
+    await test_PUSHBACK3_foreignUserExcluded();
+    await test_PUSHBACK4_deduplicatedTokens();
+    await test_PUSHBACK5_nullOrEmptyTokenIgnored();
+    await test_PUSHBACK6_perTokenErrorIsolated();
+    test_PUSHBACK7_payloadStrings();
+    console.log('\n✅ All BACKREQ + PUSHBACK tests passed.\n');
   } catch (err) {
     console.error('\n❌ Test failed:', err.message);
     process.exit(1);

@@ -1935,6 +1935,37 @@ async function escalateToOwner(conversation, pool, io, language, channexId = nul
 // ❓ QUESTION FACTUELLE À L'HÔTE (réponse 1 clic)
 // ============================================
 
+// Collecte les tokens FCM destinataires d'une host_question :
+// - tokens du propriétaire concerné (compte principal, sans sub_account_id)
+// - tokens des comptes agence qui gèrent ce propriétaire (account_delegations)
+// Retourne un tableau de tokens dédupliqués, sans null ni vide.
+// Exporté pour les tests unitaires.
+async function collectHostQuestionRecipients(pool, ownerUserId) {
+  const ownerToks = await pool.query(
+    'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL AND sub_account_id IS NULL',
+    [ownerUserId]
+  );
+  const agencyToks = await pool.query(
+    `SELECT uft.fcm_token
+     FROM account_delegations ad
+     JOIN user_fcm_tokens uft ON uft.user_id = ad.delegate_user_id
+     WHERE ad.delegator_user_id = $1
+       AND ad.status = 'accepted'
+       AND uft.fcm_token IS NOT NULL
+       AND uft.sub_account_id IS NULL`,
+    [ownerUserId]
+  );
+  const seen = new Set();
+  const tokens = [];
+  for (const row of [...ownerToks.rows, ...agencyToks.rows]) {
+    if (row.fcm_token && !seen.has(row.fcm_token)) {
+      seen.add(row.fcm_token);
+      tokens.push(row.fcm_token);
+    }
+  }
+  return tokens;
+}
+
 // Crée une question en attente + notifie l'hôte. Met l'IA en pause sur la conv
 // le temps de la réponse (réutilise le mécanisme d'escalade existant).
 async function createHostQuestion(conversation, pool, io, { question, guestMessage, language, kind, meta, triggerMessageId = null }) {
@@ -2011,7 +2042,7 @@ async function createHostQuestion(conversation, pool, io, { question, guestMessa
     );
   } catch(e) {}
 
-  // Notifier l'hôte (push) + temps réel
+  // Notifier le propriétaire + les comptes agence légitimement liés (push)
   try {
     const { sendNotification } = require('./services/notifications-service');
     const guest = conversation.guest_name || 'Voyageur';
@@ -2019,17 +2050,19 @@ async function createHostQuestion(conversation, pool, io, { question, guestMessa
     const label = kind === 'schedule' ? 'Demande horaire' : 'Question voyageur';
     const title = `${emoji} ${label} — ${guest}${propName ? ' · ' + propName : ''}`;
     const body = question;
-    const tokens = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-      [conversation.user_id]
-    );
-    for (const tok of tokens.rows) {
-      await sendNotification(tok.fcm_token, title, body, {
-        type: 'host_question',
-        question_id: String(questionId),
-        conversation_id: String(conversation.id),
-        screen: 'messages'
-      });
+    const pushData = {
+      type: 'host_question',
+      question_id: String(questionId),
+      conversation_id: String(conversation.id),
+      screen: 'messages'
+    };
+    const allTokens = await collectHostQuestionRecipients(pool, conversation.user_id);
+    for (const token of allTokens) {
+      try {
+        await sendNotification(token, title, body, pushData);
+      } catch (tokenErr) {
+        console.error(`❌ [QHOTE] token ${token.slice(0, 20)}… : ${tokenErr.message}`);
+      }
     }
   } catch(e) {
     console.error('❌ [QHOTE] Erreur notification:', e.message);
@@ -2252,5 +2285,6 @@ module.exports = {
   relayHostAnswer,
   generateOwnerSuggestion,
   confirmUpsellPaid,
-  checkExistingScheduleDecision
+  checkExistingScheduleDecision,
+  collectHostQuestionRecipients
 };
