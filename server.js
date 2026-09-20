@@ -12583,6 +12583,9 @@ app.post('/api/settings/notifications', authenticateAny, async (req, res) => {
     if (['all','ai_off','escalation'].includes(body.notif_message_level)) merged.notif_message_level = body.notif_message_level;
 
     const saved = await saveNotificationSettings(user.id, merged);
+    // Le filtre des preferences met les valeurs en cache 60 s : l'invalider ici
+    // pour qu'une bascule s'applique au prochain envoi, pas une minute plus tard.
+    try { require('./services/notification-preferences').invalidate(user.id); } catch (e) {}
 
     res.json({
       message: 'Préférences de notifications mises à jour',
