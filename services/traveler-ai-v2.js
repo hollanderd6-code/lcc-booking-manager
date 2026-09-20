@@ -846,13 +846,11 @@ demande du CURRENT_GUEST_MESSAGE — tu NE confirmes PAS. Le backend décide.
 {
   "primary_action": "<action principale>",
   "actions": ["<action1>", "<action2 si multi-demande>"],
-  "action": "<alias de primary_action — rétrocompatibilité>",
   "reply": "<réponse voyageur en ${guest.language}, null si non-REPLY>",
   "confidence": <0.00–1.00>,
   "reasoning": "<raisonnement court — non visible du voyageur>",
   "facts_used": ["<clé_fait_structuré_utilisé_dans_reply>"],
   "missing_information": ["<info_manquante_pour_répondre>"],
-  "tags": ["<tag1>", "<tag2>"],
   "requires_human": <true|false>,
   "hallucination_risk": "<LOW|MEDIUM|HIGH>"
 }
@@ -1000,7 +998,8 @@ function computeContextFingerprint({ guestMessage, history, fewShot, travelerCon
  *
  * Gère :
  *   - 429 rate limit   → 1 retry avec retry-after (RATE_LIMIT / WAIT_MS / RETRY 1/1)
- *   - 400 json_validate_failed → capture failed_generation + 1 retry (JSON_VALIDATE_FAILED / RETRY 1/1)
+ *   - 400 json_validate_failed / parsing failure / unexpected tool call →
+ *     capture failed_generation + 1 retry (STRUCTURED_OUTPUT_RETRY / RETRY 1/1)
  *
  * @param {object} p
  * @param {string} p.systemPrompt
@@ -1075,19 +1074,27 @@ async function callGroqTravelerV2({ systemPrompt, history, guestMessage, apiKey,
       const rawFailed = errPayload?.error?.failed_generation || null;
       failedGenDiag   = rawFailed ? _maskSensitive(_safeDiagStr(rawFailed)).substring(0, 500) : null;
 
-      // Détecte toutes les variantes d'erreur de parsing Groq :
-      //   - error.code === 'json_validate_failed'  (variante historique)
-      //   - error.message contient 'parsing failed' (variante GOLDEN-003)
+      // Détecte toutes les variantes d'erreur de génération structurée Groq :
+      //   - error.code === 'json_validate_failed'  (JSON schema non respecté)
+      //   - error.message contient 'parsing failed' (JSON non parseable, variante GOLDEN-003)
       //   - error.message contient 'could not be parsed'
-      const isParsingFailure =
+      //   - error.message contient 'tool choice is none' (modèle a généré un tool call inattendu)
+      const isUnexpectedToolCall = typeof errMsg === 'string'
+        && errMsg.toLowerCase().includes('tool choice is none');
+
+      const isRetryableStructuredOutputFailure =
         errCode === 'json_validate_failed'
         || (typeof errMsg === 'string' && (
             errMsg.toLowerCase().includes('parsing failed')
             || errMsg.toLowerCase().includes('could not be parsed')
+            || errMsg.toLowerCase().includes('tool choice is none')
           ));
 
-      if (isParsingFailure) {
-        console.warn(`⚠️ ${tag} JSON_VALIDATE_FAILED`);
+      if (isRetryableStructuredOutputFailure) {
+        const retryReason = isUnexpectedToolCall ? 'UNEXPECTED_TOOL_CALL'
+          : errCode === 'json_validate_failed' ? 'JSON_SCHEMA'
+          : 'JSON_PARSE';
+        console.warn(`⚠️ ${tag} STRUCTURED_OUTPUT_RETRY reason=${retryReason}`);
         if (failedGenDiag) console.warn(`   ${tag} failed_generation: ${failedGenDiag.substring(0, 200)}`);
         console.warn(`   ${tag} RETRY 1/1`);
         res = await _doFetch();

@@ -534,7 +534,7 @@ console.log('\n── Série T9 : Rate limit 429 + json_validate_failed — retr
 
 // T33+T34+T49+T50+T51+T81-T85 sont groupés dans un seul test async pour éviter la race
 // condition sur global.fetch (plusieurs tests async s'exécuteraient en concurrence).
-test('T33+T34+T49+T50+T51+T81-T85 — retry strategy 429, json_validate_failed, parsing_failed séquentiels', async () => {
+test('T33+T34+T49+T50+T51+T81-T85+T108-T109 — retry strategy 429, json_validate_failed, parsing_failed, tool_call séquentiels', async () => {
   _setDelay(() => Promise.resolve());  // pas d'attente réelle en test
   const originalFetch = global.fetch;
 
@@ -815,6 +815,79 @@ test('T33+T34+T49+T50+T51+T81-T85 — retry strategy 429, json_validate_failed, 
     assert.strictEqual(capturedBodyL.response_format?.type, 'json_schema',                   'T86 (A): response_format.type === json_schema');
     assert.strictEqual(capturedBodyL.response_format?.json_schema?.strict, true,              'T87 (B): json_schema.strict === true');
     assert.strictEqual(capturedBodyL.response_format?.json_schema?.name, 'traveler_decision', 'T88 (C): json_schema.name === traveler_decision');
+    // G — payload runtime : tools/tool_choice/parallel_tool_calls absents
+    assert.strictEqual(capturedBodyL.tools,               undefined, 'G: tools ABSENT du payload Groq');
+    assert.strictEqual(capturedBodyL.tool_choice,         undefined, 'G: tool_choice ABSENT du payload Groq');
+    assert.strictEqual(capturedBodyL.parallel_tool_calls, undefined, 'G: parallel_tool_calls ABSENT du payload Groq');
+
+    // ── Scénario M (T108) : "Tool choice is none" → 1 retry → succès ─────────
+    let callCountM = 0;
+    global.fetch = async () => {
+      callCountM++;
+      if (callCountM === 1) {
+        return {
+          status: 400, ok: false,
+          json: async () => ({
+            error: {
+              message: 'Tool choice is none, but model called a tool',
+              failed_generation: '{"name":"traveler_decision","arguments":{"primary_action":"REPLY"}}',
+            },
+          }),
+          text: async () => 'tool call error',
+        };
+      }
+      return {
+        status: 200, ok: true,
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify({
+            primary_action: 'REPLY', actions: ['REPLY'],
+            reply: 'Bonjour !', confidence: 0.9,
+            reasoning: 'retry ok tool', facts_used: [], missing_information: [],
+            requires_human: false, hallucination_risk: 'LOW',
+          }) } }],
+          usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 },
+        }),
+      };
+    };
+    const rM = await callGroqTravelerV2({
+      systemPrompt: 'sys', history: [], guestMessage: 'hi',
+      apiKey: 'fake-key', label: 'T108',
+    });
+    assert.strictEqual(callCountM, 2, 'T108 (C): fetch appelé 2 fois sur "Tool choice is none" (1 + 1 retry)');
+    assert.strictEqual(rM.error, null, 'T108 (C): pas d\'erreur après retry réussi');
+    assert.strictEqual(rM.decision?.primary_action, 'REPLY', 'T108 (C): décision correcte après retry');
+    assert.ok(rM.failed_generation && rM.failed_generation.includes('traveler_decision'), 'T108 (C): failed_generation capturé depuis premier appel');
+
+    // ── Scénario N (T109) : double "Tool choice is none" → 2 appels max, erreur propre ─
+    let callCountN = 0;
+    global.fetch = async () => {
+      callCountN++;
+      return {
+        status: 400, ok: false,
+        json: async () => ({
+          error: {
+            message: 'Tool choice is none, but model called a tool',
+            failed_generation: '{"name":"traveler_decision","arguments":{}}',
+          },
+        }),
+        text: async () => 'still tool call error',
+      };
+    };
+    let didThrowN = false;
+    let rN;
+    try {
+      rN = await callGroqTravelerV2({
+        systemPrompt: 'sys', history: [], guestMessage: 'hi',
+        apiKey: 'fake-key', label: 'T109',
+      });
+    } catch (e) {
+      didThrowN = true;
+    }
+    assert.strictEqual(didThrowN, false, 'T109 (D): pas d\'exception propagée sur double tool-call failure');
+    assert.strictEqual(callCountN, 2, 'T109 (D): exactement 2 appels (1 + 1 retry), aucun troisième');
+    assert.ok(rN.error && rN.error.includes('400'), `T109 (D): erreur HTTP 400 après double tool-call failure, obtenu: ${rN.error}`);
+    assert.strictEqual(rN.decision, null, 'T109 (D): pas de décision sur double tool-call failure');
+    assert.ok(rN.failed_generation, 'T109 (D): failed_generation capturé même sur double échec outil');
 
   } finally {
     global.fetch = originalFetch;
@@ -1536,6 +1609,76 @@ test('T105 — "tags" absent du schema Groq : champ diagnostic, validateTraveler
   const props = TRAVELER_DECISION_JSON_SCHEMA.properties;
   assert.ok(!('tags' in props), '"tags" absent de properties (non décisionnel)');
   assert.ok(!TRAVELER_DECISION_JSON_SCHEMA.required.includes('tags'), '"tags" absent de required');
+});
+
+// ─── Série V2.1.3 : Prompt/schema consistency + tool-call retry ───────────────
+
+console.log('\n── Série V2.1.3 : Prompt/schema consistency + tool-call retry ────────────────');
+
+test('T106 (A) — Prompt FORMAT JSON : "action" et "tags" absents des champs demandés au modèle', () => {
+  const ctx = buildTravelerContextFromRawData({
+    conversation: makeConv(), property: makeProp(), welcomeBook: makeWelcomeBook(),
+    deposit: { status: 'authorized', amount_cents: 0 },
+    registration: { done: true, guest_country: 'FR', unique_token: null },
+    atTimestamp: AT_BEFORE,
+  });
+  ctx._fewShot = [];
+  const prompt = buildTravelerSystemPrompt(ctx);
+
+  // Extraire uniquement le bloc FORMAT JSON (entre header et MULTI-ACTIONS)
+  const fmtStart = prompt.indexOf('FORMAT JSON DE RÉPONSE');
+  const fmtEnd   = prompt.indexOf('MULTI-ACTIONS');
+  assert.ok(fmtStart >= 0, 'section FORMAT JSON DE RÉPONSE présente dans le prompt');
+  assert.ok(fmtEnd > fmtStart, 'section MULTI-ACTIONS présente après FORMAT JSON');
+  const fmtBlock = prompt.substring(fmtStart, fmtEnd);
+
+  // Les 9 champs du schema doivent être présents dans le FORMAT JSON
+  const expected9 = [
+    '"primary_action"', '"actions"', '"reply"', '"confidence"',
+    '"reasoning"', '"facts_used"', '"missing_information"',
+    '"requires_human"', '"hallucination_risk"',
+  ];
+  for (const field of expected9) {
+    assert.ok(fmtBlock.includes(field + ':'), `champ ${field} présent dans FORMAT JSON`);
+  }
+
+  // "action" et "tags" ne doivent plus figurer comme champs standalone demandés au modèle.
+  // Note : '"primary_action":' et '"actions":' ne contiennent pas la sous-chaîne '"action":'.
+  assert.ok(!fmtBlock.includes('"action":'), '"action": absent du FORMAT JSON (non demandé au modèle)');
+  assert.ok(!fmtBlock.includes('"tags":'),   '"tags": absent du FORMAT JSON (non demandé au modèle)');
+});
+
+test('T107 (B) — validateTravelerDecision sortie 9-champs strict : backward compat action+tags préservés', () => {
+  // Simule la sortie exacte d'un modèle strict : 9 champs, sans "action" ni "tags"
+  const strict9 = {
+    primary_action: 'ASK_OWNER',
+    actions: ['ASK_OWNER'],
+    reply: null,
+    confidence: 0.77,
+    reasoning: 'Missing equipment info',
+    facts_used: [],
+    missing_information: ['iron availability'],
+    requires_human: false,
+    hallucination_risk: 'MEDIUM',
+  };
+  const d = validateTravelerDecision(strict9);
+  assert.strictEqual(d.action,         'ASK_OWNER', 'action synthétisé depuis primary_action');
+  assert.strictEqual(d.action,         d.primary_action, 'action === primary_action (alias backward compat)');
+  assert.deepStrictEqual(d.tags,       [], 'tags defaults to [] quand absent de la sortie modèle');
+  assert.strictEqual(d.primary_action, 'ASK_OWNER');
+  assert.deepStrictEqual(d.actions,    ['ASK_OWNER']);
+  assert.strictEqual(d.reply,          null);
+  assert.strictEqual(d.confidence,     0.77);
+  assert.deepStrictEqual(d.missing_information, ['iron availability']);
+  assert.strictEqual(d.requires_human,     false);
+  assert.strictEqual(d.hallucination_risk, 'MEDIUM');
+});
+
+test('T111 (G) — traveler-ai-v2.js : tools/tool_choice/parallel_tool_calls absents du code source', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'services', 'traveler-ai-v2.js'), 'utf8');
+  assert.ok(!src.includes('"tools"'),               '"tools" absent du source V2 (Traveler V2 n\'utilise aucun outil)');
+  assert.ok(!src.includes('"tool_choice"'),         '"tool_choice" absent du source V2');
+  assert.ok(!src.includes('"parallel_tool_calls"'), '"parallel_tool_calls" absent du source V2');
 });
 
 // ─── Résumé ───────────────────────────────────────────────────────────────────
