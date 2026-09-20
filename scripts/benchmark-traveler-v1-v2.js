@@ -502,6 +502,163 @@ function buildBlindEntry({ evalId, v1Label, v1Response, v2Response, category, fp
   };
 }
 
+// ─── Global Token Budget (V1 + V2 shared) ────────────────────────────────────
+
+const SAFE_TPM_BUDGET = 6000; // conservative ceiling below Groq's 8000 TPM limit
+const TPM_WINDOW_MS   = 60_000;
+
+/**
+ * Minimum gap applied after every top-level Groq call (V1 or V2), regardless of
+ * TPM budget state.  Accounts for internal retries that we cannot observe without
+ * modifying V1/V2: V1 (MAX_RETRIES=2 → up to 3 Groq calls), V2 (up to 3 _doFetch
+ * calls for 429 + JSON_SCHEMA retries).  Those retries consume tokens within the
+ * same 60-second window but are not separately recorded.  A 2.5 s floor ensures
+ * the *next* top-level call does not immediately follow a silent retry burst.
+ * Cost: 2.5 s × 2 calls × 25 cases = 125 s (~2 min) of deterministic overhead.
+ */
+const INTER_CALL_COOLDOWN_MS = 2500;
+
+/**
+ * Sliding-window token budget shared across ALL Groq calls (V1 and V2).
+ * Both systems use the same account/model — the budget is global.
+ * In dry-run mode tokenBudget is null and no waits occur.
+ *
+ * waitIfNeeded() uses a controlled loop (not a single-wait) so the call is
+ * only authorised once used + estimated truly fits within safeTpm.
+ *
+ * Special case: if estimatedTokens > safeTpm (call is too large to fit even
+ * alone), the function waits for the entire window to clear then allows it,
+ * logging SINGLE_CALL_EXCEEDS_SAFE_BUDGET.  No infinite loop risk.
+ *
+ * @param {number} safeTpm    — per-minute token ceiling (default: SAFE_TPM_BUDGET)
+ * @param {number} windowMs   — sliding window duration in ms (default: 60 000)
+ * @param {number} _bufferMs  — extra safety margin after each wait (default: 1500;
+ *                              override in tests for faster execution)
+ * @returns {{ waitIfNeeded, record, tokensLast60s, _log }}
+ */
+function createTokenBudget(safeTpm = SAFE_TPM_BUDGET, windowMs = TPM_WINDOW_MS, _bufferMs = 1500) {
+  const _log = []; // { ts: epoch ms, tokens: number }
+
+  function _pruneOld() {
+    const cutoff = Date.now() - windowMs;
+    while (_log.length > 0 && _log[0].ts < cutoff) _log.shift();
+  }
+
+  function tokensLast60s() {
+    _pruneOld();
+    return _log.reduce((s, e) => s + e.tokens, 0);
+  }
+
+  async function waitIfNeeded(estimatedTokens, label) {
+    // Special case: single call too large to fit within safeTpm even alone.
+    if (estimatedTokens > safeTpm) {
+      _pruneOld();
+      if (_log.length === 0) {
+        // Window is empty — allow immediately, cannot prevent this oversized call.
+        process.stdout.write(
+          `  [BENCH RATE LIMIT] SINGLE_CALL_EXCEEDS_SAFE_BUDGET\n` +
+          `    label=${label}  estimated=${estimatedTokens}  safe_budget=${safeTpm}` +
+          `  window_empty=true  action=allow\n`
+        );
+        return 0;
+      }
+      // Wait until the NEWEST entry expires so the entire window is cleared.
+      const newest = _log[_log.length - 1];
+      const waitMs = Math.max(0, newest.ts + windowMs - Date.now()) + _bufferMs;
+      process.stdout.write(
+        `  [BENCH RATE LIMIT] SINGLE_CALL_EXCEEDS_SAFE_BUDGET\n` +
+        `    label=${label}  estimated=${estimatedTokens}  safe_budget=${safeTpm}` +
+        `  wait_for_full_clear_ms=${waitMs}\n`
+      );
+      await new Promise(r => setTimeout(r, waitMs));
+      _pruneOld();
+      return waitMs;
+    }
+
+    // Normal case: loop until used + estimated truly fits within safeTpm.
+    let totalWaitMs = 0;
+    for (;;) {
+      _pruneOld();
+      const used = tokensLast60s();
+      if (used + estimatedTokens <= safeTpm) return totalWaitMs;
+
+      const oldest = _log[0];
+      if (!oldest) return totalWaitMs; // window just became empty
+
+      const waitMs = Math.max(0, oldest.ts + windowMs - Date.now()) + _bufferMs;
+      process.stdout.write(
+        `  [BENCH RATE LIMIT] ${label}\n` +
+        `    estimated_next_tokens=${estimatedTokens}  tokens_last_60s=${used}` +
+        `  safe_budget=${safeTpm}  wait_ms=${waitMs}\n`
+      );
+      await new Promise(r => setTimeout(r, waitMs));
+      totalWaitMs += waitMs;
+      _pruneOld();
+    }
+  }
+
+  function record(tokens) {
+    _log.push({ ts: Date.now(), tokens });
+  }
+
+  return { waitIfNeeded, record, tokensLast60s, _log };
+}
+
+// ─── Token Estimators ─────────────────────────────────────────────────────────
+
+/**
+ * Fixed character overhead of buildSystemPrompt (groq-ai.js) not captured by
+ * JSON.stringify(context): preamble "⚠️ LANGUE … QUI TU ES … CONTEXTE TEMPOREL …"
+ * (~700 chars) + few-shot block headers / borders (~350 chars) – JSON key-name
+ * overhead (~250 chars saved).  Net conservative addition: 800 chars ≈ 200 tokens.
+ */
+const V1_PROMPT_FIXED_OVERHEAD_CHARS = 800;
+
+/**
+ * Conservative token estimate for a V1 call.
+ * Accounts for:
+ *   - V1_PROMPT_FIXED_OVERHEAD_CHARS: fixed template text in buildSystemPrompt
+ *     not present in JSON.stringify(context) — without this the estimate undercounts.
+ *   - JSON.stringify(context): property data serialised as JSON (all fields).
+ *   - history: full array passed to getGroqResponse; V1 uses slice(-10) internally,
+ *     so the estimate is conservative (over-counts up to the full array size).
+ *   - fewShot: raw char count; the block header (~350 chars) is in the fixed overhead.
+ *   - guestMessage: user turn.
+ *   - +600 output allowance = V1 max_tokens.
+ */
+function estimateV1Tokens(guestMessage, history, context, fewShot) {
+  const chars =
+    V1_PROMPT_FIXED_OVERHEAD_CHARS +
+    JSON.stringify(context || {}).length +
+    (history || []).reduce((s, h) => s + (h.content || '').length, 0) +
+    (fewShot  || []).reduce((s, f) => s + (f.guest || '').length + (f.host || '').length, 0) +
+    (guestMessage || '').length;
+  return Math.ceil(chars / 4) + 600; // 600 = V1 max_tokens
+}
+
+/**
+ * Conservative token estimate for a V2 call.
+ * Uses the actual V2 system prompt string (already built by buildTravelerSystemPrompt,
+ * which already includes the few-shot block via ctx._fewShot) + history + fewShot
+ * + guestMessage.
+ *
+ * Known conservative over-counts (safe per policy):
+ *   - fewShot chars are counted TWICE: once inside systemPrompt.length (embedded by
+ *     buildTravelerSystemPrompt), and once via the fewShot reduce.
+ *   - history counts all rows from the DB query (up to 30); callGroqTravelerV2 uses
+ *     history.slice(-15) internally — so up to 15 extra entries are counted.
+ * Both over-counts are safe (larger estimate → earlier wait).
+ * +600 output allowance = V2 max_tokens.
+ */
+function estimateV2Tokens(guestMessage, history, systemPrompt, fewShot) {
+  const chars =
+    (systemPrompt || '').length +
+    (history || []).reduce((s, h) => s + (h.content || '').length, 0) +
+    (fewShot  || []).reduce((s, f) => s + (f.guest || '').length + (f.host || '').length, 0) +
+    (guestMessage || '').length;
+  return Math.ceil(chars / 4) + 600; // 600 = V2 max_tokens
+}
+
 // ─── Run Validity ────────────────────────────────────────────────────────────
 
 /**
@@ -646,6 +803,7 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
   const keyMapping   = {};
 
   let groqCallCount = 0;
+  const tokenBudget = dryRun ? null : createTokenBudget(SAFE_TPM_BUDGET);
 
   for (let i = 0; i < devCases.length; i++) {
     const evalCase = devCases[i];
@@ -776,17 +934,29 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
       console.log(`     contexts built — V1 fp=${raw.v1_context_fp} V2 fp=${raw.v2_context_fp}`);
 
       if (dryRun) {
-        raw.v1_response = '[DRY_RUN_NO_CALL]';
-        raw.v2_response = '[DRY_RUN_NO_CALL]';
-        console.log(`     ✅ DRY-RUN: skipped Groq calls`);
+        const _estV1 = estimateV1Tokens(msg.message, v1History, v1Context, v1FewShot);
+        const _estV2 = estimateV2Tokens(msg.message, v2History, v2SystemPrompt, v2FewShot);
+        raw.v1_response         = '[DRY_RUN_NO_CALL]';
+        raw.v2_response         = '[DRY_RUN_NO_CALL]';
+        raw.v1_estimated_tokens = _estV1;
+        raw.v2_estimated_tokens = _estV2;
+        console.log(`     ✅ DRY-RUN: skipped Groq calls  V1_est=${_estV1}  V2_est=${_estV2}  combined=${_estV1 + _estV2}`);
       } else {
         // ── V1 call ──────────────────────────────────────────────
+        if (tokenBudget) {
+          const _estV1 = estimateV1Tokens(msg.message, v1History, v1Context, v1FewShot);
+          await tokenBudget.waitIfNeeded(_estV1, `V1 ${evalId}`);
+        }
         console.log(`     🚀 V1...`);
         const v1Start = Date.now();
         try {
           const v1Response  = await getGroqResponse(msg.message, v1Context, v1History, v1FewShot, { now: targetTs });
           raw.v1_latency_ms = Date.now() - v1Start;
           groqCallCount++;
+          if (tokenBudget) {
+            tokenBudget.record(estimateV1Tokens(msg.message, v1History, v1Context, v1FewShot));
+            await new Promise(r => setTimeout(r, INTER_CALL_COOLDOWN_MS));
+          }
           const v1Valid = validateV1Response(v1Response);
           if (v1Valid.ok) {
             raw.v1_response = v1Response;
@@ -799,13 +969,18 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
           raw.v1_error      = e.message;
           raw.v1_latency_ms = Date.now() - v1Start;
           groqCallCount++;
+          if (tokenBudget) {
+            tokenBudget.record(estimateV1Tokens(msg.message, v1History, v1Context, v1FewShot));
+            await new Promise(r => setTimeout(r, INTER_CALL_COOLDOWN_MS));
+          }
           console.warn(`        V1 ❌ ${e.message}`);
         }
 
-        // 2s inter-V1/V2 pause to reduce 429 risk (both use same Groq key)
-        await new Promise(r => setTimeout(r, 2000));
-
         // ── V2 call ──────────────────────────────────────────────
+        if (tokenBudget) {
+          const _estV2 = estimateV2Tokens(msg.message, v2History, v2SystemPrompt, v2FewShot);
+          await tokenBudget.waitIfNeeded(_estV2, `V2 ${evalId}`);
+        }
         console.log(`     🚀 V2...`);
         const v2Result = await callGroqTravelerV2({
           systemPrompt: v2SystemPrompt,
@@ -819,14 +994,15 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
         raw.v2_latency_ms = v2Result.latency_ms;
         raw.v2_error      = v2Result.error || null;
         groqCallCount++;
+        if (tokenBudget) {
+          tokenBudget.record(estimateV2Tokens(msg.message, v2History, v2SystemPrompt, v2FewShot));
+          await new Promise(r => setTimeout(r, INTER_CALL_COOLDOWN_MS));
+        }
         if (v2Result.decision) {
           console.log(`        V2 ✅ (${v2Result.latency_ms}ms) action=${v2Result.decision.action}`);
         } else {
           console.warn(`        V2 ❌ ${v2Result.error}`);
         }
-
-        // 3s inter-case pause
-        if (i < devCases.length - 1) await new Promise(r => setTimeout(r, 3000));
       }
 
     } catch(err) {
@@ -917,6 +1093,37 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
     console.log(`  EXPERIMENTAL_RESULT_VALID: ${runValid ? 'OUI' : 'NON'}`);
     if (!runValid) console.error('  ❌ Both V1 and V2 returned 0 successes — this run is invalid.');
   }
+
+  // Dry-run: print per-case token estimates and statistics
+  if (dryRun) {
+    const v1Ests  = rawResults.map(r => r.v1_estimated_tokens).filter(x => typeof x === 'number');
+    const v2Ests  = rawResults.map(r => r.v2_estimated_tokens).filter(x => typeof x === 'number');
+    const combined = v1Ests.map((v1, i) => v1 + (v2Ests[i] || 0));
+
+    if (v1Ests.length > 0) {
+      const _sort = arr => [...arr].sort((a, b) => a - b);
+      const _mean = arr => arr.reduce((s, x) => s + x, 0) / arr.length;
+      const _med  = arr => { const s = _sort(arr); const m = Math.floor(s.length / 2); return s.length % 2 === 0 ? (s[m-1]+s[m])/2 : s[m]; };
+
+      console.log(`\n── DRY-RUN TOKEN ESTIMATES (per DEV case) ───────────────────────────────`);
+      console.log(`  ${'EVAL-ID'.padEnd(14)} ${'V1 est'.padStart(8)} ${'V2 est'.padStart(8)} ${'combined'.padStart(10)}`);
+      rawResults.forEach((r, i) => {
+        const v1e = r.v1_estimated_tokens ?? 'N/A';
+        const v2e = r.v2_estimated_tokens ?? 'N/A';
+        const cmb = (typeof v1e === 'number' && typeof v2e === 'number') ? v1e + v2e : 'N/A';
+        console.log(`  ${r.eval_id.padEnd(14)} ${String(v1e).padStart(8)} ${String(v2e).padStart(8)} ${String(cmb).padStart(10)}`);
+      });
+      const sv1 = _sort(v1Ests), sv2 = _sort(v2Ests), sc = _sort(combined);
+      console.log(`\n── V1 token stats ────────────────────────────────────────────────────────`);
+      console.log(`  min=${sv1[0]}  median=${_med(v1Ests)}  max=${sv1[sv1.length-1]}  mean=${Math.round(_mean(v1Ests))}`);
+      console.log(`\n── V2 token stats ────────────────────────────────────────────────────────`);
+      console.log(`  min=${sv2[0]}  median=${_med(v2Ests)}  max=${sv2[sv2.length-1]}  mean=${Math.round(_mean(v2Ests))}`);
+      console.log(`\n── Combined V1+V2 token stats ────────────────────────────────────────────`);
+      console.log(`  min=${sc[0]}  median=${_med(combined)}  max=${sc[sc.length-1]}  mean=${Math.round(_mean(combined))}`);
+      console.log(`  SAFE_TPM_BUDGET=${SAFE_TPM_BUDGET}  cases_per_window≈${(SAFE_TPM_BUDGET/_mean(combined)).toFixed(1)}`);
+    }
+  }
+
   console.log(`${'═'.repeat(70)}\n`);
 
   return { blindResults, rawResults, keyMapping, abAssignments, runValid };
@@ -961,9 +1168,15 @@ module.exports = {
   buildBlindEntry,
   validateV1Response,
   computeRunValidity,
+  createTokenBudget,
+  estimateV1Tokens,
+  estimateV2Tokens,
   runBenchmark,
   EXPECTED_FINGERPRINT,
   GOLDEN_IDS,
   REGRESSION_IDS,
   AB_SALT,
+  SAFE_TPM_BUDGET,
+  INTER_CALL_COOLDOWN_MS,
+  V1_PROMPT_FIXED_OVERHEAD_CHARS,
 };

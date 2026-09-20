@@ -18,13 +18,22 @@ const {
   buildBlindEntry,
   validateV1Response,
   computeRunValidity,
+  createTokenBudget,
+  estimateV1Tokens,
+  estimateV2Tokens,
   EXPECTED_FINGERPRINT,
   GOLDEN_IDS,
   REGRESSION_IDS,
   AB_SALT,
+  SAFE_TPM_BUDGET,
+  INTER_CALL_COOLDOWN_MS,
+  V1_PROMPT_FIXED_OVERHEAD_CHARS,
 } = require('../scripts/benchmark-traveler-v1-v2');
 
 let pass = 0; let fail = 0;
+// Async test promises collected here; awaited before the final summary.
+const _asyncPending = [];
+
 function t(label, fn) {
   try {
     fn();
@@ -35,15 +44,18 @@ function t(label, fn) {
     process.stdout.write(`  ❌ ${label}: ${e.message}\n`);
   }
 }
-async function ta(label, fn) {
-  try {
-    await fn();
-    pass++;
-    process.stdout.write(`  ✅ ${label}\n`);
-  } catch (e) {
-    fail++;
-    process.stdout.write(`  ❌ ${label}: ${e.message}\n`);
-  }
+function ta(label, fn) {
+  const p = (async () => {
+    try {
+      await fn();
+      pass++;
+      process.stdout.write(`  ✅ ${label}\n`);
+    } catch (e) {
+      fail++;
+      process.stdout.write(`  ❌ ${label}: ${e.message}\n`);
+    }
+  })();
+  _asyncPending.push(p);
 }
 
 // ─── Read source for inspection tests ─────────────────────────────────────────
@@ -634,11 +646,238 @@ t('V2 not modified (key exports still present)', () => {
   assert.ok(v2src.includes('Shadow Mode'), 'Shadow Mode marker must still be present');
 });
 
+// ─── Section 9: Global TPM hardening ─────────────────────────────────────────
+
+console.log('\n── 9. Global TPM hardening ───────────────────────────────────────────────');
+
+t('SAFE_TPM_BUDGET = 6000', () => {
+  assert.strictEqual(SAFE_TPM_BUDGET, 6000);
+});
+
+t('budget is shared V1+V2: both record() to the same log', () => {
+  const budget = createTokenBudget(6000);
+  budget.record(300); // simulate V1
+  budget.record(400); // simulate V2
+  assert.strictEqual(budget.tokensLast60s(), 700, 'V1+V2 must share the same counter');
+});
+
+t('under budget → no wait (state check)', () => {
+  const budget = createTokenBudget(6000);
+  budget.record(100);
+  const used = budget.tokensLast60s();
+  assert.ok(used + 100 <= 6000, 'should be under budget');
+});
+
+t('over budget → wait needed (state check)', () => {
+  const budget = createTokenBudget(100);
+  budget.record(99);
+  const used = budget.tokensLast60s();
+  assert.ok(used + 2 > 100, '99 used + 2 estimated must exceed safeTpm=100');
+});
+
+t('old calls (>60s) exit the window', () => {
+  const budget = createTokenBudget(6000);
+  budget._log.push({ ts: Date.now() - 61_000, tokens: 5500 });
+  const used = budget.tokensLast60s();
+  assert.strictEqual(used, 0, 'tokens from 61s ago must be pruned');
+});
+
+t('V1 estimate includes +600 output allowance', () => {
+  const est = estimateV1Tokens('hi', [], {}, []);
+  assert.ok(est >= 600, 'V1 estimate must include at least 600 output tokens');
+});
+
+t('V2 estimate includes +600 output allowance', () => {
+  const est = estimateV2Tokens('hi', [], '', []);
+  assert.ok(est >= 600, 'V2 estimate must include at least 600 output tokens');
+});
+
+t('V1 and V2 estimates grow with content', () => {
+  const small = estimateV1Tokens('hi', [], {}, []);
+  const large = estimateV1Tokens('hi', [{ content: 'x'.repeat(4000) }], {}, []);
+  assert.ok(large > small, 'longer history must increase V1 token estimate');
+});
+
+t('dry-run → tokenBudget is null (source check)', () => {
+  assert.ok(
+    src.includes('const tokenBudget = dryRun ? null : createTokenBudget(SAFE_TPM_BUDGET)'),
+    'dry-run must skip token budget creation'
+  );
+});
+
+t('tokenBudget guards both V1 and V2 calls (source check)', () => {
+  assert.ok(src.includes('tokenBudget.waitIfNeeded'), 'waitIfNeeded must be called');
+  assert.ok(src.includes('estimateV1Tokens'), 'V1 estimation must be used');
+  assert.ok(src.includes('estimateV2Tokens'), 'V2 estimation must be used');
+});
+
+t('fixed inter-case pauses removed (source check)', () => {
+  assert.ok(!src.includes('setTimeout(r, 3000)'), 'fixed 3s inter-case pause must be removed');
+  assert.ok(!src.includes('setTimeout(r, 2000)'), 'fixed 2s inter-V1/V2 pause must be removed');
+});
+
+t('V1 not modified: model and temperature unchanged', () => {
+  assert.ok(groqSrc.includes("'openai/gpt-oss-120b'"), 'V1 model must be unchanged');
+  assert.ok(/temperature:\s*0\.25/.test(groqSrc), 'V1 temperature must be unchanged');
+});
+
+t('run_valid still strict 25/25/25 after TPM hardening', () => {
+  assert.strictEqual(computeRunValidity(25, 25, 25), true);
+  assert.strictEqual(computeRunValidity(25, 25, 24), false);
+  assert.strictEqual(computeRunValidity(25, 24, 25), false);
+});
+
+// ─── Section 10: TPM limiter final — loop, oversized, cooldown ───────────────
+
+console.log('\n── 10. TPM limiter final ────────────────────────────────────────────────');
+
+t('INTER_CALL_COOLDOWN_MS exported and > 0', () => {
+  assert.ok(typeof INTER_CALL_COOLDOWN_MS === 'number' && INTER_CALL_COOLDOWN_MS > 0,
+    'INTER_CALL_COOLDOWN_MS must be a positive number');
+});
+
+t('V1_PROMPT_FIXED_OVERHEAD_CHARS exported and > 0', () => {
+  assert.ok(typeof V1_PROMPT_FIXED_OVERHEAD_CHARS === 'number' && V1_PROMPT_FIXED_OVERHEAD_CHARS > 0,
+    'V1_PROMPT_FIXED_OVERHEAD_CHARS must be a positive number');
+});
+
+t('V1 estimator includes fixed overhead (source check)', () => {
+  assert.ok(src.includes('V1_PROMPT_FIXED_OVERHEAD_CHARS'),
+    'V1 estimator must include V1_PROMPT_FIXED_OVERHEAD_CHARS to avoid undercount');
+});
+
+t('SINGLE_CALL_EXCEEDS_SAFE_BUDGET logged in source', () => {
+  assert.ok(src.includes('SINGLE_CALL_EXCEEDS_SAFE_BUDGET'),
+    'waitIfNeeded must log SINGLE_CALL_EXCEEDS_SAFE_BUDGET for oversized calls');
+});
+
+t('waitIfNeeded uses a loop (source check)', () => {
+  // The loop is implemented with for(;;) inside waitIfNeeded
+  const fnStart = src.indexOf('async function waitIfNeeded(');
+  const fnEnd   = src.indexOf('\n  function record(', fnStart);
+  const fnBody  = fnStart >= 0 && fnEnd > fnStart ? src.substring(fnStart, fnEnd) : src;
+  assert.ok(/for\s*\(\s*;/.test(fnBody), 'waitIfNeeded must contain a for(;;) loop');
+});
+
+t('INTER_CALL_COOLDOWN_MS used after V1 and V2 calls (source check)', () => {
+  assert.ok(
+    (src.match(/INTER_CALL_COOLDOWN_MS/g) || []).length >= 3,
+    'INTER_CALL_COOLDOWN_MS must appear at least 3 times: constant + V1 try + V1 catch + V2'
+  );
+  assert.ok(src.includes('setTimeout(r, INTER_CALL_COOLDOWN_MS)'),
+    'cooldown must use setTimeout(r, INTER_CALL_COOLDOWN_MS)');
+});
+
+t('dry-run zero Groq calls (source check)', () => {
+  // dry-run path sets '[DRY_RUN_NO_CALL]' and skips getGroqResponse / callGroqTravelerV2
+  assert.ok(src.includes('[DRY_RUN_NO_CALL]'), 'dry-run marker must be present');
+  const dryBlock = src.indexOf('if (dryRun) {');
+  assert.ok(dryBlock >= 0, 'dry-run branch must exist');
+});
+
+t('dry-run logs V1_est and V2_est per case (source check)', () => {
+  assert.ok(src.includes('V1_est=') && src.includes('V2_est='),
+    'dry-run must log V1_est and V2_est for each case');
+});
+
+t('run_valid still strict 25/25/25 after final TPM hardening', () => {
+  assert.strictEqual(computeRunValidity(25, 25, 25), true);
+  assert.strictEqual(computeRunValidity(25, 25, 24), false);
+  assert.strictEqual(computeRunValidity(25, 24, 25), false);
+});
+
+// ── Async: single call > safeTpm, empty log → immediate allow (no deadlock) ──
+
+ta('single call > safeTpm, empty log → immediate allow', async () => {
+  const budget = createTokenBudget(100, 200, 20);  // safeTpm=100, 200ms window, 20ms buffer
+  assert.strictEqual(budget._log.length, 0);       // log is empty
+  const waitMs = await budget.waitIfNeeded(150, 'test-oversized-empty');
+  // Should return 0 (immediate) even though 150 > 100
+  assert.strictEqual(waitMs, 0, 'oversized call with empty log must not wait');
+});
+
+// ── Async: single call > safeTpm, non-empty log → waits for full window clear ─
+
+ta('single call > safeTpm, non-empty log → waits for window clear', async () => {
+  const WINDOW = 150; // ms
+  const BUFFER = 20;  // ms
+  const budget = createTokenBudget(100, WINDOW, BUFFER);
+  // Push an entry that expires in ~80ms
+  budget._log.push({ ts: Date.now() - (WINDOW - 80), tokens: 60 });
+  const t0 = Date.now();
+  const waitMs = await budget.waitIfNeeded(150, 'test-oversized-nonempty');
+  const elapsed = Date.now() - t0;
+  // Should have waited ≥ 80ms for window clear
+  assert.ok(elapsed >= 50, `should have waited for window clear, got elapsed=${elapsed}ms`);
+  assert.ok(waitMs > 0, 'should return positive waitMs');
+  // After wait, window must be empty
+  assert.strictEqual(budget.tokensLast60s(), 0, 'window must be empty after wait');
+});
+
+// ── Async: normal case loop — first expiry insufficient, loops again ──────────
+
+ta('waitIfNeeded loops: first expiry insufficient, loops until budget fits', async () => {
+  const WINDOW = 200; // ms
+  const BUFFER = 20;  // ms
+  const budget = createTokenBudget(100, WINDOW, BUFFER);
+  const now = Date.now();
+  // Entry A: expires in ~60ms (ts = now - 140ms)
+  // Entry B: expires in ~120ms (ts = now - 80ms)
+  // Both are 60 tokens each; total used = 120 > 100.
+  // First iteration: wait for A to expire (~60 + 20ms buffer = ~80ms).
+  // After first wait: A gone (120ms old → expired), B still present (80+80=160ms old → also expired if WINDOW=200? Let's check: B.ts = now-80, expires at now-80+200 = now+120. After waiting 80ms, time is ~now+80. B expires at now+120. So B is NOT expired yet.
+  // Hmm, need to think more carefully.
+  // A.ts = now - 140 → expires at now - 140 + 200 = now + 60 → expires in ~60ms
+  // B.ts = now - 80  → expires at now - 80 + 200 = now + 120 → expires in ~120ms
+  // First waitIfNeeded: used=120, oldest=A, waitMs = (A.ts + 200 - Date.now) + 20 ≈ (60) + 20 = ~80ms
+  // After first wait (~80ms elapsed total): A is now ~80ms beyond expiry → pruned
+  //   B is now 80ms old (was 80ms at start) → B.ts was at now-80, after 80ms it's now+0ms old → wait, let me recalculate:
+  //   B.ts = original_now - 80. After waiting 80ms, current time = original_now + 80.
+  //   B age = (original_now + 80) - (original_now - 80) = 160ms. Window = 200ms. So B is NOT expired (160 < 200). ✓
+  //   used = B.tokens = 60. 60 + 40 = 100 <= 100 ✓ → loop exits.
+  // Wait, estimated is 40 tokens: used=60, 60+40=100 <= 100. Loop exits after ONE iteration.
+  // Let me use estimated=50 instead: 60+50=110 > 100. Then need another wait.
+  // After B expires (~120ms total from start): used=0, 0+50=50 <= 100. Loop exits.
+  //
+  // So: A.ts = now-140, B.ts = now-80, estimated=50 (fits only when both gone).
+  budget._log.push({ ts: now - 140, tokens: 60 }); // A: expires in ~60ms
+  budget._log.push({ ts: now - 80,  tokens: 60 }); // B: expires in ~120ms
+  // Verify initial state: both in window
+  assert.ok(budget.tokensLast60s() === 120, 'initial used must be 120');
+
+  const t0 = Date.now();
+  await budget.waitIfNeeded(50, 'test-loop');
+  const elapsed = Date.now() - t0;
+
+  // Must have waited for at least B to expire (~120ms from start)
+  assert.ok(elapsed >= 80, `should have waited at least ~80ms, got ${elapsed}ms`);
+  // After wait, used + 50 must fit within 100
+  const usedAfter = budget.tokensLast60s();
+  assert.ok(usedAfter + 50 <= 100, `budget must fit after loop: used=${usedAfter}`);
+});
+
+// ── Async: budget correct after wait ─────────────────────────────────────────
+
+ta('budget correctly fits after waitIfNeeded completes', async () => {
+  const WINDOW = 150;
+  const BUFFER = 20;
+  const budget = createTokenBudget(100, WINDOW, BUFFER);
+  // Fill to 90 tokens with an entry that expires in ~80ms
+  budget._log.push({ ts: Date.now() - (WINDOW - 80), tokens: 90 });
+  await budget.waitIfNeeded(20, 'test-fits-after');
+  const used = budget.tokensLast60s();
+  assert.ok(used + 20 <= 100, `after wait: used=${used} + 20 must be ≤ 100`);
+});
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 
-console.log('\n═══════════════════════════════════════════════════════════════════════');
-const total = pass + fail;
-console.log(`  ${pass}/${total} tests passed  (${fail} failed)`);
-console.log('═══════════════════════════════════════════════════════════════════════\n');
-
-if (fail > 0) process.exit(1);
+Promise.all(_asyncPending).then(() => {
+  console.log('\n═══════════════════════════════════════════════════════════════════════');
+  const total = pass + fail;
+  console.log(`  ${pass}/${total} tests passed  (${fail} failed)`);
+  console.log('═══════════════════════════════════════════════════════════════════════\n');
+  if (fail > 0) process.exit(1);
+}).catch(e => {
+  console.error('Async test runner error:', e);
+  process.exit(1);
+});
