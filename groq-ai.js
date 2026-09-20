@@ -45,8 +45,7 @@ function formatRooms(rooms) {
 // Calcul du contexte temporel précis
 // ─────────────────────────────────────────────
 
-function buildTemporalContext(ctx) {
-  const now = new Date();
+function buildTemporalContext(ctx, now = new Date()) {
   const checkin  = ctx.checkinDt  ? new Date(ctx.checkinDt)  : null;
   const checkout = ctx.checkoutDt ? new Date(ctx.checkoutDt) : null;
 
@@ -64,7 +63,7 @@ function buildTemporalContext(ctx) {
   let isCheckoutDay = false;
 
   if (checkin && checkout) {
-    const today = new Date(); today.setHours(0,0,0,0);
+    const today = new Date(now); today.setHours(0,0,0,0);
     const checkinDay  = new Date(checkin);  checkinDay.setHours(0,0,0,0);
     const checkoutDay = new Date(checkout); checkoutDay.setHours(0,0,0,0);
     isCheckinDay  = today.getTime() === checkinDay.getTime();
@@ -492,11 +491,15 @@ async function groqComplete({ messages, temperature, top_p, max_tokens = 600, mo
   return null;
 }
 
-async function getGroqResponse(userMessage, conversationContext = {}, messageHistory = [], fewShotExamples = []) {
+async function getGroqResponse(userMessage, conversationContext = {}, messageHistory = [], fewShotExamples = [], opts = {}) {
   if (!GROQ_API_KEY) {
     console.warn('⚠️ GROQ_API_KEY non configurée');
     return null;
   }
+
+  // opts.now allows benchmark to inject a historical timestamp without changing production behaviour.
+  // Production callers pass no opts → new Date() used as before.
+  const _now = (opts.now instanceof Date) ? opts.now : new Date();
 
   try {
     console.log(`🌍 [GROQ] Langue: ${conversationContext.language || 'auto'} | Phase: ${conversationContext.stayPhase || '?'}`);
@@ -506,12 +509,12 @@ async function getGroqResponse(userMessage, conversationContext = {}, messageHis
       checkoutDt:    conversationContext.checkoutDt,
       arrivalTime:   conversationContext.arrivalTime,
       departureTime: conversationContext.departureTime,
-    });
+    }, _now);
 
     let systemPrompt = buildSystemPrompt(conversationContext, temporalCtx, fewShotExamples);
 
     // Heure relative ("dans 30 min"…) résolue côté code → l'IA ne calcule pas elle-même.
-    const _rel = resolveRelativeTime(userMessage, new Date());
+    const _rel = resolveRelativeTime(userMessage, _now);
     if (_rel) {
       systemPrompt += `\n\n⏱️ HEURE RELATIVE DÉJÀ CALCULÉE (FIABLE) : le voyageur écrit « ${_rel.matched} », ce qui correspond exactement à ${_rel.timeLabel} (heure de Paris). Si tu mentionnes une heure, emploie EXACTEMENT ${_rel.timeLabel}. N'effectue toi-même AUCUN calcul d'heure.`;
     }
