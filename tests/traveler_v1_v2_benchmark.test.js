@@ -16,6 +16,8 @@ const {
   computeABAssignment,
   computeV1ContextFingerprint,
   buildBlindEntry,
+  validateV1Response,
+  computeRunValidity,
   EXPECTED_FINGERPRINT,
   GOLDEN_IDS,
   REGRESSION_IDS,
@@ -521,6 +523,115 @@ t('M: no new exports added to groq-ai.js', () => {
     assert.ok(expected.has(name), `Unexpected export added: ${name}`);
   }
   assert.strictEqual(exportedNames.length, 3, 'groq-ai.js must export exactly 3 functions');
+});
+
+// ─── Section 8: Auth failure hardening ──────────────────────────────────────
+
+console.log('\n── 8. Auth failure hardening ─────────────────────────────────────────────');
+
+t('dry-run works without GROQ_API_KEY (check inside !dryRun guard)', () => {
+  assert.ok(
+    /if\s*\(!dryRun\)\s*\{[\s\S]*?GROQ_API_KEY_MISSING/.test(src),
+    'GROQ_API_KEY fail-fast must be inside !dryRun guard'
+  );
+});
+
+t('real-run: fail-fast present before case processing loop', () => {
+  const keyIdx  = src.indexOf('GROQ_API_KEY_MISSING');
+  const loopIdx = src.indexOf('for (let i = 0; i < devCases.length');
+  assert.ok(keyIdx > 0 && loopIdx > 0 && keyIdx < loopIdx,
+    'GROQ_API_KEY_MISSING abort must appear before the case loop');
+});
+
+t('real-run: missing key throws before Groq calls', () => {
+  assert.ok(src.includes("throw new Error('GROQ_API_KEY_MISSING')"),
+    'must throw GROQ_API_KEY_MISSING to abort before processing any case');
+});
+
+t('V1 null != success', () => {
+  assert.strictEqual(validateV1Response(null).ok, false);
+});
+
+t('V1 undefined != success', () => {
+  assert.strictEqual(validateV1Response(undefined).ok, false);
+});
+
+t('V1 empty string != success', () => {
+  assert.strictEqual(validateV1Response('').ok, false);
+});
+
+t('V1 whitespace-only != success', () => {
+  assert.strictEqual(validateV1Response('   ').ok, false);
+});
+
+t('V1 real response = success', () => {
+  assert.strictEqual(validateV1Response('Bonjour, le check-in est à 15h.').ok, true);
+});
+
+t('V2 error field set on auth failure (source check)', () => {
+  assert.ok(
+    src.includes('raw.v2_error      = v2Result.error || null'),
+    'V2 auth failure must be recorded in raw.v2_error'
+  );
+});
+
+t('run_valid: strict 25/25 both systems required (source check)', () => {
+  assert.ok(
+    src.includes('return attempted === 25 && v1ok === 25 && v2ok === 25'),
+    'computeRunValidity must require exactly 25/25 from both systems'
+  );
+});
+
+t('non-zero exit when runValid is false', () => {
+  assert.ok(
+    src.includes('process.exit(runValid ? 0 : 1)'),
+    'CLI must exit 1 when runValid is false'
+  );
+});
+
+t('validateV1Response exported', () => {
+  assert.strictEqual(typeof validateV1Response, 'function');
+});
+
+t('computeRunValidity: 25/25 + 25/25 => valid', () => {
+  assert.strictEqual(computeRunValidity(25, 25, 25), true);
+});
+
+t('computeRunValidity: 25/25 V1 + 24/25 V2 => invalid', () => {
+  assert.strictEqual(computeRunValidity(25, 25, 24), false);
+});
+
+t('computeRunValidity: 24/25 V1 + 25/25 V2 => invalid', () => {
+  assert.strictEqual(computeRunValidity(25, 24, 25), false);
+});
+
+t('computeRunValidity: 0/25 V1 + 25/25 V2 => invalid', () => {
+  assert.strictEqual(computeRunValidity(25, 0, 25), false);
+});
+
+t('computeRunValidity: 25/25 V1 + 0/25 V2 => invalid', () => {
+  assert.strictEqual(computeRunValidity(25, 25, 0), false);
+});
+
+t('computeRunValidity: 0/25 + 0/25 => invalid', () => {
+  assert.strictEqual(computeRunValidity(25, 0, 0), false);
+});
+
+t('dataset fingerprint unchanged after hardening', () => {
+  const ds = JSON.parse(fs.readFileSync(
+    path.join(__dirname, '..', 'benchmarks', 'traveler-v2-eval-set.json'), 'utf8'
+  ));
+  assert.strictEqual(ds.dataset_fingerprint, EXPECTED_FINGERPRINT,
+    'dataset must not be modified');
+});
+
+t('V2 not modified (key exports still present)', () => {
+  const v2src = fs.readFileSync(
+    path.join(__dirname, '..', 'services', 'traveler-ai-v2.js'), 'utf8'
+  );
+  assert.ok(v2src.includes('callGroqTravelerV2'), 'callGroqTravelerV2 must still be present');
+  assert.ok(v2src.includes('buildTravelerContext'), 'buildTravelerContext must still be present');
+  assert.ok(v2src.includes('Shadow Mode'), 'Shadow Mode marker must still be present');
 });
 
 // ─── Summary ─────────────────────────────────────────────────────────────────

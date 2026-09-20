@@ -502,6 +502,61 @@ function buildBlindEntry({ evalId, v1Label, v1Response, v2Response, category, fp
   };
 }
 
+// ─── Run Validity ────────────────────────────────────────────────────────────
+
+/**
+ * A DEV25 run is valid only when every case has a real generation from both systems.
+ * A single technical error invalidates the run for comparative purposes.
+ * @param {number} attempted — cases actually processed
+ * @param {number} v1ok      — cases with a valid V1 string response
+ * @param {number} v2ok      — cases with a valid V2 object response (no error)
+ * @returns {boolean}
+ */
+function computeRunValidity(attempted, v1ok, v2ok) {
+  return attempted === 25 && v1ok === 25 && v2ok === 25;
+}
+
+// ─── V1 Response Validator ────────────────────────────────────────────────────
+
+/**
+ * A real V1 generation is a non-empty, non-whitespace string.
+ * null / undefined / "" / "  " are all failures — never count as success.
+ * @param {*} response
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+function validateV1Response(response) {
+  if (response === null || response === undefined)  return { ok: false, reason: 'NULL_RESPONSE' };
+  if (typeof response !== 'string')                 return { ok: false, reason: 'NOT_A_STRING' };
+  if (response.trim().length === 0)                 return { ok: false, reason: 'EMPTY_OR_WHITESPACE' };
+  return { ok: true };
+}
+
+// ─── Groq Key Preflight ───────────────────────────────────────────────────────
+
+/**
+ * Makes a minimal Groq API call (1 token) to verify the key is valid.
+ * Uses native fetch (Node 18+). Does NOT use a DEV benchmark case.
+ * @param {string} apiKey
+ * @returns {Promise<{ok: boolean, error?: string}>}
+ */
+async function preflightGroqKey(apiKey) {
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        model:     'openai/gpt-oss-120b',
+        messages:  [{ role: 'user', content: 'ok' }],
+        max_tokens: 1,
+      }),
+    });
+    if (res.status === 200 || res.status === 201) return { ok: true };
+    return { ok: false, error: `HTTP ${res.status}` };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
 // ─── Historical Reply Resolver ────────────────────────────────────────────────
 
 function _resolveHistoricalReplyLocal(nextRow) {
@@ -557,6 +612,23 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
     note: 'per-case mapping: SYSTEM_A = model labeled V1 in some cases, V2 in others (see abAssignments)',
   };
   console.log(`   ✅ Key generated (SYSTEM_A global default: ${KEY_INFO.global_label.SYSTEM_A})`);
+
+  // Step 2.5 — GROQ_API_KEY fail-fast (real runs only — dry-run skips Groq entirely)
+  if (!dryRun) {
+    if (!process.env.GROQ_API_KEY || !process.env.GROQ_API_KEY.trim()) {
+      console.error('\n❌ ABORT: GROQ_API_KEY_MISSING');
+      console.error('   A real benchmark run requires GROQ_API_KEY to be set.');
+      console.error('   Processed cases = 0, Groq calls = 0');
+      throw new Error('GROQ_API_KEY_MISSING');
+    }
+    console.log('\n── Step 2.5: Groq key preflight');
+    const pf = await preflightGroqKey(process.env.GROQ_API_KEY);
+    if (!pf.ok) {
+      console.error(`   ❌ ABORT: Groq key invalid — ${pf.error}`);
+      throw new Error(`GROQ_KEY_INVALID: ${pf.error}`);
+    }
+    console.log('   ✅ Groq key verified');
+  }
 
   // Step 3 — DB connection
   console.log('\n── Step 3: DB connection');
@@ -713,13 +785,20 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
         const v1Start = Date.now();
         try {
           const v1Response  = await getGroqResponse(msg.message, v1Context, v1History, v1FewShot, { now: targetTs });
-          raw.v1_response   = v1Response;
           raw.v1_latency_ms = Date.now() - v1Start;
           groqCallCount++;
-          console.log(`        V1 ✅ (${raw.v1_latency_ms}ms) ${(v1Response || '').substring(0, 50)}`);
+          const v1Valid = validateV1Response(v1Response);
+          if (v1Valid.ok) {
+            raw.v1_response = v1Response;
+            console.log(`        V1 ✅ (${raw.v1_latency_ms}ms) ${v1Response.substring(0, 50)}`);
+          } else {
+            raw.v1_error = v1Valid.reason;
+            console.warn(`        V1 ❌ ${v1Valid.reason}`);
+          }
         } catch(e) {
           raw.v1_error      = e.message;
           raw.v1_latency_ms = Date.now() - v1Start;
+          groqCallCount++;
           console.warn(`        V1 ❌ ${e.message}`);
         }
 
@@ -769,6 +848,15 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
 
   await pool.end();
 
+  // Step 4.5 — Compute run validity before writing outputs
+  let runValid = true;
+  let _v1ok = 0, _v2ok = 0;
+  if (!dryRun) {
+    _v1ok = rawResults.filter(r => validateV1Response(r.v1_response).ok).length;
+    _v2ok = rawResults.filter(r => r.v2_response && typeof r.v2_response === 'object' && !r.v2_error).length;
+    runValid = computeRunValidity(rawResults.length, _v1ok, _v2ok);
+  }
+
   // Step 5 — Write outputs
   console.log('\n── Step 5: Write output files');
   const prefix    = dryRun ? 'DRYRUN' : 'RUN';
@@ -779,6 +867,7 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
   // BLIND.json — no model labels anywhere
   const blindOutput = {
     run_id:              `${prefix}-${timestamp}`,
+    run_valid:           dryRun ? null : runValid,
     dry_run:             dryRun,
     generated_at:        new Date().toISOString(),
     dataset_fingerprint: dataset.dataset_fingerprint,
@@ -803,6 +892,7 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
   // RAW.json — full diagnostic data
   const rawOutput = {
     run_id:          `${prefix}-${timestamp}`,
+    run_valid:       dryRun ? null : runValid,
     dry_run:         dryRun,
     generated_at:    new Date().toISOString(),
     groq_call_count: groqCallCount,
@@ -822,14 +912,14 @@ async function runBenchmark({ dryRun = true, confirmRealRun = false } = {}) {
   console.log(`  V1 SYSTEM_A: ${countA}   V1 SYSTEM_B: ${countB}`);
   console.log(`  Groq calls:  ${groqCallCount}${dryRun ? ' (dry-run: none)' : ''}`);
   if (!dryRun) {
-    const v1ok = rawResults.filter(r => r.v1_response && r.v1_response !== '[DRY_RUN_NO_CALL]' && !r.v1_error).length;
-    const v2ok = rawResults.filter(r => r.v2_response && r.v2_response !== '[DRY_RUN_NO_CALL]' && !r.v2_error).length;
-    console.log(`  V1 success:  ${v1ok}/${rawResults.length}`);
-    console.log(`  V2 success:  ${v2ok}/${rawResults.length}`);
+    console.log(`  V1 success:  ${_v1ok}/${rawResults.length}`);
+    console.log(`  V2 success:  ${_v2ok}/${rawResults.length}`);
+    console.log(`  EXPERIMENTAL_RESULT_VALID: ${runValid ? 'OUI' : 'NON'}`);
+    if (!runValid) console.error('  ❌ Both V1 and V2 returned 0 successes — this run is invalid.');
   }
   console.log(`${'═'.repeat(70)}\n`);
 
-  return { blindResults, rawResults, keyMapping, abAssignments };
+  return { blindResults, rawResults, keyMapping, abAssignments, runValid };
 }
 
 // ─── CLI ──────────────────────────────────────────────────────────────────────
@@ -853,7 +943,7 @@ if (require.main === module) {
   }
 
   runBenchmark({ dryRun: !devMode, confirmRealRun })
-    .then(() => process.exit(0))
+    .then(({ runValid }) => process.exit(runValid ? 0 : 1))
     .catch(err => {
       console.error('❌ Fatal:', err.message);
       process.exit(1);
@@ -869,6 +959,8 @@ module.exports = {
   buildV1History,
   computeV1ContextFingerprint,
   buildBlindEntry,
+  validateV1Response,
+  computeRunValidity,
   runBenchmark,
   EXPECTED_FINGERPRINT,
   GOLDEN_IDS,
