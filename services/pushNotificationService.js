@@ -1,5 +1,6 @@
 const admin = require('firebase-admin');
 const path = require('path');
+const { allows } = require('./notification-preferences');
 
 // Initialiser Firebase Admin SDK
 let firebaseInitialized = false;
@@ -45,6 +46,15 @@ async function sendPushNotification(userId, notification, db) {
   }
 
   try {
+    // ── Préférences utilisateur ─────────────────────────────────────────────
+    // Ce fichier envoyait sans jamais consulter Mon compte ▸ Notifications.
+    // Point de passage unique des cinq fonctions du module.
+    const type = notification && notification.data && notification.data.type;
+    if (db && type && !(await allows(db, userId, type))) {
+      console.log(`🔕 [NOTIF-PREF] ${type} coupé par l'utilisateur ${userId} — envoi annulé`);
+      return;
+    }
+
     // La colonne s'appelle fcm_token, pas token : la table user_fcm_tokens a
     // pour colonnes id, user_id, fcm_token, device_id, device_type,
     // sub_account_id, created_at, updated_at. La requête d'origine lisait
@@ -62,13 +72,20 @@ async function sendPushNotification(userId, notification, db) {
 
     const fcmTokens = tokens.rows.map(row => row.fcm_token);
 
-    // Préparer le message
+    // Préparer le message. `data` n'accepte que des chaînes : une valeur null
+    // devient "null" et l'app lit un identifiant invalide — on les retire.
+    const data = {};
+    for (const [key, value] of Object.entries(notification.data || {})) {
+      if (value === null || value === undefined || value === '') continue;
+      data[key] = String(value);
+    }
+
     const message = {
       notification: {
         title: notification.title,
         body: notification.body
       },
-      data: notification.data || {},
+      data,
       tokens: fcmTokens
     };
 
@@ -173,9 +190,12 @@ async function sendNewMessageNotification(recipientUserId, messageDataOrGuestNam
     title: titleParts.join(' '),
     body: preview || 'Nouveau message',
     data: {
+      // `new_chat_message` reste le type historique de ce chemin ; il est
+      // désormais routé côté iOS comme un message (il tombait sur l'accueil).
       type: 'new_chat_message',
       conversationId: conversationId ? conversationId.toString() : '',
       conversation_id: conversationId ? conversationId.toString() : '',
+      screen: 'messages'
     }
   };
 
@@ -197,6 +217,7 @@ async function sendNewReservationNotification(userId, reservationData, db) {
       property_id: reservationData.propertyId || '',
       reservation_id: reservationData.reservationId || '',
       start_date: reservationData.startDate || '',
+      check_in: reservationData.startDate || '',
       end_date: reservationData.endDate || ''
     }
   };
@@ -238,6 +259,7 @@ async function sendCleaningNotification(userId, cleaningData, db) {
       type: 'new_cleaning',
       property_id: cleaningData.propertyId || '',
       cleaning_id: cleaningData.cleaningId || '',
+      checklistId: cleaningData.checklistId || cleaningData.cleaningId || '',
       date: cleaningData.date || ''
     }
   };
