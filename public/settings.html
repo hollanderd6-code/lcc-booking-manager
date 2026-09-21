@@ -2856,8 +2856,19 @@ function insertVariable(textareaId, variable, event) {
     // direct ici levait un ReferenceError qui interrompait silencieusement
     // tout le reste de loadPropertyExtendedData (dont le bloc Equipements).
     // On differe d'un tick, quand tous les blocs <script> sont evalues.
-    if (property.id) {
-      var _factsPropertyId = property.id;
+    // L'objet transmis par le bouton ne porte pas toujours `.id` : le code
+    // voisin (~l.3177) fait deja `propertyData.id || propertyData.property_id`.
+    // Un `if (property.id)` seul echouait donc en silence.
+    var _resolveFactsPropertyId = function (p) {
+      var v = (p && (p.id || p.property_id || p.propertyId)) || null;
+      if (!v) {
+        var el = document.getElementById('propertyId');
+        v = (el && el.value) || null;
+      }
+      return v;
+    };
+    var _factsPropertyId = _resolveFactsPropertyId(property);
+    if (_factsPropertyId) {
       setTimeout(function () {
         if (typeof loadPropertyFacts === 'function') {
           loadPropertyFacts(_factsPropertyId);
@@ -2865,6 +2876,8 @@ function insertVariable(textareaId, variable, event) {
           console.warn('⚠️ loadPropertyFacts indisponible — faits non charges');
         }
       }, 0);
+    } else {
+      console.warn('⚠️ Faits memorises : identifiant du logement introuvable', property);
     }
     
     // === ÉQUIPEMENTS ===
