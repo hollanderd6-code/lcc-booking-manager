@@ -49,6 +49,7 @@ const { setupChatRoutes } = require('./routes/chat_routes');
 const { comptesAutorises } = require('./utils/agency');
 const { normalizeDateOnly, getOccupiedNights } = require('./utils/dates');
 const createSmartLocksRoutes = require('./routes/smart-locks-routes');
+const { runPricingShadow } = require('./routes/effective-pricing-shadow');
 
 // ============================================
 // 📨 IMPORT SYSTÈME DE MESSAGES D'ARRIVÉE AUTOMATIQUES
@@ -541,6 +542,23 @@ async function triggerChannexRatesSync(propertyId, userId) {
 
       restrictions.push({ date: dateStr, ...buildMinStayFields(minStayRules, dateStr, dow) });
     }
+
+    // === PRICING SHADOW (P0-B) — observateur uniquement, ne modifie PAS le payload Channex ===
+    try {
+      await runPricingShadow(pool, {
+        propertyId,
+        userId:            ownerId,
+        startDate:         fmt(today),
+        endDate:           fmt(endDate),
+        legacyRates:       rates,
+        legacyRestrictions: restrictions,
+        longStayRule,
+        isExternalPricing: !!prop.external_pricing,
+      });
+    } catch (err) {
+      console.error('[PRICING SHADOW] Erreur (non bloquante):', err.message);
+    }
+    // === FIN SHADOW ===
 
     if (rates.length > 0 && !prop.external_pricing) {
       await pushRates(pool, {
@@ -50653,10 +50671,28 @@ app.get('/api/search', authenticateAny, async (req, res) => {
     const PER_CAT = 5;
     const pattern = `%${q}%`;
 
+    /* ── Recherche par numero de telephone ──────────────────────────────
+       Les numeros sont stockes dans des formats heterogenes selon la source
+       (« +33 7 77 36 01 52 », « 0777360152 », « 33777360152 »). On compare
+       donc des chiffres seuls des deux cotes, sur les 9 DERNIERS chiffres :
+       c'est le suffixe commun a toutes ces ecritures d'un numero francais.
+
+       Sous 5 chiffres saisis, on neutralise la condition avec le motif '%X%' :
+       la partie gauche ne contenant que des chiffres ne peut jamais y
+       correspondre, et $3 reste reference (PostgreSQL refuse un parametre
+       declare mais jamais utilise). */
+    const qDigits     = q.replace(/[^0-9]/g, '');
+    const phoneActive = qDigits.length >= 5;
+    const phoneKey    = qDigits.length >= 9 ? qDigits.slice(-9) : qDigits;
+    const phonePattern = phoneActive ? `%${phoneKey}%` : '%X%';
+
     const agencyIds = await getAgencyUserIds(req, userId);
 
     // col peut être une expression SQL (ex: "sub.client_name" ou une concat).
     const cmp = (col) => `unaccent(COALESCE(${col}, '')) ILIKE unaccent($1)`;
+
+    // Compare un numero en ne gardant que les chiffres, des deux cotes.
+    const phoneCmp = (col) => `regexp_replace(COALESCE(${col}, ''), '[^0-9]', '', 'g') LIKE $3`;
 
     const baseUrl = process.env.APP_URL || 'https://www.boostinghost.fr';
 
@@ -50693,23 +50729,26 @@ app.get('/api/search', authenticateAny, async (req, res) => {
 
         // 1. Réservations — uid actionnable pour ouvrir la fiche
         pool.query(`
-          SELECT uid, guest_name, start_date, end_date, property_id, COALESCE(NULLIF(platform, ''), source) AS platform
+          SELECT uid, guest_name, guest_phone, start_date, end_date, property_id, COALESCE(NULLIF(platform, ''), source) AS platform
           FROM reservations
           WHERE user_id = ANY($2::text[])
-            AND (${cmp('guest_name')} OR ${cmp('uid')})
+            AND (${cmp('guest_name')} OR ${cmp('uid')} OR ${phoneCmp('guest_phone')})
           ORDER BY start_date DESC
           LIMIT ${PER_CAT}
-        `, [pattern, agencyIds]),
+        `, [pattern, agencyIds, phonePattern]),
 
         // 2. Conversations — id actionnable pour ouvrir le fil
         pool.query(`
-          SELECT id, guest_name, platform, property_id, reservation_uid
-          FROM conversations
-          WHERE user_id = ANY($2::text[])
-            AND ${cmp('guest_name')}
-          ORDER BY id DESC
+          SELECT c.id, c.guest_name, c.platform, c.property_id, c.reservation_uid
+          FROM conversations c
+          /* Le telephone n'est pas suppose present sur conversations : on passe
+             par la reservation liee, dont la colonne guest_phone est certaine. */
+          LEFT JOIN reservations r ON r.uid = c.reservation_uid
+          WHERE c.user_id = ANY($2::text[])
+            AND (${cmp('c.guest_name')} OR ${phoneCmp('r.guest_phone')})
+          ORDER BY c.id DESC
           LIMIT ${PER_CAT}
-        `, [pattern, agencyIds]),
+        `, [pattern, agencyIds, phonePattern]),
 
         // 3. Propriétés
         pool.query(`
