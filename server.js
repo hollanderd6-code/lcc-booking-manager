@@ -6599,6 +6599,28 @@ async function getUserFromRequest(req) {
 // ============================================
 // HELPER AGENCY : récupère tous les user_ids accessibles
 // ============================================
+// Variante de getAgencyUserIds qui inclut TOUJOURS les comptes délégués, sans
+// exiger ?agency=all. À utiliser sur les routes lues par une interface qui ne
+// peut pas ajouter le paramètre (panneaux internes, app mobile). Résout aussi
+// le compte parent d'un sous-compte.
+async function getOwnerScopeIds(req) {
+  const baseId = req.user?.isSubAccount
+    ? (req.user.parentUserId || req.user.id)
+    : req.user?.id;
+  if (!baseId) return [];
+  try {
+    const d = await pool.query(
+      `SELECT delegator_user_id FROM account_delegations
+        WHERE delegate_user_id = $1 AND status = 'accepted'`,
+      [baseId]
+    );
+    return [baseId, ...d.rows.map(r => r.delegator_user_id)];
+  } catch (e) {
+    console.warn('⚠️ getOwnerScopeIds:', e.message);
+    return [baseId];
+  }
+}
+
 async function getAgencyUserIds(req, userId) {
   if (req.query.agency !== 'all') return [userId];
   try {
@@ -39607,10 +39629,10 @@ async function ensurePropertyFactsTable() {
 ensurePropertyFactsTable();
 
 // GET /api/properties/:id/facts — liste des faits mémorisés d'un logement
-app.get('/api/properties/:id/facts', authenticateToken, async (req, res) => {
+app.get('/api/properties/:id/facts', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
-    const agencyIds = await getAgencyUserIds(req, userId);
+    const agencyIds = await getOwnerScopeIds(req);
     // Vérifier que le logement appartient bien à l'utilisateur (ou délégation agence)
     const own = await pool.query(
       `SELECT id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
@@ -39631,10 +39653,10 @@ app.get('/api/properties/:id/facts', authenticateToken, async (req, res) => {
 });
 
 // POST /api/properties/:id/facts — créer/modifier un fait manuellement
-app.post('/api/properties/:id/facts', authenticateToken, async (req, res) => {
+app.post('/api/properties/:id/facts', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
-    const agencyIds = await getAgencyUserIds(req, userId);
+    const agencyIds = await getOwnerScopeIds(req);
     const own = await pool.query(
       `SELECT id, user_id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
       [req.params.id, agencyIds]
@@ -39661,10 +39683,10 @@ app.post('/api/properties/:id/facts', authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/properties/:id/facts/:factId — oublier un fait
-app.delete('/api/properties/:id/facts/:factId', authenticateToken, async (req, res) => {
+app.delete('/api/properties/:id/facts/:factId', authenticateAny, async (req, res) => {
   try {
     const userId = req.user.id;
-    const agencyIds = await getAgencyUserIds(req, userId);
+    const agencyIds = await getOwnerScopeIds(req);
     const own = await pool.query(
       `SELECT id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
       [req.params.id, agencyIds]

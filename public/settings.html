@@ -4200,11 +4200,18 @@ async function loadPropertyFacts(propertyId) {
   list.innerHTML = '<div style="font-size:12px;color:#9ca3af;padding:6px;">Chargement…</div>';
   try {
     const token = localStorage.getItem('lcc_token');
-    const res = await fetch('/api/properties/' + propertyId + '/facts', {
+    const res = await fetch('/api/properties/' + propertyId + '/facts?agency=all', {
       headers: { Authorization: 'Bearer ' + token }
     });
-    const data = await res.json();
-    renderPropertyFacts(data.facts || []);
+    const data = await res.json().catch(function(){ return {}; });
+    // Un 403/500 renvoie un JSON sans `facts` : sans ce test, l'interface
+    // affichait l'etat « aucun fait » et masquait l'erreur.
+    if (!res.ok || !Array.isArray(data.facts)) {
+      list.innerHTML = '<div style="font-size:12px;color:#ef4444;padding:6px;">'
+        + (data.error || ('Erreur ' + res.status)) + '</div>';
+      return;
+    }
+    renderPropertyFacts(data.facts);
   } catch(e) {
     list.innerHTML = '<div style="font-size:12px;color:#ef4444;padding:6px;">Erreur de chargement</div>';
   }
@@ -4244,7 +4251,7 @@ async function deletePropertyFact(factId) {
   if (!confirm('Oublier ce fait ? L\'IA reposera la question la prochaine fois.')) return;
   try {
     const token = localStorage.getItem('lcc_token');
-    await fetch('/api/properties/' + propertyId + '/facts/' + factId, {
+    await fetch('/api/properties/' + propertyId + '/facts/' + factId + '?agency=all', {
       method: 'DELETE',
       headers: { Authorization: 'Bearer ' + token }
     });
@@ -4265,7 +4272,7 @@ async function addPropertyFactManual() {
   const detail = prompt('Précision (optionnel)') || '';
   try {
     const token = localStorage.getItem('lcc_token');
-    await fetch('/api/properties/' + propertyId + '/facts', {
+    await fetch('/api/properties/' + propertyId + '/facts?agency=all', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ question: question.trim(), answer: answer, detail: detail.trim() })
