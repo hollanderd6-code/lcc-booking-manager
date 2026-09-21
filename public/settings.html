@@ -2988,9 +2988,16 @@ function insertVariable(textareaId, variable, event) {
 
   // Intercepter l'ouverture de la modal d'édition
   // Cette fonction doit être appelée quand tu charges une propriété
-  const originalEditProperty = window.editProperty;
-  if (typeof originalEditProperty === 'function') {
-    window.editProperty = function(propertyData) {
+  // window.editProperty est definie par un script charge APRES ce bloc.
+  // L'ancien garde `if (typeof originalEditProperty === 'function')` etait donc
+  // faux a cet instant : le decorateur ne s'installait jamais et le panneau
+  // « Faits memorises par l'IA » restait vide sans aucun message d'erreur.
+  // On retente l'installation jusqu'a ce que la fonction existe.
+  function installEditPropertyHook() {
+    const originalEditProperty = window.editProperty;
+    if (typeof originalEditProperty !== 'function') return false;
+    if (originalEditProperty.__bhFactsHook) return true;
+    const wrappedEditProperty = function(propertyData) {
       // Appeler la fonction originale
       originalEditProperty(propertyData);
       
@@ -3045,6 +3052,18 @@ function insertVariable(textareaId, variable, event) {
       // Charger les données étendues
       loadPropertyExtendedData(propertyData);
     };
+    wrappedEditProperty.__bhFactsHook = true;
+    window.editProperty = wrappedEditProperty;
+    console.log('✅ Hook editProperty installe (faits memorises)');
+    return true;
+  }
+
+  if (!installEditPropertyHook()) {
+    document.addEventListener('DOMContentLoaded', installEditPropertyHook);
+    var _bhHookTries = 0;
+    var _bhHookTimer = setInterval(function () {
+      if (installEditPropertyHook() || ++_bhHookTries > 40) clearInterval(_bhHookTimer);
+    }, 250);
   }
 
   console.log('✅ Module auto-réponses chargé');
