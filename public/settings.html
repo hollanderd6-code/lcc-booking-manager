@@ -4633,5 +4633,46 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 .settings-back-btn i { font-size: 13px !important; color: inherit !important; }
 </style>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+// Faits memorises par l'IA — chargement pilote par la modale
+//
+// window.editProperty est redefinie trois fois dans ce fichier (l.~3056,
+// ~3175, ~4417) et la modale « Modifier le logement » ne passe pas forcement
+// par elle : accrocher un decorateur a cette fonction s'est revele non fiable.
+// On observe donc directement l'etat de #editPropertyModal.
+// ════════════════════════════════════════════════════════════════════
+(function bhFactsModalWatcher() {
+  var lastLoadedId = null;
+
+  function modalIsVisible(el) {
+    if (!el) return false;
+    if (el.offsetParent !== null) return true;
+    var s = window.getComputedStyle(el);
+    return s.display !== 'none' && s.visibility !== 'hidden';
+  }
+
+  function tick() {
+    var modal = document.getElementById('editPropertyModal');
+    if (!modalIsVisible(modal)) { lastLoadedId = null; return; }
+
+    var input = document.getElementById('propertyId');
+    var pid = input && input.value;
+    if (!pid || pid === lastLoadedId) return;
+
+    lastLoadedId = pid;
+    if (typeof loadPropertyFacts === 'function') {
+      loadPropertyFacts(pid);
+    } else {
+      console.warn('⚠️ loadPropertyFacts indisponible — faits non charges');
+    }
+  }
+
+  setInterval(tick, 400);
+  console.log('✅ Faits memorises : surveillance de la modale active');
+})();
+</script>
+
 </body>
 </html>
