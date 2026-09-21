@@ -9751,6 +9751,20 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
       userProps = userProps.concat(getUserProperties(uid));
     }
 
+    /* tri global apres concatenation — PROPERTIES est trie par display_order
+       au chargement (loadProperties, l.~6837), mais concatener compte par
+       compte detruit ce tri : on obtenait tous les logements du compte
+       principal, puis ceux de chaque delegue. Un logement delegue place en 2e
+       position par l'utilisateur se retrouvait donc en fin de liste, et le
+       calendrier paraissait « oublier » l'ordre a chaque relance. */
+    userProps.sort((a, b) => {
+      const oa = Number(a.displayOrder ?? a.display_order ?? 0);
+      const ob = Number(b.displayOrder ?? b.display_order ?? 0);
+      if (oa !== ob) return oa - ob;
+      return String(a.createdAt ?? a.created_at ?? '')
+        .localeCompare(String(b.createdAt ?? b.created_at ?? ''));
+    });
+
     // Filtrer selon propriétés accessibles (si sous-compte)
     // Si accessibleProperties est vide → accès à TOUS les logements du parent
     let filteredProps;
