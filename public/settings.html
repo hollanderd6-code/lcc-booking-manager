@@ -2851,7 +2851,21 @@ function insertVariable(textareaId, variable, event) {
     }
 
     // === FAITS MÉMORISÉS PAR L'IA ===
-    if (property.id) loadPropertyFacts(property.id);
+    // loadPropertyFacts est declaree dans un bloc <script> plus bas (l.~4197).
+    // Une declaration de fonction n'est hissee que dans SON bloc : l'appel
+    // direct ici levait un ReferenceError qui interrompait silencieusement
+    // tout le reste de loadPropertyExtendedData (dont le bloc Equipements).
+    // On differe d'un tick, quand tous les blocs <script> sont evalues.
+    if (property.id) {
+      var _factsPropertyId = property.id;
+      setTimeout(function () {
+        if (typeof loadPropertyFacts === 'function') {
+          loadPropertyFacts(_factsPropertyId);
+        } else {
+          console.warn('⚠️ loadPropertyFacts indisponible — faits non charges');
+        }
+      }, 0);
+    }
     
     // === ÉQUIPEMENTS ===
     try {
