@@ -140,21 +140,14 @@ async function handleIncomingMessageDebounced(message, conversation, pool, io) {
   // • Les messages suivants d'un même burst passent par la branche `existing` → pas de doublon.
   if ((conversation.notif_message_level || 'ai_off') === 'all') {
     try {
-      const { sendNotification } = require('./services/notifications-service');
       const propName = conversation.bh_prop_internal || conversation.bh_prop_name || null;
       const guestLabel = conversation.guest_name || 'Voyageur';
       const title = `💬 ${guestLabel}${propName ? ' — ' + propName : ''}`;
       const body = (message._rawMessage || message.message || '').substring(0, 80);
-      const tokRes = await pool.query(
-        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL AND sub_account_id IS NULL',
-        [conversation.user_id]
-      );
-      for (const tok of tokRes.rows) {
-        await sendNotification(tok.fcm_token, title, body, {
-          type: 'new_guest_message',
-          conversation_id: String(convId)
-        });
-      }
+      await notifyConversationOwners(pool, conversation, title, body, {
+        type: 'new_guest_message',
+        conversation_id: String(convId)
+      });
       console.log(`📱 [DEBOUNCE] Notif immédiate envoyée — conv ${convId} (niveau all)`);
     } catch(e) { console.warn('⚠️ [DEBOUNCE] Erreur notif immédiate:', e.message); }
   }
@@ -487,19 +480,12 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         if (hoursAgo < 4) {
           console.log(`ℹ️ [HANDLER] Conv escaladée il y a ${hoursAgo.toFixed(1)}h → bot silencieux, notif proprio`);
           try {
-            const tokens = await pool.query(
-              'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-              [conversation.user_id]
+            await notifyConversationOwners(
+              pool, conversation,
+              `💬 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''} a répondu`,
+              `Nouveau message dans une conversation en attente.`,
+              { type: 'new_guest_message', conversation_id: String(conversation.id) }
             );
-            const { sendNotification } = require('./services/notifications-service');
-            for (const tok of tokens.rows) {
-              await sendNotification(
-                tok.fcm_token,
-                `💬 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''} a répondu`,
-                `Nouveau message dans une conversation en attente.`,
-                { type: 'new_guest_message', conversation_id: String(conversation.id) }
-              );
-            }
           } catch(e) { console.error('❌ [HANDLER] Erreur notif escalade:', e.message); }
           return true;
         } else {
@@ -531,19 +517,12 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         // 'escalation' = seulement les vraies escalades → la pause 2h n'en est pas une.
         if (_pauseLevel !== 'escalation') {
           try {
-            const tokensRes = await pool.query(
-              'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL AND sub_account_id IS NULL',
-              [conversation.user_id]
+            await notifyConversationOwners(
+              pool, conversation,
+              `💬 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''}`,
+              (message._rawMessage || message.message || '').substring(0, 80),
+              { type: 'new_guest_message', conversation_id: String(conversation.id) }
             );
-            const { sendNotification } = require('./services/notifications-service');
-            for (const tok of tokensRes.rows) {
-              await sendNotification(
-                tok.fcm_token,
-                `💬 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''}`,
-                (message._rawMessage || message.message || '').substring(0, 80),
-                { type: 'new_guest_message', conversation_id: String(conversation.id) }
-              );
-            }
           } catch(e) { console.warn('⚠️ [HANDLER] Erreur notif pause owner:', e.message); }
         }
         return false;
@@ -813,19 +792,12 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     if (negativePatterns.some(p => message.message.toLowerCase().includes(p))) {
       console.log(`😠 [HANDLER] Sentiment négatif → notif proprio (conv ${conversation.id})`);
       try {
-        const tokensRes = await pool.query(
-          `SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL`,
-          [conversation.user_id]
+        await notifyConversationOwners(
+          pool, conversation,
+          `😠 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''} — Message négatif`,
+          `Un voyageur semble insatisfait. Vérifiez la conversation.`,
+          { type: 'negative_sentiment', conversationId: String(conversation.id), screen: 'messages' }
         );
-        const { sendNotification } = require('./firebase');
-        for (const tok of tokensRes.rows) {
-          await sendNotification(
-            tok.fcm_token,
-            `😠 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''} — Message négatif`,
-            `Un voyageur semble insatisfait. Vérifiez la conversation.`,
-            { type: 'negative_sentiment', conversationId: String(conversation.id), screen: 'messages' }
-          );
-        }
       } catch(e) { console.warn('⚠️ [HANDLER] Erreur push sentiment négatif:', e.message); }
     }
 
@@ -1610,7 +1582,6 @@ async function addLateCheckoutNote(conversation, pool, reqLabel) {
 // Notifie le propriétaire (push) d'une demande d'arrivée anticipée.
 async function notifyEarlyCheckin(conversation, pool, reqLabel, arrLabel, accepted) {
   try {
-    const { sendNotification } = require('./services/notifications-service');
     let propName = null;
     if (conversation.property_id) {
       try {
@@ -1627,17 +1598,11 @@ async function notifyEarlyCheckin(conversation, pool, reqLabel, arrLabel, accept
       ? `Arrivée à ${reqLabel} acceptée automatiquement (prévu ${arrLabel}). Note ajoutée à la réservation.`
       : `Le voyageur demande à arriver à ${reqLabel} (prévu ${arrLabel}) — au-delà de la tolérance. À valider manuellement.`;
 
-    const tokens = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-      [conversation.user_id]
-    );
-    for (const tok of tokens.rows) {
-      await sendNotification(tok.fcm_token, title, body, {
-        type: accepted ? 'early_checkin_ok' : 'early_checkin_review',
-        conversation_id: String(conversation.id),
-        screen: 'messages'
-      });
-    }
+    await notifyConversationOwners(pool, conversation, title, body, {
+      type: accepted ? 'early_checkin_ok' : 'early_checkin_review',
+      conversation_id: String(conversation.id),
+      screen: 'messages'
+    });
   } catch(e) {
     console.error('❌ [ARR] Erreur notification early:', e.message);
   }
@@ -1646,7 +1611,6 @@ async function notifyEarlyCheckin(conversation, pool, reqLabel, arrLabel, accept
 // Notifie le propriétaire (push) d'une demande de départ tardif.
 async function notifyLateCheckout(conversation, pool, reqLabel, depLabel, accepted) {
   try {
-    const { sendNotification } = require('./services/notifications-service');
     let propName = null;
     if (conversation.property_id) {
       try {
@@ -1663,17 +1627,11 @@ async function notifyLateCheckout(conversation, pool, reqLabel, depLabel, accept
       ? `Départ à ${reqLabel} accepté automatiquement (prévu ${depLabel}). Note ajoutée à la réservation.`
       : `Le voyageur demande à partir à ${reqLabel} (prévu ${depLabel}) — au-delà de la tolérance. À valider manuellement.`;
 
-    const tokens = await pool.query(
-      'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-      [conversation.user_id]
-    );
-    for (const tok of tokens.rows) {
-      await sendNotification(tok.fcm_token, title, body, {
-        type: accepted ? 'late_checkout_ok' : 'late_checkout_review',
-        conversation_id: String(conversation.id),
-        screen: 'messages'
-      });
-    }
+    await notifyConversationOwners(pool, conversation, title, body, {
+      type: accepted ? 'late_checkout_ok' : 'late_checkout_review',
+      conversation_id: String(conversation.id),
+      screen: 'messages'
+    });
   } catch(e) {
     console.error('❌ [LATE] Erreur notification:', e.message);
   }
@@ -1900,7 +1858,6 @@ async function escalateToOwner(conversation, pool, io, language, channexId = nul
       });
     }
     try {
-      const { sendNotification } = require('./services/notifications-service');
       let _propName = null;
       if (conversation.property_id) {
         try {
@@ -1909,18 +1866,12 @@ async function escalateToOwner(conversation, pool, io, language, channexId = nul
           if (_p) _propName = _p.internal_name || _p.name || null;
         } catch(e) {}
       }
-      const tokens = await pool.query(
-        'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-        [conversation.user_id]
+      await notifyConversationOwners(
+        pool, conversation,
+        `🤝 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''} — Prise en charge requise`,
+        `L'IA a passé la main. Répondez dès que possible.`,
+        { type: 'escalation', conversation_id: String(conversation.id), screen: 'messages' }
       );
-      for (const tok of tokens.rows) {
-        await sendNotification(
-          tok.fcm_token,
-          `🤝 ${conversation.guest_name || 'Voyageur'}${_propName ? ' — ' + _propName : ''} — Prise en charge requise`,
-          `L'IA a passé la main. Répondez dès que possible.`,
-          { type: 'escalation', conversation_id: String(conversation.id), screen: 'messages' }
-        );
-      }
     } catch(nErr) { console.error('❌ [HANDLER] Erreur notif escalade:', nErr.message); }
 
     // ── Brouillon de réponse pour l'hôte (asynchrone, ne bloque pas l'escalade) ──
@@ -2265,19 +2216,12 @@ async function confirmUpsellPaid({ paymentRow, pool, io }) {
         `✅💸 Panier d'accueil PAYÉ — à préparer pour l'arrivée.`, pool, io);
       // Notif proprio
       try {
-        const { sendNotification } = require('./services/notifications-service');
-        const tokens = await pool.query(
-          'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
-          [conversation.user_id]
+        await notifyConversationOwners(
+          pool, conversation,
+          `🧺 Panier d'accueil payé — ${conversation.guest_name || 'Voyageur'}`,
+          `Pensez à le préparer pour l'arrivée.`,
+          { type: 'upsell_paid', conversation_id: String(conversation.id), screen: 'messages' }
         );
-        for (const tok of tokens.rows) {
-          await sendNotification(
-            tok.fcm_token,
-            `🧺 Panier d'accueil payé — ${conversation.guest_name || 'Voyageur'}`,
-            `Pensez à le préparer pour l'arrivée.`,
-            { type: 'upsell_paid', conversation_id: String(conversation.id), screen: 'messages' }
-          );
-        }
       } catch(e) {}
     } else {
       console.warn(`⚠️ [UPSELL] kind inconnu: ${kind}`);
