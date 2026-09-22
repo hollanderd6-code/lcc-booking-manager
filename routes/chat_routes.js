@@ -4,6 +4,7 @@
 
 const crypto = require('crypto');
 const { comptesAutorises } = require('../utils/agency');
+const { deescalateConversation } = require('../utils/chat-utils');
 
 // ============================================
 // 🤖 IMPORTS SYSTÈME ONBOARDING + RÉPONSES AUTO
@@ -896,7 +897,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
         }
 
         // ✅ Support des sous-comptes
-        const realUserId = req.user.isSubAccount 
+        const realUserId = req.user.isSubAccount
           ? (await getRealUserId(pool, req))
           : req.user.id;
 
@@ -907,14 +908,14 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
         if (!comptes.includes(conversation.user_id)) {
           return res.status(403).json({ error: 'Accès refusé' });
         }
-        
+
         // ✅ Vérifier accès propriété si sous-compte
         if (req.user.isSubAccount) {
           const subAccountData = await pool.query(
             'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
             [req.user.subAccountId]
           );
-          
+
           if (subAccountData.rows.length > 0) {
             const accessibleIds = subAccountData.rows[0].accessible_property_ids || [];
             if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
@@ -971,6 +972,11 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
       );
 
       const newMessage = result.rows[0];
+
+      // Désescalade si réponse hôte
+      if (sender_type === 'owner' || sender_type === 'property') {
+        await deescalateConversation(pool, conversation_id, '/api/chat/send');
+      }
 
       // Marquer conversation comme active
       await pool.query(
@@ -1375,11 +1381,7 @@ if (sender_type === 'owner' && (message && message.trim())) {
         [conversationId, agencyIds]
       );
       if (!conv.rows.length) return res.status(404).json({ error: 'Conversation non trouvée' });
-      await pool.query(
-        'UPDATE conversations SET escalated = FALSE, escalated_at = NULL, updated_at = NOW() WHERE id = $1',
-        [conversationId]
-      );
-      console.log(`✅ [DEESCALADE] Conv ${conversationId} désescaladée manuellement (user ${userId})`);
+      await deescalateConversation(pool, conversationId, `manuelle (user ${userId})`);
       res.json({ success: true });
     } catch (e) {
       console.error('❌ deescalate:', e.message);

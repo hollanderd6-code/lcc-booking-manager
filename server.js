@@ -50,6 +50,7 @@ const { comptesAutorises } = require('./utils/agency');
 const { normalizeDateOnly, getOccupiedNights } = require('./utils/dates');
 const createSmartLocksRoutes = require('./routes/smart-locks-routes');
 const { runPricingShadow } = require('./routes/effective-pricing-shadow');
+const { deescalateConversation } = require('./utils/chat-utils');
 
 // ============================================
 // 📨 IMPORT SYSTÈME DE MESSAGES D'ARRIVÉE AUTOMATIQUES
@@ -35451,121 +35452,6 @@ async function transmitToChannex(pool, conversationId, message, messageId) {
 }
 
 // ============================================
-// 🤖 ENDPOINT ENVOI MESSAGE AVEC TRAITEMENT AUTO
-// ============================================
-
-app.post('/api/chat/send', async (req, res) => {
-  try {
-    const { conversation_id, message, sender_type, sender_name } = req.body;
-
-    if (!conversation_id || !message) {
-      return res.status(400).json({ error: 'conversation_id et message requis' });
-    }
-
-    // Insérer le message dans la DB
-    const messageResult = await pool.query(
-      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
-       VALUES ($1, $2, $3, $4, FALSE, NOW())
-       RETURNING id, conversation_id, sender_type, sender_name, message, is_read, created_at`,
-      [conversation_id, sender_type || 'guest', sender_name || 'Voyageur', message]
-    );
-
-    const savedMessage = messageResult.rows[0];
-
-    // Émettre via Socket.io
-    if (io) {
-      io.to(`conversation_${conversation_id}`).emit('new_message', savedMessage);
-    }
-
-    // ✅ Désescalade immédiate dès qu'un message hôte est enregistré
-    if (sender_type === 'owner' || sender_type === 'property') {
-      try {
-        const escResult = await pool.query(
-          'SELECT escalated FROM conversations WHERE id = $1',
-          [conversation_id]
-        );
-        if (escResult.rows[0]?.escalated) {
-          await pool.query(
-            `UPDATE conversations SET escalated = FALSE, escalated_at = NULL, updated_at = NOW() WHERE id = $1`,
-            [conversation_id]
-          );
-          console.log(`✅ [DESESCALADE] Conv ${conversation_id} — bot réactivé immédiatement`);
-        }
-      } catch(e) {
-        console.error('❌ [DESESCALADE] Erreur reset:', e.message);
-      }
-    }
-
-    // ── Transmission vers la plateforme OTA si message hôte ──
-    let delivered = false;
-    let deliveryError = null;
-    if (sender_type === 'owner') {
-      ({ delivered, deliveryError } = await transmitToChannex(pool, conversation_id, message, savedMessage.id));
-    }
-
-    // 🤖 TRAITER AUTOMATIQUEMENT (Onboarding + Réponses auto)
-    if (sender_type === 'guest') {
-      // Récupérer la conversation complète
-      const convResult = await pool.query(
-        'SELECT * FROM conversations WHERE id = $1',
-        [conversation_id]
-      );
-
-      if (convResult.rows.length > 0) {
-        const conversation = convResult.rows[0];
-
-        // Traiter le message (onboarding + réponses auto)
-        const msgNotifAllowed = await shouldSendNotification(conversation.user_id, 'notif_new_message');
-        const botHandled = await handleIncomingMessage(savedMessage, conversation, pool, io);
-
-        // 🔔 Notifs seulement si le bot n'a PAS répondu (escalade ou non géré)
-        if (!botHandled) {
-          // Notif Firebase propriétaire
-          if (msgNotifAllowed) {
-            try {
-              await sendNewMessageNotification(
-                conversation.user_id,
-                conversation.guest_name || 'Voyageur',
-                savedMessage.message,
-                conversation.id,
-                pool
-              );
-            } catch (nErr) { console.error('❌ Notif Firebase message:', nErr.message); }
-          }
-
-          // 🔔 Notif sous-comptes : nouveau message
-          try {
-            await sendNotificationToSubAccountsOf(
-              conversation.user_id, 'can_view_messages',
-              `💬 ${conversation.guest_name || 'Voyageur'}`,
-              (() => {
-                const preview = (savedMessage.message || '')
-                  .replace(/https?:\/\/\S+/g, '🔗 Lien')
-                  .substring(0, 80);
-                return preview || 'Nouveau message';
-              })(),
-              { type: 'new_chat_message', conversationId: String(conversation.id), conversation_id: String(conversation.id) },
-              'notif_sub_new_message'
-            );
-          } catch (nErr) { console.error('❌ Notif sous-comptes message:', nErr.message); }
-        }
-      }
-    }
-
-    res.json({
-      success: true,
-      message: savedMessage,
-      delivered,
-      ...(deliveryError ? { delivery_error: deliveryError } : {})
-    });
-
-  } catch (error) {
-    console.error('❌ Erreur /api/chat/send:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// ============================================
 // ROUTE VERIFICATION CHAT (AJOUTEE DIRECTEMENT)
 // ============================================
 
@@ -43002,8 +42888,10 @@ app.post('/api/channex/webhook-message', async (req, res) => {
 
     // Accepter guest, traveler, customer — rejeter host/system/auto/bot
     const isGuestMessage = !['host', 'system', 'auto', 'property', 'manager', 'bot', 'owner'].includes(sender);
+    // Réponse hôte écrite directement dans l'app OTA (ex: réponse Airbnb côté hôte)
+    const isHostReply = !isGuestMessage && ['host', 'property', 'owner', 'manager'].includes(sender);
 
-    if (!channex_booking_id || !messageText || !isGuestMessage) {
+    if (!channex_booking_id || !messageText || (!isGuestMessage && !isHostReply)) {
       console.warn(`⚠️ [CHANNEX MSG] Payload skipped — booking_id=${channex_booking_id} | sender="${sender}" | msgLen=${messageText.length}`);
       return res.status(200).json({ received: true, skipped: true });
     }
@@ -43121,6 +43009,31 @@ app.post('/api/channex/webhook-message', async (req, res) => {
       );
       conversation_id = newConv.rows[0].id;
       console.log(`✅ [CHANNEX MSG] Nouvelle conversation créée: ${conversation_id}`);
+    }
+
+    // ── Réponse hôte depuis la plateforme OTA ──────────────────────────────────
+    if (isHostReply) {
+      const hostMsgResult = await pool.query(
+        `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+         VALUES ($1, 'property', 'Hôte', $2, TRUE, NOW())
+         RETURNING *`,
+        [conversation_id, messageText]
+      );
+      const hostMsg = hostMsgResult.rows[0];
+
+      await deescalateConversation(pool, conversation_id, `webhook Channex (sender=${sender})`);
+
+      if (io) {
+        io.to(`conversation_${conversation_id}`).emit('new_message', hostMsg);
+        io.to(`user_${user_id}`).emit('new_platform_message', {
+          conversation_id,
+          message: hostMsg,
+          channex_booking_id
+        });
+      }
+
+      console.log(`✅ [CHANNEX MSG] Réponse hôte enregistrée conversation ${conversation_id}`);
+      return res.status(200).json({ success: true });
     }
 
     // Insérer le message dans BH
@@ -43605,22 +43518,7 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
 
     const { delivered, deliveryError } = await transmitToChannex(pool, conversationId, finalMessage, savedMsg.id);
 
-    // Désescalade immédiate dès qu'un message hôte est enregistré
-    try {
-      const escResult = await pool.query(
-        'SELECT escalated FROM conversations WHERE id = $1',
-        [conversationId]
-      );
-      if (escResult.rows[0]?.escalated) {
-        await pool.query(
-          `UPDATE conversations SET escalated = FALSE, escalated_at = NULL, updated_at = NOW() WHERE id = $1`,
-          [conversationId]
-        );
-        console.log(`✅ [DESESCALADE] Conv ${conversationId} — bot réactivé (send-platform)`);
-      }
-    } catch(e) {
-      console.error('❌ [DESESCALADE] Erreur reset send-platform:', e.message);
-    }
+    await deescalateConversation(pool, conversationId, 'send-platform');
 
     // Notifier via Socket.io
     if (io) {
