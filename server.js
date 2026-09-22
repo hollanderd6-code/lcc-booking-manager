@@ -38905,6 +38905,41 @@ app.post('/api/admin/clients/:id/extend-trial', authenticateToken, async (req, r
   }
 });
 
+// POST /api/admin/clients/:id/create-trial — crée une ligne subscriptions trial (14 j) pour un compte qui n'en a pas
+app.post('/api/admin/clients/:id/create-trial', authenticateToken, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    const ADMIN_EMAILS = ['charles.induni@gmail.com', 'arnaud.gestionpro@gmail.com'];
+    if (!user || !ADMIN_EMAILS.includes(user.email)) return res.status(403).json({ error: 'Accès refusé' });
+
+    const { id } = req.params;
+
+    const target = await pool.query('SELECT id FROM users WHERE id = $1', [id]);
+    if (target.rows.length === 0) return res.status(404).json({ error: 'Utilisateur introuvable' });
+
+    const existing = await pool.query('SELECT id FROM subscriptions WHERE user_id = $1', [id]);
+    if (existing.rows.length > 0) return res.status(409).json({ error: 'Cet utilisateur a déjà un abonnement' });
+
+    const trialStart = new Date();
+    const trialEnd   = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    const subId      = `sub_${Date.now()}`;
+
+    await pool.query(
+      `INSERT INTO subscriptions (id, user_id, status, plan_type, plan_amount,
+         trial_start_date, trial_end_date, created_at, updated_at)
+       VALUES ($1, $2, 'trial', 'pro', 0, $3, $4, NOW(), NOW())`,
+      [subId, id, trialStart, trialEnd]
+    );
+
+    await logAdminAction(user, id, 'create_trial', { trial_end_date: trialEnd });
+
+    res.json({ success: true, status: 'trial', plan_type: 'pro', trial_end_date: trialEnd });
+  } catch(e) {
+    console.error('POST /api/admin/clients/:id/create-trial:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // PUT /api/admin/clients/:id/plan — changer le plan / statut d'un client
 app.put('/api/admin/clients/:id/plan', authenticateToken, async (req, res) => {
   try {
