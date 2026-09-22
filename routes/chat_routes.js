@@ -332,7 +332,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
            AND c.owner_suggestion_status = 'pending') AS has_suggestion,
           c.guest_first_name,
           c.guest_last_name,
-          c.guest_phone,
+          COALESCE(c.guest_phone, r.guest_phone) AS guest_phone,
           p.name as property_name,
           p.color as property_color,
           r.guest_country,
@@ -451,7 +451,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
              AND c.owner_suggestion_status = 'pending') AS has_suggestion,
             c.guest_first_name,
             c.guest_last_name,
-            c.guest_phone,
+            COALESCE(c.guest_phone, r.guest_phone) AS guest_phone,
             p.name as property_name,
             p.color as property_color,
             r.guest_country,
@@ -769,10 +769,19 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
 
       const convCheck = await pool.query(
         `SELECT c.id, c.user_id, c.property_id,
-                c.guest_first_name, c.guest_last_name, c.guest_phone, c.platform,
-                c.escalated, c.ai_disabled
+                c.guest_first_name, c.guest_last_name,
+                COALESCE(c.guest_phone, r.guest_phone) AS guest_phone,
+                c.platform, c.escalated, c.ai_disabled
          FROM conversations c
-         WHERE c.id = $1`,
+         LEFT JOIN reservations r ON (
+           (c.channex_booking_id IS NOT NULL AND r.channex_booking_id = c.channex_booking_id)
+           OR (c.channex_booking_id IS NULL AND r.property_id = c.property_id
+               AND DATE(r.start_date) = DATE(c.reservation_start_date)
+               AND r.status != 'cancelled')
+         )
+         WHERE c.id = $1
+         ORDER BY (r.guest_phone IS NOT NULL) DESC NULLS LAST
+         LIMIT 1`,
         [conversationId]
       );
 
