@@ -18,6 +18,7 @@
 
 const express = require('express');
 const cors = require('cors');
+const { requirePermission } = require('../sub-accounts-middleware');
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -416,9 +417,8 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
   //         notifyPush, notifyEmail, notifyAlert,
   //         propertyType, bedrooms }
   // ────────────────────────────────────────────────────────
-  app.post('/api/dynamic-pricing/config', corsDP, express.json(), authenticateAny, async (req, res) => {
+  app.post('/api/dynamic-pricing/config', corsDP, express.json(), authenticateAny, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
     try {
-      const userId = req.user.id;
       const {
         propertyId,
         priceMin,
@@ -437,7 +437,7 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
       await pool.query('ALTER TABLE pricing_config ADD COLUMN IF NOT EXISTS strategy INTEGER DEFAULT 50').catch(() => {});
       const strategyVal = Math.max(0, Math.min(100, parseInt(strategy) || 50));
 
-      // Validation
+      // Validation des champs obligatoires (avant tout accès DB)
       if (!propertyId) {
         return res.status(400).json({ error: 'propertyId requis' });
       }
@@ -450,6 +450,47 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
       if (!['manual','auto'].includes(mode)) {
         return res.status(400).json({ error: 'mode doit être manual ou auto' });
       }
+
+      // Résolution de l'identité de l'appelant (sub_account → parent user)
+      let callerUserId;
+      if (req.user.isSubAccount) {
+        const saRow = await pool.query(
+          'SELECT parent_user_id FROM sub_accounts WHERE id = $1',
+          [req.user.subAccountId]
+        );
+        if (!saRow.rows[0]) return res.status(401).json({ error: 'Sous-compte introuvable' });
+        callerUserId = saRow.rows[0].parent_user_id;
+      } else {
+        callerUserId = req.user.id;
+      }
+
+      // Vérification accès + résolution de l'identité canonique du pricing
+      // pricingOwnerId = properties.user_id — jamais fourni par le client
+      const propRes = await pool.query(
+        `SELECT id, user_id AS pricing_owner_id
+         FROM properties
+         WHERE id = $1
+           AND (
+             user_id = $2
+             OR EXISTS (
+               SELECT 1 FROM account_delegations
+               WHERE delegator_user_id = user_id
+                 AND delegate_user_id  = $2
+                 AND status = 'accepted'
+             )
+           )`,
+        [propertyId, callerUserId]
+      );
+
+      if (!propRes.rows[0]) {
+        const existsRes = await pool.query(
+          'SELECT 1 FROM properties WHERE id = $1', [propertyId]
+        );
+        if (!existsRes.rows[0]) return res.status(404).json({ error: 'Logement introuvable' });
+        return res.status(403).json({ error: 'Accès refusé à ce logement' });
+      }
+
+      const pricingOwnerId = propRes.rows[0].pricing_owner_id;
 
       const result = await pool.query(
         `INSERT INTO pricing_config (
@@ -471,11 +512,11 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
            strategy     = EXCLUDED.strategy,
            updated_at   = NOW()
          RETURNING *`,
-        [userId, propertyId, priceMin, priceMax, mode, isActive,
+        [pricingOwnerId, propertyId, priceMin, priceMax, mode, isActive,
          notifyPush, notifyEmail, notifyAlert, propertyType, bedrooms, strategyVal]
       );
 
-      console.log(`✅ [DYNAMIC-PRICING] Config sauvegardée — ${userId} / ${propertyId} — mode:${mode} [${priceMin}€-${priceMax}€]`);
+      console.log(`✅ [DYNAMIC-PRICING] Config sauvegardée — owner:${pricingOwnerId} / ${propertyId} — mode:${mode} [${priceMin}€-${priceMax}€] (actor:${callerUserId})`);
       res.json({ success: true, config: result.rows[0] });
 
     } catch (err) {
