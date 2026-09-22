@@ -51,6 +51,7 @@ const { normalizeDateOnly, getOccupiedNights } = require('./utils/dates');
 const createSmartLocksRoutes = require('./routes/smart-locks-routes');
 const { runPricingShadow } = require('./routes/effective-pricing-shadow');
 const { deescalateConversation } = require('./utils/chat-utils');
+const { resolveOwnerClientId } = require('./utils/owner-utils');
 
 // ============================================
 // 📨 IMPORT SYSTÈME DE MESSAGES D'ARRIVÉE AUTOMATIQUES
@@ -1124,7 +1125,7 @@ async function getStripeForProperty(pool, propertyId, userId) {
     const ownerRes = await pool.query(
       `SELECT oc.stripe_account_id, oc.use_bh_stripe
        FROM properties p
-       LEFT JOIN owner_clients oc ON oc.id = p.owner_id
+       LEFT JOIN owner_clients oc ON oc.id = REGEXP_REPLACE(p.owner_id, '^agency_client_', '')
        WHERE p.id = $1`,
       [propertyId]
     );
@@ -27068,7 +27069,7 @@ app.post('/api/invoice/resend',
     // Récupérer owner si dispo
     let ownerInfo = null;
     if (meta.ownerId) {
-      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [meta.ownerId, ownerUserId]);
+      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [resolveOwnerClientId(meta.ownerId), ownerUserId]);
       if (ownerRes.rows.length > 0) ownerInfo = ownerRes.rows[0];
     }
 
@@ -27146,7 +27147,7 @@ app.post('/api/invoice/generate-pdf',
     // Récupérer ownerInfo si ownerId fourni
     let ownerInfo = null;
     if (data.ownerId) {
-      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [data.ownerId, userId]);
+      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [resolveOwnerClientId(data.ownerId), userId]);
       if (ownerRes.rows.length > 0) ownerInfo = ownerRes.rows[0];
     }
 
@@ -27214,7 +27215,7 @@ app.get('/api/invoice/download-by-number/:invoiceNumber',
 
     let ownerInfo = null;
     if (meta.ownerId) {
-      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [meta.ownerId, ownerUserId]);
+      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [resolveOwnerClientId(meta.ownerId), ownerUserId]);
       if (ownerRes.rows.length > 0) ownerInfo = ownerRes.rows[0];
     }
 
@@ -27529,7 +27530,7 @@ app.post('/api/invoice/create',
         if (ownerId) {
           const ownerResult = await pool.query(
             'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
-            [ownerId, billingUserId]
+            [resolveOwnerClientId(ownerId), billingUserId]
           );
           ownerInfo = ownerResult.rows[0] || null;
         }
@@ -28431,7 +28432,7 @@ app.get('/api/invoice/download/:token', async (req, res) => {
       if (meta.propertyName) {
         const ocq = await pool.query(
           `SELECT oc.* FROM properties p
-           JOIN owner_clients oc ON oc.id = p.owner_id
+           JOIN owner_clients oc ON oc.id = REGEXP_REPLACE(p.owner_id, '^agency_client_', '')
            WHERE p.name = $1 AND p.user_id = $2
            ORDER BY (p.address = $3) DESC
            LIMIT 1`,

@@ -20,7 +20,7 @@ async function _resolveStripeTarget(pool, propertyId, userId) {
       const r = await pool.query(
         `SELECT oc.stripe_account_id, oc.use_bh_stripe
          FROM properties p
-         LEFT JOIN owner_clients oc ON oc.id = p.owner_id
+         LEFT JOIN owner_clients oc ON oc.id = REGEXP_REPLACE(p.owner_id, '^agency_client_', '')
          WHERE p.id = $1`, [propertyId]
       );
       const owner = r.rows[0];
