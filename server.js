@@ -42891,15 +42891,28 @@ app.post('/api/channex/webhook-message', async (req, res) => {
           const handled = await handleIncomingMessageDebounced(savedMsg, conversation, pool, io);
           console.log(`🤖 [CHANNEX MSG] handleIncomingMessage retourné: ${handled}`);
 
-          // Notif push si AUCUNE réponse auto (escalade, pause, ai_disabled, etc.).
-          // ⚠️ handleIncomingMessageDebounced retourne toujours true (debounce) : on ne peut
-          // pas se fier à `handled` seul. On relit ai_disabled depuis la DB pour couvrir
-          // le cas où l'hôte a repris la main (ai_disabled=true) — le debounce sort
-          // silencieusement dans ce cas, la notif immédiate (Bug C) ne couvre pas ai_disabled.
+          // Décision de notification :
+          // • 'escalated'   — debounce a traité une conv déjà escaladée (notif déjà envoyée
+          //                   par le handler) ; webhook envoie quand même pour les follow-ups
+          //                   car l'hôte doit savoir qu'il y a un nouveau message en attente.
+          // • true (différé) — message mis en file 90 s ; le bot peut répondre OU escalader.
+          //   Pour 'ai_off' on notifie immédiatement : si l'escalade échoue côté Groq, l'hôte
+          //   a déjà reçu ce filet de sécurité. Pour 'escalation' on se fie à escalateToOwner.
+          //   Pour 'all' le debounce a déjà envoyé la notif immédiate.
+          // • false (bot non-invité) — toujours notifier.
           const _notifLevel = conversation.notif_message_level || 'ai_off';
-          // Conv déjà escaladée + nouveau message voyageur : notif sauf pour 'escalation'
-          // (l'escalade initiale a déjà notifié, les follow-ups deviendraient trop bruyants).
-          let _needsNotif = !handled || (conversation.escalated && _notifLevel !== 'escalation');
+          let _needsNotif;
+          if (handled === 'escalated' || conversation.escalated) {
+            // Conv (déjà) escaladée : notif sauf si l'hôte a demandé silence total.
+            _needsNotif = _notifLevel !== 'escalation';
+          } else if (!handled) {
+            _needsNotif = true;
+          } else {
+            // Différé (true) : on ne sait pas encore ce que le bot va faire.
+            _needsNotif = _notifLevel === 'ai_off';
+          }
+          // Filet de sécurité 'all' : si le debounce est sorti silencieusement (ai_disabled),
+          // la notif immédiate n'a pas été envoyée — compenser ici.
           if (!_needsNotif) {
             try {
               const _aiCheck = await pool.query('SELECT ai_disabled FROM conversations WHERE id = $1', [conversation_id]);
@@ -42910,7 +42923,8 @@ app.post('/api/channex/webhook-message', async (req, res) => {
             } catch(e) {}
           }
           if (_needsNotif) {
-            console.log(`📱 [CHANNEX MSG] ${conversation.escalated ? 'Conv escaladée' : 'Pas de réponse auto (ai_disabled ou non géré)'} → notif push propriétaire`);
+            const _notifReason = conversation.escalated ? 'conv escaladée' : (handled === 'escalated' ? 'escalade sync' : (handled ? 'différé ai_off' : 'bot non-invité'));
+            console.log(`📱 [CHANNEX MSG] ${_notifReason} → notif push propriétaire`);
             const tokensRes = await pool.query(
               'SELECT fcm_token FROM user_fcm_tokens WHERE user_id = $1 AND fcm_token IS NOT NULL',
               [user_id]
@@ -42923,7 +42937,7 @@ app.post('/api/channex/webhook-message', async (req, res) => {
             }
             await sendNotificationToDelegatesOf(user_id, bhNotifTitle, guest_name + ': ' + messageText.substring(0, 80), { type: 'new_guest_message', conversation_id: String(conversation_id) });
           } else {
-            console.log(`✅ [CHANNEX MSG] Réponse auto envoyée → pas de notif push`);
+            console.log(`✅ [CHANNEX MSG] Bot va répondre (niveau ${_notifLevel}) → pas de notif push immédiate`);
           }
         } else {
           // Réponses auto désactivées → notif directe

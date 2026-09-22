@@ -123,7 +123,7 @@ async function handleIncomingMessageDebounced(message, conversation, pool, io) {
         clearTimeout(entry.timer);
         _debounceMap.delete(convId);
         console.log(`ℹ️ [DEBOUNCE] Conv escaladée il y a ${hoursAgo.toFixed(1)}h → bot silencieux`);
-        return true;
+        return 'escalated';
       } else {
         // Reset escalade — l'IA reprend la main
         await pool.query('UPDATE conversations SET escalated = FALSE, escalated_at = NULL WHERE id = $1', [convId]);
@@ -172,7 +172,10 @@ async function _flushDebounce(convId, pool, io) {
     console.log(`⏳ [DEBOUNCE] Conv ${convId} — ${messages.length} messages fusionnés → 1 appel Groq`);
   }
 
-  await handleIncomingMessage(combinedMessage, conversation, pool, io);
+  const _r = await handleIncomingMessage(combinedMessage, conversation, pool, io);
+  if (_r === 'escalated') {
+    console.log(`🤝 [DEBOUNCE] Conv ${convId} escaladée — notification envoyée par escalateToOwner`);
+  }
 }
 
 // ============================================
@@ -487,7 +490,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
               { type: 'new_guest_message', conversation_id: String(conversation.id) }
             );
           } catch(e) { console.error('❌ [HANDLER] Erreur notif escalade:', e.message); }
-          return true;
+          return 'escalated';
         } else {
           // Reset escalade — l'IA reprend
           await pool.query('UPDATE conversations SET escalated = FALSE, escalated_at = NULL WHERE id = $1', [conversation.id]);
@@ -495,7 +498,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         }
       }
     } catch(e) {
-      if (conversation.escalated) return true;
+      if (conversation.escalated) return 'escalated';
     }
 
     // ─── Pause 2h après réponse manuelle de l'hôte ────────────────
@@ -962,7 +965,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         if (isBillingDispute(message.message)) {
           console.log('⚖️ [HANDLER] Litige de facturation détecté → escalade vers l\'hôte');
           await escalateToOwner(conversation, pool, io, language, channexId);
-          return false;
+          return 'escalated';
         }
         // 🧾 Filet de sécurité : une demande de facture ne doit jamais escalader.
         if (isInvoiceRequest(message.message)) {
@@ -979,7 +982,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         } else {
           console.log('🔄 [HANDLER] Groq → escalade');
           await escalateToOwner(conversation, pool, io, language, channexId);
-          return false;
+          return 'escalated';
         }
       }
 
@@ -1019,7 +1022,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         } catch(e) {
           console.error('❌ [HANDLER] Erreur question hôte:', e.message);
           await escalateToOwner(conversation, pool, io, language, channexId);
-          return false;
+          return 'escalated';
         }
       }
 
@@ -1173,7 +1176,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         } catch(e) {
           console.error('❌ [HANDLER] Erreur late checkout:', e.message);
           await escalateToOwner(conversation, pool, io, language, channexId);
-          return false;
+          return 'escalated';
         }
       }
 
@@ -1320,7 +1323,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         } catch(e) {
           console.error('❌ [HANDLER] Erreur early check-in:', e.message);
           await escalateToOwner(conversation, pool, io, language, channexId);
-          return false;
+          return 'escalated';
         }
       }
 
@@ -1332,7 +1335,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         if (isBillingDispute(message.message)) {
           console.log('⚖️ [HANDLER] [FACTURE] sur un litige de facturation → escalade vers l\'hôte');
           await escalateToOwner(conversation, pool, io, language, channexId);
-          return false;
+          return 'escalated';
         }
         const cleanMsg = aiResponse.replace(/\[FACTURE(?:[^\]]*)\]/, '').trim();
         try {
@@ -1485,7 +1488,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     if (isBillingDispute(message.message)) {
       console.log('⚖️ [HANDLER] Litige de facturation (Groq sans réponse) → escalade');
       await escalateToOwner(conversation, pool, io, language, channexId);
-      return false;
+      return 'escalated';
     }
     // 🧾 Sauf demande de facture : on enregistre la demande et on confirme, sans escalader.
     if (isInvoiceRequest(message.message)) {
@@ -1519,7 +1522,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     }
     console.log('⚠️ [HANDLER] Groq sans réponse → escalade');
     await escalateToOwner(conversation, pool, io, language, channexId);
-    return false;
+    return 'escalated';
 
   } catch (error) {
     console.error('❌ [HANDLER] Erreur handleIncomingMessage:', error);
