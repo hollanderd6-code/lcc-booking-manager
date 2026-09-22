@@ -26848,6 +26848,11 @@ app.post('/api/owner-invoices/:id/credit-note',
 // ============================================
 // FONCTION GLOBALE - Génération PDF facture
 // ============================================
+
+// Tracés vectoriels du monogramme B (source : public/img/brand/web/mono-carre.svg)
+// Coordonnées en unités de fonte (Y↑), bounding box : x 39-531, y -4 à 628
+const _BH_LOGO_PATH = 'M304 337 L315 353 Q380 353 428.5 331.0 Q477 309 504.0 270.5 Q531 232 531 182 Q531 130 502.5 87.5 Q474 45 424.0 20.5 Q374 -4 311 -4 Q282 -4 241.0 -1.0 Q200 2 166 2 Q131 2 99.0 1.0 Q67 0 42 0 Q39 0 39.0 6.0 Q39 12 42 12 Q73 12 89.5 17.0 Q106 22 112.5 37.0 Q119 52 119 81 V544 Q119 573 113.0 587.5 Q107 602 90.5 607.5 Q74 613 43 613 Q41 613 41.0 619.0 Q41 625 43 625 Q68 625 99.5 623.5 Q131 622 166 622 Q194 622 226.0 625.0 Q258 628 287 628 Q347 628 387.5 612.5 Q428 597 449.0 568.0 Q470 539 470 498 Q470 442 427.0 398.5 Q384 355 304 337 Z M270 608 Q250 608 237.5 603.0 Q225 598 220.0 584.0 Q215 570 215 542 V346 L179 353 Q212 352 233.0 351.5 Q254 351 256 351 Q318 351 347.0 391.0 Q376 431 376 489 Q376 526 364.5 553.0 Q353 580 329.5 594.0 Q306 608 270 608 Z M295 19 Q366 19 398.0 55.5 Q430 92 430 158 Q430 232 391.5 279.0 Q353 326 275 326 Q260 326 235.0 325.5 Q210 325 183 320 L215 332 V81 Q215 60 220.0 46.0 Q225 32 242.5 25.5 Q260 19 295 19 Z';
+
 async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
   const {
     clientName = '', clientEmail = '', clientAddress = '', clientPostalCode = '',
@@ -26908,6 +26913,8 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
 
     const W = 595, H = 842;
     const mg = 48;
+    const FOOTER_H = 36;
+    const CONTENT_BOTTOM = H - FOOTER_H - 12; // limite basse du contenu (au-dessus du pied de page)
     // Maison Vert palette
     const BOTTLE  = '#0E3B2E'; // aplats, bandeau
     const ACCENT  = '#1E6E52'; // titres section, accents
@@ -26954,6 +26961,14 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     // ── Zone blanche principale ─────────────────────────────────────────────────
     let y = HEADER_H + 22;
 
+    // Saut de page si le contenu dépasse la limite (pied de page réservé)
+    const ensureSpace = (needed) => {
+      if (y + needed > CONTENT_BOTTOM) {
+        doc.addPage();
+        y = mg;
+      }
+    };
+
     // ── Parties (émetteur / client) — deux colonnes ────────────────────────────
     const colW = (W - mg * 2 - 20) / 2;
     const col2 = mg + colW + 20;
@@ -26998,6 +27013,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     y = Math.max(yL, yR) + 20;
 
     // ── Séjour ──────────────────────────────────────────────────────────────────
+    ensureSpace(12 + 13 + 34 + 4 + 30);
     doc.rect(mg, y, W - mg * 2, 0.75).fill(BORDER); y += 12;
     doc.font('MN-Bold').fontSize(7).fillColor(ACCENT).text('SÉJOUR', mg, y); y += 13;
 
@@ -27026,6 +27042,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     y += 16;
 
     // ── Tableau détail ──────────────────────────────────────────────────────────
+    ensureSpace(12 + 12 + 30);
     doc.rect(mg, y, W - mg * 2, 0.75).fill(BORDER); y += 12;
     doc.font('MN-Bold').fontSize(7).fillColor(ACCENT).text('DÉTAIL', mg, y); y += 12;
 
@@ -27040,6 +27057,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     let alt = false;
     const addRow = (label, amount) => {
       if (parseFloat(amount || 0) <= 0) return;
+      ensureSpace(ROW_H);
       if (alt) doc.rect(mg, y, W - mg * 2, ROW_H).fill(IVORY);
       doc.font('MN-Regular').fontSize(9.5).fillColor(BODY)
          .text(label, mg + 14, y + 9, { width: 280 });
@@ -27054,6 +27072,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     y += 20;
 
     // ── Totaux ──────────────────────────────────────────────────────────────────
+    ensureSpace(16 + 16 + 7 + 38 + 16);
     const totW = 230, totX = W - mg - totW;
     doc.font('MN-Regular').fontSize(9).fillColor(MUTED)
        .text('Sous-total HT', totX, y, { width: 130 })
@@ -27081,14 +27100,43 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
          .text('TVA non applicable, art. 293 B du CGI', totX, y);
     }
 
-    // ── Pied de page ────────────────────────────────────────────────────────────
-    const FOOTER_H = 36;
+    // ── Pied de page — dernière page uniquement ────────────────────────────────
     doc.rect(0, H - FOOTER_H, W, FOOTER_H).fill(BOTTLE);
-    doc.font('MN-Regular').fontSize(7.5).fillColor('rgba(255,255,255,0.55)')
-       .text('Document généré via', mg, H - FOOTER_H + 10, { continued: true })
-       .font('MN-SemiBold').fillColor('rgba(255,255,255,0.88)').text(' Boostinghost.fr', { continued: false });
-    doc.font('MN-Regular').fontSize(7.5).fillColor('rgba(255,255,255,0.45)')
-       .text('boostinghost.fr', 0, H - FOOTER_H + 10, { width: W - mg, align: 'right' });
+
+    // Monogramme B vectoriel 18 pt (tracés depuis public/img/brand/web/mono-carre.svg)
+    const LOGO_H_F = 18;
+    const s_f = LOGO_H_F / 632;
+    const LOGO_W_F = 492 * s_f;
+
+    // Mesure des segments de texte pour centrage horizontal
+    const FOOTER_FONT = 8.5;
+    const FTXT1 = 'Cette facture a été générée par ';
+    const FTXT2 = 'Boostinghost.fr';
+    doc.font('MN-Regular').fontSize(FOOTER_FONT);
+    const fw1 = doc.widthOfString(FTXT1);
+    doc.font('MN-Bold').fontSize(FOOTER_FONT);
+    const fw2 = doc.widthOfString(FTXT2);
+
+    const fGap = 6;
+    const fStartX = (W - (LOGO_W_F + fGap + fw1 + fw2)) / 2;
+
+    // Logo : transform(a=s, b=0, c=0, d=-s, e, f) — inversion axe Y fontcoords→PDF
+    const fLogoTopY = H - FOOTER_H + (FOOTER_H - LOGO_H_F) / 2;
+    doc.save();
+    doc.transform(s_f, 0, 0, -s_f, fStartX - 39 * s_f, fLogoTopY + 628 * s_f);
+    doc.path(_BH_LOGO_PATH).fill(IVORY);
+    doc.restore();
+
+    // Mention textuelle
+    const fTextX = fStartX + LOGO_W_F + fGap;
+    const fTextY = H - FOOTER_H + (FOOTER_H - FOOTER_FONT * 1.15) / 2;
+    doc.font('MN-Regular').fontSize(FOOTER_FONT).fillColor(IVORY)
+       .text(FTXT1, fTextX, fTextY, { continued: true, lineBreak: false });
+    doc.font('MN-Bold').fillColor(IVORY)
+       .text(FTXT2, { continued: false, lineBreak: false });
+
+    // Lien cliquable sur toute la mention
+    doc.link(fTextX, fTextY - 1, fw1 + fw2, FOOTER_FONT + 3, 'https://boostinghost.fr');
 
     doc.end();
     stream.on('finish', resolve);
