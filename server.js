@@ -18567,7 +18567,7 @@ app.get('/api/properties/diffusion', authenticateAny, requirePermission(pool, 'c
          u.stripe_account_id  AS user_stripe,
          u.use_bh_stripe      AS user_use_bh
        FROM properties p
-       LEFT JOIN owner_clients oc ON oc.id = p.owner_id
+       LEFT JOIN owner_clients oc ON oc.id = REGEXP_REPLACE(p.owner_id, '^agency_client_', '')
        LEFT JOIN users u ON u.id = p.user_id
        LEFT JOIN LATERAL (
          SELECT status FROM channex_logs
