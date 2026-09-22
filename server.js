@@ -11323,7 +11323,7 @@ app.post('/api/sms/toggle', authenticateAny, async (req, res) => {
               <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Bonjour <strong>${escapeHtml(userName)}</strong>,</p>
               <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">L'option <strong>SMS automatiques</strong> vient d'être activée sur votre compte Boostinghost.</p>
               ${emailCard('success', 'Ce qui est activé :<br>• SMS de demande de caution avec lien Stripe (J-2 avant l\'arrivée)<br>• SMS d\'informations d\'arrivée le jour J (si caution validée)<br>• Pour toutes les plateformes sauf Airbnb')}
-              ${basePlan !== 'pro' ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#5A5A54;line-height:1.6;margin:14px 0 0;">Des frais de <strong>5,99€/mois</strong> s'appliquent à cette option. Vous pouvez la désactiver à tout moment depuis votre espace Boostinghost.</p>` : ''}
+              ${basePlan !== 'pro' ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#5A5A54;line-height:1.6;margin:14px 0 0;">Des frais de <strong>5,99 € TTC/mois</strong> s'appliquent à cette option. Vous pouvez la désactiver à tout moment depuis votre espace Boostinghost.</p>` : ''}
             `
           })
         }).catch(e => console.warn('⚠️ [SMS] Email utilisateur error:', e.message));
@@ -11338,7 +11338,7 @@ app.post('/api/sms/toggle', authenticateAny, async (req, res) => {
           tag: 'Notification admin',
           bodyHtml: `
             ${emailCard('info', `<strong>${escapeHtml(userName)}</strong> (${escapeHtml(userEmail || '')}) vient d'activer l'option SMS.<br>Plan : <strong>${escapeHtml(basePlan)}</strong> | User ID : ${userId}`)}
-            ${basePlan !== 'pro' ? emailCard('warning', '⚠️ Plan Solo/Standard — facturation 5,99€/mois à vérifier.') : emailCard('neutral', 'Plan Pro — inclus.')}
+            ${basePlan !== 'pro' ? emailCard('warning', '⚠️ Plan Starter — facturation 5,99 € TTC/mois à vérifier.') : emailCard('neutral', 'Plan Pro — inclus.')}
           `
         })
       }).catch(e => console.warn('⚠️ [SMS] Email admin error:', e.message));
@@ -13016,9 +13016,9 @@ async function sendWelcomeEmail(email, firstName) {
     ${emailCTABlock(pricingUrl, 'Choisir mon plan', { title: 'Démarrez dès maintenant' })}
     ${emailCard('info', '<strong>🎯 Démarrage accompagné offert</strong><br>Prenez 45 minutes avec nous pour configurer votre compte ensemble — connexion des plateformes, paramétrage des logements, messagerie IA. Gratuit, inclus avec tous les plans.')}
     ${emailBookingSummary([
-      { label: 'Solo — 1 logement', value: '15 €/mois' },
-      { label: 'Standard — jusqu\'à 3 logements', value: '29 €/mois' },
-      { label: 'Pro — jusqu\'à 6 logements', value: '49 €/mois' }
+      { label: 'Starter — jusqu\'à 3 logements', value: '15 € TTC/mois' },
+      { label: 'Pro — jusqu\'à 47 logements', value: '49 € TTC/mois' },
+      { label: 'Agence — logements illimités', value: '299 € TTC/mois' }
     ])}
     <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#5A5A54;line-height:1.6;margin:14px 0 0;">Une question ? <a href="mailto:contact@boostinghost.fr" style="color:#0E3B2E;">contact@boostinghost.fr</a></p>
   `;
@@ -13054,7 +13054,7 @@ async function sendTrialStartedEmail(email, firstName, plan, amount) {
       bodyHtml: `
         <p>Bonjour <strong>${firstName}</strong>,</p>
         <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Votre essai gratuit est actif. Vous avez accès à toutes les fonctionnalités sans aucune limitation pendant 14 jours.</p>
-        ${emailCard('success', `<strong>Plan ${escapeHtml(planName)}</strong> — Gratuit pendant 14 jours · puis <strong>${escapeHtml(price)} €/mois</strong>`)}
+        ${emailCard('success', `<strong>Plan ${escapeHtml(planName)}</strong> — Gratuit pendant 14 jours · puis <strong>${escapeHtml(price)} € TTC/mois</strong>`)}
         ${emailBookingSummary([
           { label: '📅', value: 'Calendrier unifié — Synchro iCal Airbnb & Booking' },
           { label: '✦', value: 'Messages automatiques IA' },
@@ -13064,7 +13064,7 @@ async function sendTrialStartedEmail(email, firstName, plan, amount) {
           { label: '📄', value: 'Facturation complète' }
         ])}
         ${emailButton(`${process.env.APP_URL || 'https://boostinghost.fr'}/app.html`, 'Accéder à mon espace')}
-        ${emailCard('warning', `À la fin de l'essai, votre abonnement démarrera automatiquement à <strong>${escapeHtml(price)} €/mois</strong>. Vous pouvez annuler à tout moment depuis vos paramètres.`)}
+        ${emailCard('warning', `À la fin de l'essai, votre abonnement démarrera automatiquement à <strong>${escapeHtml(price)} € TTC/mois</strong>. Vous pouvez annuler à tout moment depuis vos paramètres.`)}
       `
     })
   };
@@ -13096,7 +13096,7 @@ async function sendTrialReminder7Days(email, firstName, plan, amount) {
         <div class="feat-row"><span class="feat-icon">🔑</span><span class="feat-text">Configurer vos serrures connectées</span></div>
         <div class="feat-row"><span class="feat-icon">🧹</span><span class="feat-text">Organiser votre planning de ménage</span></div>
         <div class="alert-card" style="margin-top:20px;">
-          Dans <strong>7 jours</strong>, votre abonnement passera à <strong>${price} €/mois</strong>. Vous pouvez annuler ou changer de plan à tout moment.
+          Dans <strong>7 jours</strong>, votre abonnement passera à <strong>${price} € TTC/mois</strong>. Vous pouvez annuler ou changer de plan à tout moment.
         </div>
         <div class="cta-block">
           <a href="${process.env.APP_URL || 'https://boostinghost.fr'}/settings-account.html" class="btn">Gérer mon abonnement →</a>
