@@ -26863,6 +26863,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     rentAmount = 0, touristTaxAmount = 0, cleaningFee = 0,
     vatRate = 0, invoiceNumber = ''
   } = data;
+  const emitterVatRegime = user?.vat_regime || data.emitterVatRegime || '';
 
   const subtotal = parseFloat(rentAmount || 0) + parseFloat(touristTaxAmount || 0) + parseFloat(cleaningFee || 0);
   const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
@@ -26903,6 +26904,16 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     const doc = new PDFDocument({ size: 'A4', margin: 0 });
     const stream = fs.createWriteStream(outputPath);
     doc.pipe(stream);
+
+    // Désactiver les ligatures (Manrope : "tt" → ﬅ supprime une lettre dans TTC, Cette, etc.)
+    const _origDocText = doc.text.bind(doc);
+    doc.text = function _noLigaText(str, x, y, opts) {
+      if (typeof x === 'object' && x !== null) { opts = x; x = undefined; y = undefined; }
+      else if (typeof y === 'object' && y !== null) { opts = y; y = undefined; }
+      const o = Object.assign({ features: { liga: false, clig: false, dlig: false } }, opts || {});
+      if (x !== undefined) return _origDocText(str, x, y, o);
+      return _origDocText(str, o);
+    };
 
     doc.registerFont('CG-Regular', F_CG_REG);
     doc.registerFont('CG-Bold',    F_CG_BOLD);
@@ -27074,16 +27085,16 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     // ── Totaux ──────────────────────────────────────────────────────────────────
     ensureSpace(16 + 16 + 7 + 38 + 16);
     const totW = 230, totX = W - mg - totW;
-    doc.font('MN-Regular').fontSize(9).fillColor(MUTED)
-       .text('Sous-total HT', totX, y, { width: 130 })
-       .text(fmtEur(subtotal), totX + 130, y, { width: 88, align: 'right' });
-    y += 16;
-    if (vatAmount > 0) {
+    if (parseFloat(vatRate || 0) > 0) {
+      doc.font('MN-Regular').fontSize(9).fillColor(MUTED)
+         .text('Sous-total HT', totX, y, { width: 130 })
+         .text(fmtEur(subtotal), totX + 130, y, { width: 88, align: 'right' });
+      y += 16;
       doc.text(`TVA (${vatRate} %)`, totX, y, { width: 130 })
          .text(fmtEur(vatAmount), totX + 130, y, { width: 88, align: 'right' });
       y += 16;
     }
-    // Ligne accent
+        // Ligne accent
     doc.rect(totX, y, totW, 1).fill(ACCENT); y += 6;
     // Bande total
     doc.rect(totX, y, totW, 38).fill(BOTTLE);
@@ -27093,14 +27104,14 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
        .text(fmtEur(total), totX + 14, y + 10, { width: totW - 28, align: 'right' });
     y += 38;
 
-    // Mention TVA si exonéré
-    if (!vatRate || parseFloat(vatRate) === 0) {
+    // Mention TVA franchise (art. 293 B) : uniquement si vat_regime = 'franchise' est renseigné
+    if (emitterVatRegime === 'franchise') {
       y += 8;
       doc.font('MN-Regular').fontSize(7.5).fillColor(MUTED)
          .text('TVA non applicable, art. 293 B du CGI', totX, y);
     }
 
-    // ── Pied de page — dernière page uniquement ────────────────────────────────
+        // ── Pied de page — dernière page uniquement ────────────────────────────────
     doc.rect(0, H - FOOTER_H, W, FOOTER_H).fill(BOTTLE);
 
     // Monogramme B vectoriel 18 pt (tracés depuis public/img/brand/web/mono-carre.svg)
@@ -27113,9 +27124,9 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     const FTXT1 = 'Cette facture a été générée par ';
     const FTXT2 = 'Boostinghost.fr';
     doc.font('MN-Regular').fontSize(FOOTER_FONT);
-    const fw1 = doc.widthOfString(FTXT1);
+    const fw1 = doc.widthOfString(FTXT1, { features: { liga: false, clig: false, dlig: false } });
     doc.font('MN-Bold').fontSize(FOOTER_FONT);
-    const fw2 = doc.widthOfString(FTXT2);
+    const fw2 = doc.widthOfString(FTXT2, { features: { liga: false, clig: false, dlig: false } });
 
     const fGap = 6;
     const fStartX = (W - (LOGO_W_F + fGap + fw1 + fw2)) / 2;
