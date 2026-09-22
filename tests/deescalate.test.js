@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('assert');
-const { deescalateConversation } = require('../utils/chat-utils');
+const { deescalateConversation, resolveEffectiveSenderType } = require('../utils/chat-utils');
 
 // ── Mock pool builder ──────────────────────────────────────────────────────────
 
@@ -91,20 +91,14 @@ async function main() {
   }
 
   // ── sender_type forcing logic ────────────────────────────────────────────────
-  // TC-ST01 : owner sans auth → reclassé en guest
+  // TC-ST01 : tout type sans auth → reclassé en guest
   {
-    function resolveEffectiveSenderType(rawType, reqUser) {
-      let sender_type = rawType;
-      if (sender_type === 'owner' && !reqUser) sender_type = 'guest';
-      return sender_type;
-    }
-
-    assert.strictEqual(resolveEffectiveSenderType('owner', null),     'guest',    'TC-ST01a: owner sans token → guest');
-    assert.strictEqual(resolveEffectiveSenderType('owner', { id: 1 }),'owner',    'TC-ST01b: owner avec token → owner');
-    assert.strictEqual(resolveEffectiveSenderType('guest', null),     'guest',    'TC-ST01c: guest sans token → guest');
-    assert.strictEqual(resolveEffectiveSenderType('guest', { id: 1 }),'guest',    'TC-ST01d: guest avec token → guest');
-    assert.strictEqual(resolveEffectiveSenderType('system', null),    'system',   'TC-ST01e: system non affecté');
-    console.log('✅  TC-ST01 — forçage sender_type owner→guest sans auth');
+    assert.strictEqual(resolveEffectiveSenderType('owner',  false), 'guest', 'TC-ST01a: owner sans auth → guest');
+    assert.strictEqual(resolveEffectiveSenderType('owner',  true),  'owner', 'TC-ST01b: owner avec auth → owner');
+    assert.strictEqual(resolveEffectiveSenderType('guest',  false), 'guest', 'TC-ST01c: guest sans auth → guest');
+    assert.strictEqual(resolveEffectiveSenderType('guest',  true),  'guest', 'TC-ST01d: guest avec auth → guest');
+    assert.strictEqual(resolveEffectiveSenderType('system', false), 'guest', 'TC-ST01e: system sans auth → guest (sécurité renforcée)');
+    console.log('✅  TC-ST01 — forçage sender_type → guest si non authentifié');
   }
 
   // TC-OWN01 : deescalate — comptesAutorises includes delegated accounts

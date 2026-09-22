@@ -2,7 +2,7 @@
 
 const assert = require('assert');
 const crypto = require('crypto');
-const { guestAuth, issueGuestToken } = require('../utils/chat-utils');
+const { guestAuth, issueGuestToken, resolveHostAccess, resolveSocketAccess, createPinRateLimiter } = require('../utils/chat-utils');
 
 // ── Mock pool builder ──────────────────────────────────────────────────────────
 
@@ -83,87 +83,36 @@ async function main() {
   }
 
   // TC-GT05 : sous-compte d'un autre hôte avec liste vide → toujours 403
-  // Teste directement la logique : !comptes.includes(user_id) → 403 sans exception sous-compte
   {
-    function resolveAccess(comptes, convUserId, isSubAccount, accessibleIds) {
-      if (!comptes.includes(convUserId)) {
-        // Nouvelle logique : toujours 403 hors comptesAutorises
-        return 403;
-      }
-      // Dans comptesAutorises : accessible_property_ids restreint si non vide
-      if (isSubAccount && accessibleIds.length > 0) {
-        return 403; // propriété non dans la liste
-      }
-      return 200;
-    }
-
     // Sous-compte d'un AUTRE hôte avec liste vide → 403 (était 200 avant le fix)
-    assert.strictEqual(resolveAccess(['other-host'], 'my-host', true, []),  403, 'TC-GT05a: autre hôte, liste vide → 403');
+    assert.strictEqual(resolveHostAccess({ comptes: ['other-host'], convUserId: 'my-host', convPropertyId: 'prop-1', isSubAccount: true, accessibleIds: [] }).ok, false, 'TC-GT05a: autre hôte, liste vide → 403');
     // Sous-compte du BON hôte avec liste vide → 200 (liste vide = pas de restriction)
-    assert.strictEqual(resolveAccess(['my-host'],   'my-host', true, []),  200, 'TC-GT05b: bon hôte, liste vide → 200');
+    assert.strictEqual(resolveHostAccess({ comptes: ['my-host'], convUserId: 'my-host', convPropertyId: 'prop-1', isSubAccount: true, accessibleIds: [] }).ok, true, 'TC-GT05b: bon hôte, liste vide → 200');
     // Sous-compte du BON hôte avec liste non-vide excluant la propriété → 403
-    assert.strictEqual(resolveAccess(['my-host'],   'my-host', true, ['prop-2']), 403, 'TC-GT05c: bon hôte, propriété exclue → 403');
+    assert.strictEqual(resolveHostAccess({ comptes: ['my-host'], convUserId: 'my-host', convPropertyId: 'prop-1', isSubAccount: true, accessibleIds: ['prop-2'] }).ok, false, 'TC-GT05c: bon hôte, propriété exclue → 403');
     console.log('✅  TC-GT05 — contrôle d\'accès sous-compte corrigé');
   }
 
   // TC-GT06 : room socket refusée sans token
-  // Simule le handler join_conversation avec socket mock
   {
-    const errors = [];
-    const joined = [];
-    const mockSocket = {
-      emit: (event, msg) => { if (event === 'error') errors.push(msg); },
-      join: (room) => joined.push(room)
-    };
-
-    async function simulateJoin(data) {
-      const conversationId = typeof data === 'object' ? data.conversationId : data;
-      const guestTokenRaw  = typeof data === 'object' ? data.guestToken   : null;
-      const hostTokenRaw   = typeof data === 'object' ? data.hostToken    : null;
-
-      if (!conversationId) { mockSocket.emit('error', 'conversationId manquant'); return; }
-
-      if (guestTokenRaw) {
-        // Validation simplifiée pour le test
-        const pool2 = makeHashPool(null); // aucun hash → toujours false
-        if (!await guestAuth(pool2, guestTokenRaw, conversationId)) {
-          mockSocket.emit('error', 'Token voyageur invalide'); return;
-        }
-      } else if (hostTokenRaw) {
-        // JWT invalide simulé → erreur
-        mockSocket.emit('error', 'Token hôte invalide'); return;
-      } else {
-        mockSocket.emit('error', 'Authentification requise pour rejoindre cette room'); return;
-      }
-      mockSocket.join(`conversation_${conversationId}`);
-    }
+    const pool2 = makeHashPool(null); // aucun hash → guestAuth toujours false
 
     // Sans rien → refus
-    await simulateJoin({ conversationId: '7' });
-    assert.ok(errors.length > 0,  'TC-GT06a: sans token → erreur socket émise');
-    assert.strictEqual(joined.length, 0, 'TC-GT06b: sans token → room non rejointe');
+    const r1 = await resolveSocketAccess(pool2, { conversationId: '7', guestToken: null, hostToken: null });
+    assert.strictEqual(r1.ok, false, 'TC-GT06a: sans token → refus');
+    assert.ok(r1.reason && r1.reason.length > 0, 'TC-GT06b: raison non vide');
 
     // Avec mauvais guestToken → refus
-    await simulateJoin({ conversationId: '7', guestToken: 'bad-token' });
-    assert.strictEqual(joined.length, 0, 'TC-GT06c: mauvais token → room non rejointe');
+    const r2 = await resolveSocketAccess(pool2, { conversationId: '7', guestToken: 'bad-token', hostToken: null });
+    assert.strictEqual(r2.ok, false, 'TC-GT06c: mauvais token → refus');
+    assert.strictEqual(r2.reason, 'Token voyageur invalide', 'TC-GT06d: raison correcte');
 
     console.log('✅  TC-GT06 — room socket refusée sans token valide');
   }
 
   // TC-GT07 : rate limiter (logique seule, sans Express)
   {
-    const attempts = new Map();
-    function check(key, max, windowMs) {
-      const now = Date.now();
-      const e = attempts.get(key);
-      if (!e || now >= e.resetAt) {
-        attempts.set(key, { count: 1, resetAt: now + windowMs });
-        return null;
-      }
-      e.count++;
-      return e.count > max ? Math.ceil((e.resetAt - now) / 1000) : null;
-    }
-
+    const check = createPinRateLimiter();
     for (let i = 0; i < 10; i++) check('ip:1.2.3.4', 10, 60000);
     const blocked = check('ip:1.2.3.4', 10, 60000);
     assert.ok(blocked !== null && blocked > 0, 'TC-GT07: 11e tentative bloquée');
