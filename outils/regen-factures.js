@@ -4,10 +4,11 @@
 // Sortie : ./output/<numéro>.pdf
 
 const { Pool }  = require('pg');
-const PDFDocument = require('pdfkit');
 const fs   = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+
+const { generateInvoicePdf } = require('../utils/invoice-pdf');
 
 if (!process.env.DATABASE_URL) {
   console.error('\n  Usage: DATABASE_URL="postgres://…" node outils/regen-factures.js FACT-YYYY-NNNN …\n');
@@ -20,35 +21,8 @@ if (!invoiceNumbers.length) {
   process.exit(1);
 }
 
-// ── Extraire generateInvoicePdf depuis server.js ──────────────────────────────
-const serverSrc = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
-const logoStart  = serverSrc.indexOf('const _BH_LOGO_PATH =');
-const logoEnd    = serverSrc.indexOf("';\n", logoStart) + 3;
-const fnStart    = serverSrc.indexOf('async function generateInvoicePdf(');
-let depth = 0, i = fnStart, fnEnd = -1;
-while (i < serverSrc.length) {
-  if (serverSrc[i] === '{') depth++;
-  else if (serverSrc[i] === '}') { depth--; if (depth === 0) { fnEnd = i + 1; break; } }
-  i++;
-}
-const tmpMod = path.join(__dirname, '../_regen_factures_tmp.js');
-fs.writeFileSync(tmpMod, `'use strict';
-const PDFDocument = require('pdfkit');
-const fs   = require('fs');
-const path = require('path');
-${serverSrc.slice(logoStart, logoEnd)}
-${serverSrc.slice(fnStart, fnEnd)}
-module.exports = { generateInvoicePdf };
-`);
-const { generateInvoicePdf } = require(tmpMod);
-fs.unlinkSync(tmpMod);
-
 // ── Résolution de l'owner_client via properties.owner_id ─────────────────────
-function resolveOwnerClientId(ownerId) {
-  if (!ownerId) return null;
-  const s = String(ownerId);
-  return (s.startsWith('agency_client_') ? s.slice('agency_client_'.length) : s) || null;
-}
+const { resolveOwnerClientId } = require('../utils/owner-utils');
 
 async function loadOwnerInfo(pool, { propertyId, propertyName, propertyAddress, userId, ownerIdHint }) {
   if (!userId) return null;

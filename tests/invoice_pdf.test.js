@@ -5,33 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-// Extract the function from server.js at import time (avoids launching the full server)
-const src = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
-
-// Find _BH_LOGO_PATH constant
-const logoConstStart = src.indexOf('// Monogramme BH ivoire');
-const logoConstEnd   = src.indexOf('\nasync function generateInvoicePdf(', logoConstStart);
-
-// Find generateInvoicePdf function
-const fnStart = src.indexOf('async function generateInvoicePdf(');
-let depth = 0, i = fnStart, fnEnd = -1;
-while (i < src.length) {
-  if (src[i] === '{') depth++;
-  else if (src[i] === '}') { depth--; if (depth === 0) { fnEnd = i + 1; break; } }
-  i++;
-}
-
-const modSrc = `'use strict';
-const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
-${src.slice(logoConstStart, logoConstEnd)}
-${src.slice(fnStart, fnEnd)}
-module.exports = { generateInvoicePdf };
-`;
-const modPath = path.join(__dirname, '..', '_invoice_pdf_test_mod.js');
-fs.writeFileSync(modPath, modSrc);
-const { generateInvoicePdf } = require(modPath);
+const { generateInvoicePdf } = require('../utils/invoice-pdf');
 
 // ── Mock data matching the function's expected field names ───────────────────
 const validData = {

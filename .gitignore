@@ -1,5 +1,8 @@
 node_modules/
 .DS_Store
+_*_tmp.js
+_invoice_pdf_test_mod.js
+_gen_invoice_real.js
 
 # ── Artefacts de build iOS / Capacitor ──
 ios/App/CapApp-SPM/.build/
