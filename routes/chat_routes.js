@@ -4,22 +4,18 @@
 
 const crypto = require('crypto');
 const { comptesAutorises } = require('../utils/agency');
-const { deescalateConversation, guestAuth, issueGuestToken } = require('../utils/chat-utils');
+const {
+  deescalateConversation,
+  guestAuth,
+  issueGuestToken,
+  resolveHostAccess,
+  resolveEffectiveSenderType,
+  createPinRateLimiter,
+  resolveSocketAccess,
+} = require('../utils/chat-utils');
 
-// In-memory rate limiter for POST /api/chat/verify-by-property
-// Prevents brute-force of the short shared property PIN.
-// Keys: `ip:${ip}` and `prop:${propertyId}`  — 10 attempts / IP / 15 min, 20 / property / 15 min
-const _pinAttempts = new Map();
-function _pinRateCheck(key, max, windowMs) {
-  const now = Date.now();
-  const e = _pinAttempts.get(key);
-  if (!e || now >= e.resetAt) {
-    _pinAttempts.set(key, { count: 1, resetAt: now + windowMs });
-    return null;
-  }
-  e.count++;
-  return e.count > max ? Math.ceil((e.resetAt - now) / 1000) : null;
-}
+// One shared rate-limiter instance for this process lifetime
+const _pinRateCheck = createPinRateLimiter();
 
 // ============================================
 // 🤖 IMPORTS SYSTÈME ONBOARDING + RÉPONSES AUTO
@@ -792,28 +788,25 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
         const realUserId = req.user.isSubAccount
           ? (await getRealUserId(pool, req))
           : req.user.id;
-
         const comptes = await comptesAutorises(pool, realUserId);
-
-        // Hors comptesAutorises → toujours 403, même pour un sous-compte
-        if (!comptes.includes(conversation.user_id)) {
-          return res.status(403).json({ error: 'Accès refusé' });
-        }
-
-        // Dans comptesAutorises → accessible_property_ids restreint si non vide
+        let accessibleIds = [];
         if (req.user.isSubAccount) {
-          const subAccountData = await pool.query(
+          const r = await pool.query(
             'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
             [req.user.subAccountId]
           );
-          const accessibleIds = subAccountData.rows[0]?.accessible_property_ids || [];
-          if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
-            return res.status(403).json({ error: 'Accès refusé à cette propriété' });
-          }
+          accessibleIds = r.rows[0]?.accessible_property_ids || [];
         }
+        const access = resolveHostAccess({
+          comptes,
+          convUserId:     conversation.user_id,
+          convPropertyId: conversation.property_id,
+          isSubAccount:   req.user.isSubAccount,
+          accessibleIds,
+        });
+        if (!access.ok) return res.status(403).json({ error: access.reason });
         isHostView = true;
       } else {
-        // Unauthentifié : token voyageur obligatoire
         const rawToken = req.headers['x-guest-token'];
         if (!await guestAuth(pool, rawToken, conversationId)) {
           return res.status(401).json({ error: 'Token voyageur requis ou invalide' });
@@ -893,31 +886,32 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
       const conversation = convResult.rows[0];
 
       if (!req.user) {
-        // Unauthentifié : token voyageur obligatoire — empêche toute écriture anonyme
         const rawToken = req.headers['x-guest-token'];
         if (!await guestAuth(pool, rawToken, conversation_id)) {
           return res.status(401).json({ error: 'Token voyageur requis ou invalide' });
         }
-        sender_type = 'guest'; // toujours guest pour les non-authentifiés
+        sender_type = resolveEffectiveSenderType(sender_type, false);
       } else if (sender_type === 'owner' || sender_type === 'property') {
-        // Propriétaire ou sous-compte authentifié
         const realUserId = req.user.isSubAccount
           ? (await getRealUserId(pool, req))
           : req.user.id;
         const comptes = await comptesAutorises(pool, realUserId);
-        if (!comptes.includes(conversation.user_id)) {
-          return res.status(403).json({ error: 'Accès refusé' });
-        }
+        let accessibleIds = [];
         if (req.user.isSubAccount) {
-          const subAccountData = await pool.query(
+          const r = await pool.query(
             'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
             [req.user.subAccountId]
           );
-          const accessibleIds = subAccountData.rows[0]?.accessible_property_ids || [];
-          if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
-            return res.status(403).json({ error: 'Accès refusé à cette propriété' });
-          }
+          accessibleIds = r.rows[0]?.accessible_property_ids || [];
         }
+        const access = resolveHostAccess({
+          comptes,
+          convUserId:     conversation.user_id,
+          convPropertyId: conversation.property_id,
+          isSubAccount:   req.user.isSubAccount,
+          accessibleIds,
+        });
+        if (!access.ok) return res.status(403).json({ error: access.reason });
       }
 
       // ============================================
@@ -1448,21 +1442,21 @@ if (sender_type === 'owner' && (message && message.trim())) {
     // Rejoindre une conversation — exige JWT hôte OU token voyageur
     socket.on('join_conversation', async (data) => {
       const conversationId = typeof data === 'object' ? data.conversationId : data;
-      const guestTokenRaw  = typeof data === 'object' ? data.guestToken   : null;
-      const hostTokenRaw   = typeof data === 'object' ? data.hostToken    : null;
-
-      if (!conversationId) return socket.emit('error', 'conversationId manquant');
+      const guestToken     = typeof data === 'object' ? data.guestToken    : null;
+      const hostToken      = typeof data === 'object' ? data.hostToken     : null;
 
       try {
-        if (guestTokenRaw) {
-          if (!await guestAuth(pool, guestTokenRaw, conversationId)) {
-            return socket.emit('error', 'Token voyageur invalide');
-          }
-        } else if (hostTokenRaw) {
+        const result = await resolveSocketAccess(pool, { guestToken, hostToken, conversationId });
+
+        if (result.ok === true) {
+          socket.join(`conversation_${conversationId}`);
+          console.log(`✅ Socket ${socket.id} rejoint conversation ${conversationId}`);
+        } else if (result.ok === null) {
+          // Host JWT path — resolveSocketAccess hands it off here
           const jwt = require('jsonwebtoken');
           const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
           let decoded;
-          try { decoded = jwt.verify(hostTokenRaw, JWT_SECRET); }
+          try { decoded = jwt.verify(result.token, JWT_SECRET); }
           catch { return socket.emit('error', 'Token hôte invalide'); }
           const userId = decoded.subAccountId
             ? (await (async () => {
@@ -1479,11 +1473,11 @@ if (sender_type === 'owner' && (message && message.trim())) {
           if (!conv.rows[0] || !comptes.includes(conv.rows[0].user_id)) {
             return socket.emit('error', 'Accès refusé à cette conversation');
           }
+          socket.join(`conversation_${conversationId}`);
+          console.log(`✅ Socket ${socket.id} rejoint conversation ${conversationId}`);
         } else {
-          return socket.emit('error', 'Authentification requise pour rejoindre cette room');
+          socket.emit('error', result.reason);
         }
-        socket.join(`conversation_${conversationId}`);
-        console.log(`✅ Socket ${socket.id} rejoint conversation ${conversationId}`);
       } catch (e) {
         console.error('❌ [SOCKET] join_conversation:', e.message);
         socket.emit('error', 'Erreur serveur');

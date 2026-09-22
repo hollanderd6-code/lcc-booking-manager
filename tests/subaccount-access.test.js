@@ -1,27 +1,7 @@
 'use strict';
 
-/**
- * Tests ciblés pour la correction de la Faille 2 :
- * un sous-compte hors comptesAutorises doit recevoir 403 même si sa
- * liste accessible_property_ids est vide (ancienne règle : liste vide
- * = "sans restriction" → accès accordé à tort à des conversations
- * d'hôtes tiers).
- */
-
 const assert = require('assert');
-
-// Simule la logique d'accès de GET /api/chat/messages (chemin authentifié)
-function resolveHostAccess({ comptes, convUserId, convPropertyId, isSubAccount, accessibleIds = [] }) {
-  // Hors comptesAutorises → toujours 403, même pour un sous-compte
-  if (!comptes.includes(convUserId)) return { status: 403, reason: 'hors-comptes' };
-
-  // Dans comptesAutorises → accessible_property_ids restreint si non vide
-  if (isSubAccount && accessibleIds.length > 0 && !accessibleIds.includes(convPropertyId)) {
-    return { status: 403, reason: 'hors-proprietes' };
-  }
-
-  return { status: 200, reason: 'ok' };
-}
+const { resolveHostAccess } = require('../utils/chat-utils');
 
 async function main() {
 
@@ -34,8 +14,8 @@ async function main() {
       isSubAccount: true,
       accessibleIds: []
     });
-    assert.strictEqual(r.status, 403, 'TC-SA01: autre hôte + liste vide → 403');
-    assert.strictEqual(r.reason, 'hors-comptes', 'TC-SA01: raison = hors-comptes');
+    assert.strictEqual(r.ok, false, 'TC-SA01: autre hôte + liste vide → 403');
+    assert.strictEqual(r.reason, 'Accès refusé', 'TC-SA01: raison = Accès refusé');
     console.log('✅  TC-SA01 — sous-compte autre hôte, liste vide → 403 (Faille 2 corrigée)');
   }
 
@@ -48,7 +28,7 @@ async function main() {
       isSubAccount: true,
       accessibleIds: []
     });
-    assert.strictEqual(r.status, 200, 'TC-SA02: bon hôte + liste vide → 200');
+    assert.strictEqual(r.ok, true, 'TC-SA02: bon hôte + liste vide → 200');
     console.log('✅  TC-SA02 — sous-compte bon hôte, liste vide → 200');
   }
 
@@ -61,7 +41,7 @@ async function main() {
       isSubAccount: true,
       accessibleIds: ['prop-1', 'prop-2']
     });
-    assert.strictEqual(r.status, 200, 'TC-SA03: bon hôte + propriété incluse → 200');
+    assert.strictEqual(r.ok, true, 'TC-SA03: bon hôte + propriété incluse → 200');
     console.log('✅  TC-SA03 — sous-compte bon hôte, propriété incluse → 200');
   }
 
@@ -74,8 +54,8 @@ async function main() {
       isSubAccount: true,
       accessibleIds: ['prop-1', 'prop-2']
     });
-    assert.strictEqual(r.status, 403, 'TC-SA04: bon hôte + propriété exclue → 403');
-    assert.strictEqual(r.reason, 'hors-proprietes', 'TC-SA04: raison = hors-proprietes');
+    assert.strictEqual(r.ok, false, 'TC-SA04: bon hôte + propriété exclue → 403');
+    assert.strictEqual(r.reason, 'Accès refusé à cette propriété', 'TC-SA04: raison');
     console.log('✅  TC-SA04 — sous-compte bon hôte, propriété exclue → 403');
   }
 
@@ -88,7 +68,7 @@ async function main() {
       isSubAccount: false,
       accessibleIds: []
     });
-    assert.strictEqual(r.status, 403, 'TC-SA05: compte principal autre hôte → 403');
+    assert.strictEqual(r.ok, false, 'TC-SA05: compte principal autre hôte → 403');
     console.log('✅  TC-SA05 — compte principal autre hôte → 403');
   }
 
@@ -101,7 +81,7 @@ async function main() {
       isSubAccount: false,
       accessibleIds: []
     });
-    assert.strictEqual(r.status, 200, 'TC-SA06: compte principal propriétaire → 200');
+    assert.strictEqual(r.ok, true, 'TC-SA06: compte principal propriétaire → 200');
     console.log('✅  TC-SA06 — compte principal propriétaire → 200');
   }
 
@@ -114,7 +94,7 @@ async function main() {
       isSubAccount: false,
       accessibleIds: []
     });
-    assert.strictEqual(r.status, 200, 'TC-SA07: gestionnaire délégué → 200');
+    assert.strictEqual(r.ok, true, 'TC-SA07: gestionnaire délégué → 200');
     console.log('✅  TC-SA07 — compte délégué (agence) → 200');
   }
 

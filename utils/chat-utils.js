@@ -61,4 +61,78 @@ async function issueGuestToken(pool, conversationId) {
   return rawToken;
 }
 
-module.exports = { deescalateConversation, guestAuth, issueGuestToken };
+/**
+ * Determine host access for a conversation.
+ * Pure function — caller is responsible for fetching comptes and accessibleIds from DB.
+ *
+ * Rules:
+ *   - Not in comptesAutorises → always 403 (no sub-account bypass)
+ *   - In comptesAutorises, isSubAccount, accessibleIds non-empty → property must be included
+ */
+function resolveHostAccess({ comptes, convUserId, convPropertyId, isSubAccount, accessibleIds = [] }) {
+  if (!comptes.includes(convUserId)) {
+    return { ok: false, reason: 'Accès refusé' };
+  }
+  if (isSubAccount && accessibleIds.length > 0 && !accessibleIds.includes(convPropertyId)) {
+    return { ok: false, reason: 'Accès refusé à cette propriété' };
+  }
+  return { ok: true };
+}
+
+/**
+ * Resolve the effective sender_type for a chat message.
+ * Without authentication every message is forced to 'guest'.
+ */
+function resolveEffectiveSenderType(rawType, hasAuth) {
+  return hasAuth ? rawType : 'guest';
+}
+
+/**
+ * Factory for the PIN rate limiter used by POST /api/chat/verify-by-property.
+ * Returns a check(key, max, windowMs) → retryAfter seconds | null function.
+ * Each call to createPinRateLimiter() produces an independent Map so tests
+ * stay isolated.
+ */
+function createPinRateLimiter() {
+  const _attempts = new Map();
+  return function check(key, max, windowMs) {
+    const now = Date.now();
+    const e = _attempts.get(key);
+    if (!e || now >= e.resetAt) {
+      _attempts.set(key, { count: 1, resetAt: now + windowMs });
+      return null;
+    }
+    e.count++;
+    return e.count > max ? Math.ceil((e.resetAt - now) / 1000) : null;
+  };
+}
+
+/**
+ * Decide whether a socket client may join a conversation room.
+ * Returns:
+ *   { ok: true }                          — guest token valid, join allowed
+ *   { ok: false, reason }                 — denied
+ *   { ok: null, reason: 'verify-host-jwt', token } — host JWT path; caller must
+ *                                           verify the JWT and check ownership
+ */
+async function resolveSocketAccess(pool, { guestToken, hostToken, conversationId }) {
+  if (!conversationId) return { ok: false, reason: 'conversationId manquant' };
+  if (guestToken) {
+    const ok = await guestAuth(pool, guestToken, conversationId);
+    return ok ? { ok: true } : { ok: false, reason: 'Token voyageur invalide' };
+  }
+  if (hostToken) {
+    return { ok: null, reason: 'verify-host-jwt', token: hostToken };
+  }
+  return { ok: false, reason: 'Authentification requise pour rejoindre cette room' };
+}
+
+module.exports = {
+  deescalateConversation,
+  guestAuth,
+  issueGuestToken,
+  resolveHostAccess,
+  resolveEffectiveSenderType,
+  createPinRateLimiter,
+  resolveSocketAccess,
+};

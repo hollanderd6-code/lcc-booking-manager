@@ -5723,7 +5723,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                     <strong>Client :</strong> ${userFirstName} (${userEmail})<br>
                     <strong>Plan :</strong> ${planLabel} ${billingLabel}<br>
                     <strong>Statut :</strong> ${statusLabel}<br>
-                    <strong>Montant :</strong> ${(planAmount / 100).toFixed(2)}€/${plan.includes('annual') ? 'an' : 'mois'}<br>
+                    <strong>Montant :</strong> ${Number(planAmount).toFixed(2).replace(".", ",")} €/${plan.includes('annual') ? 'an' : 'mois'}<br>
                     <strong>Date :</strong> ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}
                   </div>
                 `
@@ -5792,7 +5792,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                       <div class="info-card">
                         <strong>Client :</strong> ${userFirstName} (${userEmail})<br>
                         <strong>Plan :</strong> ${planLabel} ${billingLabel}<br>
-                        <strong>Montant :</strong> ${(planAmount / 100).toFixed(2)}€/${(plan || '').includes('annual') ? 'an' : 'mois'}<br>
+                        <strong>Montant :</strong> ${Number(planAmount).toFixed(2).replace(".", ",")} €/${(plan || '').includes('annual') ? 'an' : 'mois'}<br>
                         <strong>Date :</strong> ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}
                       </div>
                     `
@@ -13027,8 +13027,8 @@ async function sendWelcomeEmail(email, firstName) {
 // EMAIL 2 : ESSAI GRATUIT DÉMARRÉ
 // ============================================
 async function sendTrialStartedEmail(email, firstName, plan, amount) {
-  const planName = plan === 'solo' ? 'Solo' : plan === 'pro' ? 'Pro' : 'Business';
-  const price = (amount / 100).toFixed(2);
+  const planName = plan === 'starter' ? 'Starter' : plan === 'pro' ? 'Pro' : plan === 'agence' ? 'Agence' : plan;
+  const price = Number(amount).toFixed(2).replace(".", ",");
   
   const mailOptions = {
     from: EMAIL_FROM,
@@ -13175,8 +13175,8 @@ async function sendTrialReminder1Day(email, firstName, plan, amount) {
 // EMAIL 6 : CONFIRMATION D'ABONNEMENT
 // ============================================
 async function sendSubscriptionConfirmedEmail(email, firstName, plan, amount) {
-  const planName = plan === 'solo' ? 'Solo' : plan === 'pro' ? 'Pro' : 'Business';
-  const price = (amount / 100).toFixed(2);
+  const planName = plan === 'starter' ? 'Starter' : plan === 'pro' ? 'Pro' : plan === 'agence' ? 'Agence' : plan;
+  const price = Number(amount).toFixed(2).replace(".", ",");
   
   const mailOptions = {
     from: EMAIL_FROM,
