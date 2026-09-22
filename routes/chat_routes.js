@@ -856,7 +856,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
   
   app.post('/api/chat/send', optionalAuth, async (req, res) => {
     try {
-      const { conversation_id, message, sender_type, sender_name, photo_data } = req.body;
+      let { conversation_id, message, sender_type, sender_name, photo_data } = req.body;
 
       if (!conversation_id || !sender_type) {
         return res.status(400).json({ error: 'Données manquantes' });
@@ -881,45 +881,39 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
 
       /* Vérifier les permissions.
 
-         Le contrôle était écrit « if (req.user && sender_type === 'owner') » :
-         il ne s'appliquait donc QUE si l'authentification avait réussi. Comme
-         la vérification du token échouait systématiquement (mauvais secret,
-         corrigé plus haut), req.user valait null et tout ce bloc était sauté :
-         n'importe quel appel pouvait poster en 'owner' dans n'importe quelle
-         conversation, sans token valide, et le message partait au voyageur.
-
-         Un contrôle d'accès doit refuser par défaut. On exige donc une
-         identité pour écrire au nom de l'hôte, au lieu de ne vérifier que
-         ceux qui en présentent une. */
+         Un accès non authentifié réclamant le rôle 'owner' est silencieusement
+         reclassé en 'guest' — le message est enregistré mais sans droits hôte.
+         Cette approche préserve l'UX du widget invité tout en interdisant toute
+         usurpation de l'identité hôte sans token valide. */
       if (sender_type === 'owner') {
         if (!req.user) {
-          return res.status(401).json({ error: 'Authentification requise' });
-        }
+          sender_type = 'guest';
+        } else {
+          // ✅ Support des sous-comptes
+          const realUserId = req.user.isSubAccount
+            ? (await getRealUserId(pool, req))
+            : req.user.id;
 
-        // ✅ Support des sous-comptes
-        const realUserId = req.user.isSubAccount
-          ? (await getRealUserId(pool, req))
-          : req.user.id;
+          /* Comme pour la lecture : un gestionnaire répond légitimement sur un
+             logement que le propriétaire lui a délégué. */
+          const comptes = await comptesAutorises(pool, realUserId);
 
-        /* Comme pour la lecture : un gestionnaire répond légitimement sur un
-           logement que le propriétaire lui a délégué. */
-        const comptes = await comptesAutorises(pool, realUserId);
+          if (!comptes.includes(conversation.user_id)) {
+            return res.status(403).json({ error: 'Accès refusé' });
+          }
 
-        if (!comptes.includes(conversation.user_id)) {
-          return res.status(403).json({ error: 'Accès refusé' });
-        }
+          // ✅ Vérifier accès propriété si sous-compte
+          if (req.user.isSubAccount) {
+            const subAccountData = await pool.query(
+              'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
+              [req.user.subAccountId]
+            );
 
-        // ✅ Vérifier accès propriété si sous-compte
-        if (req.user.isSubAccount) {
-          const subAccountData = await pool.query(
-            'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
-            [req.user.subAccountId]
-          );
-
-          if (subAccountData.rows.length > 0) {
-            const accessibleIds = subAccountData.rows[0].accessible_property_ids || [];
-            if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
-              return res.status(403).json({ error: 'Accès refusé à cette propriété' });
+            if (subAccountData.rows.length > 0) {
+              const accessibleIds = subAccountData.rows[0].accessible_property_ids || [];
+              if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
+                return res.status(403).json({ error: 'Accès refusé à cette propriété' });
+              }
             }
           }
         }
