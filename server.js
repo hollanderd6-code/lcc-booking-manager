@@ -11463,6 +11463,9 @@ app.post('/api/billing/sms/subscribe', authenticateAny, async (req, res) => {
     const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
 
     // Si l'utilisateur a déjà un customer Stripe, l'utiliser
+    const taxRateId = process.env.STRIPE_TAX_RATE_FR_20;
+    if (!taxRateId) console.error('❌ [BILLING] STRIPE_TAX_RATE_FR_20 non défini — TVA 20 % absente de cette session');
+
     const sessionParams = {
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -11473,9 +11476,12 @@ app.post('/api/billing/sms/subscribe', authenticateAny, async (req, res) => {
           smsOption: 'true',
           basePlan,
           smsQuantity: String(smsQuantity)
-        }
+        },
+        ...(taxRateId ? { default_tax_rates: [taxRateId] } : {})
       },
       client_reference_id: user.id.toString(),
+      billing_address_collection: 'required',
+      tax_id_collection: { enabled: true },
       success_url: `${appUrl}/settings-account.html?tab=subscription&sms_success=true`,
       cancel_url:  `${appUrl}/settings-account.html?tab=subscription&sms_cancelled=true`,
       locale: 'fr',
@@ -11573,14 +11579,20 @@ app.post('/api/billing/droits/subscribe', authenticateAny, async (req, res) => {
     const priceId = getPriceIdForPlan('droits_par_profil');
     const appUrl  = process.env.APP_URL || 'https://boostinghost.fr';
 
+    const taxRateId = process.env.STRIPE_TAX_RATE_FR_20;
+    if (!taxRateId) console.error('❌ [BILLING] STRIPE_TAX_RATE_FR_20 non défini — TVA 20 % absente de cette session');
+
     const sessionParams = {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
-        metadata: { userId: user.id.toString(), droitsOption: 'true', basePlan }
+        metadata: { userId: user.id.toString(), droitsOption: 'true', basePlan },
+        ...(taxRateId ? { default_tax_rates: [taxRateId] } : {})
       },
       client_reference_id: user.id.toString(),
+      billing_address_collection: 'required',
+      tax_id_collection: { enabled: true },
       success_url: `${appUrl}/settings-account.html?tab=subscription&droits_success=true`,
       cancel_url:  `${appUrl}/settings-account.html?tab=subscription`,
       locale: 'fr',
@@ -29738,6 +29750,9 @@ app.post('/api/billing/create-checkout-session', authenticateAny, async (req, re
 
     const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
 
+    const taxRateId = process.env.STRIPE_TAX_RATE_FR_20;
+    if (!taxRateId) console.error('❌ [BILLING] STRIPE_TAX_RATE_FR_20 non défini — TVA 20 % absente de cette session');
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -29748,14 +29763,16 @@ app.post('/api/billing/create-checkout-session', authenticateAny, async (req, re
           plan: plan,
           planDisplay: getPlanDisplayName(plan),
           extraProps: String(cappedExtra)
-        }
+        },
+        ...(taxRateId ? { default_tax_rates: [taxRateId] } : {})
       },
       customer_email: user.email,
       client_reference_id: user.id.toString(),
+      billing_address_collection: 'required',
+      tax_id_collection: { enabled: true },
       success_url: `${appUrl}/settings-account.html?tab=subscription&success=true`,
       cancel_url: `${appUrl}/pricing.html?cancelled=true`,
       locale: 'fr',
-      // Permettre la modification de la quantité dans le checkout
       allow_promotion_codes: true
     });
 
