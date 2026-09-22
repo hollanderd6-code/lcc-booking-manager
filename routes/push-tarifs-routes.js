@@ -8,133 +8,137 @@
 
    (outils/monter-push-tarifs.js le fait pour vous.)
 
-   ── LE PROBLEME QUE CETTE ROUTE RESOUT ───────────────────────────
-   Sur Booking.com, deux logements du meme immeuble :
+   ── CE QU'ELLE FAIT ──────────────────────────────────────────
+   POST /api/properties/:id/push-rates
 
-     Appartement 1 Chambre (900151901)  « Réservable », Standard Rate 75 €
-     Appartement deux pièces (900151902) « Tarif fermé », Standard Rate VIDE
+   Valide l'accès utilisateur puis délègue la résolution des
+   tarifs et restrictions à publishEffectivePricing() (P0-C1).
+   Plus aucune résolution locale : la route délègue entièrement
+   au publisher et n'appelle plus les fonctions Channex directement.
 
-   Les disponibilites du second sont bien parties — les reservations
-   nettes s'affichent. Mais son plan tarifaire n'a AUCUN prix, et un
-   plan sans prix est ferme a la vente. C'est litteralement ce que
-   Booking annonce.
+   ── DATE RANGE ───────────────────────────────────────────────
+   500 nuits à partir d'aujourd'hui (start inclusif / end exclusif).
+   Même horizon qu'avant. Local noon évite les décalages DST.
 
-   Pourquoi : les tarifs ne partaient que par un seul chemin, le moteur
-   de tarification dynamique en mode « auto » (routes/pricing-apply.js).
-   Un logement qui n'est pas passe par ce moteur n'a jamais recu de prix.
-   Aucune route ne permettait de pousser simplement le prix du
-   calendrier.
-
-   ── D'OU VIENT LE PRIX ENVOYE ────────────────────────────────────
-   Dans l'ordre :
-     1. pricing_schedule, si le moteur a deja calcule des nuits — c'est
-        le prix que l'utilisateur voit dans son calendrier ;
-     2. sinon weekend_price les vendredis et samedis, base_price les
-        autres jours — le reglage de la fiche du logement.
-
-   La majoration par plateforme est appliquee par pushRates lui-meme
-   (channex.js, assurerPlansMajores) : rien a faire ici. base_price
-   n'est jamais modifie.
-
-   ── CE QU'ELLE REFUSE ────────────────────────────────────────────
-   Un logement sans base_price : sans prix de reference, il n'y a rien
-   a envoyer, et inventer un prix serait pire que de refuser.
+   ── CE QU'ELLE REFUSE ────────────────────────────────────────
+   - Logement sans base_price
+   - Logement non connecté à Channex
+   - Logement en tarification externe (PriceLabs)
    ============================================================ */
 
 'use strict';
 
-module.exports = function monterRoutesPushTarifs(app, pool, auth) {
+module.exports = function monterRoutesPushTarifs(app, pool, auth, deps = {}) {
+  const { publishEffectivePricing: _pub, PUBLISH_STATUS } = require('./pricing-publisher');
+  const { addDays } = require('./effective-pricing-resolver');
+  const publish = deps.publisher || _pub;
 
   app.post('/api/properties/:id/push-rates', auth, async (req, res) => {
     try {
+      // ── 1. Auth + ownership ─────────────────────────────────────────────────
       const { rows } = await pool.query(
-        `SELECT id, name, internal_name, base_price, weekend_price,
-                channex_enabled, channex_property_id,
-                channex_room_type_id, channex_rate_plan_id, external_pricing
+        `SELECT id, name, internal_name, base_price, channex_enabled,
+                channex_rate_plan_id, external_pricing
            FROM properties
           WHERE id = $1 AND user_id = $2`,
-        [req.params.id, req.user.id]
+        [req.params.id, req.user.id],
       );
-
       const p = rows[0];
-      if (!p) return res.status(404).json({ error: 'Logement introuvable' });
 
+      if (!p) {
+        return res.status(404).json({ error: 'Logement introuvable' });
+      }
       if (!p.channex_enabled || !p.channex_rate_plan_id) {
         return res.status(400).json({
-          error: 'Ce logement n\'est pas encore connecté aux plateformes.'
+          error: 'Ce logement n\'est pas encore connecté aux plateformes.',
         });
       }
       if (p.base_price == null) {
         return res.status(400).json({
           error: 'Ce logement n\'a pas de prix de base. Renseignez-le dans sa fiche : ' +
-                 'sans prix de référence, il n\'y a rien à envoyer aux plateformes.'
+                 'sans prix de référence, il n\'y a rien à envoyer aux plateformes.',
         });
       }
       if (p.external_pricing) {
         return res.status(400).json({
           error: 'Les tarifs de ce logement sont pilotés par un outil externe (PriceLabs). ' +
-                 'C\'est lui qui doit les envoyer.'
+                 'C\'est lui qui doit les envoyer.',
         });
       }
 
+      // ── 2. Date range — 500 nuits, start inclusif / end exclusif ────────────
+      // Local noon évite les décalages DST au moment du slice ISO.
       const JOURS = 500;
+      const d0 = new Date();
+      d0.setHours(12, 0, 0, 0);
+      const startDate = d0.toISOString().slice(0, 10);
+      const endDate   = addDays(startDate, JOURS);   // exclusif → exactement JOURS nuits
 
-      // 1. Le planning du moteur, s'il existe : c'est le prix que
-      //    l'utilisateur voit dans son calendrier.
-      const { rows: planning } = await pool.query(
-        `SELECT to_char(date, 'YYYY-MM-DD') AS date, price
-           FROM pricing_schedule
-          WHERE property_id = $1
-            AND date >= CURRENT_DATE
-            AND date < CURRENT_DATE + $2::int
-          ORDER BY date`,
-        [p.id, JOURS]
-      ).catch(() => ({ rows: [] }));
+      // ── 3. Déléguer au publisher (just-in-time resolver) ────────────────────
+      const result = await publish(pool, {
+        propertyId: p.id,
+        userId:     req.user.id,
+        startDate,
+        endDate,
+        reason:    'manual_push',
+        force:      true,
+      });
 
-      const parDate = {};
-      planning.forEach(r => { parDate[r.date] = parseFloat(r.price); });
+      // ── 4. HTTP mapping ──────────────────────────────────────────────────────
+      const label = p.internal_name || p.name;
+      console.log(
+        `💰 [PUSH-RATES] ${label} : ${result.nights} nuits — ${result.status}` +
+        ` — rates:${result.rates.pushed} restr:${result.restrictions.pushed}`,
+      );
 
-      // 2. Repli sur la fiche : weekend_price les vendredis et samedis.
-      const base = parseFloat(p.base_price);
-      const weekend = p.weekend_price != null ? parseFloat(p.weekend_price) : base;
-
-      const rates = [];
-      const d = new Date();
-      d.setHours(12, 0, 0, 0);   // midi : evite les decalages de fuseau
-      for (let i = 0; i < JOURS; i++) {
-        const iso = d.toISOString().slice(0, 10);
-        const jour = d.getDay();                     // 5 = vendredi, 6 = samedi
-        const prix = parDate[iso] != null ? parDate[iso] : (jour === 5 || jour === 6 ? weekend : base);
-        rates.push({ date: iso, price: prix });
-        d.setDate(d.getDate() + 1);
+      if (result.status === PUBLISH_STATUS.OK) {
+        return res.json({
+          ok:        true,
+          nuits:     result.nights,
+          depuis:    startDate,
+          jusqu_au:  addDays(startDate, JOURS - 1),
+          message:   result.nights + ' nuits envoyées. Comptez quelques minutes avant que les ' +
+                     'plateformes ouvrent les dates à la vente.',
+        });
       }
 
-      const { pushRates } = require('../channex');
-      await pushRates(pool, {
-        property_id: p.id,
-        channex_property_id: p.channex_property_id,
-        channex_rate_plan_id: p.channex_rate_plan_id,
-        rates: rates
-      });
+      if (result.status === PUBLISH_STATUS.PARTIAL) {
+        return res.json({
+          ok:      false,
+          partial: true,
+          nuits:   result.nights,
+          message: 'Synchronisation partielle : certains éléments n\'ont pas pu être envoyés aux plateformes.',
+        });
+      }
 
-      const source = planning.length ? 'calendrier' : 'fiche du logement';
-      console.log(`💰 [PUSH-RATES] ${p.internal_name || p.name} : ${rates.length} nuits envoyées (source : ${source})`);
+      if (result.status === PUBLISH_STATUS.ERROR) {
+        console.error('❌ [PUSH-RATES] publisher error —',
+          result.rates.error || result.restrictions.error || 'unknown');
+        return res.status(500).json({ error: 'L\'envoi des tarifs a échoué.' });
+      }
 
-      res.json({
-        ok: true,
-        nuits: rates.length,
-        source: source,
-        depuis: rates[0].date,
-        jusqu_au: rates[rates.length - 1].date,
-        message: rates.length + ' nuits envoyées. Comptez quelques minutes avant que les ' +
-                 'plateformes ouvrent les dates à la vente.'
-      });
+      // Défense en profondeur : les SKIPPED ne devraient pas être atteints
+      // ici car les guards ci-dessus les ont déjà bloqués.
+      if (result.status === PUBLISH_STATUS.SKIPPED_EXTERNAL) {
+        return res.status(400).json({
+          error: 'Les tarifs de ce logement sont pilotés par un outil externe. C\'est lui qui doit les envoyer.',
+        });
+      }
+      if (result.status === PUBLISH_STATUS.SKIPPED_CHANNEX_DISABLED ||
+          result.status === PUBLISH_STATUS.SKIPPED_MISSING_IDS) {
+        return res.status(400).json({
+          error: 'Ce logement n\'est pas encore connecté aux plateformes.',
+        });
+      }
+      if (result.status === PUBLISH_STATUS.SKIPPED_NOT_FOUND) {
+        return res.status(404).json({ error: 'Logement introuvable' });
+      }
+
+      return res.status(500).json({ error: 'Statut inattendu.' });
+
     } catch (e) {
       console.error('❌ [PUSH-RATES]', e.response?.data || e.message);
-      res.status(500).json({
-        error: 'L\'envoi des tarifs a échoué. ' +
-               (e.response?.data?.errors?.title || e.message)
-      });
+      res.status(500).json({ error: 'L\'envoi des tarifs a échoué.' });
     }
   });
 
