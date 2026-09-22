@@ -32,6 +32,7 @@
 'use strict';
 
 const express = require('express');
+const { requirePermission } = require('../sub-accounts-middleware');
 
 const COLONNES = {
   notifyPush:  'notify_push',
@@ -57,7 +58,7 @@ module.exports = function monterNotifications(app, pool, deps) {
      logements — heritage de l'ancien modele. On renvoie la valeur
      dominante et on signale le desaccord, plutot que de choisir en
      silence une ligne au hasard. */
-  app.get('/api/dynamic-pricing/notifications', auth, async (req, res) => {
+  app.get('/api/dynamic-pricing/notifications', auth, requirePermission(pool, 'can_view_pricing'), async (req, res) => {
     try {
       const userId = await uid(req);
       const { rows } = await pool.query(
@@ -65,7 +66,17 @@ module.exports = function monterNotifications(app, pool, deps) {
                 COUNT(*) FILTER (WHERE notify_push  IS TRUE)::int AS push_on,
                 COUNT(*) FILTER (WHERE notify_email IS TRUE)::int AS email_on,
                 COUNT(*) FILTER (WHERE notify_alert IS TRUE)::int AS alert_on
-           FROM pricing_config WHERE user_id = $1`,
+           FROM pricing_config pc
+           JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
+           WHERE (
+             p.user_id = $1
+             OR EXISTS (
+               SELECT 1 FROM account_delegations
+               WHERE delegator_user_id = p.user_id
+                 AND delegate_user_id  = $1
+                 AND status = 'accepted'
+             )
+           )`,
         [userId]
       );
 
@@ -93,7 +104,7 @@ module.exports = function monterNotifications(app, pool, deps) {
   /* ── Ecriture ───────────────────────────────────────────────────
      Un seul drapeau a la fois, sur tous les logements. Un PATCH par
      interrupteur : deux onglets ouverts ne s'ecrasent pas. */
-  app.patch('/api/dynamic-pricing/notifications', express.json(), auth, async (req, res) => {
+  app.patch('/api/dynamic-pricing/notifications', express.json(), auth, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
     try {
       const cle = String(req.body.key || '');
       const colonne = COLONNES[cle];
@@ -106,7 +117,20 @@ module.exports = function monterNotifications(app, pool, deps) {
 
       const userId = await uid(req);
       const { rowCount } = await pool.query(
-        `UPDATE pricing_config SET ${colonne} = $2, updated_at = NOW() WHERE user_id = $1`,
+        `UPDATE pricing_config pc
+            SET ${colonne} = $2, updated_at = NOW()
+           FROM properties p
+          WHERE pc.property_id = p.id
+            AND pc.user_id = p.user_id
+            AND (
+              p.user_id = $1
+              OR EXISTS (
+                SELECT 1 FROM account_delegations
+                WHERE delegator_user_id = p.user_id
+                  AND delegate_user_id  = $1
+                  AND status = 'accepted'
+              )
+            )`,
         [userId, req.body.value]
       );
 

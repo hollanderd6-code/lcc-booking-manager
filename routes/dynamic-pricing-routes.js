@@ -249,23 +249,45 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
 
   const corsDP = cors();
 
+  // Résout l'identité de l'appelant (sub_account → parent user_id)
+  async function resolveCallerId(req) {
+    if (req.user.isSubAccount) {
+      const { rows } = await pool.query(
+        'SELECT parent_user_id FROM sub_accounts WHERE id = $1',
+        [req.user.subAccountId]
+      );
+      if (!rows[0]) throw new Error('Sous-compte introuvable');
+      return rows[0].parent_user_id;
+    }
+    return req.user.id;
+  }
+
   // ────────────────────────────────────────────────────────
   // GET /api/dynamic-pricing/dashboard
   // Retourne pour chaque logement actif : config, dernier
   // snapshot marché, historique de la semaine en cours.
   // ────────────────────────────────────────────────────────
-  app.get('/api/dynamic-pricing/dashboard', corsDP, authenticateAny, async (req, res) => {
+  app.get('/api/dynamic-pricing/dashboard', corsDP, authenticateAny, requirePermission(pool, 'can_view_pricing'), async (req, res) => {
     try {
-      const userId = req.user.id;
+      const callerUserId = await resolveCallerId(req);
 
-      // 1. Toutes les configs actives de l'user
+      // 1. Configs actives canoniques accessibles par l'appelant
       const configs = await pool.query(
         `SELECT pc.*, p.name AS property_name, p.address
          FROM pricing_config pc
-         LEFT JOIN properties p ON p.id = pc.property_id
-         WHERE pc.user_id = $1 AND pc.is_active = TRUE
+         JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
+         WHERE pc.is_active = TRUE
+           AND (
+             p.user_id = $1
+             OR EXISTS (
+               SELECT 1 FROM account_delegations
+               WHERE delegator_user_id = p.user_id
+                 AND delegate_user_id  = $1
+                 AND status = 'accepted'
+             )
+           )
          ORDER BY pc.created_at ASC`,
-        [userId]
+        [callerUserId]
       );
 
       if (configs.rows.length === 0) {
@@ -296,11 +318,12 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
       const weekStart = monday.toISOString().slice(0, 10);
 
       const histories = await pool.query(
-        `SELECT property_id, price_before, price_calculated, price_applied,
-                status, mode_used, reason, factor_market, factor_self, factor_season,
-                market_median, market_occupancy, tension_level, applied_at
-         FROM pricing_history
-         WHERE property_id = ANY($1::text[]) AND week_start = $2`,
+        `SELECT ph.property_id, ph.price_before, ph.price_calculated, ph.price_applied,
+                ph.status, ph.mode_used, ph.reason, ph.factor_market, ph.factor_self, ph.factor_season,
+                ph.market_median, ph.market_occupancy, ph.tension_level, ph.applied_at
+         FROM pricing_history ph
+         JOIN properties p ON p.id = ph.property_id AND p.user_id = ph.user_id
+         WHERE ph.property_id = ANY($1::text[]) AND ph.week_start = $2`,
         [propertyIds, weekStart]
       );
       const historyMap = {};
@@ -370,17 +393,25 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
   // GET /api/dynamic-pricing/config
   // Retourne toutes les configs de l'user (actives + inactives)
   // ────────────────────────────────────────────────────────
-  app.get('/api/dynamic-pricing/config', corsDP, authenticateAny, async (req, res) => {
+  app.get('/api/dynamic-pricing/config', corsDP, authenticateAny, requirePermission(pool, 'can_view_pricing'), async (req, res) => {
     try {
-      const userId = req.user.id;
+      const callerUserId = await resolveCallerId(req);
 
       const result = await pool.query(
         `SELECT pc.*, p.name AS property_name
          FROM pricing_config pc
-         LEFT JOIN properties p ON p.id = pc.property_id
-         WHERE pc.user_id = $1
+         JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
+         WHERE (
+           p.user_id = $1
+           OR EXISTS (
+             SELECT 1 FROM account_delegations
+             WHERE delegator_user_id = p.user_id
+               AND delegate_user_id  = $1
+               AND status = 'accepted'
+           )
+         )
          ORDER BY pc.created_at ASC`,
-        [userId]
+        [callerUserId]
       );
 
       const configs = result.rows.map(c => ({
@@ -530,23 +561,33 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
   // Accepte ou refuse une suggestion en attente (mode manual).
   // Body: { action: 'apply' | 'decline' }
   // ────────────────────────────────────────────────────────
-  app.post('/api/dynamic-pricing/decision/:historyId', corsDP, express.json(), authenticateAny, async (req, res) => {
+  app.post('/api/dynamic-pricing/decision/:historyId', corsDP, express.json(), authenticateAny, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
     try {
-      const userId    = req.user.id;
-      const historyId = parseInt(req.params.historyId);
-      const { action } = req.body || {};
+      const callerUserId = await resolveCallerId(req);
+      const historyId    = parseInt(req.params.historyId);
+      const { action }   = req.body || {};
 
       if (!['apply','decline'].includes(action)) {
         return res.status(400).json({ error: "action doit être 'apply' ou 'decline'" });
       }
 
-      // Vérifier que la suggestion appartient à l'user et est bien 'pending'
+      // Vérifier que la suggestion est 'pending' et que l'appelant a accès au logement
       const check = await pool.query(
         `SELECT ph.*, pc.price_min, pc.price_max, pc.mode
          FROM pricing_history ph
          JOIN pricing_config pc ON pc.property_id = ph.property_id AND pc.user_id = ph.user_id
-         WHERE ph.id = $1 AND ph.user_id = $2 AND ph.status = 'pending'`,
-        [historyId, userId]
+         JOIN properties p ON p.id = ph.property_id AND p.user_id = ph.user_id
+         WHERE ph.id = $1 AND ph.status = 'pending'
+           AND (
+             p.user_id = $2
+             OR EXISTS (
+               SELECT 1 FROM account_delegations
+               WHERE delegator_user_id = p.user_id
+                 AND delegate_user_id  = $2
+                 AND status = 'accepted'
+             )
+           )`,
+        [historyId, callerUserId]
       );
 
       if (check.rows.length === 0) {
@@ -567,7 +608,7 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
            SET status = 'applied', price_applied = $1,
                applied_by = $2, applied_at = NOW(), updated_at = NOW()
            WHERE id = $3`,
-          [priceApplied, userId, historyId]
+          [priceApplied, callerUserId, historyId]
         );
 
         // TODO V3 : push vers Channex ici
@@ -598,7 +639,7 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
           console.error('⚠️ [DYNAMIC-PRICING] Channex push error:', chErr.message);
         }
 
-        console.log(`✅ [DYNAMIC-PRICING] Suggestion acceptée — historyId:${historyId} — ${priceApplied}€`);
+        console.log(`✅ [DYNAMIC-PRICING] Suggestion acceptée — historyId:${historyId} — ${priceApplied}€ (actor:${callerUserId})`);
         res.json({ success: true, action: 'applied', priceApplied });
 
       } else {
@@ -608,7 +649,7 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
            SET status = 'declined', price_applied = price_before,
                applied_by = $1, applied_at = NOW(), updated_at = NOW()
            WHERE id = $2`,
-          [userId, historyId]
+          [callerUserId, historyId]
         );
 
         console.log(`ℹ️ [DYNAMIC-PRICING] Suggestion refusée — historyId:${historyId}`);
@@ -626,30 +667,39 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
   // Historique paginé des ajustements (tous logements).
   // Query: ?limit=20&offset=0&propertyId=xxx
   // ────────────────────────────────────────────────────────
-  app.get('/api/dynamic-pricing/history', corsDP, authenticateAny, async (req, res) => {
+  app.get('/api/dynamic-pricing/history', corsDP, authenticateAny, requirePermission(pool, 'can_view_pricing'), async (req, res) => {
     try {
-      const userId     = req.user.id;
-      const limit      = Math.min(parseInt(req.query.limit  || 20), 100);
-      const offset     = parseInt(req.query.offset || 0);
-      const propertyId = req.query.propertyId || null;
+      const callerUserId = await resolveCallerId(req);
+      const limit        = Math.min(parseInt(req.query.limit  || 20), 100);
+      const offset       = parseInt(req.query.offset || 0);
+      const propertyId   = req.query.propertyId || null;
 
-      const conditions = ['ph.user_id = $1'];
-      const params     = [userId];
+      const params = [callerUserId];
       let pi = 2;
+      let propFilter = '';
 
       if (propertyId) {
-        conditions.push(`ph.property_id = $${pi++}`);
+        propFilter = `AND ph.property_id = $${pi++}`;
         params.push(propertyId);
       }
 
-      const where = conditions.join(' AND ');
+      const canonicalWhere = `(
+             p.user_id = $1
+             OR EXISTS (
+               SELECT 1 FROM account_delegations
+               WHERE delegator_user_id = p.user_id
+                 AND delegate_user_id  = $1
+                 AND status = 'accepted'
+             )
+           )`;
 
       const result = await pool.query(
         `SELECT ph.*,
                 p.name AS property_name
          FROM pricing_history ph
-         LEFT JOIN properties p ON p.id = ph.property_id
-         WHERE ${where}
+         JOIN properties p ON p.id = ph.property_id AND p.user_id = ph.user_id
+         WHERE ${canonicalWhere}
+         ${propFilter}
          ORDER BY ph.week_start DESC, ph.created_at DESC
          LIMIT $${pi++} OFFSET $${pi++}`,
         [...params, limit, offset]
@@ -657,7 +707,11 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
 
       // Total pour pagination
       const countResult = await pool.query(
-        `SELECT COUNT(*) AS total FROM pricing_history ph WHERE ${where}`,
+        `SELECT COUNT(*) AS total
+         FROM pricing_history ph
+         JOIN properties p ON p.id = ph.property_id AND p.user_id = ph.user_id
+         WHERE ${canonicalWhere}
+         ${propFilter}`,
         params
       );
 
@@ -701,18 +755,28 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
   // Utile pour un graphique d'évolution.
   // Query: ?weeks=8
   // ────────────────────────────────────────────────────────
-  app.get('/api/dynamic-pricing/market/:propertyId', corsDP, authenticateAny, async (req, res) => {
+  app.get('/api/dynamic-pricing/market/:propertyId', corsDP, authenticateAny, requirePermission(pool, 'can_view_pricing'), async (req, res) => {
     try {
-      const userId     = req.user.id;
-      const propertyId = req.params.propertyId;
-      const weeks      = Math.min(parseInt(req.query.weeks || 8), 52);
+      const callerUserId = await resolveCallerId(req);
+      const propertyId   = req.params.propertyId;
+      const weeks        = Math.min(parseInt(req.query.weeks || 8), 52);
 
-      // Vérifier que l'user a bien une config pour ce logement
-      const cfgCheck = await pool.query(
-        'SELECT id FROM pricing_config WHERE user_id = $1 AND property_id = $2',
-        [userId, propertyId]
+      // Vérifier que l'appelant est owner ou delegate du logement
+      const accessCheck = await pool.query(
+        `SELECT id FROM properties
+         WHERE id = $1
+           AND (
+             user_id = $2
+             OR EXISTS (
+               SELECT 1 FROM account_delegations
+               WHERE delegator_user_id = user_id
+                 AND delegate_user_id  = $2
+                 AND status = 'accepted'
+             )
+           )`,
+        [propertyId, callerUserId]
       );
-      if (cfgCheck.rows.length === 0) {
+      if (accessCheck.rows.length === 0) {
         return res.status(403).json({ error: 'Accès refusé à ce logement' });
       }
 

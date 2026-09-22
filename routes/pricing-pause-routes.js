@@ -32,6 +32,7 @@
 'use strict';
 
 const express = require('express');
+const { requirePermission } = require('../sub-accounts-middleware');
 
 const MIGRATION = `
   ALTER TABLE pricing_config
@@ -60,7 +61,7 @@ module.exports = function monterPause(app, pool, deps) {
      En pause si au moins une ligne porte une date de pause. On renvoie
      aussi le nombre de logements concernes : « en pause » sans dire
      combien ne rassure personne. */
-  app.get('/api/dynamic-pricing/pause', auth, async (req, res) => {
+  app.get('/api/dynamic-pricing/pause', auth, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
     try {
       const userId = await uid(req);
       const { rows } = await pool.query(
@@ -68,7 +69,17 @@ module.exports = function monterPause(app, pool, deps) {
                 COUNT(*) FILTER (WHERE paused_at IS NOT NULL)::int AS en_pause,
                 COUNT(*) FILTER (WHERE is_active IS TRUE)::int     AS actifs,
                 MAX(paused_at)                                    AS depuis
-           FROM pricing_config WHERE user_id = $1`,
+           FROM pricing_config pc
+           JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
+           WHERE (
+             p.user_id = $1
+             OR EXISTS (
+               SELECT 1 FROM account_delegations
+               WHERE delegator_user_id = p.user_id
+                 AND delegate_user_id  = $1
+                 AND status = 'accepted'
+             )
+           )`,
         [userId]
       );
       const r = rows[0] || {};
@@ -86,7 +97,7 @@ module.exports = function monterPause(app, pool, deps) {
   });
 
   /* ── Mise en pause et reprise ───────────────────────────────────── */
-  app.post('/api/dynamic-pricing/pause', express.json(), auth, async (req, res) => {
+  app.post('/api/dynamic-pricing/pause', express.json(), auth, requirePermission(pool, 'can_manage_pricing'), async (req, res) => {
     try {
       if (typeof req.body.paused !== 'boolean') {
         return res.status(400).json({ error: 'paused doit être true ou false' });
@@ -97,12 +108,24 @@ module.exports = function monterPause(app, pool, deps) {
         /* On n'ecrase pas une memoire deja posee : une seconde mise en
            pause ne doit pas enregistrer « inactif » comme etat d'origine. */
         const { rowCount } = await pool.query(
-          `UPDATE pricing_config
-              SET actif_avant_pause = COALESCE(actif_avant_pause, is_active),
+          `UPDATE pricing_config pc
+              SET actif_avant_pause = COALESCE(pc.actif_avant_pause, pc.is_active),
                   is_active         = FALSE,
-                  paused_at         = COALESCE(paused_at, NOW()),
+                  paused_at         = COALESCE(pc.paused_at, NOW()),
                   updated_at        = NOW()
-            WHERE user_id = $1 AND paused_at IS NULL`,
+             FROM properties p
+            WHERE pc.property_id = p.id
+              AND pc.user_id = p.user_id
+              AND pc.paused_at IS NULL
+              AND (
+                p.user_id = $1
+                OR EXISTS (
+                  SELECT 1 FROM account_delegations
+                  WHERE delegator_user_id = p.user_id
+                    AND delegate_user_id  = $1
+                    AND status = 'accepted'
+                )
+              )`,
           [userId]
         );
         console.log(`⏸️ [DP-PAUSE] ${userId} — ${rowCount} logement(s) mis en pause`);
@@ -110,12 +133,24 @@ module.exports = function monterPause(app, pool, deps) {
       }
 
       const { rowCount } = await pool.query(
-        `UPDATE pricing_config
-            SET is_active         = COALESCE(actif_avant_pause, TRUE),
+        `UPDATE pricing_config pc
+            SET is_active         = COALESCE(pc.actif_avant_pause, TRUE),
                 actif_avant_pause = NULL,
                 paused_at         = NULL,
                 updated_at        = NOW()
-          WHERE user_id = $1 AND paused_at IS NOT NULL`,
+           FROM properties p
+          WHERE pc.property_id = p.id
+            AND pc.user_id = p.user_id
+            AND pc.paused_at IS NOT NULL
+            AND (
+              p.user_id = $1
+              OR EXISTS (
+                SELECT 1 FROM account_delegations
+                WHERE delegator_user_id = p.user_id
+                  AND delegate_user_id  = $1
+                  AND status = 'accepted'
+              )
+            )`,
         [userId]
       );
       console.log(`▶️ [DP-PAUSE] ${userId} — ${rowCount} logement(s) repris`);
