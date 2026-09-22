@@ -4,7 +4,22 @@
 
 const crypto = require('crypto');
 const { comptesAutorises } = require('../utils/agency');
-const { deescalateConversation } = require('../utils/chat-utils');
+const { deescalateConversation, guestAuth, issueGuestToken } = require('../utils/chat-utils');
+
+// In-memory rate limiter for POST /api/chat/verify-by-property
+// Prevents brute-force of the short shared property PIN.
+// Keys: `ip:${ip}` and `prop:${propertyId}`  — 10 attempts / IP / 15 min, 20 / property / 15 min
+const _pinAttempts = new Map();
+function _pinRateCheck(key, max, windowMs) {
+  const now = Date.now();
+  const e = _pinAttempts.get(key);
+  if (!e || now >= e.resetAt) {
+    _pinAttempts.set(key, { count: 1, resetAt: now + windowMs });
+    return null;
+  }
+  e.count++;
+  return e.count > max ? Math.ceil((e.resetAt - now) / 1000) : null;
+}
 
 // ============================================
 // 🤖 IMPORTS SYSTÈME ONBOARDING + RÉPONSES AUTO
@@ -581,9 +596,19 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
       const { property_id, chat_pin, checkin_date, checkout_date, platform } = req.body;
 
       if (!property_id || !chat_pin || !checkin_date || !platform) {
-        return res.status(400).json({ 
-          error: 'property_id, chat_pin, checkin_date et platform requis' 
+        return res.status(400).json({
+          error: 'property_id, chat_pin, checkin_date et platform requis'
         });
+      }
+
+      // Rate limit par IP et par logement (PIN court partagé = brute-forceable sans limite)
+      const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+      const retryIp   = _pinRateCheck(`ip:${ip}`,          10, 15 * 60 * 1000);
+      const retryProp = _pinRateCheck(`prop:${property_id}`, 20, 15 * 60 * 1000);
+      const retryAfter = retryIp || retryProp;
+      if (retryAfter) {
+        res.set('Retry-After', String(retryAfter));
+        return res.status(429).json({ error: 'Trop de tentatives, réessayez plus tard', retryAfter });
       }
 
       // Vérifier que la propriété existe ET récupérer le PIN de la propriété
@@ -597,11 +622,9 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
         return res.status(404).json({ error: 'Propriété introuvable' });
       }
 
-      console.log('✅ [VERIFY] Propriété trouvée:', property.rows[0].name, 'PIN attendu:', property.rows[0].chat_pin);
-
       // ✅ VÉRIFIER LE PIN DE LA PROPRIÉTÉ
       if (property.rows[0].chat_pin && property.rows[0].chat_pin !== chat_pin) {
-        console.log('❌ [VERIFY] PIN incorrect. Attendu:', property.rows[0].chat_pin, 'Reçu:', chat_pin);
+        console.log('❌ [VERIFY] PIN incorrect pour logement', property_id);
         return res.status(403).json({ error: 'Code PIN incorrect' });
       }
 
@@ -721,34 +744,17 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
         await sendWelcomeMessage(pool, io, conversation.id, property_id, property.rows[0].user_id);
       }
 
-      // ⭐ Récupérer les infos du voyageur de la conversation
-      const convDetailsResult = await pool.query(
-        `SELECT guest_first_name, guest_last_name, guest_phone, platform 
-         FROM conversations 
-         WHERE id = $1`,
-        [conversation.id]
-      );
-      
-      const convDetails = convDetailsResult.rows[0] || {};
+      // Émettre le token voyageur (nouveau à chaque vérification — révoque l'ancien)
+      const guestToken = await issueGuestToken(pool, conversation.id);
 
       res.json({
         success: true,
         conversation_id: conversation.id,
         property_id: property_id,
         property_name: property.rows[0].name,
-        unique_token: conversation.unique_token, // ✅ AJOUT
-        reservation_start: conversation.reservation_start_date, // ✅ AJOUT
-        reservation_end: conversation.reservation_end_date, // ✅ AJOUT
-        // ⭐ Ajouter les infos du voyageur
-        guest_first_name: convDetails.guest_first_name,
-        guest_last_name: convDetails.guest_last_name,
-        guest_phone: convDetails.guest_phone,
-        guest_display_name: convDetails.guest_first_name 
-          ? `${convDetails.guest_first_name} ${convDetails.guest_last_name || ''}`.trim()
-          : `Voyageur ${convDetails.platform || 'Booking'}`,
-        guest_initial: convDetails.guest_first_name 
-          ? convDetails.guest_first_name.charAt(0).toUpperCase() 
-          : 'V'
+        guest_token: guestToken,
+        reservation_start: conversation.reservation_start_date,
+        reservation_end: conversation.reservation_end_date
       });
 
     } catch (error) {
@@ -780,69 +786,76 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
 
       const conversation = convCheck.rows[0];
 
-      // Vérifier les permissions (propriétaire OU sous-compte OU voyageur vérifié)
+      // Vérifier les permissions : propriétaire JWT, sous-compte, ou voyageur avec token
+      let isHostView = false;
       if (req.user) {
-        // ✅ Support des sous-comptes
-        const realUserId = req.user.isSubAccount 
+        const realUserId = req.user.isSubAccount
           ? (await getRealUserId(pool, req))
           : req.user.id;
 
-        /* Un compte d'agence lit légitimement les conversations des logements
-           qui lui sont délégués : comparer au seul user_id de la conversation
-           l'aurait refusé. Tant que la vérification du token échouait, ce
-           contrôle n'était jamais atteint et le défaut restait invisible. */
         const comptes = await comptesAutorises(pool, realUserId);
 
+        // Hors comptesAutorises → toujours 403, même pour un sous-compte
         if (!comptes.includes(conversation.user_id)) {
-          // Vérifier si sous-compte avec accès à cette propriété
-          if (req.user.isSubAccount) {
-            const subAccountData = await pool.query(
-              'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
-              [req.user.subAccountId]
-            );
-            
-            if (subAccountData.rows.length > 0) {
-              const accessibleIds = subAccountData.rows[0].accessible_property_ids || [];
-              if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
-                return res.status(403).json({ error: 'Accès refusé à cette propriété' });
-              }
-            }
-          } else {
-            return res.status(403).json({ error: 'Accès refusé' });
+          return res.status(403).json({ error: 'Accès refusé' });
+        }
+
+        // Dans comptesAutorises → accessible_property_ids restreint si non vide
+        if (req.user.isSubAccount) {
+          const subAccountData = await pool.query(
+            'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
+            [req.user.subAccountId]
+          );
+          const accessibleIds = subAccountData.rows[0]?.accessible_property_ids || [];
+          if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
+            return res.status(403).json({ error: 'Accès refusé à cette propriété' });
           }
+        }
+        isHostView = true;
+      } else {
+        // Unauthentifié : token voyageur obligatoire
+        const rawToken = req.headers['x-guest-token'];
+        if (!await guestAuth(pool, rawToken, conversationId)) {
+          return res.status(401).json({ error: 'Token voyageur requis ou invalide' });
         }
       }
 
-      const messages = await pool.query(
-        `SELECT 
-          id, conversation_id, sender_type, sender_name, message,
-          is_read, is_bot_response, is_auto_response,
-          created_at, read_at, delivered_at
-         FROM messages
-         WHERE conversation_id = $1
-         ORDER BY created_at ASC`,
-        [conversationId]
-      );
+      const messagesQuery = isHostView
+        ? pool.query(
+            `SELECT id, conversation_id, sender_type, sender_name, message,
+                    is_read, is_bot_response, is_auto_response,
+                    created_at, read_at, delivered_at
+             FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC`,
+            [conversationId]
+          )
+        : pool.query(
+            `SELECT id, conversation_id, sender_type, sender_name, message,
+                    is_read, is_bot_response, is_auto_response, created_at
+             FROM messages WHERE conversation_id = $1 AND sender_type != 'internal_note'
+             ORDER BY created_at ASC`,
+            [conversationId]
+          );
 
-      res.json({
-        success: true,
-        messages: messages.rows,
-        // ⭐ Ajouter les infos de la conversation
-        conversation: {
-          id: conversation.id,
-          guest_first_name: conversation.guest_first_name,
-          guest_last_name: conversation.guest_last_name,
-          guest_phone: conversation.guest_phone,
-          guest_display_name: conversation.guest_first_name 
-            ? `${conversation.guest_first_name} ${conversation.guest_last_name || ''}`.trim()
-            : `Voyageur ${conversation.platform || 'Booking'}`,
-          guest_initial: conversation.guest_first_name
-            ? conversation.guest_first_name.charAt(0).toUpperCase()
-            : 'V',
-          escalated: conversation.escalated,
-          ai_disabled: conversation.ai_disabled
-        }
-      });
+      const messages = await messagesQuery;
+
+      const convPayload = {
+        id: conversation.id,
+        guest_first_name: conversation.guest_first_name,
+        guest_last_name: conversation.guest_last_name,
+        guest_display_name: conversation.guest_first_name
+          ? `${conversation.guest_first_name} ${conversation.guest_last_name || ''}`.trim()
+          : `Voyageur ${conversation.platform || 'Booking'}`,
+        guest_initial: conversation.guest_first_name
+          ? conversation.guest_first_name.charAt(0).toUpperCase()
+          : 'V'
+      };
+      if (isHostView) {
+        convPayload.guest_phone  = conversation.guest_phone;
+        convPayload.escalated    = conversation.escalated;
+        convPayload.ai_disabled  = conversation.ai_disabled;
+      }
+
+      res.json({ success: true, messages: messages.rows, conversation: convPayload });
 
     } catch (error) {
       console.error('❌ Erreur récupération messages:', error);
@@ -879,42 +892,30 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
 
       const conversation = convResult.rows[0];
 
-      /* Vérifier les permissions.
-
-         Un accès non authentifié réclamant le rôle 'owner' est silencieusement
-         reclassé en 'guest' — le message est enregistré mais sans droits hôte.
-         Cette approche préserve l'UX du widget invité tout en interdisant toute
-         usurpation de l'identité hôte sans token valide. */
-      if (sender_type === 'owner') {
-        if (!req.user) {
-          sender_type = 'guest';
-        } else {
-          // ✅ Support des sous-comptes
-          const realUserId = req.user.isSubAccount
-            ? (await getRealUserId(pool, req))
-            : req.user.id;
-
-          /* Comme pour la lecture : un gestionnaire répond légitimement sur un
-             logement que le propriétaire lui a délégué. */
-          const comptes = await comptesAutorises(pool, realUserId);
-
-          if (!comptes.includes(conversation.user_id)) {
-            return res.status(403).json({ error: 'Accès refusé' });
-          }
-
-          // ✅ Vérifier accès propriété si sous-compte
-          if (req.user.isSubAccount) {
-            const subAccountData = await pool.query(
-              'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
-              [req.user.subAccountId]
-            );
-
-            if (subAccountData.rows.length > 0) {
-              const accessibleIds = subAccountData.rows[0].accessible_property_ids || [];
-              if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
-                return res.status(403).json({ error: 'Accès refusé à cette propriété' });
-              }
-            }
+      if (!req.user) {
+        // Unauthentifié : token voyageur obligatoire — empêche toute écriture anonyme
+        const rawToken = req.headers['x-guest-token'];
+        if (!await guestAuth(pool, rawToken, conversation_id)) {
+          return res.status(401).json({ error: 'Token voyageur requis ou invalide' });
+        }
+        sender_type = 'guest'; // toujours guest pour les non-authentifiés
+      } else if (sender_type === 'owner' || sender_type === 'property') {
+        // Propriétaire ou sous-compte authentifié
+        const realUserId = req.user.isSubAccount
+          ? (await getRealUserId(pool, req))
+          : req.user.id;
+        const comptes = await comptesAutorises(pool, realUserId);
+        if (!comptes.includes(conversation.user_id)) {
+          return res.status(403).json({ error: 'Accès refusé' });
+        }
+        if (req.user.isSubAccount) {
+          const subAccountData = await pool.query(
+            'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
+            [req.user.subAccountId]
+          );
+          const accessibleIds = subAccountData.rows[0]?.accessible_property_ids || [];
+          if (accessibleIds.length > 0 && !accessibleIds.includes(conversation.property_id)) {
+            return res.status(403).json({ error: 'Accès refusé à cette propriété' });
           }
         }
       }
@@ -1310,14 +1311,20 @@ if (sender_type === 'owner' && (message && message.trim())) {
     try {
       const { conversationId } = req.params;
 
+      if (!req.user) {
+        const rawToken = req.headers['x-guest-token'];
+        if (!await guestAuth(pool, rawToken, conversationId)) {
+          return res.status(401).json({ error: 'Token voyageur requis ou invalide' });
+        }
+      }
+
       await pool.query(
-        `UPDATE messages 
+        `UPDATE messages
          SET is_read = TRUE, read_at = NOW()
          WHERE conversation_id = $1 AND is_read = FALSE`,
         [conversationId]
       );
 
-      // Émettre via Socket.io
       if (io) {
         io.to(`conversation_${conversationId}`).emit('messages_read', { conversationId });
       }
@@ -1439,7 +1446,7 @@ if (sender_type === 'owner' && (message && message.trim())) {
     console.log('🔌 Client connecté:', socket.id);
 
     // Rejoindre une conversation
-    socket.on('join_conversation', async (conversationId) => {
+    socket.on('join_conversation', (conversationId) => {
       socket.join(`conversation_${conversationId}`);
       console.log(`✅ Socket ${socket.id} rejoint conversation ${conversationId}`);
     });
@@ -1472,11 +1479,17 @@ if (sender_type === 'owner' && (message && message.trim())) {
       // Accepter les deux formats: token ou fcm_token
       const { conversation_id, token, fcm_token, device_type } = req.body;
       const finalToken = fcm_token || token;
-      
+
       if (!conversation_id || !finalToken) {
         return res.status(400).json({ error: 'conversation_id et token/fcm_token requis' });
       }
-      
+
+      // Exige le token voyageur pour associer un FCM token à une conversation
+      const rawGuestToken = req.headers['x-guest-token'];
+      if (!await guestAuth(pool, rawGuestToken, conversation_id)) {
+        return res.status(401).json({ error: 'Token voyageur requis ou invalide' });
+      }
+
       const conv = await pool.query('SELECT id FROM conversations WHERE id = $1', [conversation_id]);
       if (conv.rows.length === 0) {
         return res.status(404).json({ error: 'Conversation introuvable' });

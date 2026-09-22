@@ -46956,6 +46956,14 @@ pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS channex_message_id TEX
 pool.query(`CREATE INDEX IF NOT EXISTS idx_messages_channex_message_id ON messages(channex_message_id) WHERE channex_message_id IS NOT NULL`)
   .catch(e => console.log('ℹ️ idx_messages_channex_message_id:', e.message));
 
+// ── Token voyageur par conversation (auth widget chat invité) ─────────────────
+pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS guest_token_hash TEXT`)
+  .catch(e => console.log('ℹ️ conversations.guest_token_hash:', e.message));
+pool.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS guest_token_issued_at TIMESTAMPTZ`)
+  .catch(e => console.log('ℹ️ conversations.guest_token_issued_at:', e.message));
+pool.query(`CREATE INDEX IF NOT EXISTS idx_conversations_guest_token_hash ON conversations(guest_token_hash) WHERE guest_token_hash IS NOT NULL`)
+  .catch(e => console.log('ℹ️ idx_conversations_guest_token_hash:', e.message));
+
 // ── Middleware : réserver le mode agence au plan Pro ─────────────
 async function requireProPlan(req, res, next) {
   // Alias vers requireFeature('mode_agence') — le mode agence est réservé au plan Agence

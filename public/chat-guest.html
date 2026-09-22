@@ -883,14 +883,31 @@
     // INITIALISATION
     // ============================================
 
+    function guestHeaders() {
+      const token = sessionStorage.getItem('chat_guest_token') || '';
+      return { 'Content-Type': 'application/json', 'X-Guest-Token': token };
+    }
+
+    function clearGuestSession() {
+      sessionStorage.removeItem('chat_conversation_id');
+      sessionStorage.removeItem('chat_property_id');
+      sessionStorage.removeItem('chat_property_name');
+      sessionStorage.removeItem('chat_verified');
+      sessionStorage.removeItem('chat_guest_token');
+      conversationId = null;
+      if (socket) { socket.disconnect(); socket = null; }
+      document.getElementById('verificationContainer').style.display = 'block';
+      document.getElementById('chatContainer').style.display = 'none';
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
       console.log('🚀 Initialisation du chat');
-      
-      // Vérifier si déjà connecté
+
       const savedConversationId = sessionStorage.getItem('chat_conversation_id');
       const isVerified = sessionStorage.getItem('chat_verified');
-      
-      if (savedConversationId && isVerified === 'true') {
+      const savedToken = sessionStorage.getItem('chat_guest_token');
+
+      if (savedConversationId && isVerified === 'true' && savedToken) {
         conversationId = savedConversationId;
         showChatInterface();
       }
@@ -990,6 +1007,7 @@
         sessionStorage.setItem('chat_property_id', data.property_id);
         sessionStorage.setItem('chat_property_name', data.property_name);
         sessionStorage.setItem('chat_verified', 'true');
+        sessionStorage.setItem('chat_guest_token', data.guest_token);
 
         // Afficher le chat
         showChatInterface();
@@ -1010,12 +1028,20 @@
 
     async function loadMessages() {
       try {
-        const response = await fetch(`${API_URL}/api/chat/messages/${conversationId}`);
+        const response = await fetch(`${API_URL}/api/chat/messages/${conversationId}`, {
+          headers: guestHeaders()
+        });
+
+        if (response.status === 401) {
+          clearGuestSession();
+          return;
+        }
+
         const data = await response.json();
-        
+
         const container = document.getElementById('messagesContainer');
         container.innerHTML = '';
-        
+
         if (data.messages && data.messages.length > 0) {
           data.messages.forEach(message => {
             appendMessageSafe(message);
@@ -1023,9 +1049,9 @@
         } else {
           container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">Aucun message pour le moment</p>';
         }
-        
+
         scrollToBottom();
-        
+
       } catch (error) {
         console.error('❌ Erreur chargement messages:', error);
         showError('Erreur de chargement des messages');
@@ -1038,10 +1064,13 @@
 
     function connectSocket() {
       socket = io(API_URL);
-      
+
       socket.on('connect', () => {
         console.log('✅ Socket connecté');
-        socket.emit('join_conversation', conversationId);
+        socket.emit('join_conversation', {
+          conversationId,
+          guestToken: sessionStorage.getItem('chat_guest_token') || ''
+        });
       });
       
       socket.on('new_message', (message) => {
@@ -1086,7 +1115,7 @@
       try {
         const response = await fetch(`${API_URL}/api/chat/send`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: guestHeaders(),
           body: JSON.stringify({
             conversation_id: conversationId,
             message: message,
@@ -1095,6 +1124,10 @@
           })
         });
 
+        if (response.status === 401) {
+          clearGuestSession();
+          return;
+        }
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
           throw new Error(errorData.error || 'Erreur envoi message');
