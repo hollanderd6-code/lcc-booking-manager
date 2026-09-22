@@ -32,12 +32,12 @@ function schedulePricingRecalc(pool, propertyId, userId, opts = {}) {
 
 async function runRecalc(pool, propertyId, userId) {
   // Ne recalcule que si le pricing dynamique est ACTIF sur ce logement
+  // Config canonique : pc.user_id = p.user_id (exclut les configs delegate orphelines)
   const cfg = (await pool.query(
     `SELECT pc.*, p.name AS property_name
        FROM pricing_config pc
-       JOIN properties p ON p.id = pc.property_id
-      WHERE pc.property_id = $1 AND pc.is_active = TRUE
-      LIMIT 1`,
+       JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
+      WHERE pc.property_id = $1 AND pc.is_active = TRUE`,
     [propertyId]
   )).rows[0];
   if (!cfg) return; // pricing non activé → on ne fait rien

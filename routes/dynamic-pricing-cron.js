@@ -357,10 +357,10 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
               u.email   AS user_email,
               u.first_name AS user_first_name
        FROM pricing_config pc
+       JOIN properties  p ON p.id = pc.property_id AND p.user_id = pc.user_id
        JOIN users       u ON u.id = pc.user_id
-       JOIN properties  p ON p.id = pc.property_id
        WHERE pc.is_active = TRUE
-       ORDER BY pc.user_id, pc.created_at`
+       ORDER BY pc.created_at`
     );
     configs = result.rows;
   } catch (err) {
@@ -532,9 +532,9 @@ async function runDailyPricingRefresh(pool, sendPushNotification = null) {
     configs = (await pool.query(
       `SELECT pc.*, p.name AS property_name
          FROM pricing_config pc
-         JOIN properties p ON p.id = pc.property_id
+         JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
         WHERE pc.is_active = TRUE
-        ORDER BY pc.user_id, pc.created_at`
+        ORDER BY pc.created_at`
     )).rows;
   } catch (err) {
     console.error('❌ [DP-CRON] Configs (refresh quotidien):', err.message);
@@ -603,12 +603,13 @@ function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
 async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendPushNotification = null, force = false }) {
   const weekStart = getCurrentWeekStart();
 
+  // Sélectionner la config canonique via properties.user_id (jamais via le caller userId)
   const cfg = (await pool.query(
     `SELECT pc.*, p.name AS property_name, p.address AS property_address
        FROM pricing_config pc
-       JOIN properties p ON p.id = pc.property_id
-      WHERE pc.user_id = $1 AND pc.property_id = $2`,
-    [userId, propertyId]
+       JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
+      WHERE pc.property_id = $1`,
+    [propertyId]
   )).rows[0];
 
   if (!cfg) return { ok: false, error: 'Config pricing introuvable pour ce logement' };
