@@ -58,3 +58,4 @@ benchmark-results/*.csv
 benchmarks/runs/
 server.js.avant-hold-conversion
 server.js.avant-comptes-geres
+output/
