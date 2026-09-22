@@ -162,7 +162,11 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
         channex_property_id: prop.channex_property_id,
         channex_room_type_id: prop.channex_room_type_id,
         channex_rate_plan_id: prop.channex_rate_plan_id,
-        restrictions: result.restrictions,
+        restrictions: result.restrictions.map(r => ({
+          date: r.date,
+          min_stay_arrival: r.min_stay,
+          min_stay_through: r.min_stay,
+        })),
       });
       pushed = result.rates.length;
       console.log(`📡 [DP-APPLY] ${prop.name} : ${pushed} nuits poussées sur Channex`);
