@@ -35439,9 +35439,12 @@ async function transmitToChannex(pool, conversationId, message, messageId) {
 
     const chxResult = await sendBookingMessage(channexBookingId, message);
     const delivered = chxResult !== null;
+    const channexMsgId = chxResult?.id || chxResult?.data?.id || null;
     if (delivered) {
-      await pool.query('UPDATE messages SET delivered_at = NOW() WHERE id = $1', [messageId])
-        .catch(e => console.warn('⚠️ [transmitToChannex] delivered_at:', e.message));
+      await pool.query(
+        'UPDATE messages SET delivered_at = NOW(), channex_message_id = $2 WHERE id = $1',
+        [messageId, channexMsgId]
+      ).catch(e => console.warn('⚠️ [transmitToChannex] delivered_at/channex_message_id:', e.message));
     }
     console.log(`${delivered ? '✅' : 'ℹ️'} [CHANNEX] Conv ${conversationId} → booking ${channexBookingId} (delivered: ${delivered})`);
     return { delivered, deliveryError: null };
@@ -35680,14 +35683,14 @@ console.log('✅ Route /api/sync/ical ajoutée');
 app.get('/api/chat/conversations/:conversationId/messages', async (req, res) => {
   try {
     const { conversationId } = req.params;
-    
+
     const result = await pool.query(
-      `SELECT * FROM messages 
-       WHERE conversation_id = $1 
+      `SELECT * FROM messages
+       WHERE conversation_id = $1
        ORDER BY created_at ASC`,
       [conversationId]
     );
-    
+
     res.json({ messages: result.rows });
   } catch (error) {
     console.error('Erreur recuperation messages:', error);
@@ -42885,6 +42888,8 @@ app.post('/api/channex/webhook-message', async (req, res) => {
     const channex_booking_id = attrs.booking_id || attrs.bookingId || null;
     const messageText = attrs.message || '';
     const sender = (attrs.sender || 'guest').toLowerCase();
+    // ID Channex du message — présent dans payload.data.id (JSONAPI) ou payload.payload.id
+    const channexMsgId = payload.data?.id || payload.payload?.id || attrs.id || null;
 
     // Accepter guest, traveler, customer — rejeter host/system/auto/bot
     const isGuestMessage = !['host', 'system', 'auto', 'property', 'manager', 'bot', 'owner'].includes(sender);
@@ -42896,21 +42901,35 @@ app.post('/api/channex/webhook-message', async (req, res) => {
       return res.status(200).json({ received: true, skipped: true });
     }
 
-    // Anti-doublon : message envoyé par nous via Channex qui revient en écho
+    // Anti-doublon — priorité ID Channex, fallback texte (5 min)
+    // Couvre : echo de nos propres messages transmis via transmitToChannex (sender='host')
+    //          et echo des réponses bot (sender='guest' renvoyé par l'OTA)
     try {
-      const recentBotMsg = await pool.query(
-        `SELECT 1 FROM messages m
-         JOIN conversations c ON c.id = m.conversation_id
-         WHERE c.channex_booking_id = $1
-         AND m.sender_type IN ('system', 'bot', 'property')
-         AND m.message = $2
-         AND m.created_at > NOW() - INTERVAL '5 minutes'
-         LIMIT 1`,
-        [channex_booking_id, messageText]
-      );
-      if (recentBotMsg.rows.length > 0) {
-        console.log(`⏭️ [CHANNEX MSG] Message bot en écho ignoré — booking ${channex_booking_id}`);
-        return res.status(200).json({ received: true, skipped: 'bot_echo' });
+      if (channexMsgId) {
+        const idDup = await pool.query(
+          'SELECT 1 FROM messages WHERE channex_message_id = $1 LIMIT 1',
+          [channexMsgId]
+        );
+        if (idDup.rows.length > 0) {
+          console.log(`⏭️ [CHANNEX MSG] Message connu (id=${channexMsgId}) ignoré`);
+          return res.status(200).json({ received: true, skipped: 'known_channex_id' });
+        }
+      } else {
+        // Fallback texte : uniquement pour les messages sans id (anciens formats Channex)
+        const recentBotMsg = await pool.query(
+          `SELECT 1 FROM messages m
+           JOIN conversations c ON c.id = m.conversation_id
+           WHERE c.channex_booking_id = $1
+           AND m.sender_type IN ('system', 'bot', 'property')
+           AND m.message = $2
+           AND m.created_at > NOW() - INTERVAL '5 minutes'
+           LIMIT 1`,
+          [channex_booking_id, messageText]
+        );
+        if (recentBotMsg.rows.length > 0) {
+          console.log(`⏭️ [CHANNEX MSG] Message bot en écho (texte) ignoré — booking ${channex_booking_id}`);
+          return res.status(200).json({ received: true, skipped: 'bot_echo_text' });
+        }
       }
     } catch(e) { /* non bloquant */ }
 
@@ -43014,10 +43033,10 @@ app.post('/api/channex/webhook-message', async (req, res) => {
     // ── Réponse hôte depuis la plateforme OTA ──────────────────────────────────
     if (isHostReply) {
       const hostMsgResult = await pool.query(
-        `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
-         VALUES ($1, 'property', 'Hôte', $2, TRUE, NOW())
+        `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at, channex_message_id)
+         VALUES ($1, 'property', 'Hôte', $2, TRUE, NOW(), $3)
          RETURNING *`,
-        [conversation_id, messageText]
+        [conversation_id, messageText, channexMsgId]
       );
       const hostMsg = hostMsgResult.rows[0];
 
@@ -43038,10 +43057,10 @@ app.post('/api/channex/webhook-message', async (req, res) => {
 
     // Insérer le message dans BH
     const msgResult = await pool.query(
-      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
-       VALUES ($1, 'guest', $2, $3, FALSE, NOW())
+      `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at, channex_message_id)
+       VALUES ($1, 'guest', $2, $3, FALSE, NOW(), $4)
        RETURNING *`,
-      [conversation_id, guest_name, messageText]
+      [conversation_id, guest_name, messageText, channexMsgId]
     );
 
     const savedMsg = msgResult.rows[0];
@@ -46948,6 +46967,12 @@ pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'p
 // ── Colonne delivered_at sur messages (transmission OTA confirmée) ──
 pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ`)
   .catch(e => console.log('ℹ️ messages.delivered_at:', e.message));
+
+// ── Colonne channex_message_id sur messages (dédup webhook par id Channex) ──
+pool.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS channex_message_id TEXT`)
+  .catch(e => console.log('ℹ️ messages.channex_message_id:', e.message));
+pool.query(`CREATE INDEX IF NOT EXISTS idx_messages_channex_message_id ON messages(channex_message_id) WHERE channex_message_id IS NOT NULL`)
+  .catch(e => console.log('ℹ️ idx_messages_channex_message_id:', e.message));
 
 // ── Middleware : réserver le mode agence au plan Pro ─────────────
 async function requireProPlan(req, res, next) {
