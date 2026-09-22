@@ -21769,6 +21769,12 @@ app.delete('/api/promo/:id', authenticateToken, async (req, res) => {
 // 🔐 AUTH
 // ════════════════════════════════════════════════════════════
 
+// Génère un identifiant utilisateur unique : préfixe u_ + timestamp base-36
+// + 4 caractères aléatoires pour éviter les collisions en cas d'inscriptions simultanées.
+function generateUserId() {
+  return `u_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { company, firstName, lastName, email, password, phone, promoCode, referralCode } = req.body;
@@ -21791,7 +21797,7 @@ app.post('/api/auth/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     
     // Générer l'ID utilisateur
-    const id = `u_${Date.now().toString(36)}`;
+    const id = generateUserId();
 
     // Générer le token de vérification
     const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -21997,7 +22003,7 @@ app.post('/api/host/register', async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const id = `u_${Date.now().toString(36)}`;
+    const id = generateUserId();
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const myReferralCode = (firstName || 'HOST').toUpperCase().slice(0,6).replace(/[^A-Z]/g,'') + Math.random().toString(36).slice(2,6).toUpperCase();
@@ -47738,7 +47744,7 @@ app.post('/api/auth/social', async (req, res) => {
       const parts = fullName.split(/\s+/).filter(Boolean);
       const firstName = parts[0] || info.email.split('@')[0];
       const lastName = parts.slice(1).join(' ') || '-';
-      const id = `u_${Date.now().toString(36)}`;
+      const id = generateUserId();
       const randomPwd = await bcrypt.hash(require('crypto').randomBytes(24).toString('hex'), 10);
       const referralCode = firstName.toUpperCase().slice(0, 6).replace(/[^A-Z]/g, '') + Math.random().toString(36).slice(2, 6).toUpperCase();
 
@@ -48111,7 +48117,7 @@ app.post('/api/guest/become-host', async (req, res) => {
       const parts = String(row.name || '').trim().split(/\s+/);
       const firstName = parts[0] || 'Hôte';
       const lastName = parts.slice(1).join(' ') || '-';
-      const id = `u_${Date.now().toString(36)}`;
+      const id = generateUserId();
       const referralCode = firstName.toUpperCase().slice(0, 6).replace(/[^A-Z]/g, '') + Math.random().toString(36).slice(2, 6).toUpperCase();
 
       await pool.query(`
