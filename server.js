@@ -21775,6 +21775,40 @@ function generateUserId() {
   return `u_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
 
+/**
+ * Crée un compte BH (users + subscriptions trial) en transaction atomique.
+ * @param {import('pg').Pool} pgPool
+ * @param {object} opts
+ * @param {(client: import('pg').PoolClient) => Promise<string>} opts.insertUser
+ *   Fonction qui reçoit le client transactionnel, insère dans users et retourne l'id.
+ * @param {number}  [opts.trialDays=14]  Durée du trial en jours.
+ * @param {boolean} [opts.skipTrial]     Vrai pour les hôtes marketplace (pas de trial).
+ * @returns {Promise<string>} L'id du nouvel utilisateur.
+ */
+async function createBHAccount(pgPool, { insertUser, trialDays = 14, skipTrial = false }) {
+  const client = await pgPool.connect();
+  try {
+    await client.query('BEGIN');
+    const userId = await insertUser(client);
+    if (!skipTrial) {
+      const trialEnd = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
+      await client.query(
+        `INSERT INTO subscriptions (id, user_id, status, plan_type, plan_amount,
+           trial_start_date, trial_end_date, created_at, updated_at)
+         VALUES ($1, $2, 'trial', 'pro', 0, NOW(), $3, NOW(), NOW())`,
+        [`sub_${Date.now()}`, userId, trialEnd]
+      );
+    }
+    await client.query('COMMIT');
+    return userId;
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { company, firstName, lastName, email, password, phone, promoCode, referralCode } = req.body;
@@ -21837,52 +21871,31 @@ app.post('/api/auth/register', async (req, res) => {
       if (rr.rows.length > 0) referrerId = rr.rows[0].id;
     }
 
-    // Créer l'utilisateur
-    await pool.query(
-      `INSERT INTO users (
-        id, company, first_name, last_name, email, password_hash, 
-        created_at, stripe_account_id,
-        email_verified, verification_token, verification_token_expires,
-        referral_code, referred_by, promo_code_used, phone
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NULL, $7, $8, $9, $10, $11, $12, $13)`,
-      [id, company, firstName, lastName, email, passwordHash, false, verificationToken, tokenExpires, myReferralCode, referrerId, promoCodeUsed, String(phone).trim()]
-    );
+    // Durée du trial : promo remplace les 14j par défaut ; bonus parrainage +30j
+    const baseDays = promoDays > 0 ? promoDays : 14;
+    const referralBonus = referrerId ? 30 : 0;
+    const totalDays = baseDays + referralBonus;
 
-    // Créer l'abonnement trial
-    const existingSub = await pool.query(
-      'SELECT id FROM subscriptions WHERE user_id = $1',
-      [id]
-    );
-
-    if (existingSub.rows.length === 0) {
-      const trialStartDate = new Date();
-      // Durée du trial : promo remplace les 14j par défaut
-      const baseDays = promoDays > 0 ? promoDays : 14;
-      // Bonus parrainage : +30 jours pour le filleul
-      const referralBonus = referrerId ? 30 : 0;
-      const totalDays = baseDays + referralBonus;
-      const trialEndDate = new Date(Date.now() + totalDays * 24 * 60 * 60 * 1000);
-
-      await pool.query(
-        `INSERT INTO subscriptions (
-          id, user_id, status, plan_type, plan_amount,
-          trial_start_date, trial_end_date,
-          created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
-        [
-          `sub_${Date.now()}`,
-          id,
-          'trial',
-          'pro',
-          0,
-          trialStartDate,
-          trialEndDate
-        ]
-      );
-
-      console.log(`✅ Trial créé : ${totalDays}j (base ${baseDays}${referralBonus ? ' + 30 parrainage' : ''}${promoCodeUsed ? ' (promo ' + promoCodeUsed + ')' : ''})`);
-    }
+    // Créer l'utilisateur + la ligne subscriptions en transaction atomique
+    await createBHAccount(pool, {
+      trialDays: totalDays,
+      insertUser: async (client) => {
+        await client.query(
+          `INSERT INTO users (
+            id, company, first_name, last_name, email, password_hash,
+            created_at, stripe_account_id,
+            email_verified, verification_token, verification_token_expires,
+            referral_code, referred_by, promo_code_used, phone
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, NOW(), NULL, $7, $8, $9, $10, $11, $12, $13)`,
+          [id, company, firstName, lastName, email, passwordHash,
+           false, verificationToken, tokenExpires,
+           myReferralCode, referrerId, promoCodeUsed, String(phone).trim()]
+        );
+        return id;
+      },
+    });
+    console.log(`✅ Compte créé : ${id} — trial ${totalDays}j (base ${baseDays}${referralBonus ? ' + 30 parrainage' : ''}${promoCodeUsed ? ' (promo ' + promoCodeUsed + ')' : ''})`);
 
     // ── Enregistrer le parrainage et récompenser le parrain ──
     if (referrerId) {
@@ -47748,25 +47761,21 @@ app.post('/api/auth/social', async (req, res) => {
       const randomPwd = await bcrypt.hash(require('crypto').randomBytes(24).toString('hex'), 10);
       const referralCode = firstName.toUpperCase().slice(0, 6).replace(/[^A-Z]/g, '') + Math.random().toString(36).slice(2, 6).toUpperCase();
 
-      await pool.query(`
-        INSERT INTO users (id, company, first_name, last_name, email, password_hash,
-                           created_at, email_verified, referral_code, ${subCol}, is_external_host)
-        VALUES ($1, $2, $3, $4, $5, $6, NOW(), TRUE, $7, $8, $9)
-      `, [id, `${firstName} ${lastName}`.trim(), firstName, lastName, info.email, randomPwd, referralCode, info.sub, asHost === true]);
-
-      // Créer l'abonnement trial — uniquement pour les comptes BH standard (pas hôtes marketplace)
-      if (!asHost) {
-        const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
-        await pool.query(
-          `INSERT INTO subscriptions (id, user_id, status, plan_type, plan_amount,
-             trial_start_date, trial_end_date, created_at, updated_at)
-           VALUES ($1, $2, 'trial', 'pro', 0, NOW(), $3, NOW(), NOW())`,
-          [`sub_${Date.now()}`, id, trialEnd]
-        );
-        console.log(`✨ [SOCIAL] Nouveau compte BH via ${provider} : ${info.email} (trial 14j)`);
-      } else {
-        console.log(`✨ [SOCIAL] Nouveau compte BH via ${provider} : ${info.email} (hôte marketplace)`);
-      }
+      // Créer l'utilisateur + la ligne subscriptions en transaction atomique
+      await createBHAccount(pool, {
+        skipTrial: asHost === true,
+        insertUser: async (client) => {
+          await client.query(
+            `INSERT INTO users (id, company, first_name, last_name, email, password_hash,
+                                created_at, email_verified, referral_code, ${subCol}, is_external_host)
+             VALUES ($1, $2, $3, $4, $5, $6, NOW(), TRUE, $7, $8, $9)`,
+            [id, `${firstName} ${lastName}`.trim(), firstName, lastName,
+             info.email, randomPwd, referralCode, info.sub, asHost === true]
+          );
+          return id;
+        },
+      });
+      console.log(`✨ [SOCIAL] Nouveau compte BH via ${provider} : ${info.email}${asHost ? ' (hôte marketplace)' : ' (trial 14j)'}`);
 
       u = (await pool.query('SELECT * FROM users WHERE id = $1', [id])).rows[0];
     }
