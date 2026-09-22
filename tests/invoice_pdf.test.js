@@ -9,8 +9,8 @@ const os = require('os');
 const src = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
 
 // Find _BH_LOGO_PATH constant
-const logoConstStart = src.indexOf('const _BH_LOGO_PATH =');
-const logoConstEnd   = src.indexOf("';\n", logoConstStart) + 3;
+const logoConstStart = src.indexOf('// Monogramme BH ivoire');
+const logoConstEnd   = src.indexOf('\nasync function generateInvoicePdf(', logoConstStart);
 
 // Find generateInvoicePdf function
 const fnStart = src.indexOf('async function generateInvoicePdf(');
