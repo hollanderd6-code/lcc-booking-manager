@@ -1966,6 +1966,20 @@ async function collectHostQuestionRecipients(pool, ownerUserId) {
   return tokens;
 }
 
+// Envoie une notification push au propriétaire + ses délégués (compte agence),
+// avec déduplication des tokens. Utilisé par toutes les notifications de conversation.
+async function notifyConversationOwners(pool, conversation, title, body, data) {
+  try {
+    const { sendNotification } = require('./services/notifications-service');
+    const tokens = await collectHostQuestionRecipients(pool, conversation.user_id);
+    for (const tok of tokens) {
+      await sendNotification(tok, title, body, data);
+    }
+  } catch (e) {
+    console.error('❌ [NOTIF] notifyConversationOwners:', e.message);
+  }
+}
+
 // Crée une question en attente + notifie l'hôte. Met l'IA en pause sur la conv
 // le temps de la réponse (réutilise le mécanisme d'escalade existant).
 async function createHostQuestion(conversation, pool, io, { question, guestMessage, language, kind, meta, triggerMessageId = null }) {
