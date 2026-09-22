@@ -32,6 +32,8 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capgo/capacitor-social-login": "^8.3.38",
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/manrope": "^5.3.0",
     "@getbrevo/brevo": "^2.0.0",
     "axios": "^1.13.6",
     "bcrypt": "^6.0.0",

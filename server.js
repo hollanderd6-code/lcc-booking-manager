@@ -26870,159 +26870,225 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
   const emitterEmail = ownerInfo?.email       || data.emitterEmail      || user?.invoice_email || user?.email || '';
   const emitterSiret = ownerInfo?.siret       || data.emitterSiret      || user?.siret       || '';
 
+  // Format montant en français : 1 234,56 €
+  const fmtEur = (n) => {
+    const v = Number(n || 0).toFixed(2).replace('.', ',');
+    const [int, dec] = v.split(',');
+    const intFmt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return `${intFmt},${dec} €`;
+  };
+
+  const platformLabels = {
+    airbnb: 'Airbnb', booking: 'Booking.com', bookingcom: 'Booking.com',
+    direct: 'Réservation directe', guest_app: 'BHGuest', bhguest: 'BHGuest',
+    abritel: 'Abritel / VRBO', vrbo: 'VRBO', expedia: 'Expedia', hotels: 'Hotels.com',
+    gites: 'Gîtes de France'
+  };
+
+  const FONT_DIR = path.join(__dirname, 'fonts');
+  const FONTSOURCE_DIR = path.join(__dirname, 'node_modules/@fontsource/manrope/files');
+  const F_CG_REG  = path.join(FONT_DIR, 'CormorantGaramond-Regular.ttf');
+  const F_CG_BOLD = path.join(FONT_DIR, 'CormorantGaramond-Bold.ttf');
+  const F_CG_IT   = path.join(FONT_DIR, 'CormorantGaramond-Italic.ttf');
+  const F_MN_REG  = path.join(FONTSOURCE_DIR, 'manrope-latin-400-normal.woff');
+  const F_MN_SB   = path.join(FONTSOURCE_DIR, 'manrope-latin-600-normal.woff');
+  const F_MN_BOLD = path.join(FONTSOURCE_DIR, 'manrope-latin-700-normal.woff');
+
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 0 });
     const stream = fs.createWriteStream(outputPath);
     doc.pipe(stream);
 
-    const W = 595, H = 842, mg = 50;
-    const GREEN = '#1A7A5E', DARK = '#111827', GRAY = '#6B7280';
-    const LIGHT = '#F3F4F6', BORDER = '#E5E7EB';
+    doc.registerFont('CG-Regular', F_CG_REG);
+    doc.registerFont('CG-Bold',    F_CG_BOLD);
+    doc.registerFont('CG-Italic',  F_CG_IT);
+    doc.registerFont('MN-Regular', F_MN_REG);
+    doc.registerFont('MN-SemiBold',F_MN_SB);
+    doc.registerFont('MN-Bold',    F_MN_BOLD);
 
-    // Bande verte haut
-    doc.rect(0, 0, W, 8).fill(GREEN);
+    const W = 595, H = 842;
+    const mg = 48;
+    // Maison Vert palette
+    const BOTTLE  = '#0E3B2E'; // aplats, bandeau
+    const ACCENT  = '#1E6E52'; // titres section, accents
+    const IVORY   = '#F2EADA'; // fonds doux
+    const BODY    = '#1C1F1D'; // texte courant
+    const MUTED   = '#6B6F6A'; // labels secondaires
+    const BORDER  = '#D9D2C5'; // séparateurs ivoire foncé
 
-    // Nom émetteur
-    let y = 32;
-    doc.font('Helvetica-Bold').fontSize(20).fillColor(DARK).text(emitterName, mg, y, { width: 310 });
-    y += 28;
-    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
-    if (emitterAddr)  { doc.text(emitterAddr, mg, y);  y += 13; }
-    if (emitterCP || emitterCity) { doc.text(`${emitterCP} ${emitterCity}`.trim(), mg, y); y += 13; }
-    if (emitterEmail) { doc.text(emitterEmail, mg, y); y += 13; }
-    if (emitterSiret) { doc.text(`SIRET : ${emitterSiret}`, mg, y); y += 13; }
+    // ── Bandeau émetteur (haut) ─────────────────────────────────────────────────
+    const HEADER_H = 110;
+    doc.rect(0, 0, W, HEADER_H).fill(BOTTLE);
 
-    // Bloc FACTURE droite
-    const bx = W - mg - 185, by = 28;
-    doc.rect(bx, by, 185, 90).fill(LIGHT);
-    doc.font('Helvetica-Bold').fontSize(20).fillColor(GREEN).text('FACTURE', bx+14, by+10);
-    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text(`N° ${invoiceNumber}`, bx+14, by+38);
-    doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(`Date : ${new Date().toLocaleDateString('fr-FR')}`, bx+14, by+54);
+    // Nom émetteur — Cormorant Garamond Bold, grand
+    doc.font('CG-Bold').fontSize(28).fillColor('#FFFFFF').text(emitterName, mg, 24, { width: 340 });
+    let yH = 24 + doc.heightOfString(emitterName, { font: 'CG-Bold', fontSize: 28, width: 340 }) + 6;
+
+    doc.font('MN-Regular').fontSize(8.5).fillColor('rgba(255,255,255,0.72)');
+    const emitterLines = [
+      emitterAddr,
+      [emitterCP, emitterCity].filter(Boolean).join(' '),
+      emitterEmail,
+      emitterSiret ? `SIRET : ${emitterSiret}` : ''
+    ].filter(Boolean);
+    for (const line of emitterLines) {
+      if (yH > HEADER_H - 10) break;
+      doc.text(line, mg, yH, { width: 320 }); yH += 13;
+    }
+
+    // Bloc FACTURE — coin supérieur droit, fond ivoire
+    const BX = W - mg - 168, BY = 18, BW = 168, BH = 88;
+    doc.rect(BX, BY, BW, BH).fill(IVORY);
+    doc.font('CG-Bold').fontSize(22).fillColor(ACCENT).text('Facture', BX + 14, BY + 10);
+    doc.font('MN-SemiBold').fontSize(9.5).fillColor(BODY).text(`N° ${invoiceNumber}`, BX + 14, BY + 38);
+    doc.font('MN-Regular').fontSize(8.5).fillColor(MUTED)
+       .text(`Émise le : ${new Date().toLocaleDateString('fr-FR')}`, BX + 14, BY + 54);
     if (checkinDate && checkoutDate) {
       const ci = new Date(checkinDate).toLocaleDateString('fr-FR');
       const co = new Date(checkoutDate).toLocaleDateString('fr-FR');
-      doc.text(`Du ${ci} au ${co}`, bx+14, by+68);
-      doc.text(`${nights} nuit${nights>1?'s':''}`, bx+14, by+81);
+      doc.text(`${ci} au ${co}`, BX + 14, BY + 67);
+      doc.font('MN-SemiBold').fontSize(8).fillColor(ACCENT)
+         .text(`${nights} nuit${nights > 1 ? 's' : ''}`, BX + 14, BY + 78);
     }
 
-    // Séparateur
-    y = 142;
-    doc.rect(mg, y, W-mg*2, 1).fill(BORDER);
-    y += 18;
+    // ── Zone blanche principale ─────────────────────────────────────────────────
+    let y = HEADER_H + 22;
 
-    // Deux colonnes
-    const colW = (W - mg*2 - 24) / 2;
-    const col2 = mg + colW + 24;
+    // ── Parties (émetteur / client) — deux colonnes ────────────────────────────
+    const colW = (W - mg * 2 - 20) / 2;
+    const col2 = mg + colW + 20;
 
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN);
-    doc.text('ÉMIS PAR', mg, y);
-    doc.text('FACTURÉ À', col2, y);
-    y += 14;
+    // Labels section
+    doc.font('MN-Bold').fontSize(7).fillColor(ACCENT)
+       .text('ÉMETTEUR', mg, y)
+       .text('DESTINATAIRE', col2, y);
+    y += 13;
 
-    // ── Colonne gauche (émetteur) ──
+    // Filet ivoire sous les labels
+    doc.rect(mg, y, W - mg * 2, 0.75).fill(BORDER);
+    y += 10;
+
+    // Colonne gauche
     let yL = y;
-    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK);
-    doc.text(emitterName, mg, yL, { width: colW });
-    yL += doc.heightOfString(emitterName, { width: colW }) + 5;
-    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
+    doc.font('CG-Bold').fontSize(14).fillColor(BODY).text(emitterName, mg, yL, { width: colW });
+    yL += doc.heightOfString(emitterName, { font: 'CG-Bold', fontSize: 14, width: colW }) + 5;
+    doc.font('MN-Regular').fontSize(8.5).fillColor(MUTED);
     if (emitterAddr)            { doc.text(emitterAddr, mg, yL, { width: colW }); yL += 13; }
-    if (emitterCP||emitterCity) { doc.text(`${emitterCP} ${emitterCity}`.trim(), mg, yL); yL += 13; }
+    if (emitterCP || emitterCity){ doc.text([emitterCP, emitterCity].filter(Boolean).join(' '), mg, yL); yL += 13; }
     if (emitterEmail)           { doc.text(emitterEmail, mg, yL); yL += 13; }
+    if (emitterSiret)           { doc.text(`SIRET : ${emitterSiret}`, mg, yL); yL += 13; }
 
-    // ── Colonne droite (client) ──
+    // Colonne droite
     let yR = y;
-    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK);
-    if (clientCompany) {
-      doc.text(clientCompany, col2, yR, { width: colW });
-      yR += doc.heightOfString(clientCompany, { width: colW }) + 5;
-      doc.font('Helvetica').fontSize(9).fillColor(GRAY);
-      doc.text(clientName, col2, yR, { width: colW }); yR += 13;
-    } else {
-      doc.text(clientName, col2, yR, { width: colW });
-      yR += doc.heightOfString(clientName, { width: colW }) + 5;
+    const clientDisplay = clientCompany || clientName;
+    doc.font('CG-Bold').fontSize(14).fillColor(BODY).text(clientDisplay, col2, yR, { width: colW });
+    yR += doc.heightOfString(clientDisplay, { font: 'CG-Bold', fontSize: 14, width: colW }) + 5;
+    if (clientCompany && clientName) {
+      doc.font('MN-Regular').fontSize(8.5).fillColor(MUTED).text(clientName, col2, yR, { width: colW }); yR += 13;
     }
-    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
-    if (clientAddress)    { doc.text(clientAddress, col2, yR, { width: colW }); yR += 13; }
-    const cpCity = `${clientPostalCode||''} ${clientCity||''}`.trim();
-    if (cpCity)           { doc.text(cpCity, col2, yR); yR += 13; }
-    if (clientNationality){ doc.text(`Nationalité : ${clientNationality}`, col2, yR); yR += 13; }
-    if (clientEmail)      { doc.text(clientEmail, col2, yR); yR += 13; }
-    if (clientSiret)      { doc.text(`N° fiscal : ${clientSiret}`, col2, yR); yR += 13; }
-    if (freeNote)         { doc.font('Helvetica-Oblique').text(freeNote, col2, yR, { width: colW }); yR += 13; doc.font('Helvetica'); }
+    doc.font('MN-Regular').fontSize(8.5).fillColor(MUTED);
+    if (clientAddress)     { doc.text(clientAddress, col2, yR, { width: colW }); yR += 13; }
+    const cpCity = [clientPostalCode, clientCity].filter(Boolean).join(' ');
+    if (cpCity)            { doc.text(cpCity, col2, yR); yR += 13; }
+    if (clientNationality) { doc.text(`Nationalité : ${clientNationality}`, col2, yR); yR += 13; }
+    if (clientEmail)       { doc.text(clientEmail, col2, yR); yR += 13; }
+    if (clientSiret)       { doc.text(`N° fiscal : ${clientSiret}`, col2, yR); yR += 13; }
+    if (freeNote)          { doc.font('CG-Italic').fontSize(9).text(freeNote, col2, yR, { width: colW }); yR += 13; }
 
-    y = Math.max(yL, yR) + 22;
+    y = Math.max(yL, yR) + 20;
 
-    // Logement
-    doc.rect(mg, y, W-mg*2, 1).fill(BORDER);
-    y += 14;
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN).text('LOGEMENT', mg, y);
-    y += 14;
-    doc.font('Helvetica-Bold').fontSize(11).fillColor(DARK).text(propertyName, mg, y);
-    y += 15;
-    doc.font('Helvetica').fontSize(9).fillColor(GRAY);
-    if (propertyAddress) { doc.text(propertyAddress, mg, y); y += 13; }
+    // ── Séjour ──────────────────────────────────────────────────────────────────
+    doc.rect(mg, y, W - mg * 2, 0.75).fill(BORDER); y += 12;
+    doc.font('MN-Bold').fontSize(7).fillColor(ACCENT).text('SÉJOUR', mg, y); y += 13;
+
+    // Fond ivoire léger pour la ligne séjour
+    const stayLineH = 34;
+    doc.rect(mg, y, W - mg * 2, stayLineH).fill(IVORY);
+    doc.font('CG-Bold').fontSize(13).fillColor(BODY).text(propertyName, mg + 12, y + 8, { width: 300 });
+    if (propertyAddress) {
+      doc.font('MN-Regular').fontSize(8.5).fillColor(MUTED).text(propertyAddress, mg + 12, y + 23, { width: 300 });
+    }
+    // Dates + durée sur la droite
     if (checkinDate && checkoutDate) {
       const ci = new Date(checkinDate).toLocaleDateString('fr-FR');
       const co = new Date(checkoutDate).toLocaleDateString('fr-FR');
-      doc.text(`Séjour du ${ci} au ${co} · ${nights} nuit${nights>1?'s':''}`, mg, y); y += 13;
+      doc.font('MN-SemiBold').fontSize(9).fillColor(ACCENT)
+         .text(`${ci} au ${co}`, mg + 12, y + 8, { width: W - mg * 2 - 24, align: 'right' });
+      doc.font('MN-Regular').fontSize(8.5).fillColor(MUTED)
+         .text(`${nights} nuit${nights > 1 ? 's' : ''}`, mg + 12, y + 23, { width: W - mg * 2 - 24, align: 'right' });
     }
-    if (platform) {
-      const platformLabels = {
-        airbnb: 'Airbnb', booking: 'Booking.com', bookingcom: 'Booking.com',
-        direct: 'Réservation directe', guest_app: 'BHGuest', bhguest: 'BHGuest',
-        abritel: 'Abritel / VRBO', vrbo: 'VRBO', expedia: 'Expedia', hotels: 'Hotels.com',
-        gites: 'Gîtes de France'
-      };
-      const pLabel = platformLabels[platform.toLowerCase()] || platform;
-      doc.text(`Plateforme : ${pLabel}`, mg, y); y += 13;
-    }
-    y += 18;
+    y += stayLineH + 4;
 
-    // Tableau header
-    doc.rect(mg, y, W-mg*2, 28).fill(GREEN);
-    doc.font('Helvetica-Bold').fontSize(9).fillColor('white')
-       .text('DESCRIPTION', mg+12, y+9, { width: 300 })
-       .text('MONTANT', W-mg-90, y+9, { width: 78, align: 'right' });
-    y += 28;
+    if (platform) {
+      const pLabel = platformLabels[platform.toLowerCase()] || platform;
+      doc.font('MN-Regular').fontSize(8).fillColor(MUTED).text(`Plateforme : ${pLabel}`, mg, y); y += 13;
+    }
+    y += 16;
+
+    // ── Tableau détail ──────────────────────────────────────────────────────────
+    doc.rect(mg, y, W - mg * 2, 0.75).fill(BORDER); y += 12;
+    doc.font('MN-Bold').fontSize(7).fillColor(ACCENT).text('DÉTAIL', mg, y); y += 12;
+
+    // En-tête tableau
+    const ROW_H = 30;
+    doc.rect(mg, y, W - mg * 2, ROW_H).fill(BOTTLE);
+    doc.font('MN-Bold').fontSize(8.5).fillColor('#FFFFFF')
+       .text('PRESTATION', mg + 14, y + 10, { width: 280 })
+       .text('MONTANT', W - mg - 90, y + 10, { width: 78, align: 'right' });
+    y += ROW_H;
 
     let alt = false;
     const addRow = (label, amount) => {
-      if (parseFloat(amount||0) <= 0) return;
-      if (alt) doc.rect(mg, y, W-mg*2, 26).fill('#F9FAFB');
-      doc.font('Helvetica').fontSize(10).fillColor(DARK).text(label, mg+12, y+7, { width: 300 });
-      doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK).text(`${Number(amount).toFixed(2)} €`, W-mg-90, y+7, { width: 78, align: 'right' });
-      doc.rect(mg, y+26, W-mg*2, 0.5).fill(BORDER);
-      y += 26; alt = !alt;
+      if (parseFloat(amount || 0) <= 0) return;
+      if (alt) doc.rect(mg, y, W - mg * 2, ROW_H).fill(IVORY);
+      doc.font('MN-Regular').fontSize(9.5).fillColor(BODY)
+         .text(label, mg + 14, y + 9, { width: 280 });
+      doc.font('MN-SemiBold').fontSize(9.5).fillColor(BODY)
+         .text(fmtEur(amount), W - mg - 90, y + 9, { width: 78, align: 'right' });
+      doc.rect(mg, y + ROW_H, W - mg * 2, 0.5).fill(BORDER);
+      y += ROW_H; alt = !alt;
     };
-    addRow(`Séjour${nights ? ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')' : ''}`, rentAmount);
+    addRow(`Séjour${nights ? ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')' : ''}`, rentAmount);
     addRow('Taxe de séjour', touristTaxAmount);
     addRow('Frais de ménage', cleaningFee);
-    y += 18;
+    y += 20;
 
-    // Totaux
-    const totW = 220, totX = W - mg - totW;
-    doc.rect(totX, y, totW, 0.5).fill(GREEN); y += 8;
-    doc.font('Helvetica').fontSize(9).fillColor(GRAY)
-       .text('Sous-total HT', totX, y, { width: 120 })
-       .text(`${subtotal.toFixed(2)} €`, totX+120, y, { width: 88, align: 'right' });
+    // ── Totaux ──────────────────────────────────────────────────────────────────
+    const totW = 230, totX = W - mg - totW;
+    doc.font('MN-Regular').fontSize(9).fillColor(MUTED)
+       .text('Sous-total HT', totX, y, { width: 130 })
+       .text(fmtEur(subtotal), totX + 130, y, { width: 88, align: 'right' });
     y += 16;
     if (vatAmount > 0) {
-      doc.text(`TVA (${vatRate}%)`, totX, y, { width: 120 })
-         .text(`${vatAmount.toFixed(2)} €`, totX+120, y, { width: 88, align: 'right' });
+      doc.text(`TVA (${vatRate} %)`, totX, y, { width: 130 })
+         .text(fmtEur(vatAmount), totX + 130, y, { width: 88, align: 'right' });
       y += 16;
     }
-    doc.rect(totX, y, totW, 0.5).fill(GREEN); y += 6;
-    doc.rect(totX, y, totW, 36).fill(GREEN);
-    doc.font('Helvetica-Bold').fontSize(13).fillColor('white')
-       .text('TOTAL TTC', totX+12, y+10, { width: 108 })
-       .text(`${total.toFixed(2)} €`, totX+120, y+10, { width: 88, align: 'right' });
+    // Ligne accent
+    doc.rect(totX, y, totW, 1).fill(ACCENT); y += 6;
+    // Bande total
+    doc.rect(totX, y, totW, 38).fill(BOTTLE);
+    doc.font('CG-Bold').fontSize(16).fillColor('#FFFFFF')
+       .text('Total TTC', totX + 14, y + 10, { width: 120 });
+    doc.font('MN-Bold').fontSize(16).fillColor('#FFFFFF')
+       .text(fmtEur(total), totX + 14, y + 10, { width: totW - 28, align: 'right' });
+    y += 38;
 
-    // Pied de page
-    doc.rect(0, H-44, W, 44).fill(GREEN);
-    doc.font('Helvetica').fontSize(8).fillColor('rgba(255,255,255,0.7)')
-       .text('Facture générée grâce à', mg, H-34, { width: W-mg*2, align: 'center' });
-    doc.font('Helvetica-Bold').fontSize(10).fillColor('white')
-       .text('Boostinghost.fr', mg, H-22, { width: W-mg*2, align: 'center' });
+    // Mention TVA si exonéré
+    if (!vatRate || parseFloat(vatRate) === 0) {
+      y += 8;
+      doc.font('MN-Regular').fontSize(7.5).fillColor(MUTED)
+         .text('TVA non applicable, art. 293 B du CGI', totX, y);
+    }
+
+    // ── Pied de page ────────────────────────────────────────────────────────────
+    const FOOTER_H = 36;
+    doc.rect(0, H - FOOTER_H, W, FOOTER_H).fill(BOTTLE);
+    doc.font('MN-Regular').fontSize(7.5).fillColor('rgba(255,255,255,0.55)')
+       .text('Document généré via', mg, H - FOOTER_H + 10, { continued: true })
+       .font('MN-SemiBold').fillColor('rgba(255,255,255,0.88)').text(' Boostinghost.fr', { continued: false });
+    doc.font('MN-Regular').fontSize(7.5).fillColor('rgba(255,255,255,0.45)')
+       .text('boostinghost.fr', 0, H - FOOTER_H + 10, { width: W - mg, align: 'right' });
 
     doc.end();
     stream.on('finish', resolve);
