@@ -47703,7 +47703,7 @@ app.post('/api/auth/social', async (req, res) => {
       const parts = fullName.split(/\s+/).filter(Boolean);
       const firstName = parts[0] || info.email.split('@')[0];
       const lastName = parts.slice(1).join(' ') || '-';
-      const id = `u_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+      const id = `u_${Date.now().toString(36)}`;
       const randomPwd = await bcrypt.hash(require('crypto').randomBytes(24).toString('hex'), 10);
       const referralCode = firstName.toUpperCase().slice(0, 6).replace(/[^A-Z]/g, '') + Math.random().toString(36).slice(2, 6).toUpperCase();
 
@@ -47713,8 +47713,21 @@ app.post('/api/auth/social', async (req, res) => {
         VALUES ($1, $2, $3, $4, $5, $6, NOW(), TRUE, $7, $8, $9)
       `, [id, `${firstName} ${lastName}`.trim(), firstName, lastName, info.email, randomPwd, referralCode, info.sub, asHost === true]);
 
+      // Créer l'abonnement trial — uniquement pour les comptes BH standard (pas hôtes marketplace)
+      if (!asHost) {
+        const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        await pool.query(
+          `INSERT INTO subscriptions (id, user_id, status, plan_type, plan_amount,
+             trial_start_date, trial_end_date, created_at, updated_at)
+           VALUES ($1, $2, 'trial', 'pro', 0, NOW(), $3, NOW(), NOW())`,
+          [`sub_${Date.now()}`, id, trialEnd]
+        );
+        console.log(`✨ [SOCIAL] Nouveau compte BH via ${provider} : ${info.email} (trial 14j)`);
+      } else {
+        console.log(`✨ [SOCIAL] Nouveau compte BH via ${provider} : ${info.email} (hôte marketplace)`);
+      }
+
       u = (await pool.query('SELECT * FROM users WHERE id = $1', [id])).rows[0];
-      console.log(`✨ [SOCIAL] Nouveau compte BH via ${provider} : ${info.email}`);
     }
 
     const token = generateToken({
