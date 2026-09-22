@@ -26861,6 +26861,52 @@ app.post('/api/owner-invoices/:id/credit-note',
 // FONCTION GLOBALE - Génération PDF facture
 // ============================================
 
+// Résout le propriétaire (émetteur) d'une facture de séjour.
+// Priorité : id du logement (stable) > nom du logement (fragile) > ownerId hint.
+async function loadOwnerInfoForInvoice(pool, { propertyId, propertyName, propertyAddress, userId, ownerIdHint } = {}) {
+  if (!userId) return null;
+
+  // 1. Via properties.id (le plus fiable)
+  if (propertyId) {
+    try {
+      const r = await pool.query(
+        `SELECT oc.* FROM properties p
+         JOIN owner_clients oc ON oc.id::text = REGEXP_REPLACE(p.owner_id, '^agency_client_', '')
+         WHERE p.id = $1 AND p.user_id = $2`,
+        [propertyId, userId]
+      );
+      if (r.rowCount) return r.rows[0];
+    } catch(e) { console.warn('⚠️ [INVOICE] ownerInfo by propertyId:', e.message); }
+  }
+
+  // 2. Via properties.name (repli si propertyId absent)
+  if (propertyName) {
+    try {
+      const r = await pool.query(
+        `SELECT oc.* FROM properties p
+         JOIN owner_clients oc ON oc.id::text = REGEXP_REPLACE(p.owner_id, '^agency_client_', '')
+         WHERE p.name = $1 AND p.user_id = $2
+         ORDER BY (p.address = $3) DESC LIMIT 1`,
+        [propertyName, userId, propertyAddress || null]
+      );
+      if (r.rowCount) return r.rows[0];
+    } catch(e) { console.warn('⚠️ [INVOICE] ownerInfo by propertyName:', e.message); }
+  }
+
+  // 3. Via ownerId explicite stocké dans les métadonnées (dernier recours)
+  if (ownerIdHint) {
+    try {
+      const r = await pool.query(
+        'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
+        [resolveOwnerClientId(ownerIdHint), userId]
+      );
+      if (r.rowCount) return r.rows[0];
+    } catch(e) { console.warn('⚠️ [INVOICE] ownerInfo by ownerIdHint:', e.message); }
+  }
+
+  return null;
+}
+
 // Monogramme BH ivoire (source : Boostinghost-ios/Assets.xcassets AppIcon 1024×1024,
 // détouré fond vert → PNG transparent, recadré aux lettres)
 const _BH_LOGO_IMG = path.join(__dirname, 'assets', 'brand', 'bh-monogram-ivory.png');
@@ -27201,12 +27247,14 @@ app.post('/api/invoice/resend',
     const user = profileResult.rows[0];
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    // Récupérer owner si dispo
-    let ownerInfo = null;
-    if (meta.ownerId) {
-      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [resolveOwnerClientId(meta.ownerId), ownerUserId]);
-      if (ownerRes.rows.length > 0) ownerInfo = ownerRes.rows[0];
-    }
+    // Résoudre l'émetteur via loadOwnerInfoForInvoice (priorité propertyId > propertyName > ownerId)
+    const ownerInfo = await loadOwnerInfoForInvoice(pool, {
+      propertyId:      meta.propertyId      || null,
+      propertyName:    meta.propertyName    || null,
+      propertyAddress: meta.propertyAddress || null,
+      userId:          ownerUserId,
+      ownerIdHint:     meta.ownerId         || null
+    });
 
     // Régénérer le PDF
     const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_resend.pdf`);
@@ -27279,12 +27327,14 @@ app.post('/api/invoice/generate-pdf',
     const data = req.body;
     const invoiceNumber = data.invoiceNumber || 'FACT-XXX';
 
-    // Récupérer ownerInfo si ownerId fourni
-    let ownerInfo = null;
-    if (data.ownerId) {
-      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [resolveOwnerClientId(data.ownerId), userId]);
-      if (ownerRes.rows.length > 0) ownerInfo = ownerRes.rows[0];
-    }
+    // Résoudre l'émetteur via loadOwnerInfoForInvoice
+    const ownerInfo = await loadOwnerInfoForInvoice(pool, {
+      propertyId:      data.propertyId      || null,
+      propertyName:    data.propertyName    || null,
+      propertyAddress: data.propertyAddress || null,
+      userId,
+      ownerIdHint:     data.ownerId         || null
+    });
 
     const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_direct.pdf`);
     await generateInvoicePdf(pdfPath, data, user, ownerInfo);
@@ -27348,11 +27398,13 @@ app.get('/api/invoice/download-by-number/:invoiceNumber',
     const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [ownerUserId]);
     const user = profileResult.rows[0];
 
-    let ownerInfo = null;
-    if (meta.ownerId) {
-      const ownerRes = await pool.query('SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2', [resolveOwnerClientId(meta.ownerId), ownerUserId]);
-      if (ownerRes.rows.length > 0) ownerInfo = ownerRes.rows[0];
-    }
+    const ownerInfo = await loadOwnerInfoForInvoice(pool, {
+      propertyId:      meta.propertyId      || null,
+      propertyName:    meta.propertyName    || null,
+      propertyAddress: meta.propertyAddress || null,
+      userId:          ownerUserId,
+      ownerIdHint:     meta.ownerId         || null
+    });
 
     const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_dl.pdf`);
     await generateInvoicePdf(pdfPath, meta, user, ownerInfo);
@@ -27647,6 +27699,7 @@ app.post('/api/invoice/create',
     // indépendamment du compte de l'opérateur qui déclenche la facture.
     let billingUserId = userId;
     let ownerInfo = null;
+    let _resolvedPropertyId = null;
     try {
       const delg = await pool.query(
         `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
@@ -27654,21 +27707,18 @@ app.post('/api/invoice/create',
       ).catch(() => ({ rows: [] }));
       const candidateIds = [userId, ...delg.rows.map(d => d.delegator_user_id)];
       const propResult = await pool.query(
-        `SELECT user_id, owner_id FROM properties
+        `SELECT id, user_id, owner_id FROM properties
          WHERE name = $1 AND user_id = ANY($2::text[])
          ORDER BY (owner_id IS NOT NULL) DESC LIMIT 1`,
         [propertyName, candidateIds]
       );
       if (propResult.rows[0]) {
         billingUserId = propResult.rows[0].user_id || userId;
-        const ownerId = propResult.rows[0].owner_id;
-        if (ownerId) {
-          const ownerResult = await pool.query(
-            'SELECT * FROM owner_clients WHERE id = $1 AND user_id = $2',
-            [resolveOwnerClientId(ownerId), billingUserId]
-          );
-          ownerInfo = ownerResult.rows[0] || null;
-        }
+        _resolvedPropertyId = propResult.rows[0].id || null;
+        ownerInfo = await loadOwnerInfoForInvoice(pool, {
+          propertyId: _resolvedPropertyId,
+          userId: billingUserId,
+        });
       }
     } catch(e) {
       console.error('Erreur résolution propriétaire (mode agence):', e.message);
@@ -27782,7 +27832,8 @@ app.post('/api/invoice/create',
           total: _total,
           invoiceNumber: invoiceNumber,
           reservationUid: reservationUid || null,
-          conversationId: linkedConvId || null
+          conversationId: linkedConvId || null,
+          propertyId: _resolvedPropertyId || null
         });
         await pool.query(
           `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at) VALUES ($1, $2, $3, $4, $5)`,
@@ -28113,7 +28164,8 @@ async function buildAndSendInvoiceToConversation({ pool, io, userId, agencyIds, 
       nights, rentAmount, touristTaxAmount: touristTax, cleaningFee, vatRate: 0,
       invoiceNumber: num,
       conversationId: conversation.id,
-      reservationUid: reservation?.uid || null
+      reservationUid: reservation?.uid || null,
+      propertyId: conversation.property_id || null
     });
 
     if (!invoiceNumber) {
@@ -28418,22 +28470,14 @@ app.get('/api/invoice/download/:token', async (req, res) => {
     const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [row.user_id]);
     const user = profileResult.rows[0];
 
-    // Résoudre le propriétaire/société du logement → émetteur correct
-    // (sinon le PDF retombe sur "Ma Conciergerie" / l'email du compte)
-    let ownerInfo = null;
-    try {
-      if (meta.propertyName) {
-        const ocq = await pool.query(
-          `SELECT oc.* FROM properties p
-           JOIN owner_clients oc ON oc.id = REGEXP_REPLACE(p.owner_id, '^agency_client_', '')
-           WHERE p.name = $1 AND p.user_id = $2
-           ORDER BY (p.address = $3) DESC
-           LIMIT 1`,
-          [meta.propertyName, row.user_id, meta.propertyAddress || null]
-        );
-        if (ocq.rowCount) ownerInfo = ocq.rows[0];
-      }
-    } catch(e) { console.warn('⚠️ ownerInfo (download invoice):', e.message); }
+    // Résoudre l'émetteur via loadOwnerInfoForInvoice (priorité propertyId > propertyName > ownerId)
+    const ownerInfo = await loadOwnerInfoForInvoice(pool, {
+      propertyId:      meta.propertyId      || null,
+      propertyName:    meta.propertyName    || null,
+      propertyAddress: meta.propertyAddress || null,
+      userId:          row.user_id,
+      ownerIdHint:     meta.ownerId         || null
+    }).catch(e => { console.warn('⚠️ ownerInfo (download invoice):', e.message); return null; });
 
     const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_pub_${token.slice(0,8)}.pdf`);
     await generateInvoicePdf(pdfPath, meta, user, ownerInfo);
@@ -35125,7 +35169,8 @@ async function runInvoiceQueue(mode) {
               touristTaxAmount: parseFloat(touristTax),
               cleaningFee: parseFloat(cleaningFee),
               vatRate: 0,
-              invoiceNumber
+              invoiceNumber,
+              propertyId: req.property_id || null
             });
             await cronClient.query(
               `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at)
