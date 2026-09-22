@@ -35547,6 +35547,13 @@ app.post('/api/save-token', authenticateAny, async (req, res) => {
           [token, userId, deviceId]
         );
 
+        // Si ce device_id appartenait à un autre compte (changement de connexion),
+        // nettoyer l'ancienne entrée pour éviter les notifications fantômes.
+        await pool.query(
+          `DELETE FROM user_fcm_tokens WHERE device_id = $1 AND user_id IS DISTINCT FROM $2`,
+          [deviceId, userId]
+        );
+
         // Upsert sur (user_id, device_id) → un seul enregistrement par appareil
         await pool.query(
           `INSERT INTO user_fcm_tokens (user_id, fcm_token, device_type, device_id, created_at, updated_at)
