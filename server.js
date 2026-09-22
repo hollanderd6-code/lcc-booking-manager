@@ -26936,13 +26936,16 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
   const emitterEmail = ownerInfo?.email       || data.emitterEmail      || user?.invoice_email || user?.email || '';
   const emitterSiret = ownerInfo?.siret       || data.emitterSiret      || user?.siret       || '';
 
-  // Format montant en français : 1 234,56 €
-  const fmtEur = (n) => {
-    const v = Number(n || 0).toFixed(2).replace('.', ',');
-    const [int, dec] = v.split(',');
-    const intFmt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    return `${intFmt},${dec} €`;
-  };
+  // Format montant — toLocaleString fr-FR peut produire U+202F (espace fine insécable)
+  // absent de Manrope woff → carré dans le PDF. On remplace par U+0020 ordinaire.
+  const formatEuro = (n) => Number(n || 0)
+    .toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    .replace(/[\u202F\u00A0]/g, ' ') + ' €';
+
+  // Format date — même sanitisation pour cohérence
+  const fmtDate = (d) => (d instanceof Date ? d : new Date(d))
+    .toLocaleDateString('fr-FR')
+    .replace(/[\u202F\u00A0]/g, ' ');
 
   const platformLabels = {
     airbnb: 'Airbnb', booking: 'Booking.com', bookingcom: 'Booking.com',
@@ -27015,18 +27018,26 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     }
 
     // Bloc FACTURE — coin supérieur droit, fond ivoire
-    const BX = W - mg - 168, BY = 18, BW = 168, BH = 88;
+    // Hauteur dynamique selon présence des dates ; centré verticalement dans le bandeau.
+    const BW = 168, BX = W - mg - BW, BPadX = 14, BPadY = 10;
+    const _hasDates = !!(checkinDate && checkoutDate);
+    // Hauteur contenu : CG-Bold 22→height 28, MN-SB 9.5→1igne 16, MN-Reg 8.5→13, MN-SB 8→10
+    const _contentSpan = _hasDates ? 78 : 54;
+    const BH = _contentSpan + BPadY * 2;
+    const BY = Math.round((HEADER_H - BH) / 2);
     doc.rect(BX, BY, BW, BH).fill(IVORY);
-    doc.font('CG-Bold').fontSize(22).fillColor(ACCENT).text('Facture', BX + 14, BY + 10);
-    doc.font('MN-SemiBold').fontSize(9.5).fillColor(BODY).text(`N° ${invoiceNumber}`, BX + 14, BY + 38);
+    const _bBase = BY + BPadY;
+    doc.font('CG-Bold').fontSize(22).fillColor(ACCENT).text('Facture', BX + BPadX, _bBase);
+    doc.font('MN-SemiBold').fontSize(9.5).fillColor(BODY)
+       .text(`N° ${invoiceNumber}`, BX + BPadX, _bBase + 28);
     doc.font('MN-Regular').fontSize(8.5).fillColor(MUTED)
-       .text(`Émise le : ${new Date().toLocaleDateString('fr-FR')}`, BX + 14, BY + 54);
-    if (checkinDate && checkoutDate) {
-      const ci = new Date(checkinDate).toLocaleDateString('fr-FR');
-      const co = new Date(checkoutDate).toLocaleDateString('fr-FR');
-      doc.text(`${ci} au ${co}`, BX + 14, BY + 67);
+       .text(`Émise le : ${fmtDate(new Date())}`, BX + BPadX, _bBase + 44);
+    if (_hasDates) {
+      const ci = fmtDate(checkinDate);
+      const co = fmtDate(checkoutDate);
+      doc.text(`${ci} au ${co}`, BX + BPadX, _bBase + 57);
       doc.font('MN-SemiBold').fontSize(8).fillColor(ACCENT)
-         .text(`${nights} nuit${nights > 1 ? 's' : ''}`, BX + 14, BY + 78);
+         .text(`${nights} nuit${nights > 1 ? 's' : ''}`, BX + BPadX, _bBase + 68);
     }
 
     // ── Zone blanche principale ─────────────────────────────────────────────────
@@ -27097,8 +27108,8 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     }
     // Dates + durée sur la droite
     if (checkinDate && checkoutDate) {
-      const ci = new Date(checkinDate).toLocaleDateString('fr-FR');
-      const co = new Date(checkoutDate).toLocaleDateString('fr-FR');
+      const ci = fmtDate(checkinDate);
+      const co = fmtDate(checkoutDate);
       doc.font('MN-SemiBold').fontSize(9).fillColor(ACCENT)
          .text(`${ci} au ${co}`, mg + 12, y + 8, { width: W - mg * 2 - 24, align: 'right' });
       doc.font('MN-Regular').fontSize(8.5).fillColor(MUTED)
@@ -27133,7 +27144,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
       doc.font('MN-Regular').fontSize(9.5).fillColor(BODY)
          .text(label, mg + 14, y + 9, { width: 280 });
       doc.font('MN-SemiBold').fontSize(9.5).fillColor(BODY)
-         .text(fmtEur(amount), W - mg - 90, y + 9, { width: 78, align: 'right' });
+         .text(formatEuro(amount), W - mg - 90, y + 9, { width: 78, align: 'right' });
       doc.rect(mg, y + ROW_H, W - mg * 2, 0.5).fill(BORDER);
       y += ROW_H; alt = !alt;
     };
@@ -27148,10 +27159,10 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     if (parseFloat(vatRate || 0) > 0) {
       doc.font('MN-Regular').fontSize(9).fillColor(MUTED)
          .text('Sous-total HT', totX, y, { width: 130 })
-         .text(fmtEur(subtotal), totX + 130, y, { width: 88, align: 'right' });
+         .text(formatEuro(subtotal), totX + 130, y, { width: 88, align: 'right' });
       y += 16;
       doc.text(`TVA (${vatRate} %)`, totX, y, { width: 130 })
-         .text(fmtEur(vatAmount), totX + 130, y, { width: 88, align: 'right' });
+         .text(formatEuro(vatAmount), totX + 130, y, { width: 88, align: 'right' });
       y += 16;
     }
         // Ligne accent
@@ -27161,7 +27172,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     doc.font('CG-Bold').fontSize(16).fillColor('#FFFFFF')
        .text('Total TTC', totX + 14, y + 10, { width: 120 });
     doc.font('MN-Bold').fontSize(16).fillColor('#FFFFFF')
-       .text(fmtEur(total), totX + 14, y + 10, { width: totW - 28, align: 'right' });
+       .text(formatEuro(total), totX + 14, y + 10, { width: totW - 28, align: 'right' });
     y += 38;
 
     // Mention TVA franchise (art. 293 B) : uniquement si vat_regime = 'franchise' est renseigné
