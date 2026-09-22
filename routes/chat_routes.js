@@ -1445,10 +1445,49 @@ if (sender_type === 'owner' && (message && message.trim())) {
   io.on('connection', (socket) => {
     console.log('🔌 Client connecté:', socket.id);
 
-    // Rejoindre une conversation
-    socket.on('join_conversation', (conversationId) => {
-      socket.join(`conversation_${conversationId}`);
-      console.log(`✅ Socket ${socket.id} rejoint conversation ${conversationId}`);
+    // Rejoindre une conversation — exige JWT hôte OU token voyageur
+    socket.on('join_conversation', async (data) => {
+      const conversationId = typeof data === 'object' ? data.conversationId : data;
+      const guestTokenRaw  = typeof data === 'object' ? data.guestToken   : null;
+      const hostTokenRaw   = typeof data === 'object' ? data.hostToken    : null;
+
+      if (!conversationId) return socket.emit('error', 'conversationId manquant');
+
+      try {
+        if (guestTokenRaw) {
+          if (!await guestAuth(pool, guestTokenRaw, conversationId)) {
+            return socket.emit('error', 'Token voyageur invalide');
+          }
+        } else if (hostTokenRaw) {
+          const jwt = require('jsonwebtoken');
+          const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+          let decoded;
+          try { decoded = jwt.verify(hostTokenRaw, JWT_SECRET); }
+          catch { return socket.emit('error', 'Token hôte invalide'); }
+          const userId = decoded.subAccountId
+            ? (await (async () => {
+                const r = await pool.query(
+                  `SELECT u.id FROM sub_accounts sa JOIN users u ON u.id = sa.user_id WHERE sa.id = $1`,
+                  [decoded.subAccountId]
+                );
+                return r.rows[0]?.id;
+              })())
+            : decoded.id;
+          if (!userId) return socket.emit('error', 'Utilisateur introuvable');
+          const comptes = await comptesAutorises(pool, userId);
+          const conv = await pool.query('SELECT user_id FROM conversations WHERE id = $1', [String(conversationId)]);
+          if (!conv.rows[0] || !comptes.includes(conv.rows[0].user_id)) {
+            return socket.emit('error', 'Accès refusé à cette conversation');
+          }
+        } else {
+          return socket.emit('error', 'Authentification requise pour rejoindre cette room');
+        }
+        socket.join(`conversation_${conversationId}`);
+        console.log(`✅ Socket ${socket.id} rejoint conversation ${conversationId}`);
+      } catch (e) {
+        console.error('❌ [SOCKET] join_conversation:', e.message);
+        socket.emit('error', 'Erreur serveur');
+      }
     });
 
     // Quitter une conversation

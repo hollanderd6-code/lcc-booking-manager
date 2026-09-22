@@ -831,9 +831,12 @@ async function openChat(conversationId) {
   // Marquer comme lu
   await markMessagesAsRead(conversationId);
   
-  // Rejoindre la room Socket.IO
+  // Rejoindre la room Socket.IO avec JWT hôte
   if (socket) {
-    socket.emit('join_conversation', conversationId);
+    socket.emit('join_conversation', {
+      conversationId,
+      hostToken: localStorage.getItem('lcc_token') || ''
+    });
   }
 }
 
