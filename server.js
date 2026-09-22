@@ -472,9 +472,10 @@ async function triggerChannexRatesSync(propertyId, userId) {
     // du logement, pas sous l'utilisateur connecté. On utilise donc prop.user_id.
     const ownerId = prop.user_id || userId;
 
-    // Skip rate push si tarification externe (PriceLabs, etc.)
+    // Hard guard : tarification externe → aucune publication Channex (ni tarifs ni restrictions).
     if (prop.external_pricing) {
-      console.log(`ℹ️ [CHANNEX RATES SYNC] ${propertyId} — tarification externe, skip push tarifs (restrictions uniquement)`);
+      console.log(`ℹ️ [CHANNEX RATES SYNC] ${propertyId} — tarification externe, aucune publication Channex`);
+      return;
     }
 
     console.log(`💰 [CHANNEX RATES SYNC] Déclenchement pour ${propertyId} (owner ${ownerId})`);
