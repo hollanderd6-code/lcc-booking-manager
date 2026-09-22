@@ -1369,10 +1369,10 @@ if (sender_type === 'owner' && (message && message.trim())) {
     try {
       const { conversationId } = req.params;
       const userId = await getRealUserId(pool, req);
-      const agencyIds = await getAgencyUserIds(req, userId);
+      const comptes = await comptesAutorises(pool, userId);
       const conv = await pool.query(
         'SELECT id FROM conversations WHERE id = $1 AND user_id = ANY($2::text[])',
-        [conversationId, agencyIds]
+        [conversationId, comptes]
       );
       if (!conv.rows.length) return res.status(404).json({ error: 'Conversation non trouvée' });
       await deescalateConversation(pool, conversationId, `manuelle (user ${userId})`);

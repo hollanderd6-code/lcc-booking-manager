@@ -107,7 +107,39 @@ async function main() {
     console.log('✅  TC-ST01 — forçage sender_type owner→guest sans auth');
   }
 
-  const total = 8; // D01–D07 + ST01
+  // TC-OWN01 : deescalate — comptesAutorises includes delegated accounts
+  // Vérifie que la vérification de propriété passe avec un compte délégué
+  {
+    const { comptesAutorises } = require('../utils/agency');
+    const pool = {
+      async query(sql, params) {
+        const n = sql.replace(/\s+/g, ' ').trim().toLowerCase();
+        // Simulate account_delegations returning a delegated account
+        if (n.includes('account_delegations') && params[0] === 'delegate-user') {
+          return { rows: [{ delegator_user_id: 'owner-user' }] };
+        }
+        return { rows: [] };
+      }
+    };
+    const comptes = await comptesAutorises(pool, 'delegate-user');
+    assert.ok(comptes.includes('delegate-user'), 'TC-OWN01: inclut userId');
+    assert.ok(comptes.includes('owner-user'),    'TC-OWN01: inclut compte délégant');
+    assert.strictEqual(comptes.length, 2,        'TC-OWN01: exactement 2 comptes');
+    console.log('✅  TC-OWN01 — comptesAutorises inclut comptes délégués sans ?agency=all');
+  }
+
+  // TC-OWN02 : deescalate — comptesAutorises sans délégation → [userId] seulement
+  {
+    const { comptesAutorises } = require('../utils/agency');
+    const pool = {
+      async query() { return { rows: [] }; }
+    };
+    const comptes = await comptesAutorises(pool, 'solo-user');
+    assert.deepStrictEqual(comptes, ['solo-user'], 'TC-OWN02: seul userId si pas de délégation');
+    console.log('✅  TC-OWN02 — comptesAutorises sans délégation retourne [userId]');
+  }
+
+  const total = 10; // D01–D07 + ST01 + OWN01 + OWN02
   console.log(`\n───────────────────────────────────────────────────────`);
   console.log(`  Résultats : ${total} passed, 0 failed`);
 }
