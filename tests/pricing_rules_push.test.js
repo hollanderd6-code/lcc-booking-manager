@@ -555,13 +555,22 @@ function makeBpPool(tables = {}) {
 }
 
 function makeBpPublisher(ratesSpy = {}) {
+  // pool will be captured at publish time; mockClient delegates to it
+  let _capturedPool;
+  const mockClient = {
+    query: (...a) => _capturedPool.query(...a),
+    release: () => {},
+  };
   return createPublisher({
-    pushRates: async (_pool, { rates }) => {
+    pushRates: async (_c, { rates }) => {
       ratesSpy.rates = rates;
       return { count: rates.length };
     },
-    pushRestrictions: async (_pool, { restrictions }) => ({ count: restrictions.length }),
+    pushRestrictions: async (_c, { restrictions }) => ({ count: restrictions.length }),
     resolveEffectivePrices,
+    connectClient: (pool) => { _capturedPool = pool; return Promise.resolve(mockClient); },
+    acquireLock:   async () => {},
+    releaseLock:   async () => {},
   });
 }
 

@@ -710,16 +710,24 @@ function makeSemanticPool(tables = {}) {
 }
 
 function makeSemanticPublisher(ratesSpy = {}, restrSpy = {}) {
+  let _capturedPool;
+  const mockClient = {
+    query: (...a) => _capturedPool.query(...a),
+    release: () => {},
+  };
   return createPublisher({
-    pushRates: async (_pool, { rates }) => {
+    pushRates: async (_c, { rates }) => {
       ratesSpy.rates = rates;
       return { count: rates.length };
     },
-    pushRestrictions: async (_pool, { restrictions }) => {
+    pushRestrictions: async (_c, { restrictions }) => {
       restrSpy.restrictions = restrictions;
       return { count: restrictions.length };
     },
     resolveEffectivePrices,
+    connectClient: (pool) => { _capturedPool = pool; return Promise.resolve(mockClient); },
+    acquireLock:   async () => {},
+    releaseLock:   async () => {},
   });
 }
 

@@ -10,8 +10,11 @@ const CHANNEX_API_URL = process.env.CHANNEX_ENV === 'production'
 
 const CHANNEX_API_KEY = process.env.CHANNEX_API_KEY;
 
+const CHANNEX_HTTP_TIMEOUT_MS = 30000;
+
 const channexAPI = axios.create({
   baseURL: CHANNEX_API_URL,
+  timeout: CHANNEX_HTTP_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
     'user-api-key': CHANNEX_API_KEY
@@ -1280,5 +1283,6 @@ module.exports = {
   getBookingMessages,
   sendBookingMessage,
   logChannex,
-  channexAPI
+  channexAPI,
+  CHANNEX_HTTP_TIMEOUT_MS,
 };

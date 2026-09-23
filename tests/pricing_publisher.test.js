@@ -138,13 +138,18 @@ function failPush(msg) {
 
 // Make a publisher with mocked deps and a pre-configured pool
 function makePublisher(tables, pushRates, pushRestrictions, resolveImpl) {
+  const pool = makeMockPool(tables);
+  const mockClient = { query: (...a) => pool.query(...a), release: () => {} };
   return {
     publish: createPublisher({
       pushRates:               pushRates || okPushRates(),
       pushRestrictions:        pushRestrictions || okPushRestrictions(),
       ...(resolveImpl ? { resolveEffectivePrices: resolveImpl } : {}),
+      connectClient: (_pool)            => Promise.resolve(mockClient),
+      acquireLock:   async (_c, _id)    => {},
+      releaseLock:   async (_c, _id)    => {},
     }),
-    pool: makeMockPool(tables),
+    pool,
   };
 }
 
@@ -589,7 +594,14 @@ console.log('\n── TC-P31–P34 : Aucune écriture DB ──');
 async function runNoWriteTest(name, tables) {
   await test(name, async () => {
     const pool = makeMockPool(tables, { rejectWrites: true });
-    const publish = createPublisher({ pushRates: okPushRates(), pushRestrictions: okPushRestrictions() });
+    const mockClient = { query: (...a) => pool.query(...a), release: () => {} };
+    const publish = createPublisher({
+      pushRates:     okPushRates(),
+      pushRestrictions: okPushRestrictions(),
+      connectClient: (_pool)         => Promise.resolve(mockClient),
+      acquireLock:   async (_c, _id) => {},
+      releaseLock:   async (_c, _id) => {},
+    });
     // Must complete without MockPool throwing a write-detected error
     await publish(pool, singleNight());
   });

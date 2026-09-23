@@ -65,6 +65,22 @@ const dpSrc      = fs.readFileSync(path.join(__dirname, '..', 'routes', 'dynamic
 
 // ─── Helpers: publisher integration ───────────────────────────────────────────
 
+// Inject mock lock deps so createPublisher doesn't call pool.connect().
+// Uses a lazy capture: connectClient stores the pool passed at publish time.
+function addLockDeps(deps) {
+  let _capturedPool;
+  const mockClient = {
+    query: (...a) => _capturedPool.query(...a),
+    release: () => {},
+  };
+  return {
+    ...deps,
+    connectClient: (pool) => { _capturedPool = pool; return Promise.resolve(mockClient); },
+    acquireLock:   async () => {},
+    releaseLock:   async () => {},
+  };
+}
+
 function makeRestrictionsSpy() {
   const spy = { calls: 0, lastRestrictions: null };
   spy.fn = async (_pool, { restrictions }) => {
@@ -162,7 +178,7 @@ function makePropPool(overrides = {}) {
 
   await test('B-SS-11 : authoritative + aucune règle stop_sell → stop_sell:false présent (réouverture)', async () => {
     const restrSpy = makeRestrictionsSpy();
-    const pub = createPublisher({
+    const pub = createPublisher(addLockDeps({
       pushRates:        makeRatesSpy().fn,
       pushRestrictions: restrSpy.fn,
       resolveEffectivePrices: async () => [{
@@ -171,7 +187,7 @@ function makePropPool(overrides = {}) {
         stopSell: false, stopSellSource: 'none',
         source: 'base_price', sourceId: null, locked: false, breakdown: null, calculatedAt: null,
       }],
-    });
+    }));
     const pool = makePropPool();
     await pub(pool, { propertyId: 'prop-1', userId: 'owner-1',
       startDate: '2026-10-01', endDate: '2026-10-02',
@@ -185,7 +201,7 @@ function makePropPool(overrides = {}) {
 
   await test('B-SS-12 : authoritative + règle stop_sell active → stop_sell:true présent (fermeture)', async () => {
     const restrSpy = makeRestrictionsSpy();
-    const pub = createPublisher({
+    const pub = createPublisher(addLockDeps({
       pushRates:        makeRatesSpy().fn,
       pushRestrictions: restrSpy.fn,
       resolveEffectivePrices: async () => [{
@@ -194,7 +210,7 @@ function makePropPool(overrides = {}) {
         stopSell: true, stopSellSource: 'stop_sell_rule',
         source: 'base_price', sourceId: null, locked: false, breakdown: null, calculatedAt: null,
       }],
-    });
+    }));
     const pool = makePropPool();
     await pub(pool, { propertyId: 'prop-1', userId: 'owner-1',
       startDate: '2026-10-01', endDate: '2026-10-02',
@@ -207,7 +223,7 @@ function makePropPool(overrides = {}) {
 
   await test('B-SS-13 : none → champ stop_sell toujours absent (price-only invariant)', async () => {
     const restrSpy = makeRestrictionsSpy();
-    const pub = createPublisher({
+    const pub = createPublisher(addLockDeps({
       pushRates:        makeRatesSpy().fn,
       pushRestrictions: restrSpy.fn,
       resolveEffectivePrices: async () => [
@@ -220,7 +236,7 @@ function makePropPool(overrides = {}) {
           stopSell: false, stopSellSource: 'none',
           source: 'base_price', sourceId: null, locked: false, breakdown: null, calculatedAt: null },
       ],
-    });
+    }));
     const pool = makePropPool();
     await pub(pool, { propertyId: 'prop-1', userId: 'owner-1',
       startDate: '2026-10-01', endDate: '2026-10-03',
@@ -233,7 +249,7 @@ function makePropPool(overrides = {}) {
 
   await test('B-SS-19 : authoritative → stop_sell:false présent même quand false (réouverture garantie)', async () => {
     const restrSpy = makeRestrictionsSpy();
-    const pub = createPublisher({
+    const pub = createPublisher(addLockDeps({
       pushRates:        makeRatesSpy().fn,
       pushRestrictions: restrSpy.fn,
       resolveEffectivePrices: async () => [{
@@ -242,7 +258,7 @@ function makePropPool(overrides = {}) {
         stopSell: false, stopSellSource: 'none',
         source: 'base_price', sourceId: null, locked: false, breakdown: null, calculatedAt: null,
       }],
-    });
+    }));
     const pool = makePropPool();
     await pub(pool, { propertyId: 'prop-1', userId: 'owner-1',
       startDate: '2026-10-01', endDate: '2026-10-02',
@@ -255,7 +271,7 @@ function makePropPool(overrides = {}) {
 
   await test('B-SS-20 : none → stop_sell toujours absent quelle que soit la règle resolver', async () => {
     const restrSpy = makeRestrictionsSpy();
-    const pub = createPublisher({
+    const pub = createPublisher(addLockDeps({
       pushRates:        makeRatesSpy().fn,
       pushRestrictions: restrSpy.fn,
       resolveEffectivePrices: async () => [{
@@ -264,7 +280,7 @@ function makePropPool(overrides = {}) {
         stopSell: true, stopSellSource: 'stop_sell_rule',
         source: 'base_price', sourceId: null, locked: false, breakdown: null, calculatedAt: null,
       }],
-    });
+    }));
     const pool = makePropPool();
     await pub(pool, { propertyId: 'prop-1', userId: 'owner-1',
       startDate: '2026-10-01', endDate: '2026-10-02',
