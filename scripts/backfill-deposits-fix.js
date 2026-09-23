@@ -8,7 +8,7 @@
  *   STRIPE_SECRET_KEY=sk_live_... DATABASE_URL=postgres://... node scripts/backfill-deposits-fix.js --execute
  *
  * dep_mppzx8z5nbl3f  PI succeeded  → captured  (captured_amount et captured_at depuis Stripe)
- * dep_mpqoq26p       PI canceled   → auth_expired  + stripe_account_id corrigé sur l'utilisateur
+ * dep_mpqoq26p       PI canceled   → auth_expired
  */
 
 'use strict';
@@ -22,17 +22,14 @@ const DRY_RUN = !process.argv.includes('--execute');
 
 const FIXES = [
   {
-    depositId: 'dep_mppzx8z5nbl3f',
-    piId:      'pi_3TcBaWFT0WaR8aHH1SClJbZn',
-    // PI est sur le compte Connect — même chemin que ce que le cron utilise.
-    useConnectAccount: true,
+    depositId:         'dep_mppzx8z5nbl3f',
+    piId:              'pi_3TcBaWFT0WaR8aHH1SClJbZn',
+    useConnectAccount: true,   // PI créé sur le compte Connect de l'utilisateur
   },
   {
-    depositId: 'dep_mpqoq26p',
-    piId:      'pi_3Tcra6FDAmyxvgFK1kMtPs9c',
-    // PI est sur le compte plateforme (pas de stripeAccount).
-    // La base pointe vers un compte Connect — il faudra corriger stripe_account_id sur l'user.
-    useConnectAccount: false,
+    depositId:         'dep_mpqoq26p',
+    piId:              'pi_3Tcra6FDAmyxvgFK1kMtPs9c',
+    useConnectAccount: false,  // PI créé sur le compte plateforme
   },
 ];
 
@@ -74,17 +71,14 @@ async function main() {
     console.log(`  stripe_account_id : ${dep.stripe_account_id || '(null — plateforme)'}`);
 
     // ── Retrieve Stripe ────────────────────────────────────────────────────
-    const stripeOpts = fix.useConnectAccount && dep.stripe_account_id
-      ? { stripeAccount: dep.stripe_account_id }
-      : {};
+    // Tout dans le deuxième argument : le SDK déplace stripeAccount en options lui-même.
+    const stripeParams = fix.useConnectAccount && dep.stripe_account_id
+      ? { expand: ['latest_charge'], stripeAccount: dep.stripe_account_id }
+      : { expand: ['latest_charge'] };
 
     let pi;
     try {
-      pi = await stripe.paymentIntents.retrieve(
-        fix.piId,
-        { expand: ['latest_charge'] },
-        stripeOpts
-      );
+      pi = await stripe.paymentIntents.retrieve(fix.piId, stripeParams);
     } catch (err) {
       console.error(`  ❌  Retrieve échoué : [${err.type}/${err.code}] ${err.message}`);
       console.error('  Abandon de ce dépôt.');
@@ -95,11 +89,11 @@ async function main() {
     console.log(`  amount            : ${(pi.amount / 100).toFixed(2)} €`);
     console.log(`  amount_received   : ${(pi.amount_received / 100).toFixed(2)} €`);
 
-    // ── Calcul des changements à appliquer ─────────────────────────────────
+    // ── Traitement selon le statut ─────────────────────────────────────────
     if (pi.status === 'succeeded') {
       const capturedAmount = pi.amount_received;
-      const charge = pi.latest_charge;
-      const capturedAt = (charge && charge.created)
+      const charge         = pi.latest_charge;
+      const capturedAt     = (charge && charge.created)
         ? new Date(charge.created * 1000).toISOString()
         : null;
 
@@ -111,8 +105,7 @@ async function main() {
       if (!DRY_RUN) {
         await pool.query(
           `UPDATE deposits
-           SET status = 'captured', captured_amount = $2, captured_at = $3,
-               reconcile_errors = 0, updated_at = NOW()
+           SET status = 'captured', captured_amount = $2, captured_at = $3, updated_at = NOW()
            WHERE id = $1 AND status = 'authorized'`,
           [fix.depositId, capturedAmount, capturedAt ?? new Date().toISOString()]
         );
@@ -123,30 +116,13 @@ async function main() {
       console.log('\n  Changement prévu sur deposits :');
       console.log(`    status : '${dep.status}' → 'auth_expired'`);
 
-      // Correction du compte si la base pointe le mauvais chemin
-      const wrongAccount = !fix.useConnectAccount && dep.stripe_account_id;
-      if (wrongAccount) {
-        console.log('\n  Changement prévu sur users :');
-        console.log(`    stripe_account_id : '${dep.stripe_account_id}' → null`);
-        console.log(`    (le PI est sur la plateforme, pas sur le compte Connect)`);
-      }
-
       if (!DRY_RUN) {
         await pool.query(
-          `UPDATE deposits
-           SET status = 'auth_expired', reconcile_errors = 0, updated_at = NOW()
+          `UPDATE deposits SET status = 'auth_expired', updated_at = NOW()
            WHERE id = $1 AND status = 'authorized'`,
           [fix.depositId]
         );
-        console.log('  ✅  deposits UPDATE appliqué.');
-
-        if (wrongAccount) {
-          await pool.query(
-            `UPDATE users SET stripe_account_id = NULL WHERE id = $1`,
-            [dep.user_id]
-          );
-          console.log('  ✅  users UPDATE appliqué (stripe_account_id → null).');
-        }
+        console.log('  ✅  UPDATE appliqué.');
       }
 
     } else {

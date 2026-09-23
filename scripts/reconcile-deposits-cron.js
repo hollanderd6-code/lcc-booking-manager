@@ -25,6 +25,10 @@ const cron = require('node-cron');
 
 function initDepositReconcileCron(pool, stripe, sendPush) {
 
+  // Migration idempotente appliquée au démarrage du serveur, pas à 8h00.
+  pool.query(`ALTER TABLE deposits ADD COLUMN IF NOT EXISTS reconcile_errors INTEGER NOT NULL DEFAULT 0`)
+    .catch(err => console.error('[reconcile] Migration reconcile_errors :', err.message));
+
   cron.schedule('0 8 * * *', async () => {
     console.log('[cron reconcile-deposits] Démarrage réconciliation…');
     try {
@@ -49,11 +53,6 @@ function initDepositReconcileCron(pool, stripe, sendPush) {
 // ─── Réconciliation ────────────────────────────────────────────────────────────
 
 async function reconcileAuthorized(pool, stripe) {
-  // Colonne ajoutée progressivement — idempotente au redémarrage.
-  await pool.query(`
-    ALTER TABLE deposits ADD COLUMN IF NOT EXISTS reconcile_errors INTEGER NOT NULL DEFAULT 0
-  `);
-
   const { rows } = await pool.query(`
     SELECT d.id, d.stripe_payment_intent_id, d.amount_cents, d.user_id,
            d.reconcile_errors,
@@ -212,11 +211,10 @@ async function retrieveBothPaths(stripe, piId, stripeAccountId) {
 
 async function tryRetrieve(stripe, piId, stripeOpts) {
   try {
-    // expand latest_charge pour obtenir created (→ captured_at) sans appel supplémentaire
+    // Tout dans le deuxième argument : le SDK déplace stripeAccount en options lui-même.
     const pi = await stripe.paymentIntents.retrieve(
       piId,
-      { expand: ['latest_charge'] },
-      stripeOpts
+      { expand: ['latest_charge'], ...stripeOpts }
     );
     return { pi };
   } catch (err) {
