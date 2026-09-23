@@ -68,7 +68,8 @@ async function reconcileAuthorized(pool, stripe) {
       }
     } catch (err) {
       // Erreur isolée (mauvais compte Connect, PI supprimé…) — on continue.
-      console.warn(`[reconcile] Impossible de récupérer ${dep.stripe_payment_intent_id} (${dep.id}) : ${err.message}`);
+      const detail = [err.type, err.code].filter(Boolean).join('/') || 'unknown';
+      console.warn(`[reconcile] Impossible de récupérer ${dep.stripe_payment_intent_id} (${dep.id}) [${detail}] : ${err.message}`);
     }
     await new Promise((r) => setTimeout(r, 120));
   }
