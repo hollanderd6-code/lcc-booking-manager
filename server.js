@@ -38296,108 +38296,12 @@ async function logAdminAction(adminUser, targetUserId, action, details) {
 }
 
 // GET /api/admin/clients — liste tous les comptes + abonnement
-app.post('/api/diffusion/sync-all', authenticateAny, async (req, res) => {
-  try {
-    const userId = req.user.isSubAccount
-      ? (await getRealUserId(pool, req))
-      : (req.user?.id || req.user?.userId);
-    const agencyIds = await getAgencyUserIds(req, userId);
-
-    const propsResult = await pool.query(
-      `SELECT id, channex_property_id, channex_room_type_id, channex_rate_plan_id,
-              base_price, weekend_price
-       FROM properties
-       WHERE user_id = ANY($1::text[]) AND channex_enabled = TRUE AND channex_property_id IS NOT NULL`,
-      [agencyIds]
-    );
-    const properties = propsResult.rows;
-    res.json({ message: `Synchronisation démarrée pour ${properties.length} logements`, count: properties.length });
-
-    // Sync en arrière-plan avec délai entre chaque
-    (async () => {
-      const fmt = d => d.toISOString().split('T')[0];
-      for (const prop of properties) {
-        try {
-          // 1. Disponibilités
-          await triggerChannexAvailabilitySync(prop.id);
-
-          // 2. Tarifs + restrictions (500 jours)
-          const rulesResult = await pool.query(
-            `SELECT * FROM pricing_rules
-             WHERE property_id = $1 AND user_id = ANY($2::text[]) AND active = true
-             ORDER BY priority DESC`,
-            [prop.id, agencyIds]
-          );
-          const rules = rulesResult.rows;
-          const minStayRules  = rules.filter(r => r.rule_type === 'min_stay');
-          const stopSellRules = rules.filter(r => r.rule_type === 'stop_sell');
-          const periodRules   = rules.filter(r => r.rule_type === 'period');
-          const weekdayRules  = rules.filter(r => r.rule_type === 'weekday');
-
-          const today = new Date();
-          const restrictions = [];
-          for (let i = 0; i < 500; i++) {
-            const d = new Date(today);
-            d.setDate(today.getDate() + i);
-            const dateStr = fmt(d);
-            const dow = d.getDay();
-            const entry = { date: dateStr };
-
-            let price = null;
-            for (const rule of periodRules) {
-              if (rule.start_date && rule.end_date && rule.price != null &&
-                  dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
-                price = parseFloat(rule.price); break;
-              }
-            }
-            if (price === null) {
-              for (const rule of weekdayRules) {
-                if (rule.days_of_week && rule.price != null && rule.days_of_week.includes(dow)) {
-                  price = parseFloat(rule.price); break;
-                }
-              }
-            }
-            if (price === null) {
-              const isPremium = (dow === 5 || dow === 6);
-              price = isPremium && prop.weekend_price != null
-                ? parseFloat(prop.weekend_price)
-                : (prop.base_price != null ? parseFloat(prop.base_price) : null);
-            }
-            if (price != null) entry.rate = price;
-
-            Object.assign(entry, buildMinStayFields(minStayRules, dateStr, dow));
-
-            for (const rule of stopSellRules) {
-              if (rule.start_date && rule.end_date &&
-                  dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
-                entry.stop_sell = true; break;
-              }
-            }
-
-            restrictions.push(entry);
-          }
-
-          if (prop.channex_rate_plan_id) {
-            await pushRestrictions(pool, {
-              property_id: prop.id,
-              channex_property_id:  prop.channex_property_id,
-              channex_room_type_id: prop.channex_room_type_id,
-              channex_rate_plan_id: prop.channex_rate_plan_id,
-              restrictions
-            });
-          }
-
-          console.log(`✅ [SYNC-ALL] ${prop.id} OK`);
-        } catch(e) {
-          console.error(`❌ [SYNC-ALL] ${prop.id}:`, e.message);
-        }
-        await new Promise(r => setTimeout(r, 1000));
-      }
-      console.log(`✅ [SYNC-ALL] Terminé — ${properties.length} logements synchronisés`);
-    })();
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
+// POST /api/diffusion/sync-all — migré vers routes/pricing-diffusion-sync.js (P0-C4.5-B)
+require('./routes/pricing-diffusion-sync')(app, pool, {
+  authenticateAny,
+  getRealUserId,
+  getAgencyUserIds,
+  triggerChannexAvailabilitySync,
 });
 
 // ══════════════════════════════════════════════════════════════
