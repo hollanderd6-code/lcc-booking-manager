@@ -43376,104 +43376,10 @@ app.post('/api/channex/sync-availability/:property_id', authenticateToken, async
   }
 });
 
-// ── Sync restrictions + tarifs vers Channex (full sync certification) ─
-app.post('/api/channex/sync-restrictions/:property_id', authenticateToken, async (req, res) => {
-  const { property_id } = req.params;
-  const user_id = req.user.id;
-  const agencyIds = await getAgencyUserIds(req, user_id);
-
-  try {
-    const propResult = await pool.query(
-      `SELECT channex_property_id, channex_room_type_id, channex_rate_plan_id, channex_enabled,
-              base_price, weekend_price
-       FROM properties WHERE id = $1 AND user_id = ANY($2::text[])`,
-      [property_id, agencyIds]
-    );
-
-    const prop = propResult.rows[0];
-    if (!prop || !prop.channex_enabled || !prop.channex_property_id) {
-      return res.status(400).json({ error: 'Logement non configuré pour la diffusion' });
-    }
-
-    // Récupérer toutes les règles actives
-    const rulesResult = await pool.query(
-      `SELECT * FROM pricing_rules
-       WHERE property_id = $1 AND user_id = ANY($2::text[]) AND active = true
-       ORDER BY priority DESC`,
-      [property_id, agencyIds]
-    );
-    const rules = rulesResult.rows;
-    const minStayRules  = rules.filter(r => r.rule_type === 'min_stay');
-    const stopSellRules = rules.filter(r => r.rule_type === 'stop_sell');
-    const periodRules   = rules.filter(r => r.rule_type === 'period');
-    const weekdayRules  = rules.filter(r => r.rule_type === 'weekday');
-
-    const today = new Date();
-    const fmt = d => d.toISOString().split('T')[0];
-    const restrictions = [];
-    const rates = [];
-
-    for (let i = 0; i < 500; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const dateStr = fmt(d);
-      const dow = d.getDay();
-      const entry = { date: dateStr };
-
-      // ── Prix ──
-      let price = null;
-      for (const rule of periodRules) {
-        if (rule.start_date && rule.end_date && rule.price != null &&
-            dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
-          price = parseFloat(rule.price); break;
-        }
-      }
-      if (price === null) {
-        for (const rule of weekdayRules) {
-          if (rule.days_of_week && rule.price != null && rule.days_of_week.includes(dow)) {
-            price = parseFloat(rule.price); break;
-          }
-        }
-      }
-      if (price === null) {
-        const isPremium = (dow === 5 || dow === 6);
-        price = isPremium && prop.weekend_price != null
-          ? parseFloat(prop.weekend_price)
-          : (prop.base_price != null ? parseFloat(prop.base_price) : null);
-      }
-      if (price != null) entry.rate = price; // rate inclus dans la restriction (format ARI Channex)
-
-      // ── min_stay ──
-      Object.assign(entry, buildMinStayFields(minStayRules, dateStr, dow));
-
-      // ── stop_sell ──
-      for (const rule of stopSellRules) {
-        if (rule.start_date && rule.end_date &&
-            dateStr >= fmt(new Date(rule.start_date)) &&
-            dateStr <= fmt(new Date(rule.end_date))) {
-          entry.stop_sell = true; break;
-        }
-      }
-
-      restrictions.push(entry);
-    }
-
-    // Pousser tarifs + restrictions en un seul appel (format ARI Channex)
-    await pushRestrictions(pool, {
-      property_id,
-      channex_property_id:  prop.channex_property_id,
-      channex_room_type_id: prop.channex_room_type_id,
-      channex_rate_plan_id: prop.channex_rate_plan_id,
-      restrictions
-    });
-
-    console.log(`✅ [CHANNEX SYNC] ${restrictions.length} restrictions+tarifs poussés pour ${property_id}`);
-    res.json({ success: true, message: 'Tarifs + restrictions synchronisés', restrictions: restrictions.length });
-
-  } catch (e) {
-    console.error('❌ [CHANNEX SYNC RESTRICTIONS]', e.message);
-    res.status(500).json({ error: e.message });
-  }
+// POST /api/channex/sync-restrictions/:property_id — migré vers routes/channex-restrictions-sync.js (P0-C4.7)
+require('./routes/channex-restrictions-sync')(app, pool, {
+  authenticateToken,
+  getAgencyUserIds,
 });
 
 // ── Importer les bookings existants depuis Channex → BH ──────
