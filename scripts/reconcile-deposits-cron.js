@@ -211,11 +211,11 @@ async function retrieveBothPaths(stripe, piId, stripeAccountId) {
 
 async function tryRetrieve(stripe, piId, stripeOpts) {
   try {
-    // Tout dans le deuxième argument : le SDK déplace stripeAccount en options lui-même.
-    const pi = await stripe.paymentIntents.retrieve(
-      piId,
-      { expand: ['latest_charge'], ...stripeOpts }
-    );
+    // 2e arg = params (expand), 3e arg = options (stripeAccount) — ne passer
+    // le 3e argument QUE si stripeAccount est défini ({} vide → "Unknown arguments").
+    const pi = stripeOpts.stripeAccount
+      ? await stripe.paymentIntents.retrieve(piId, { expand: ['latest_charge'] }, stripeOpts)
+      : await stripe.paymentIntents.retrieve(piId, { expand: ['latest_charge'] });
     return { pi };
   } catch (err) {
     const detail = [err.type, err.code].filter(Boolean).join('/') || 'unknown';

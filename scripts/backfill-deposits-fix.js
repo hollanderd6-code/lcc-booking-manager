@@ -71,14 +71,13 @@ async function main() {
     console.log(`  stripe_account_id : ${dep.stripe_account_id || '(null — plateforme)'}`);
 
     // ── Retrieve Stripe ────────────────────────────────────────────────────
-    // Tout dans le deuxième argument : le SDK déplace stripeAccount en options lui-même.
-    const stripeParams = fix.useConnectAccount && dep.stripe_account_id
-      ? { expand: ['latest_charge'], stripeAccount: dep.stripe_account_id }
-      : { expand: ['latest_charge'] };
-
+    // 2e arg = params (expand), 3e arg = options (stripeAccount) — ne passer
+    // le 3e argument QUE si stripeAccount est défini ({}  vide → "Unknown arguments").
     let pi;
     try {
-      pi = await stripe.paymentIntents.retrieve(fix.piId, stripeParams);
+      pi = fix.useConnectAccount && dep.stripe_account_id
+        ? await stripe.paymentIntents.retrieve(fix.piId, { expand: ['latest_charge'] }, { stripeAccount: dep.stripe_account_id })
+        : await stripe.paymentIntents.retrieve(fix.piId, { expand: ['latest_charge'] });
     } catch (err) {
       console.error(`  ❌  Retrieve échoué : [${err.type}/${err.code}] ${err.message}`);
       console.error('  Abandon de ce dépôt.');

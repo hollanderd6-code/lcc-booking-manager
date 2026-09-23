@@ -3119,6 +3119,14 @@ ON invoice_download_tokens(token);
     }
     try {
       await pool.query(`
+        ALTER TABLE market_data ADD COLUMN IF NOT EXISTS data_source TEXT NOT NULL DEFAULT 'unknown';
+      `);
+      console.log('✅ market_data.data_source ajouté (P1.0-A)');
+    } catch (e) {
+      console.log('ℹ️ market_data.data_source:', e.message);
+    }
+    try {
+      await pool.query(`
         ALTER TABLE conversations ADD COLUMN IF NOT EXISTS channex_booking_id TEXT;
         CREATE INDEX IF NOT EXISTS idx_conversations_channex_booking_id 
           ON conversations(channex_booking_id) WHERE channex_booking_id IS NOT NULL;

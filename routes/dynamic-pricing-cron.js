@@ -412,14 +412,15 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       }
 
       // 4. INSERT market_data (upsert)
+      const dataSource = isMock ? 'mock' : 'apify_live';
       await pool.query(
         `INSERT INTO market_data (
            user_id, property_id, week_start,
            median_price, price_p25, price_p75,
            occupancy_rate, comparable_count, tension_level,
-           zone_label, scraped_at, created_at
+           zone_label, data_source, scraped_at, created_at
          )
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),NOW())
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())
          ON CONFLICT (property_id, week_start) DO UPDATE SET
            median_price     = EXCLUDED.median_price,
            price_p25        = EXCLUDED.price_p25,
@@ -428,12 +429,13 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
            comparable_count = EXCLUDED.comparable_count,
            tension_level    = EXCLUDED.tension_level,
            zone_label       = EXCLUDED.zone_label,
+           data_source      = EXCLUDED.data_source,
            scraped_at       = NOW()`,
         [
           cfg.user_id, cfg.property_id, weekStart,
           marketStats.median, marketStats.p25, marketStats.p75,
           marketStats.occupancy, marketStats.count, marketStats.tensionLevel,
-          zoneLabel,
+          zoneLabel, dataSource,
         ]
       );
 
@@ -545,14 +547,19 @@ async function runDailyPricingRefresh(pool, sendPushNotification = null) {
   let done = 0, pushed = 0;
   for (const cfg of configs) {
     try {
-      const md = (await pool.query(
-        `SELECT median_price, occupancy_rate, tension_level
+      const mdRow = (await pool.query(
+        `SELECT median_price, occupancy_rate, tension_level, data_source
            FROM market_data WHERE property_id = $1 ORDER BY week_start DESC LIMIT 1`,
         [cfg.property_id]
-      )).rows[0] || {};
-      const marketStats = { median: md.median_price, occupancy: md.occupancy_rate, tensionLevel: md.tension_level };
+      )).rows[0] || null;
+      const marketStats = mdRow ? {
+        median: mdRow.median_price,
+        occupancy: mdRow.occupancy_rate,
+        tensionLevel: mdRow.tension_level,
+      } : null;
+      const isMock = mdRow !== null && mdRow.data_source !== 'apify_live';
       const apply = await applyDynamicPricingForProperty(pool, {
-        cfg, marketStats, isMock: false, sendPushNotification,
+        cfg, marketStats, isMock, sendPushNotification,
       });
       done++;
       if (apply.status === 'applied') pushed += (apply.pushed || 0);
@@ -643,14 +650,15 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   const marketStats = calcMarketStats(filtered.length >= 5 ? filtered : listings);
   if (!marketStats) return { ok: false, error: 'Pas assez de données marché pour ce logement' };
 
+  const dataSourceOne = isMock ? 'mock' : 'apify_live';
   await pool.query(
     `INSERT INTO market_data (
        user_id, property_id, week_start,
        median_price, price_p25, price_p75,
        occupancy_rate, comparable_count, tension_level,
-       zone_label, scraped_at, created_at
+       zone_label, data_source, scraped_at, created_at
      )
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),NOW())
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())
      ON CONFLICT (property_id, week_start) DO UPDATE SET
        median_price     = EXCLUDED.median_price,
        price_p25        = EXCLUDED.price_p25,
@@ -659,12 +667,13 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
        comparable_count = EXCLUDED.comparable_count,
        tension_level    = EXCLUDED.tension_level,
        zone_label       = EXCLUDED.zone_label,
+       data_source      = EXCLUDED.data_source,
        scraped_at       = NOW()`,
     [
       cfg.user_id, cfg.property_id, weekStart,
       marketStats.median, marketStats.p25, marketStats.p75,
       marketStats.occupancy, marketStats.count, marketStats.tensionLevel,
-      zoneLabel,
+      zoneLabel, dataSourceOne,
     ]
   );
 

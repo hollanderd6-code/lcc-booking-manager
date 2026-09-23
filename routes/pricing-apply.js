@@ -150,7 +150,10 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
   // 3. Mode → push ou suggestions
   const mode = cfg.mode || 'manual';
   const canPush = prop.channex_enabled && prop.channex_rate_plan_id && !prop.external_pricing;
-  const willPush = mode === 'auto' && canPush;
+  if (mode === 'auto' && canPush && isMock) {
+    console.warn(`⚠️ [DP-APPLY] ${prop.name}: auto push bloqué — données marché non live (data_source non 'apify_live')`);
+  }
+  const willPush = mode === 'auto' && canPush && !isMock;
   const status = willPush ? 'applied' : 'pending';
 
   // 4. Stockage du planning par nuit (+ breakdown)
