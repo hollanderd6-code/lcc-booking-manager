@@ -530,7 +530,8 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
            created_at, updated_at
          )
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
-         ON CONFLICT (user_id, property_id) DO UPDATE SET
+         ON CONFLICT (property_id) DO UPDATE SET
+           user_id      = EXCLUDED.user_id,
            price_min    = EXCLUDED.price_min,
            price_max    = EXCLUDED.price_max,
            mode         = EXCLUDED.mode,

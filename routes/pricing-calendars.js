@@ -141,6 +141,39 @@ async function getCalendarsForProperty(pool, { userId, propertyId, zone }) {
   };
 }
 
+// Résout l'identité canonique du pricing (properties.user_id) pour un acteur
+// donné (compte principal ou délégué/sous-compte). Renvoie null si l'acteur
+// n'a pas accès à ce logement.
+async function resolvePricingOwner(pool, req, propertyId) {
+  let callerUserId;
+  if (req.user && req.user.isSubAccount) {
+    const { rows } = await pool.query(
+      'SELECT parent_user_id FROM sub_accounts WHERE id = $1',
+      [req.user.subAccountId]
+    );
+    if (!rows[0]) return null;
+    callerUserId = rows[0].parent_user_id;
+  } else {
+    callerUserId = req.user && req.user.id;
+  }
+  const { rows } = await pool.query(
+    `SELECT user_id AS pricing_owner_id
+       FROM properties
+      WHERE id = $1
+        AND (
+          user_id = $2
+          OR EXISTS (
+            SELECT 1 FROM account_delegations
+            WHERE delegator_user_id = user_id
+              AND delegate_user_id  = $2
+              AND status = 'accepted'
+          )
+        )`,
+    [propertyId, callerUserId]
+  );
+  return rows[0] ? rows[0].pricing_owner_id : null;
+}
+
 // ── Routes CRUD (chaque client gère SES événements + SA zone) ─────
 // À câbler dans server.js :
 //   const { setupPricingCalendarRoutes } = require('./routes/pricing-calendars');
@@ -223,11 +256,14 @@ function setupPricingCalendarRoutes(app, pool, authenticateAny) {
       if (!propertyId || !VALID_ZONES.includes(zone)) {
         return res.status(400).json({ error: 'propertyId + zone (A|B|C) requis' });
       }
-      await pool.query(
+      const ownerId = await resolvePricingOwner(pool, req, propertyId);
+      if (!ownerId) return res.status(403).json({ error: 'Accès refusé à ce logement' });
+      const { rowCount } = await pool.query(
         `UPDATE pricing_config SET school_zone=$1, updated_at=NOW()
           WHERE user_id=$2 AND property_id=$3`,
-        [zone, req.user.id, propertyId]
+        [zone, ownerId, propertyId]
       );
+      if (!rowCount) return res.status(404).json({ error: 'Pricing non configuré sur ce logement.' });
       res.json({ ok: true, zone });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
@@ -270,9 +306,11 @@ function setupPricingCalendarRoutes(app, pool, authenticateAny) {
     try {
       const { mode } = req.body || {};
       if (!['manual', 'auto'].includes(mode)) return res.status(400).json({ error: 'mode manual|auto requis' });
+      const ownerId = await resolvePricingOwner(pool, req, req.params.propertyId);
+      if (!ownerId) return res.status(403).json({ error: 'Accès refusé à ce logement' });
       const r = await pool.query(
         `UPDATE pricing_config SET mode = $1, updated_at = NOW() WHERE user_id = $2 AND property_id = $3`,
-        [mode, req.user.id, req.params.propertyId]
+        [mode, ownerId, req.params.propertyId]
       );
       if (r.rowCount === 0) return res.status(404).json({ error: 'Active d\'abord le pricing dynamique sur ce logement.' });
       res.json({ ok: true, mode });
