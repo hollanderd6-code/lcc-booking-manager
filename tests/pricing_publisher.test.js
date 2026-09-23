@@ -1012,6 +1012,188 @@ await test('PUB-D12 — resolver throw → propagation inchangée', async () => 
   );
 });
 
+// ─── P2-PUB-01–P2-PUB-09 : stopSellMode (C4.4-B) ────────────────────────────
+
+console.log('\n── P2-PUB-01–P2-PUB-09 : stopSellMode ──');
+
+const SS1 = '2026-10-01';
+const SS2 = '2026-10-02';
+
+// Resolver that returns one night with stopSell = true and one with stopSell = false
+function makeStopSellResolver(s1StopSell, s2StopSell) {
+  return async (_pool, _opts) => [
+    { date: SS1, price: 100, priceValid: true, minStayArrival: 1, minStayThrough: 1,
+      minStaySource: 'default', stopSell: s1StopSell, stopSellSource: s1StopSell ? 'stop_sell_rule' : 'none',
+      source: 'base_price', sourceId: null, locked: false, breakdown: {}, calculatedAt: SS1 },
+    { date: SS2, price: 110, priceValid: true, minStayArrival: 1, minStayThrough: 1,
+      minStaySource: 'default', stopSell: s2StopSell, stopSellSource: s2StopSell ? 'stop_sell_rule' : 'none',
+      source: 'base_price', sourceId: null, locked: false, breakdown: {}, calculatedAt: SS2 },
+  ];
+}
+
+function makeStopSellPublisher(s1StopSell, s2StopSell) {
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp()] },
+    okPushRates(), okPushRestrictions(rrSpy),
+    makeStopSellResolver(s1StopSell, s2StopSell),
+  );
+  return { publish, pool, rrSpy };
+}
+
+await test('P2-PUB-01 — stopSellMode:authoritative + true → stop_sell:true envoyé', async () => {
+  const { publish, pool, rrSpy } = makeStopSellPublisher(true, false);
+  await publish(pool, { propertyId: 'p1', userId: 'u1', startDate: SS1, endDate: addDays(SS2, 1), stopSellMode: 'authoritative' });
+  const r1 = rrSpy.lastRestrictions.find(r => r.date === SS1);
+  assert.ok(Object.prototype.hasOwnProperty.call(r1, 'stop_sell'), 'stop_sell must be present');
+  assert.strictEqual(r1.stop_sell, true, 'stop_sell must be true');
+});
+
+await test('P2-PUB-02 — stopSellMode:authoritative + false → stop_sell:false envoyé explicitement', async () => {
+  const { publish, pool, rrSpy } = makeStopSellPublisher(true, false);
+  await publish(pool, { propertyId: 'p1', userId: 'u1', startDate: SS1, endDate: addDays(SS2, 1), stopSellMode: 'authoritative' });
+  const r2 = rrSpy.lastRestrictions.find(r => r.date === SS2);
+  assert.ok(Object.prototype.hasOwnProperty.call(r2, 'stop_sell'), 'stop_sell must be present');
+  assert.strictEqual(r2.stop_sell, false, 'stop_sell must be false');
+});
+
+await test('P2-PUB-03 — stopSellMode:true_only + stopSell=true → stop_sell:true', async () => {
+  const { publish, pool, rrSpy } = makeStopSellPublisher(true, false);
+  await publish(pool, { propertyId: 'p1', userId: 'u1', startDate: SS1, endDate: addDays(SS2, 1), stopSellMode: 'true_only' });
+  const r1 = rrSpy.lastRestrictions.find(r => r.date === SS1);
+  assert.ok(Object.prototype.hasOwnProperty.call(r1, 'stop_sell'), 'stop_sell must be present for true case');
+  assert.strictEqual(r1.stop_sell, true);
+});
+
+await test('P2-PUB-04 — stopSellMode:true_only + stopSell=false → champ absent', async () => {
+  const { publish, pool, rrSpy } = makeStopSellPublisher(true, false);
+  await publish(pool, { propertyId: 'p1', userId: 'u1', startDate: SS1, endDate: addDays(SS2, 1), stopSellMode: 'true_only' });
+  const r2 = rrSpy.lastRestrictions.find(r => r.date === SS2);
+  assert.ok(
+    !Object.prototype.hasOwnProperty.call(r2, 'stop_sell'),
+    'stop_sell must be absent when stopSell=false in true_only mode',
+  );
+});
+
+await test('P2-PUB-05 — stopSellMode:none → champ absent pour true ET false', async () => {
+  const { publish, pool, rrSpy } = makeStopSellPublisher(true, false);
+  await publish(pool, { propertyId: 'p1', userId: 'u1', startDate: SS1, endDate: addDays(SS2, 1), stopSellMode: 'none' });
+  for (const r of rrSpy.lastRestrictions) {
+    assert.ok(
+      !Object.prototype.hasOwnProperty.call(r, 'stop_sell'),
+      `stop_sell must be absent in 'none' mode for ${r.date}`,
+    );
+  }
+});
+
+await test('P2-PUB-06 — includeStopSell:false sans stopSellMode → none (backward compat PATH4)', async () => {
+  const { publish, pool, rrSpy } = makeStopSellPublisher(true, false);
+  await publish(pool, { propertyId: 'p1', userId: 'u1', startDate: SS1, endDate: addDays(SS2, 1), includeStopSell: false });
+  for (const r of rrSpy.lastRestrictions) {
+    assert.ok(
+      !Object.prototype.hasOwnProperty.call(r, 'stop_sell'),
+      `stop_sell must be absent (includeStopSell:false → none) for ${r.date}`,
+    );
+  }
+});
+
+await test('P2-PUB-07 — aucun stopSellMode + aucun includeStopSell → authoritative (backward compat PATH1)', async () => {
+  const { publish, pool, rrSpy } = makeStopSellPublisher(false, false);
+  await publish(pool, { propertyId: 'p1', userId: 'u1', startDate: SS1, endDate: addDays(SS2, 1) });
+  for (const r of rrSpy.lastRestrictions) {
+    assert.ok(
+      Object.prototype.hasOwnProperty.call(r, 'stop_sell'),
+      `stop_sell must be present by default (authoritative) for ${r.date}`,
+    );
+  }
+});
+
+await test('P2-PUB-08 — stopSellMode explicite gagne sur includeStopSell', async () => {
+  const { publish, pool, rrSpy } = makeStopSellPublisher(true, false);
+  // stopSellMode:'true_only' wins over includeStopSell:false
+  await publish(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: SS1, endDate: addDays(SS2, 1),
+    stopSellMode: 'true_only',
+    includeStopSell: false,
+  });
+  const r1 = rrSpy.lastRestrictions.find(r => r.date === SS1);
+  const r2 = rrSpy.lastRestrictions.find(r => r.date === SS2);
+  // true_only: present+true for SS1 (stopSell=true), absent for SS2 (stopSell=false)
+  assert.ok(Object.prototype.hasOwnProperty.call(r1, 'stop_sell'), 'SS1 must have stop_sell (true_only wins)');
+  assert.strictEqual(r1.stop_sell, true);
+  assert.ok(!Object.prototype.hasOwnProperty.call(r2, 'stop_sell'), 'SS2 must not have stop_sell (true_only wins)');
+});
+
+await test('P2-PUB-09 — stopSellMode invalide → fail fast, zéro push Channex', async () => {
+  const rSpy = { calls: 0 };
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp()] },
+    okPushRates(rSpy), okPushRestrictions(rrSpy),
+    makeStopSellResolver(false, false),
+  );
+  await assert.rejects(
+    () => publish(pool, { propertyId: 'p1', userId: 'u1', startDate: SS1, endDate: addDays(SS2, 1), stopSellMode: 'invalid_mode' }),
+    /stopSellMode invalide/,
+    'must throw on invalid mode',
+  );
+  assert.strictEqual(rSpy.calls || 0, 0, 'pushRates must not be called');
+  assert.strictEqual(rrSpy.calls || 0, 0, 'pushRestrictions must not be called');
+});
+
+// ─── P2-PUB-BP : BoostPrice semantic proof (C4.4-B19) ────────────────────────
+
+console.log('\n── P2-PUB-BP : BoostPrice semantic proof ──');
+
+// These tests wire the full pool mock (resolver reads pricing_schedule) with
+// the publisher to prove PATH 2 now publishes BoostPrice-effective prices.
+
+// pricing_config with is_active:true is required for the resolver to activate BoostPrice
+const BP_CFG = [{ property_id: 'p1', user_id: 'u1', is_active: true }];
+
+await test('P2-PUB-BP01 — BoostPrice applied=99, base=75 → prix 99 publié', async () => {
+  const rSpy = {};
+  const { publish, pool } = makePublisher({
+    properties:       [baseProp({ base_price: 75 })],
+    pricing_schedule: [{ date: MON, price: 99, status: 'applied' }],
+    pricing_rules: [], pricing_overrides: [], pricing_config: BP_CFG,
+  }, okPushRates(rSpy));
+  await publish(pool, { propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1) });
+  assert.ok(rSpy.lastRates, 'rates must have been pushed');
+  const pushed = rSpy.lastRates.find(r => r.date === MON);
+  assert.ok(pushed, `rate for ${MON} must be present`);
+  assert.strictEqual(pushed.price, 99, 'BoostPrice applied (99) must win over base (75)');
+});
+
+await test('P2-PUB-BP02 — override=105, BoostPrice applied=99 → 105', async () => {
+  const rSpy = {};
+  const { publish, pool } = makePublisher({
+    properties:       [baseProp({ base_price: 75 })],
+    pricing_schedule: [{ date: MON, price: 99, status: 'applied' }],
+    pricing_overrides: [{ date: MON, price: 105 }],
+    pricing_rules: [], pricing_config: BP_CFG,
+  }, okPushRates(rSpy));
+  await publish(pool, { propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1) });
+  const pushed = rSpy.lastRates.find(r => r.date === MON);
+  assert.ok(pushed, `rate for ${MON} must be present`);
+  assert.strictEqual(pushed.price, 105, 'manual override (105) must win over BoostPrice (99)');
+});
+
+await test('P2-PUB-BP03 — BoostPrice pending=99, base=75 → 75 (pending ignoré)', async () => {
+  const rSpy = {};
+  const { publish, pool } = makePublisher({
+    properties: [baseProp({ base_price: 75 })],
+    pricing_schedule: [{ date: MON, price: 99, status: 'pending' }],
+    pricing_rules: [],
+    pricing_overrides: [],
+    pricing_config: [],
+  }, okPushRates(rSpy));
+  await publish(pool, { propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1) });
+  const pushed = rSpy.lastRates.find(r => r.date === MON);
+  assert.ok(pushed, `rate for ${MON} must be present`);
+  assert.strictEqual(pushed.price, 75, 'BoostPrice pending (99) must NOT override base (75)');
+});
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(55)}`);

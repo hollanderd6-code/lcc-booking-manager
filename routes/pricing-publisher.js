@@ -70,6 +70,13 @@ function createPublisher(deps = {}) {
    * @param {string}  opts.endDate       Exclusive 'YYYY-MM-DD'
    * @param {string}  [opts.reason]      Included in result/logs only; never influences prices
    * @param {boolean} [opts.force]       Reserved. No effect in P0-C1. NEVER bypasses external_pricing.
+   * @param {string}  [opts.stopSellMode]
+   *   'authoritative' — stop_sell:true|false always sent (default when neither param is set)
+   *   'true_only'     — stop_sell:true sent only when resolver returns true; field absent otherwise
+   *   'none'          — stop_sell field always absent
+   *   Overrides includeStopSell when both are provided.
+   * @param {boolean} [opts.includeStopSell]
+   *   Legacy compat. false → mode='none'. Ignored when stopSellMode is set.
    * @returns {Promise<PublishResult>}
    */
   async function publishEffectivePricing(pool, {
@@ -80,7 +87,8 @@ function createPublisher(deps = {}) {
     reason = 'unknown',
     force = false,       // reserved — no effect in P0-C1; diffing guard will use this in P0-D
     allowedDates,        // optional Array<'YYYY-MM-DD'> — restricts publish to this subset
-    includeStopSell,     // optional boolean, default true — set false to omit stop_sell field
+    stopSellMode,        // explicit mode: 'authoritative' | 'true_only' | 'none'
+    includeStopSell,     // legacy compat: false → 'none'. Ignored when stopSellMode is set.
   }) {
     // ── 1. Fetch property ──────────────────────────────────────────────────────
     const propRes = await pool.query(
@@ -123,6 +131,20 @@ function createPublisher(deps = {}) {
     const nights = await _resolve()(pool, { propertyId, userId: ownerId, startDate, endDate });
 
     // ── 5. Build payloads ──────────────────────────────────────────────────────
+    // Resolve stopSellMode:
+    //   explicit stopSellMode wins; else legacy includeStopSell:false → 'none'; else 'authoritative'
+    const VALID_STOP_SELL_MODES = new Set(['authoritative', 'true_only', 'none']);
+    const resolvedStopSellMode = stopSellMode !== undefined
+      ? stopSellMode
+      : (includeStopSell === false ? 'none' : 'authoritative');
+
+    // Fail-fast: unknown mode → error before any Channex call
+    if (!VALID_STOP_SELL_MODES.has(resolvedStopSellMode)) {
+      throw new Error(
+        `[PUBLISHER] stopSellMode invalide: "${resolvedStopSellMode}" — valeurs acceptées: authoritative|true_only|none`
+      );
+    }
+
     // allowedDates: optional array → converted to Set for O(1) lookup.
     // undefined/null → no filtering (publish all resolved nights).
     // [] → publish nothing (empty array is intentional; not equivalent to absent).
@@ -137,18 +159,23 @@ function createPublisher(deps = {}) {
       .map(n => ({ date: n.date, price: n.price }));
 
     // Restrictions: all publish nights (min_stay defaults to 1 — never null).
-    // stop_sell: always sent when includeStopSell is not explicitly false.
-    // stop_sell:false re-opens a date previously blocked — intentional.
-    // includeStopSell:false omits the field entirely, leaving Channex state unchanged.
+    // stop_sell handling depends on resolvedStopSellMode:
+    //   authoritative — stop_sell:true|false always present (may reopen manually-blocked dates)
+    //   true_only     — stop_sell:true when resolver says true; field absent otherwise (safe for PATH 2)
+    //   none          — stop_sell field always absent (PATH 4 / includeStopSell:false compat)
     const restrictions = publishNights.map(n => {
       const r = {
         date:             n.date,
         min_stay_arrival: n.minStayArrival,
         min_stay_through: n.minStayThrough,
       };
-      if (includeStopSell !== false) {
+      if (resolvedStopSellMode === 'authoritative') {
         r.stop_sell = n.stopSell ?? false;
+      } else if (resolvedStopSellMode === 'true_only') {
+        if (n.stopSell) r.stop_sell = true;
+        // field absent when stopSell is falsy — Channex state unchanged
       }
+      // 'none': stop_sell always absent
       return r;
     });
 
