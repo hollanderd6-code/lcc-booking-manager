@@ -774,6 +774,244 @@ await test('C04 — les trois IDs présents → fonctionnement normal', async ()
     'pas de detail dans le résultat quand les IDs sont présents');
 });
 
+// ─── PUB-D01–D12 : allowedDates + includeStopSell (C4.3-D) ──────────────────
+
+console.log('\n── PUB-D01–D12 : allowedDates + includeStopSell ──');
+
+// Helper: resolver returning a fixed set of nights
+function makeResolver(nights) {
+  return async (_pool, _opts) => nights.map(n => ({
+    date:           n.date,
+    price:          n.price ?? 100,
+    priceValid:     (n.price ?? 100) > 0,
+    minStayArrival: n.minStay ?? 1,
+    minStayThrough: n.minStay ?? 1,
+    minStaySource:  'default',
+    stopSell:       n.stopSell ?? false,
+    stopSellSource: n.stopSell ? 'stop_sell_rule' : 'none',
+    source:         SOURCE.BASE_PRICE,
+    sourceId:       null,
+    locked:         false,
+    breakdown:      null,
+    calculatedAt:   null,
+  }));
+}
+
+const D1 = '2026-10-01';
+const D2 = '2026-10-02';
+const D3 = '2026-10-03';
+const D4 = '2026-10-04';
+
+// Three-night base setup
+function makeThreeNightPublisher(pushRates, pushRestrictions) {
+  return makePublisher(
+    { properties: [baseProp()] },
+    pushRates, pushRestrictions,
+    makeResolver([
+      { date: D1, price: 90 },
+      { date: D2, price: 100 },
+      { date: D3, price: 110 },
+    ]),
+  );
+}
+
+await test('PUB-D01 — allowedDates absent → toutes les dates de la fenêtre publiées', async () => {
+  const rSpy = { calls: 0 };
+  const { publish, pool } = makeThreeNightPublisher(okPushRates(rSpy), okPushRestrictions());
+  const res = await publish(pool, {
+    propertyId: 'p1', userId: 'u1',
+    startDate: D1, endDate: addDays(D3, 1),
+  });
+  assert.strictEqual(res.status, PUBLISH_STATUS.OK);
+  assert.strictEqual(rSpy.lastRates.length, 3, 'toutes les 3 nuits doivent être publiées');
+  assert.deepStrictEqual(rSpy.lastRates.map(r => r.date), [D1, D2, D3]);
+});
+
+await test('PUB-D02 — allowedDates sous-ensemble → seules ces dates dans rates', async () => {
+  const rSpy = { calls: 0 };
+  const { publish, pool } = makeThreeNightPublisher(okPushRates(rSpy), okPushRestrictions());
+  await publish(pool, {
+    propertyId: 'p1', userId: 'u1',
+    startDate: D1, endDate: addDays(D3, 1),
+    allowedDates: [D1, D3],
+  });
+  assert.strictEqual(rSpy.lastRates.length, 2);
+  assert.deepStrictEqual(rSpy.lastRates.map(r => r.date), [D1, D3]);
+  assert.ok(!rSpy.lastRates.find(r => r.date === D2), 'D2 doit être absent');
+});
+
+await test('PUB-D03 — allowedDates sous-ensemble → seules ces dates dans restrictions', async () => {
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makeThreeNightPublisher(okPushRates(), okPushRestrictions(rrSpy));
+  await publish(pool, {
+    propertyId: 'p1', userId: 'u1',
+    startDate: D1, endDate: addDays(D3, 1),
+    allowedDates: [D2],
+  });
+  assert.strictEqual(rrSpy.lastRestrictions.length, 1);
+  assert.strictEqual(rrSpy.lastRestrictions[0].date, D2);
+});
+
+await test('PUB-D04 — date allowed + priceValid=false → absent des rates, présent dans restrictions', async () => {
+  const rSpy = { calls: 0 };
+  const rrSpy = { calls: 0 };
+  // Resolver explicite retournant D1 avec price=null/priceValid=false, D2 valide
+  const explicitResolver = async (_pool, _opts) => [
+    { date: D1, price: null, priceValid: false, minStayArrival: 1, minStayThrough: 1, minStaySource: 'default', stopSell: false, stopSellSource: 'none', source: SOURCE.NONE, sourceId: null, locked: false, breakdown: null, calculatedAt: null },
+    { date: D2, price: 100,  priceValid: true,  minStayArrival: 1, minStayThrough: 1, minStaySource: 'default', stopSell: false, stopSellSource: 'none', source: SOURCE.BASE_PRICE, sourceId: null, locked: false, breakdown: null, calculatedAt: null },
+  ];
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp()] },
+    okPushRates(rSpy), okPushRestrictions(rrSpy),
+    explicitResolver,
+  );
+  await publish(pool, {
+    propertyId: 'p1', userId: 'u1',
+    startDate: D1, endDate: addDays(D2, 1),
+    allowedDates: [D1, D2],
+  });
+  assert.ok(!rSpy.lastRates?.find(r => r.date === D1), 'D1 (null price) absent des rates');
+  assert.ok(rSpy.lastRates?.find(r => r.date === D2), 'D2 présent dans rates');
+  assert.ok(rrSpy.lastRestrictions?.find(r => r.date === D1), 'D1 présent dans restrictions');
+  assert.ok(rrSpy.lastRestrictions?.find(r => r.date === D2), 'D2 présent dans restrictions');
+});
+
+await test('PUB-D05 — allowedDates=[] → 0 rates et 0 restrictions, pas de push', async () => {
+  const rSpy = { calls: 0 };
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makeThreeNightPublisher(okPushRates(rSpy), okPushRestrictions(rrSpy));
+  const res = await publish(pool, {
+    propertyId: 'p1', userId: 'u1',
+    startDate: D1, endDate: addDays(D3, 1),
+    allowedDates: [],
+  });
+  assert.strictEqual(rSpy.calls || 0, 0, 'pushRates ne doit pas être appelé');
+  assert.strictEqual(rrSpy.calls || 0, 0, 'pushRestrictions ne doit pas être appelé');
+  assert.strictEqual(res.rates.count, 0);
+  assert.strictEqual(res.restrictions.count, 0);
+});
+
+await test('PUB-D06 — allowedDates avec doublons → aucune duplication publiée', async () => {
+  const rSpy = { calls: 0 };
+  const { publish, pool } = makeThreeNightPublisher(okPushRates(rSpy), okPushRestrictions());
+  await publish(pool, {
+    propertyId: 'p1', userId: 'u1',
+    startDate: D1, endDate: addDays(D3, 1),
+    allowedDates: [D1, D1, D2, D2],  // doublons
+  });
+  const dates = rSpy.lastRates.map(r => r.date);
+  assert.strictEqual(dates.length, new Set(dates).size, 'aucun doublon dans rates');
+  assert.strictEqual(dates.length, 2, 'D1 et D2 publiés une seule fois chacun');
+});
+
+await test('PUB-D07 — allowedDates contient date hors fenêtre → jamais publiée', async () => {
+  const rSpy = { calls: 0 };
+  const { publish, pool } = makeThreeNightPublisher(okPushRates(rSpy), okPushRestrictions());
+  // D4 est hors de la fenêtre [D1, D3+1)
+  await publish(pool, {
+    propertyId: 'p1', userId: 'u1',
+    startDate: D1, endDate: addDays(D3, 1),
+    allowedDates: [D1, D4],  // D4 hors fenêtre
+  });
+  assert.ok(!rSpy.lastRates?.find(r => r.date === D4), 'D4 hors fenêtre jamais publié');
+  assert.strictEqual(rSpy.lastRates?.length, 1, 'seul D1 est publié');
+});
+
+await test('PUB-D08 — includeStopSell absent → comportement historique, stop_sell présent', async () => {
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp()] },
+    okPushRates(), okPushRestrictions(rrSpy),
+    makeResolver([{ date: D1, price: 100, stopSell: false }]),
+  );
+  await publish(pool, { propertyId: 'p1', userId: 'u1', startDate: D1, endDate: addDays(D1, 1) });
+  assert.ok(
+    Object.prototype.hasOwnProperty.call(rrSpy.lastRestrictions[0], 'stop_sell'),
+    'stop_sell doit être présent quand includeStopSell absent',
+  );
+});
+
+await test('PUB-D09 — includeStopSell=true → stop_sell présent', async () => {
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp()] },
+    okPushRates(), okPushRestrictions(rrSpy),
+    makeResolver([{ date: D1, price: 100, stopSell: true }]),
+  );
+  await publish(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: D1, endDate: addDays(D1, 1),
+    includeStopSell: true,
+  });
+  assert.ok(
+    Object.prototype.hasOwnProperty.call(rrSpy.lastRestrictions[0], 'stop_sell'),
+    'stop_sell doit être présent quand includeStopSell=true',
+  );
+  assert.strictEqual(rrSpy.lastRestrictions[0].stop_sell, true);
+});
+
+await test('PUB-D10 — includeStopSell=false → champ stop_sell absent de TOUTES les restrictions', async () => {
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp()] },
+    okPushRates(), okPushRestrictions(rrSpy),
+    makeResolver([
+      { date: D1, price: 100, stopSell: false },
+      { date: D2, price: 110, stopSell: true },
+      { date: D3, price: 90,  stopSell: false },
+    ]),
+  );
+  await publish(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: D1, endDate: addDays(D3, 1),
+    includeStopSell: false,
+  });
+  assert.strictEqual(rrSpy.calls, 1, 'pushRestrictions doit être appelé');
+  for (const r of rrSpy.lastRestrictions) {
+    assert.ok(
+      !Object.prototype.hasOwnProperty.call(r, 'stop_sell'),
+      `stop_sell ne doit pas être présent sur ${r.date} quand includeStopSell=false`,
+    );
+  }
+});
+
+await test('PUB-D11 — appel style PATH1 sans nouveaux params → contrat résultat inchangé', async () => {
+  const rSpy = { calls: 0 };
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp()] },
+    okPushRates(rSpy), okPushRestrictions(rrSpy),
+  );
+  const res = await publish(pool, {
+    propertyId: 'p1', userId: 'u1',
+    startDate: MON, endDate: addDays(MON, 1),
+    reason: 'trigger_sync',
+  });
+  assert.strictEqual(res.status, PUBLISH_STATUS.OK);
+  assert.ok(res.nights >= 1);
+  assert.ok(res.rates.count >= 1);
+  assert.ok(res.restrictions.count >= 1);
+  assert.strictEqual(rSpy.calls, 1, 'pushRates doit être appelé');
+  assert.strictEqual(rrSpy.calls, 1, 'pushRestrictions doit être appelé');
+  // stop_sell present (default behavior)
+  assert.ok(
+    Object.prototype.hasOwnProperty.call(rrSpy.lastRestrictions[0], 'stop_sell'),
+    'stop_sell doit être présent dans le comportement PATH1 par défaut',
+  );
+});
+
+await test('PUB-D12 — resolver throw → propagation inchangée', async () => {
+  const throwingResolver = async () => { throw new Error('DB connexion perdue'); };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp()] },
+    okPushRates(), okPushRestrictions(),
+    throwingResolver,
+  );
+  await assert.rejects(
+    () => publish(pool, { propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1) }),
+    /DB connexion perdue/,
+    'resolver throw doit se propager depuis le publisher',
+  );
+});
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(55)}`);

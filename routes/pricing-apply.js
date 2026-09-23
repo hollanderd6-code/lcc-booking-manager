@@ -21,6 +21,7 @@ const {
 } = require('./pricing-engine');
 
 const { addDays } = require('./effective-pricing-resolver');
+const { publishEffectivePricing } = require('./pricing-publisher');
 
 // ── Lundi de la semaine courante (aligne le récap hebdo) ─────
 function getCurrentWeekStart() {
@@ -180,32 +181,27 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
   }
   await upsertSchedule(pool, cfg.user_id, cfg.property_id, nightsToUpsert, status);
 
-  // 5. Push Channex (mode auto uniquement)
-  let pushed = 0;
+  // 5. Publish via central publisher (mode auto uniquement)
+  // allowedDates = exactement les dates upsertées applied — nuits booked exclues
+  let pubResult = { status: 'skipped_no_push', rates: { count: 0, pushed: 0, error: null }, restrictions: { count: 0, pushed: 0, error: null } };
   if (willPush) {
+    const startDate = new Date().toISOString().slice(0, 10);
+    const endDate   = addDays(startDate, 365);
+    const allowedDates = nightsToUpsert.map(n => n.date);
     try {
-      const { pushRates, pushRestrictions } = require('../channex');
-      await pushRates(pool, {
-        property_id: prop.id,
-        channex_property_id: prop.channex_property_id,
-        channex_rate_plan_id: prop.channex_rate_plan_id,
-        rates: result.rates,
+      pubResult = await publishEffectivePricing(pool, {
+        propertyId:      cfg.property_id,
+        userId:          cfg.user_id,
+        startDate,
+        endDate,
+        allowedDates,
+        reason:          'boostprice_auto',
+        includeStopSell: false,
       });
-      await pushRestrictions(pool, {
-        property_id: prop.id,
-        channex_property_id: prop.channex_property_id,
-        channex_room_type_id: prop.channex_room_type_id,
-        channex_rate_plan_id: prop.channex_rate_plan_id,
-        restrictions: result.restrictions.map(r => ({
-          date: r.date,
-          min_stay_arrival: r.min_stay,
-          min_stay_through: r.min_stay,
-        })),
-      });
-      pushed = result.rates.length;
-      console.log(`📡 [DP-APPLY] ${prop.name} : ${pushed} nuits poussées sur Channex`);
-    } catch (chErr) {
-      console.error(`⚠️ [DP-APPLY] Channex push error (${prop.name}):`, chErr.message);
+      console.log(`📡 [DP-APPLY] ${prop.name} : pub:${pubResult.status} rates:${pubResult.rates.pushed}/${pubResult.rates.count}`);
+    } catch (pubErr) {
+      console.error(`⚠️ [DP-APPLY] publisher throw inattendu (${prop.name}):`, pubErr.message);
+      pubResult = { status: 'error', rates: { count: allowedDates.length, pushed: 0, error: pubErr.message }, restrictions: { count: allowedDates.length, pushed: 0, error: null } };
     }
   }
 
@@ -232,8 +228,8 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
   } catch {}
 
   const reason = willPush
-    ? `${nights.length} nuits recalculées et poussées (J→J+${result.schedule.length})`
-    : `${nights.length} suggestions prêtes${isMock ? ' (marché simulé)' : ''}`;
+    ? `${nightsToUpsert.length} nuits recalculées (pub:${pubResult.status})`
+    : `${nightsToUpsert.length} suggestions prêtes${isMock ? ' (marché simulé)' : ''}`;
 
   try {
     await pool.query(
@@ -296,7 +292,8 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
     priceApplied: willPush ? avg7 : null,
     priceCalculated: avg7,
     nights: nights.length,
-    pushed,
+    pushed: pubResult.rates.pushed,
+    publishStatus: pubResult.status,
   };
 }
 

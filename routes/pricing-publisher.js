@@ -78,7 +78,9 @@ function createPublisher(deps = {}) {
     startDate,
     endDate,
     reason = 'unknown',
-    force = false,  // reserved — no effect in P0-C1; diffing guard will use this in P0-D
+    force = false,       // reserved — no effect in P0-C1; diffing guard will use this in P0-D
+    allowedDates,        // optional Array<'YYYY-MM-DD'> — restricts publish to this subset
+    includeStopSell,     // optional boolean, default true — set false to omit stop_sell field
   }) {
     // ── 1. Fetch property ──────────────────────────────────────────────────────
     const propRes = await pool.query(
@@ -121,19 +123,34 @@ function createPublisher(deps = {}) {
     const nights = await _resolve()(pool, { propertyId, userId: ownerId, startDate, endDate });
 
     // ── 5. Build payloads ──────────────────────────────────────────────────────
+    // allowedDates: optional array → converted to Set for O(1) lookup.
+    // undefined/null → no filtering (publish all resolved nights).
+    // [] → publish nothing (empty array is intentional; not equivalent to absent).
+    const allowedDateSet = Array.isArray(allowedDates) ? new Set(allowedDates) : null;
+    const publishNights  = allowedDateSet !== null
+      ? nights.filter(n => allowedDateSet.has(n.date))
+      : nights;
+
     // Rates: only nights with a valid (non-null, > 0) price
-    const rates = nights
+    const rates = publishNights
       .filter(n => n.priceValid)
       .map(n => ({ date: n.date, price: n.price }));
 
-    // Restrictions: all resolved nights (min_stay defaults to 1 — never null)
-    // stop_sell always sent (false re-opens a date previously blocked)
-    const restrictions = nights.map(n => ({
-      date:             n.date,
-      min_stay_arrival: n.minStayArrival,
-      min_stay_through: n.minStayThrough,
-      stop_sell:        n.stopSell ?? false,
-    }));
+    // Restrictions: all publish nights (min_stay defaults to 1 — never null).
+    // stop_sell: always sent when includeStopSell is not explicitly false.
+    // stop_sell:false re-opens a date previously blocked — intentional.
+    // includeStopSell:false omits the field entirely, leaving Channex state unchanged.
+    const restrictions = publishNights.map(n => {
+      const r = {
+        date:             n.date,
+        min_stay_arrival: n.minStayArrival,
+        min_stay_through: n.minStayThrough,
+      };
+      if (includeStopSell !== false) {
+        r.stop_sell = n.stopSell ?? false;
+      }
+      return r;
+    });
 
     // ── 6. Push — both attempted independently; errors are collected, not thrown
     let ratesResult       = null;
@@ -179,7 +196,8 @@ function createPublisher(deps = {}) {
     else if (ratesOk || restrOk) status = PUBLISH_STATUS.PARTIAL;
     else status = PUBLISH_STATUS.ERROR;
 
-    console.log(`[PUBLISHER] ${propertyId} — ${status} — reason:${reason} — rates:${rates.length} restr:${restrictions.length}`);
+    const filterNote = allowedDateSet !== null ? ` allowed:${allowedDateSet.size}` : '';
+    console.log(`[PUBLISHER] ${propertyId} — ${status} — reason:${reason} — rates:${rates.length} restr:${restrictions.length}${filterNote}`);
 
     return {
       status,
