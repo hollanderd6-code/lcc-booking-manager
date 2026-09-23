@@ -49,7 +49,7 @@ const { setupChatRoutes } = require('./routes/chat_routes');
 const { comptesAutorises } = require('./utils/agency');
 const { normalizeDateOnly, getOccupiedNights } = require('./utils/dates');
 const createSmartLocksRoutes = require('./routes/smart-locks-routes');
-const { runPricingShadow } = require('./routes/effective-pricing-shadow');
+const { triggerSync: _triggerSync } = require('./routes/trigger-sync');
 const { deescalateConversation } = require('./utils/chat-utils');
 const { resolveOwnerClientId } = require('./utils/owner-utils');
 const { generateInvoicePdf } = require('./utils/invoice-pdf');
@@ -457,138 +457,7 @@ function buildMinStayFields(minStayRules, dateStr, dow) {
 }
 
 async function triggerChannexRatesSync(propertyId, userId) {
-  try {
-    const propResult = await pool.query(
-      `SELECT id, user_id, name, base_price, weekend_price,
-              channex_enabled, channex_property_id, channex_room_type_id, channex_rate_plan_id,
-              external_pricing
-       FROM properties WHERE id = $1`,
-      [propertyId]
-    );
-    const prop = propResult.rows[0];
-    if (!prop || !prop.channex_enabled || !prop.channex_rate_plan_id) return;
-
-    // ✅ Mode agence : les règles/overrides sont stockés sous le compte PROPRIÉTAIRE
-    // du logement, pas sous l'utilisateur connecté. On utilise donc prop.user_id.
-    const ownerId = prop.user_id || userId;
-
-    // Hard guard : tarification externe → aucune publication Channex (ni tarifs ni restrictions).
-    if (prop.external_pricing) {
-      console.log(`ℹ️ [CHANNEX RATES SYNC] ${propertyId} — tarification externe, aucune publication Channex`);
-      return;
-    }
-
-    console.log(`💰 [CHANNEX RATES SYNC] Déclenchement pour ${propertyId} (owner ${ownerId})`);
-
-    const rulesResult = await pool.query(
-      'SELECT * FROM pricing_rules WHERE property_id = $1 AND user_id = $2 AND active = true ORDER BY priority DESC',
-      [propertyId, ownerId]
-    );
-    const rules = rulesResult.rows;
-
-    const today = new Date();
-    const fmt = d => d.toISOString().split('T')[0];
-    const endDate = new Date(today); endDate.setDate(today.getDate() + 500);
-
-    const overridesResult = await pool.query(
-      `SELECT TO_CHAR(date,'YYYY-MM-DD') as date, price FROM pricing_overrides
-       WHERE property_id = $1 AND user_id = $2 AND date >= $3 AND date <= $4`,
-      [propertyId, ownerId, fmt(today), fmt(endDate)]
-    );
-    const overridesMap = {};
-    overridesResult.rows.forEach(o => { overridesMap[o.date] = parseFloat(o.price); });
-
-    const periodRules  = rules.filter(r => r.rule_type === 'period');
-    const weekdayRules = rules.filter(r => r.rule_type === 'weekday');
-    const minStayRules = rules.filter(r => r.rule_type === 'min_stay');
-    const longStayRule = rules.find(r => r.rule_type === 'long_stay') || null;
-
-    const rates = [];
-    const restrictions = [];
-
-    for (let i = 0; i < 500; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const dateStr = fmt(d);
-      const dow = d.getDay();
-
-      let appliedPrice = null;
-
-      if (overridesMap[dateStr] != null) {
-        appliedPrice = overridesMap[dateStr];
-      } else {
-        for (const rule of periodRules) {
-          if (rule.start_date && rule.end_date && rule.price != null) {
-            if (dateStr >= fmt(new Date(rule.start_date)) && dateStr <= fmt(new Date(rule.end_date))) {
-              appliedPrice = parseFloat(rule.price); break;
-            }
-          }
-        }
-        if (appliedPrice === null) {
-          for (const rule of weekdayRules) {
-            if (rule.days_of_week && rule.price != null && rule.days_of_week.includes(dow)) {
-              appliedPrice = parseFloat(rule.price); break;
-            }
-          }
-        }
-        if (appliedPrice === null) {
-          const isPremium = (dow === 5 || dow === 6);
-          appliedPrice = isPremium && prop.weekend_price != null
-            ? parseFloat(prop.weekend_price)
-            : (prop.base_price != null ? parseFloat(prop.base_price) : null);
-        }
-        if (appliedPrice != null && longStayRule && longStayRule.discount_pct && longStayRule.discount_after_nights) {
-          appliedPrice = Math.round(appliedPrice * (1 - parseFloat(longStayRule.discount_pct) / 100) * 100) / 100;
-        }
-      }
-
-      if (appliedPrice != null) rates.push({ date: dateStr, price: appliedPrice });
-
-      restrictions.push({ date: dateStr, ...buildMinStayFields(minStayRules, dateStr, dow) });
-    }
-
-    // === PRICING SHADOW (P0-B) — observateur uniquement, ne modifie PAS le payload Channex ===
-    try {
-      await runPricingShadow(pool, {
-        propertyId,
-        userId:            ownerId,
-        startDate:         fmt(today),
-        endDate:           fmt(endDate),
-        legacyRates:       rates,
-        legacyRestrictions: restrictions,
-        longStayRule,
-        isExternalPricing: !!prop.external_pricing,
-      });
-    } catch (err) {
-      console.error('[PRICING SHADOW] Erreur (non bloquante):', err.message);
-    }
-    // === FIN SHADOW ===
-
-    if (rates.length > 0 && !prop.external_pricing) {
-      await pushRates(pool, {
-        property_id: propertyId,
-        channex_property_id: prop.channex_property_id,
-        channex_rate_plan_id: prop.channex_rate_plan_id,
-        rates
-      });
-    }
-    if (restrictions.length > 0) {
-      await pushRestrictions(pool, {
-        property_id: propertyId,
-        channex_property_id: prop.channex_property_id,
-        channex_room_type_id: prop.channex_room_type_id,
-        channex_rate_plan_id: prop.channex_rate_plan_id,
-        restrictions
-      });
-    }
-
-    console.log(`✅ [CHANNEX RATES SYNC] ${rates.length} tarifs + ${restrictions.length} restrictions synchronisés`);
-    if (restrictions.length > 0) {
-      dbg(`🔍 [CHANNEX RATES SYNC] Détail restrictions:`, restrictions.map(r => `${r.date}→arr=${r.min_stay_arrival}/thr=${r.min_stay_through}`).join(', '));
-    }
-  } catch (e) {
-    console.error('⚠️ [CHANNEX RATES SYNC] Erreur (non bloquante):', e.message);
-  }
+  await _triggerSync(pool, propertyId, userId);
 }
 
 // ============================================

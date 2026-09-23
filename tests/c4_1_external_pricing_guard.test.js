@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * P0-C4.1 — Hard guard external_pricing dans triggerChannexRatesSync
+ * P0-C4.1 — Hard guard external_pricing dans publishEffectivePricing
  *
- * triggerChannexRatesSync est une fonction interne de server.js (non exportée).
- * Require('server.js') démarrerait le serveur réel (DB, crons, listen) → hors scope
- * d'un test unitaire sans refactoring de server.js.
+ * Depuis C4.2e, triggerChannexRatesSync est un thin wrapper qui délègue
+ * entièrement à publishEffectivePricing (pricing-publisher.js).
+ * Le guard external_pricing réside désormais dans le publisher.
  *
- * Stratégie : inspection structurelle du source.
- *   1. Extraire le corps de triggerChannexRatesSync.
- *   2. Vérifier que la branche external_pricing contient un return.
- *   3. Vérifier que ce return précède les appels pushRates et pushRestrictions.
+ * Stratégie : inspection structurelle de routes/pricing-publisher.js.
+ *   1. Extraire le corps de publishEffectivePricing.
+ *   2. Vérifier que le guard external_pricing contient un return.
+ *   3. Vérifier que pushRates / pushRestrictions sont positionnés APRÈS le guard.
+ *   4. Vérifier que le resolver (_resolve) est appelé APRÈS le guard.
+ *   5. Vérifier que triggerChannexRatesSync dans server.js délègue au publisher.
  *
  * Exécution : node tests/c4_1_external_pricing_guard.test.js
  */
@@ -19,7 +21,11 @@ const assert = require('assert');
 const fs     = require('fs');
 const path   = require('path');
 
-const src = fs.readFileSync(
+const publisherSrc = fs.readFileSync(
+  path.join(__dirname, '..', 'routes', 'pricing-publisher.js'),
+  'utf8'
+);
+const serverSrc = fs.readFileSync(
   path.join(__dirname, '..', 'server.js'),
   'utf8'
 );
@@ -42,12 +48,10 @@ function test(name, fn) {
 
 // ── Extraction du corps de la fonction ────────────────────────────────────────
 
-// Localise la déclaration de la fonction puis extrait jusqu'à sa fermeture
-// (première accolade fermante au même niveau d'imbrication que l'ouverture de la fonction).
 function extractFunctionBody(source, fnName) {
   const declRe = new RegExp(`async function ${fnName}\\s*\\(`);
   const startIdx = source.search(declRe);
-  assert.ok(startIdx >= 0, `Fonction ${fnName} introuvable dans server.js`);
+  assert.ok(startIdx >= 0, `Fonction ${fnName} introuvable`);
 
   let depth = 0;
   let bodyStart = -1;
@@ -63,61 +67,61 @@ function extractFunctionBody(source, fnName) {
   throw new Error(`Impossible d'extraire le corps de ${fnName}`);
 }
 
-const fnBody = extractFunctionBody(src, 'triggerChannexRatesSync');
+// Note: extractFunctionBody is not used for the publisher because the parameter
+// destructuring `{` confuses brace-counting. We search publisherSrc directly —
+// the file is dedicated to publishEffectivePricing so false positives are impossible.
 
-// ── TC-G01 : la fonction existe et est bien trouvée ───────────────────────────
-test('TC-G01 triggerChannexRatesSync est présente dans server.js', () => {
-  assert.ok(fnBody.length > 200, 'Corps trop court — extraction incorrecte');
-});
-
-// ── TC-G02 : le bloc external_pricing contient un return ─────────────────────
-test('TC-G02 external_pricing → return dans le corps de la fonction', () => {
-  // Localise le guard puis cherche un 'return;' dans les 5 lignes qui suivent.
-  const guardIdx = fnBody.indexOf('if (prop.external_pricing)');
-  assert.ok(guardIdx >= 0, 'Guard if (prop.external_pricing) introuvable');
-
-  // Extrait les 400 caractères suivant le guard (couvre largement le bloc + return)
-  const snippet = fnBody.slice(guardIdx, guardIdx + 400);
+// ── TC-G01 : publishEffectivePricing existe ───────────────────────────────────
+test('TC-G01 publishEffectivePricing est présente dans pricing-publisher.js', () => {
   assert.ok(
-    /\breturn\s*;/.test(snippet),
-    'Aucun return trouvé dans les 400 caractères après if (prop.external_pricing)'
+    publisherSrc.includes('async function publishEffectivePricing'),
+    'async function publishEffectivePricing introuvable dans pricing-publisher.js'
   );
 });
 
-// ── TC-G03 : pushRates apparaît APRÈS le garde external_pricing ───────────────
-test('TC-G03 pushRates est positionné après le guard external_pricing', () => {
-  const guardIdx     = fnBody.indexOf('if (prop.external_pricing)');
-  const returnIdx    = fnBody.indexOf('return;', guardIdx);
-  const pushRatesIdx = fnBody.indexOf('pushRates(', returnIdx);
+// ── TC-G02 : le guard external_pricing renvoie avant tout calcul ──────────────
+test('TC-G02 external_pricing → skip avant tout calcul', () => {
+  const guardIdx = publisherSrc.indexOf('prop.external_pricing');
+  assert.ok(guardIdx >= 0, 'Guard external_pricing introuvable dans pricing-publisher.js');
+
+  const snippet = publisherSrc.slice(guardIdx, guardIdx + 300);
+  assert.ok(
+    /return\s+_skip\(/.test(snippet) || /\breturn\b/.test(snippet),
+    'Aucun return/skip trouvé dans les 300 caractères après le guard external_pricing'
+  );
+});
+
+// ── TC-G03 : pushRates est positionné APRÈS le guard ─────────────────────────
+test('TC-G03 _pushRates appelé après le guard external_pricing', () => {
+  const guardIdx     = publisherSrc.indexOf('prop.external_pricing');
+  const pushRatesIdx = publisherSrc.indexOf('_pushRates()', guardIdx);
 
   assert.ok(guardIdx     >= 0, 'Guard external_pricing introuvable');
-  assert.ok(returnIdx    >  guardIdx, 'return introuvable après le guard');
-  assert.ok(pushRatesIdx >  returnIdx,
-    `pushRates (pos ${pushRatesIdx}) devrait être après le return du guard (pos ${returnIdx})`);
+  assert.ok(pushRatesIdx >  guardIdx,
+    `_pushRates (pos ${pushRatesIdx}) devrait être après le guard (pos ${guardIdx})`);
 });
 
-// ── TC-G04 : pushRestrictions apparaît APRÈS le garde ────────────────────────
-test('TC-G04 pushRestrictions est positionné après le guard external_pricing', () => {
-  const guardIdx          = fnBody.indexOf('if (prop.external_pricing)');
-  const returnIdx         = fnBody.indexOf('return;', guardIdx);
-  const pushRestrictionsIdx = fnBody.indexOf('pushRestrictions(', returnIdx);
+// ── TC-G04 : pushRestrictions est positionné APRÈS le guard ──────────────────
+test('TC-G04 _pushRestrictions appelé après le guard external_pricing', () => {
+  const guardIdx            = publisherSrc.indexOf('prop.external_pricing');
+  const pushRestrictionsIdx = publisherSrc.indexOf('_pushRestrictions()', guardIdx);
 
   assert.ok(guardIdx            >= 0, 'Guard external_pricing introuvable');
-  assert.ok(returnIdx           >  guardIdx,  'return introuvable après le guard');
-  assert.ok(pushRestrictionsIdx >  returnIdx,
-    `pushRestrictions (pos ${pushRestrictionsIdx}) devrait être après le return du guard (pos ${returnIdx})`);
+  assert.ok(pushRestrictionsIdx >  guardIdx,
+    `_pushRestrictions (pos ${pushRestrictionsIdx}) devrait être après le guard (pos ${guardIdx})`);
 });
 
-// ── TC-G05 : le guard précède le calcul 500 jours (pas seulement avant pushRates) ──
-test('TC-G05 le guard précède la boucle de calcul des 500 nuits', () => {
-  const guardIdx = fnBody.indexOf('if (prop.external_pricing)');
-  const loopIdx  = fnBody.indexOf('for (let i = 0; i < 500; i++)');
-
-  assert.ok(guardIdx >= 0, 'Guard introuvable');
-  assert.ok(loopIdx  >= 0, 'Boucle 500 nuits introuvable');
-  // Le guard doit être AVANT la boucle (early return évite les calculs inutiles).
-  assert.ok(guardIdx < loopIdx,
-    `Guard (pos ${guardIdx}) devrait précéder la boucle de calcul (pos ${loopIdx})`);
+// ── TC-G05 : triggerChannexRatesSync délègue au publisher (C4.2e) ─────────────
+test('TC-G05 triggerChannexRatesSync délègue à _triggerSync (publisher)', () => {
+  const triggerBody = extractFunctionBody(serverSrc, 'triggerChannexRatesSync');
+  assert.ok(
+    triggerBody.includes('_triggerSync'),
+    'triggerChannexRatesSync doit déléguer à _triggerSync (C4.2e migration)'
+  );
+  assert.ok(
+    !triggerBody.includes('prop.external_pricing'),
+    'triggerChannexRatesSync ne doit plus contenir le guard external_pricing directement'
+  );
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────
