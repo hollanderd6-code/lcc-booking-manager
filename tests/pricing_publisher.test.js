@@ -612,6 +612,110 @@ await runNoWriteTest(
   { properties: [baseProp()] },
 );
 
+// ─── P01–P06 : Modèle A min_stay + stop_sell (C4.2a) ─────────────────────────
+
+console.log('\n── P01–P06 : Modèle A min_stay + stop_sell ──');
+
+await test('P01 — BoostPrice min_stay=3 → min_stay_arrival=3 min_stay_through=3', async () => {
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    {
+      properties:      [baseProp()],
+      pricing_config:  [{ is_active: true }],
+      pricing_schedule:[{ date: MON, price: 110, min_stay: 3, status: 'applied', id: 1 }],
+    },
+    okPushRates(), okPushRestrictions(rrSpy),
+  );
+  await publish(pool, singleNight());
+  assert.strictEqual(rrSpy.lastRestrictions[0].min_stay_arrival, 3,
+    'BoostPrice min_stay doit être publié comme min_stay_arrival');
+  assert.strictEqual(rrSpy.lastRestrictions[0].min_stay_through, 3,
+    'BoostPrice min_stay doit être publié comme min_stay_through');
+});
+
+await test('P02 — stopSell=true → stop_sell=true dans restrictions', async () => {
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    {
+      properties:    [baseProp()],
+      pricing_rules: [{
+        rule_type: 'stop_sell', id: 20, priority: 0, active: true,
+        start_date: '2026-09-20', end_date: '2026-09-25',
+      }],
+    },
+    okPushRates(), okPushRestrictions(rrSpy),
+  );
+  await publish(pool, singleNight());
+  assert.strictEqual(rrSpy.lastRestrictions[0].stop_sell, true,
+    'stop_sell doit être true quand une règle couvre la date');
+});
+
+await test('P03 — stopSell=false → stop_sell=false explicitement envoyé (réouverture)', async () => {
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp()] },
+    okPushRates(), okPushRestrictions(rrSpy),
+  );
+  await publish(pool, singleNight());
+  // stop_sell=false DOIT être présent (pas omis) pour rouvrir une date précédemment bloquée
+  assert.ok(Object.prototype.hasOwnProperty.call(rrSpy.lastRestrictions[0], 'stop_sell'),
+    'stop_sell doit être présent dans le payload même quand false');
+  assert.strictEqual(rrSpy.lastRestrictions[0].stop_sell, false,
+    'stop_sell doit être false (pas undefined/omis) pour permettre la réouverture');
+});
+
+await test('P04 — priceValid=false + stopSell=true → 0 rate, restriction stop_sell envoyée', async () => {
+  const rSpy = { calls: 0 };
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    {
+      properties:    [baseProp({ base_price: null, weekend_price: null })],
+      pricing_rules: [{
+        rule_type: 'stop_sell', id: 20, priority: 0, active: true,
+        start_date: '2026-09-20', end_date: '2026-09-25',
+      }],
+    },
+    okPushRates(rSpy), okPushRestrictions(rrSpy),
+  );
+  const res = await publish(pool, singleNight());
+  assert.strictEqual(res.rates.count, 0, 'aucun rate (prix null)');
+  assert.strictEqual(rSpy.calls || 0, 0, 'pushRates non appelé');
+  assert.strictEqual(rrSpy.calls, 1, 'pushRestrictions appelé malgré prix null');
+  assert.strictEqual(rrSpy.lastRestrictions[0].stop_sell, true,
+    'stop_sell doit être présent dans les restrictions même sans prix');
+});
+
+await test('P05 — external_pricing=true → aucun push (inchangé)', async () => {
+  const rSpy = { calls: 0 }, rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp({ external_pricing: true })] },
+    okPushRates(rSpy), okPushRestrictions(rrSpy),
+  );
+  const res = await publish(pool, singleNight());
+  assert.strictEqual(res.status, PUBLISH_STATUS.SKIPPED_EXTERNAL);
+  assert.strictEqual(rSpy.calls || 0, 0, 'pushRates ne doit pas être appelé');
+  assert.strictEqual(rrSpy.calls || 0, 0, 'pushRestrictions ne doit pas être appelé');
+});
+
+await test('P06 — BoostPrice price + BoostPrice min_stay → les deux préservés', async () => {
+  const rSpy = { calls: 0 };
+  const rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    {
+      properties:      [baseProp()],
+      pricing_config:  [{ is_active: true }],
+      pricing_schedule:[{ date: MON, price: 185, min_stay: 4, status: 'applied', id: 1 }],
+    },
+    okPushRates(rSpy), okPushRestrictions(rrSpy),
+  );
+  await publish(pool, singleNight());
+  assert.strictEqual(rSpy.lastRates[0].price, 185, 'BoostPrice price doit être préservé');
+  assert.strictEqual(rrSpy.lastRestrictions[0].min_stay_arrival, 4,
+    'BoostPrice min_stay doit être préservé dans arrival');
+  assert.strictEqual(rrSpy.lastRestrictions[0].min_stay_through, 4,
+    'BoostPrice min_stay doit être préservé dans through');
+});
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(55)}`);

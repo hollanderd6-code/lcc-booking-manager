@@ -885,6 +885,215 @@ test('TC45 — pricing_config not found → bpActive=false (applied schedule ign
   assert.strictEqual(res[0].source, SOURCE.BASE_PRICE, 'No pricing_config → BoostPrice must be inactive');
 });
 
+// ─── Section R01–R12 : Modèle A min_stay + stop_sell (C4.2a) ─────────────────
+
+console.log('\n── R01–R12 : Modèle A min_stay + stop_sell ──');
+
+test('R01 — BoostPrice applied min_stay=3, legacy=2 → schedule wins', async () => {
+  const pool = makeMockPool({
+    properties:      [prop()],
+    pricing_config:  [cfg()],
+    pricing_schedule:[{ date: MON, price: 110, min_stay: 3, status: 'applied', id: 1 }],
+    pricing_rules:   [{
+      rule_type: 'min_stay', min_nights: 2, min_stay_scope: 'through',
+      days_of_week: null, start_date: null, end_date: null, active: true,
+    }],
+  });
+  const res = await resolveEffectivePrices(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1),
+  });
+  assert.strictEqual(res[0].price, 110);
+  assert.strictEqual(res[0].source, SOURCE.BOOSTPRICE);
+  assert.strictEqual(res[0].minStayArrival, 3);
+  assert.strictEqual(res[0].minStayThrough, 3);
+  assert.strictEqual(res[0].minStaySource, 'boostprice');
+});
+
+test('R02 — BoostPrice applied min_stay=null → fallback legacy min_stay=2', async () => {
+  const pool = makeMockPool({
+    properties:      [prop()],
+    pricing_config:  [cfg()],
+    pricing_schedule:[{ date: MON, price: 110, min_stay: null, status: 'applied', id: 1 }],
+    pricing_rules:   [{
+      rule_type: 'min_stay', min_nights: 2, min_stay_scope: 'through',
+      days_of_week: null, start_date: null, end_date: null, active: true,
+    }],
+  });
+  const res = await resolveEffectivePrices(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1),
+  });
+  assert.strictEqual(res[0].source, SOURCE.BOOSTPRICE);
+  assert.strictEqual(res[0].minStayThrough, 2);
+  assert.strictEqual(res[0].minStaySource, 'min_stay_rule');
+});
+
+test('R03 — BoostPrice applied min_stay=0 → invalid, fallback to default=1', async () => {
+  const pool = makeMockPool({
+    properties:      [prop()],
+    pricing_config:  [cfg()],
+    pricing_schedule:[{ date: MON, price: 110, min_stay: 0, status: 'applied', id: 1 }],
+  });
+  const res = await resolveEffectivePrices(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1),
+  });
+  assert.strictEqual(res[0].source, SOURCE.BOOSTPRICE);
+  assert.strictEqual(res[0].minStayArrival, 1);
+  assert.strictEqual(res[0].minStayThrough, 1);
+  assert.strictEqual(res[0].minStaySource, 'default');
+});
+
+test('R04 — BoostPrice pending → ignoré pour prix ET min_stay', async () => {
+  const pool = makeMockPool({
+    properties:      [prop()],
+    pricing_config:  [cfg()],
+    pricing_schedule:[{ date: MON, price: 110, min_stay: 3, status: 'pending', id: 1 }],
+    pricing_rules:   [{
+      rule_type: 'min_stay', min_nights: 2, min_stay_scope: 'through',
+      days_of_week: null, start_date: null, end_date: null, active: true,
+    }],
+  });
+  const res = await resolveEffectivePrices(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1),
+  });
+  assert.notStrictEqual(res[0].source, SOURCE.BOOSTPRICE, 'pending doit être ignoré');
+  assert.strictEqual(res[0].minStayThrough, 2, 'legacy min_stay doit s\'appliquer');
+  assert.strictEqual(res[0].minStaySource, 'min_stay_rule');
+});
+
+test('R05 — manual override + BoostPrice applied → prix override, min_stay legacy', async () => {
+  const pool = makeMockPool({
+    properties:      [prop()],
+    pricing_config:  [cfg()],
+    pricing_schedule:[{ date: MON, price: 110, min_stay: 3, status: 'applied', id: 1 }],
+    pricing_overrides:[{ date: MON, price: 95, id: 5 }],
+    pricing_rules:   [
+      { rule_type: 'min_stay', min_nights: 2, min_stay_scope: 'arrival',
+        days_of_week: null, start_date: null, end_date: null, active: true },
+      { rule_type: 'min_stay', min_nights: 2, min_stay_scope: 'through',
+        days_of_week: null, start_date: null, end_date: null, active: true },
+    ],
+  });
+  const res = await resolveEffectivePrices(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1),
+  });
+  assert.strictEqual(res[0].price, 95);
+  assert.strictEqual(res[0].source, SOURCE.MANUAL_OVERRIDE);
+  assert.strictEqual(res[0].minStayArrival, 2);
+  assert.strictEqual(res[0].minStayThrough, 2);
+  assert.strictEqual(res[0].minStaySource, 'min_stay_rule');
+});
+
+test('R06 — period rule + legacy min_stay → minStaySource=min_stay_rule', async () => {
+  const pool = makeMockPool({
+    properties:    [prop()],
+    pricing_rules: [
+      { rule_type: 'period', id: 1, price: 200, priority: 0,
+        start_date: '2026-09-20', end_date: '2026-09-22', active: true },
+      { rule_type: 'min_stay', min_nights: 4, min_stay_scope: 'arrival',
+        days_of_week: null, start_date: null, end_date: null, active: true },
+    ],
+  });
+  const res = await resolveEffectivePrices(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1),
+  });
+  assert.strictEqual(res[0].source, SOURCE.PERIOD_RULE);
+  assert.strictEqual(res[0].minStayArrival, 4);
+  assert.strictEqual(res[0].minStaySource, 'min_stay_rule');
+});
+
+test('R07 — aucune règle min_stay → minStay=1, minStaySource=default', async () => {
+  const pool = makeMockPool({ properties: [prop()] });
+  const res = await resolveEffectivePrices(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1),
+  });
+  assert.strictEqual(res[0].minStayArrival, 1);
+  assert.strictEqual(res[0].minStayThrough, 1);
+  assert.strictEqual(res[0].minStaySource, 'default');
+});
+
+test('R08 — stop_sell actif sur la date → stopSell=true', async () => {
+  const pool = makeMockPool({
+    properties:    [prop()],
+    pricing_rules: [{
+      rule_type: 'stop_sell', id: 20, priority: 0, active: true,
+      start_date: '2026-09-20', end_date: '2026-09-25',
+    }],
+  });
+  const res = await resolveEffectivePrices(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1),
+  });
+  assert.strictEqual(res[0].stopSell, true);
+  assert.strictEqual(res[0].stopSellSource, 'stop_sell_rule');
+});
+
+test('R09 — stop_sell hors période → stopSell=false', async () => {
+  const pool = makeMockPool({
+    properties:    [prop()],
+    pricing_rules: [{
+      rule_type: 'stop_sell', id: 20, priority: 0, active: true,
+      start_date: '2026-10-01', end_date: '2026-10-31',
+    }],
+  });
+  const res = await resolveEffectivePrices(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1),
+  });
+  assert.strictEqual(res[0].stopSell, false);
+  assert.strictEqual(res[0].stopSellSource, 'none');
+});
+
+test('R10 — stop_sell + BoostPrice applied → BoostPrice reste source prix, stopSell=true', async () => {
+  const pool = makeMockPool({
+    properties:      [prop()],
+    pricing_config:  [cfg()],
+    pricing_schedule:[{ date: MON, price: 110, min_stay: 3, status: 'applied', id: 1 }],
+    pricing_rules:   [{
+      rule_type: 'stop_sell', id: 20, priority: 0, active: true,
+      start_date: '2026-09-20', end_date: '2026-09-25',
+    }],
+  });
+  const res = await resolveEffectivePrices(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1),
+  });
+  assert.strictEqual(res[0].source, SOURCE.BOOSTPRICE);
+  assert.strictEqual(res[0].price, 110);
+  assert.strictEqual(res[0].stopSell, true);
+  assert.strictEqual(res[0].stopSellSource, 'stop_sell_rule');
+});
+
+test('R11 — stop_sell + manual override → manual_override reste source prix, stopSell=true', async () => {
+  const pool = makeMockPool({
+    properties:       [prop()],
+    pricing_overrides:[{ date: MON, price: 95, id: 5 }],
+    pricing_rules:    [{
+      rule_type: 'stop_sell', id: 20, priority: 0, active: true,
+      start_date: '2026-09-20', end_date: '2026-09-25',
+    }],
+  });
+  const res = await resolveEffectivePrices(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1),
+  });
+  assert.strictEqual(res[0].source, SOURCE.MANUAL_OVERRIDE);
+  assert.strictEqual(res[0].price, 95);
+  assert.strictEqual(res[0].stopSell, true);
+});
+
+test('R12 — aucun prix (base_price null) + stop_sell actif → price=null + stopSell=true', async () => {
+  const pool = makeMockPool({
+    properties:    [prop({ base_price: null, weekend_price: null })],
+    pricing_rules: [{
+      rule_type: 'stop_sell', id: 20, priority: 0, active: true,
+      start_date: '2026-09-20', end_date: '2026-09-25',
+    }],
+  });
+  const res = await resolveEffectivePrices(pool, {
+    propertyId: 'p1', userId: 'u1', startDate: MON, endDate: addDays(MON, 1),
+  });
+  assert.strictEqual(res[0].price, null);
+  assert.strictEqual(res[0].priceValid, false);
+  assert.strictEqual(res[0].stopSell, true);
+  assert.strictEqual(res[0].stopSellSource, 'stop_sell_rule');
+});
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 // Async tests complete in microtasks — wait one event loop tick to collect results

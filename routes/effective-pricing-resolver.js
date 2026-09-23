@@ -97,6 +97,9 @@ function calcMinStay(rules, dateStr, dow, scope) {
  *   priceValid:      boolean,
  *   minStayArrival:  number,
  *   minStayThrough:  number,
+ *   minStaySource:   string,
+ *   stopSell:        boolean,
+ *   stopSellSource:  string,
  *   source:          string,
  *   sourceId:        number|null,
  *   locked:          boolean,
@@ -145,7 +148,7 @@ async function resolveEffectivePrices(pool, { propertyId, userId, startDate, end
   const schedMap = new Map();
   if (bpActive) {
     const schedRes = await pool.query(
-      `SELECT TO_CHAR(date,'YYYY-MM-DD') AS date, price, id, updated_at, breakdown
+      `SELECT TO_CHAR(date,'YYYY-MM-DD') AS date, price, min_stay, id, updated_at, breakdown
        FROM pricing_schedule
        WHERE property_id = $1
          AND date >= $2 AND date < $3
@@ -162,10 +165,11 @@ async function resolveEffectivePrices(pool, { propertyId, userId, startDate, end
      ORDER BY priority DESC`,
     [propertyId, userId]
   );
-  const rules      = rulesRes.rows;
-  const periodRules  = rules.filter(r => r.rule_type === 'period');
-  const weekdayRules = rules.filter(r => r.rule_type === 'weekday');
-  const minStayRules = rules.filter(r => r.rule_type === 'min_stay');
+  const rules         = rulesRes.rows;
+  const periodRules   = rules.filter(r => r.rule_type === 'period');
+  const weekdayRules  = rules.filter(r => r.rule_type === 'weekday');
+  const minStayRules  = rules.filter(r => r.rule_type === 'min_stay');
+  const stopSellRules = rules.filter(r => r.rule_type === 'stop_sell');
 
   // ── Per-date resolution ──────────────────────────────────────────────────────
   const result = [];
@@ -248,9 +252,43 @@ async function resolveEffectivePrices(pool, { propertyId, userId, startDate, end
       source = SOURCE.BASE_PRICE;
     }
 
-    // min-stay (independent of price — narrowest-span logic for date ranges)
-    const minStayArrival = calcMinStay(minStayRules, cursor, dow, 'arrival') ?? 1;
-    const minStayThrough = calcMinStay(minStayRules, cursor, dow, 'through') ?? 1;
+    // min-stay — Modèle A: source=boostprice → schedule.min_stay si valide; sinon legacy
+    let minStayArrival, minStayThrough, minStaySource;
+    if (source === SOURCE.BOOSTPRICE) {
+      const bpMin = schedMap.get(cursor)?.min_stay;
+      if (bpMin != null && bpMin > 0) {
+        minStayArrival = bpMin;
+        minStayThrough = bpMin;
+        minStaySource  = 'boostprice';
+      } else {
+        const arr = calcMinStay(minStayRules, cursor, dow, 'arrival');
+        const thr = calcMinStay(minStayRules, cursor, dow, 'through');
+        minStayArrival = arr ?? 1;
+        minStayThrough = thr ?? 1;
+        minStaySource  = (arr != null || thr != null) ? 'min_stay_rule' : 'default';
+      }
+    } else {
+      const arr = calcMinStay(minStayRules, cursor, dow, 'arrival');
+      const thr = calcMinStay(minStayRules, cursor, dow, 'through');
+      minStayArrival = arr ?? 1;
+      minStayThrough = thr ?? 1;
+      minStaySource  = (arr != null || thr != null) ? 'min_stay_rule' : 'default';
+    }
+
+    // stop_sell — indépendant de la source prix (même sémantique inclusive que triggerChannexRatesSync)
+    let stopSell = false;
+    let stopSellSource = 'none';
+    for (const rule of stopSellRules) {
+      if (rule.start_date && rule.end_date) {
+        const rs = fmtDate(rule.start_date);
+        const re = fmtDate(rule.end_date);
+        if (cursor >= rs && cursor <= re) {
+          stopSell = true;
+          stopSellSource = 'stop_sell_rule';
+          break;
+        }
+      }
+    }
 
     result.push({
       date:           cursor,
@@ -258,6 +296,9 @@ async function resolveEffectivePrices(pool, { propertyId, userId, startDate, end
       priceValid:     price != null && price > 0,
       minStayArrival,
       minStayThrough,
+      minStaySource,
+      stopSell,
+      stopSellSource,
       source,
       sourceId,
       locked,

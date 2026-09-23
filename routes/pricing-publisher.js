@@ -121,10 +121,12 @@ function createPublisher(deps = {}) {
       .map(n => ({ date: n.date, price: n.price }));
 
     // Restrictions: all resolved nights (min_stay defaults to 1 — never null)
+    // stop_sell always sent (false re-opens a date previously blocked)
     const restrictions = nights.map(n => ({
       date:             n.date,
       min_stay_arrival: n.minStayArrival,
       min_stay_through: n.minStayThrough,
+      stop_sell:        n.stopSell ?? false,
     }));
 
     // ── 6. Push — both attempted independently; errors are collected, not thrown
