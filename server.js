@@ -8170,7 +8170,7 @@ async function captureDeposit(depositId, amountCents = null) {
       console.warn('⚠️ Notification caution (non bloquant):', notifErr.message);
     }
 
-    return true;
+    return capturedAmount;
   } catch (error) {
     console.error('❌ Erreur captureDeposit:', error);
     throw error;
@@ -24656,9 +24656,9 @@ app.post('/api/deposits/:depositId/capture',
       return res.status(404).json({ error: 'Caution introuvable' });
     }
 
-    await captureDeposit(depositId, amountCents);
-    
-    res.json({ message: 'Caution capturée avec succès' });
+    const capturedAmountCents = await captureDeposit(depositId, amountCents);
+
+    res.json({ message: 'Caution capturée avec succès', amountCents: capturedAmountCents });
   } catch (err) {
     console.error('Erreur POST /api/deposits/capture:', err);
     res.status(500).json({ error: err.message || 'Erreur serveur' });
@@ -24690,9 +24690,10 @@ app.post('/api/deposits/:depositId/release',
       return res.status(404).json({ error: 'Caution introuvable' });
     }
 
+    const depositRow = deposit.rows[0];
     await releaseDeposit(depositId);
 
-    res.json({ message: 'Caution libérée avec succès' });
+    res.json({ message: 'Caution libérée avec succès', amountCents: depositRow.captured_amount ?? depositRow.amount ?? null });
   } catch (err) {
     console.error('Erreur POST /api/deposits/release:', err);
     res.status(500).json({ error: err.message || 'Erreur serveur' });
