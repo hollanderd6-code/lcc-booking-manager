@@ -416,8 +416,9 @@ async function buildBookedSet(pool, propertyId, today, horizonDays) {
   return set;
 }
 
-async function priceProperty(pool, { userId, property, today, configOverride, events, schoolHolidays }) {
-  today = toUTC(today || new Date());
+async function priceProperty(pool, opts) {
+  const { userId, property, today: rawToday, configOverride, events, schoolHolidays } = opts;
+  const today = toUTC(rawToday || new Date());
 
   // base price + min/max
   const basePrice    = property.base_price != null ? parseFloat(property.base_price) : null;
@@ -432,15 +433,25 @@ async function priceProperty(pool, { userId, property, today, configOverride, ev
   const priceMin = cfgRow.price_min != null ? parseFloat(cfgRow.price_min) : 30;
   const priceMax = cfgRow.price_max != null ? parseFloat(cfgRow.price_max) : 1000;
 
-  // dernier snapshot marché
-  const market = (await pool.query(
-    `SELECT median_price AS median, occupancy_rate, comparable_count, tension_level
-       FROM market_data
-      WHERE property_id = $1
-      ORDER BY week_start DESC LIMIT 1`,
-    [property.id]
-  )).rows[0] || null;
-  if (market && market.median != null) market.median = parseFloat(market.median);
+  // Market signal:
+  //   marketOverride key absent → legacy DB lookup (backward-compatible)
+  //   marketOverride = null     → explicitly neutral; no DB lookup performed
+  //   marketOverride = object   → use supplied value directly
+  let market;
+  if ('marketOverride' in opts) {
+    market = opts.marketOverride ?? null;
+    if (market != null && market.median != null) market.median = parseFloat(market.median);
+  } else {
+    const dbRow = (await pool.query(
+      `SELECT median_price AS median, occupancy_rate, comparable_count, tension_level
+         FROM market_data
+        WHERE property_id = $1
+        ORDER BY week_start DESC LIMIT 1`,
+      [property.id]
+    )).rows[0] || null;
+    if (dbRow && dbRow.median != null) dbRow.median = parseFloat(dbRow.median);
+    market = dbRow;
+  }
 
   const horizonDays = (configOverride?.horizonDays) || DEFAULTS.horizonDays;
   const bookedSet = await buildBookedSet(pool, property.id, today, horizonDays);

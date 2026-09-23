@@ -114,7 +114,7 @@ function configToOverride(cfg) {
 // ============================================================
 // applyDynamicPricingForProperty
 // ============================================================
-async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, sendPushNotification }) {
+async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, marketOverride, sendPushNotification }) {
   await ensureScheduleTable(pool);
   const weekStart = getCurrentWeekStart();
 
@@ -133,14 +133,21 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
   }
 
   // 2. Moteur per-night (J → J+horizon)
-  const result = await priceProperty(pool, {
+  // marketOverride present → pipeline resolved usability; pass it (null = neutral).
+  // marketOverride absent  → backward-compat: priceProperty does its own DB lookup.
+  const engineOpts = {
     userId: cfg.user_id,
     property: prop,
     today: new Date(),
-    events: EVENTS_PARIS_2026,                  // ⟵ remplace par TES événements
+    events: EVENTS_PARIS_2026,
     schoolHolidays: SCHOOL_HOLIDAYS_IDF_2025_2026,
     configOverride: configToOverride(cfg),
-  });
+  };
+  // marketOverride !== undefined means the caller explicitly resolved market usability.
+  // null = neutral (stale/untrusted). An object = use it. Absent (undefined) = legacy DB lookup.
+  if (marketOverride !== undefined) engineOpts.marketOverride = marketOverride;
+
+  const result = await priceProperty(pool, engineOpts);
 
   const nights = result.schedule.filter(n => !n.booked);
   if (nights.length === 0) {

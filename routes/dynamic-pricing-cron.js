@@ -26,6 +26,7 @@ const {
   getSelfOccupancy,
 } = require('./dynamic-pricing-routes');
 const { applyDynamicPricingForProperty } = require('./pricing-apply');
+const { resolveMarketData } = require('./market-data-resolver');
 
 // ── Constantes ───────────────────────────────────────────────
 const APIFY_ACTOR_ID  = 'tri_angle~airbnb-scraper';
@@ -441,9 +442,23 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
 
       console.log(`✅ [DP-CRON] market_data inséré: médiane=${marketStats.median}€ occ=${marketStats.occupancy}% tension=${marketStats.tensionLevel}`);
 
+      // Résolution trust+freshness : le résultat du scrape courant est déjà connu.
+      // isMock vient directement du scraper → pas de requête DB supplémentaire.
+      // Live fresh : market utilisable ; mock : market neutralisé.
+      const marketOverride = isMock ? null : {
+        median:           marketStats.median,
+        occupancy_rate:   marketStats.occupancy,
+        comparable_count: marketStats.count,
+        tension_level:    marketStats.tensionLevel,
+        tensionLevel:     marketStats.tensionLevel,
+      };
+      if (isMock) {
+        console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: market mock — signal neutralisé, auto-push bloqué`);
+      }
+
       // 5-8. Moteur per-night : calcul, stockage planning, push Channex, notif
       const apply = await applyDynamicPricingForProperty(pool, {
-        cfg, marketStats, isMock, sendPushNotification,
+        cfg, marketStats, isMock, marketOverride, sendPushNotification,
       });
 
       results.push({
@@ -547,19 +562,25 @@ async function runDailyPricingRefresh(pool, sendPushNotification = null) {
   let done = 0, pushed = 0;
   for (const cfg of configs) {
     try {
-      const mdRow = (await pool.query(
-        `SELECT median_price, occupancy_rate, tension_level, data_source
-           FROM market_data WHERE property_id = $1 ORDER BY week_start DESC LIMIT 1`,
-        [cfg.property_id]
-      )).rows[0] || null;
-      const marketStats = mdRow ? {
-        median: mdRow.median_price,
-        occupancy: mdRow.occupancy_rate,
-        tensionLevel: mdRow.tension_level,
+      const resolution = await resolveMarketData(pool, { propertyId: cfg.property_id });
+      const isMock = !resolution.trusted && resolution.status !== 'missing';
+
+      if (resolution.status === 'live_stale') {
+        console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: market stale (${resolution.ageDays?.toFixed(1)}j) — signal neutralisé, auto-push maintenu`);
+      } else if (isMock) {
+        console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: market ${resolution.status} — signal neutralisé, auto-push bloqué`);
+      }
+
+      const marketStats = resolution.row ? {
+        median: resolution.row.median_price,
+        occupancy: resolution.row.occupancy_rate,
+        tensionLevel: resolution.row.tension_level,
       } : null;
-      const isMock = mdRow !== null && mdRow.data_source !== 'apify_live';
+
       const apply = await applyDynamicPricingForProperty(pool, {
-        cfg, marketStats, isMock, sendPushNotification,
+        cfg, marketStats, isMock,
+        marketOverride: resolution.market,   // null when stale/untrusted, object when usable
+        sendPushNotification,
       });
       done++;
       if (apply.status === 'applied') pushed += (apply.pushed || 0);
@@ -679,8 +700,20 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
 
   console.log(`✅ [DP-ONE] market_data: médiane=${marketStats.median}€ occ=${marketStats.occupancy}% tension=${marketStats.tensionLevel}`);
 
+  // Trust comes directly from the scrape result — no redundant DB read.
+  const marketOverride = isMock ? null : {
+    median:           marketStats.median,
+    occupancy_rate:   marketStats.occupancy,
+    comparable_count: marketStats.count,
+    tension_level:    marketStats.tensionLevel,
+    tensionLevel:     marketStats.tensionLevel,
+  };
+  if (isMock) {
+    console.log(`ℹ️ [DP-ONE] ${cfg.property_name}: market mock — signal neutralisé, auto-push bloqué`);
+  }
+
   const apply = await applyDynamicPricingForProperty(pool, {
-    cfg, marketStats, isMock, sendPushNotification,
+    cfg, marketStats, isMock, marketOverride, sendPushNotification,
   });
 
   return { ok: true, isMock, marketStats, apply };

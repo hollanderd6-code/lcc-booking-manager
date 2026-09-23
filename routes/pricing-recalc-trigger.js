@@ -13,6 +13,7 @@
 'use strict';
 
 const { applyDynamicPricingForProperty } = require('./pricing-apply');
+const { resolveMarketData } = require('./market-data-resolver');
 
 const _timers = new Map();      // propertyId -> timeout
 const DEBOUNCE_MS = 45000;      // 45 s
@@ -42,19 +43,24 @@ async function runRecalc(pool, propertyId, userId) {
   )).rows[0];
   if (!cfg) return; // pricing non activé → on ne fait rien
 
-  const md = (await pool.query(
-    `SELECT median_price, occupancy_rate, tension_level
-       FROM market_data WHERE property_id = $1 ORDER BY week_start DESC LIMIT 1`,
-    [propertyId]
-  )).rows[0] || {};
-  const marketStats = {
-    median: md.median_price, occupancy: md.occupancy_rate, tensionLevel: md.tension_level,
-  };
+  // Use the shared resolver — closes the P1.0-A bypass (isMock: false was hardcoded before).
+  const resolution = await resolveMarketData(pool, { propertyId });
+  const isMock = !resolution.trusted && resolution.status !== 'missing';
+
+  const marketStats = resolution.row ? {
+    median: resolution.row.median_price,
+    occupancy: resolution.row.occupancy_rate,
+    tensionLevel: resolution.row.tension_level,
+  } : null;
 
   const r = await applyDynamicPricingForProperty(pool, {
-    cfg, marketStats, isMock: false, sendPushNotification: null, // silencieux
+    cfg,
+    marketStats,
+    isMock,
+    marketOverride: resolution.market,   // null when stale/untrusted/missing
+    sendPushNotification: null,          // silencieux
   });
-  console.log(`🔁 [DP-TRIGGER] ${cfg.property_name} repricé (nouvelle résa) — ${r.nights || 0} nuits, ${r.status}`);
+  console.log(`🔁 [DP-TRIGGER] ${cfg.property_name} repricé (nouvelle résa) — ${r.nights || 0} nuits, ${r.status} [market:${resolution.status}]`);
 }
 
 module.exports = { schedulePricingRecalc };
