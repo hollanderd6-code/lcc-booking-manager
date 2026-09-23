@@ -104,8 +104,14 @@ function createPublisher(deps = {}) {
       return _skip(PUBLISH_STATUS.SKIPPED_CHANNEX_DISABLED, propertyId, reason);
     }
 
-    if (!prop.channex_property_id || !prop.channex_rate_plan_id) {
-      return _skip(PUBLISH_STATUS.SKIPPED_MISSING_IDS, propertyId, reason);
+    const missingIds = [
+      !prop.channex_property_id  && 'channex_property_id',
+      !prop.channex_rate_plan_id && 'channex_rate_plan_id',
+      !prop.channex_room_type_id && 'channex_room_type_id',
+    ].filter(Boolean);
+
+    if (missingIds.length > 0) {
+      return _skip(PUBLISH_STATUS.SKIPPED_MISSING_IDS, propertyId, reason, { missingIds });
     }
 
     // ── 3. Resolve ownerId — rules/overrides stored under property owner ───────
@@ -188,7 +194,7 @@ function createPublisher(deps = {}) {
   return publishEffectivePricing;
 }
 
-function _skip(status, propertyId, reason) {
+function _skip(status, propertyId, reason, detail = null) {
   return {
     status,
     propertyId,
@@ -196,6 +202,7 @@ function _skip(status, propertyId, reason) {
     nights:       0,
     rates:        { count: 0, pushed: 0, error: null },
     restrictions: { count: 0, pushed: 0, error: null },
+    ...(detail != null ? { detail } : {}),
   };
 }
 

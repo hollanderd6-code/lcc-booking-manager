@@ -529,6 +529,238 @@ test('TC-S23 — LONG_STAY_DIFFERENCE: override bypasses long_stay (manual_overr
     'manual_override with price diff should not be classified as LONG_STAY_DIFFERENCE');
 });
 
+// ─── S01–S10 : Shadow restrictions (C4.2c) ───────────────────────────────────
+
+console.log('\n── S01–S10 : Shadow restrictions ──');
+
+test('S01 — legacy min_stay=2 / effective min_stay=2 → match', () => {
+  const comparisons = compareNights({
+    resolverNights: [makeResolverNight({ minStayArrival: 2, minStayThrough: 2 })],
+    legacyRateMap:  new Map([[MON, 100]]),
+    legacyRestMap:  new Map([[MON, { min_stay_arrival: 2, min_stay_through: 2 }]]),
+    pendingSet:     new Set(),
+    longStayRule:   null,
+    isExternalPricing: false,
+    propertyId:     'p1',
+  });
+  assert.strictEqual(comparisons[0].restrictionComparison.minStayArrivalMatch, true);
+  assert.strictEqual(comparisons[0].restrictionComparison.minStayThroughMatch, true);
+});
+
+test('S02 — legacy min_stay=2 / BoostPrice effective min_stay=3 → différence attendue BoostPrice', () => {
+  const cl = classifyNight({
+    legacyPrice: 100, legacyMinArr: 2, legacyMinThru: 2,
+    resolverNight: makeResolverNight({
+      price: 100, minStayArrival: 3, minStayThrough: 3,
+      source: SOURCE.BOOSTPRICE, minStaySource: 'boostprice',
+    }),
+    longStayRule: null, isExternalPricing: false, hasPending: false,
+  });
+  assert.strictEqual(cl, CLASSIFICATION.EXPECTED_BOOSTPRICE_MIN_STAY_DIFFERENCE);
+});
+
+test('S03 — legacy min_stay=2 / effective legacy min_stay=3 → différence inattendue', () => {
+  const cl = classifyNight({
+    legacyPrice: 100, legacyMinArr: 2, legacyMinThru: 2,
+    resolverNight: makeResolverNight({ minStayArrival: 3, minStayThrough: 3 }),
+    longStayRule: null, isExternalPricing: false, hasPending: false,
+  });
+  assert.strictEqual(cl, CLASSIFICATION.UNEXPECTED_MIN_STAY_DIFFERENCE);
+});
+
+test('S04 — legacy stop_sell=true / effective stopSell=true → match', () => {
+  const comparisons = compareNights({
+    resolverNights: [makeResolverNight({ stopSell: true })],
+    legacyRateMap:  new Map([[MON, 100]]),
+    legacyRestMap:  new Map([[MON, { min_stay_arrival: 1, min_stay_through: 1, stop_sell: true }]]),
+    pendingSet:     new Set(),
+    longStayRule:   null,
+    isExternalPricing: false,
+    propertyId:     'p1',
+  });
+  assert.strictEqual(comparisons[0].restrictionComparison.stopSellMatch, true,
+    'stop_sell identical → stopSellMatch=true');
+  assert.strictEqual(comparisons[0].differences.stopSell, false);
+});
+
+test('S05 — legacy stop_sell=false / effective stopSell=true → différence inattendue visible', () => {
+  const comparisons = compareNights({
+    resolverNights: [makeResolverNight({ stopSell: true })],
+    legacyRateMap:  new Map([[MON, 100]]),
+    legacyRestMap:  new Map([[MON, { min_stay_arrival: 1, min_stay_through: 1, stop_sell: false }]]),
+    pendingSet:     new Set(),
+    longStayRule:   null,
+    isExternalPricing: false,
+    propertyId:     'p1',
+  });
+  assert.strictEqual(comparisons[0].restrictionComparison.stopSellMatch, false,
+    'stop_sell divergence doit être visible dans restrictionComparison');
+  assert.strictEqual(comparisons[0].differences.stopSell, true);
+  assert.strictEqual(comparisons[0].legacy.stopSell, false);
+  assert.strictEqual(comparisons[0].resolver.stopSell, true);
+});
+
+test('S06 — legacy stop_sell=true / effective stopSell=false → différence inattendue visible', () => {
+  const comparisons = compareNights({
+    resolverNights: [makeResolverNight({ stopSell: false })],
+    legacyRateMap:  new Map([[MON, 100]]),
+    legacyRestMap:  new Map([[MON, { min_stay_arrival: 1, min_stay_through: 1, stop_sell: true }]]),
+    pendingSet:     new Set(),
+    longStayRule:   null,
+    isExternalPricing: false,
+    propertyId:     'p1',
+  });
+  assert.strictEqual(comparisons[0].restrictionComparison.stopSellMatch, false);
+  assert.strictEqual(comparisons[0].differences.stopSell, true);
+  assert.strictEqual(comparisons[0].legacy.stopSell, true);
+  assert.strictEqual(comparisons[0].resolver.stopSell, false);
+});
+
+test('S07 — manual override + mêmes restrictions → aucune fausse divergence restrictions', () => {
+  const comparisons = compareNights({
+    resolverNights: [makeResolverNight({
+      price: 120, source: SOURCE.MANUAL_OVERRIDE, locked: true,
+      minStayArrival: 2, minStayThrough: 2, stopSell: false,
+    })],
+    legacyRateMap: new Map([[MON, 120]]),
+    legacyRestMap: new Map([[MON, { min_stay_arrival: 2, min_stay_through: 2, stop_sell: false }]]),
+    pendingSet:    new Set(),
+    longStayRule:  null,
+    isExternalPricing: false,
+    propertyId:    'p1',
+  });
+  assert.strictEqual(comparisons[0].restrictionComparison.minStayArrivalMatch, true,
+    'manual override ne doit pas créer de fausse divergence min_stay_arrival');
+  assert.strictEqual(comparisons[0].restrictionComparison.minStayThroughMatch, true);
+  assert.strictEqual(comparisons[0].restrictionComparison.stopSellMatch, true);
+});
+
+test('S08 — BoostPrice price différent + BoostPrice min_stay différent → price=EXPECTED_BOOSTPRICE, restriction attendue', () => {
+  const comparisons = compareNights({
+    resolverNights: [makeResolverNight({
+      price: 180, source: SOURCE.BOOSTPRICE,
+      minStayArrival: 3, minStayThrough: 3, minStaySource: 'boostprice',
+    })],
+    legacyRateMap: new Map([[MON, 100]]),
+    legacyRestMap: new Map([[MON, { min_stay_arrival: 2, min_stay_through: 2 }]]),
+    pendingSet:    new Set(),
+    longStayRule:  null,
+    isExternalPricing: false,
+    propertyId:    'p1',
+  });
+  // Price classification conservée
+  assert.strictEqual(comparisons[0].classification, CLASSIFICATION.EXPECTED_BOOSTPRICE_DIFFERENCE,
+    'price classification conservée = EXPECTED_BOOSTPRICE_DIFFERENCE');
+  // Restriction différence marquée attendue
+  assert.strictEqual(comparisons[0].restrictionComparison.minStayDiffExpected, true,
+    'min_stay diff doit être marquée attendue (BoostPrice source)');
+  assert.strictEqual(comparisons[0].restrictionComparison.minStayArrivalMatch, false);
+});
+
+test('S09 — 500 nuits sans divergence restrictions → agrégat 0 unexpected restriction difference', () => {
+  const logs = [];
+  const origLog = console.log;
+  console.log = (...args) => logs.push(args.join(' '));
+
+  const nights500 = Array.from({ length: 500 }, (_, i) => ({
+    propertyId: 'p1',
+    date: addDays(MON, i),
+    legacy:   { price: 100, minStayArrival: 1, minStayThrough: 1, stopSell: false, source: null },
+    resolver: { price: 100, minStayArrival: 1, minStayThrough: 1, stopSell: false, source: SOURCE.BASE_PRICE, locked: false },
+    differences: { price: false, minStayArrival: false, minStayThrough: false, stopSell: false, source: false },
+    restrictionComparison: { minStayArrivalMatch: true, minStayThroughMatch: true, stopSellMatch: true, minStayDiffExpected: false },
+    classification: CLASSIFICATION.MATCH,
+  }));
+
+  logShadowSummary(nights500, { propertyId: 'p1', startDate: MON, endDate: addDays(MON, 500) });
+  console.log = origLog;
+
+  const unexpectedStopSellLine = logs.find(l => l.includes('unexpected_stop_sell'));
+  assert.ok(unexpectedStopSellLine, 'unexpected_stop_sell doit apparaître dans le résumé');
+  assert.ok(unexpectedStopSellLine.includes(': 0') || unexpectedStopSellLine.endsWith('0'),
+    'unexpected_stop_sell doit être 0 pour 500 nuits sans divergence');
+
+  const unexpectedMinStayLine = logs.find(l => l.includes('unexpected_min_stay') && l.includes('restriction'));
+  // Also check via the full log set
+  const restrLines = logs.filter(l => l.includes('unexpected_min_stay'));
+  // The restriction_divergences section logs unexpected_min_stay: 0
+  assert.ok(restrLines.some(l => l.includes('0')),
+    'unexpected_min_stay restriction doit être 0');
+});
+
+test('S10 — plusieurs divergences → compteurs agrégés exacts', () => {
+  const logs = [];
+  const origLog = console.log;
+  console.log = (...args) => logs.push(args.join(' '));
+
+  // 2 unexpected stop_sell + 1 expected min_stay boostprice + 1 unexpected min_stay
+  const comparisons = [
+    // S05 case: stop_sell false→true
+    {
+      propertyId: 'p1', date: addDays(MON, 0),
+      legacy:   { price: 100, minStayArrival: 1, minStayThrough: 1, stopSell: false, source: null },
+      resolver: { price: 100, minStayArrival: 1, minStayThrough: 1, stopSell: true,  source: SOURCE.BASE_PRICE, locked: false },
+      differences: { price: false, minStayArrival: false, minStayThrough: false, stopSell: true, source: false },
+      restrictionComparison: { minStayArrivalMatch: true, minStayThroughMatch: true, stopSellMatch: false, minStayDiffExpected: false },
+      classification: CLASSIFICATION.MATCH,
+    },
+    // Another stop_sell diff
+    {
+      propertyId: 'p1', date: addDays(MON, 1),
+      legacy:   { price: 100, minStayArrival: 1, minStayThrough: 1, stopSell: true,  source: null },
+      resolver: { price: 100, minStayArrival: 1, minStayThrough: 1, stopSell: false, source: SOURCE.BASE_PRICE, locked: false },
+      differences: { price: false, minStayArrival: false, minStayThrough: false, stopSell: true, source: false },
+      restrictionComparison: { minStayArrivalMatch: true, minStayThroughMatch: true, stopSellMatch: false, minStayDiffExpected: false },
+      classification: CLASSIFICATION.MATCH,
+    },
+    // BoostPrice expected min_stay diff
+    {
+      propertyId: 'p1', date: addDays(MON, 2),
+      legacy:   { price: 100, minStayArrival: 2, minStayThrough: 2, stopSell: false, source: null },
+      resolver: { price: 180, minStayArrival: 3, minStayThrough: 3, stopSell: false, source: SOURCE.BOOSTPRICE, locked: false },
+      differences: { price: true, minStayArrival: true, minStayThrough: true, stopSell: false, source: false },
+      restrictionComparison: { minStayArrivalMatch: false, minStayThroughMatch: false, stopSellMatch: true, minStayDiffExpected: true },
+      classification: CLASSIFICATION.EXPECTED_BOOSTPRICE_DIFFERENCE,
+    },
+    // Unexpected min_stay diff (no boostprice)
+    {
+      propertyId: 'p1', date: addDays(MON, 3),
+      legacy:   { price: 100, minStayArrival: 2, minStayThrough: 2, stopSell: false, source: null },
+      resolver: { price: 100, minStayArrival: 3, minStayThrough: 3, stopSell: false, source: SOURCE.BASE_PRICE, locked: false },
+      differences: { price: false, minStayArrival: true, minStayThrough: true, stopSell: false, source: false },
+      restrictionComparison: { minStayArrivalMatch: false, minStayThroughMatch: false, stopSellMatch: true, minStayDiffExpected: false },
+      classification: CLASSIFICATION.UNEXPECTED_MIN_STAY_DIFFERENCE,
+    },
+    // MATCH — no restriction diff
+    {
+      propertyId: 'p1', date: addDays(MON, 4),
+      legacy:   { price: 100, minStayArrival: 1, minStayThrough: 1, stopSell: false, source: null },
+      resolver: { price: 100, minStayArrival: 1, minStayThrough: 1, stopSell: false, source: SOURCE.BASE_PRICE, locked: false },
+      differences: { price: false, minStayArrival: false, minStayThrough: false, stopSell: false, source: false },
+      restrictionComparison: { minStayArrivalMatch: true, minStayThroughMatch: true, stopSellMatch: true, minStayDiffExpected: false },
+      classification: CLASSIFICATION.MATCH,
+    },
+  ];
+
+  logShadowSummary(comparisons, { propertyId: 'p1', startDate: MON, endDate: addDays(MON, 5) });
+  console.log = origLog;
+
+  const stopSellLine = logs.find(l => l.includes('unexpected_stop_sell'));
+  assert.ok(stopSellLine, 'unexpected_stop_sell doit apparaître dans le résumé');
+  assert.ok(stopSellLine.includes('2'), 'unexpected_stop_sell doit être 2');
+
+  // restriction_divergences lines are separate log entries — check by value
+  const expMinStayLines = logs.filter(l => l.includes('expected_boostprice_min_stay'));
+  assert.ok(expMinStayLines.length > 0, 'expected_boostprice_min_stay doit apparaître dans le résumé');
+  assert.ok(expMinStayLines.some(l => l.includes('1')),
+    'expected_boostprice_min_stay restriction doit être 1');
+
+  const unexpMinStayLines = logs.filter(l => l.includes('unexpected_min_stay'));
+  assert.ok(unexpMinStayLines.length > 0, 'unexpected_min_stay doit apparaître dans le résumé');
+  assert.ok(unexpMinStayLines.some(l => l.includes('1')),
+    'unexpected_min_stay restriction doit être 1');
+});
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 setImmediate(() => {

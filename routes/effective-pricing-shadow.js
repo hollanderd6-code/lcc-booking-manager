@@ -18,15 +18,16 @@ const { resolveEffectivePrices, SOURCE } = require('./effective-pricing-resolver
 const MAX_DIFF_DETAIL = 20;
 
 const CLASSIFICATION = Object.freeze({
-  MATCH:                          'MATCH',
-  EXPECTED_BOOSTPRICE_DIFFERENCE: 'EXPECTED_BOOSTPRICE_DIFFERENCE',
-  MANUAL_OVERRIDE_PROTECTION:     'MANUAL_OVERRIDE_PROTECTION',
-  PENDING_IGNORED:                'PENDING_IGNORED',
-  UNEXPECTED_PRICE_DIFFERENCE:    'UNEXPECTED_PRICE_DIFFERENCE',
-  UNEXPECTED_MIN_STAY_DIFFERENCE: 'UNEXPECTED_MIN_STAY_DIFFERENCE',
-  EXTERNAL_PRICING_CASE:          'EXTERNAL_PRICING_CASE',
-  LONG_STAY_DIFFERENCE:           'LONG_STAY_DIFFERENCE',
-  OTHER:                          'OTHER',
+  MATCH:                                   'MATCH',
+  EXPECTED_BOOSTPRICE_DIFFERENCE:          'EXPECTED_BOOSTPRICE_DIFFERENCE',
+  EXPECTED_BOOSTPRICE_MIN_STAY_DIFFERENCE: 'EXPECTED_BOOSTPRICE_MIN_STAY_DIFFERENCE',
+  MANUAL_OVERRIDE_PROTECTION:              'MANUAL_OVERRIDE_PROTECTION',
+  PENDING_IGNORED:                         'PENDING_IGNORED',
+  UNEXPECTED_PRICE_DIFFERENCE:             'UNEXPECTED_PRICE_DIFFERENCE',
+  UNEXPECTED_MIN_STAY_DIFFERENCE:          'UNEXPECTED_MIN_STAY_DIFFERENCE',
+  EXTERNAL_PRICING_CASE:                   'EXTERNAL_PRICING_CASE',
+  LONG_STAY_DIFFERENCE:                    'LONG_STAY_DIFFERENCE',
+  OTHER:                                   'OTHER',
 });
 
 function isShadowEnabled() {
@@ -88,7 +89,13 @@ function classifyNight({
     return CLASSIFICATION.UNEXPECTED_PRICE_DIFFERENCE;
   }
 
-  if (arrDiff || thrDiff) return CLASSIFICATION.UNEXPECTED_MIN_STAY_DIFFERENCE;
+  if (arrDiff || thrDiff) {
+    // BoostPrice explains the min_stay divergence (source=boostprice, schedule.min_stay used)
+    if (resolverNight.source === SOURCE.BOOSTPRICE && resolverNight.minStaySource === 'boostprice') {
+      return CLASSIFICATION.EXPECTED_BOOSTPRICE_MIN_STAY_DIFFERENCE;
+    }
+    return CLASSIFICATION.UNEXPECTED_MIN_STAY_DIFFERENCE;
+  }
 
   // Prices and min_stay match — informational sub-classifications
   if (resolverNight.source === SOURCE.MANUAL_OVERRIDE) {
@@ -115,8 +122,10 @@ function compareNights({
   const comparisons = [];
   for (const resolverNight of resolverNights) {
     const date = resolverNight.date;
-    const legacyPrice = legacyRateMap.has(date) ? legacyRateMap.get(date) : null;
-    const legacyRest  = legacyRestMap.get(date) || { min_stay_arrival: 1, min_stay_through: 1 };
+    const legacyPrice    = legacyRateMap.has(date) ? legacyRateMap.get(date) : null;
+    const legacyRest     = legacyRestMap.get(date) || { min_stay_arrival: 1, min_stay_through: 1 };
+    const legacyStopSell = legacyRest.stop_sell ?? false;
+    const resolverStopSell = resolverNight.stopSell ?? false;
 
     const cl = classifyNight({
       legacyPrice,
@@ -128,6 +137,10 @@ function compareNights({
       hasPending: pendingSet.has(date),
     });
 
+    // BoostPrice explains the min_stay divergence when both source and minStaySource = boostprice
+    const minStayDiffExpected =
+      resolverNight.source === SOURCE.BOOSTPRICE && resolverNight.minStaySource === 'boostprice';
+
     comparisons.push({
       propertyId,
       date,
@@ -135,12 +148,14 @@ function compareNights({
         price:          legacyPrice,
         minStayArrival: legacyRest.min_stay_arrival,
         minStayThrough: legacyRest.min_stay_through,
+        stopSell:       legacyStopSell,
         source:         null, // not tracked in path A (triggerChannexRatesSync)
       },
       resolver: {
         price:          resolverNight.price,
         minStayArrival: resolverNight.minStayArrival,
         minStayThrough: resolverNight.minStayThrough,
+        stopSell:       resolverStopSell,
         source:         resolverNight.source,
         locked:         resolverNight.locked,
       },
@@ -148,7 +163,14 @@ function compareNights({
         price:          legacyPrice !== resolverNight.price,
         minStayArrival: legacyRest.min_stay_arrival !== resolverNight.minStayArrival,
         minStayThrough: legacyRest.min_stay_through !== resolverNight.minStayThrough,
+        stopSell:       legacyStopSell !== resolverStopSell,
         source:         false, // legacy source not tracked
+      },
+      restrictionComparison: {
+        minStayArrivalMatch: legacyRest.min_stay_arrival === resolverNight.minStayArrival,
+        minStayThroughMatch: legacyRest.min_stay_through === resolverNight.minStayThrough,
+        stopSellMatch:       legacyStopSell === resolverStopSell,
+        minStayDiffExpected,
       },
       classification: cl,
     });
@@ -163,28 +185,43 @@ function compareNights({
 function logShadowSummary(comparisons, { propertyId, startDate, endDate }) {
   const total = comparisons.length;
   const counts = {
-    match:                   0,
-    expected_boostprice:     0,
-    manual_override_protection: 0,
-    pending_ignored:         0,
-    unexpected_price:        0,
-    unexpected_min_stay:     0,
-    external_pricing:        0,
-    long_stay_difference:    0,
-    other:                   0,
+    match:                           0,
+    expected_boostprice:             0,
+    expected_boostprice_min_stay:    0,
+    manual_override_protection:      0,
+    pending_ignored:                 0,
+    unexpected_price:                0,
+    unexpected_min_stay:             0,
+    external_pricing:                0,
+    long_stay_difference:            0,
+    other:                           0,
   };
+
+  let restrUnexpectedMinStay = 0;
+  let restrExpectedMinStay   = 0;
+  let restrUnexpectedStopSell = 0;
 
   for (const c of comparisons) {
     switch (c.classification) {
-      case CLASSIFICATION.MATCH:                          counts.match++; break;
-      case CLASSIFICATION.EXPECTED_BOOSTPRICE_DIFFERENCE: counts.expected_boostprice++; break;
-      case CLASSIFICATION.MANUAL_OVERRIDE_PROTECTION:     counts.manual_override_protection++; break;
-      case CLASSIFICATION.PENDING_IGNORED:                counts.pending_ignored++; break;
-      case CLASSIFICATION.UNEXPECTED_PRICE_DIFFERENCE:    counts.unexpected_price++; break;
-      case CLASSIFICATION.UNEXPECTED_MIN_STAY_DIFFERENCE: counts.unexpected_min_stay++; break;
-      case CLASSIFICATION.EXTERNAL_PRICING_CASE:          counts.external_pricing++; break;
-      case CLASSIFICATION.LONG_STAY_DIFFERENCE:           counts.long_stay_difference++; break;
-      case CLASSIFICATION.OTHER:                          counts.other++; break;
+      case CLASSIFICATION.MATCH:                                   counts.match++; break;
+      case CLASSIFICATION.EXPECTED_BOOSTPRICE_DIFFERENCE:          counts.expected_boostprice++; break;
+      case CLASSIFICATION.EXPECTED_BOOSTPRICE_MIN_STAY_DIFFERENCE: counts.expected_boostprice_min_stay++; break;
+      case CLASSIFICATION.MANUAL_OVERRIDE_PROTECTION:              counts.manual_override_protection++; break;
+      case CLASSIFICATION.PENDING_IGNORED:                         counts.pending_ignored++; break;
+      case CLASSIFICATION.UNEXPECTED_PRICE_DIFFERENCE:             counts.unexpected_price++; break;
+      case CLASSIFICATION.UNEXPECTED_MIN_STAY_DIFFERENCE:          counts.unexpected_min_stay++; break;
+      case CLASSIFICATION.EXTERNAL_PRICING_CASE:                   counts.external_pricing++; break;
+      case CLASSIFICATION.LONG_STAY_DIFFERENCE:                    counts.long_stay_difference++; break;
+      case CLASSIFICATION.OTHER:                                   counts.other++; break;
+    }
+    const rc = c.restrictionComparison;
+    if (rc) {
+      const minStayDiffers = !rc.minStayArrivalMatch || !rc.minStayThroughMatch;
+      if (minStayDiffers) {
+        if (rc.minStayDiffExpected) restrExpectedMinStay++;
+        else restrUnexpectedMinStay++;
+      }
+      if (!rc.stopSellMatch) restrUnexpectedStopSell++;
     }
   }
 
@@ -197,14 +234,19 @@ function logShadowSummary(comparisons, { propertyId, startDate, endDate }) {
   console.log(`nights_compared:            ${total}`);
   console.log(`matches:                    ${counts.match}`);
   console.log(`differences:                ${totalDiffs}`);
-  console.log(`  expected_boostprice:        ${counts.expected_boostprice}`);
-  console.log(`  manual_override_protection: ${counts.manual_override_protection}`);
-  console.log(`  pending_ignored:            ${counts.pending_ignored}`);
-  console.log(`  unexpected_price:           ${counts.unexpected_price}`);
-  console.log(`  unexpected_min_stay:        ${counts.unexpected_min_stay}`);
-  console.log(`  external_pricing:           ${counts.external_pricing}`);
-  console.log(`  long_stay_difference:       ${counts.long_stay_difference}`);
-  console.log(`  other:                      ${counts.other}`);
+  console.log(`  expected_boostprice:          ${counts.expected_boostprice}`);
+  console.log(`  expected_boostprice_min_stay: ${counts.expected_boostprice_min_stay}`);
+  console.log(`  manual_override_protection:   ${counts.manual_override_protection}`);
+  console.log(`  pending_ignored:              ${counts.pending_ignored}`);
+  console.log(`  unexpected_price:             ${counts.unexpected_price}`);
+  console.log(`  unexpected_min_stay:          ${counts.unexpected_min_stay}`);
+  console.log(`  external_pricing:             ${counts.external_pricing}`);
+  console.log(`  long_stay_difference:         ${counts.long_stay_difference}`);
+  console.log(`  other:                        ${counts.other}`);
+  console.log(`restriction_divergences:`);
+  console.log(`  expected_boostprice_min_stay: ${restrExpectedMinStay}`);
+  console.log(`  unexpected_min_stay:          ${restrUnexpectedMinStay}`);
+  console.log(`  unexpected_stop_sell:         ${restrUnexpectedStopSell}`);
 
   if (diffs.length > 0) {
     const shown = Math.min(diffs.length, MAX_DIFF_DETAIL);

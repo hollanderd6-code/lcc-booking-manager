@@ -716,6 +716,64 @@ await test('P06 — BoostPrice price + BoostPrice min_stay → les deux préserv
     'BoostPrice min_stay doit être préservé dans through');
 });
 
+// ─── C01–C04 : room_type_id guard (C4.2c) ────────────────────────────────────
+
+console.log('\n── C01–C04 : room_type_id guard ──');
+
+await test('C01 — room_type_id manquant → SKIPPED_MISSING_IDS, pushRates non appelé, pushRestrictions non appelé', async () => {
+  const rSpy = { calls: 0 }, rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp({ channex_room_type_id: null })] },
+    okPushRates(rSpy), okPushRestrictions(rrSpy),
+  );
+  const res = await publish(pool, singleNight());
+  assert.strictEqual(res.status, PUBLISH_STATUS.SKIPPED_MISSING_IDS,
+    'room_type_id manquant doit produire SKIPPED_MISSING_IDS');
+  assert.strictEqual(rSpy.calls || 0, 0, 'pushRates ne doit pas être appelé');
+  assert.strictEqual(rrSpy.calls || 0, 0, 'pushRestrictions ne doit pas être appelé');
+  assert.ok(res.detail?.missingIds?.includes('channex_room_type_id'),
+    'detail.missingIds doit indiquer channex_room_type_id');
+});
+
+await test('C02 — channex_property_id manquant → comportement existant préservé', async () => {
+  const rSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp({ channex_property_id: null })] },
+    okPushRates(rSpy),
+  );
+  const res = await publish(pool, singleNight());
+  assert.strictEqual(res.status, PUBLISH_STATUS.SKIPPED_MISSING_IDS);
+  assert.strictEqual(rSpy.calls || 0, 0);
+  assert.ok(res.detail?.missingIds?.includes('channex_property_id'));
+});
+
+await test('C03 — channex_rate_plan_id manquant → comportement existant préservé', async () => {
+  const rSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp({ channex_rate_plan_id: null })] },
+    okPushRates(rSpy),
+  );
+  const res = await publish(pool, singleNight());
+  assert.strictEqual(res.status, PUBLISH_STATUS.SKIPPED_MISSING_IDS);
+  assert.strictEqual(rSpy.calls || 0, 0);
+  assert.ok(res.detail?.missingIds?.includes('channex_rate_plan_id'));
+});
+
+await test('C04 — les trois IDs présents → fonctionnement normal', async () => {
+  const rSpy = { calls: 0 }, rrSpy = { calls: 0 };
+  const { publish, pool } = makePublisher(
+    { properties: [baseProp()] },
+    okPushRates(rSpy), okPushRestrictions(rrSpy),
+  );
+  const res = await publish(pool, singleNight());
+  assert.strictEqual(res.status, PUBLISH_STATUS.OK,
+    'les trois IDs présents → publication normale');
+  assert.strictEqual(rSpy.calls, 1, 'pushRates doit être appelé');
+  assert.strictEqual(rrSpy.calls, 1, 'pushRestrictions doit être appelé');
+  assert.strictEqual(res.detail, undefined,
+    'pas de detail dans le résultat quand les IDs sont présents');
+});
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(55)}`);
