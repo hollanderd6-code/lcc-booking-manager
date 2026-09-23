@@ -60,30 +60,37 @@ async function ensureScheduleTable(pool) {
 
 // ── Upsert du planning par nuit (par lots) ───────────────────
 async function upsertSchedule(pool, userId, propertyId, nights, status) {
+  if (status !== 'applied' && status !== 'pending') {
+    throw new Error(`upsertSchedule: statut invalide "${status}" — attendu applied|pending`);
+  }
+  // pushed_at est un littéral SQL (fonction ou NULL), pas un paramètre
+  const pushedAtSql = status === 'applied' ? 'NOW()' : 'NULL';
   const CHUNK = 200;
   for (let i = 0; i < nights.length; i += CHUNK) {
     const slice = nights.slice(i, i + CHUNK);
     const values = [];
     const params = [];
     slice.forEach((n, k) => {
-      const b = k * 7;
-      values.push(`($${b+1},$${b+2},$${b+3},$${b+4},$${b+5},$${b+6},$${b+7})`);
+      const b = k * 8;   // 8 params par nuit (status ajouté)
+      values.push(`($${b+1},$${b+2},$${b+3},$${b+4},$${b+5},$${b+6},$${b+7},$${b+8},${pushedAtSql})`);
       params.push(
         userId, propertyId, n.date, n.price, n.minStay,
-        n.reason, JSON.stringify(n.breakdown || {})
+        n.reason, JSON.stringify(n.breakdown || {}), status
       );
     });
     await pool.query(
       `INSERT INTO pricing_schedule
-         (user_id, property_id, date, price, min_stay, reason, breakdown)
+         (user_id, property_id, date, price, min_stay, reason, breakdown,
+          status, pushed_at)
        VALUES ${values.join(',')}
        ON CONFLICT (property_id, date) DO UPDATE SET
+         user_id    = EXCLUDED.user_id,
          price      = EXCLUDED.price,
          min_stay   = EXCLUDED.min_stay,
          reason     = EXCLUDED.reason,
          breakdown  = EXCLUDED.breakdown,
-         status     = '${status}',
-         pushed_at  = ${status === 'applied' ? 'NOW()' : 'NULL'},
+         status     = EXCLUDED.status,
+         pushed_at  = EXCLUDED.pushed_at,
          updated_at = NOW()`,
       params
     );
@@ -266,4 +273,4 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
   };
 }
 
-module.exports = { applyDynamicPricingForProperty, ensureScheduleTable };
+module.exports = { applyDynamicPricingForProperty, ensureScheduleTable, upsertSchedule };
