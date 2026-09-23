@@ -495,6 +495,34 @@ function makeDeps(pubResult) {
     );
   });
 
+  // ─── Group J : C4.8-B stop_sell intent (B20) ─────────────────────────────────
+
+  await test('B20 — _applyDecision passe stopSellMode:none au publisher (manual_accept = price-only)', async () => {
+    const pool = makeMockPool();
+    const { deps, spy } = makeDeps();
+    await _applyDecision(pool, { historyRow: makeHistoryRow(), callerUserId: 'c', priceApplied: 120 }, deps);
+    assert.strictEqual(spy.lastArgs.stopSellMode, 'none',
+      'manual_accept doit passer stopSellMode:none — ne doit pas toucher stop_sell');
+  });
+
+  await test('B21 — stopSellMode:none ne dépend pas du default publisher (explicitement transmis)', () => {
+    // Structural: _applyDecision must contain an explicit stopSellMode:'none' call.
+    // Scan from the function declaration up to the first module.exports after it.
+    const applyIdx = decisionSrc.indexOf('async function _applyDecision');
+    assert.ok(applyIdx >= 0, '_applyDecision non trouvée');
+    const endIdx = decisionSrc.indexOf('module.exports', applyIdx);
+    assert.ok(endIdx >= 0, 'module.exports non trouvé après _applyDecision');
+    const fnRegion = decisionSrc.slice(applyIdx, endIdx);
+    assert.ok(
+      fnRegion.includes("stopSellMode: 'none'"),
+      "_applyDecision doit passer stopSellMode:'none' explicitement (pas de dépendance au default publisher)"
+    );
+    assert.ok(
+      !fnRegion.includes("stopSellMode: 'authoritative'"),
+      "_applyDecision ne doit PAS utiliser authoritative"
+    );
+  });
+
   // ─── Summary ─────────────────────────────────────────────────────────────────
 
   process.stdout.write(`\n${'─'.repeat(60)}\n`);

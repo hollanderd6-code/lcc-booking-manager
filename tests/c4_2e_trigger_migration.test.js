@@ -229,6 +229,79 @@ function makeSpy(returnValue) {
     assert.strictEqual(spy.opts.userId,     'user-C', 'dernier userId = user-C');
   });
 
+  // ─── C4.8-B — stopSellMode contract ─────────────────────────────────────────
+
+  console.log('\n── C4.8-B — stopSellMode contract (T15–T23) ──');
+
+  await test('T15 (B-T01) — default (no options) → stopSellMode:none transmis au publisher', async () => {
+    const spy = makeSpy();
+    const sync = createTriggerSync({ publishEffectivePricing: spy.fn });
+    await sync(mockPool, 'p', 'u');
+    assert.strictEqual(spy.opts.stopSellMode, 'none', 'default doit être none');
+  });
+
+  await test('T16 (B-T02) — options.stopSellMode:none → none propagé', async () => {
+    const spy = makeSpy();
+    const sync = createTriggerSync({ publishEffectivePricing: spy.fn });
+    await sync(mockPool, 'p', 'u', { stopSellMode: 'none' });
+    assert.strictEqual(spy.opts.stopSellMode, 'none');
+  });
+
+  await test('T17 (B-T03) — options.stopSellMode:authoritative → authoritative propagé', async () => {
+    const spy = makeSpy();
+    const sync = createTriggerSync({ publishEffectivePricing: spy.fn });
+    await sync(mockPool, 'p', 'u', { stopSellMode: 'authoritative' });
+    assert.strictEqual(spy.opts.stopSellMode, 'authoritative');
+  });
+
+  await test('T18 (B-T04) — options.stopSellMode invalide → fail-safe none', async () => {
+    const spy = makeSpy();
+    const sync = createTriggerSync({ publishEffectivePricing: spy.fn });
+    await sync(mockPool, 'p', 'u', { stopSellMode: 'true_only' });
+    assert.strictEqual(spy.opts.stopSellMode, 'none', 'valeur non autorisée doit tomber sur none');
+  });
+
+  await test('T19 (B-T04b) — options={} (objet vide) → fail-safe none', async () => {
+    const spy = makeSpy();
+    const sync = createTriggerSync({ publishEffectivePricing: spy.fn });
+    await sync(mockPool, 'p', 'u', {});
+    assert.strictEqual(spy.opts.stopSellMode, 'none');
+  });
+
+  await test('T20 (B-T05) — stopSellMode:none → rates publiées (publisher appelé)', async () => {
+    const spy = makeSpy(okResult('p'));
+    const sync = createTriggerSync({ publishEffectivePricing: spy.fn });
+    await sync(mockPool, 'p', 'u', { stopSellMode: 'none' });
+    assert.strictEqual(spy.calls, 1, 'publisher doit être appelé même avec none');
+    assert.ok(spy.opts.startDate, 'startDate transmis');
+    assert.ok(spy.opts.endDate,   'endDate transmis');
+  });
+
+  await test('T21 (B-T06) — stopSellMode:none → min_stay encore transmis (publisher appelé)', async () => {
+    const spy = makeSpy();
+    const sync = createTriggerSync({ publishEffectivePricing: spy.fn });
+    await sync(mockPool, 'p', 'u', { stopSellMode: 'none' });
+    // publisher reçoit none — le resolver calculera min_stay indépendamment de stop_sell
+    assert.strictEqual(spy.opts.stopSellMode, 'none');
+    assert.strictEqual(spy.calls, 1);
+  });
+
+  await test('T22 (B-T07) — stopSellMode:none → publisher reçoit none (champ stop_sell absent côté publisher)', async () => {
+    const spy = makeSpy();
+    const sync = createTriggerSync({ publishEffectivePricing: spy.fn });
+    await sync(mockPool, 'p', 'u', { stopSellMode: 'none' });
+    assert.strictEqual(spy.opts.stopSellMode, 'none',
+      'publisher doit recevoir none pour que stop_sell soit absent des restrictions');
+  });
+
+  await test('T23 (B-T08) — stopSellMode:authoritative → publisher reçoit authoritative', async () => {
+    const spy = makeSpy();
+    const sync = createTriggerSync({ publishEffectivePricing: spy.fn });
+    await sync(mockPool, 'p', 'u', { stopSellMode: 'authoritative' });
+    assert.strictEqual(spy.opts.stopSellMode, 'authoritative',
+      'publisher doit recevoir authoritative pour envoyer true/false');
+  });
+
   // ─── Summary ────────────────────────────────────────────────────────────────
 
   console.log(`\n${'─'.repeat(55)}`);

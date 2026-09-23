@@ -301,11 +301,12 @@ async function _applyDecision(pool, { historyRow, callerUserId, priceApplied }, 
   }
 
   return publishFn(pool, {
-    propertyId: historyRow.property_id,
+    propertyId:   historyRow.property_id,
     userId,
-    startDate:  weekStart,
+    startDate:    weekStart,
     endDate,
-    reason:     'manual_accept',
+    reason:       'manual_accept',
+    stopSellMode: 'none',   // C4.8-B9: manual_accept is price-only — must not touch stop_sell
   });
 }
 

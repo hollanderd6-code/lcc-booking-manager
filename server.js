@@ -456,8 +456,8 @@ function buildMinStayFields(minStayRules, dateStr, dow) {
   };
 }
 
-async function triggerChannexRatesSync(propertyId, userId) {
-  await _triggerSync(pool, propertyId, userId);
+async function triggerChannexRatesSync(propertyId, userId, options) {
+  await _triggerSync(pool, propertyId, userId, options);
 }
 
 // ============================================
@@ -18992,7 +18992,7 @@ app.post('/api/pricing/overrides', authenticateAny, requirePermission(pool, 'can
         [ownerId, property_id, date]
       );
       res.json({ success: true, deleted: true });
-      setImmediate(() => triggerChannexRatesSync(property_id, ownerId));
+      setImmediate(() => triggerChannexRatesSync(property_id, ownerId, { stopSellMode: 'none' }));
       return;
     }
 
@@ -19005,7 +19005,7 @@ app.post('/api/pricing/overrides', authenticateAny, requirePermission(pool, 'can
     `, [ownerId, property_id, date, parseFloat(price)]);
 
     res.json({ success: true, property_id, date, price: parseFloat(price) });
-    setImmediate(() => triggerChannexRatesSync(property_id, ownerId));
+    setImmediate(() => triggerChannexRatesSync(property_id, ownerId, { stopSellMode: 'none' }));
   } catch (err) {
     console.error('❌ POST /api/pricing/overrides:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -19073,7 +19073,7 @@ app.post('/api/pricing/overrides/batch', authenticateAny, requirePermission(pool
         count++;
       }
       // Sync Channex en arrière-plan
-      setImmediate(() => triggerChannexRatesSync(property_id, user.id));
+      setImmediate(() => triggerChannexRatesSync(property_id, user.id, { stopSellMode: 'none' }));
     }
 
     console.log(`✅ [BATCH PRICING] ${count} overrides appliqués pour ${property_ids.length} logements`);
@@ -19299,7 +19299,7 @@ app.delete('/api/pricing/overrides/:property_id/:date', authenticateAny, require
     );
 
     res.json({ success: true });
-    setImmediate(() => triggerChannexRatesSync(property_id, user.id));
+    setImmediate(() => triggerChannexRatesSync(property_id, user.id, { stopSellMode: 'none' }));
   } catch (err) {
     console.error('❌ DELETE /api/pricing/overrides:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -19562,7 +19562,10 @@ app.post('/api/pricing/rules', authenticateAny, requirePermission(pool, 'can_man
     ]);
 
     res.json({ success: true, rule: result.rows[0] });
-    setImmediate(() => triggerChannexRatesSync(property_id, user.id));
+    // C4.8-B4: intent from persisted row — stop_sell mutations use authoritative
+    const _newRuleType = result.rows[0]?.rule_type;
+    const _mode4 = (_newRuleType === 'stop_sell') ? 'authoritative' : 'none';
+    setImmediate(() => triggerChannexRatesSync(property_id, ownerId, { stopSellMode: _mode4 }));
   } catch (err) {
     console.error('❌ POST /api/pricing/rules:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -19581,6 +19584,11 @@ app.put('/api/pricing/rules/:id', authenticateAny, requirePermission(pool, 'can_
       days_of_week, price, min_nights, min_stay_scope,
       discount_pct, discount_after_nights, priority, active
     } = req.body;
+
+    // C4.8-B5: fetch old rule_type BEFORE update to detect stop_sell mutations
+    // (type transition stop_sell→other or other→stop_sell must also use authoritative)
+    const oldRow = await pool.query('SELECT rule_type FROM pricing_rules WHERE id = $1', [id]);
+    const _oldType = oldRow.rows[0]?.rule_type;
 
     const result = await pool.query(`
       UPDATE pricing_rules SET
@@ -19613,7 +19621,9 @@ app.put('/api/pricing/rules/:id', authenticateAny, requirePermission(pool, 'can_
 
     if (result.rows.length === 0) return res.status(404).json({ error: 'Règle introuvable' });
     res.json({ success: true, rule: result.rows[0] });
-    setImmediate(() => triggerChannexRatesSync(result.rows[0].property_id, user.id));
+    const _newType = result.rows[0].rule_type;
+    const _mode5 = (_oldType === 'stop_sell' || _newType === 'stop_sell') ? 'authoritative' : 'none';
+    setImmediate(() => triggerChannexRatesSync(result.rows[0].property_id, user.id, { stopSellMode: _mode5 }));
   } catch (err) {
     console.error('❌ PUT /api/pricing/rules:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -19626,9 +19636,16 @@ app.delete('/api/pricing/rules/:id', authenticateAny, requirePermission(pool, 'c
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
-    const deleted = await pool.query('DELETE FROM pricing_rules WHERE id = $1 AND user_id = ANY($2::text[]) RETURNING property_id', [req.params.id, await getAgencyUserIds(req, user.id)]);
+    // C4.8-B6: RETURNING rule_type to detect stop_sell deletion (reopen must be authoritative)
+    const deleted = await pool.query(
+      'DELETE FROM pricing_rules WHERE id = $1 AND user_id = ANY($2::text[]) RETURNING property_id, rule_type',
+      [req.params.id, await getAgencyUserIds(req, user.id)]
+    );
     res.json({ success: true });
-    if (deleted.rows[0]) setImmediate(() => triggerChannexRatesSync(deleted.rows[0].property_id, user.id));
+    if (deleted.rows[0]) {
+      const _mode6 = (deleted.rows[0].rule_type === 'stop_sell') ? 'authoritative' : 'none';
+      setImmediate(() => triggerChannexRatesSync(deleted.rows[0].property_id, user.id, { stopSellMode: _mode6 }));
+    }
   } catch (err) {
     console.error('❌ DELETE /api/pricing/rules:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -20938,7 +20955,7 @@ userId: userId
       ...(avertissementCoexistence ? { avertissement: avertissementCoexistence } : {})
     });
     // Pousser les nouveaux tarifs (prix de base/weekend) vers Channex
-    setImmediate(() => triggerChannexRatesSync(propertyId, userId));
+    setImmediate(() => triggerChannexRatesSync(propertyId, userId, { stopSellMode: 'none' }));
   } catch (err) {
     console.error('❌ Erreur modification logement:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -23171,7 +23188,7 @@ app.post('/api/host/pricing/override', authenticateToken, async (req, res) => {
     }
 
     // Sync Channex si applicable (non bloquant)
-    try { triggerChannexRatesSync(propertyId, req.user.id); } catch(e){}
+    try { triggerChannexRatesSync(propertyId, req.user.id, { stopSellMode: 'none' }); } catch(e){}
 
     res.json({ success: true, count: dates.length, price: p });
   } catch (e) {
@@ -23193,7 +23210,7 @@ app.delete('/api/host/pricing/override', authenticateToken, async (req, res) => 
       `DELETE FROM pricing_overrides WHERE user_id = $1 AND property_id = $2 AND date = ANY($3::date[])`,
       [req.user.id, propertyId, dates]
     );
-    try { triggerChannexRatesSync(propertyId, req.user.id); } catch(e){}
+    try { triggerChannexRatesSync(propertyId, req.user.id, { stopSellMode: 'none' }); } catch(e){}
     res.json({ success: true, count: dates.length });
   } catch (e) {
     console.error('❌ [HOST] delete override:', e.message);
@@ -23276,7 +23293,7 @@ app.put('/api/host/pricing/weekend', authenticateToken, async (req, res) => {
     if (wp != null && wp < 0) return res.status(400).json({ error: 'Prix invalide' });
 
     await pool.query('UPDATE properties SET weekend_price = $1, updated_at = NOW() WHERE id = $2', [wp, propertyId]);
-    try { triggerChannexRatesSync(propertyId, req.user.id); } catch(e){}
+    try { triggerChannexRatesSync(propertyId, req.user.id, { stopSellMode: 'none' }); } catch(e){}
     res.json({ success: true, weekendPrice: wp });
   } catch (e) {
     console.error('❌ [HOST] weekend price:', e.message);
@@ -23301,7 +23318,7 @@ app.post('/api/host/pricing/season', authenticateToken, async (req, res) => {
        VALUES ($1, $2, $3, 'period', $4, $5, $6, 10, true) RETURNING id`,
       [req.user.id, propertyId, name.trim(), start_date, end_date, parseFloat(price)]
     );
-    try { triggerChannexRatesSync(propertyId, req.user.id); } catch(e){}
+    try { triggerChannexRatesSync(propertyId, req.user.id, { stopSellMode: 'none' }); } catch(e){}
     res.json({ success: true, id: result.rows[0].id });
   } catch (e) {
     console.error('❌ [HOST] add season:', e.message);
@@ -23318,7 +23335,7 @@ app.delete('/api/host/pricing/season/:ruleId', authenticateToken, async (req, re
     if (r.rows.length === 0) return res.status(404).json({ error: 'Règle introuvable' });
 
     await pool.query('DELETE FROM pricing_rules WHERE id = $1 AND user_id = $2', [ruleId, req.user.id]);
-    try { triggerChannexRatesSync(r.rows[0].property_id, req.user.id); } catch(e){}
+    try { triggerChannexRatesSync(r.rows[0].property_id, req.user.id, { stopSellMode: 'none' }); } catch(e){}
     res.json({ success: true });
   } catch (e) {
     console.error('❌ [HOST] delete season:', e.message);
@@ -23387,7 +23404,7 @@ app.put('/api/host/pricing/long-stay', authenticateToken, async (req, res) => {
         [req.user.id, propertyId, `Réduction ${pct}% dès ${after} nuits`, pct, after]
       );
     }
-    try { triggerChannexRatesSync(propertyId, req.user.id); } catch(e){}
+    try { triggerChannexRatesSync(propertyId, req.user.id, { stopSellMode: 'none' }); } catch(e){}
     res.json({ success: true });
   } catch (e) {
     console.error('❌ [HOST] long-stay:', e.message);
@@ -23416,7 +23433,7 @@ app.put('/api/host/pricing/min-stay', authenticateToken, async (req, res) => {
         [req.user.id, propertyId, `Minimum ${mn} nuits`, mn]
       );
     }
-    try { triggerChannexRatesSync(propertyId, req.user.id); } catch(e){}
+    try { triggerChannexRatesSync(propertyId, req.user.id, { stopSellMode: 'none' }); } catch(e){}
     res.json({ success: true });
   } catch (e) {
     console.error('❌ [HOST] min-stay:', e.message);
@@ -41031,7 +41048,9 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
         avertissement = "Aucun prix de base n'est defini sur ce logement : les plateformes le laisseront ferme tant qu'un tarif ne sera pas renseigne.";
         console.warn(`⚠️ [CHANNEX CONNECT] ${property_id} : pas de base_price, aucun tarif pousse`);
       } else {
-        await triggerChannexRatesSync(property_id, user_id);
+        // C4.8-B8: stopSellMode:'none' — initial connect must not clear pre-existing
+        // stop_sell state on Channex/OTA. Rates and min_stay are still published.
+        await triggerChannexRatesSync(property_id, user_id, { stopSellMode: 'none' });
         tarifs_pousses = true;
         console.log(`✅ [CHANNEX CONNECT] Tarifs pousses pour ${property_id}`);
       }
