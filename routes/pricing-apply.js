@@ -20,6 +20,8 @@ const {
   EVENTS_PARIS_2026,
 } = require('./pricing-engine');
 
+const { addDays } = require('./effective-pricing-resolver');
+
 // ── Lundi de la semaine courante (aligne le récap hebdo) ─────
 function getCurrentWeekStart() {
   const d = new Date();
@@ -151,7 +153,32 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
   const status = willPush ? 'applied' : 'pending';
 
   // 4. Stockage du planning par nuit (+ breakdown)
-  await upsertSchedule(pool, cfg.user_id, cfg.property_id, nights, status);
+  // C7: in manual mode, skip dates already locked by an explicit manual accept
+  let nightsToUpsert = nights;
+  if (!willPush) {
+    try {
+      const manualApplied = await pool.query(
+        `SELECT week_start FROM pricing_history
+         WHERE property_id = $1 AND status = 'applied' AND mode_used = 'manual'`,
+        [cfg.property_id]
+      );
+      if (manualApplied.rows.length > 0) {
+        const protectedDates = new Set();
+        for (const row of manualApplied.rows) {
+          const ws = String(row.week_start).slice(0, 10);
+          for (let i = 0; i < 7; i++) protectedDates.add(addDays(ws, i));
+        }
+        nightsToUpsert = nights.filter(n => !protectedDates.has(n.date));
+        const skipped = nights.length - nightsToUpsert.length;
+        if (skipped > 0) {
+          console.log(`[DP-APPLY] C7: ${skipped} nuit(s) protégée(s) par accept manuel pour ${cfg.property_id}`);
+        }
+      }
+    } catch (e) {
+      console.error(`⚠️ [DP-APPLY] C7 protection query failed (${cfg.property_id}):`, e.message);
+    }
+  }
+  await upsertSchedule(pool, cfg.user_id, cfg.property_id, nightsToUpsert, status);
 
   // 5. Push Channex (mode auto uniquement)
   let pushed = 0;

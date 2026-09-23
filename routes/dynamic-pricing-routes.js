@@ -243,6 +243,72 @@ function buildWeeklyEmailHtml(firstName, rows, weekLabel) {
 </html>`;
 }
 
+// ── C4.3-C : ACCEPT transactionnel ───────────────────────────
+// Isolated for unit testing via deps injection.
+// Called by the decision route after ownership/pending checks pass.
+// Contract:
+//   1. BEGIN — history applied — 7 schedule rows — COMMIT
+//   2. publishEffectivePricing called AFTER commit (DB decision survives publisher failure)
+//   Returns the publisher result object.
+async function _applyDecision(pool, { historyRow, callerUserId, priceApplied }, deps = {}) {
+  const publishFn = deps.publishEffectivePricing
+    || require('./pricing-publisher').publishEffectivePricing;
+  const _addDays  = deps.addDays
+    || require('./effective-pricing-resolver').addDays;
+
+  const weekStart = String(historyRow.week_start).slice(0, 10);
+  const endDate   = _addDays(weekStart, 7);
+  const userId    = historyRow.user_id || callerUserId;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    await client.query(
+      `UPDATE pricing_history
+         SET status = 'applied', price_applied = $1,
+             applied_by = $2, applied_at = NOW(), updated_at = NOW()
+       WHERE id = $3`,
+      [priceApplied, callerUserId, historyRow.id]
+    );
+
+    for (let i = 0; i < 7; i++) {
+      const date = _addDays(weekStart, i);
+      await client.query(
+        `INSERT INTO pricing_schedule
+           (user_id, property_id, date, price, min_stay, reason, breakdown, status, pushed_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'applied',NOW())
+         ON CONFLICT (property_id, date) DO UPDATE SET
+           user_id    = EXCLUDED.user_id,
+           price      = EXCLUDED.price,
+           min_stay   = COALESCE(pricing_schedule.min_stay, EXCLUDED.min_stay),
+           reason     = EXCLUDED.reason,
+           breakdown  = EXCLUDED.breakdown,
+           status     = EXCLUDED.status,
+           pushed_at  = EXCLUDED.pushed_at,
+           updated_at = NOW()`,
+        [userId, historyRow.property_id, date, priceApplied, 1,
+         'manual_accept', JSON.stringify({ manual_accept: true, priceApplied })]
+      );
+    }
+
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+
+  return publishFn(pool, {
+    propertyId: historyRow.property_id,
+    userId,
+    startDate:  weekStart,
+    endDate,
+    reason:     'manual_accept',
+  });
+}
+
 // ── Setup principal ──────────────────────────────────────────
 
 function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
@@ -598,50 +664,21 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
       const row = check.rows[0];
 
       if (action === 'apply') {
-        // Appliquer le prix calculé (clampé dans la fourchette)
         const priceApplied = Math.min(
           parseFloat(row.price_max),
           Math.max(parseFloat(row.price_min), parseFloat(row.price_calculated))
         );
 
-        await pool.query(
-          `UPDATE pricing_history
-           SET status = 'applied', price_applied = $1,
-               applied_by = $2, applied_at = NOW(), updated_at = NOW()
-           WHERE id = $3`,
-          [priceApplied, callerUserId, historyId]
-        );
+        const pubResult = await _applyDecision(pool, { historyRow: row, callerUserId, priceApplied });
 
-        // TODO V3 : push vers Channex ici
-        try {
-          const { pushRates } = require('../channex');
-          const propRes = await pool.query(
-            `SELECT channex_enabled, channex_property_id, channex_rate_plan_id
-             FROM properties WHERE id = $1`, [row.property_id]
-          );
-          const prop = propRes.rows[0];
-          if (prop?.channex_enabled && prop.channex_rate_plan_id) {
-            // Générer les dates de la semaine (lundi → dimanche)
-            const ws = new Date(row.week_start);
-            const rates = [];
-            for (let i = 0; i < 7; i++) {
-              const d = new Date(ws); d.setDate(ws.getDate() + i);
-              rates.push({ date: d.toISOString().slice(0, 10), price: priceApplied });
-            }
-            await pushRates(pool, {
-              property_id: row.property_id,
-              channex_property_id: prop.channex_property_id,
-              channex_rate_plan_id: prop.channex_rate_plan_id,
-              rates
-            });
-            console.log(`📡 [DYNAMIC-PRICING] Prix poussé sur Channex: ${priceApplied}€ × 7 jours`);
-          }
-        } catch (chErr) {
-          console.error('⚠️ [DYNAMIC-PRICING] Channex push error:', chErr.message);
-        }
-
-        console.log(`✅ [DYNAMIC-PRICING] Suggestion acceptée — historyId:${historyId} — ${priceApplied}€ (actor:${callerUserId})`);
-        res.json({ success: true, action: 'applied', priceApplied });
+        console.log(`✅ [DYNAMIC-PRICING] Suggestion acceptée — historyId:${historyId} — ${priceApplied}€ (actor:${callerUserId}) — pub:${pubResult.status}`);
+        res.json({
+          success:       true,
+          action:        'applied',
+          priceApplied,
+          publishStatus: pubResult.status,
+          otaSynced:     pubResult.status === 'ok',
+        });
 
       } else {
         // Refuser → garder le prix actuel
@@ -887,6 +924,7 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
 // Exporte aussi les helpers pour le futur cron Apify
 module.exports = {
   setupDynamicPricingRoutes,
+  _applyDecision,
   calcRecommendedPrice,
   calcTensionLevel,
   tensionLabel,

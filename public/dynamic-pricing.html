@@ -1731,12 +1731,23 @@ async function submitDecision(historyId, action, propertyId, price) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    showToast(
-      action === 'apply'
-        ? `${fmtEuro(data.priceApplied)} appliqué sur Airbnb & Booking ✓`
-        : 'Prix conservé',
-      action === 'apply' ? 'success' : ''
-    );
+    if (action === 'apply') {
+      let toastMsg;
+      if (data.otaSynced) {
+        toastMsg = `${fmtEuro(data.priceApplied)} appliqué sur Airbnb & Booking ✓`;
+      } else if (data.publishStatus === 'partial') {
+        toastMsg = `${fmtEuro(data.priceApplied)} enregistré — synchronisation OTA partielle`;
+      } else if (data.publishStatus === 'error') {
+        toastMsg = `${fmtEuro(data.priceApplied)} enregistré — erreur de synchronisation OTA`;
+      } else if (data.publishStatus && data.publishStatus.startsWith('skipped_external')) {
+        toastMsg = `${fmtEuro(data.priceApplied)} enregistré — tarification externe active`;
+      } else {
+        toastMsg = `${fmtEuro(data.priceApplied)} enregistré dans Boostinghost — synchronisation OTA non confirmée`;
+      }
+      showToast(toastMsg, 'success');
+    } else {
+      showToast('Prix conservé', '');
+    }
 
     // Recharger le dashboard pour refléter le changement
     await loadDashboard();

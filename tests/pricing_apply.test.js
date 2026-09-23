@@ -288,6 +288,94 @@ await test('TC-A08 erreur pushRates → pushRestrictions non appelé, fonction n
   assert.ok(result.status != null, 'la fonction doit retourner un résultat valide');
 });
 
+// ─── C7 : Recalc protection ───────────────────────────────────────────────────
+
+const W_PROT = '2026-09-22';   // protected week_start
+const D_PROT = '2026-09-22';   // addDays(W_PROT, 0) — inside protected week
+const D_FREE = '2026-11-01';   // outside any protected week
+
+function makeMockPoolC7(manualAppliedRows) {
+  const capturedDates = [];
+  const pool = {
+    _capturedDates: capturedDates,
+    async query(sql, params) {
+      const s = sql.toLowerCase().trim();
+      if (s.startsWith('create table') || s.startsWith('create index')) return { rows: [] };
+      if (s.includes('from properties'))  return { rows: [BASE_PROP] };
+      if (s.includes('from pricing_history') && s.includes('mode_used')) {
+        return { rows: manualAppliedRows };
+      }
+      if (s.includes('from pricing_history')) return { rows: [] };
+      if (s.includes('into pricing_schedule')) {
+        if (params) {
+          // params layout per night: [userId, propertyId, date, price, minStay, reason, breakdown, status]
+          for (let i = 2; i < params.length; i += 8) capturedDates.push(params[i]);
+        }
+        return { rows: [], rowCount: params ? params.length / 8 : 0 };
+      }
+      if (s.startsWith('insert') || s.startsWith('update')) return { rows: [], rowCount: 1 };
+      return { rows: [] };
+    },
+  };
+  return pool;
+}
+
+// C7-A: manual mode + date in protected week → excluded from upsert
+await test('C7-A — manual mode: date in protected week excluded from upsert', async () => {
+  _pricePropertyImpl    = makePriceProperty([
+    { date: D_PROT, price: 82, minStay: 2 },
+    { date: D_FREE, price: 90, minStay: 1 },
+  ]);
+  _pushRatesImpl        = () => ({ success: true });
+  _pushRestrictionsImpl = () => ({ success: true });
+
+  const pool = makeMockPoolC7([{ week_start: W_PROT }]);
+  await applyDynamicPricingForProperty(pool, {
+    cfg: makeCfg({ mode: 'manual' }), marketStats: {}, isMock: false, sendPushNotification: null,
+  });
+
+  assert.ok(!pool._capturedDates.includes(D_PROT),
+    `Protected date ${D_PROT} must NOT be upserted (manual accept lock)`);
+  assert.ok(pool._capturedDates.includes(D_FREE),
+    `Free date ${D_FREE} must be upserted normally`);
+});
+
+// C7-B: manual mode + no manual history → all nights upserted
+await test('C7-B — manual mode: no manual history → all nights pass through', async () => {
+  _pricePropertyImpl    = makePriceProperty([
+    { date: D_FREE, price: 90, minStay: 1 },
+  ]);
+  _pushRatesImpl        = () => ({ success: true });
+  _pushRestrictionsImpl = () => ({ success: true });
+
+  const pool = makeMockPoolC7([]);  // no manual-applied history
+  await applyDynamicPricingForProperty(pool, {
+    cfg: makeCfg({ mode: 'manual' }), marketStats: {}, isMock: false, sendPushNotification: null,
+  });
+
+  assert.ok(pool._capturedDates.includes(D_FREE),
+    `${D_FREE} must be upserted when no manual lock exists`);
+});
+
+// C7-C: auto mode + canPush=true → manual protection bypassed (AUTO_CAN_RETAKE_CONTROL=YES)
+await test('C7-C — auto+canPush=true: manual protection bypassed, AUTO retakes control', async () => {
+  _pricePropertyImpl    = makePriceProperty([
+    { date: D_PROT, price: 82, minStay: 2 },
+  ]);
+  let pushedRates = false;
+  _pushRatesImpl        = () => { pushedRates = true; return { success: true }; };
+  _pushRestrictionsImpl = () => ({ success: true });
+
+  const pool = makeMockPoolC7([{ week_start: W_PROT }]);  // manual history exists
+  await applyDynamicPricingForProperty(pool, {
+    cfg: makeCfg({ mode: 'auto' }), marketStats: {}, isMock: false, sendPushNotification: null,
+  });
+
+  assert.ok(pool._capturedDates.includes(D_PROT),
+    `${D_PROT} must be upserted in auto mode (C7 protection bypassed)`);
+  assert.ok(pushedRates, 'pushRates must be called in auto mode');
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 
 console.log('\n── P0-C3B pricing-apply restrictions mapping ────────────────────────────────');
