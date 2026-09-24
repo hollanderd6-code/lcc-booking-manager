@@ -6553,7 +6553,17 @@ async function getOwnerScopeIds(req) {
 }
 
 async function getAgencyUserIds(req, userId) {
-  if (req.query.agency !== 'all') return [userId];
+  // Sans agency=all, on reste sur son compte pour les LISTES (sélecteur de compte respecté).
+  // Mais une action, un élément précis ou une requête liée à un logement doit couvrir
+  // tous les comptes qui nous délèguent — sinon l'app, qui n'envoie pas toujours
+  // agency=all, échoue (« introuvable ») sur les logements délégués.
+  const _q = (req && req.query) || {};
+  const _porteSurElement = Boolean(
+    (req && req.method && req.method !== 'GET')
+    || Object.keys((req && req.params) || {}).length > 0
+    || _q.property_id || _q.propertyId || _q.conversation_id
+  );
+  if (_q.agency !== 'all' && _porteSurElement === false) return [userId];
   try {
     const delegations = await pool.query(
       `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
