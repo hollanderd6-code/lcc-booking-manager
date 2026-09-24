@@ -27199,8 +27199,8 @@ app.post('/api/invoice/create',
       freeNote,
       clientNationality,
       platform,
-      propertyName,
-      propertyAddress,
+      propertyName: _rawPropertyName,
+      propertyAddress: _rawPropertyAddress,
       checkinDate,
       checkoutDate,
       nights,
@@ -27213,6 +27213,8 @@ app.post('/api/invoice/create',
       conversationId: rawConversationId
     } = req.body;
 
+    let propertyName    = _rawPropertyName    || '';
+    let propertyAddress = _rawPropertyAddress || '';
     const reservationUid  = rawReservationUid  || null;
     const linkedConvId    = rawConversationId  ? parseInt(rawConversationId, 10) : null;
 
@@ -27307,12 +27309,31 @@ app.post('/api/invoice/create',
         [userId]
       ).catch(() => ({ rows: [] }));
       const candidateIds = [userId, ...delg.rows.map(d => d.delegator_user_id)];
-      const propResult = await pool.query(
-        `SELECT id, user_id, owner_id FROM properties
-         WHERE name = $1 AND user_id = ANY($2::text[])
-         ORDER BY (owner_id IS NOT NULL) DESC LIMIT 1`,
-        [propertyName, candidateIds]
-      );
+      // 1) Par la réservation (fiable) ; 2) par nom OU nom interne (repli)
+      let propResult = { rows: [] };
+      if (reservationUid) {
+        propResult = await pool.query(
+          `SELECT p.id, p.user_id, p.owner_id, p.name, p.internal_name, p.address AS _resaProp
+             FROM reservations r JOIN properties p ON p.id = r.property_id
+            WHERE r.uid = $1 AND p.user_id = ANY($2::text[]) LIMIT 1`,
+          [reservationUid, candidateIds]
+        );
+      }
+      if (!propResult.rows[0] && propertyName) {
+        propResult = await pool.query(
+          `SELECT id, user_id, owner_id, name, internal_name, address AS _resaProp FROM properties
+            WHERE (name = $1 OR internal_name = $1) AND user_id = ANY($2::text[])
+            ORDER BY (owner_id IS NOT NULL) DESC LIMIT 1`,
+          [propertyName, candidateIds]
+        );
+      }
+      if (propResult.rows[0]) {
+        const _p = propResult.rows[0];
+        if (!propertyName)    propertyName    = (_p.internal_name && _p.internal_name.trim()) || _p.name || '';
+        if (!propertyAddress) propertyAddress = _p._resaProp || '';
+      } else {
+        console.warn(`⚠️ [INVOICE] Logement introuvable (resa=${reservationUid}, nom="${propertyName}") → émetteur = compte connecté`);
+      }
       if (propResult.rows[0]) {
         billingUserId = propResult.rows[0].user_id || userId;
         _resolvedPropertyId = propResult.rows[0].id || null;
