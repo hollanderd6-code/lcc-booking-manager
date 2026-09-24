@@ -35,7 +35,7 @@ const APIFY_BASE_URL  = 'https://api.apify.com/v2';
 const MAX_LISTINGS    = 100;   // concurrents max à scraper par zone
 const ZONE_RADIUS_KM  = 1.5;   // rayon de recherche autour du logement
 const MOCK_MODE       = !process.env.APIFY_TOKEN; // mode mock si pas de token
-const MARKET_REQUEST_CURRENCY = 'EUR'; // devise courante des requêtes Apify (P1.2-B2)
+// MARKET_REQUEST_CURRENCY supprimé en B4-C — chaque propriété utilise sa propre devise
 
 // Normalise une valeur en code devise ISO 4217 à 3 lettres majuscules, ou null.
 function normalizeMarketCurrency(value) {
@@ -137,12 +137,12 @@ function getFallbackZones(address, zoneLabel) {
 
 // Scrape en élargissant progressivement jusqu'à atteindre MIN_COMPARABLES.
 // Retourne le meilleur résultat (zone la plus dense si aucune n'atteint le seuil).
-async function scrapeBestZone(zones, medianFallback, maxListings, bedrooms) {
+async function scrapeBestZone(zones, medianFallback, maxListings, bedrooms, requestedCurrency) {
   let best = { listings: [], isMock: false, zoneUsed: zones[zones.length - 1] || 'France' };
   for (const zone of zones) {
     let res;
     try {
-      res = await scrapeZone(zone, medianFallback, maxListings);
+      res = await scrapeZone(zone, medianFallback, maxListings, requestedCurrency);
     } catch (e) {
       console.warn(`⚠️ [DP] Scrape "${zone}" échoué: ${e.message}`);
       continue;
@@ -251,11 +251,12 @@ function calcMarketStats(listings) {
 }
 
 // ── Appel Apify ──────────────────────────────────────────────
-async function scrapeWithApify(location, maxListings) {
+async function scrapeWithApify(location, maxListings, requestedCurrency) {
+  if (!requestedCurrency) throw new Error('requestedCurrency requis — aucun fallback EUR autorisé');
   const token = process.env.APIFY_TOKEN;
   if (!token) throw new Error('APIFY_TOKEN non défini');
 
-  console.log(`🔍 [DP-CRON] Apify scraping: "${location}" max=${maxListings}`);
+  console.log(`🔍 [DP-CRON] Apify scraping: "${location}" max=${maxListings} currency=${requestedCurrency}`);
 
   // 1. Démarrer le run
   const startRes = await fetch(
@@ -265,7 +266,7 @@ async function scrapeWithApify(location, maxListings) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         locationQueries: [location],
-        currency:        MARKET_REQUEST_CURRENCY,
+        currency:        requestedCurrency,
         locale:          'fr-FR',
         maxListings,
         enrichUserProfiles: false,
@@ -316,7 +317,7 @@ async function scrapeWithApify(location, maxListings) {
 }
 
 // ── Scraping avec fallback mock ──────────────────────────────
-async function scrapeZone(location, medianFallback, maxListings) {
+async function scrapeZone(location, medianFallback, maxListings, requestedCurrency) {
   if (MOCK_MODE) {
     console.log(`🎭 [DP-CRON] Mode MOCK pour "${location}" (APIFY_TOKEN absent)`);
     const mock = getMockListings(location, medianFallback);
@@ -324,7 +325,7 @@ async function scrapeZone(location, medianFallback, maxListings) {
   }
 
   try {
-    const listings = await scrapeWithApify(location, maxListings);
+    const listings = await scrapeWithApify(location, maxListings, requestedCurrency);
     return { listings, isMock: false };
   } catch (err) {
     console.error(`❌ [DP-CRON] Apify error pour "${location}":`, err.message);
@@ -364,7 +365,7 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       `SELECT pc.*,
               p.name    AS property_name,
               p.address AS property_address,
-              p.latitude, p.longitude, p.country_code,
+              p.latitude, p.longitude, p.country_code, p.currency,
               u.email   AS user_email,
               u.first_name AS user_first_name
        FROM pricing_config pc
@@ -396,7 +397,6 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
 
       // 2. Zones de recherche ordonnées (ville → préfecture → région)
       const zones = getFallbackZones(cfg.property_address, cfg.zone_label);
-      const cacheKey = zones.join('|');
 
       // Snapshot T0 : capturer avant le scrape — la clé et la devise doivent refléter
       // l'état de la propriété au moment du scrape, pas après une éventuelle mise à jour.
@@ -405,15 +405,42 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
         latitude:  cfg.latitude  != null ? parseFloat(cfg.latitude)  : null,
         longitude: cfg.longitude != null ? parseFloat(cfg.longitude) : null,
       });
-      const capturedMarketCurrency = normalizeMarketCurrency(MARKET_REQUEST_CURRENCY);
+      const capturedPropertyCurrency = normalizeMarketCurrency(cfg.currency);
 
-      // 3. Scraping avec élargissement progressif (cache par jeu de zones)
+      // Unknown currency → skip market scrape entirely; BoostPrice still runs
+      if (!capturedPropertyCurrency) {
+        console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: devise inconnue — scrape marché ignoré, BoostPrice sans signal marché`);
+        const apply = await applyDynamicPricingForProperty(pool, {
+          cfg, marketStats: null, isMock: false, marketOverride: null, sendPushNotification,
+        });
+        results.push({
+          userId:          cfg.user_id,
+          userEmail:       cfg.user_email,
+          firstName:       cfg.user_first_name,
+          propertyId:      cfg.property_id,
+          propertyName:    cfg.property_name,
+          status:          apply.status,
+          priceBefore:     apply.priceBefore,
+          priceApplied:    apply.priceApplied,
+          priceCalculated: apply.priceCalculated,
+          tensionLevel:    null,
+          nights:          apply.nights,
+          isMock:          false,
+        });
+        continue;
+      }
+
+      // Same zone + same currency → cache may be reused; different currency → separate scrape
+      const cacheKey = zones.join('|') + ':' + capturedPropertyCurrency;
+
+      // 3. Scraping avec élargissement progressif (cache par jeu de zones + devise)
       if (!zoneCache[cacheKey]) {
         zoneCache[cacheKey] = await scrapeBestZone(
           zones,
           (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
           MAX_LISTINGS,
-          cfg.bedrooms
+          cfg.bedrooms,
+          capturedPropertyCurrency
         );
       }
 
@@ -436,7 +463,7 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       const writeResult = await writeScrapeResult(pool, {
         userId: cfg.user_id, propertyId: cfg.property_id, weekStart,
         marketStats, zoneLabel, dataSource, capturedContextKey: marketContextKey,
-        currency: capturedMarketCurrency,
+        currency: capturedPropertyCurrency,
       });
 
       if (!writeResult.written) {
@@ -650,7 +677,7 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   // Sélectionner la config canonique via properties.user_id (jamais via le caller userId)
   const cfg = (await pool.query(
     `SELECT pc.*, p.name AS property_name, p.address AS property_address,
-            p.latitude, p.longitude, p.country_code
+            p.latitude, p.longitude, p.country_code, p.currency
        FROM pricing_config pc
        JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
       WHERE pc.property_id = $1`,
@@ -678,13 +705,23 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
     latitude:  cfg.latitude  != null ? parseFloat(cfg.latitude)  : null,
     longitude: cfg.longitude != null ? parseFloat(cfg.longitude) : null,
   });
-  const capturedMarketCurrencyOne = normalizeMarketCurrency(MARKET_REQUEST_CURRENCY);
+  const capturedPropertyCurrency = normalizeMarketCurrency(cfg.currency);
+
+  // Unknown currency → skip scrape and writeScrapeResult; BoostPrice still runs
+  if (!capturedPropertyCurrency) {
+    console.log(`ℹ️ [DP-ONE] ${cfg.property_name}: devise inconnue — scrape marché ignoré, BoostPrice sans signal marché`);
+    const apply = await applyDynamicPricingForProperty(pool, {
+      cfg, marketStats: null, isMock: false, marketOverride: null, sendPushNotification,
+    });
+    return { ok: true, isMock: false, marketStats: null, apply };
+  }
 
   const { listings, isMock, zoneUsed } = await scrapeBestZone(
     zones,
     (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
     MAX_LISTINGS,
-    cfg.bedrooms
+    cfg.bedrooms,
+    capturedPropertyCurrency
   );
   const zoneLabel = zoneUsed;
 
@@ -699,7 +736,7 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   const writeResultOne = await writeScrapeResult(pool, {
     userId: cfg.user_id, propertyId, weekStart,
     marketStats, zoneLabel, dataSource: dataSourceOne, capturedContextKey: marketContextKey,
-    currency: capturedMarketCurrencyOne,
+    currency: capturedPropertyCurrency,
   });
 
   if (!writeResultOne.written) {

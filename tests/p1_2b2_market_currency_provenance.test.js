@@ -6,11 +6,11 @@
  * Groups:
  *   MCUR-B2-01–04 : schema migration invariants
  *   MCUR-B2-05–07 : normalizeMarketCurrency
- *   MCUR-B2-08    : actor request uses canonical constant
- *   MCUR-B2-09–10 : acquisition paths pass captured currency
+ *   MCUR-B2-08    : scrapeWithApify uses explicit requestedCurrency (B4-C)
+ *   MCUR-B2-09–10 : acquisition paths capture per-property currency (B4-C)
  *   MCUR-B2-11–12 : writeScrapeResult INSERT + UPSERT currency
- *   MCUR-B2-13    : mock snapshot currency
- *   MCUR-B2-14–15 : resolver / pricing engine unchanged
+ *   MCUR-B2-13    : currency captured before scrape decision (not inside isMock)
+ *   MCUR-B2-14–15 : resolver has B4-B currency statuses / pricing engine unchanged
  *   MCUR-B2-16–18 : no backfill, no inference, geographic CAS intact
  *
  * Run: node tests/p1_2b2_market_currency_provenance.test.js
@@ -134,42 +134,69 @@ await test('MCUR-B2-07 normalizer: invalid inputs → null', () => {
 
 console.log('\n── MCUR-B2-08 : actor request currency ──');
 
-await test('MCUR-B2-08 actor request uses MARKET_REQUEST_CURRENCY constant, not bare string', () => {
+await test('MCUR-B2-08 scrapeWithApify uses explicit requestedCurrency parameter (B4-C — no MARKET_REQUEST_CURRENCY)', () => {
+  // B4-C: per-property currency — global constant removed
   assert.ok(
-    /const MARKET_REQUEST_CURRENCY\s*=\s*['"]EUR['"]/.test(CRON_SRC),
-    "MARKET_REQUEST_CURRENCY = 'EUR' constant not found in cron module"
+    !/const MARKET_REQUEST_CURRENCY\s*=/.test(CRON_SRC),
+    'MARKET_REQUEST_CURRENCY constant must be removed in B4-C'
   );
-  // The Apify body must reference the constant, not duplicate 'EUR' directly
+  // scrapeWithApify must accept requestedCurrency as a parameter
+  const fnMatch = CRON_SRC.match(/async function scrapeWithApify\s*\([^)]+\)/);
+  assert.ok(fnMatch, 'scrapeWithApify function not found');
+  assert.ok(
+    /requestedCurrency/.test(fnMatch[0]),
+    'scrapeWithApify must accept requestedCurrency parameter'
+  );
+  // Must guard against missing requestedCurrency — no EUR fallback
+  assert.ok(
+    /if\s*\(!requestedCurrency\)/.test(CRON_SRC),
+    'scrapeWithApify must guard against missing requestedCurrency (no EUR fallback)'
+  );
+  // Apify body must use requestedCurrency, not a string literal
   const apifyBodyMatch = CRON_SRC.match(/body:\s*JSON\.stringify\(\{[\s\S]{0,400}?\}\)/);
   assert.ok(apifyBodyMatch, 'Apify body JSON.stringify block not found');
   assert.ok(
-    /currency\s*:\s*MARKET_REQUEST_CURRENCY/.test(apifyBodyMatch[0]),
-    "Apify actor body must use MARKET_REQUEST_CURRENCY constant, not literal 'EUR'"
+    /currency\s*:\s*requestedCurrency/.test(apifyBodyMatch[0]),
+    "Apify body must use requestedCurrency variable, not MARKET_REQUEST_CURRENCY or 'EUR'"
+  );
+});
+
+console.log('\n── MCUR-B2-09–10 : acquisition paths capture per-property currency ──');
+
+await test('MCUR-B2-09 weekly path captures capturedPropertyCurrency from cfg.currency with unknown-currency guard', () => {
+  // B4-C: per-property currency captured from cfg.currency
+  assert.ok(
+    /const capturedPropertyCurrency = normalizeMarketCurrency\(cfg\.currency\)/.test(CRON_SRC),
+    'capturedPropertyCurrency not captured from cfg.currency in cron (weekly path)'
+  );
+  // Unknown-currency guard must skip scrape and continue
+  assert.ok(
+    /if\s*\(!capturedPropertyCurrency\)/.test(CRON_SRC),
+    'Unknown-currency guard (if !capturedPropertyCurrency) missing from cron'
+  );
+  // writeScrapeResult must pass capturedPropertyCurrency
+  assert.ok(
+    /currency:\s*capturedPropertyCurrency/.test(CRON_SRC),
+    'currency: capturedPropertyCurrency not passed to writeScrapeResult'
+  );
+});
+
+await test('MCUR-B2-10 one-property path uses capturedPropertyCurrency and has unknown-currency guard', () => {
+  const fnIdx = CRON_SRC.indexOf('async function runDynamicPricingForOneProperty');
+  assert.ok(fnIdx !== -1, 'runDynamicPricingForOneProperty not found');
+  const fnBody = CRON_SRC.slice(fnIdx, fnIdx + 3000);
+  assert.ok(
+    /const capturedPropertyCurrency = normalizeMarketCurrency\(cfg\.currency\)/.test(fnBody),
+    'capturedPropertyCurrency not captured from cfg.currency in one-property path'
   );
   assert.ok(
-    !/currency\s*:\s*'EUR'/.test(apifyBodyMatch[0]),
-    "Apify actor body must not use bare 'EUR' string literal — use MARKET_REQUEST_CURRENCY"
+    /if\s*\(!capturedPropertyCurrency\)/.test(fnBody),
+    'Unknown-currency guard missing from one-property path'
   );
-});
-
-console.log('\n── MCUR-B2-09–10 : acquisition paths capture + pass currency ──');
-
-await test('MCUR-B2-09 weekly path captures capturedMarketCurrency before scrape', () => {
-  // Find runDynamicPricingJob body region (weekly loop)
-  const jobStart = CRON_SRC.indexOf('const capturedMarketCurrency = normalizeMarketCurrency(MARKET_REQUEST_CURRENCY)');
-  assert.ok(jobStart !== -1, 'capturedMarketCurrency not captured in weekly path');
-  // Must appear before the writeScrapeResult call in the weekly path
-  const writeCallIdx = CRON_SRC.indexOf("capturedContextKey: marketContextKey,\n        currency: capturedMarketCurrency,");
-  assert.ok(writeCallIdx !== -1, 'currency: capturedMarketCurrency not passed in weekly writeScrapeResult call');
-  assert.ok(jobStart < writeCallIdx, 'capturedMarketCurrency must be captured before writeScrapeResult');
-});
-
-await test('MCUR-B2-10 one-property path captures currency and passes it to writeScrapeResult', () => {
-  const captureIdx = CRON_SRC.indexOf('const capturedMarketCurrencyOne = normalizeMarketCurrency(MARKET_REQUEST_CURRENCY)');
-  assert.ok(captureIdx !== -1, 'capturedMarketCurrencyOne not captured in one-property path');
-  const writeCallIdx = CRON_SRC.indexOf('currency: capturedMarketCurrencyOne,');
-  assert.ok(writeCallIdx !== -1, 'currency: capturedMarketCurrencyOne not found in one-property writeScrapeResult call');
-  assert.ok(captureIdx < writeCallIdx, 'capturedMarketCurrencyOne must be captured before writeScrapeResult');
+  assert.ok(
+    /scrapeBestZone[\s\S]{0,300}capturedPropertyCurrency/.test(fnBody),
+    'capturedPropertyCurrency not passed to scrapeBestZone in one-property path'
+  );
 });
 
 console.log('\n── MCUR-B2-11–12 : writeScrapeResult INSERT + UPSERT ──');
@@ -250,41 +277,39 @@ await test('MCUR-B2-12 writeScrapeResult UPSERT ON CONFLICT updates currency', (
   );
 });
 
-console.log('\n── MCUR-B2-13 : mock snapshot currency ──');
+console.log('\n── MCUR-B2-13 : currency captured before scrape decision ──');
 
-await test('MCUR-B2-13 mock acquisition (isMock=true) passes same capturedMarketCurrency', () => {
-  // Both paths use capturedMarketCurrency regardless of isMock.
-  // Verify dataSource diverges but currency capture does not branch on isMock.
-  const weeklyCapture = CRON_SRC.match(
-    /const capturedMarketCurrency = normalizeMarketCurrency\(MARKET_REQUEST_CURRENCY\)/
-  );
-  assert.ok(weeklyCapture, 'Weekly capturedMarketCurrency not found');
-
-  // The isMock branch in weekly path only affects dataSource and marketOverride,
-  // not capturedMarketCurrency. Verify currency is NOT inside an if(isMock) block.
-  const captureIdx = CRON_SRC.indexOf('const capturedMarketCurrency = normalizeMarketCurrency(MARKET_REQUEST_CURRENCY)');
-  // Look for isMock conditional before the capture
+await test('MCUR-B2-13 property currency captured before scrape decision (not inside isMock branch)', () => {
+  // B4-C: capturedPropertyCurrency must be captured unconditionally before scrape
+  const captureIdx = CRON_SRC.indexOf('const capturedPropertyCurrency = normalizeMarketCurrency(cfg.currency)');
+  assert.ok(captureIdx !== -1, 'capturedPropertyCurrency not found in cron');
+  // Verify no isMock branch precedes the capture (currency capture is unconditional)
   const precedingSlice = CRON_SRC.slice(Math.max(0, captureIdx - 200), captureIdx);
   assert.ok(
     !/if\s*\(\s*!?isMock/.test(precedingSlice),
-    'capturedMarketCurrency capture must not be inside an isMock branch'
+    'capturedPropertyCurrency capture must not be inside an isMock branch'
   );
 });
 
-console.log('\n── MCUR-B2-14–15 : resolver / pricing engine unchanged ──');
+console.log('\n── MCUR-B2-14–15 : resolver has B4-B currency statuses / pricing engine unchanged ──');
 
-await test('MCUR-B2-14 resolver does not reference currency (no enforcement added)', () => {
+await test('MCUR-B2-14 resolver has B4-B currency-aware classification (propertyCurrency + three new statuses)', () => {
+  // B4-B added propertyCurrency support to the resolver
   assert.ok(
-    !/live_wrong_currency/.test(RESOLVER_SRC),
-    'live_wrong_currency found in resolver — currency enforcement must not be added in B2'
+    /propertyCurrency/.test(RESOLVER_SRC),
+    'propertyCurrency not found in resolver — B4-B should have added it'
   );
   assert.ok(
-    !/currency_unverified/.test(RESOLVER_SRC),
-    'currency_unverified found in resolver — must not be added in B2'
+    /property_currency_unknown/.test(RESOLVER_SRC),
+    "status 'property_currency_unknown' not found in resolver"
   );
   assert.ok(
-    !/propertyCurrency/.test(RESOLVER_SRC),
-    'propertyCurrency parameter found in resolver — must not be added in B2'
+    /market_currency_unknown/.test(RESOLVER_SRC),
+    "status 'market_currency_unknown' not found in resolver"
+  );
+  assert.ok(
+    /currency_mismatch/.test(RESOLVER_SRC),
+    "status 'currency_mismatch' not found in resolver"
   );
 });
 
