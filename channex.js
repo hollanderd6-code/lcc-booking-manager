@@ -1260,6 +1260,45 @@ async function listChannexRoomTypes(channex_property_id) {
   }
 }
 
+// ── Currency normalizer/validator (shape only: ^[A-Z]{3}$) ──
+function _parseChannexCurrency(value) {
+  if (value == null) return null;
+  const s = String(value).trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(s) ? s : null;
+}
+
+// ── Lire la devise d'un rate plan Channex (P1.2-B3B) ─────────
+// Aucun accès DB. Aucune décision d'autorité. Lecture pure.
+// Returns: { ok: true, currency: 'EUR' }
+//       or { ok: false, error: 'invalid_input'|'not_found'|'missing_currency'|'invalid_currency'|'api_error' }
+async function getChannexRatePlanCurrency(ratePlanId) {
+  if (!ratePlanId || typeof ratePlanId !== 'string' || !ratePlanId.trim()) {
+    return { ok: false, error: 'invalid_input' };
+  }
+
+  try {
+    const res = await channexAPI.get('/rate_plans/' + ratePlanId.trim());
+    const raw = res.data?.data?.attributes?.currency;
+
+    if (raw == null || raw === '') {
+      return { ok: false, error: 'missing_currency' };
+    }
+
+    const currency = _parseChannexCurrency(raw);
+    if (!currency) {
+      return { ok: false, error: 'invalid_currency' };
+    }
+
+    return { ok: true, currency };
+
+  } catch (e) {
+    if (e.response?.status === 404) {
+      return { ok: false, error: 'not_found' };
+    }
+    return { ok: false, error: 'api_error', status: e.response?.status ?? null };
+  }
+}
+
 // ── Lister les rate_plans d'un room_type Channex ────────────
 async function listChannexRatePlans(channex_room_type_id) {
   try {
@@ -1283,6 +1322,7 @@ module.exports = {
   listChannexProperties,
   listChannexRoomTypes,
   listChannexRatePlans,
+  getChannexRatePlanCurrency,
   pushAvailability,
   pushRates,
   assurerPlansMajores,
