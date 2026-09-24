@@ -53,6 +53,7 @@ const { triggerSync: _triggerSync } = require('./routes/trigger-sync');
 const { deescalateConversation } = require('./utils/chat-utils');
 const { resolveOwnerClientId } = require('./utils/owner-utils');
 const { generateInvoicePdf } = require('./utils/invoice-pdf');
+const { geocodeAddress } = require('./services/property-geocoder');
 
 // ============================================
 // 📨 IMPORT SYSTÈME DE MESSAGES D'ARRIVÉE AUTOMATIQUES
@@ -6700,6 +6701,44 @@ function normalizeIcalUrls(raw) {
   if (typeof raw === 'object') return [raw]; // objet non-tableau
   return [];
 }
+
+// ── P1.1-C2 : Property Geo Context helpers ────────────────────────────────────
+function normalizeAddressForComparison(addr) {
+  if (addr == null) return '';
+  return String(addr).trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+async function geocodePropertyAsync(pool, propertyId, address) {
+  if (!address || !String(address).trim()) return;
+  let result;
+  try {
+    result = await geocodeAddress(address);
+  } catch (e) {
+    console.warn(`⚠️ [GEO] geocodeAddress error for ${propertyId}:`, e.message);
+    return;
+  }
+  if (!result || result.status !== 'resolved') {
+    console.log(`ℹ️ [GEO] ${propertyId}: status=${result?.status} reason=${result?.reason}`);
+    return;
+  }
+  try {
+    const r = await pool.query(
+      `UPDATE properties
+       SET latitude = $1, longitude = $2, country_code = $3, timezone = $4
+       WHERE id = $5 AND address = $6`,
+      [result.latitude, result.longitude, result.countryCode, result.timezone, propertyId, address]
+    );
+    if (r.rowCount === 0) {
+      console.log(`ℹ️ [GEO] ${propertyId}: compare-and-set miss (address changed)`);
+      return;
+    }
+    console.log(`✅ [GEO] ${propertyId}: resolved (${result.latitude},${result.longitude}) cc=${result.countryCode} tz=${result.timezone}`);
+    await loadProperties();
+  } catch (e) {
+    console.warn(`⚠️ [GEO] write-back error for ${propertyId}:`, e.message);
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // PROPERTIES est créé par affectation dans loadProperties (variable globale implicite)
 async function loadProperties() {
@@ -18946,6 +18985,10 @@ app.post('/api/properties',
       property: { id }
     });
 
+    if (address) {
+      setImmediate(() => geocodePropertyAsync(pool, id, address));
+    }
+
   } catch (error) {
     console.error('❌ Erreur création/mise à jour propriété:', error);
     res.status(500).json({ 
@@ -20884,6 +20927,9 @@ app.put('/api/properties/:propertyId',
 userId: userId
     });
     
+    const addressChanged = normalizeAddressForComparison(newAddress) !==
+      normalizeAddressForComparison(property.address || null);
+
     const result = await pool.query(
       `UPDATE properties
        SET
@@ -20927,6 +20973,10 @@ userId: userId
          booking_commission_pct = $40,
          deposit_release_days = $41,
          external_pricing = $42,
+         latitude     = CASE WHEN $43::boolean THEN NULL ELSE latitude END,
+         longitude    = CASE WHEN $43::boolean THEN NULL ELSE longitude END,
+         country_code = CASE WHEN $43::boolean THEN NULL ELSE country_code END,
+         timezone     = CASE WHEN $43::boolean THEN NULL ELSE timezone END,
          updated_at = NOW()
        WHERE id = $22 AND user_id = ANY($23::text[])`,
       [
@@ -20959,13 +21009,14 @@ userId: userId
         body.airbnbCommissionPct != null && body.airbnbCommissionPct !== '' ? parseFloat(body.airbnbCommissionPct) : (property.airbnb_commission_pct ?? 3),
         body.bookingCommissionPct != null && body.bookingCommissionPct !== '' ? parseFloat(body.bookingCommissionPct) : (property.booking_commission_pct ?? 15),
         newDepositReleaseDays,
-        newExternalPricing
+        newExternalPricing,
+        addressChanged
       ]
     );
-    
+
     console.log('✅ UPDATE terminé, lignes affectées:', result.rowCount);
     console.log('💰 [COMMISSION DEBUG] airbnb:', body.airbnbCommissionPct, '| booking:', body.bookingCommissionPct);
-    
+
     await loadProperties();
 
     // Lire directement depuis la DB pour éviter les race conditions avec le cache
@@ -20992,6 +21043,9 @@ userId: userId
     });
     // Pousser les nouveaux tarifs (prix de base/weekend) vers Channex
     setImmediate(() => triggerChannexRatesSync(propertyId, userId, { stopSellMode: 'none' }));
+    if (newAddress && addressChanged) {
+      setImmediate(() => geocodePropertyAsync(pool, propertyId, newAddress));
+    }
   } catch (err) {
     console.error('❌ Erreur modification logement:', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -22152,6 +22206,10 @@ app.post('/api/host/properties', authenticateToken, upload.array('photos', 15), 
 
     console.log(`✅ [HOST] Logement créé: ${id} (${name}) — ${photoUrls.length} photos, par ${userId}`);
     res.json({ success: true, id, name, photoCount: photoUrls.length, message: 'Logement publié sur la marketplace.' });
+    const geoAddress = [address, postalCode, city].filter(Boolean).join(', ');
+    if (geoAddress) {
+      setImmediate(() => geocodePropertyAsync(pool, id, geoAddress));
+    }
 
   } catch (e) {
     console.error('❌ [HOST] create property:', e.message);

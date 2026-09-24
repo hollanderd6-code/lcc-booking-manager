@@ -236,14 +236,18 @@ await test('PLC-19 INSERT properties ne contient pas les colonnes geo/locale', a
   }
 });
 
-await test('PLC-20 UPDATE properties ne set pas les colonnes geo/locale', async () => {
+await test('PLC-20 UPDATE properties ne set pas les colonnes geo/locale via paramètre client ($N)', async () => {
+  // P1.1-C2 ajoute "latitude = CASE WHEN address IS DISTINCT FROM $4 THEN NULL ELSE latitude END"
+  // (logique serveur pure — pas un paramètre client). Ce test vérifie qu'aucune colonne
+  // geo/locale n'est assignée directement à un paramètre $N (écrit par le client).
   assert.ok(updateSrc, 'UPDATE properties SET introuvable dans server.js');
   const whereIdx = updateSrc.indexOf('WHERE');
   const setBlock = whereIdx !== -1 ? updateSrc.slice(0, whereIdx) : updateSrc;
   const forbidden = ['latitude', 'longitude', 'country_code', 'timezone', 'currency'];
   for (const col of forbidden) {
-    assert.ok(!new RegExp(`\\b${col}\\s*=`).test(setBlock),
-      `UPDATE set "${col}" — ne doit pas être écrit par client`);
+    // CASE WHEN autorisé (serveur), affectation directe à $N interdite (client)
+    assert.ok(!new RegExp(`\\b${col}\\s*=\\s*\\$\\d`).test(setBlock),
+      `UPDATE assigne "${col}" à un paramètre client $N — ne doit pas être écrit directement par le client`);
   }
 });
 
