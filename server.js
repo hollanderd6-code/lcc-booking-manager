@@ -55,6 +55,7 @@ const { resolveOwnerClientId } = require('./utils/owner-utils');
 const { generateInvoicePdf } = require('./utils/invoice-pdf');
 const { geocodeAddress } = require('./services/property-geocoder');
 const { computeMarketContextKey } = require('./routes/market-context-key');
+const { scheduleMarketRefresh } = require('./routes/market-refresh-trigger');
 
 // ============================================
 // 📨 IMPORT SYSTÈME DE MESSAGES D'ARRIVÉE AUTOMATIQUES
@@ -6720,7 +6721,7 @@ function normalizeAddressForComparison(addr) {
   return String(addr).trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-async function geocodePropertyAsync(pool, propertyId, expectedStoredAddress, geocodeQuery = expectedStoredAddress) {
+async function geocodePropertyAsync(pool, propertyId, expectedStoredAddress, geocodeQuery = expectedStoredAddress, userId = null, previousContextKey = null) {
   if (!expectedStoredAddress || !String(expectedStoredAddress).trim()) return;
   let result;
   try {
@@ -6746,6 +6747,17 @@ async function geocodePropertyAsync(pool, propertyId, expectedStoredAddress, geo
     }
     console.log(`✅ [GEO] ${propertyId}: resolved (${result.latitude},${result.longitude}) cc=${result.countryCode} tz=${result.timezone}`);
     await loadProperties();
+    // C3C bridge: schedule market refresh when geo context changes
+    if (userId) {
+      const newContextKey = computeMarketContextKey({
+        countryCode: result.countryCode,
+        latitude:    result.latitude,
+        longitude:   result.longitude,
+      });
+      if (newContextKey && newContextKey !== previousContextKey) {
+        scheduleMarketRefresh(pool, { propertyId, userId, expectedContextKey: newContextKey });
+      }
+    }
   } catch (e) {
     console.warn(`⚠️ [GEO] write-back error for ${propertyId}:`, e.message);
   }
@@ -18998,7 +19010,7 @@ app.post('/api/properties',
     });
 
     if (address) {
-      setImmediate(() => geocodePropertyAsync(pool, id, address));
+      setImmediate(() => geocodePropertyAsync(pool, id, address, address, userId, null));
     }
 
   } catch (error) {
@@ -21056,7 +21068,12 @@ userId: userId
     // Pousser les nouveaux tarifs (prix de base/weekend) vers Channex
     setImmediate(() => triggerChannexRatesSync(propertyId, userId, { stopSellMode: 'none' }));
     if (newAddress && addressChanged) {
-      setImmediate(() => geocodePropertyAsync(pool, propertyId, newAddress));
+      const _prevKey = computeMarketContextKey({
+        countryCode: property.country_code,
+        latitude:    property.latitude,
+        longitude:   property.longitude,
+      });
+      setImmediate(() => geocodePropertyAsync(pool, propertyId, newAddress, newAddress, userId, _prevKey));
     } else if (newAddress && !addressChanged) {
       const _geoIncomplete = computeMarketContextKey({
         countryCode: updated.country_code,
@@ -21064,7 +21081,7 @@ userId: userId
         longitude:   updated.longitude,
       }) === null;
       if (_geoIncomplete) {
-        setImmediate(() => geocodePropertyAsync(pool, propertyId, newAddress));
+        setImmediate(() => geocodePropertyAsync(pool, propertyId, newAddress, newAddress, userId, null));
       }
     }
   } catch (err) {
@@ -22229,7 +22246,7 @@ app.post('/api/host/properties', authenticateToken, upload.array('photos', 15), 
     res.json({ success: true, id, name, photoCount: photoUrls.length, message: 'Logement publié sur la marketplace.' });
     const geoAddress = [address, postalCode, city].filter(Boolean).join(', ');
     if (address && geoAddress) {
-      setImmediate(() => geocodePropertyAsync(pool, id, address, geoAddress));
+      setImmediate(() => geocodePropertyAsync(pool, id, address, geoAddress, userId, null));
     }
 
   } catch (e) {

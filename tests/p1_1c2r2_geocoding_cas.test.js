@@ -43,11 +43,11 @@ function getGeoFn() {
 }
 
 function getPUTGeoRegion() {
-  // Anchor on the first occurrence of the 3-param call in the PUT addressChanged branch
-  const marker = 'geocodePropertyAsync(pool, propertyId, newAddress)';
+  // C3C updated calls to 6 params; anchor on the addressChanged=true branch marker.
+  const marker = 'geocodePropertyAsync(pool, propertyId, newAddress, newAddress, userId, _prevKey)';
   const idx = SERVER_SRC.indexOf(marker);
   if (idx === -1) return '';
-  return SERVER_SRC.slice(idx - 800, idx + 600);
+  return SERVER_SRC.slice(idx - 900, idx + 600);
 }
 
 function getPOSTHostGeoHook() {
@@ -61,12 +61,21 @@ function getPOSTHostGeoHook() {
 
 console.log('\n── C2R2-01–05 : signature — séparation anchor/query ──');
 
-await test('C2R2-01 signature 4 params : expectedStoredAddress + geocodeQuery = expectedStoredAddress', async () => {
+await test('C2R2-01 signature : expectedStoredAddress + geocodeQuery default + userId + previousContextKey', async () => {
   const fn = getGeoFn();
   assert.ok(fn, 'geocodePropertyAsync introuvable dans server.js');
+  // C3C extended to 6 params: geocodeQuery default + userId + previousContextKey
   assert.ok(
-    /geocodePropertyAsync\s*\(pool,\s*propertyId,\s*expectedStoredAddress,\s*geocodeQuery\s*=\s*expectedStoredAddress\s*\)/.test(fn),
-    'Signature 4-params attendue : (pool, propertyId, expectedStoredAddress, geocodeQuery = expectedStoredAddress)'
+    /geocodePropertyAsync\s*\(pool,\s*propertyId,\s*expectedStoredAddress,\s*geocodeQuery\s*=\s*expectedStoredAddress/.test(fn),
+    'Signature attendue : (pool, propertyId, expectedStoredAddress, geocodeQuery = expectedStoredAddress, ...)'
+  );
+  assert.ok(
+    /userId\s*=\s*null/.test(fn),
+    'userId = null default absent de la signature'
+  );
+  assert.ok(
+    /previousContextKey\s*=\s*null/.test(fn),
+    'previousContextKey = null default absent de la signature'
   );
 });
 
@@ -111,16 +120,15 @@ await test('C2R2-04 CAS WHERE $6 = expectedStoredAddress (pas geocodeQuery)', as
   );
 });
 
-await test('C2R2-05 callers 3-params existants (PUT + POST standard) toujours valides — default param', async () => {
-  // PUT handler: geocodePropertyAsync(pool, propertyId, newAddress)
+await test('C2R2-05 callers PUT + POST standard passent userId et previousContextKey explicitement (C3C)', async () => {
+  // C3C updated all callers to 6 params — verify each call site is explicit
   assert.ok(
-    SERVER_SRC.includes('geocodePropertyAsync(pool, propertyId, newAddress)'),
-    'Appel 3-params geocodePropertyAsync(pool, propertyId, newAddress) absent du PUT handler'
+    SERVER_SRC.includes('geocodePropertyAsync(pool, propertyId, newAddress, newAddress, userId, _prevKey)'),
+    'PUT handler (addressChanged) doit passer (pool, propertyId, newAddress, newAddress, userId, _prevKey)'
   );
-  // POST standard: geocodePropertyAsync(pool, id, address)
   assert.ok(
-    SERVER_SRC.includes('geocodePropertyAsync(pool, id, address)'),
-    'Appel 3-params geocodePropertyAsync(pool, id, address) absent du POST /api/properties'
+    SERVER_SRC.includes('geocodePropertyAsync(pool, id, address, address, userId, null)'),
+    'POST standard doit passer (pool, id, address, address, userId, null)'
   );
 });
 
@@ -154,8 +162,8 @@ await test('C2R2-08 PUT handler — cosmetic branch ne re-géocode QUE si geo in
   // The conditional geocode call must be guarded by _geoIncomplete
   const incompleteIdx = region.indexOf('_geoIncomplete');
   assert.ok(incompleteIdx !== -1, '_geoIncomplete absent de la région PUT');
-  const cosmGeoIdx = region.indexOf('geocodePropertyAsync(pool, propertyId, newAddress)', incompleteIdx);
-  assert.ok(cosmGeoIdx !== -1, 'geocodePropertyAsync absent après le guard _geoIncomplete');
+  const cosmGeoIdx = region.indexOf('geocodePropertyAsync(pool, propertyId, newAddress, newAddress, userId, null)', incompleteIdx);
+  assert.ok(cosmGeoIdx !== -1, 'geocodePropertyAsync(pool, propertyId, newAddress, newAddress, userId, null) absent après le guard _geoIncomplete');
   assert.ok(cosmGeoIdx > incompleteIdx, '_geoIncomplete doit précéder le setImmediate cosmétique');
 });
 
@@ -174,8 +182,8 @@ await test('C2R2-10 marketplace passe address ET geoAddress séparément (4-para
   const block = getPOSTHostGeoHook();
   assert.ok(block, 'Bloc POST /api/host/properties introuvable');
   assert.ok(
-    /geocodePropertyAsync\s*\(pool,\s*id,\s*address,\s*geoAddress\s*\)/.test(block),
-    'Appel 4-params geocodePropertyAsync(pool, id, address, geoAddress) absent du marketplace caller'
+    /geocodePropertyAsync\s*\(pool,\s*id,\s*address,\s*geoAddress,\s*userId,\s*null\s*\)/.test(block),
+    'Appel 6-params geocodePropertyAsync(pool, id, address, geoAddress, userId, null) absent du marketplace caller'
   );
 });
 
@@ -218,12 +226,21 @@ await test('C2R2-13 computeMarketContextKey utilisé dans la branche cosmetic ed
 
 console.log('\n── C2R2-14–15 : isolation — pas de marché/Apify dans geocodePropertyAsync ──');
 
-await test('C2R2-14 geocodePropertyAsync ne contient pas scheduleMarketRefresh (isolation C2/C3)', async () => {
+await test('C2R2-14 geocodePropertyAsync délègue au trigger (scheduleMarketRefresh) sans appel Apify direct', async () => {
   const fn = getGeoFn();
   assert.ok(fn, 'geocodePropertyAsync introuvable');
+  // C3C adds scheduleMarketRefresh — orchestration only, no direct Apify
   assert.ok(
-    !/scheduleMarketRefresh/.test(fn),
-    'scheduleMarketRefresh trouvé dans geocodePropertyAsync — C3C ne doit pas être implémenté ici'
+    !/APIFY_ACTOR_ID/.test(fn),
+    'APIFY_ACTOR_ID trouvé dans geocodePropertyAsync — Apify ne doit pas être appelé directement'
+  );
+  assert.ok(
+    !/scrapeBestZone/.test(fn),
+    'scrapeBestZone trouvé dans geocodePropertyAsync — doit passer par le trigger'
+  );
+  assert.ok(
+    !/INSERT INTO market_data/.test(fn),
+    'Écriture directe market_data dans geocodePropertyAsync — doit passer par writeScrapeResult'
   );
 });
 

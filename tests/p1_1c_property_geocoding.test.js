@@ -62,12 +62,12 @@ function getPOSTPropertiesGeoHook() {
 }
 
 function getPUTLoadPropertiesRegion() {
-  // Anchor on the setImmediate geocode call specific to the PUT handler
-  // (uses 'propertyId' not 'id', uniquely identifies the PUT path)
-  const marker = 'geocodePropertyAsync(pool, propertyId, newAddress)';
+  // Anchor on the 6-param setImmediate call in the PUT addressChanged=true branch.
+  // C3C updated the call to pass userId + _prevKey; use the new unique marker.
+  const marker = 'geocodePropertyAsync(pool, propertyId, newAddress, newAddress, userId, _prevKey)';
   const idx = src.indexOf(marker);
   if (idx === -1) return '';
-  return src.slice(idx - 600, idx + 200);
+  return src.slice(idx - 700, idx + 400);
 }
 
 function getPOSTHostGeoHook() {

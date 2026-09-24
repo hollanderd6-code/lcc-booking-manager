@@ -435,15 +435,19 @@ await test('MC-34 pas de WHERE data_source avant LIMIT dans le resolver (aucun p
     'Le SELECT market_data ne doit pas filtrer market_context_key avant le LIMIT');
 });
 
-await test('MC-35 aucun trigger Geoapify→market ajouté (geocodePropertyAsync non modifié pour lancer Apify)', async () => {
+await test('MC-35 C3C — market refresh déclenché via scheduleMarketRefresh après CAS réussi (pas d\'Apify direct)', async () => {
   const serverSrc = fs.readFileSync(path.resolve(__dirname, '../server.js'), 'utf8');
   const geoAsyncFn = serverSrc.slice(
     serverSrc.indexOf('async function geocodePropertyAsync'),
     serverSrc.indexOf('\n}', serverSrc.indexOf('async function geocodePropertyAsync')) + 2
   );
-  assert.ok(!/apify/i.test(geoAsyncFn), 'geocodePropertyAsync ne doit pas appeler Apify (C3C uniquement)');
-  assert.ok(!/scheduleMarketRefresh/.test(geoAsyncFn), 'scheduleMarketRefresh absent de geocodePropertyAsync (C3C)');
-  assert.ok(!/runDynamicPricing/.test(geoAsyncFn), 'runDynamicPricing absent de geocodePropertyAsync');
+  // C3C adds scheduleMarketRefresh — must be present
+  assert.ok(/scheduleMarketRefresh/.test(geoAsyncFn), 'scheduleMarketRefresh absent de geocodePropertyAsync (C3C non implémenté)');
+  // But Apify and runDynamicPricing must never be called directly
+  assert.ok(!/apify/i.test(geoAsyncFn), 'geocodePropertyAsync ne doit pas appeler Apify directement');
+  assert.ok(!/runDynamicPricing/.test(geoAsyncFn), 'runDynamicPricing ne doit pas être appelé directement dans geocodePropertyAsync');
+  // scheduleMarketRefresh must be guarded by newContextKey (fail-closed)
+  assert.ok(/newContextKey\s*&&/.test(geoAsyncFn), 'Guard newContextKey && absent — null key pourrait déclencher refresh');
 });
 
 console.log('\n── MC-36–MC-43 : parité JS/SQL, atomicité, sécurité transaction ──');
