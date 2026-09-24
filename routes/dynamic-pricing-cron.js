@@ -35,6 +35,14 @@ const APIFY_BASE_URL  = 'https://api.apify.com/v2';
 const MAX_LISTINGS    = 100;   // concurrents max à scraper par zone
 const ZONE_RADIUS_KM  = 1.5;   // rayon de recherche autour du logement
 const MOCK_MODE       = !process.env.APIFY_TOKEN; // mode mock si pas de token
+const MARKET_REQUEST_CURRENCY = 'EUR'; // devise courante des requêtes Apify (P1.2-B2)
+
+// Normalise une valeur en code devise ISO 4217 à 3 lettres majuscules, ou null.
+function normalizeMarketCurrency(value) {
+  if (value == null) return null;
+  const s = String(value).trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(s) ? s : null;
+}
 
 // ── Extrait une ZONE DE RECHERCHE exploitable (ville) depuis une adresse ──
 // "18 bis rue Gambetta 91300 Massy" → "Massy, France"
@@ -257,7 +265,7 @@ async function scrapeWithApify(location, maxListings) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         locationQueries: [location],
-        currency:        'EUR',
+        currency:        MARKET_REQUEST_CURRENCY,
         locale:          'fr-FR',
         maxListings,
         enrichUserProfiles: false,
@@ -390,13 +398,14 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       const zones = getFallbackZones(cfg.property_address, cfg.zone_label);
       const cacheKey = zones.join('|');
 
-      // Snapshot T0 : capturer avant le scrape — la clé doit refléter où la propriété
-      // était localisée au moment du scrape, pas après une éventuelle mise à jour géo.
+      // Snapshot T0 : capturer avant le scrape — la clé et la devise doivent refléter
+      // l'état de la propriété au moment du scrape, pas après une éventuelle mise à jour.
       const marketContextKey = computeMarketContextKey({
         countryCode: cfg.country_code,
         latitude:  cfg.latitude  != null ? parseFloat(cfg.latitude)  : null,
         longitude: cfg.longitude != null ? parseFloat(cfg.longitude) : null,
       });
+      const capturedMarketCurrency = normalizeMarketCurrency(MARKET_REQUEST_CURRENCY);
 
       // 3. Scraping avec élargissement progressif (cache par jeu de zones)
       if (!zoneCache[cacheKey]) {
@@ -427,6 +436,7 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       const writeResult = await writeScrapeResult(pool, {
         userId: cfg.user_id, propertyId: cfg.property_id, weekStart,
         marketStats, zoneLabel, dataSource, capturedContextKey: marketContextKey,
+        currency: capturedMarketCurrency,
       });
 
       if (!writeResult.written) {
@@ -668,6 +678,7 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
     latitude:  cfg.latitude  != null ? parseFloat(cfg.latitude)  : null,
     longitude: cfg.longitude != null ? parseFloat(cfg.longitude) : null,
   });
+  const capturedMarketCurrencyOne = normalizeMarketCurrency(MARKET_REQUEST_CURRENCY);
 
   const { listings, isMock, zoneUsed } = await scrapeBestZone(
     zones,
@@ -688,6 +699,7 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   const writeResultOne = await writeScrapeResult(pool, {
     userId: cfg.user_id, propertyId, weekStart,
     marketStats, zoneLabel, dataSource: dataSourceOne, capturedContextKey: marketContextKey,
+    currency: capturedMarketCurrencyOne,
   });
 
   if (!writeResultOne.written) {
@@ -737,6 +749,7 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
 async function writeScrapeResult(pool, {
   userId, propertyId, weekStart,
   marketStats, zoneLabel, dataSource, capturedContextKey,
+  currency = null,
 }) {
   const client = await pool.connect();
   try {
@@ -770,9 +783,9 @@ async function writeScrapeResult(pool, {
          user_id, property_id, week_start,
          median_price, price_p25, price_p75,
          occupancy_rate, comparable_count, tension_level,
-         zone_label, data_source, market_context_key, scraped_at, created_at
+         zone_label, data_source, market_context_key, currency, scraped_at, created_at
        )
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW(),NOW())
        ON CONFLICT (property_id, week_start) DO UPDATE SET
          median_price       = EXCLUDED.median_price,
          price_p25          = EXCLUDED.price_p25,
@@ -783,12 +796,13 @@ async function writeScrapeResult(pool, {
          zone_label         = EXCLUDED.zone_label,
          data_source        = EXCLUDED.data_source,
          market_context_key = EXCLUDED.market_context_key,
+         currency           = EXCLUDED.currency,
          scraped_at         = NOW()`,
       [
         userId, propertyId, weekStart,
         marketStats.median, marketStats.p25, marketStats.p75,
         marketStats.occupancy, marketStats.count, marketStats.tensionLevel,
-        zoneLabel, dataSource, capturedContextKey,
+        zoneLabel, dataSource, capturedContextKey, currency,
       ]
     );
 

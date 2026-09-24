@@ -3280,6 +3280,17 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ market_data.market_context_key:', e.message);
     }
 
+    // ✅ Migration P1.2-B2 : market_data.currency — devise du snapshot marché
+    try {
+      await pool.query(`
+        ALTER TABLE market_data ADD COLUMN IF NOT EXISTS currency TEXT
+          CONSTRAINT chk_market_data_currency CHECK (currency IS NULL OR currency ~ '^[A-Z]{3}$');
+      `);
+      console.log('✅ market_data.currency ajouté (P1.2-B2)');
+    } catch (e) {
+      console.log('ℹ️ market_data.currency:', e.message);
+    }
+
     // ✅ Migration : table notification_history
     try {
       await pool.query(`
