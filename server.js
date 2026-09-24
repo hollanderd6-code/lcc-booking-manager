@@ -3247,6 +3247,24 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Colonnes observabilité iCal:', e.message);
     }
 
+    // ✅ Migration : P1.1-B — Property Local Context (géolocalisation + contexte local)
+    // NULL = non encore résolu. Aucune valeur par défaut FR/EUR/Paris.
+    try {
+      await pool.query(`
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS latitude NUMERIC(9,6)
+          CONSTRAINT chk_properties_lat CHECK (latitude IS NULL OR (latitude >= -90 AND latitude <= 90));
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS longitude NUMERIC(9,6)
+          CONSTRAINT chk_properties_lng CHECK (longitude IS NULL OR (longitude >= -180 AND longitude <= 180));
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS country_code TEXT
+          CONSTRAINT chk_properties_country_code CHECK (country_code IS NULL OR country_code ~ '^[A-Z]{2}$');
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS timezone TEXT;
+        ALTER TABLE properties ADD COLUMN IF NOT EXISTS currency TEXT
+          CONSTRAINT chk_properties_currency CHECK (currency IS NULL OR currency ~ '^[A-Z]{3}$');
+      `);
+      console.log('✅ Colonnes Property Local Context OK');
+    } catch (e) {
+      console.log('ℹ️ Property Local Context columns:', e.message);
+    }
 
     // ✅ Migration : table notification_history
     try {
@@ -6731,7 +6749,12 @@ async function loadProperties() {
         airbnb_commission_pct,
         booking_commission_pct,
         last_ical_sync_at,
-        ical_sync_status
+        ical_sync_status,
+        latitude,
+        longitude,
+        country_code,
+        timezone,
+        currency
       FROM properties
       ORDER BY display_order ASC, created_at ASC
     `);
@@ -6784,7 +6807,12 @@ async function loadProperties() {
         internal_name: row.internal_name || null,
         custom_auto_responses: row.custom_auto_responses || [],
         last_ical_sync_at: row.last_ical_sync_at || null,
-        ical_sync_status: row.ical_sync_status || null
+        ical_sync_status: row.ical_sync_status || null,
+        latitude:     row.latitude     != null ? parseFloat(row.latitude)  : null,
+        longitude:    row.longitude    != null ? parseFloat(row.longitude) : null,
+        country_code: row.country_code ?? null,
+        timezone:     row.timezone     ?? null,
+        currency:     row.currency     ?? null,
       };
     });
     console.log('✅ PROPERTIES chargées : ${PROPERTIES.length} logements'); 
