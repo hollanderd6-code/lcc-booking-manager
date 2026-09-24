@@ -56,6 +56,7 @@ const { generateInvoicePdf } = require('./utils/invoice-pdf');
 const { geocodeAddress } = require('./services/property-geocoder');
 const { computeMarketContextKey } = require('./routes/market-context-key');
 const { scheduleMarketRefresh } = require('./routes/market-refresh-trigger');
+const { normalizeCurrency } = require('./routes/market-data-resolver');
 
 // ============================================
 // 📨 IMPORT SYSTÈME DE MESSAGES D'ARRIVÉE AUTOMATIQUES
@@ -20975,6 +20976,11 @@ userId: userId
     const addressChanged = normalizeAddressForComparison(newAddress) !==
       normalizeAddressForComparison(property.address || null);
 
+    const oldCurrencyNorm = normalizeCurrency(property.currency);
+    const newCurrencyNorm = body.currency !== undefined
+      ? normalizeCurrency(body.currency)
+      : oldCurrencyNorm;
+
     const result = await pool.query(
       `UPDATE properties
        SET
@@ -21022,6 +21028,7 @@ userId: userId
          longitude    = CASE WHEN $43::boolean THEN NULL ELSE longitude END,
          country_code = CASE WHEN $43::boolean THEN NULL ELSE country_code END,
          timezone     = CASE WHEN $43::boolean THEN NULL ELSE timezone END,
+         currency     = $44,
          updated_at = NOW()
        WHERE id = $22 AND user_id = ANY($23::text[])`,
       [
@@ -21055,7 +21062,8 @@ userId: userId
         body.bookingCommissionPct != null && body.bookingCommissionPct !== '' ? parseFloat(body.bookingCommissionPct) : (property.booking_commission_pct ?? 15),
         newDepositReleaseDays,
         newExternalPricing,
-        addressChanged
+        addressChanged,
+        newCurrencyNorm
       ]
     );
 
@@ -21088,6 +21096,22 @@ userId: userId
     });
     // Pousser les nouveaux tarifs (prix de base/weekend) vers Channex
     setImmediate(() => triggerChannexRatesSync(propertyId, userId, { stopSellMode: 'none' }));
+    // B4-E: schedule market refresh when property currency changes to a valid value
+    if (newCurrencyNorm && newCurrencyNorm !== oldCurrencyNorm) {
+      const _freshRow = dbRow.rows[0];
+      if (_freshRow) {
+        setImmediate(() => {
+          const ctxKey = computeMarketContextKey({
+            countryCode: _freshRow.country_code,
+            latitude:    _freshRow.latitude,
+            longitude:   _freshRow.longitude,
+          });
+          if (ctxKey) {
+            scheduleMarketRefresh(pool, { propertyId, userId, expectedContextKey: ctxKey });
+          }
+        });
+      }
+    }
     if (newAddress && addressChanged) {
       const _prevKey = computeMarketContextKey({
         countryCode: property.country_code,

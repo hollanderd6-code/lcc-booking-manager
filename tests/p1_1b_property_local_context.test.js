@@ -243,7 +243,8 @@ await test('PLC-20 UPDATE properties ne set pas les colonnes geo/locale via para
   assert.ok(updateSrc, 'UPDATE properties SET introuvable dans server.js');
   const whereIdx = updateSrc.indexOf('WHERE');
   const setBlock = whereIdx !== -1 ? updateSrc.slice(0, whereIdx) : updateSrc;
-  const forbidden = ['latitude', 'longitude', 'country_code', 'timezone', 'currency'];
+  // B4-E: currency is now intentionally client-writable via PUT /api/properties/:propertyId
+  const forbidden = ['latitude', 'longitude', 'country_code', 'timezone'];
   for (const col of forbidden) {
     // CASE WHEN autorisé (serveur), affectation directe à $N interdite (client)
     assert.ok(!new RegExp(`\\b${col}\\s*=\\s*\\$\\d`).test(setBlock),
