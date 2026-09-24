@@ -2,14 +2,16 @@
 'use strict';
 require('dotenv').config();
 /**
- * P1.2-B3C-R2 — Channex Identifier State Diagnostic
+ * P1.2-B3C-R2 / B3D-BLOCKER — Channex Identifier State Diagnostic
  *
  * READ-ONLY. No DB writes. No Channex writes.
  *
  * Reports:
  *   - Counts by channex_enabled + presence of each Channex identifier
  *   - Properties with stale identifiers (disabled + IDs present)
- *   - St-Ouen or any named property inspection (via --name)
+ *   - Named property full inspection (--name):
+ *       current fields, B3D eligibility, shared channex_property_id
+ *       check, recent channex_logs (last 10 events)
  *
  * Usage:
  *   node outils/diag-channex-identifier-state.js
@@ -98,19 +100,24 @@ function pres(v) { return v ? 'PRESENT' : 'absent'; }
       }
     }
 
-    // ── 3. Named property inspection ─────────────────────────────────────────
+    // ── 3. Named property — full B3D-blocker investigation ───────────────────
     if (nameFilter) {
       const named = await pool.query(`
         SELECT
-          id,
+          id, user_id,
           COALESCE(internal_name, name, id) AS display_name,
           channex_enabled,
+          channex_property_id,
           (channex_property_id IS NOT NULL)     AS has_property_id,
           (channex_property_id_ext IS NOT NULL) AS has_property_id_ext,
           (channex_room_type_id IS NOT NULL)    AS has_room_type_id,
           (channex_rate_plan_id IS NOT NULL)    AS has_rate_plan_id,
           (channex_markup_rate_plans IS NOT NULL AND channex_markup_rate_plans::text <> '{}') AS has_markup_rate_plans,
-          currency
+          currency,
+          -- B3D eligibility predicate (fresh evaluation)
+          (channex_enabled = true
+           AND currency IS NULL
+           AND channex_rate_plan_id IS NOT NULL) AS b3d_eligible
         FROM properties
         WHERE LOWER(COALESCE(internal_name, name, '')) LIKE LOWER($1)
         ORDER BY display_name
@@ -120,14 +127,61 @@ function pres(v) { return v ? 'PRESENT' : 'absent'; }
       for (const row of named.rows) {
         const idSuffix = '…' + String(row.id).slice(-8);
         const name     = String(row.display_name).slice(0, 40);
-        console.log(`\n    [${idSuffix}] ${name}`);
-        console.log(`      channex_enabled:           ${tf(row.channex_enabled)}`);
-        console.log(`      channex_property_id:       ${pres(row.has_property_id)}`);
-        console.log(`      channex_property_id_ext:   ${pres(row.has_property_id_ext)}`);
-        console.log(`      channex_room_type_id:      ${pres(row.has_room_type_id)}`);
-        console.log(`      channex_rate_plan_id:      ${pres(row.has_rate_plan_id)}`);
-        console.log(`      channex_markup_rate_plans: ${pres(row.has_markup_rate_plans)}`);
-        console.log(`      properties.currency:       ${row.currency || 'NULL'}`);
+        console.log(`\n  ══ [${idSuffix}] ${name} ══`);
+        console.log(`    channex_enabled:           ${tf(row.channex_enabled)}`);
+        console.log(`    channex_property_id:       ${pres(row.has_property_id)}`);
+        console.log(`    channex_property_id_ext:   ${pres(row.has_property_id_ext)}`);
+        console.log(`    channex_room_type_id:      ${pres(row.has_room_type_id)}`);
+        console.log(`    channex_rate_plan_id:      ${pres(row.has_rate_plan_id)}`);
+        console.log(`    channex_markup_rate_plans: ${pres(row.has_markup_rate_plans)}`);
+        console.log(`    properties.currency:       ${row.currency || 'NULL'}`);
+        console.log(`    B3D_ELIGIBLE:              ${row.b3d_eligible ? 'YES ← eligible for backfill' : 'no'}`);
+
+        // ── Shared channex_property_id check ──────────────────────────────────
+        if (row.channex_property_id) {
+          const shared = await pool.query(`
+            SELECT id, COALESCE(internal_name, name, id) AS display_name, channex_enabled
+            FROM properties
+            WHERE channex_property_id = $1
+              AND id <> $2
+          `, [row.channex_property_id, row.id]);
+
+          console.log(`\n    SHARED CHANNEX_PROPERTY_ID CHECK:`);
+          if (shared.rows.length === 0) {
+            console.log(`      ST_OUEN_CHANNEX_PROPERTY_SHARED = false`);
+            console.log(`      → No other property shares this channex_property_id.`);
+          } else {
+            console.log(`      ST_OUEN_CHANNEX_PROPERTY_SHARED = true  ⚠`);
+            console.log(`      → ${shared.rows.length} other propert(ies) share this channex_property_id:`);
+            for (const s of shared.rows) {
+              const sName = String(s.display_name).slice(0, 40);
+              console.log(`        …${String(s.id).slice(-8)}  ${sName}  enabled=${tf(s.channex_enabled)}`);
+            }
+            console.log(`      REMOTE_DELETE_ALLOWED = false  (shared property)`);
+          }
+        } else {
+          console.log(`\n    SHARED CHANNEX_PROPERTY_ID CHECK: channex_property_id absent — no check needed`);
+        }
+
+        // ── Recent channex_logs (last 10 events for this property) ────────────
+        const logs = await pool.query(`
+          SELECT event_type, direction, status, error_message,
+                 to_char(created_at, 'YYYY-MM-DD HH24:MI:SS') AS ts
+          FROM channex_logs
+          WHERE property_id = $1
+          ORDER BY created_at DESC
+          LIMIT 10
+        `, [row.id]);
+
+        console.log(`\n    RECENT CHANNEX_LOGS (last ${logs.rows.length} events):`);
+        if (logs.rows.length === 0) {
+          console.log(`      (no entries)`);
+        } else {
+          for (const l of logs.rows) {
+            const err = l.error_message ? ` ← ${String(l.error_message).slice(0, 60)}` : '';
+            console.log(`      ${l.ts}  ${(l.event_type || '').padEnd(20)} ${(l.direction || '').padEnd(8)} ${l.status}${err}`);
+          }
+        }
       }
     }
 
