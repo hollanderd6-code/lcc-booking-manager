@@ -422,34 +422,17 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
         continue;
       }
 
-      // 4. INSERT market_data (upsert)
+      // 4. INSERT market_data (upsert atomique avec vérification de contexte)
       const dataSource = isMock ? 'mock' : 'apify_live';
-      await pool.query(
-        `INSERT INTO market_data (
-           user_id, property_id, week_start,
-           median_price, price_p25, price_p75,
-           occupancy_rate, comparable_count, tension_level,
-           zone_label, data_source, market_context_key, scraped_at, created_at
-         )
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
-         ON CONFLICT (property_id, week_start) DO UPDATE SET
-           median_price       = EXCLUDED.median_price,
-           price_p25          = EXCLUDED.price_p25,
-           price_p75          = EXCLUDED.price_p75,
-           occupancy_rate     = EXCLUDED.occupancy_rate,
-           comparable_count   = EXCLUDED.comparable_count,
-           tension_level      = EXCLUDED.tension_level,
-           zone_label         = EXCLUDED.zone_label,
-           data_source        = EXCLUDED.data_source,
-           market_context_key = EXCLUDED.market_context_key,
-           scraped_at         = NOW()`,
-        [
-          cfg.user_id, cfg.property_id, weekStart,
-          marketStats.median, marketStats.p25, marketStats.p75,
-          marketStats.occupancy, marketStats.count, marketStats.tensionLevel,
-          zoneLabel, dataSource, marketContextKey,
-        ]
-      );
+      const writeResult = await writeScrapeResult(pool, {
+        userId: cfg.user_id, propertyId: cfg.property_id, weekStart,
+        marketStats, zoneLabel, dataSource, capturedContextKey: marketContextKey,
+      });
+
+      if (!writeResult.written) {
+        console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: contexte géo changé pendant le scrape — snapshot obsolète ignoré`);
+        continue;
+      }
 
       console.log(`✅ [DP-CRON] market_data inséré: médiane=${marketStats.median}€ occ=${marketStats.occupancy}% tension=${marketStats.tensionLevel}`);
 
@@ -558,7 +541,8 @@ async function runDailyPricingRefresh(pool, sendPushNotification = null) {
   let configs;
   try {
     configs = (await pool.query(
-      `SELECT pc.*, p.name AS property_name
+      `SELECT pc.*, p.name AS property_name,
+              p.latitude, p.longitude, p.country_code
          FROM pricing_config pc
          JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
         WHERE pc.is_active = TRUE
@@ -573,10 +557,21 @@ async function runDailyPricingRefresh(pool, sendPushNotification = null) {
   let done = 0, pushed = 0;
   for (const cfg of configs) {
     try {
-      const resolution = await resolveMarketData(pool, { propertyId: cfg.property_id });
+      const propertyContextKey = computeMarketContextKey({
+        countryCode: cfg.country_code,
+        latitude:    cfg.latitude,
+        longitude:   cfg.longitude,
+      });
+      const resolution = await resolveMarketData(pool, { propertyId: cfg.property_id, propertyContextKey });
       const isMock = !resolution.trusted && resolution.status !== 'missing';
 
-      if (resolution.status === 'live_stale') {
+      if (resolution.status === 'live_wrong_location') {
+        console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: market mauvaise localisation — signal neutralisé, auto-push maintenu`);
+      } else if (resolution.status === 'legacy_unverified_location') {
+        console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: market legacy (contexte non vérifié) — signal neutralisé, auto-push maintenu`);
+      } else if (resolution.status === 'context_unavailable') {
+        console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: market contexte indisponible — signal neutralisé, auto-push maintenu`);
+      } else if (resolution.status === 'live_stale') {
         console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: market stale (${resolution.ageDays?.toFixed(1)}j) — signal neutralisé, auto-push maintenu`);
       } else if (isMock) {
         console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: market ${resolution.status} — signal neutralisé, auto-push bloqué`);
@@ -690,32 +685,15 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   if (!marketStats) return { ok: false, error: 'Pas assez de données marché pour ce logement' };
 
   const dataSourceOne = isMock ? 'mock' : 'apify_live';
-  await pool.query(
-    `INSERT INTO market_data (
-       user_id, property_id, week_start,
-       median_price, price_p25, price_p75,
-       occupancy_rate, comparable_count, tension_level,
-       zone_label, data_source, market_context_key, scraped_at, created_at
-     )
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
-     ON CONFLICT (property_id, week_start) DO UPDATE SET
-       median_price       = EXCLUDED.median_price,
-       price_p25          = EXCLUDED.price_p25,
-       price_p75          = EXCLUDED.price_p75,
-       occupancy_rate     = EXCLUDED.occupancy_rate,
-       comparable_count   = EXCLUDED.comparable_count,
-       tension_level      = EXCLUDED.tension_level,
-       zone_label         = EXCLUDED.zone_label,
-       data_source        = EXCLUDED.data_source,
-       market_context_key = EXCLUDED.market_context_key,
-       scraped_at         = NOW()`,
-    [
-      cfg.user_id, cfg.property_id, weekStart,
-      marketStats.median, marketStats.p25, marketStats.p75,
-      marketStats.occupancy, marketStats.count, marketStats.tensionLevel,
-      zoneLabel, dataSourceOne, marketContextKey,
-    ]
-  );
+  const writeResultOne = await writeScrapeResult(pool, {
+    userId: cfg.user_id, propertyId, weekStart,
+    marketStats, zoneLabel, dataSource: dataSourceOne, capturedContextKey: marketContextKey,
+  });
+
+  if (!writeResultOne.written) {
+    console.log(`ℹ️ [DP-ONE] ${cfg.property_name}: contexte géo changé pendant le scrape — snapshot obsolète ignoré`);
+    return { ok: false, error: 'context_stale', propertyId };
+  }
 
   console.log(`✅ [DP-ONE] market_data: médiane=${marketStats.median}€ occ=${marketStats.occupancy}% tension=${marketStats.tensionLevel}`);
 
@@ -738,4 +716,91 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   return { ok: true, isMock, marketStats, apply };
 }
 
-module.exports = { initDynamicPricingCron, runDynamicPricingJob, runDailyPricingRefresh, runDynamicPricingForOneProperty };
+// ── Écriture atomique du snapshot marché avec vérification de contexte (CAS) ──
+//
+// Séquence après la fin du scrape HTTP (aucune transaction pendant Apify) :
+//   BEGIN
+//   SELECT country_code, latitude, longitude FROM properties WHERE id=$1 FOR UPDATE
+//   computeMarketContextKey() → currentContextKey   ← implémentation canonique JS
+//   if capturedContextKey !== currentContextKey → ROLLBACK → { written:false }
+//   INSERT/UPSERT market_data
+//   COMMIT
+//
+// Le FOR UPDATE empêche physiquement un UPDATE concurrent sur la row properties
+// entre la vérification de contexte et l'écriture du snapshot.
+// Durée du verrou : SELECT + compare (µs) + UPSERT — aucun appel HTTP.
+//
+// null === null : autorisé (legacy sans géo).
+// null !== 'CC:X:Y' : bloqué (propriété géocodée pendant le scrape).
+// 'CC:X:Y' !== 'CC:A:B' : bloqué (propriété déplacée).
+// 'CC:X:Y' === 'CC:X:Y' : autorisé (contexte stable).
+async function writeScrapeResult(pool, {
+  userId, propertyId, weekStart,
+  marketStats, zoneLabel, dataSource, capturedContextKey,
+}) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const propRes = await client.query(
+      `SELECT country_code, latitude, longitude
+         FROM properties WHERE id = $1 FOR UPDATE`,
+      [propertyId]
+    );
+
+    if (propRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { written: false, reason: 'property_not_found' };
+    }
+
+    const prop = propRes.rows[0];
+    const currentContextKey = computeMarketContextKey({
+      countryCode: prop.country_code,
+      latitude:    prop.latitude,
+      longitude:   prop.longitude,
+    });
+
+    if (capturedContextKey !== currentContextKey) {
+      await client.query('ROLLBACK');
+      return { written: false, reason: 'context_stale' };
+    }
+
+    await client.query(
+      `INSERT INTO market_data (
+         user_id, property_id, week_start,
+         median_price, price_p25, price_p75,
+         occupancy_rate, comparable_count, tension_level,
+         zone_label, data_source, market_context_key, scraped_at, created_at
+       )
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
+       ON CONFLICT (property_id, week_start) DO UPDATE SET
+         median_price       = EXCLUDED.median_price,
+         price_p25          = EXCLUDED.price_p25,
+         price_p75          = EXCLUDED.price_p75,
+         occupancy_rate     = EXCLUDED.occupancy_rate,
+         comparable_count   = EXCLUDED.comparable_count,
+         tension_level      = EXCLUDED.tension_level,
+         zone_label         = EXCLUDED.zone_label,
+         data_source        = EXCLUDED.data_source,
+         market_context_key = EXCLUDED.market_context_key,
+         scraped_at         = NOW()`,
+      [
+        userId, propertyId, weekStart,
+        marketStats.median, marketStats.p25, marketStats.p75,
+        marketStats.occupancy, marketStats.count, marketStats.tensionLevel,
+        zoneLabel, dataSource, capturedContextKey,
+      ]
+    );
+
+    await client.query('COMMIT');
+    return { written: true };
+
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { initDynamicPricingCron, runDynamicPricingJob, runDailyPricingRefresh, runDynamicPricingForOneProperty, writeScrapeResult };

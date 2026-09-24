@@ -166,18 +166,18 @@ await test('MCK-24 server.js contient la migration market_context_key (P1.1-C3A)
   assert.ok(/P1\.1-C3A/.test(SERVER_SRC), 'Label P1.1-C3A absent du commentaire de migration dans server.js');
 });
 
-await test('MCK-25 dynamic-pricing-cron.js — les deux write paths incluent market_context_key dans INSERT et ON CONFLICT DO UPDATE', async () => {
-  // Compter les occurrences de market_context_key dans les blocs INSERT
+await test('MCK-25 dynamic-pricing-cron.js — writeScrapeResult inclut market_context_key + les deux write paths l\'appellent', async () => {
+  // C3B a centralisé l'UPSERT dans writeScrapeResult — vérifier la fonction helper
   const insertMatches = [...CRON_SRC.matchAll(/INSERT INTO market_data[\s\S]*?scraped_at\s*=\s*NOW\(\)/g)];
-  assert.ok(insertMatches.length >= 2, `Moins de 2 blocs INSERT market_data trouvés (${insertMatches.length})`);
-
-  for (let i = 0; i < insertMatches.length; i++) {
-    const block = insertMatches[i][0];
-    assert.ok(/market_context_key/.test(block),
-      `Bloc INSERT #${i + 1} ne contient pas market_context_key`);
-    assert.ok(/market_context_key\s*=\s*EXCLUDED\.market_context_key/.test(block),
-      `Bloc INSERT #${i + 1} ne contient pas "market_context_key = EXCLUDED.market_context_key" dans ON CONFLICT`);
-  }
+  assert.ok(insertMatches.length >= 1, `Aucun bloc INSERT market_data trouvé`);
+  const block = insertMatches[0][0];
+  assert.ok(/market_context_key/.test(block), 'writeScrapeResult ne contient pas market_context_key');
+  assert.ok(/market_context_key\s*=\s*EXCLUDED\.market_context_key/.test(block),
+    'writeScrapeResult ne contient pas "market_context_key = EXCLUDED.market_context_key"');
+  // Les deux write paths doivent appeler writeScrapeResult
+  const callCount = (CRON_SRC.match(/\bwriteScrapeResult\b/g) || []).length;
+  assert.ok(callCount >= 3, `writeScrapeResult doit être défini (1×) + appelé (2×), trouvé ${callCount}×`);
+  assert.ok(/capturedContextKey/.test(CRON_SRC), 'capturedContextKey absent des appels writeScrapeResult');
 });
 
 console.log('\n── MCK-26–MCK-28 : R5 — support des strings NUMERIC PostgreSQL ──');

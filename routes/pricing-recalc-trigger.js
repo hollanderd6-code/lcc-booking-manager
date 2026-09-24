@@ -14,6 +14,7 @@
 
 const { applyDynamicPricingForProperty } = require('./pricing-apply');
 const { resolveMarketData } = require('./market-data-resolver');
+const { computeMarketContextKey } = require('./market-context-key');
 
 const _timers = new Map();      // propertyId -> timeout
 const DEBOUNCE_MS = 45000;      // 45 s
@@ -35,7 +36,8 @@ async function runRecalc(pool, propertyId, userId) {
   // Ne recalcule que si le pricing dynamique est ACTIF sur ce logement
   // Config canonique : pc.user_id = p.user_id (exclut les configs delegate orphelines)
   const cfg = (await pool.query(
-    `SELECT pc.*, p.name AS property_name
+    `SELECT pc.*, p.name AS property_name,
+            p.latitude, p.longitude, p.country_code
        FROM pricing_config pc
        JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
       WHERE pc.property_id = $1 AND pc.is_active = TRUE`,
@@ -43,8 +45,12 @@ async function runRecalc(pool, propertyId, userId) {
   )).rows[0];
   if (!cfg) return; // pricing non activé → on ne fait rien
 
-  // Use the shared resolver — closes the P1.0-A bypass (isMock: false was hardcoded before).
-  const resolution = await resolveMarketData(pool, { propertyId });
+  const propertyContextKey = computeMarketContextKey({
+    countryCode: cfg.country_code,
+    latitude:    cfg.latitude,
+    longitude:   cfg.longitude,
+  });
+  const resolution = await resolveMarketData(pool, { propertyId, propertyContextKey });
   const isMock = !resolution.trusted && resolution.status !== 'missing';
 
   const marketStats = resolution.row ? {
