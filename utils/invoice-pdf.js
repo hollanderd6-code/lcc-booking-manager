@@ -29,11 +29,12 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     propertyName = '', propertyAddress = '',
     checkinDate = '', checkoutDate = '', nights = 0,
     rentAmount = 0, touristTaxAmount = 0, cleaningFee = 0,
-    vatRate = 0, invoiceNumber = ''
+    vatRate = 0, invoiceNumber = '',
+    serviceFee = 0, paid = false, paidDate = ''
   } = data;
   const emitterVatRegime = user?.vat_regime || data.emitterVatRegime || '';
 
-  const subtotal = parseFloat(rentAmount || 0) + parseFloat(touristTaxAmount || 0) + parseFloat(cleaningFee || 0);
+  const subtotal = parseFloat(rentAmount || 0) + parseFloat(touristTaxAmount || 0) + parseFloat(cleaningFee || 0) + parseFloat(serviceFee || 0);
   const vatAmount = subtotal * (parseFloat(vatRate || 0) / 100);
   const total = subtotal + vatAmount;
 
@@ -248,6 +249,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     addRow(`Séjour${nights ? ' (' + nights + ' nuit' + (nights > 1 ? 's' : '') + ')' : ''}`, rentAmount);
     addRow('Taxe de séjour', touristTaxAmount);
     addRow('Frais de ménage', cleaningFee);
+    addRow('Frais de service plateforme', serviceFee);
     y += 20;
 
     // ── Totaux ──────────────────────────────────────────────────────────────────
@@ -270,6 +272,23 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
        .text('Total TTC', totX + 14, y + 10, { width: 120 });
     doc.font('MN-Bold').fontSize(16).fillColor('#FFFFFF')
        .text(formatEuro(total), totX + 14, y + 10, { width: totW - 28, align: 'right' });
+
+    // ── Tampon FACTURE ACQUITTÉE — rouge, encadré, à gauche du total ──
+    if (paid) {
+      const RED = '#C62828';
+      const pLabel = platform ? (platformLabels[platform.toLowerCase()] || platform) : '';
+      const sub = [pLabel ? `Réglée via ${pLabel}` : 'Réglée',
+                   paidDate ? `le ${fmtDate(paidDate)}` : ''].filter(Boolean).join(' ');
+      const SW = 210, SH = 54, SX = mg, SY = y - 8;
+      doc.save();
+      doc.lineWidth(2).strokeColor(RED).rect(SX, SY, SW, SH).stroke();
+      doc.lineWidth(0.75).strokeColor(RED).rect(SX + 4, SY + 4, SW - 8, SH - 8).stroke();
+      doc.font('MN-Bold').fontSize(14).fillColor(RED)
+         .text('FACTURE ACQUITTÉE', SX, SY + 12, { width: SW, align: 'center' });
+      doc.font('MN-SemiBold').fontSize(8).fillColor(RED)
+         .text(sub, SX, SY + 32, { width: SW, align: 'center' });
+      doc.restore();
+    }
     y += 38;
 
     // Mention TVA franchise (art. 293 B) : uniquement si vat_regime = 'franchise' est renseigné

@@ -27709,12 +27709,16 @@ async function buildAndSendInvoiceToConversation({ pool, io, userId, agencyIds, 
   const nights = reservation
     ? Math.round((new Date(reservation.end_date) - new Date(reservation.start_date)) / 86400000)
     : 0;
-  const _total      = parseFloat(reservation?.amount_total)    || 0;
-  const cleaningFee = parseFloat(reservation?.amount_cleaning) || 0;
-  const touristTax  = parseFloat(reservation?.amount_taxes)    || 0;
-  const rentAmount  = _total > 0
-    ? Math.max(0, Math.round((_total - cleaningFee - touristTax) * 100) / 100)
-    : parseFloat(reservation?.amount_rooms) || 0;
+  // Montant réellement payé par le voyageur (Booking : taxe de séjour HORS amount_total)
+  const { computeInvoiceAmounts, isOtaReservation } = require('./utils/invoice-amounts');
+  const _amt        = computeInvoiceAmounts(reservation || {});
+  const cleaningFee = _amt.cleaningFee;
+  const touristTax  = _amt.touristTaxAmount;
+  const rentAmount  = _amt.rentAmount;
+  const serviceFee  = _amt.serviceFee || 0;
+  const _paid       = reservation ? isOtaReservation(reservation) : false;
+  const _paidDate   = _paid ? (reservation.created_at || null) : null;
+  const _platform   = reservation?.ota_name || reservation?.platform || '';
   const clientName = reservation?.guest_name || conversation.guest_name || 'Client';
 
   // ── 4. Génération numéro + token si nécessaire ───────────────────────────
@@ -27730,6 +27734,7 @@ async function buildAndSendInvoiceToConversation({ pool, io, userId, agencyIds, 
       checkinDate: reservation?.start_date || '',
       checkoutDate: reservation?.end_date   || '',
       nights, rentAmount, touristTaxAmount: touristTax, cleaningFee, vatRate: 0,
+      serviceFee, paid: _paid, paidDate: _paidDate, platform: _platform,
       invoiceNumber: num,
       conversationId: conversation.id,
       reservationUid: reservation?.uid || null,
@@ -27847,7 +27852,8 @@ app.post('/api/invoice/send-to-conversation',
     if (resUid) {
       const resRow = await pool.query(
         `SELECT uid, guest_name, guest_email, start_date, end_date,
-                amount_total, amount_rooms, amount_cleaning, amount_taxes
+                amount_total, amount_rooms, amount_cleaning, amount_taxes,
+                ota_name, platform, source, created_at, airbnb_data
          FROM reservations WHERE uid = $1 LIMIT 1`,
         [resUid]
       );
@@ -27856,7 +27862,8 @@ app.post('/api/invoice/send-to-conversation',
     if (!reservation && conversation.channex_booking_id) {
       const resRow = await pool.query(
         `SELECT uid, guest_name, guest_email, start_date, end_date,
-                amount_total, amount_rooms, amount_cleaning, amount_taxes
+                amount_total, amount_rooms, amount_cleaning, amount_taxes,
+                ota_name, platform, source, created_at, airbnb_data
          FROM reservations WHERE channex_booking_id = $1 LIMIT 1`,
         [conversation.channex_booking_id]
       );
