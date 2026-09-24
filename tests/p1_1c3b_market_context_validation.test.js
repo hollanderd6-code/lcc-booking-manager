@@ -338,13 +338,15 @@ await test('MC-22 scrape B, propriété devient C avant écriture → écriture 
 });
 
 await test('MC-23 après refus, written=false empêche applyDynamicPricingForProperty (vérif source)', async () => {
+  // B4-D extended the rejection handler; continue now follows ~1200 chars of currency_stale branch
   assert.ok(
-    /writeResult\.written[\s\S]{0,200}continue/.test(CRON_SRC) ||
+    /writeResult\.written[\s\S]{0,1500}continue/.test(CRON_SRC) ||
     /writeResult\.written[\s\S]{0,200}return/.test(CRON_SRC),
     'runDynamicPricingJob ne branche pas sur writeResult.written avant continue'
   );
+  // B4-D extended the rejection handler; return follows ~475 chars of currency_stale branch
   assert.ok(
-    /writeResultOne\.written[\s\S]{0,200}return/.test(CRON_SRC),
+    /writeResultOne\.written[\s\S]{0,600}return/.test(CRON_SRC),
     'runDynamicPricingForOneProperty ne branche pas sur writeResultOne.written avant return'
   );
 });

@@ -211,13 +211,14 @@ await test('B4C-11 weekly scrapeBestZone call passes capturedPropertyCurrency', 
   );
 });
 
-await test('B4C-12 weekly writeScrapeResult call passes capturedPropertyCurrency as currency', () => {
+await test('B4C-12 weekly writeScrapeResult call passes capturedPropertyCurrency', () => {
   const fnIdx = CRON_SRC.indexOf('async function runDynamicPricingJob');
   assert.ok(fnIdx !== -1, 'runDynamicPricingJob not found');
   const fnBody = CRON_SRC.slice(fnIdx, fnIdx + 6000);
+  // B4-D renamed parameter; callers now use shorthand notation
   assert.ok(
-    /currency:\s*capturedPropertyCurrency/.test(fnBody),
-    'weekly writeScrapeResult must receive currency: capturedPropertyCurrency'
+    /writeScrapeResult\([\s\S]{0,500}capturedPropertyCurrency/.test(fnBody),
+    'weekly writeScrapeResult must pass capturedPropertyCurrency'
   );
 });
 
@@ -340,13 +341,14 @@ await test('B4C-21 one-property scrapeBestZone call passes capturedPropertyCurre
   );
 });
 
-await test('B4C-22 one-property writeScrapeResult call passes capturedPropertyCurrency as currency', () => {
+await test('B4C-22 one-property writeScrapeResult call passes capturedPropertyCurrency', () => {
   const fnIdx = CRON_SRC.indexOf('async function runDynamicPricingForOneProperty');
   assert.ok(fnIdx !== -1, 'runDynamicPricingForOneProperty not found');
   const fnBody = CRON_SRC.slice(fnIdx, fnIdx + 3000);
+  // B4-D renamed parameter; caller now uses shorthand notation
   assert.ok(
-    /currency:\s*capturedPropertyCurrency/.test(fnBody),
-    'one-property writeScrapeResult must receive currency: capturedPropertyCurrency'
+    /writeScrapeResult\([\s\S]{0,500}capturedPropertyCurrency/.test(fnBody),
+    'one-property writeScrapeResult must pass capturedPropertyCurrency'
   );
 });
 

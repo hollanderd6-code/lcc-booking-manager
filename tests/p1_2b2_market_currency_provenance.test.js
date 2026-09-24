@@ -174,10 +174,10 @@ await test('MCUR-B2-09 weekly path captures capturedPropertyCurrency from cfg.cu
     /if\s*\(!capturedPropertyCurrency\)/.test(CRON_SRC),
     'Unknown-currency guard (if !capturedPropertyCurrency) missing from cron'
   );
-  // writeScrapeResult must pass capturedPropertyCurrency
+  // writeScrapeResult must receive capturedPropertyCurrency (B4-D renamed param, shorthand notation)
   assert.ok(
-    /currency:\s*capturedPropertyCurrency/.test(CRON_SRC),
-    'currency: capturedPropertyCurrency not passed to writeScrapeResult'
+    /writeScrapeResult\([\s\S]{0,500}capturedPropertyCurrency/.test(CRON_SRC),
+    'capturedPropertyCurrency not passed to writeScrapeResult'
   );
 });
 
@@ -357,9 +357,10 @@ await test('MCUR-B2-17 no country→currency inference added', () => {
 
 await test('MCUR-B2-18 geographic CAS remains present in writeScrapeResult', () => {
   // The SELECT FOR UPDATE + capturedContextKey comparison must still exist
+  // B4-D extended SELECT to include currency column
   assert.ok(
-    /SELECT country_code, latitude, longitude\s+FROM properties WHERE id = \$1 FOR UPDATE/.test(CRON_SRC),
-    'Geographic CAS SELECT FOR UPDATE missing from writeScrapeResult'
+    /SELECT country_code, latitude, longitude, currency\s+FROM properties WHERE id = \$1 FOR UPDATE/.test(CRON_SRC),
+    'Geographic + currency CAS SELECT FOR UPDATE missing from writeScrapeResult'
   );
   assert.ok(
     /capturedContextKey !== currentContextKey/.test(CRON_SRC),

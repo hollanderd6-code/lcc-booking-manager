@@ -463,11 +463,32 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       const writeResult = await writeScrapeResult(pool, {
         userId: cfg.user_id, propertyId: cfg.property_id, weekStart,
         marketStats, zoneLabel, dataSource, capturedContextKey: marketContextKey,
-        currency: capturedPropertyCurrency,
+        capturedPropertyCurrency,
       });
 
       if (!writeResult.written) {
-        console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: contexte géo changé pendant le scrape — snapshot obsolète ignoré`);
+        if (writeResult.reason === 'currency_stale') {
+          console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: devise changée pendant scrape — snapshot ignoré (captured:${writeResult.capturedCurrency} current:${writeResult.currentCurrency}), BoostPrice sans signal marché`);
+          const apply = await applyDynamicPricingForProperty(pool, {
+            cfg, marketStats: null, isMock: false, marketOverride: null, sendPushNotification,
+          });
+          results.push({
+            userId:          cfg.user_id,
+            userEmail:       cfg.user_email,
+            firstName:       cfg.user_first_name,
+            propertyId:      cfg.property_id,
+            propertyName:    cfg.property_name,
+            status:          apply.status,
+            priceBefore:     apply.priceBefore,
+            priceApplied:    apply.priceApplied,
+            priceCalculated: apply.priceCalculated,
+            tensionLevel:    null,
+            nights:          apply.nights,
+            isMock:          false,
+          });
+        } else {
+          console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: contexte géo changé pendant le scrape — snapshot obsolète ignoré`);
+        }
         continue;
       }
 
@@ -736,10 +757,17 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   const writeResultOne = await writeScrapeResult(pool, {
     userId: cfg.user_id, propertyId, weekStart,
     marketStats, zoneLabel, dataSource: dataSourceOne, capturedContextKey: marketContextKey,
-    currency: capturedPropertyCurrency,
+    capturedPropertyCurrency,
   });
 
   if (!writeResultOne.written) {
+    if (writeResultOne.reason === 'currency_stale') {
+      console.log(`ℹ️ [DP-ONE] ${cfg.property_name}: devise changée pendant scrape — snapshot ignoré (captured:${writeResultOne.capturedCurrency} current:${writeResultOne.currentCurrency}), BoostPrice sans signal marché`);
+      const apply = await applyDynamicPricingForProperty(pool, {
+        cfg, marketStats: null, isMock: false, marketOverride: null, sendPushNotification,
+      });
+      return { ok: true, isMock: false, marketStats: null, apply };
+    }
     console.log(`ℹ️ [DP-ONE] ${cfg.property_name}: contexte géo changé pendant le scrape — snapshot obsolète ignoré`);
     return { ok: false, error: 'context_stale', propertyId };
   }
@@ -765,35 +793,44 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   return { ok: true, isMock, marketStats, apply };
 }
 
-// ── Écriture atomique du snapshot marché avec vérification de contexte (CAS) ──
+// ── Écriture atomique du snapshot marché avec vérification de contexte + devise (CAS) ──
 //
 // Séquence après la fin du scrape HTTP (aucune transaction pendant Apify) :
 //   BEGIN
-//   SELECT country_code, latitude, longitude FROM properties WHERE id=$1 FOR UPDATE
+//   SELECT country_code, latitude, longitude, currency FROM properties WHERE id=$1 FOR UPDATE
 //   computeMarketContextKey() → currentContextKey   ← implémentation canonique JS
-//   if capturedContextKey !== currentContextKey → ROLLBACK → { written:false }
-//   INSERT/UPSERT market_data
+//   1. Geographic CAS : if capturedContextKey !== currentContextKey → ROLLBACK → context_stale
+//   2. Currency CAS   : if capturedPropertyCurrency ≠ currentCurrency  → ROLLBACK → currency_stale
+//   3. INSERT/UPSERT market_data
 //   COMMIT
 //
 // Le FOR UPDATE empêche physiquement un UPDATE concurrent sur la row properties
 // entre la vérification de contexte et l'écriture du snapshot.
-// Durée du verrou : SELECT + compare (µs) + UPSERT — aucun appel HTTP.
+// Durée du verrou : SELECT + compares (µs) + UPSERT — aucun appel HTTP.
 //
-// null === null : autorisé (legacy sans géo).
-// null !== 'CC:X:Y' : bloqué (propriété géocodée pendant le scrape).
-// 'CC:X:Y' !== 'CC:A:B' : bloqué (propriété déplacée).
-// 'CC:X:Y' === 'CC:X:Y' : autorisé (contexte stable).
+// Geographic CAS :
+//   null === null : autorisé (legacy sans géo).
+//   null !== 'CC:X:Y' : bloqué (propriété géocodée pendant le scrape).
+//   'CC:X:Y' !== 'CC:A:B' : bloqué (propriété déplacée).
+//   'CC:X:Y' === 'CC:X:Y' : autorisé (contexte stable).
+//
+// Currency CAS (B4-D) — activé quand capturedPropertyCurrency !== undefined :
+//   capturedPropertyCurrency null   → FAIL CLOSED (invariant B4-C : jamais censé scraper sans devise).
+//   captured ≠ current             → currency_stale (race gagnée par le changement de devise).
+//   captured = current             → PASS, écriture autorisée.
+//   capturedPropertyCurrency undefined → check inactif (callers pré-B4-D, backward-compat).
 async function writeScrapeResult(pool, {
   userId, propertyId, weekStart,
   marketStats, zoneLabel, dataSource, capturedContextKey,
-  currency = null,
+  capturedPropertyCurrency = undefined,   // B4-D: undefined=legacy; null=fail-closed; valid ISO-4217=compare
+  currency = capturedPropertyCurrency,    // legacy alias — prefer capturedPropertyCurrency for new callers
 }) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
     const propRes = await client.query(
-      `SELECT country_code, latitude, longitude
+      `SELECT country_code, latitude, longitude, currency
          FROM properties WHERE id = $1 FOR UPDATE`,
       [propertyId]
     );
@@ -810,9 +847,20 @@ async function writeScrapeResult(pool, {
       longitude:   prop.longitude,
     });
 
+    // 1. Geographic CAS (runs first — §6 ordering)
     if (capturedContextKey !== currentContextKey) {
       await client.query('ROLLBACK');
       return { written: false, reason: 'context_stale' };
+    }
+
+    // 2. Currency CAS (B4-D) — only when capturedPropertyCurrency was explicitly provided
+    if (capturedPropertyCurrency !== undefined) {
+      const currentCurrency = normalizeMarketCurrency(prop.currency);
+      if (!capturedPropertyCurrency || currentCurrency !== capturedPropertyCurrency) {
+        await client.query('ROLLBACK');
+        return { written: false, reason: 'currency_stale',
+                 capturedCurrency: capturedPropertyCurrency, currentCurrency };
+      }
     }
 
     await client.query(
