@@ -27806,7 +27806,7 @@ async function buildAndSendInvoiceToConversation({ pool, io, userId, agencyIds, 
         message: { content: `Voici votre facture ${invoiceNumber} : ${downloadUrl} (lien valable 1 an)` }
       });
     } catch (chErr) {
-      console.warn('⚠️ [SEND-TO-CONV] Erreur message Channex (non bloquant):', chErr.message);
+      console.warn('⚠️ [SEND-TO-CONV] Erreur message Channex (non bloquant):', chErr.message, JSON.stringify(chErr.response?.data || {}));
     }
   }
 
@@ -34889,7 +34889,7 @@ Séjour du ${_d1} au ${_d2}`
                 });
                 console.log(`✅ [INVOICE CRON] Message Channex envoyé pour booking ${channexBookingId}`);
               } catch(chErr) {
-                console.warn(`⚠️ [INVOICE CRON] Erreur message Channex (non bloquant):`, chErr.message);
+                console.warn(`⚠️ [INVOICE CRON] Erreur message Channex (non bloquant):`, chErr.message, JSON.stringify(chErr.response?.data || {}));
               }
             }
           }
