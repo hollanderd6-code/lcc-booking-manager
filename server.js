@@ -34746,6 +34746,26 @@ async function runInvoiceQueue(mode) {
     for (const req of requests.rows) {
       try {
         const userId = req.user_id;
+        // Une facture émise ne se refait pas : si la réservation a déjà un numéro, on le réutilise.
+        if (req.reservation_uid) {
+          const _dejaFacturee = await pool.query(
+            `SELECT invoice_number FROM invoice_requests
+              WHERE reservation_uid = $1 AND status = 'sent' AND invoice_number IS NOT NULL AND id <> $2
+             UNION ALL
+             SELECT invoice_number FROM invoice_download_tokens
+              WHERE file_path LIKE '{%' AND file_path::jsonb->>'reservationUid' = $1
+             LIMIT 1`,
+            [req.reservation_uid, req.id]
+          ).catch(() => ({ rows: [] }));
+          if (_dejaFacturee.rows[0]) {
+            await pool.query(
+              `UPDATE invoice_requests SET status = 'sent', invoice_number = $1, updated_at = NOW() WHERE id = $2`,
+              [_dejaFacturee.rows[0].invoice_number, req.id]
+            );
+            console.log(`🔁 [INVOICE CRON] Résa ${req.reservation_uid} déjà facturée (${_dejaFacturee.rows[0].invoice_number}) → pas de nouveau numéro`);
+            continue;
+          }
+        }
         const clientName = req.client_name || req.guest_name || 'Client';
         // ⚠️ Livraison : email UNIQUEMENT si le voyageur a fourni une adresse explicite.
         // Les emails plateforme (Airbnb/Booking) sont souvent factices → sinon on livre
