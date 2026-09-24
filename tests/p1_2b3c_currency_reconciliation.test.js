@@ -11,6 +11,9 @@
  * B3C-16    : ratePlanIdSuffix is last 8 chars
  * B3C-17    : HUMAN_REVIEW_STATUSES set contents
  * B3C-18    : pure module — no DB / no HTTP code
+ * B3C-19    : audit SQL does not reference properties.boost_price_active directly
+ * B3C-20    : audit SQL LEFT JOINs pricing_config with canonical ownership key
+ * B3C-21    : boostPriceActive NULL/false/true semantics via reconciler
  *
  * Run: node tests/p1_2b3c_currency_reconciliation.test.js
  * No DB. No Channex. No network.
@@ -46,9 +49,13 @@ const {
   FUTURE_ACTION,
 } = require('../routes/property-currency-reconciler');
 
-// ── Source check ───────────────────────────────────────────────────────────────
+// ── Source checks ──────────────────────────────────────────────────────────────
 const RECONCILER_SRC = fs.readFileSync(
   path.resolve(__dirname, '../routes/property-currency-reconciler.js'),
+  'utf8'
+);
+const AUDIT_SRC = fs.readFileSync(
+  path.resolve(__dirname, '../outils/audit-property-currencies.js'),
   'utf8'
 );
 
@@ -277,16 +284,69 @@ await test('B3C-18 pure module — no pool.query, no client.query, no HTTP calls
   );
 });
 
+console.log('\n── B3C-19–21 : audit SQL BoostPrice fix (R1) ──');
+
+await test('B3C-19 audit SQL does not select boost_price_active from properties directly', () => {
+  // The column does not exist on the properties table — must come from pricing_config via JOIN.
+  // Permitted: COALESCE(pc.is_active, false) AS boost_price_active
+  // Forbidden: bare "boost_price_active" in the SELECT list without table qualifier
+  const fetchBlock = AUDIT_SRC.match(/async function fetchProperties[\s\S]+?^\}/m);
+  assert.ok(fetchBlock, 'fetchProperties not found in audit source');
+  assert.ok(
+    !/\bSELECT\b[\s\S]*?[^.]boost_price_active/.test(fetchBlock[0].split('COALESCE')[0]),
+    'boost_price_active appears as an unqualified column before COALESCE — must derive from pricing_config'
+  );
+  assert.ok(
+    /COALESCE\s*\(\s*pc\.is_active\s*,\s*false\s*\)\s+AS\s+boost_price_active/i.test(fetchBlock[0]),
+    'COALESCE(pc.is_active, false) AS boost_price_active not found in fetchProperties SQL'
+  );
+});
+
+await test('B3C-20 audit SQL LEFT JOINs pricing_config on property_id + user_id', () => {
+  const fetchBlock = AUDIT_SRC.match(/async function fetchProperties[\s\S]+?^\}/m);
+  assert.ok(fetchBlock, 'fetchProperties not found');
+  assert.ok(
+    /LEFT JOIN pricing_config pc/i.test(fetchBlock[0]),
+    'LEFT JOIN pricing_config pc not found in fetchProperties'
+  );
+  assert.ok(
+    /pc\.property_id\s*=\s*p\.id/.test(fetchBlock[0]),
+    'pc.property_id = p.id join condition not found'
+  );
+  assert.ok(
+    /pc\.user_id\s*=\s*p\.user_id/.test(fetchBlock[0]),
+    'pc.user_id = p.user_id join condition not found (required for uniqueness)'
+  );
+});
+
+await test('B3C-21 boostPriceActive NULL/false/true semantics via reconciler', () => {
+  // no pricing_config row → boost_price_active = false (COALESCE in SQL) → reconciler sees false
+  const noConfig = reconcilePropertyCurrency({ ...base(), boost_price_active: false }, null);
+  assert.strictEqual(noConfig.boostPriceActive, false, 'no pricing_config → boostPriceActive must be false');
+
+  // pricing_config.is_active = true → boost_price_active = true
+  const active = reconcilePropertyCurrency({ ...base(), boost_price_active: true }, null);
+  assert.strictEqual(active.boostPriceActive, true, 'is_active=true → boostPriceActive must be true');
+
+  // pricing_config.is_active = false → boost_price_active = false
+  const inactive = reconcilePropertyCurrency({ ...base(), boost_price_active: false }, null);
+  assert.strictEqual(inactive.boostPriceActive, false, 'is_active=false → boostPriceActive must be false');
+
+  // null (defensive — COALESCE handles it, but reconciler must also not crash on null/undefined)
+  const nullVal = reconcilePropertyCurrency({ ...base(), boost_price_active: null }, null);
+  assert.strictEqual(nullVal.boostPriceActive, false, 'null → !!null → boostPriceActive must be false');
+});
+
 // ── Summary ────────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(55)}`);
-console.log(`  ${passed} passed  /  ${failed} failed  /  18 total`);
+console.log(`  ${passed} passed  /  ${failed} failed  /  21 total`);
 if (failures.length) {
   console.log('\n  Failures:');
   failures.forEach(f => console.log(`    ❌  ${f.name}\n       ${f.message}`));
 }
 console.log('─'.repeat(55));
-if (passed + failed !== 18) {
-  console.error(`⚠️  Expected 18 tests, ${passed + failed} ran`);
+if (passed + failed !== 21) {
+  console.error(`⚠️  Expected 21 tests, ${passed + failed} ran`);
   process.exit(1);
 }
 process.exit(failed > 0 ? 1 : 0);

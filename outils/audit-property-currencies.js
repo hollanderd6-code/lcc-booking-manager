@@ -63,14 +63,17 @@ function makePool() {
 async function fetchProperties(pool, userId) {
   const sql = `
     SELECT
-      id, name, internal_name, currency,
-      channex_enabled, channex_rate_plan_id,
-      channex_property_id, channex_room_type_id, channex_property_id_ext,
-      external_pricing, boost_price_active,
-      user_id
-    FROM properties
-    ${userId ? 'WHERE user_id = $1' : ''}
-    ORDER BY user_id, id
+      p.id, p.name, p.internal_name, p.currency,
+      p.channex_enabled, p.channex_rate_plan_id,
+      p.channex_property_id, p.channex_room_type_id, p.channex_property_id_ext,
+      p.external_pricing,
+      COALESCE(pc.is_active, false) AS boost_price_active,
+      p.user_id
+    FROM properties p
+    LEFT JOIN pricing_config pc
+      ON pc.property_id = p.id AND pc.user_id = p.user_id
+    ${userId ? 'WHERE p.user_id = $1' : ''}
+    ORDER BY p.user_id, p.id
   `;
   const params = userId ? [userId] : [];
   const res = await pool.query(sql, params);
