@@ -19,6 +19,8 @@
 const express = require('express');
 const cors = require('cors');
 const { requirePermission } = require('../sub-accounts-middleware');
+const { scheduleMarketRefresh }  = require('./market-refresh-trigger');
+const { computeMarketContextKey } = require('./market-context-key');
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -565,7 +567,8 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
       // Vérification accès + résolution de l'identité canonique du pricing
       // pricingOwnerId = properties.user_id — jamais fourni par le client
       const propRes = await pool.query(
-        `SELECT id, user_id AS pricing_owner_id
+        `SELECT id, user_id AS pricing_owner_id,
+                latitude, longitude, country_code
          FROM properties
          WHERE id = $1
            AND (
@@ -589,6 +592,13 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
       }
 
       const pricingOwnerId = propRes.rows[0].pricing_owner_id;
+
+      // C3D — read old activation state before UPSERT
+      const oldCfg = await pool.query(
+        'SELECT is_active FROM pricing_config WHERE property_id = $1',
+        [propertyId]
+      );
+      const wasActive = oldCfg.rows[0]?.is_active === true;
 
       const result = await pool.query(
         `INSERT INTO pricing_config (
@@ -617,6 +627,26 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
 
       console.log(`✅ [DYNAMIC-PRICING] Config sauvegardée — owner:${pricingOwnerId} / ${propertyId} — mode:${mode} [${priceMin}€-${priceMax}€] (actor:${callerUserId})`);
       res.json({ success: true, config: result.rows[0] });
+
+      // C3D — activation transition → schedule market refresh (Order A closure)
+      const nowActive = result.rows[0]?.is_active === true;
+      if (!wasActive && nowActive) {
+        const { latitude, longitude, country_code } = propRes.rows[0];
+        const contextKey = computeMarketContextKey({ countryCode: country_code, latitude, longitude });
+        console.log(`[C3D] activation detected propertyId=${propertyId} owner=${pricingOwnerId} previous=${wasActive ? 'inactive' : 'missing'}`);
+        if (contextKey) {
+          console.log(`[C3D] market refresh scheduled propertyId=${propertyId} ctx=${contextKey}`);
+          setImmediate(() => {
+            try {
+              scheduleMarketRefresh(pool, { propertyId, userId: pricingOwnerId, expectedContextKey: contextKey });
+            } catch (e) {
+              console.warn(`[C3D] scheduleMarketRefresh error propertyId=${propertyId}:`, e.message);
+            }
+          });
+        } else {
+          console.log(`[C3D] no geo propertyId=${propertyId} — market refresh skipped`);
+        }
+      }
 
     } catch (err) {
       console.error('❌ [DYNAMIC-PRICING] config POST error:', err.message);

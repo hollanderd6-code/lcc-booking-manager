@@ -104,6 +104,9 @@ function makeMockPool({ properties = {}, subAccounts = {}, onInsert = null } = {
         return { rows: properties[propId] ? [{ id: propId }] : [] };
       }
 
+      // C3D pre-read — old activation state
+      if (s.startsWith('select is_active from pricing_config')) return { rows: [] };
+
       // INSERT INTO pricing_config
       if (s.startsWith('insert into pricing_config')) {
         if (onInsert) onInsert(params);
