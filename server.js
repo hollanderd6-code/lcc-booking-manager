@@ -26836,7 +26836,9 @@ app.post('/api/invoice/resend',
       checkinDate: meta.checkinDate, checkoutDate: meta.checkoutDate,
       nights: meta.nights, rentAmount: meta.rentAmount,
       touristTaxAmount: meta.touristTaxAmount, cleaningFee: meta.cleaningFee,
-      vatRate: meta.vatRate, invoiceNumber
+      vatRate: meta.vatRate, invoiceNumber,
+      serviceFee: meta.serviceFee || 0, paid: !!meta.paid,
+      paidDate: meta.paidDate || null, platform: meta.platform || ''
     };
 
     await generateInvoicePdf(pdfPath, savedVars, user, ownerInfo);
@@ -34666,6 +34668,8 @@ async function runInvoiceQueue(mode) {
     const requests = await pool.query(
       `SELECT ir.*, r.guest_name, r.guest_email, r.start_date, r.end_date,
               r.amount_total, r.amount_rooms, r.amount_cleaning, r.amount_taxes,
+              r.ota_name, r.platform AS res_platform, r.source AS res_source,
+              r.created_at AS res_created_at, r.airbnb_data,
               p.name as property_name, p.address as property_address,
               p.cleaning_fee as prop_cleaning_fee, p.tourist_tax_per_night,
               u.email as user_email, u.company as user_company
@@ -34703,13 +34707,23 @@ async function runInvoiceQueue(mode) {
         // (amount_rooms / rent_amount sont parfois corrompus avec le brut total,
         //  ce qui gonflait la ligne "Séjour" puis double-comptait ménage + taxe.)
         const _total    = parseFloat(req.amount_total) || 0;
-        const cleaningFee = parseFloat(req.cleaning_fee || req.amount_cleaning || req.prop_cleaning_fee) || 0;
-        const touristTax  = parseFloat(req.tourist_tax || req.amount_taxes || (req.tourist_tax_per_night ? req.tourist_tax_per_night * nights : 0)) || 0;
+        let cleaningFee = parseFloat(req.cleaning_fee || req.amount_cleaning || req.prop_cleaning_fee) || 0;
+        let touristTax  = parseFloat(req.tourist_tax || req.amount_taxes || (req.tourist_tax_per_night ? req.tourist_tax_per_night * nights : 0)) || 0;
         let rentAmount;
         if (_total > 0) {
           rentAmount = Math.max(0, Math.round((_total - cleaningFee - touristTax) * 100) / 100);
         } else {
           rentAmount = parseFloat(req.rent_amount || req.amount_rooms) || 0;
+        }
+        // Réservation plateforme : montant réellement payé (Booking : taxe HORS amount_total)
+        const { computeInvoiceAmounts, isOtaReservation } = require('./utils/invoice-amounts');
+        const _resForAmt = { ...req, platform: req.res_platform, source: req.res_source, created_at: req.res_created_at };
+        const _isOta = !!req.ota_name && isOtaReservation(_resForAmt);
+        let serviceFee = 0;
+        if (_isOta && _total > 0) {
+          const _a = computeInvoiceAmounts(_resForAmt);
+          rentAmount = _a.rentAmount; cleaningFee = _a.cleaningFee;
+          touristTax = _a.touristTaxAmount; serviceFee = _a.serviceFee || 0;
         }
 
         // Générer le numéro de facture + token dans une transaction protégée par
@@ -34744,6 +34758,8 @@ async function runInvoiceQueue(mode) {
               touristTaxAmount: parseFloat(touristTax),
               cleaningFee: parseFloat(cleaningFee),
               vatRate: 0,
+              serviceFee, paid: _isOta, paidDate: _isOta ? req.res_created_at : null,
+              platform: req.ota_name || '',
               invoiceNumber,
               propertyId: req.property_id || null
             });
@@ -34756,7 +34772,7 @@ async function runInvoiceQueue(mode) {
               `INSERT INTO owner_invoices (id, user_id, invoice_number, client_name, client_email, total_ttc, status, created_at)
                VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'sent', NOW()) ON CONFLICT DO NOTHING`,
               [userId, invoiceNumber, clientName, clientEmail,
-               parseFloat(rentAmount) + parseFloat(cleaningFee) + parseFloat(touristTax)]
+               parseFloat(rentAmount) + parseFloat(cleaningFee) + parseFloat(touristTax) + serviceFee]
             );
             await cronClient.query('COMMIT');
           } catch (e) {
@@ -35243,6 +35259,8 @@ app.post('/api/test/invoice-cron', authenticateAny, async (req, res) => {
     const requests = await pool.query(
       `SELECT ir.*, r.guest_name, r.guest_email, r.start_date, r.end_date,
               r.amount_total, r.amount_rooms, r.amount_cleaning, r.amount_taxes,
+              r.ota_name, r.platform AS res_platform, r.source AS res_source,
+              r.created_at AS res_created_at, r.airbnb_data,
               p.name as property_name, p.address as property_address,
               p.cleaning_fee as prop_cleaning_fee, p.tourist_tax_per_night,
               u.email as user_email, u.company as user_company

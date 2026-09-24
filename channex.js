@@ -728,7 +728,9 @@ async function processChannexBooking(pool, bookingData) {
       ? parseFloat(room.amount)
       : null;
     let amount_rooms;
-    if (roomAmountRaw != null && !isNaN(roomAmountRaw)) {
+    if (roomAmountRaw != null && !isNaN(roomAmountRaw)
+        && !(isBookingCom && amount_cleaning > 0 && Math.abs(roomAmountRaw - amount_total) < 0.01)) {
+      // (Booking : room.amount == amount_total inclut le ménage → branche suivante)
       // room.amount fourni par l'OTA : source fiable, conserver
       amount_rooms = roomAmountRaw;
     } else if (isBookingCom && amount_cleaning > 0 && amount_total > 0) {
@@ -785,6 +787,14 @@ async function processChannexBooking(pool, bookingData) {
         const nonInclusive = pure_taxes.filter(t => !t.is_inclusive);
         if (nonInclusive.length === 1) bdc_city_tax = parseFloat(nonInclusive[0].total_price || 0);
       }
+    }
+
+    // Booking perçoit lui-même la taxe (Withheld) : Channex la place dans
+    // room.collected_taxes, pas dans room.taxes. Ex. Mangano M6 : 28,17 €.
+    if (isBookingCom && !bdc_city_tax) {
+      const ct = (room.collected_taxes || []).find(t =>
+        /city|tourist|taxe.?s.?jour/i.test(`${t.type || ''} ${t.name || ''}`));
+      if (ct) bdc_city_tax = parseFloat(ct.total_price || 0) || 0;
     }
 
     // ── Booking.com : commission ──────────────────────────────────────────────
