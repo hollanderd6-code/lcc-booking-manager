@@ -42691,8 +42691,8 @@ app.post('/api/channex/webhook-message', async (req, res) => {
           } else if (!handled) {
             _needsNotif = true;
           } else {
-            // Différé (true) : on ne sait pas encore ce que le bot va faire.
-            _needsNotif = _notifLevel === 'ai_off';
+            // Différé (true) : le bot répond ou escalade dans 90 s ; escalateToOwner notifie lui-même.
+            _needsNotif = false;
           }
           // Filet de sécurité 'all' : si le debounce est sorti silencieusement (ai_disabled),
           // la notif immédiate n'a pas été envoyée — compenser ici.
