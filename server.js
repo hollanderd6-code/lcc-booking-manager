@@ -34885,7 +34885,7 @@ Séjour du ${_d1} au ${_d2}`
                   ? `Votre facture a été envoyée par email. Référence : ${invoiceNumber}`
                   : `Voici votre facture ${invoiceNumber} : ${downloadUrl} (lien valable 1 an)`;
                 await channexAPI.post(`/bookings/${channexBookingId}/messages`, {
-                  message: { content: channexMsg }
+                  message: { message: channexMsg }
                 });
                 console.log(`✅ [INVOICE CRON] Message Channex envoyé pour booking ${channexBookingId}`);
               } catch(chErr) {
