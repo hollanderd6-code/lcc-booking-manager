@@ -269,7 +269,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     // Bande total
     doc.rect(totX, y, totW, 38).fill(BOTTLE);
     doc.font('CG-Bold').fontSize(16).fillColor('#FFFFFF')
-       .text('Total TTC', totX + 14, y + 10, { width: 120 });
+       .text('Total', totX + 14, y + 10, { width: 120 });
     doc.font('MN-Bold').fontSize(16).fillColor('#FFFFFF')
        .text(formatEuro(total), totX + 14, y + 10, { width: totW - 28, align: 'right' });
 
