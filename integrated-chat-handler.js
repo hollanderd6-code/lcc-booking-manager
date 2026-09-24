@@ -613,9 +613,10 @@ async function handleIncomingMessage(message, conversation, pool, io) {
     // ─── Caution ──────────────────────────────────────────────────
     let depositStatus = null;
     let depositAmount = null;
+    let depositCapturedAmount = null, depositCapturedAt = null;
     try {
       const depResult = await pool.query(
-        `SELECT d.status, d.amount_cents, p.deposit_amount
+        `SELECT d.status, d.amount_cents, d.captured_amount, d.captured_at, p.deposit_amount
          FROM conversations c
          LEFT JOIN properties p ON p.id = c.property_id
          LEFT JOIN reservations r ON (
@@ -629,6 +630,8 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       );
       if (depResult.rows[0] && !isAirbnbPlatform) {
         depositStatus = depResult.rows[0].status || null;
+        if (depResult.rows[0].captured_amount != null) depositCapturedAmount = depResult.rows[0].captured_amount / 100;
+        depositCapturedAt = depResult.rows[0].captured_at || null;
         depositAmount = depResult.rows[0].amount_cents
           ? depResult.rows[0].amount_cents / 100
           : depResult.rows[0].deposit_amount || null;
@@ -880,6 +883,8 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       // Caution
       depositAmount:      isAirbnbPlatform ? null : depositAmount,
       depositStatus:      isAirbnbPlatform ? 'not_applicable' : depositStatus,
+      depositCapturedAmount: isAirbnbPlatform ? null : depositCapturedAmount,
+      depositCapturedAt:     isAirbnbPlatform ? null : depositCapturedAt,
       depositBlocksAccess,
       depositLinkAlreadySent,
       depositUrl,

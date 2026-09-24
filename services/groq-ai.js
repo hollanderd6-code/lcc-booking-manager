@@ -197,6 +197,16 @@ function buildSystemPrompt(ctx, temporalCtx, fewShotExamples) {
       `- Restitution : débloquée ${releaseDays} jours après le départ, peut arriver sous 5 à 10 jours sur le compte du voyageur`,
       `- Débit bancaire : non débitée pour les banques françaises classiques. Peut être débitée temporairement pour Revolut, N26, Wise et banques internationales.`,
     ];
+    if (ctx.depositStatus === 'captured' && ctx.depositCapturedAmount != null) {
+      const kept = Number(ctx.depositCapturedAmount);
+      const back = Math.max(0, Math.round((amt - kept) * 100) / 100);
+      const d = ctx.depositCapturedAt ? new Date(ctx.depositCapturedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : null;
+      depositLines.push(`- MONTANT RETENU PAR L'HÔTE : ${kept}€${d ? ' (le ' + d + ')' : ''}`);
+      depositLines.push(back > 0
+        ? `- Part NON retenue : ${back}€ — jamais encaissée par l'hôte, libérée le même jour. Si la banque l'avait bloquée ou débitée temporairement, elle réapparaît sous 5 à 10 jours ouvrés selon la banque. AUCUN autre versement n'est prévu.`
+        : `- La totalité de la caution a été retenue. AUCUN remboursement n'est prévu.`);
+      depositLines.push(`- Motif de la retenue : NON CONNU ici.`);
+    }
     if (ctx.depositBlocksAccess) {
       const lienInfo = ctx.depositLinkAlreadySent
         ? `Le lien a déjà été envoyé — NE PAS le renvoyer. Dire simplement que les infos d'accès seront envoyées dès validation.`
@@ -302,7 +312,9 @@ CAUTION — ne pas escalader pour ces cas
 • Caution déjà payée (authorized/captured) → ne JAMAIS redemander le paiement.
 
 CAUTION — escalader TOUJOURS
-• Statut CAUTION ENCAISSÉE + toute question sur l'argent (montant reçu, remboursé, retenu, virement partiel, « il manque », « reste », « solde ») → [ESCALADE].
+• Statut CAUTION ENCAISSÉE SANS ligne « MONTANT RETENU PAR L'HÔTE » + toute question sur l'argent → [ESCALADE].
+• Ligne « MONTANT RETENU PAR L'HÔTE » présente → répondre avec CES chiffres exactement (montant retenu, part non retenue), sans promettre d'autre versement ni inventer de date. Ne pas donner de motif.
+• Demande du motif de la retenue → [ESCALADE].
 • Le voyageur dit avoir reçu un montant différent de celui attendu → [ESCALADE].
 • Contestation d'une retenue ou demande de justificatif → [ESCALADE].
 
