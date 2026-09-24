@@ -60,10 +60,19 @@ async function repartirTemplateParProprietaire(db, t, { dryRun = false } = {}) {
     const nouveau = r.rows[0];
     out.push(nouveau);
     if (cols.includes('template_id')) {
-      const sel = cols.map(c => (c === 'template_id' ? '$1' : `"${c}"`)).join(', ');
+      // idempotency_key est unique : on y remplace l'id du template s'il y figure, sinon NULL
+      // (la clé d'origine suffit alors à bloquer le renvoi).
+      const motif = `'(^|[^0-9])' || $2::text || '([^0-9]|$)'`;
+      const sel = cols.map(c => {
+        if (c === 'template_id') return '$1::int';
+        if (c === 'idempotency_key') return `CASE WHEN idempotency_key ~ (${motif})
+          THEN regexp_replace(idempotency_key, ${motif}, '\\1' || $1::text || '\\2', 'g') ELSE NULL END`;
+        return `"${c}"`;
+      }).join(', ');
       await db.query(
         `INSERT INTO message_template_logs (${cols.map(c => `"${c}"`).join(', ')})
-         SELECT ${sel} FROM message_template_logs WHERE template_id = $2`, [nouveau.id, t.id]);
+         SELECT ${sel} FROM message_template_logs WHERE template_id = $2::int
+         ON CONFLICT DO NOTHING`, [nouveau.id, t.id]);
     }
   }
   return { rows: out, changes };
