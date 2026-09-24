@@ -27,6 +27,7 @@ const {
 } = require('./dynamic-pricing-routes');
 const { applyDynamicPricingForProperty } = require('./pricing-apply');
 const { resolveMarketData } = require('./market-data-resolver');
+const { computeMarketContextKey } = require('./market-context-key');
 
 // ── Constantes ───────────────────────────────────────────────
 const APIFY_ACTOR_ID  = 'tri_angle~airbnb-scraper';
@@ -355,6 +356,7 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       `SELECT pc.*,
               p.name    AS property_name,
               p.address AS property_address,
+              p.latitude, p.longitude, p.country_code,
               u.email   AS user_email,
               u.first_name AS user_first_name
        FROM pricing_config pc
@@ -388,6 +390,14 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       const zones = getFallbackZones(cfg.property_address, cfg.zone_label);
       const cacheKey = zones.join('|');
 
+      // Snapshot T0 : capturer avant le scrape — la clé doit refléter où la propriété
+      // était localisée au moment du scrape, pas après une éventuelle mise à jour géo.
+      const marketContextKey = computeMarketContextKey({
+        countryCode: cfg.country_code,
+        latitude:  cfg.latitude  != null ? parseFloat(cfg.latitude)  : null,
+        longitude: cfg.longitude != null ? parseFloat(cfg.longitude) : null,
+      });
+
       // 3. Scraping avec élargissement progressif (cache par jeu de zones)
       if (!zoneCache[cacheKey]) {
         zoneCache[cacheKey] = await scrapeBestZone(
@@ -419,24 +429,25 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
            user_id, property_id, week_start,
            median_price, price_p25, price_p75,
            occupancy_rate, comparable_count, tension_level,
-           zone_label, data_source, scraped_at, created_at
+           zone_label, data_source, market_context_key, scraped_at, created_at
          )
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
          ON CONFLICT (property_id, week_start) DO UPDATE SET
-           median_price     = EXCLUDED.median_price,
-           price_p25        = EXCLUDED.price_p25,
-           price_p75        = EXCLUDED.price_p75,
-           occupancy_rate   = EXCLUDED.occupancy_rate,
-           comparable_count = EXCLUDED.comparable_count,
-           tension_level    = EXCLUDED.tension_level,
-           zone_label       = EXCLUDED.zone_label,
-           data_source      = EXCLUDED.data_source,
-           scraped_at       = NOW()`,
+           median_price       = EXCLUDED.median_price,
+           price_p25          = EXCLUDED.price_p25,
+           price_p75          = EXCLUDED.price_p75,
+           occupancy_rate     = EXCLUDED.occupancy_rate,
+           comparable_count   = EXCLUDED.comparable_count,
+           tension_level      = EXCLUDED.tension_level,
+           zone_label         = EXCLUDED.zone_label,
+           data_source        = EXCLUDED.data_source,
+           market_context_key = EXCLUDED.market_context_key,
+           scraped_at         = NOW()`,
         [
           cfg.user_id, cfg.property_id, weekStart,
           marketStats.median, marketStats.p25, marketStats.p75,
           marketStats.occupancy, marketStats.count, marketStats.tensionLevel,
-          zoneLabel, dataSource,
+          zoneLabel, dataSource, marketContextKey,
         ]
       );
 
@@ -633,7 +644,8 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
 
   // Sélectionner la config canonique via properties.user_id (jamais via le caller userId)
   const cfg = (await pool.query(
-    `SELECT pc.*, p.name AS property_name, p.address AS property_address
+    `SELECT pc.*, p.name AS property_name, p.address AS property_address,
+            p.latitude, p.longitude, p.country_code
        FROM pricing_config pc
        JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
       WHERE pc.property_id = $1`,
@@ -656,6 +668,12 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   const zones = getFallbackZones(cfg.property_address, cfg.zone_label);
   console.log(`🎯 [DP-ONE] Analyse à la demande: ${cfg.property_name} (${propertyId}) — zones: ${zones.join(' → ')}`);
 
+  const marketContextKey = computeMarketContextKey({
+    countryCode: cfg.country_code,
+    latitude:  cfg.latitude  != null ? parseFloat(cfg.latitude)  : null,
+    longitude: cfg.longitude != null ? parseFloat(cfg.longitude) : null,
+  });
+
   const { listings, isMock, zoneUsed } = await scrapeBestZone(
     zones,
     (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
@@ -677,24 +695,25 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
        user_id, property_id, week_start,
        median_price, price_p25, price_p75,
        occupancy_rate, comparable_count, tension_level,
-       zone_label, data_source, scraped_at, created_at
+       zone_label, data_source, market_context_key, scraped_at, created_at
      )
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
      ON CONFLICT (property_id, week_start) DO UPDATE SET
-       median_price     = EXCLUDED.median_price,
-       price_p25        = EXCLUDED.price_p25,
-       price_p75        = EXCLUDED.price_p75,
-       occupancy_rate   = EXCLUDED.occupancy_rate,
-       comparable_count = EXCLUDED.comparable_count,
-       tension_level    = EXCLUDED.tension_level,
-       zone_label       = EXCLUDED.zone_label,
-       data_source      = EXCLUDED.data_source,
-       scraped_at       = NOW()`,
+       median_price       = EXCLUDED.median_price,
+       price_p25          = EXCLUDED.price_p25,
+       price_p75          = EXCLUDED.price_p75,
+       occupancy_rate     = EXCLUDED.occupancy_rate,
+       comparable_count   = EXCLUDED.comparable_count,
+       tension_level      = EXCLUDED.tension_level,
+       zone_label         = EXCLUDED.zone_label,
+       data_source        = EXCLUDED.data_source,
+       market_context_key = EXCLUDED.market_context_key,
+       scraped_at         = NOW()`,
     [
       cfg.user_id, cfg.property_id, weekStart,
       marketStats.median, marketStats.p25, marketStats.p75,
       marketStats.occupancy, marketStats.count, marketStats.tensionLevel,
-      zoneLabel, dataSourceOne,
+      zoneLabel, dataSourceOne, marketContextKey,
     ]
   );
 

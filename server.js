@@ -3267,6 +3267,17 @@ ON invoice_download_tokens(token);
       console.log('ℹ️ Property Local Context columns:', e.message);
     }
 
+    // ✅ Migration : P1.1-C3A — market_context_key (identité géographique du snapshot marché)
+    // NULL = legacy / contexte géographique non encore enregistré au moment du scrape.
+    try {
+      await pool.query(`
+        ALTER TABLE market_data ADD COLUMN IF NOT EXISTS market_context_key TEXT;
+      `);
+      console.log('✅ market_data.market_context_key ajouté (P1.1-C3A)');
+    } catch (e) {
+      console.log('ℹ️ market_data.market_context_key:', e.message);
+    }
+
     // ✅ Migration : table notification_history
     try {
       await pool.query(`
