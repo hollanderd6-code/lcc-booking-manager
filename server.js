@@ -24779,9 +24779,14 @@ app.post('/api/deposits/:depositId/capture',
     const { amountCents } = req.body;
     
     // Vérifier que le deposit appartient à l'utilisateur
+    // Toute agence qui gère le logement peut agir, quel que soit le contexte envoyé par l'app.
+    // Le Stripe utilisé reste celui de la caution (deposits.user_id) — voir captureDeposit/releaseDeposit.
+    const _idsGeres = await getAgencyUserIds({ query: { agency: 'all' }, headers: {}, user: req.user }, userId);
     const deposit = await pool.query(
-      'SELECT * FROM deposits WHERE id = $1 AND user_id = ANY($2::text[])',
-      [depositId, await getAgencyUserIds(req, userId)]
+      `SELECT d.* FROM deposits d
+         LEFT JOIN properties p ON p.id::text = d.property_id::text
+        WHERE d.id = $1 AND (d.user_id = ANY($2::text[]) OR p.user_id = ANY($2::text[]))`,
+      [depositId, _idsGeres]
     );
 
     if (deposit.rows.length === 0) {
@@ -24813,9 +24818,14 @@ app.post('/api/deposits/:depositId/release',
     const { depositId } = req.params;
     
     // Vérifier que le deposit appartient à l'utilisateur
+    // Toute agence qui gère le logement peut agir, quel que soit le contexte envoyé par l'app.
+    // Le Stripe utilisé reste celui de la caution (deposits.user_id) — voir captureDeposit/releaseDeposit.
+    const _idsGeres = await getAgencyUserIds({ query: { agency: 'all' }, headers: {}, user: req.user }, userId);
     const deposit = await pool.query(
-      'SELECT * FROM deposits WHERE id = $1 AND user_id = ANY($2::text[])',
-      [depositId, await getAgencyUserIds(req, userId)]
+      `SELECT d.* FROM deposits d
+         LEFT JOIN properties p ON p.id::text = d.property_id::text
+        WHERE d.id = $1 AND (d.user_id = ANY($2::text[]) OR p.user_id = ANY($2::text[]))`,
+      [depositId, _idsGeres]
     );
 
     if (deposit.rows.length === 0) {
@@ -33670,10 +33680,13 @@ app.post('/api/message-templates', authenticateToken, async (req, res) => {
     const result = await pool.query(
       `INSERT INTO message_templates (user_id, property_id, title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, property_ids)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [userId, property_id || null, title, message, trigger_type, trigger_offset_hours || 0, trigger_offset_days || 0, send_condition || 'always',
+      [proprio.global ? proprio.userId : userId, property_id || null, title, message, trigger_type, trigger_offset_hours || 0, trigger_offset_days || 0, send_condition || 'always',
        JSON.stringify(property_ids && property_ids.length > 0 ? property_ids : [])]
     );
-    res.json({ success: true, template: result.rows[0] });
+    // Règle : un template ciblé appartient au propriétaire de ses logements (partagé entre ses agences).
+    const { repartirTemplateParProprietaire } = require('./utils/templates-proprietaire');
+    const _rep = await repartirTemplateParProprietaire(pool, result.rows[0]);
+    res.json({ success: true, template: _rep.rows[0], templates: _rep.rows });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
@@ -33789,7 +33802,9 @@ app.put('/api/message-templates/:id', authenticateToken, async (req, res) => {
        JSON.stringify(Array.isArray(property_ids) && property_ids.length > 0 ? property_ids : [])]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Template non trouvé' });
-    res.json({ success: true, template: result.rows[0] });
+    const { repartirTemplateParProprietaire } = require('./utils/templates-proprietaire');
+    const _rep = await repartirTemplateParProprietaire(pool, result.rows[0]);
+    res.json({ success: true, template: _rep.rows[0], templates: _rep.rows });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
