@@ -34737,6 +34737,8 @@ async function runInvoiceQueue(mode) {
        WHERE ir.status = 'pending'
        AND DATE(r.end_date) ${cmp} $1
        AND DATE(r.end_date) >= ($1::date - INTERVAL '120 days')
+       -- Laisse 2 h au voyageur pour donner société / SIRET / adresse avant de générer
+       AND ir.updated_at < NOW() - INTERVAL '2 hours'
        FOR UPDATE OF ir SKIP LOCKED`,
       [today]
     );

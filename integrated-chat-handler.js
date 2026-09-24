@@ -36,6 +36,16 @@ function isBillingDispute(message) {
   return /(diff[eè]re|diff[eè]rent|ne correspond|correspond pas|pas le (bon|même) montant|montant.{0,25}(pay|re[çc]u)|(pay|re[çc]u).{0,25}montant|trop (pay|factur|pr[eé]lev|cher)|erreur|se trompe|faux montant|incorrect|anormal|abusi|rembours|avoir|d[eé]j[aà] (re[çc]u|pay[eé])|already (paid|received|got)|wrong amount|doesn.?t match|does not match|overcharg|discrepan|not correct|refund|dispute|contest)/.test(m);
 }
 
+const INVOICE_ASK = {
+  fr: `Souhaitez-vous qu'une information particulière y figure (nom différent, société, SIRET, adresse de facturation, email) ? Répondez simplement ici.`,
+  en: `Would you like any specific details on it (different name, company, VAT/registration number, billing address, email)? Just reply here.`,
+  es: `¿Desea que figure algún dato concreto (otro nombre, empresa, NIF, dirección de facturación, email)? Responda aquí.`,
+  it: `Desidera che vi compaia qualche dato particolare (altro nome, società, P.IVA, indirizzo di fatturazione, email)? Risponda qui.`,
+  de: `Sollen bestimmte Angaben darauf stehen (anderer Name, Firma, USt-IdNr., Rechnungsadresse, E-Mail)? Antworten Sie einfach hier.`,
+  pt: `Deseja que conste alguma informação específica (outro nome, empresa, NIF, morada de faturação, email)? Responda aqui.`,
+  nl: `Wilt u specifieke gegevens vermelden (andere naam, bedrijf, btw-nummer, factuuradres, e-mail)? Antwoord gewoon hier.`,
+};
+
 const INVOICE_CONFIRM = {
   fr: `Bien noté, je m'occupe de votre facture 😊 Vous la recevrez très prochainement (par email si vous nous en communiquez un, sinon directement ici dans la conversation).`,
   en: `Noted, I'll take care of your invoice 😊 You'll receive it very shortly (by email if you share one, otherwise right here in the chat).`,
@@ -976,7 +986,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         if (isInvoiceRequest(message.message)) {
           console.log('🧾 [HANDLER] Groq a voulu escalader une demande de facture → on force le flux FACTURE');
           const lang = language;
-          aiResponse = (INVOICE_CONFIRM[lang] || INVOICE_CONFIRM.fr) + '\n[FACTURE]';
+          aiResponse = (INVOICE_CONFIRM[lang] || INVOICE_CONFIRM.fr) + '\n\n' + (INVOICE_ASK[lang] || INVOICE_ASK.fr) + '\n[FACTURE]';
           // pas de return : on laisse l'exécution atteindre le bloc [FACTURE] plus bas
         } else if (isPureAcknowledgment(message.message)) {
           // 🙏 Simple remerciement / « bien arrivé » / « merci pour votre disponibilité »
@@ -1522,7 +1532,7 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         }
       } catch (fErr) { console.warn('⚠️ [FACTURE] Erreur création demande (fallback):', fErr.message); }
       const lang = language;
-      await sendBotMessage(conversation.id, INVOICE_CONFIRM[lang] || INVOICE_CONFIRM.fr, pool, io, channexId);
+      await sendBotMessage(conversation.id, (INVOICE_CONFIRM[lang] || INVOICE_CONFIRM.fr) + '\n\n' + (INVOICE_ASK[lang] || INVOICE_ASK.fr), pool, io, channexId);
       return true;
     }
     console.log('⚠️ [HANDLER] Groq sans réponse → escalade');
