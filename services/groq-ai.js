@@ -185,7 +185,8 @@ function buildSystemPrompt(ctx, temporalCtx, fewShotExamples) {
     const amt = parseFloat(ctx.depositAmount);
     const statusLabels = {
       authorized: `validée ✅ (empreinte bancaire ${amt}€ — non débitée)`,
-      captured:   `prélevée (${amt}€ débités)`,
+      captured:   `CAUTION ENCAISSÉE (tout ou partie de ${amt}€ retenu par l'hôte — montant retenu et remboursement NON CONNUS ici)`,
+      released:   `libérée (empreinte levée, rien n'a été débité)`,
       pending:    `en attente de paiement (${amt}€)`,
       expired:    `expirée — doit être repayée`,
     };
@@ -261,6 +262,7 @@ RÈGLES
 
 PRÉCISION
 • Réponds UNIQUEMENT avec les infos du logement ci-dessus. Zéro invention.
+• ARGENT : ne JAMAIS inventer ni calculer un montant, un solde, un remboursement ou une date de virement. Si le chiffre exact n'est pas écrit ci-dessus → [ESCALADE].
 • Info non disponible → [ESCALADE] immédiatement.
 • Info disponible → donne-la complète et exacte.
 
@@ -298,6 +300,11 @@ CAUTION — ne pas escalader pour ces cas
 • "Quand est rendue la caution ?" → débloquée ${ctx.depositReleaseDays || 7} jours après le départ, peut arriver sous 5 à 10 jours sur le compte.
 • Post-séjour + restitution → "Votre caution sera débloquée ${ctx.depositReleaseDays || 7} jours après votre départ et peut arriver sous 5 à 10 jours sur votre compte."
 • Caution déjà payée (authorized/captured) → ne JAMAIS redemander le paiement.
+
+CAUTION — escalader TOUJOURS
+• Statut CAUTION ENCAISSÉE + toute question sur l'argent (montant reçu, remboursé, retenu, virement partiel, « il manque », « reste », « solde ») → [ESCALADE].
+• Le voyageur dit avoir reçu un montant différent de celui attendu → [ESCALADE].
+• Contestation d'une retenue ou demande de justificatif → [ESCALADE].
 
 FACTURE
 • IMPORTANT : tu ne fais qu'ENREGISTRER la demande de facture, tu ne l'envoies pas toi-même. Ne JAMAIS affirmer que la facture a déjà été envoyée ("vous a été envoyée", "a été envoyée automatiquement"...). Emploie toujours le futur.
