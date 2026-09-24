@@ -23,6 +23,8 @@
 'use strict';
 
 const express = require('express');
+const { resolveMarketData } = require('./market-data-resolver');
+const { computeMarketContextKey } = require('./market-context-key');
 
 // ── Dates officielles (Journal Officiel) — multiplicateurs = demande estimée ──
 // 'ALL' = commun aux 3 zones (Toussaint, Noël, Été).
@@ -174,6 +176,53 @@ async function resolvePricingOwner(pool, req, propertyId) {
   return rows[0] ? rows[0].pricing_owner_id : null;
 }
 
+// ── BP-1 fix: recompute core extracted for testability (injectable deps) ────────
+async function _runRecompute(pool, userId, propertyId, {
+  _resolveMarketData: resolveMarketDataFn,
+  _computeContextKey: computeContextKeyFn,
+  _applyFn:          applyFn,
+} = {}) {
+  const resolveFn = resolveMarketDataFn || resolveMarketData;
+  const ctxFn     = computeContextKeyFn  || computeMarketContextKey;
+  const apply     = applyFn             || require('./pricing-apply').applyDynamicPricingForProperty;
+
+  const cfg = (await pool.query(
+    `SELECT pc.*, p.name AS property_name,
+            p.latitude, p.longitude, p.country_code, p.currency
+       FROM pricing_config pc
+       JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
+      WHERE pc.user_id = $1 AND pc.property_id = $2`,
+    [userId, propertyId]
+  )).rows[0];
+  if (!cfg) return null;
+
+  const propertyContextKey = ctxFn({
+    countryCode: cfg.country_code,
+    latitude:    cfg.latitude,
+    longitude:   cfg.longitude,
+  });
+
+  const resolution = await resolveFn(pool, {
+    propertyId,
+    propertyContextKey,
+    propertyCurrency: cfg.currency,
+  });
+
+  const isMock = !resolution.trusted && resolution.status !== 'missing';
+
+  const marketStats = resolution.row ? {
+    median:       resolution.row.median_price,
+    occupancy:    resolution.row.occupancy_rate,
+    tensionLevel: resolution.row.tension_level,
+  } : null;
+
+  return apply(pool, {
+    cfg, marketStats, isMock,
+    marketOverride:        resolution.market,
+    sendPushNotification:  null,
+  });
+}
+
 // ── Routes CRUD (chaque client gère SES événements + SA zone) ─────
 // À câbler dans server.js :
 //   const { setupPricingCalendarRoutes } = require('./routes/pricing-calendars');
@@ -317,30 +366,11 @@ function setupPricingCalendarRoutes(app, pool, authenticateAny) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  // Recalcul à la demande (sans scrape : réutilise le dernier market_data)
+  // Recalcul à la demande (sans scrape : réutilise le dernier market_data via le resolver)
   app.post('/api/pricing/recompute/:propertyId', authenticateAny, async (req, res) => {
     try {
-      const cfg = (await pool.query(
-        `SELECT pc.*, p.name AS property_name
-           FROM pricing_config pc JOIN properties p ON p.id = pc.property_id
-          WHERE pc.user_id = $1 AND pc.property_id = $2`,
-        [req.user.id, req.params.propertyId]
-      )).rows[0];
-      if (!cfg) return res.status(404).json({ error: 'Active d\'abord le pricing dynamique sur ce logement.' });
-
-      const md = (await pool.query(
-        `SELECT median_price, occupancy_rate, tension_level
-           FROM market_data WHERE property_id = $1 ORDER BY week_start DESC LIMIT 1`,
-        [req.params.propertyId]
-      )).rows[0] || {};
-      const marketStats = {
-        median: md.median_price, occupancy: md.occupancy_rate, tensionLevel: md.tension_level,
-      };
-
-      const { applyDynamicPricingForProperty } = require('./pricing-apply'); // lazy (évite cycle)
-      const result = await applyDynamicPricingForProperty(pool, {
-        cfg, marketStats, isMock: false, sendPushNotification: null,
-      });
+      const result = await _runRecompute(pool, req.user.id, req.params.propertyId);
+      if (!result) return res.status(404).json({ error: 'Active d\'abord le pricing dynamique sur ce logement.' });
       res.json(result);
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
@@ -352,6 +382,7 @@ module.exports = {
   ensureCalendarTables,
   getCalendarsForProperty,
   setupPricingCalendarRoutes,
+  _runRecompute,
   SCHOOL_HOLIDAYS_SEED,
   VALID_ZONES,
 };

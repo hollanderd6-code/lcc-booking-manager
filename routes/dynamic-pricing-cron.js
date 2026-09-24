@@ -552,7 +552,7 @@ async function runDailyPricingRefresh(pool, sendPushNotification = null) {
   try {
     configs = (await pool.query(
       `SELECT pc.*, p.name AS property_name,
-              p.latitude, p.longitude, p.country_code
+              p.latitude, p.longitude, p.country_code, p.currency
          FROM pricing_config pc
          JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
         WHERE pc.is_active = TRUE
@@ -572,7 +572,7 @@ async function runDailyPricingRefresh(pool, sendPushNotification = null) {
         latitude:    cfg.latitude,
         longitude:   cfg.longitude,
       });
-      const resolution = await resolveMarketData(pool, { propertyId: cfg.property_id, propertyContextKey });
+      const resolution = await resolveMarketData(pool, { propertyId: cfg.property_id, propertyContextKey, propertyCurrency: cfg.currency });
       const isMock = !resolution.trusted && resolution.status !== 'missing';
 
       if (resolution.status === 'live_wrong_location') {

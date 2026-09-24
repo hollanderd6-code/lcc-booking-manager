@@ -37,7 +37,7 @@ async function runRecalc(pool, propertyId, userId) {
   // Config canonique : pc.user_id = p.user_id (exclut les configs delegate orphelines)
   const cfg = (await pool.query(
     `SELECT pc.*, p.name AS property_name,
-            p.latitude, p.longitude, p.country_code
+            p.latitude, p.longitude, p.country_code, p.currency
        FROM pricing_config pc
        JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
       WHERE pc.property_id = $1 AND pc.is_active = TRUE`,
@@ -50,7 +50,7 @@ async function runRecalc(pool, propertyId, userId) {
     latitude:    cfg.latitude,
     longitude:   cfg.longitude,
   });
-  const resolution = await resolveMarketData(pool, { propertyId, propertyContextKey });
+  const resolution = await resolveMarketData(pool, { propertyId, propertyContextKey, propertyCurrency: cfg.currency });
   const isMock = !resolution.trusted && resolution.status !== 'missing';
 
   const marketStats = resolution.row ? {

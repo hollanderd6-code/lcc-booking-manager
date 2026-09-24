@@ -1,8 +1,8 @@
 'use strict';
 /**
- * Market Data Resolver — P1.0-B / P1.1-C3B
+ * Market Data Resolver — P1.0-B / P1.1-C3B / P1.2-B4-B
  *
- * Single source of truth for market snapshot trust + freshness + location compatibility.
+ * Single source of truth for market snapshot trust + freshness + location + currency.
  *
  * Classification pipeline:
  *   1. No row               → missing   (neutral, push allowed)
@@ -12,16 +12,25 @@
  *      propertyContextKey provided:
  *        row key = null              → legacy_unverified_location (neutral, push allowed)
  *        row key ≠ property key      → live_wrong_location        (neutral, push allowed)
- *        row key = property key      → live_fresh / live_stale    (standard freshness)
+ *        row key = property key      → currency check (step 5-7), then freshness
  *      propertyContextKey absent:
  *        row key ≠ null              → context_unavailable        (neutral, push allowed)
- *        row key = null              → live_fresh / live_stale    (legacy P1.0-B behavior)
+ *        row key = null              → currency check (step 5-7), then freshness
+ *   5. (currency check active) propertyCurrency null → property_currency_unknown (neutral, push allowed)
+ *   6. (currency check active) row.currency null     → market_currency_unknown   (neutral, push allowed)
+ *   7. (currency check active) currencies differ     → currency_mismatch         (neutral, push allowed)
+ *   8. age > TTL             → live_stale (neutral, push allowed)
+ *   9. all checks pass       → live_fresh (usable, push allowed)
+ *
+ * Currency check (B4-B):
+ *   Active only when propertyCurrency is explicitly provided (not undefined).
+ *   Passing undefined is backward-compatible: no currency classification performed.
+ *   Passing null means the property has no known currency → property_currency_unknown.
+ *   Currency statuses: trusted=true, usable=false, market=null, isMock=false.
+ *   Auto-push remains allowed — BoostPrice uses non-market signals only.
  *
  * Location-specific statuses (wrong/legacy/unavailable):
- *   trusted=true  (provenance preserved)
- *   usable=false  (market never reaches engine)
- *   isMock = !trusted && status !== 'missing' → false for all three
- *   auto-push remains allowed
+ *   trusted=true, usable=false, market=null, isMock=false, push allowed.
  *
  * Provenance always wins before location (B11):
  *   mock/unknown/invalid rows never receive a location-specific status.
@@ -32,24 +41,41 @@ const MARKET_TTL_MS           = MARKET_TTL_DAYS * 24 * 60 * 60 * 1000;
 const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
 
 /**
- * resolveMarketData(pool, { propertyId, propertyContextKey?, now? })
+ * Normalize a value to strict ISO 4217 alpha-3 uppercase, or null.
+ * Returns null for: null, undefined, empty string, non-alpha-3, wrong length.
+ */
+function normalizeCurrency(value) {
+  if (value == null) return null;
+  const s = String(value).trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(s) ? s : null;
+}
+
+/**
+ * resolveMarketData(pool, { propertyId, propertyContextKey?, propertyCurrency?, now? })
  *
  * Reads the single most-recent market_data row for a property (latest week_start,
  * then latest scraped_at — no data_source pre-filter) and classifies it.
  *
  * @param {object} pool
  * @param {string} opts.propertyId
- * @param {string|null} [opts.propertyContextKey] — from computeMarketContextKey(); null = no geo
- * @param {Date}        [opts.now]                — override current time (tests only)
+ * @param {string|null}    [opts.propertyContextKey] — from computeMarketContextKey(); null = no geo
+ * @param {string|null}    [opts.propertyCurrency]   — from properties.currency; omit for backward compat
+ * @param {Date}           [opts.now]                — override current time (tests only)
  */
-async function resolveMarketData(pool, { propertyId, propertyContextKey, now } = {}) {
-  const nowMs       = (now instanceof Date ? now : new Date()).getTime();
-  const propCtxKey  = propertyContextKey ?? null;
+async function resolveMarketData(pool, { propertyId, propertyContextKey, propertyCurrency, now } = {}) {
+  const nowMs      = (now instanceof Date ? now : new Date()).getTime();
+  const propCtxKey = propertyContextKey ?? null;
+
+  // Currency check is only active when propertyCurrency is explicitly provided (not undefined).
+  // undefined = caller predates B4-B and does not participate in currency classification.
+  // null = property has no known valid currency → property_currency_unknown.
+  const currencyCheckActive = propertyCurrency !== undefined;
+  const propCurr = currencyCheckActive ? normalizeCurrency(propertyCurrency) : null;
 
   const row = (await pool.query(
     `SELECT median_price, price_p25, price_p75,
             occupancy_rate, comparable_count, tension_level,
-            data_source, scraped_at, week_start, market_context_key
+            data_source, scraped_at, week_start, market_context_key, currency
        FROM market_data
       WHERE property_id = $1
       ORDER BY week_start DESC, scraped_at DESC
@@ -106,7 +132,7 @@ async function resolveMarketData(pool, { propertyId, propertyContextKey, now } =
       return { row, status: 'live_wrong_location', trusted: true, fresh, usable: false,
                ageMs: effectiveAgeMs, ageDays, market: null, locationCompatible: false };
     }
-    // Keys match — location compatible (B6), fall through to freshness
+    // Keys match — location compatible (B6), fall through to currency
   } else {
     // Property has no geo — legacy compatibility (B9/B10)
     if (rowCtxKey !== null) {
@@ -114,10 +140,33 @@ async function resolveMarketData(pool, { propertyId, propertyContextKey, now } =
       return { row, status: 'context_unavailable', trusted: true, fresh, usable: false,
                ageMs: effectiveAgeMs, ageDays, market: null, locationCompatible: null };
     }
-    // Both null — legacy behavior, fall through to freshness
+    // Both null — legacy behavior, fall through to currency
   }
 
-  // ── Step 4: Freshness ─────────────────────────────────────────────────────────
+  // ── Step 4: Currency compatibility (B4-B) ─────────────────────────────────────
+  // Only runs when propertyCurrency was explicitly provided by the caller.
+  if (currencyCheckActive) {
+    const rowCurr = normalizeCurrency(row.currency);
+
+    if (propCurr === null) {
+      return { row, status: 'property_currency_unknown', trusted: true, fresh, usable: false,
+               ageMs: effectiveAgeMs, ageDays, market: null, locationCompatible: true,
+               propertyCurrency: null, marketCurrency: rowCurr, refreshRequired: false };
+    }
+    if (rowCurr === null) {
+      return { row, status: 'market_currency_unknown', trusted: true, fresh, usable: false,
+               ageMs: effectiveAgeMs, ageDays, market: null, locationCompatible: true,
+               propertyCurrency: propCurr, marketCurrency: null, refreshRequired: true };
+    }
+    if (rowCurr !== propCurr) {
+      return { row, status: 'currency_mismatch', trusted: true, fresh, usable: false,
+               ageMs: effectiveAgeMs, ageDays, market: null, locationCompatible: true,
+               propertyCurrency: propCurr, marketCurrency: rowCurr, refreshRequired: true };
+    }
+    // Currencies match — fall through to freshness
+  }
+
+  // ── Step 5: Freshness ─────────────────────────────────────────────────────────
   if (!fresh) {
     return { row, status: 'live_stale', trusted: true, fresh: false, usable: false,
              ageMs: effectiveAgeMs, ageDays, market: null, locationCompatible: true };
@@ -135,4 +184,4 @@ async function resolveMarketData(pool, { propertyId, propertyContextKey, now } =
            ageMs: effectiveAgeMs, ageDays, market, locationCompatible: true };
 }
 
-module.exports = { resolveMarketData, MARKET_TTL_DAYS, MARKET_TTL_MS };
+module.exports = { resolveMarketData, MARKET_TTL_DAYS, MARKET_TTL_MS, normalizeCurrency };
