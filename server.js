@@ -27195,6 +27195,35 @@ app.get('/api/invoice/history',
   }
 });
 
+// Reporte sur une facture existante les infos client saisies lors d'une nouvelle tentative (même numéro).
+async function _majInfosFactureExistante(pool, invoiceNumber, body) {
+  if (!invoiceNumber || !body) return;
+  const champs = {
+    clientName: ['clientName', 'client_name'], clientEmail: ['clientEmail', 'client_email'],
+    clientAddress: ['clientAddress', 'client_address'], clientPostalCode: ['clientPostalCode', 'client_postal_code'],
+    clientCity: ['clientCity', 'client_city'], clientSiret: ['clientSiret', 'client_siret'],
+    clientCompany: ['clientCompany', 'client_company'], clientPhone: ['clientPhone', 'client_phone', 'phone']
+  };
+  const maj = {};
+  for (const [k, keys] of Object.entries(champs)) {
+    const v = keys.map(x => body[x]).find(x => x != null && String(x).trim() !== '');
+    if (v != null) maj[k] = String(v).trim();
+  }
+  if (!Object.keys(maj).length) return;
+  try {
+    const toks = await pool.query('SELECT token, file_path FROM invoice_download_tokens WHERE invoice_number = $1', [invoiceNumber]);
+    for (const t of toks.rows) {
+      let m; try { m = JSON.parse(t.file_path || '{}'); } catch (e) { continue; }
+      const avant = JSON.stringify(m);
+      Object.assign(m, maj);
+      if (JSON.stringify(m) !== avant) {
+        await pool.query('UPDATE invoice_download_tokens SET file_path = $1 WHERE token = $2', [JSON.stringify(m), t.token]);
+      }
+    }
+    console.log(`✏️ [INVOICE] ${invoiceNumber} existante complétée :`, Object.keys(maj).join(', '));
+  } catch (e) { console.warn('⚠️ [INVOICE] Mise à jour infos facture existante:', e.message); }
+}
+
 app.post('/api/invoice/create',
   authenticateAny,
   requirePermission(pool, 'can_manage_invoices'),
@@ -27311,6 +27340,7 @@ app.post('/api/invoice/create',
       const preflight = await _findExistingInvoice(pool);
       if (preflight) {
         console.log(`🔄 [INVOICE] Idempotent pré-vol — reservationUid=${reservationUid} → ${preflight.invoiceNumber}`);
+        await _majInfosFactureExistante(pool, preflight.invoiceNumber, req.body);
         return res.json({
           success: true, existing: true, duplicate: true,
           invoiceNumber: preflight.invoiceNumber,
@@ -27406,6 +27436,7 @@ app.post('/api/invoice/create',
       }
     }
     if (_innerIdempotent) {
+      await _majInfosFactureExistante(pool, _innerIdempotent.invoiceNumber, req.body);
       return res.json({
         success: true, existing: true, duplicate: true,
         invoiceNumber: _innerIdempotent.invoiceNumber,
