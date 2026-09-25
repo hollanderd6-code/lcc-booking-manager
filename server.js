@@ -27456,11 +27456,20 @@ app.post('/api/invoice/create',
 
     // (ownerInfo + billingUserId déjà résolus plus haut en mode agence)
 // Générer un PDF professionnel avec PDFKit - délègue à la fonction globale
+    let _paidInfo = { paid: false, paidDate: null };
+    try {
+      const { isOtaReservation } = require(`./utils/invoice-amounts`);
+      let _r = null;
+      if (reservationUid) { const _q = await pool.query(`SELECT ota_name, platform, source, created_at FROM reservations WHERE uid = $1 LIMIT 1`, [reservationUid]); _r = _q.rows[0] || null; }
+      const _ota = _r ? isOtaReservation(_r) : /airbnb|booking|expedia|vrbo|abritel/i.test(platform || ``);
+      _paidInfo = { paid: !!_ota, paidDate: _ota ? (_r?.created_at || checkinDate || null) : null };
+    } catch (e) { console.warn(`[INVOICE] tampon acquittee:`, e.message); }
     async function generateInvoicePdfToFile(outputPath) {
       return generateInvoicePdf(outputPath, {
         clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret,
         clientCompany: clientCompany || '', freeNote: freeNote || '',
         clientNationality: clientNationality || '', platform: platform || '',
+        paid: _paidInfo.paid, paidDate: _paidInfo.paidDate,
         propertyName, propertyAddress, checkinDate, checkoutDate, nights,
         rentAmount, touristTaxAmount, cleaningFee, vatRate, invoiceNumber
       }, user, ownerInfo);
@@ -27508,6 +27517,7 @@ app.post('/api/invoice/create',
           touristTaxAmount: touristTaxAmount || 0,
           cleaningFee: cleaningFee || 0,
           vatRate: vatRate || 0,
+          paid: _paidInfo.paid, paidDate: _paidInfo.paidDate,
           total: _total,
           invoiceNumber: invoiceNumber,
           reservationUid: reservationUid || null,
@@ -27665,6 +27675,7 @@ app.post('/api/invoice/create',
         touristTaxAmount: touristTaxAmount || 0,
         cleaningFee: cleaningFee || 0,
         vatRate: vatRate || 0,
+        paid: _paidInfo.paid, paidDate: _paidInfo.paidDate,
         total: dlTotal,
         invoiceNumber,
         reservationUid: reservationUid || null,
