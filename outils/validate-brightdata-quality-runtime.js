@@ -91,7 +91,7 @@ async function resolvePropF2(pool, name) {
 
 // ── previewMode ───────────────────────────────────────────────────────────────
 // BRIGHTDATA_CALLS = 0   DB_WRITES = 0   CHANNEX_WRITES = 0   PRICING_WRITES = 0
-async function previewMode(pool, { name, _now } = {}) {
+async function previewMode(pool, { name, _now, _getFallbackZones } = {}) {
   console.log('\n' + '═'.repeat(72));
   console.log('  B5-F2 BRIGHT DATA QUALITY VALIDATION — PREVIEW MODE (READ-ONLY)');
   console.log('  BRIGHTDATA_CALLS=0 | DB_WRITES=0 | CHANNEX_WRITES=0 | PRICING_WRITES=0');
@@ -120,7 +120,7 @@ async function previewMode(pool, { name, _now } = {}) {
   const { checkIn, checkOut } = getBrightDataMarketDates({ timezone, now: _now });
   const apiKeyPresent     = !!(process.env.BRIGHTDATA_API_KEY);
 
-  const { getFallbackZones } = require('../routes/dynamic-pricing-cron');
+  const getFallbackZones = _getFallbackZones || require('../routes/dynamic-pricing-cron').getFallbackZones;
   const zones    = getFallbackZones(prop.address, null);
   const location = zones[0];
 
@@ -177,7 +177,7 @@ async function previewMode(pool, { name, _now } = {}) {
 // ── executeMode ───────────────────────────────────────────────────────────────
 // MARKET_DATA_WRITES = 0  CHANNEX_WRITES = 0  PRICING_WRITES = 0
 // 0 DB writes — validation is purely observational
-async function executeMode(pool, { name, _now, _bdScrape } = {}) {
+async function executeMode(pool, { name, _now, _bdScrape, _getFallbackZones } = {}) {
   const bdScrape = _bdScrape || scrapeWithBrightData;
 
   console.log('\n' + '═'.repeat(72));
@@ -269,7 +269,7 @@ async function executeMode(pool, { name, _now, _bdScrape } = {}) {
   console.log(`\n  DATE STRATEGY: checkIn=${checkIn}  checkOut=${checkOut}  tz=${capturedTimezone}`);
 
   // ── 6. Zone derivation (production logic) ────────────────────────────────
-  const { getFallbackZones } = require('../routes/dynamic-pricing-cron');
+  const getFallbackZones = _getFallbackZones || require('../routes/dynamic-pricing-cron').getFallbackZones;
   const zones    = getFallbackZones(prop.address, null);
   const location = zones[0];
   console.log(`  LOCATION: ${location}`);

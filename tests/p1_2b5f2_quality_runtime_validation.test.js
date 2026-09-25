@@ -156,6 +156,14 @@ function makeCloseListings(count, distKm = 0.4) {
   }));
 }
 
+// Stub getFallbackZones — avoids Jest circular-dep issue (cron → routes → trigger → cron).
+// Real production path is tested end-to-end by node invocation; tests only need a valid zone string.
+function testFallbackZones(address) {
+  const pcMatch = (address || '').match(/\b(\d{5})\b/);
+  const city    = pcMatch ? 'Test City, France' : 'France';
+  return [city];
+}
+
 // Standard mock BD result — valid brightdata_live with close-by listings
 function makeBdResult(listings = makeCloseListings(10), overrides = {}) {
   return {
@@ -276,7 +284,7 @@ function makeBdResult(listings = makeCloseListings(10), overrides = {}) {
     const savedKey = process.env.BRIGHTDATA_API_KEY;
     process.env.BRIGHTDATA_API_KEY = 'test-key-f2';
     try {
-      const result = await previewMode(pool, { name: 'TestF2' });
+      const result = await previewMode(pool, { name: 'TestF2', _getFallbackZones: testFallbackZones });
       assert.strictEqual(result.ok, true);
       assert.strictEqual(result.propertyId, TEST_PROP_ROW.id);
     } finally {
@@ -292,7 +300,7 @@ function makeBdResult(listings = makeCloseListings(10), overrides = {}) {
     const savedKey = process.env.BRIGHTDATA_API_KEY;
     delete process.env.BRIGHTDATA_API_KEY;
     try {
-      await executeMode(pool, { name: 'TestF2', _bdScrape: async () => { throw new Error('should not reach BD'); } });
+      await executeMode(pool, { name: 'TestF2', _getFallbackZones: testFallbackZones, _bdScrape: async () => { throw new Error('should not reach BD'); } });
       assert.fail('should have thrown AbortError');
     } catch (err) {
       assert.ok(err instanceof AbortError, `expected AbortError, got ${err.constructor.name}`);
@@ -308,6 +316,7 @@ function makeBdResult(listings = makeCloseListings(10), overrides = {}) {
     try {
       await executeMode(pool, {
         name: 'TestF2',
+        _getFallbackZones: testFallbackZones,
         _bdScrape: async () => makeBdResult([]),
       });
       assert.fail('should have thrown AbortError');
@@ -336,6 +345,7 @@ function makeBdResult(listings = makeCloseListings(10), overrides = {}) {
     process.env.BRIGHTDATA_API_KEY = 'test-key-f2';
     const result = await executeMode(pool, {
       name: 'TestF2',
+      _getFallbackZones: testFallbackZones,
       _bdScrape: async () => makeBdResult(farListings),
     });
     assert.strictEqual(result.verdict, 'FAIL');
@@ -347,6 +357,7 @@ function makeBdResult(listings = makeCloseListings(10), overrides = {}) {
     process.env.BRIGHTDATA_API_KEY = 'test-key-f2';
     const result = await executeMode(pool, {
       name: 'TestF2',
+      _getFallbackZones: testFallbackZones,
       _bdScrape: async () => makeBdResult(makeCloseListings(10)),
     });
     assert.strictEqual(result.verdict, 'PASS', `Expected PASS, got FAIL on: ${result.failedChecks?.join(', ')}`);
@@ -361,6 +372,7 @@ function makeBdResult(listings = makeCloseListings(10), overrides = {}) {
     try {
       await executeMode(pool, {
         name: 'TestF2',
+        _getFallbackZones: testFallbackZones,
         _bdScrape: async () => ({
           listings: makeCloseListings(5), isMock: true,
           provider: 'mock', dataSource: 'mock',
@@ -378,6 +390,7 @@ function makeBdResult(listings = makeCloseListings(10), overrides = {}) {
     process.env.BRIGHTDATA_API_KEY = 'test-key-f2';
     await executeMode(pool, {
       name: 'TestF2',
+      _getFallbackZones: testFallbackZones,
       _bdScrape: async () => makeBdResult(makeCloseListings(10)),
     });
     assert.strictEqual(pool._writtenSqls.length, 0,
@@ -390,6 +403,7 @@ function makeBdResult(listings = makeCloseListings(10), overrides = {}) {
     // makeCloseListings includes availableDates — should produce calendar_unavailability_proxy
     const result = await executeMode(pool, {
       name: 'TestF2',
+      _getFallbackZones: testFallbackZones,
       _bdScrape: async () => makeBdResult(makeCloseListings(10)),
     });
     assert.strictEqual(result.stats?.occupancy_semantics, 'calendar_unavailability_proxy');
@@ -404,6 +418,7 @@ function makeBdResult(listings = makeCloseListings(10), overrides = {}) {
     process.env.BRIGHTDATA_API_KEY = 'test-key-f2';
     const result = await executeMode(pool, {
       name: 'TestF2',
+      _getFallbackZones: testFallbackZones,
       _bdScrape: async () => makeBdResult(noCalListings),
     });
     assert.strictEqual(result.stats?.occupancy_semantics, 'insufficient_calendars');
@@ -459,6 +474,7 @@ function makeBdResult(listings = makeCloseListings(10), overrides = {}) {
     process.env.BRIGHTDATA_API_KEY = 'test-key-f2';
     const result = await executeMode(pool, {
       name: 'TestF2',
+      _getFallbackZones: testFallbackZones,
       _bdScrape: async () => makeBdResult(badPriceListings),
     });
     assert.strictEqual(result.verdict, 'FAIL');
@@ -476,6 +492,7 @@ function makeBdResult(listings = makeCloseListings(10), overrides = {}) {
     process.env.BRIGHTDATA_API_KEY = 'test-key-f2';
     const result = await executeMode(pool, {
       name: 'TestF2',
+      _getFallbackZones: testFallbackZones,
       _bdScrape: async () => makeBdResult(farListings),
     });
     assert.strictEqual(result.verdict, 'FAIL');
