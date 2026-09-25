@@ -191,6 +191,7 @@ function selectComparables(listings, {
     diag.comparableCount = qualified.length;
     diag.calendarPresentCount = qualified.filter(l => l.availableDates != null).length;
     diag.calendarMissingCount = qualified.length - diag.calendarPresentCount;
+    diag.radiusCandidateCounts = null;
     const status = qualified.length >= MIN_COMPARABLES_FALLBACK ? 'ok' : 'insufficient_comparables';
     return { listings: qualified, status, selectedRadiusKm: null, diagnostics: diag };
   }
@@ -204,6 +205,13 @@ function selectComparables(listings, {
     _dist: haversineKm(targetLat, targetLon, l.latitude, l.longitude),
     listing: l,
   }));
+
+  // Per-radius candidate counts (after dedup + category + capacity filters) — for F2 reporting
+  const radiusCandidateCounts = {};
+  for (const r of RADIUS_BANDS_KM) {
+    radiusCandidateCounts[r] = withDist.filter(d => d._dist <= r).length;
+  }
+  diag.radiusCandidateCounts = radiusCandidateCounts;
 
   // Adaptive radius selection — prefer ≥ MIN_COMPARABLES_TARGET, fall back to ≥ MIN_COMPARABLES_FALLBACK
   let selectedRadius = null;
