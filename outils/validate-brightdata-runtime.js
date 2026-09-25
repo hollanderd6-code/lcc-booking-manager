@@ -474,7 +474,26 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+
+  function classifyError(err) {
+    const msg  = (err.message || '').toLowerCase();
+    const code = (err.code    || '').toUpperCase();
+    if (msg.includes('self-signed') || msg.includes('certificate') ||
+        code.includes('CERT') || code.includes('SSL') || msg.includes('tls')) {
+      return 'DB_TLS_ERROR';
+    }
+    if (code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT') {
+      return 'DB_CONNECTION_ERROR';
+    }
+    if (msg.includes('property') || msg.includes('propriét') || msg.includes('market_data')) {
+      return 'PROPERTY_LOOKUP_ERROR';
+    }
+    if (msg.includes('brightdata') || msg.includes('bright data')) {
+      return 'BRIGHTDATA_ERROR';
+    }
+    return 'FATAL_ERROR';
+  }
 
   const run = execute
     ? executeMode(pool, { name })
@@ -486,7 +505,8 @@ if (require.main === module) {
       if (err.name === 'AbortError') {
         console.error(`\n  ❌ ABORT: ${err.message}`);
       } else {
-        console.error('\n  ❌ Erreur fatale:', err.message);
+        const errType = classifyError(err);
+        console.error(`\n  ❌ ${errType}: ${err.message}`);
       }
       pool.end().catch(() => {});
       process.exit(1);
