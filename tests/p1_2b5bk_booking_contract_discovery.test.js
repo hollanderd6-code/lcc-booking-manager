@@ -28,6 +28,9 @@ const {
   toISO8601Timestamp,
   normalizeBookingCurrency,
   previewMode,
+  executeMode,
+  sanitizeErrorBody,
+  redactSecrets,
   BOOKING_DATASET_ID,
   BOOKING_TRIGGER_BASE,
   BOOKING_PROGRESS_BASE,
@@ -363,6 +366,213 @@ const SAMPLE_BOOKING_ITEM = {
       'diagnostic tool must not call production provider resolution functions');
     assert.ok(!src.includes("scrape(location"),
       'diagnostic tool must not call market-provider scrape() (production path)');
+  });
+
+  // ── B5-BK-B: sanitizeErrorBody ─────────────────────────────────────────────
+
+  await test('BK-36 sanitizeErrorBody JSON body extracts ERROR_USEFUL_KEYS only', async () => {
+    const body   = '{"error":"unauthorized","message":"bad api key","code":401,"extra":"ignored"}';
+    const result = sanitizeErrorBody(body, 'application/json', 'dummy_key');
+    const parsed = JSON.parse(result);
+    assert.ok(parsed.error   !== undefined, 'Expected "error" key');
+    assert.ok(parsed.message !== undefined, 'Expected "message" key');
+    assert.ok(parsed.code    !== undefined, 'Expected "code" key');
+    assert.strictEqual(parsed.extra, undefined, '"extra" is not in ERROR_USEFUL_KEYS — must be filtered out');
+  });
+
+  await test('BK-37 sanitizeErrorBody text/plain body returns non-empty string', async () => {
+    const body   = 'Error: invalid request — unexpected field';
+    const result = sanitizeErrorBody(body, 'text/plain', undefined);
+    assert.strictEqual(typeof result, 'string');
+    assert.ok(result.includes('Error'), 'Expected text content preserved');
+    assert.ok(result.length > 0);
+  });
+
+  await test('BK-38 sanitizeErrorBody HTML body returns string without crashing', async () => {
+    const body   = '<html><body><h1>403 Forbidden</h1></body></html>';
+    const result = sanitizeErrorBody(body, 'text/html', undefined);
+    assert.strictEqual(typeof result, 'string');
+    assert.ok(result.includes('403'), 'Expected HTML content preserved');
+  });
+
+  await test('BK-39 sanitizeErrorBody empty/null/undefined body → (empty response body)', async () => {
+    assert.strictEqual(sanitizeErrorBody('',        'application/json', undefined), '(empty response body)');
+    assert.strictEqual(sanitizeErrorBody(null,      'application/json', undefined), '(empty response body)');
+    assert.strictEqual(sanitizeErrorBody(undefined, 'application/json', undefined), '(empty response body)');
+  });
+
+  await test('BK-40 sanitizeErrorBody malformed JSON falls back to raw text', async () => {
+    const body   = '{bad json here';
+    const result = sanitizeErrorBody(body, 'application/json', undefined);
+    assert.strictEqual(typeof result, 'string');
+    assert.ok(result.includes('bad json'), 'Expected raw text fallback on JSON parse failure');
+  });
+
+  // ── B5-BK-B: redactSecrets ─────────────────────────────────────────────────
+
+  await test('BK-41 redactSecrets redacts literal API key passed as apiKey param', async () => {
+    const key    = 'sk-test-abc12345-secretval';
+    const text   = `Authorization failed for key value: ${key}`;
+    const result = redactSecrets(text, key);
+    assert.ok(!result.includes(key),         'API key must not appear in output');
+    assert.ok(result.includes('[REDACTED]'), 'Expected [REDACTED] marker');
+  });
+
+  await test('BK-42 redactSecrets redacts Bearer token', async () => {
+    const text   = 'Bearer eyJhbGciOiJIUzI1NiJ9.abc123xyz';
+    const result = redactSecrets(text);
+    assert.ok(!result.includes('eyJhbGciOiJIUzI1NiJ9'), 'Bearer value must be redacted');
+    assert.strictEqual(result, 'Bearer [REDACTED]');
+  });
+
+  await test('BK-43 redactSecrets redacts "authorization" JSON field value', async () => {
+    const text   = '{"authorization": "Bearer mysecrettoken"}';
+    const result = redactSecrets(text);
+    assert.ok(!result.includes('mysecrettoken'), 'authorization value must be redacted');
+    assert.ok(result.includes('[REDACTED]'));
+  });
+
+  await test('BK-44 redactSecrets redacts "api_key" JSON field value', async () => {
+    const text   = '{"api_key": "myprivatekey123"}';
+    const result = redactSecrets(text);
+    assert.ok(!result.includes('myprivatekey123'), 'api_key value must be redacted');
+    assert.ok(result.includes('[REDACTED]'));
+  });
+
+  await test('BK-45 redactSecrets redacts "token" JSON field value', async () => {
+    const text   = '{"token": "secrettoken456"}';
+    const result = redactSecrets(text);
+    assert.ok(!result.includes('secrettoken456'), 'token value must be redacted');
+    assert.ok(result.includes('[REDACTED]'));
+  });
+
+  await test('BK-46 redactSecrets redacts api_key= URL query param', async () => {
+    const text   = 'https://api.brightdata.com/datasets/v3/trigger?dataset_id=gd_xyz&api_key=secretkey123&format=json';
+    const result = redactSecrets(text);
+    assert.ok(!result.includes('secretkey123'),      'api_key value must be redacted from URL');
+    assert.ok(result.includes('api_key=[REDACTED]'), 'Expected api_key=[REDACTED] in URL');
+  });
+
+  // ── B5-BK-B: previewMode safety ────────────────────────────────────────────
+
+  await test('BK-47 previewMode makes 0 network (fetch) calls', async () => {
+    const pool          = makeMockPool([MOCK_PROPERTY]);
+    const originalFetch = global.fetch;
+    let fetchCallCount  = 0;
+    global.fetch        = async () => { fetchCallCount++; return {}; };
+    try {
+      await withEnv(
+        { MARKET_PRIMARY_PROVIDER: undefined },
+        () => previewMode({ name: 'M6', pool, _now: new Date('2026-09-25T12:00:00Z') })
+      );
+    } finally {
+      global.fetch = originalFetch;
+    }
+    assert.strictEqual(fetchCallCount, 0, 'previewMode must not call fetch — BD_CALLS=0');
+  });
+
+  await test('BK-48 previewMode issues 0 DB write queries', async () => {
+    const queries = [];
+    const pool    = {
+      query: async (sql) => {
+        queries.push(sql.trim().toUpperCase());
+        return { rows: [MOCK_PROPERTY] };
+      },
+    };
+    await withEnv(
+      { MARKET_PRIMARY_PROVIDER: undefined },
+      () => previewMode({ name: 'M6', pool, _now: new Date('2026-09-25T12:00:00Z') })
+    );
+    const writeQueries = queries.filter(q => /^(INSERT|UPDATE|DELETE|TRUNCATE)/.test(q));
+    assert.strictEqual(writeQueries.length, 0,
+      'previewMode must not issue INSERT/UPDATE/DELETE queries — DB_WRITES=0');
+  });
+
+  // ── B5-BK-B: executeMode safety ────────────────────────────────────────────
+
+  await test('BK-49 executeMode triggers exactly 1 POST to Bright Data trigger endpoint', async () => {
+    let postCount   = 0;
+    const mockFetch = async (url, opts = {}) => {
+      const method = (opts.method || 'GET').toUpperCase();
+      if (url.includes('trigger') && method === 'POST') {
+        postCount++;
+        return {
+          ok: true, status: 200,
+          text: async () => JSON.stringify({ snapshot_id: 'snap-bk49-test' }),
+          headers: { get: () => 'application/json' },
+        };
+      }
+      if (url.includes('progress')) {
+        return { ok: true, status: 200, json: async () => ({ status: 'ready' }) };
+      }
+      if (url.includes('snapshot')) {
+        return { ok: true, status: 200, json: async () => [SAMPLE_BOOKING_ITEM] };
+      }
+      throw new Error(`BK-49 unexpected fetch: ${method} ${url}`);
+    };
+    const pool = makeMockPool([MOCK_PROPERTY]);
+    await withEnv(
+      { BRIGHTDATA_API_KEY: 'test-key-bk49', MARKET_PRIMARY_PROVIDER: undefined },
+      () => executeMode({ name: 'M6', pool, _bdFetchImpl: mockFetch, _now: new Date('2026-09-25T12:00:00Z') })
+    );
+    assert.strictEqual(postCount, 1, 'executeMode must trigger exactly 1 POST to BD trigger endpoint');
+  });
+
+  // ── B5-BK-B: additional source text safety ─────────────────────────────────
+
+  await test('BK-50 diagnostic tool does not write to market_data table', async () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../outils/diag-brightdata-booking.js'), 'utf8'
+    );
+    assert.ok(!src.includes('INSERT INTO market_data'),
+      'diag-brightdata-booking must not write to market_data table');
+  });
+
+  await test('BK-51 diagnostic tool does not call runDynamicPricingForOneProperty', async () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../outils/diag-brightdata-booking.js'), 'utf8'
+    );
+    assert.ok(!src.includes('runDynamicPricingForOneProperty'),
+      'diag-brightdata-booking must not call runDynamicPricingForOneProperty');
+  });
+
+  await test('BK-52 diagnostic tool does not call sendBookingMessage (Channex)', async () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../outils/diag-brightdata-booking.js'), 'utf8'
+    );
+    assert.ok(!src.includes('sendBookingMessage'),
+      'diag-brightdata-booking must not call Channex sendBookingMessage');
+  });
+
+  // ── B5-BK-B: request contract unchanged ────────────────────────────────────
+
+  await test('BK-53 previewMode requestBody uses ISO8601 dates and all required contract fields', async () => {
+    const pool   = makeMockPool([MOCK_PROPERTY]);
+    const result = await withEnv(
+      { MARKET_PRIMARY_PROVIDER: undefined },
+      () => previewMode({ name: 'M6', pool, _now: new Date('2026-09-25T12:00:00Z') })
+    );
+    assert.ok(result.ok, 'previewMode must succeed');
+    // triggerUrl must embed unchanged contract constants
+    assert.ok(result.triggerUrl.includes(BOOKING_DATASET_ID),
+      'triggerUrl must include BOOKING_DATASET_ID unchanged');
+    assert.ok(result.triggerUrl.includes('type=discover_new'),
+      'discovery type must remain discover_new');
+    assert.ok(result.triggerUrl.includes('discover_by=location'),
+      'discover_by must remain location');
+    // Request body must use ISO8601 timestamps (not plain YYYY-MM-DD)
+    const body = result.requestBody[0];
+    assert.ok(body.check_in.includes('T00:00:00.000Z'),
+      'check_in must be ISO8601 timestamp (not plain YYYY-MM-DD)');
+    assert.ok(body.check_out.includes('T00:00:00.000Z'),
+      'check_out must be ISO8601 timestamp (not plain YYYY-MM-DD)');
+    // Mandatory body fields present and correctly typed
+    assert.ok(typeof body.location === 'string' && body.location,
+      'body.location must be a non-empty string');
+    assert.ok(typeof body.currency === 'string' && body.currency,
+      'body.currency must be a non-empty string');
+    assert.strictEqual(typeof body.adults, 'number', 'body.adults must be a number');
+    assert.strictEqual(typeof body.rooms,  'number', 'body.rooms must be a number');
   });
 
 })();

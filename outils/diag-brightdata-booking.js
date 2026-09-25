@@ -2,7 +2,7 @@
 'use strict';
 require('dotenv').config();
 /**
- * P1.2-B5-BK-A — Bright Data Booking.com Contract Discovery
+ * P1.2-B5-BK-A/B — Bright Data Booking.com Contract Discovery
  *
  * Discovery diagnostic — investigates the Booking.com BD API contract.
  * Does NOT activate Booking.com in production.
@@ -17,6 +17,13 @@ require('dotenv').config();
  *   Execute:  MAX 1 BD job, MAX 10 records, 0 DB writes, 0 pricing writes
  *   NEVER:    market_data writes, pricing engine, Channex calls
  *
+ * B5-BK-B additions:
+ *   - Error body observability: HTTP_STATUS, HTTP_STATUS_TEXT,
+ *     RESPONSE_CONTENT_TYPE, SANITIZED_ERROR_BODY on any non-2xx trigger
+ *   - Secret redaction in error bodies (Bearer, api_key, token, auth headers,
+ *     literal BRIGHTDATA_API_KEY value)
+ *   - Preview shows EXACT REQUEST CONTRACT (URL + query params + body) without secrets
+ *
  * CONTRACT CONFIDENCE LEVELS (Phase 2 research summary):
  *   BOOKING_DATASET_ID        gd_m4bf7a917zfezv9d5    INFERRED (BD product page + AI summaries)
  *   BOOKING_TRIGGER_BASE      /datasets/v3/trigger    CONFIRMED (same as Airbnb)
@@ -30,11 +37,6 @@ require('dotenv').config();
  *   RATING_FIELD              review_score 0-10       CONFIRMED (HuggingFace schema)
  *   OCCUPANCY_PROXY           NOT FEASIBLE            CONFIRMED (no available_dates)
  *   CROSS_PLATFORM_DEDUP      NOT FEASIBLE            CONFIRMED (no shared ID space)
- *
- * Blocking limitations for production adapter:
- *   1. No lat/lon → selectComparables() geo-filter disabled
- *   2. No available_dates → occupancy proxy always 0 (insufficient_calendars)
- *   3. BOOKING_DATASET_ID unconfirmed — must verify via --execute before adapting
  */
 
 // ── Safe imports only ─────────────────────────────────────────────────────────
@@ -74,6 +76,77 @@ const CONTRACT_CONFIDENCE = {
   OCCUPANCY_PROXY:        'CONFIRMED',  // NOT FEASIBLE — no available_dates
   CROSS_PLATFORM_DEDUP:   'CONFIRMED',  // NOT FEASIBLE — incompatible ID spaces
 };
+
+// ── Error body observability (B5-BK-B) ────────────────────────────────────────
+
+const ERROR_BODY_MAX_CHARS = 4000;
+const ERROR_USEFUL_KEYS    = [
+  'error', 'message', 'code', 'details', 'errors',
+  'description', 'reason', 'status', 'statusCode', 'type',
+];
+
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Redact all secret patterns from a string.
+ *   Bearer tokens, authorization/api_key/token headers and query params.
+ * Optionally redacts the literal apiKey value when explicitly passed
+ * (guards against BD echoing credentials back in error bodies).
+ *
+ * @param {string}  text
+ * @param {string}  [apiKey] — literal secret to erase from text
+ * @returns {string}
+ */
+function redactSecrets(text, apiKey) {
+  if (typeof text !== 'string') return String(text);
+  let result = text
+    .replace(/Bearer\s+\S+/gi,                       'Bearer [REDACTED]')
+    .replace(/"[Aa]uthorization"\s*:\s*"[^"]*"/g,    '"authorization": "[REDACTED]"')
+    .replace(/"[Aa]pi_?[Kk]ey"\s*:\s*"[^"]*"/g,      '"api_key": "[REDACTED]"')
+    .replace(/"[Aa]pikey"\s*:\s*"[^"]*"/g,            '"apikey": "[REDACTED]"')
+    .replace(/"[Tt]oken"\s*:\s*"[^"]*"/g,             '"token": "[REDACTED]"')
+    .replace(/\bapi_?key=[^&\s"'<>]*/gi,              'api_key=[REDACTED]')
+    .replace(/\btoken=[^&\s"'<>]*/gi,                 'token=[REDACTED]');
+  // Erase the literal API key value if Bright Data echoes it back in error bodies
+  if (apiKey && apiKey.length > 4) {
+    result = result.replace(new RegExp(escapeRegExp(apiKey), 'g'), '[REDACTED]');
+  }
+  return result;
+}
+
+/**
+ * Sanitize a Bright Data error response body for safe console display.
+ *
+ * - Reads rawText (already consumed from Response.text() — no double-read)
+ * - Handles application/json, text/plain, text/html, empty body
+ * - Parses JSON when possible; extracts known error keys first
+ * - Redacts all secret patterns; truncates to maxLen
+ *
+ * @param {string}  rawText     — body already read via Response.text()
+ * @param {string}  contentType — value of Content-Type header
+ * @param {string}  [apiKey]    — literal API key to redact from body
+ * @param {number}  [maxLen]    — max chars to return (default 4000)
+ * @returns {string}
+ */
+function sanitizeErrorBody(rawText, contentType, apiKey, maxLen) {
+  if (maxLen === undefined) maxLen = ERROR_BODY_MAX_CHARS;
+  if (!rawText) return '(empty response body)';
+
+  // Always try JSON parse — BD may not set Content-Type correctly
+  let jsonObj = null;
+  try { jsonObj = JSON.parse(rawText); } catch {}
+
+  if (jsonObj !== null && typeof jsonObj === 'object') {
+    const useful = {};
+    ERROR_USEFUL_KEYS.forEach(k => { if (jsonObj[k] !== undefined) useful[k] = jsonObj[k]; });
+    const pretty = JSON.stringify(Object.keys(useful).length > 0 ? useful : jsonObj, null, 2);
+    return redactSecrets(pretty, apiKey).slice(0, maxLen);
+  }
+
+  return redactSecrets(rawText, apiKey).slice(0, maxLen);
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -242,6 +315,15 @@ async function resolvePropByName(pool, name) {
 
 // ── Booking.com BD job trigger (max MAX_RECORDS records) ──────────────────────
 
+/**
+ * Trigger a Booking.com discovery job and return the result items.
+ *
+ * Error body observability (B5-BK-B):
+ *   On any non-2xx trigger response the function prints:
+ *     HTTP_STATUS, HTTP_STATUS_TEXT, RESPONSE_CONTENT_TYPE, SANITIZED_ERROR_BODY
+ *   Body is read exactly once via .text() — never causes a double-read error.
+ *   BRIGHTDATA_API_KEY value is redacted from error output.
+ */
 async function triggerBookingJob(location, currency, checkIn, checkOut, opts = {}) {
   const {
     _fetchImpl,
@@ -269,10 +351,26 @@ async function triggerBookingJob(location, currency, checkIn, checkOut, opts = {
     }]),
   });
 
-  if (!triggerRes.ok) throw new Error(`Booking.com BD trigger échoué: ${triggerRes.status}`);
+  // Read body exactly once — prevents double-read error regardless of status
+  const rawTriggerBody = await triggerRes.text().catch(() => '');
+
+  if (!triggerRes.ok) {
+    const ct = (triggerRes.headers && typeof triggerRes.headers.get === 'function')
+      ? (triggerRes.headers.get('content-type') ?? 'unknown')
+      : 'unknown';
+    const sanitized = sanitizeErrorBody(rawTriggerBody, ct, key);
+    const indented  = sanitized.split('\n').map(l => '    ' + l).join('\n');
+    console.error(`\n  ❌ BD TRIGGER FAILED`);
+    console.error(`  HTTP_STATUS:           ${triggerRes.status}`);
+    console.error(`  HTTP_STATUS_TEXT:      ${triggerRes.statusText ?? ''}`);
+    console.error(`  RESPONSE_CONTENT_TYPE: ${ct}`);
+    console.error(`  SANITIZED_ERROR_BODY:`);
+    console.error(indented);
+    throw new Error(`Booking.com BD trigger échoué: ${triggerRes.status}`);
+  }
 
   let triggerData;
-  try   { triggerData = await triggerRes.json(); }
+  try   { triggerData = JSON.parse(rawTriggerBody); }
   catch { throw new Error('Booking.com BD trigger: réponse JSON malformée'); }
 
   const snapshotId = triggerData?.snapshot_id;
@@ -314,7 +412,7 @@ async function triggerBookingJob(location, currency, checkIn, checkOut, opts = {
 
 async function previewMode({ name, _now, pool } = {}) {
   console.log('\n' + '═'.repeat(72));
-  console.log('  B5-BK-A BOOKING.COM CONTRACT DISCOVERY — PREVIEW MODE');
+  console.log('  B5-BK BOOKING.COM CONTRACT DISCOVERY — PREVIEW MODE');
   console.log('  BD_CALLS=0 | DB_WRITES=0 | MARKET_DATA_WRITES=0 | PRICING_WRITES=0');
   console.log('═'.repeat(72));
 
@@ -349,19 +447,34 @@ async function previewMode({ name, _now, pool } = {}) {
   console.log(`    bedrooms:          ${prop.bedrooms ?? 'NULL'}`);
   console.log(`    context_key:       ${ctxKey}`);
 
-  console.log('\n  PLANNED BOOKING.COM BD CALL:');
-  console.log(`    BOOKING_DATASET_ID:  ${BOOKING_DATASET_ID}  (INFERRED)`);
-  console.log(`    trigger_endpoint:    ${BOOKING_TRIGGER_BASE}`);
-  console.log(`    discovery_type:      ${BOOKING_DISCOVERY_TYPE}  (INFERRED)`);
-  console.log(`    discover_by:         ${BOOKING_DISCOVER_BY}  (INFERRED)`);
-  console.log(`    location:            ${zones[0]}`);
-  console.log(`    check_in (ISO8601):  ${toISO8601Timestamp(checkIn)}  (INFERRED format)`);
-  console.log(`    check_out (ISO8601): ${toISO8601Timestamp(checkOut)}`);
-  console.log(`    currency:            ${currency}`);
-  console.log(`    adults:              ${BOOKING_DEFAULT_ADULTS}`);
-  console.log(`    rooms:               ${BOOKING_DEFAULT_ROOMS}`);
-  console.log(`    limit_per_input:     ${MAX_RECORDS}  (hard cap — discovery only)`);
-  console.log(`    API key:             ${process.env.BRIGHTDATA_API_KEY ? 'PRESENT' : 'ABSENT'}`);
+  // ── EXACT REQUEST CONTRACT (B5-BK-B) ─────────────────────────────────────
+  const location    = zones[0];
+  const reqBody     = [{
+    location,
+    currency:  normalizeBookingCurrency(currency),
+    check_in:  toISO8601Timestamp(checkIn),
+    check_out: toISO8601Timestamp(checkOut),
+    adults:    BOOKING_DEFAULT_ADULTS,
+    rooms:     BOOKING_DEFAULT_ROOMS,
+  }];
+  const triggerUrl  = `${BOOKING_TRIGGER_BASE}?dataset_id=${BOOKING_DATASET_ID}&format=json` +
+    `&type=${BOOKING_DISCOVERY_TYPE}&discover_by=${BOOKING_DISCOVER_BY}&limit_per_input=${MAX_RECORDS}`;
+
+  console.log('\n  EXACT REQUEST CONTRACT (will be sent unchanged — no secrets):');
+  console.log('  ─────────────────────────────────────────────────────────────');
+  console.log('  TRIGGER_URL_SANITIZED:');
+  console.log(`    ${BOOKING_TRIGGER_BASE}`);
+  console.log(`      ?dataset_id=${BOOKING_DATASET_ID}`);
+  console.log(`      &format=json`);
+  console.log(`      &type=${BOOKING_DISCOVERY_TYPE}`);
+  console.log(`      &discover_by=${BOOKING_DISCOVER_BY}`);
+  console.log(`      &limit_per_input=${MAX_RECORDS}`);
+  console.log('  HEADERS (sanitized):');
+  console.log('    Authorization: Bearer [REDACTED]');
+  console.log('    Content-Type:  application/json');
+  console.log('  REQUEST BODY:');
+  const bodyLines = JSON.stringify(reqBody, null, 4).split('\n');
+  bodyLines.forEach(l => console.log('    ' + l));
 
   console.log('\n  CONTRACT CONFIDENCE LEVELS:');
   for (const [k, v] of Object.entries(CONTRACT_CONFIDENCE)) {
@@ -388,7 +501,8 @@ async function previewMode({ name, _now, pool } = {}) {
     zones,
     checkIn,
     checkOut,
-    triggerUrl: `${BOOKING_TRIGGER_BASE}?dataset_id=${BOOKING_DATASET_ID}&format=json&type=${BOOKING_DISCOVERY_TYPE}&discover_by=${BOOKING_DISCOVER_BY}&limit_per_input=${MAX_RECORDS}`,
+    triggerUrl,
+    requestBody: reqBody,
   };
 }
 
@@ -397,7 +511,7 @@ async function previewMode({ name, _now, pool } = {}) {
 
 async function executeMode({ name, _bdFetchImpl, _now, pool } = {}) {
   console.log('\n' + '═'.repeat(72));
-  console.log('  B5-BK-A BOOKING.COM CONTRACT DISCOVERY — EXECUTE MODE');
+  console.log('  B5-BK BOOKING.COM CONTRACT DISCOVERY — EXECUTE MODE');
   console.log('  MAX_BD_CALLS=1 | MAX_RECORDS=10 | DB_WRITES=0 | PRICING_WRITES=0');
   console.log('═'.repeat(72));
 
@@ -627,6 +741,8 @@ module.exports = {
   toISO8601Timestamp,
   normalizeBookingCurrency,
   resolvePropByName,
+  sanitizeErrorBody,
+  redactSecrets,
   BOOKING_DATASET_ID,
   BOOKING_TRIGGER_BASE,
   BOOKING_PROGRESS_BASE,
