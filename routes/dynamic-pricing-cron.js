@@ -902,4 +902,4 @@ async function writeScrapeResult(pool, {
   }
 }
 
-module.exports = { initDynamicPricingCron, runDynamicPricingJob, runDailyPricingRefresh, runDynamicPricingForOneProperty, writeScrapeResult };
+module.exports = { initDynamicPricingCron, runDynamicPricingJob, runDailyPricingRefresh, runDynamicPricingForOneProperty, writeScrapeResult, scrapeBestZone, getFallbackZones, getCurrentWeekStart, calcMarketStats };
