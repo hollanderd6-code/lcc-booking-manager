@@ -9854,7 +9854,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           r.ota_notes,
           r.created_at,
           c.onboarding_completed,
-          c.id as conversation_id,
+          COALESCE((SELECT c2.id FROM conversations c2 WHERE c2.reservation_uid = r.uid OR (r.channex_booking_id IS NOT NULL AND c2.channex_booking_id = r.channex_booking_id) ORDER BY c2.id DESC LIMIT 1), c.id) as conversation_id,
           (
             SELECT json_agg(json_build_object(
               'id', p.id,
@@ -9986,7 +9986,8 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           notes: isRealNote(dbData.notes) ? dbData.notes.trim() : null,
           ota_notes: dbData.ota_notes || null,
           createdAt: dbData.created_at ? new Date(dbData.created_at).toISOString() : null,
-          payments: dbData.payments || []
+          payments: dbData.payments || [],
+          conversation_id: dbData.conversation_id || null
         };
 
         allReservations.push(enrichedReservation);
