@@ -1,6 +1,6 @@
 'use strict';
 /**
- * P1.2-B5-BK-A — Booking.com Contract Discovery Tests
+ * P1.2-B5-BK-A/B/C — Booking.com Contract Discovery Tests
  *
  * Validates:
  *   - Contract constants (dataset ID, endpoints, confidence levels)
@@ -9,6 +9,9 @@
  *   - analyzeFieldPresence schema analysis
  *   - previewMode (0 BD calls, 0 DB writes)
  *   - Safety source-text checks
+ *   - B5-BK-B: sanitizeErrorBody, redactSecrets
+ *   - B5-BK-C: url_collection contract (no discover_new, no discover_by=location,
+ *              body url=BOOKING_INPUT_URL, executeMode blocked by default)
  *
  * SAFETY:
  *   LIVE_BRIGHTDATA_CALLS = 0
@@ -35,8 +38,8 @@ const {
   BOOKING_TRIGGER_BASE,
   BOOKING_PROGRESS_BASE,
   BOOKING_SNAPSHOT_BASE,
-  BOOKING_DISCOVERY_TYPE,
-  BOOKING_DISCOVER_BY,
+  BOOKING_INPUT_URL,
+  EXECUTE_BLOCKED_B5_BK_C,
   CONTRACT_CONFIDENCE,
   MAX_RECORDS,
 } = require('../outils/diag-brightdata-booking');
@@ -133,12 +136,21 @@ const SAMPLE_BOOKING_ITEM = {
     assert.ok(BOOKING_SNAPSHOT_BASE.includes('api.brightdata.com/datasets/v3/snapshot'));
   });
 
-  await test('BK-04 BOOKING_DISCOVERY_TYPE is discover_new', async () => {
-    assert.strictEqual(BOOKING_DISCOVERY_TYPE, 'discover_new');
+  await test('BK-04 BOOKING_INPUT_URL is https://www.booking.com (B5-BK-C corrected contract)', async () => {
+    assert.strictEqual(BOOKING_INPUT_URL, 'https://www.booking.com',
+      'url_collection body must use the Booking.com homepage URL (CONFIRMED from official BD docs)');
   });
 
-  await test('BK-05 BOOKING_DISCOVER_BY is location', async () => {
-    assert.strictEqual(BOOKING_DISCOVER_BY, 'location');
+  await test('BK-05 triggerUrl does NOT contain discover_new (unsupported for this dataset)', async () => {
+    const pool   = makeMockPool([MOCK_PROPERTY]);
+    const result = await withEnv(
+      { MARKET_PRIMARY_PROVIDER: undefined },
+      () => previewMode({ name: 'M6', pool, _now: new Date('2026-09-25T12:00:00Z') })
+    );
+    assert.ok(!result.triggerUrl.includes('discover_new'),
+      'discover_new must NOT appear in trigger URL — dataset returned HTTP 400 for this type');
+    assert.ok(!result.triggerUrl.includes('discover_by'),
+      'discover_by must NOT appear in trigger URL — unsupported for url_collection');
   });
 
   await test('BK-06 MAX_RECORDS is 10 (discovery hard cap)', async () => {
@@ -513,7 +525,11 @@ const SAMPLE_BOOKING_ITEM = {
     const pool = makeMockPool([MOCK_PROPERTY]);
     await withEnv(
       { BRIGHTDATA_API_KEY: 'test-key-bk49', MARKET_PRIMARY_PROVIDER: undefined },
-      () => executeMode({ name: 'M6', pool, _bdFetchImpl: mockFetch, _now: new Date('2026-09-25T12:00:00Z') })
+      () => executeMode({
+        name: 'M6', pool, _bdFetchImpl: mockFetch,
+        _now: new Date('2026-09-25T12:00:00Z'),
+        _unlockExecute: true,  // bypass EXECUTE_BLOCKED_B5_BK_C for this test
+      })
     );
     assert.strictEqual(postCount, 1, 'executeMode must trigger exactly 1 POST to BD trigger endpoint');
   });
@@ -546,27 +562,64 @@ const SAMPLE_BOOKING_ITEM = {
 
   // ── B5-BK-B: request contract unchanged ────────────────────────────────────
 
-  await test('BK-53 previewMode requestBody uses ISO8601 dates and all required contract fields', async () => {
+  // ── B5-BK-C: url_collection contract ───────────────────────────────────────
+
+  await test('BK-54 CONTRACT_CONFIDENCE.URL_COLLECTION_SUPPORTED is CONFIRMED', async () => {
+    assert.strictEqual(CONTRACT_CONFIDENCE.URL_COLLECTION_SUPPORTED, 'CONFIRMED',
+      'url_collection is CONFIRMED supported (real API error + official BD docs)');
+  });
+
+  await test('BK-55 CONTRACT_CONFIDENCE.INPUT_URL_FIELD is CONFIRMED', async () => {
+    assert.strictEqual(CONTRACT_CONFIDENCE.INPUT_URL_FIELD, 'CONFIRMED',
+      'url field in body is CONFIRMED from official BD Listings Search documentation');
+  });
+
+  await test('BK-56 CONTRACT_CONFIDENCE.BOOKING_DATASET_ID is CONFIRMED (was INFERRED in B5-BK-A)', async () => {
+    assert.strictEqual(CONTRACT_CONFIDENCE.BOOKING_DATASET_ID, 'CONFIRMED',
+      'Dataset ID confirmed as "Listings Search" on official Bright Data product page');
+  });
+
+  await test('BK-57 executeMode returns blocked=true by default (B5-BK-C guard)', async () => {
+    const pool   = makeMockPool([MOCK_PROPERTY]);
+    const result = await withEnv(
+      { BRIGHTDATA_API_KEY: 'test-key-bk57', MARKET_PRIMARY_PROVIDER: undefined },
+      () => executeMode({ name: 'M6', pool, _now: new Date('2026-09-25T12:00:00Z') })
+    );
+    assert.strictEqual(result.ok,      false,              'blocked executeMode must return ok=false');
+    assert.strictEqual(result.blocked, true,               'blocked executeMode must return blocked=true');
+    assert.strictEqual(result.reason,  'execute_blocked_b5bk_c',
+      'reason must identify the B5-BK-C block');
+  });
+
+  await test('BK-58 EXECUTE_BLOCKED_B5_BK_C is true (safety constant must not be silently disabled)', async () => {
+    assert.strictEqual(EXECUTE_BLOCKED_B5_BK_C, true,
+      'Execute block must remain true until B5-BK-D first live call confirms the contract');
+  });
+
+  await test('BK-53 previewMode requestBody uses B5-BK-C url_collection contract', async () => {
     const pool   = makeMockPool([MOCK_PROPERTY]);
     const result = await withEnv(
       { MARKET_PRIMARY_PROVIDER: undefined },
       () => previewMode({ name: 'M6', pool, _now: new Date('2026-09-25T12:00:00Z') })
     );
     assert.ok(result.ok, 'previewMode must succeed');
-    // triggerUrl must embed unchanged contract constants
+    // triggerUrl: has dataset_id but NO discover_new / discover_by (B5-BK-C correction)
     assert.ok(result.triggerUrl.includes(BOOKING_DATASET_ID),
-      'triggerUrl must include BOOKING_DATASET_ID unchanged');
-    assert.ok(result.triggerUrl.includes('type=discover_new'),
-      'discovery type must remain discover_new');
-    assert.ok(result.triggerUrl.includes('discover_by=location'),
-      'discover_by must remain location');
-    // Request body must use ISO8601 timestamps (not plain YYYY-MM-DD)
+      'triggerUrl must include BOOKING_DATASET_ID');
+    assert.ok(!result.triggerUrl.includes('discover_new'),
+      'discover_new must NOT be in trigger URL (HTTP 400 confirmed it is unsupported)');
+    assert.ok(!result.triggerUrl.includes('discover_by'),
+      'discover_by must NOT be in trigger URL');
+    // Request body must include url=BOOKING_INPUT_URL (url_collection contract)
     const body = result.requestBody[0];
+    assert.strictEqual(body.url, BOOKING_INPUT_URL,
+      'body.url must be BOOKING_INPUT_URL ("https://www.booking.com")');
+    // ISO8601 timestamps (CONFIRMED in official BD examples)
     assert.ok(body.check_in.includes('T00:00:00.000Z'),
-      'check_in must be ISO8601 timestamp (not plain YYYY-MM-DD)');
+      'check_in must be ISO8601 timestamp');
     assert.ok(body.check_out.includes('T00:00:00.000Z'),
-      'check_out must be ISO8601 timestamp (not plain YYYY-MM-DD)');
-    // Mandatory body fields present and correctly typed
+      'check_out must be ISO8601 timestamp');
+    // Mandatory body fields
     assert.ok(typeof body.location === 'string' && body.location,
       'body.location must be a non-empty string');
     assert.ok(typeof body.currency === 'string' && body.currency,

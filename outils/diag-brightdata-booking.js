@@ -2,7 +2,7 @@
 'use strict';
 require('dotenv').config();
 /**
- * P1.2-B5-BK-A/B — Bright Data Booking.com Contract Discovery
+ * P1.2-B5-BK-A/B/C — Bright Data Booking.com Contract Discovery
  *
  * Discovery diagnostic — investigates the Booking.com BD API contract.
  * Does NOT activate Booking.com in production.
@@ -11,6 +11,7 @@ require('dotenv').config();
  * Usage:
  *   Preview:  node outils/diag-brightdata-booking.js --name "M6"
  *   Execute:  node outils/diag-brightdata-booking.js --name "M6" --execute
+ *             (BLOCKED in B5-BK-C — see EXECUTE_BLOCKED_B5_BK_C constant)
  *
  * SAFETY CONTRACT:
  *   Preview:  0 BD calls, 0 DB writes, 0 market_data writes
@@ -24,14 +25,21 @@ require('dotenv').config();
  *     literal BRIGHTDATA_API_KEY value)
  *   - Preview shows EXACT REQUEST CONTRACT (URL + query params + body) without secrets
  *
- * CONTRACT CONFIDENCE LEVELS (Phase 2 research summary):
- *   BOOKING_DATASET_ID        gd_m4bf7a917zfezv9d5    INFERRED (BD product page + AI summaries)
+ * B5-BK-C: Corrected contract after confirmed HTTP 400 from real API call:
+ *   discover_new       → NOT SUPPORTED (error: "Supported types: ['url_collection']")
+ *   type= query param  → MUST NOT be sent (implicit url_collection for this dataset)
+ *   discover_by=       → MUST NOT be sent
+ *   body url field     → REQUIRED: "https://www.booking.com" (official BD docs)
+ *   executeMode        → BLOCKED pending first controlled url_collection live call (B5-BK-D)
+ *
+ * CONTRACT CONFIDENCE LEVELS (B5-BK-C update):
+ *   BOOKING_DATASET_ID        gd_m4bf7a917zfezv9d5    CONFIRMED (BD "Listings Search" page)
  *   BOOKING_TRIGGER_BASE      /datasets/v3/trigger    CONFIRMED (same as Airbnb)
- *   BOOKING_DISCOVERY_TYPE    discover_new            INFERRED (standard BD pattern)
- *   BOOKING_DISCOVER_BY       location                INFERRED (same param as Airbnb)
- *   INPUT_DATE_FORMAT         ISO8601 full timestamp  INFERRED (observed in output schema)
+ *   URL_COLLECTION_SUPPORTED  url_collection          CONFIRMED (API error + official docs)
+ *   INPUT_URL_FIELD           https://www.booking.com CONFIRMED (official BD examples)
+ *   INPUT_DATE_FORMAT         ISO8601 full timestamp  CONFIRMED (official BD examples)
  *   PRICE_FIELD               final_price             CONFIRMED (HuggingFace schema)
- *   PRICE_SEMANTICS           per-night for dates     INFERRED (1-night sample = price)
+ *   PRICE_SEMANTICS           per-night for dates     INFERRED (unconfirmed without live data)
  *   LAT_LON_AVAILABLE         FALSE                   CONFIRMED (map_coordinates=null)
  *   BEDROOMS_AVAILABLE        TRUE                    CONFIRMED (nb_bedrooms field)
  *   RATING_FIELD              review_score 0-10       CONFIRMED (HuggingFace schema)
@@ -50,31 +58,35 @@ const { Pool }                     = require('pg');
 
 // ── Contract constants (with confidence annotations) ──────────────────────────
 
-const BOOKING_DATASET_ID     = 'gd_m4bf7a917zfezv9d5';  // INFERRED
-const BOOKING_TRIGGER_BASE   = 'https://api.brightdata.com/datasets/v3/trigger';   // CONFIRMED
-const BOOKING_PROGRESS_BASE  = 'https://api.brightdata.com/datasets/v3/progress';  // CONFIRMED
-const BOOKING_SNAPSHOT_BASE  = 'https://api.brightdata.com/datasets/v3/snapshot';  // CONFIRMED
-const BOOKING_DISCOVERY_TYPE = 'discover_new';  // INFERRED
-const BOOKING_DISCOVER_BY    = 'location';       // INFERRED
+const BOOKING_DATASET_ID    = 'gd_m4bf7a917zfezv9d5';   // CONFIRMED (BD "Listings Search" page)
+const BOOKING_TRIGGER_BASE  = 'https://api.brightdata.com/datasets/v3/trigger';   // CONFIRMED
+const BOOKING_PROGRESS_BASE = 'https://api.brightdata.com/datasets/v3/progress';  // CONFIRMED
+const BOOKING_SNAPSHOT_BASE = 'https://api.brightdata.com/datasets/v3/snapshot';  // CONFIRMED
+// url_collection: no type= or discover_by= query params — body includes url + location instead
+const BOOKING_INPUT_URL     = 'https://www.booking.com'; // CONFIRMED (official BD Listings Search docs)
 const BOOKING_DEFAULT_ADULTS = 2;
 const BOOKING_DEFAULT_ROOMS  = 1;
-const MAX_RECORDS            = 10;        // hard cap — discovery only
-const MAX_WAIT_MS            = 180_000;   // 3 minutes
+const MAX_RECORDS            = 10;       // hard cap — discovery only
+const MAX_WAIT_MS            = 180_000;  // 3 minutes
 const POLL_INTERVAL_MS_LIVE  = 10_000;
 
+// B5-BK-C: executeMode blocked pending first successful url_collection live call.
+// Remove this guard (or pass _unlockExecute: true) only after B5-BK-D confirms the contract.
+const EXECUTE_BLOCKED_B5_BK_C = true;
+
 const CONTRACT_CONFIDENCE = {
-  BOOKING_DATASET_ID:     'INFERRED',
-  BOOKING_DISCOVERY_TYPE: 'INFERRED',
-  BOOKING_DISCOVER_BY:    'INFERRED',
-  INPUT_DATE_FORMAT:      'INFERRED',   // ISO8601 timestamp (not plain YYYY-MM-DD)
-  PRICE_FIELD:            'CONFIRMED',  // final_price
-  PRICE_SEMANTICS:        'INFERRED',   // per-night for requested dates — verify with execute
-  CURRENCY_FIELD:         'CONFIRMED',  // item.currency
-  LAT_LON_AVAILABLE:      'CONFIRMED',  // FALSE — map_coordinates null in observed data
-  BEDROOMS_AVAILABLE:     'CONFIRMED',  // nb_bedrooms field present
-  RATING_FIELD:           'CONFIRMED',  // review_score 0-10 scale
-  OCCUPANCY_PROXY:        'CONFIRMED',  // NOT FEASIBLE — no available_dates
-  CROSS_PLATFORM_DEDUP:   'CONFIRMED',  // NOT FEASIBLE — incompatible ID spaces
+  BOOKING_DATASET_ID:      'CONFIRMED',  // BD product page names gd_m4bf7a917zfezv9d5 "Listings Search"
+  URL_COLLECTION_SUPPORTED:'CONFIRMED',  // real API error: "Supported types: ['url_collection']"
+  INPUT_URL_FIELD:         'CONFIRMED',  // official docs: url="https://www.booking.com" + location
+  INPUT_DATE_FORMAT:       'CONFIRMED',  // ISO8601 timestamps — shown in official BD examples
+  PRICE_FIELD:             'CONFIRMED',  // final_price
+  PRICE_SEMANTICS:         'INFERRED',   // per-night — semantics unconfirmed without live data
+  CURRENCY_FIELD:          'CONFIRMED',  // item.currency
+  LAT_LON_AVAILABLE:       'CONFIRMED',  // FALSE — map_coordinates null in observed data
+  BEDROOMS_AVAILABLE:      'CONFIRMED',  // nb_bedrooms field present
+  RATING_FIELD:            'CONFIRMED',  // review_score 0-10 scale
+  OCCUPANCY_PROXY:         'CONFIRMED',  // NOT FEASIBLE — no available_dates
+  CROSS_PLATFORM_DEDUP:    'CONFIRMED',  // NOT FEASIBLE — incompatible ID spaces
 };
 
 // ── Error body observability (B5-BK-B) ────────────────────────────────────────
@@ -334,20 +346,23 @@ async function triggerBookingJob(location, currency, checkIn, checkOut, opts = {
   const key    = process.env.BRIGHTDATA_API_KEY;
   if (!key) throw new Error('BRIGHTDATA_API_KEY non défini');
 
+  // B5-BK-C: no type= or discover_by= params — url_collection is implicit for this dataset.
   const triggerUrl = `${BOOKING_TRIGGER_BASE}?dataset_id=${BOOKING_DATASET_ID}&format=json` +
-    `&type=${BOOKING_DISCOVERY_TYPE}&discover_by=${BOOKING_DISCOVER_BY}&limit_per_input=${MAX_RECORDS}`;
+    `&limit_per_input=${MAX_RECORDS}`;
 
   const triggerRes = await _fetch(triggerUrl, {
     method:  'POST',
     headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-    // Note: dates sent as ISO8601 timestamps (INFERRED format for Booking.com)
+    // url_collection: body includes url + location (CONFIRMED from official BD docs)
+    // dates as ISO8601 timestamps (CONFIRMED from official BD Listings Search examples)
     body: JSON.stringify([{
+      url:      BOOKING_INPUT_URL,
       location,
-      currency:  normalizeBookingCurrency(currency),
+      currency: normalizeBookingCurrency(currency),
       check_in:  toISO8601Timestamp(checkIn),
       check_out: toISO8601Timestamp(checkOut),
-      adults:    BOOKING_DEFAULT_ADULTS,
-      rooms:     BOOKING_DEFAULT_ROOMS,
+      adults:   BOOKING_DEFAULT_ADULTS,
+      rooms:    BOOKING_DEFAULT_ROOMS,
     }]),
   });
 
@@ -447,28 +462,30 @@ async function previewMode({ name, _now, pool } = {}) {
   console.log(`    bedrooms:          ${prop.bedrooms ?? 'NULL'}`);
   console.log(`    context_key:       ${ctxKey}`);
 
-  // ── EXACT REQUEST CONTRACT (B5-BK-B) ─────────────────────────────────────
+  // ── EXACT REQUEST CONTRACT (B5-BK-B/C) ──────────────────────────────────
   const location    = zones[0];
+  // B5-BK-C: body now includes url=BOOKING_INPUT_URL (CONFIRMED from official BD docs)
   const reqBody     = [{
+    url:      BOOKING_INPUT_URL,
     location,
-    currency:  normalizeBookingCurrency(currency),
+    currency: normalizeBookingCurrency(currency),
     check_in:  toISO8601Timestamp(checkIn),
     check_out: toISO8601Timestamp(checkOut),
-    adults:    BOOKING_DEFAULT_ADULTS,
-    rooms:     BOOKING_DEFAULT_ROOMS,
+    adults:   BOOKING_DEFAULT_ADULTS,
+    rooms:    BOOKING_DEFAULT_ROOMS,
   }];
+  // B5-BK-C: no type= or discover_by= (were causing HTTP 400 — not supported)
   const triggerUrl  = `${BOOKING_TRIGGER_BASE}?dataset_id=${BOOKING_DATASET_ID}&format=json` +
-    `&type=${BOOKING_DISCOVERY_TYPE}&discover_by=${BOOKING_DISCOVER_BY}&limit_per_input=${MAX_RECORDS}`;
+    `&limit_per_input=${MAX_RECORDS}`;
 
-  console.log('\n  EXACT REQUEST CONTRACT (will be sent unchanged — no secrets):');
+  console.log('\n  EXACT REQUEST CONTRACT (B5-BK-C corrected — no secrets):');
   console.log('  ─────────────────────────────────────────────────────────────');
   console.log('  TRIGGER_URL_SANITIZED:');
   console.log(`    ${BOOKING_TRIGGER_BASE}`);
   console.log(`      ?dataset_id=${BOOKING_DATASET_ID}`);
   console.log(`      &format=json`);
-  console.log(`      &type=${BOOKING_DISCOVERY_TYPE}`);
-  console.log(`      &discover_by=${BOOKING_DISCOVER_BY}`);
   console.log(`      &limit_per_input=${MAX_RECORDS}`);
+  console.log('  (no type= or discover_by= — url_collection is implicit for this dataset)');
   console.log('  HEADERS (sanitized):');
   console.log('    Authorization: Bearer [REDACTED]');
   console.log('    Content-Type:  application/json');
@@ -489,9 +506,10 @@ async function previewMode({ name, _now, pool } = {}) {
   console.log('    ✅ nb_bedrooms present     → bedroom count filter feasible');
   console.log('    ✅ final_price present     → nightly price parseable (semantics INFERRED)');
   console.log('    ✅ review_score present    → rating quality filter feasible (0-10 → 0-5)');
-  console.log('    ⚠️  Dataset ID unconfirmed → verify with --execute before adapting');
+  console.log('    ✅ Dataset ID CONFIRMED    → gd_m4bf7a917zfezv9d5 = BD "Listings Search"');
+  console.log('    ✅ url_collection CONFIRMED → body: url + location (not discover_new)');
 
-  console.log('\n  Run with --execute to perform the discovery call (max 1 job, max 10 records).');
+  console.log('\n  ⛔  --execute BLOQUÉ (B5-BK-C): contrat établi, appel réel = B5-BK-D.');
   console.log('═'.repeat(72) + '\n');
 
   return {
@@ -509,7 +527,16 @@ async function previewMode({ name, _now, pool } = {}) {
 // ── Execute mode ──────────────────────────────────────────────────────────────
 // MAX_BD_CALLS=1  MAX_RECORDS=10  DB_WRITES=0  PRICING_WRITES=0  CHANNEX_WRITES=0
 
-async function executeMode({ name, _bdFetchImpl, _now, pool } = {}) {
+async function executeMode({ name, _bdFetchImpl, _now, pool, _unlockExecute } = {}) {
+  // B5-BK-C: executeMode blocked until first controlled url_collection call confirms the contract.
+  if (EXECUTE_BLOCKED_B5_BK_C && !_unlockExecute) {
+    console.error('\n  ⛔  B5-BK-C: executeMode BLOQUÉ');
+    console.error('  Le contrat url_collection a été établi par B5-BK-C (preview CONFIRMED).');
+    console.error('  Le premier appel réel contrôlé sera effectué dans le ticket B5-BK-D.');
+    console.error('  Pour débloquer: passer _unlockExecute: true ou retirer EXECUTE_BLOCKED_B5_BK_C.');
+    return { ok: false, blocked: true, reason: 'execute_blocked_b5bk_c' };
+  }
+
   console.log('\n' + '═'.repeat(72));
   console.log('  B5-BK BOOKING.COM CONTRACT DISCOVERY — EXECUTE MODE');
   console.log('  MAX_BD_CALLS=1 | MAX_RECORDS=10 | DB_WRITES=0 | PRICING_WRITES=0');
@@ -545,8 +572,8 @@ async function executeMode({ name, _bdFetchImpl, _now, pool } = {}) {
 
   if (!items.length) {
     console.log('\n  ⚠️  0 items returned — cannot analyze output contract.');
-    console.log('  Possible causes: BOOKING_DATASET_ID wrong, discover_by parameter mismatch,');
-    console.log('  date format issue, or location query not found.');
+    console.log('  Possible causes: location not found by Booking.com, date range issue,');
+    console.log('  currency filter, or limit_per_input=0.');
     return { ok: false, snapshotId, returnedCount: 0 };
   }
 
@@ -747,8 +774,8 @@ module.exports = {
   BOOKING_TRIGGER_BASE,
   BOOKING_PROGRESS_BASE,
   BOOKING_SNAPSHOT_BASE,
-  BOOKING_DISCOVERY_TYPE,
-  BOOKING_DISCOVER_BY,
+  BOOKING_INPUT_URL,
+  EXECUTE_BLOCKED_B5_BK_C,
   CONTRACT_CONFIDENCE,
   BOOKING_EXPECTED_FIELDS,
   MAX_RECORDS,
