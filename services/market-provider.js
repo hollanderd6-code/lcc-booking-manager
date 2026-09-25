@@ -1,6 +1,6 @@
 'use strict';
 /**
- * P1.2-B5-D — Market Provider Abstraction (dual-provider + feature flag)
+ * P1.2-B5-D/G — Market Provider Abstraction (dual-provider + feature flag + pilot allowlist)
  *
  * Single entry point for market listing scraping.
  * Provider selection via MARKET_PRIMARY_PROVIDER env var.
@@ -13,6 +13,18 @@
  * Provider selection (MARKET_PRIMARY_PROVIDER):
  *   'brightdata' → Bright Data first, falls back to Apify on failure/empty result
  *   anything else (including missing/invalid) → Apify  (DEFAULT, zero production change)
+ *
+ * ── B5-G pilot allowlist routing (resolveProviderForProperty) ────────────────
+ *   When MARKET_PRIMARY_PROVIDER=brightdata AND a propertyId is supplied:
+ *     MARKET_BRIGHTDATA_PROPERTY_ALLOWLIST non-empty:
+ *       listed property     → brightdata
+ *       non-listed property → apify  (no BD call)
+ *     MARKET_BRIGHTDATA_GLOBAL_ENABLED=true (no allowlist):
+ *       all properties      → brightdata
+ *     Otherwise (neither allowlist nor global flag):
+ *       all properties      → apify  (safe default — explicit opt-in required)
+ *   When no propertyId is supplied (legacy callers): resolveProvider() used directly.
+ *   BRIGHTDATA_API_KEY alone does NOT activate Bright Data.
  *
  * Normalized provider result:
  *   {
@@ -30,10 +42,6 @@
  *     checkIn  = local today + 14 calendar days  (in property's timezone)
  *     checkOut = checkIn + 1 calendar day
  *   Dates are derived by the orchestration layer, never inside brightdata.js.
- *
- * ── B5-E integration points ──────────────────────────────────────────────────
- * 1. Rolling date horizons (J+7, J+30) — pass multiple checkIn/checkOut windows.
- * 2. Multi-horizon median aggregation.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -90,6 +98,36 @@ function resolveProvider() {
   return raw === 'brightdata' ? 'brightdata' : 'apify';
 }
 
+/**
+ * Resolve the market provider for a specific property, honouring the pilot allowlist.
+ *
+ * Called by scrape() when propertyId is supplied.  Legacy callers that omit
+ * propertyId bypass this and use resolveProvider() directly (unchanged behaviour).
+ *
+ * Routing when MARKET_PRIMARY_PROVIDER=brightdata:
+ *   Allowlist non-empty → listed property = brightdata, unlisted = apify.
+ *   No allowlist + MARKET_BRIGHTDATA_GLOBAL_ENABLED=true → brightdata for all.
+ *   No allowlist + no global flag → apify (safe explicit-opt-in default).
+ *
+ * null/undefined propertyId with allowlist set → apify (unknown ≠ listed).
+ *
+ * @param {string|null} propertyId
+ * @returns {'apify'|'brightdata'}
+ */
+function resolveProviderForProperty(propertyId) {
+  const primary = resolveProvider();
+  if (primary !== 'brightdata') return 'apify';
+
+  const allowlistRaw = (process.env.MARKET_BRIGHTDATA_PROPERTY_ALLOWLIST || '').trim();
+  if (allowlistRaw) {
+    const allowed = allowlistRaw.split(',').map(s => s.trim()).filter(Boolean);
+    return (propertyId != null && allowed.includes(String(propertyId))) ? 'brightdata' : 'apify';
+  }
+
+  const globalEnabled = (process.env.MARKET_BRIGHTDATA_GLOBAL_ENABLED || '').trim().toLowerCase();
+  return globalEnabled === 'true' ? 'brightdata' : 'apify';
+}
+
 // ── Main scrape entry point ───────────────────────────────────────────────────
 
 /**
@@ -109,6 +147,7 @@ function resolveProvider() {
  * @param {string}   [opts.bdApiKey]          — injectable API key for Bright Data tests
  * @param {string}   [opts.timezone='Europe/Paris'] — property timezone for date strategy
  * @param {Date}     [opts.now]              — injectable clock for date strategy tests
+ * @param {string}   [opts.propertyId]       — B5-G: enables allowlist routing via resolveProviderForProperty
  */
 async function scrape(location, maxListings, requestedCurrency, opts = {}) {
   if (!requestedCurrency) throw new Error('requestedCurrency requis — aucun fallback EUR autorisé');
@@ -120,16 +159,22 @@ async function scrape(location, maxListings, requestedCurrency, opts = {}) {
     bdApiKey,
     timezone = 'Europe/Paris',
     now,
+    propertyId,
+    maxWaitMs,      // forwarded to BD adapter (useful for tests)
+    pollIntervalMs, // forwarded to BD adapter (useful for tests)
   } = opts;
 
-  const provider = resolveProvider();
+  // When propertyId is provided use allowlist-aware routing; legacy callers (no propertyId) use resolveProvider().
+  const provider = (propertyId != null)
+    ? resolveProviderForProperty(propertyId)
+    : resolveProvider();
 
   if (provider === 'brightdata') {
     const { checkIn, checkOut } = getBrightDataMarketDates({ timezone, now });
     try {
       const bdResult = await brightdataProvider.scrapeWithBrightData(
         location, maxListings, requestedCurrency,
-        { checkIn, checkOut, fetchImpl: bdFetchImpl, apiKey: bdApiKey }
+        { checkIn, checkOut, fetchImpl: bdFetchImpl, apiKey: bdApiKey, maxWaitMs, pollIntervalMs }
       );
       if (bdResult.listings.length > 0) {
         // Bright Data succeeded with usable listings — do NOT call Apify.
@@ -146,4 +191,4 @@ async function scrape(location, maxListings, requestedCurrency, opts = {}) {
   return apifyProvider.scrapeZoneApify(location, maxListings, requestedCurrency, medianFallback, fetchFn);
 }
 
-module.exports = { scrape, getBrightDataMarketDates, resolveProvider };
+module.exports = { scrape, getBrightDataMarketDates, resolveProvider, resolveProviderForProperty };

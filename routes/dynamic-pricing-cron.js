@@ -139,12 +139,22 @@ function getFallbackZones(address, zoneLabel) {
 
 // Scrape en élargissant progressivement jusqu'à atteindre MIN_COMPARABLES.
 // Retourne le meilleur résultat (zone la plus dense si aucune n'atteint le seuil).
-async function scrapeBestZone(zones, medianFallback, maxListings, bedrooms, requestedCurrency) {
-  let best = { listings: [], isMock: true, dataSource: 'mock', zoneUsed: zones[zones.length - 1] || 'France' };
-  for (const zone of zones) {
+// B5-G: propertyId enables allowlist routing and limits BD to first zone only
+//        (BD's selectComparables radius expansion already handles wider areas).
+async function scrapeBestZone(zones, medianFallback, maxListings, bedrooms, requestedCurrency, propertyId) {
+  const provider = (propertyId != null)
+    ? marketProvider.resolveProviderForProperty(propertyId)
+    : marketProvider.resolveProvider();
+
+  // BD handles geographic radius expansion via selectComparables — only try the most-specific zone.
+  // Iterating fallback zones for BD would trigger up to N separate paid API calls.
+  const zonesToTry = (provider === 'brightdata') ? zones.slice(0, 1) : zones;
+
+  let best = { listings: [], isMock: true, dataSource: 'mock', zoneUsed: zonesToTry[zonesToTry.length - 1] || 'France', diagnostics: null };
+  for (const zone of zonesToTry) {
     let res;
     try {
-      res = await scrapeZone(zone, medianFallback, maxListings, requestedCurrency);
+      res = await scrapeZone(zone, medianFallback, maxListings, requestedCurrency, propertyId);
     } catch (e) {
       console.warn(`⚠️ [DP] Scrape "${zone}" échoué: ${e.message}`);
       continue;
@@ -158,10 +168,10 @@ async function scrapeBestZone(zones, medianFallback, maxListings, bedrooms, requ
     console.log(`🔎 [DP] Zone "${zone}": ${listings.length} listings (${usable} exploitables, seuil ${MIN_COMPARABLES}, source: ${res.dataSource})`);
 
     if (listings.length > best.listings.length) {
-      best = { listings, isMock: res.isMock, dataSource: res.dataSource, zoneUsed: zone };
+      best = { listings, isMock: res.isMock, dataSource: res.dataSource, zoneUsed: zone, diagnostics: res.diagnostics };
     }
     if (usable >= MIN_COMPARABLES) {
-      return { listings, isMock: res.isMock, dataSource: res.dataSource, zoneUsed: zone };
+      return { listings, isMock: res.isMock, dataSource: res.dataSource, zoneUsed: zone, diagnostics: res.diagnostics };
     }
   }
   if (best.zoneUsed) console.log(`ℹ️ [DP] Aucune zone ≥ seuil — on garde la plus dense: "${best.zoneUsed}" (${best.listings.length})`);
@@ -321,13 +331,19 @@ async function scrapeWithApify(location, maxListings, requestedCurrency) {
   return items.map(parseApifyItem).filter(Boolean);
 }
 
-// ── Scraping via market provider abstraction (B5-D) ──────────
+// ── Scraping via market provider abstraction (B5-D/G) ────────
 // Provider selection, Bright Data ↔ Apify fallback, and mock fallback are
 // all handled inside marketProvider.scrape(). scrapeWithApify remains
 // available as a legacy reference (source-analysis tests require it).
-async function scrapeZone(location, medianFallback, maxListings, requestedCurrency) {
-  const result = await marketProvider.scrape(location, maxListings, requestedCurrency, { medianFallback });
-  return { listings: result.listings, isMock: result.isMock, dataSource: result.dataSource };
+async function scrapeZone(location, medianFallback, maxListings, requestedCurrency, propertyId) {
+  const result = await marketProvider.scrape(location, maxListings, requestedCurrency, { medianFallback, propertyId });
+  return {
+    listings:    result.listings,
+    isMock:      result.isMock,
+    dataSource:  result.dataSource,
+    provider:    result.provider,
+    diagnostics: result.diagnostics,
+  };
 }
 
 // ── Notification push ────────────────────────────────────────
@@ -348,19 +364,50 @@ async function sendPricingPush(pool, userId, propertyName, message, type) {
   }
 }
 
-// ── Provider-aware market stats (B5-F1) ──────────────────────
+// ── B5-G quality gate for BD stats before market_data write ──
+// Returns true only when all numeric stats are structurally sound.
+// A failing gate returns null from calcProviderMarketStats → property is skipped this week.
+function validateBDStats(stats) {
+  if (!stats) return false;
+  if (!Number.isFinite(stats.median)    || stats.median    <= 0) return false;
+  if (!Number.isFinite(stats.p25)       || stats.p25       <= 0) return false;
+  if (!Number.isFinite(stats.p75)       || stats.p75       <= 0) return false;
+  if (stats.p25 > stats.median || stats.median > stats.p75)      return false;
+  if (!Number.isFinite(stats.occupancy) || stats.occupancy < 0 || stats.occupancy > 100) return false;
+  return true;
+}
+
+// ── Provider-aware market stats (B5-F1/G) ────────────────────
 // Dispatches to calcBrightDataMarketStats+selectComparables for brightdata_live,
 // or to the shared bedroom-filtered calcMarketStats for all other providers.
+// B5-G quality gate: insufficient_comparables or invalid stats → null (fail closed, no DB write).
 function calcProviderMarketStats(listings, cfg, dataSource) {
   if (dataSource === 'brightdata_live') {
     const tLat = cfg.latitude   != null ? parseFloat(cfg.latitude)   : null;
     const tLon = cfg.longitude  != null ? parseFloat(cfg.longitude)  : null;
     const tG   = cfg.max_guests != null ? parseInt(cfg.max_guests, 10) : null;
-    const { listings: cmp, status } = selectComparables(listings, { targetLat: tLat, targetLon: tLon, targetGuests: tG });
+    const selResult = selectComparables(listings, { targetLat: tLat, targetLon: tLon, targetGuests: tG });
+    // Quality gate 1: comparable selection must succeed
+    if (selResult.status !== 'ok') {
+      console.warn(`⚠️ [BD-QUALITY] selectComparables status=${selResult.status} comparableCount=${selResult.listings?.length ?? 0} — skip write`);
+      return null;
+    }
     const today = (cfg.timezone
       ? new Date().toLocaleString('sv-SE', { timeZone: cfg.timezone })
       : new Date().toISOString()).slice(0, 10);
-    return calcBrightDataMarketStats(status === 'ok' ? cmp : listings, { today });
+    const stats = calcBrightDataMarketStats(selResult.listings, { today });
+    // Quality gate 2: stats must be structurally valid before write
+    if (!validateBDStats(stats)) {
+      console.warn(`⚠️ [BD-QUALITY] stats invalides (median=${stats?.median} p25=${stats?.p25} p75=${stats?.p75} occ=${stats?.occupancy}) — skip write`);
+      return null;
+    }
+    // Attach selection diagnostics for observability (not written to DB)
+    stats._bdSelectionDiag = {
+      selectedRadiusKm: selResult.selectedRadiusKm,
+      comparableCount:  selResult.listings.length,
+      selectionStatus:  selResult.status,
+    };
+    return stats;
   }
   const f = cfg.bedrooms
     ? listings.filter(l => l.bedrooms == null || Math.abs(l.bedrooms - cfg.bedrooms) <= 1)
@@ -446,27 +493,45 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
         continue;
       }
 
-      // Same zone + same currency → cache may be reused; different currency → separate scrape
-      const cacheKey = zones.join('|') + ':' + capturedPropertyCurrency;
+      // Same zone + same currency + same provider → cache may be reused.
+      // Provider is included in the key so BD and Apify results for the same zone/currency
+      // never share a cache entry (prevents M6 BD result from being reused for Apify properties).
+      const providerForCache = marketProvider.resolveProviderForProperty(cfg.property_id);
+      const cacheKey = zones.join('|') + ':' + capturedPropertyCurrency + ':' + providerForCache;
 
-      // 3. Scraping avec élargissement progressif (cache par jeu de zones + devise)
+      // 3. Scraping avec élargissement progressif (cache par jeu de zones + devise + provider)
       if (!zoneCache[cacheKey]) {
         zoneCache[cacheKey] = await scrapeBestZone(
           zones,
           (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
           MAX_LISTINGS,
           cfg.bedrooms,
-          capturedPropertyCurrency
+          capturedPropertyCurrency,
+          cfg.property_id
         );
       }
 
-      const { listings, isMock, zoneUsed, dataSource } = zoneCache[cacheKey];
+      const { listings, isMock, zoneUsed, dataSource, diagnostics } = zoneCache[cacheKey];
       const zoneLabel = zoneUsed;
 
       const marketStats = calcProviderMarketStats(listings, cfg, dataSource);
       if (!marketStats) {
         console.warn(`⚠️ [DP-CRON] Pas assez de données pour ${cfg.property_name}`);
         continue;
+      }
+
+      // Observability: log sanitized BD market scrape fields (Phase 10, B5-G)
+      if (dataSource === 'brightdata_live') {
+        const pid  = String(cfg.property_id || '').slice(-8);
+        const diag = diagnostics || {};
+        const sel  = marketStats._bdSelectionDiag || {};
+        console.log(
+          `📊 [BD-MARKET] prop=…${pid} zone="${zoneLabel}" ` +
+          `raw=${diag.returnedCount ?? '?'} acc=${diag.acceptedCount ?? '?'} ` +
+          `cmp=${sel.comparableCount ?? '?'} radius=${sel.selectedRadiusKm ?? '?'}km ` +
+          `median=${marketStats.median} proxy=${marketStats.occupancy}% ` +
+          `source=${dataSource} currency=${capturedPropertyCurrency}`
+        );
       }
 
       // 4. INSERT market_data (upsert atomique avec vérification de contexte)
@@ -749,12 +814,13 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
     return { ok: true, isMock: false, marketStats: null, apply };
   }
 
-  const { listings, isMock, zoneUsed, dataSource } = await scrapeBestZone(
+  const { listings, isMock, zoneUsed, dataSource, diagnostics } = await scrapeBestZone(
     zones,
     (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
     MAX_LISTINGS,
     cfg.bedrooms,
-    capturedPropertyCurrency
+    capturedPropertyCurrency,
+    propertyId
   );
   const zoneLabel = zoneUsed;
 
@@ -780,6 +846,20 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   }
 
   console.log(`✅ [DP-ONE] market_data: médiane=${marketStats.median}€ occ=${marketStats.occupancy}% tension=${marketStats.tensionLevel}`);
+
+  // Observability for one-property BD path (logged after confirmed write)
+  if (dataSource === 'brightdata_live') {
+    const pid  = String(propertyId || '').slice(-8);
+    const diag = diagnostics || {};
+    const sel  = marketStats._bdSelectionDiag || {};
+    console.log(
+      `📊 [BD-MARKET] prop=…${pid} zone="${zoneLabel}" ` +
+      `raw=${diag.returnedCount ?? '?'} acc=${diag.acceptedCount ?? '?'} ` +
+      `cmp=${sel.comparableCount ?? '?'} radius=${sel.selectedRadiusKm ?? '?'}km ` +
+      `median=${marketStats.median} proxy=${marketStats.occupancy}% ` +
+      `source=${dataSource} currency=${capturedPropertyCurrency}`
+    );
+  }
 
   // Trust comes directly from the scrape result — no redundant DB read.
   const marketOverride = isMock ? null : {
@@ -909,4 +989,4 @@ async function writeScrapeResult(pool, {
   }
 }
 
-module.exports = { initDynamicPricingCron, runDynamicPricingJob, runDailyPricingRefresh, runDynamicPricingForOneProperty, writeScrapeResult, scrapeBestZone, getFallbackZones, getCurrentWeekStart, calcMarketStats };
+module.exports = { initDynamicPricingCron, runDynamicPricingJob, runDailyPricingRefresh, runDynamicPricingForOneProperty, writeScrapeResult, scrapeBestZone, getFallbackZones, getCurrentWeekStart, calcMarketStats, validateBDStats, calcProviderMarketStats };
