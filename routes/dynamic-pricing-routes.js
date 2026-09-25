@@ -21,6 +21,7 @@ const cors = require('cors');
 const { requirePermission } = require('../sub-accounts-middleware');
 const { scheduleMarketRefresh }  = require('./market-refresh-trigger');
 const { computeMarketContextKey } = require('./market-context-key');
+const { classifyMarketData }     = require('./market-data-resolver');
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -342,7 +343,9 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
 
       // 1. Configs actives canoniques accessibles par l'appelant
       const configs = await pool.query(
-        `SELECT pc.*, p.name AS property_name, p.address
+        `SELECT pc.*, p.name AS property_name, p.address,
+                p.currency AS property_currency,
+                p.latitude, p.longitude, p.country_code
          FROM pricing_config pc
          JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
          WHERE pc.is_active = TRUE
@@ -369,7 +372,8 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
       const markets = await pool.query(
         `SELECT DISTINCT ON (property_id)
            property_id, week_start, median_price, price_p25, price_p75,
-           occupancy_rate, comparable_count, tension_level, scraped_at
+           occupancy_rate, comparable_count, tension_level, scraped_at,
+           currency, market_context_key, data_source
          FROM market_data
          WHERE property_id = ANY($1::text[])
          ORDER BY property_id, week_start DESC`,
@@ -411,24 +415,39 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
           weeklyGain += parseFloat(history.price_applied) - parseFloat(history.price_before);
         }
 
+        const propertyContextKey = computeMarketContextKey({
+          countryCode: cfg.country_code,
+          latitude:    cfg.latitude,
+          longitude:   cfg.longitude,
+        });
+        const classification = classifyMarketData(market, {
+          propertyCurrency:   cfg.property_currency ?? null,
+          propertyContextKey,
+        });
+
         return {
-          propertyId:    cfg.property_id,
-          propertyName:  cfg.property_name || cfg.property_id,
-          address:       cfg.address || '',
-          mode:          cfg.mode,
-          priceMin:      parseFloat(cfg.price_min),
-          priceMax:      parseFloat(cfg.price_max),
-          notifyPush:    cfg.notify_push,
+          propertyId:       cfg.property_id,
+          propertyName:     cfg.property_name || cfg.property_id,
+          address:          cfg.address || '',
+          mode:             cfg.mode,
+          priceMin:         parseFloat(cfg.price_min),
+          priceMax:         parseFloat(cfg.price_max),
+          notifyPush:       cfg.notify_push,
+          propertyCurrency: cfg.property_currency ?? null,
           market: market ? {
-            weekStart:       market.week_start,
-            medianPrice:     parseFloat(market.median_price || 0),
-            priceP25:        parseFloat(market.price_p25 || 0),
-            priceP75:        parseFloat(market.price_p75 || 0),
-            occupancyRate:   parseFloat(market.occupancy_rate || 0),
-            comparableCount: market.comparable_count,
-            tensionLevel:    market.tension_level,
-            tensionLabel:    tensionLabel(market.tension_level),
-            scrapedAt:       market.scraped_at,
+            weekStart:          market.week_start,
+            medianPrice:        parseFloat(market.median_price || 0),
+            priceP25:           parseFloat(market.price_p25 || 0),
+            priceP75:           parseFloat(market.price_p75 || 0),
+            occupancyRate:      parseFloat(market.occupancy_rate || 0),
+            comparableCount:    market.comparable_count,
+            tensionLevel:       market.tension_level,
+            tensionLabel:       tensionLabel(market.tension_level),
+            scrapedAt:          market.scraped_at,
+            currency:           market.currency ?? null,
+            resolverStatus:     classification.status,
+            usedForCalculation: classification.usable,
+            refreshRequired:    classification.refreshRequired ?? false,
           } : null,
           history: history ? {
             status:          history.status,
@@ -851,7 +870,8 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
 
       const result = await pool.query(
         `SELECT week_start, median_price, price_p25, price_p75,
-                occupancy_rate, comparable_count, tension_level, scraped_at
+                occupancy_rate, comparable_count, tension_level, scraped_at,
+                currency
          FROM market_data
          WHERE property_id = $1
          ORDER BY week_start DESC
@@ -871,6 +891,7 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
           tensionLevel:    s.tension_level,
           tensionLabel:    tensionLabel(s.tension_level),
           scrapedAt:       s.scraped_at,
+          currency:        s.currency ?? null,
         })).reverse(), // chronologique
       });
 

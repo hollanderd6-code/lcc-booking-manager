@@ -51,18 +51,19 @@ function normalizeCurrency(value) {
 }
 
 /**
- * resolveMarketData(pool, { propertyId, propertyContextKey?, propertyCurrency?, now? })
+ * classifyMarketData(row, { propertyContextKey?, propertyCurrency?, now? })
  *
- * Reads the single most-recent market_data row for a property (latest week_start,
- * then latest scraped_at — no data_source pre-filter) and classifies it.
+ * Pure classifier — takes an already-fetched market_data row (or null) and
+ * returns the same resolution shape as resolveMarketData.  Zero DB queries.
+ * Callers that already have the row (e.g. dashboard batch query) use this
+ * directly to avoid N+1 queries.
  *
- * @param {object} pool
- * @param {string} opts.propertyId
- * @param {string|null}    [opts.propertyContextKey] — from computeMarketContextKey(); null = no geo
- * @param {string|null}    [opts.propertyCurrency]   — from properties.currency; omit for backward compat
- * @param {Date}           [opts.now]                — override current time (tests only)
+ * @param {object|null} row         — raw market_data DB row, or null if absent
+ * @param {string|null} [opts.propertyContextKey] — from computeMarketContextKey()
+ * @param {string|null} [opts.propertyCurrency]   — from properties.currency; omit for backward compat
+ * @param {Date}        [opts.now]                — override current time (tests only)
  */
-async function resolveMarketData(pool, { propertyId, propertyContextKey, propertyCurrency, now } = {}) {
+function classifyMarketData(row, { propertyContextKey, propertyCurrency, now } = {}) {
   const nowMs      = (now instanceof Date ? now : new Date()).getTime();
   const propCtxKey = propertyContextKey ?? null;
 
@@ -71,17 +72,6 @@ async function resolveMarketData(pool, { propertyId, propertyContextKey, propert
   // null = property has no known valid currency → property_currency_unknown.
   const currencyCheckActive = propertyCurrency !== undefined;
   const propCurr = currencyCheckActive ? normalizeCurrency(propertyCurrency) : null;
-
-  const row = (await pool.query(
-    `SELECT median_price, price_p25, price_p75,
-            occupancy_rate, comparable_count, tension_level,
-            data_source, scraped_at, week_start, market_context_key, currency
-       FROM market_data
-      WHERE property_id = $1
-      ORDER BY week_start DESC, scraped_at DESC
-      LIMIT 1`,
-    [propertyId]
-  )).rows[0] || null;
 
   if (!row) {
     return { row: null, status: 'missing', trusted: false, fresh: false, usable: false,
@@ -184,4 +174,32 @@ async function resolveMarketData(pool, { propertyId, propertyContextKey, propert
            ageMs: effectiveAgeMs, ageDays, market, locationCompatible: true };
 }
 
-module.exports = { resolveMarketData, MARKET_TTL_DAYS, MARKET_TTL_MS, normalizeCurrency };
+/**
+ * resolveMarketData(pool, { propertyId, propertyContextKey?, propertyCurrency?, now? })
+ *
+ * Fetches the most-recent market_data row for a property (latest week_start,
+ * then latest scraped_at) and classifies it via classifyMarketData.
+ * Callers that already have the row should call classifyMarketData directly.
+ *
+ * @param {object} pool
+ * @param {string} opts.propertyId
+ * @param {string|null}    [opts.propertyContextKey] — from computeMarketContextKey(); null = no geo
+ * @param {string|null}    [opts.propertyCurrency]   — from properties.currency; omit for backward compat
+ * @param {Date}           [opts.now]                — override current time (tests only)
+ */
+async function resolveMarketData(pool, { propertyId, propertyContextKey, propertyCurrency, now } = {}) {
+  const row = (await pool.query(
+    `SELECT median_price, price_p25, price_p75,
+            occupancy_rate, comparable_count, tension_level,
+            data_source, scraped_at, week_start, market_context_key, currency
+       FROM market_data
+      WHERE property_id = $1
+      ORDER BY week_start DESC, scraped_at DESC
+      LIMIT 1`,
+    [propertyId]
+  )).rows[0] || null;
+
+  return classifyMarketData(row, { propertyContextKey, propertyCurrency, now });
+}
+
+module.exports = { resolveMarketData, classifyMarketData, MARKET_TTL_DAYS, MARKET_TTL_MS, normalizeCurrency };
