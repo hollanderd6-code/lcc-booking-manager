@@ -10005,7 +10005,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           if (prop) {
             const existingIdx = allReservations.findIndex(r => r.uid === dbData.uid);
             const manualObj = {
-              id: dbData.uid, uid: dbData.uid,
+              id: dbData.uid, uid: dbData.uid, conversation_id: dbData.conversation_id || null,
               propertyId: dbData.property_id,
               propertyName: displayName(prop),
               startDate: dbData.start_date, endDate: dbData.end_date || null,
@@ -10053,6 +10053,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           allReservations.push({
             id: dbData.uid,
             uid: dbData.uid,
+            conversation_id: dbData.conversation_id || null,
             propertyId: dbData.property_id,
             propertyName: displayName(prop),
             startDate: dbData.start_date,
