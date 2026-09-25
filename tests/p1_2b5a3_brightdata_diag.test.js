@@ -31,6 +31,16 @@
  *   BD-25 : tool source imports no pg / Pool (no DB modules)
  *   BD-26 : tool source imports no channex modules
  *   BD-27 : tool source imports no dynamic-pricing or pricing execution modules
+ *   BD-62 : num_of_nights never classified as nightly price candidate
+ *   BD-63 : minimum_nights regression — still excluded (smoke)
+ *   BD-64 : price_per_night recognized in nightlyCandidates
+ *   BD-65 : initial_price_per_night recognized in nightlyCandidates
+ *   BD-66 : absent bedrooms → parseBedrooms returns null, never 1
+ *   BD-67 : guests field never used as bedroom count
+ *   BD-68 : beds field never used as bedroom count
+ *   BD-69 : snapshotResumeMode never calls POST /trigger (regression)
+ *   BD-70 : analyzePriceStructure extracts per-record price fields correctly
+ *   BD-71 : buildAdapterDecision recommends price_per_night when present
  *
  * Run: node tests/p1_2b5a3_brightdata_diag.test.js
  * No real Bright Data / DB / Channex calls.
@@ -65,6 +75,9 @@ const {
   snapshotResumeMode,
   parseBedrooms,
   analyzeRecords,
+  analyzePriceStructure,
+  analyzeBedroomSources,
+  buildAdapterDecision,
   inspectRecord,
   sanitizeErrorBody,
   redactSecrets,
@@ -1307,6 +1320,179 @@ await test('BD-39 sanitizeErrorBody and redactSecrets exported; no new forbidden
   // Empty body handled gracefully
   assert.strictEqual(sanitizeErrorBody('', 'application/json'), '(empty response body)');
   assert.strictEqual(sanitizeErrorBody(null, 'text/plain'),     '(empty response body)');
+});
+
+// ── BD-62 : num_of_nights never a price candidate ────────────────────────────
+console.log('\n── BD-62 : num_of_nights never classified as price candidate ──');
+
+await test('BD-62 num_of_nights in pricing_details never appears in nightlyCandidates', async () => {
+  const records = [{
+    currency:        'EUR',
+    pricing_details: { num_of_nights: 3, price_per_night: 85, cleaning_fee: 20 },
+    total_price:     275,
+  }];
+  const analysis = analyzeRecords(records, 'EUR');
+  assert.ok(!analysis.nightlyCandidates.includes('pricing_details.num_of_nights'),
+    'pricing_details.num_of_nights must NOT be in nightlyCandidates');
+  assert.ok(analysis.nightlyCandidates.includes('pricing_details.price_per_night'),
+    'pricing_details.price_per_night MUST still be in nightlyCandidates');
+});
+
+// ── BD-63 : minimum_nights regression ────────────────────────────────────────
+console.log('\n── BD-63 : minimum_nights regression ──');
+
+await test('BD-63 minimum_nights still excluded from nightlyCandidates (regression)', async () => {
+  const records = [{ minimum_nights: 2, currency: 'EUR', pricing_details: null }];
+  const analysis = analyzeRecords(records, 'EUR');
+  assert.ok(!analysis.nightlyCandidates.includes('minimum_nights'),
+    'minimum_nights must NOT be in nightlyCandidates');
+});
+
+// ── BD-64 : price_per_night recognized ───────────────────────────────────────
+console.log('\n── BD-64 : price_per_night recognized in nightlyCandidates ──');
+
+await test('BD-64 price_per_night in pricing_details is recognized as nightly price candidate', async () => {
+  const records = [{
+    currency:        'EUR',
+    pricing_details: { price_per_night: 85, num_of_nights: 3 },
+  }];
+  const analysis = analyzeRecords(records, 'EUR');
+  assert.ok(analysis.nightlyCandidates.includes('pricing_details.price_per_night'),
+    'pricing_details.price_per_night must be in nightlyCandidates');
+  assert.ok(!analysis.nightlyCandidates.includes('pricing_details.num_of_nights'),
+    'pricing_details.num_of_nights must NOT be in nightlyCandidates');
+});
+
+// ── BD-65 : initial_price_per_night recognized ───────────────────────────────
+console.log('\n── BD-65 : initial_price_per_night recognized in nightlyCandidates ──');
+
+await test('BD-65 initial_price_per_night in pricing_details is recognized as nightly price candidate', async () => {
+  const records = [{
+    currency:        'EUR',
+    pricing_details: { initial_price_per_night: 90, price_per_night: 85 },
+  }];
+  const analysis = analyzeRecords(records, 'EUR');
+  assert.ok(analysis.nightlyCandidates.includes('pricing_details.initial_price_per_night'),
+    'pricing_details.initial_price_per_night must be in nightlyCandidates');
+});
+
+// ── BD-66 : absent bedrooms → null, not 1 ────────────────────────────────────
+console.log('\n── BD-66 : absent bedrooms → parseBedrooms returns null ──');
+
+await test('BD-66 parseBedrooms returns null when no bedroom/studio mention — never defaults to 1', async () => {
+  assert.strictEqual(parseBedrooms(null),                     null, 'null details → null');
+  assert.strictEqual(parseBedrooms([]),                       null, 'empty details → null');
+  assert.strictEqual(parseBedrooms(['5 guests', '1 bath']),   null, 'no bedroom mention → null');
+  assert.notStrictEqual(parseBedrooms(null), 1,                     'must NOT default to 1');
+  assert.notStrictEqual(parseBedrooms(['2 beds']), 1,               '"2 beds" alone must not yield 1 bedroom');
+});
+
+// ── BD-67 : guests never used as bedroom count ───────────────────────────────
+console.log('\n── BD-67 : guests field never used as bedroom count ──');
+
+await test('BD-67 analyzeBedroomSources never classifies guests field as a structured bedroom source', async () => {
+  const records = [{ currency: 'EUR', guests: 4, pricing_details: null }];
+  const bs = analyzeBedroomSources(records);
+  assert.ok(!bs.structuredFields.includes('guests'),
+    'guests must NOT be a structured bedroom field');
+  assert.ok(bs.bestSource !== 'guests',
+    `bestSource must not be "guests", got: "${bs.bestSource}"`);
+});
+
+// ── BD-68 : beds never used as bedroom count ─────────────────────────────────
+console.log('\n── BD-68 : beds field never used as bedroom count ──');
+
+await test('BD-68 analyzeBedroomSources never classifies beds as a structured bedroom source', async () => {
+  const records = [{ currency: 'EUR', beds: 2, pricing_details: null }];
+  const bs = analyzeBedroomSources(records);
+  assert.ok(!bs.structuredFields.includes('beds'),
+    'beds must NOT be a structured bedroom field');
+  assert.ok(bs.bestSource !== 'beds',
+    `bestSource must not be "beds", got: "${bs.bestSource}"`);
+});
+
+// ── BD-69 : snapshotResumeMode 0 POST /trigger (regression) ─────────────────
+console.log('\n── BD-69 : snapshotResumeMode never POSTs (regression) ──');
+
+await test('BD-69 snapshotResumeMode still makes 0 POST /trigger calls after B5-A4d changes', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd69';
+  let postCalled = false;
+  const fetchFn = async (url, options = {}) => {
+    if ((options.method || 'GET').toUpperCase() === 'POST') { postCalled = true; }
+    if (url.includes('/progress/')) return makeProgressResponse('ready');
+    if (url.includes('/snapshot/')) return makeSnapshotResponse(SAMPLE_RECORDS_WITH_PRICE);
+    return { ok: false, status: 500, text: async () => '', json: async () => ({}) };
+  };
+  try {
+    await snapshotResumeMode('snap-bd69', { fetchFn, pollIntervalMs: 1, maxWaitMs: 500 });
+    assert.ok(!postCalled, 'snapshotResumeMode must never call POST /trigger');
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-70 : analyzePriceStructure per-record extraction ──────────────────────
+console.log('\n── BD-70 : analyzePriceStructure extracts per-record price fields ──');
+
+await test('BD-70 analyzePriceStructure correctly extracts all pricing_details fields per record', async () => {
+  const records = [{
+    currency:    'EUR',
+    price:       null,
+    total_price: 312,
+    pricing_details: {
+      num_of_nights:           3,
+      initial_price_per_night: 90,
+      price_per_night:         85,
+      price_without_fees:      255,
+      cleaning_fee:            30,
+      airbnb_service_fee:      15,
+      taxes:                   12,
+      special_offer:           null,
+    },
+  }];
+  const ps = analyzePriceStructure(records);
+  assert.strictEqual(ps.perRecord.length, 1, 'must have 1 per-record entry');
+  const r = ps.perRecord[0];
+  assert.strictEqual(r.num_of_nights,           3,   'num_of_nights = 3');
+  assert.strictEqual(r.initial_price_per_night, 90,  'initial_price_per_night = 90');
+  assert.strictEqual(r.price_per_night,         85,  'price_per_night = 85');
+  assert.strictEqual(r.price_without_fees,      255, 'price_without_fees = 255');
+  assert.strictEqual(r.total_price,             312, 'total_price = 312');
+  assert.strictEqual(r.cleaning_fee,            30,  'cleaning_fee = 30');
+  assert.strictEqual(r.airbnb_service_fee,      15,  'airbnb_service_fee = 15');
+  assert.strictEqual(r.taxes,                   12,  'taxes = 12');
+  assert.strictEqual(ps.aggregates.COUNT_PRICE_PER_NIGHT_PRESENT,         1, 'COUNT_PRICE_PER_NIGHT_PRESENT = 1');
+  assert.strictEqual(ps.aggregates.COUNT_INITIAL_PRICE_PER_NIGHT_PRESENT, 1, 'COUNT_INITIAL_PRICE_PER_NIGHT_PRESENT = 1');
+});
+
+// ── BD-71 : buildAdapterDecision recommends price_per_night ─────────────────
+console.log('\n── BD-71 : buildAdapterDecision recommends price_per_night ──');
+
+await test('BD-71 buildAdapterDecision recommends price_per_night over initial when both present', async () => {
+  const priceStructure = {
+    perRecord: [{
+      price_per_night: 85, initial_price_per_night: 90,
+      price_without_fees: 85, total_price: 312,
+    }],
+    aggregates: {
+      COUNT_PRICE_PER_NIGHT_PRESENT:                    1,
+      COUNT_INITIAL_PRICE_PER_NIGHT_PRESENT:            1,
+      COUNT_PRICE_WITHOUT_FEES_EQUALS_PRICE_PER_NIGHT:  1,
+      COUNT_TOTAL_EQUALS_PRICE_PER_NIGHT:               0,
+    },
+  };
+  const bedroomSources = { bestSource: 'UNAVAILABLE' };
+  const decision = buildAdapterDecision(priceStructure, bedroomSources, ['EUR'], 'EUR');
+  assert.strictEqual(decision.RECOMMENDED_NIGHTLY_PRICE_FIELD, 'pricing_details.price_per_night',
+    'must recommend price_per_night over initial_price_per_night');
+  assert.strictEqual(decision.CAN_BUILD_BRIGHTDATA_ADAPTER, 'YES',
+    'must be YES when price field found');
+  assert.strictEqual(decision.CAN_NORMALIZE_BEDROOMS, 'NO',
+    'must be NO when bestSource=UNAVAILABLE');
+  assert.strictEqual(decision.CURRENCY_VALIDATED, 'YES',
+    'must be YES when currency matches');
+  assert.strictEqual(decision.PRICE_WITHOUT_FEES_SEMANTICS, 'EQUALS_PRICE_PER_NIGHT_FOR_SOME_RECORDS',
+    'must reflect price_without_fees equality');
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────

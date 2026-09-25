@@ -87,6 +87,7 @@ const NON_PRICE_FIELDS = new Set([
   'minimum_nights', 'minimum_stay', 'min_nights', 'minimum_night',
   'max_nights', 'maximum_nights', 'max_stay',
   'nights',             // number of nights booked, not a monetary value
+  'num_of_nights', 'number_of_nights', 'nb_nights', 'n_nights',  // duration count, not a price
   'checkin_time', 'checkout_time',
   'guests', 'guest_count', 'min_guests', 'max_guests',
   'ratings', 'rating', 'review_count', 'reviews_count',
@@ -253,6 +254,187 @@ function inspectRecord(record, index) {
 }
 
 /**
+ * Per-record numeric price analysis from pricing_details + top-level fields.
+ * Returns: perRecord[], aggregates{}, oneNightWarning, oneNightRecords.
+ * Numeric price values are intentionally shown (not redacted).
+ */
+function analyzePriceStructure(records) {
+  const emptyAgg = {
+    COUNT_PRICE_PER_NIGHT_PRESENT: 0, COUNT_INITIAL_PRICE_PER_NIGHT_PRESENT: 0,
+    COUNT_PRICE_EQUALS_PRICE_PER_NIGHT: 0, COUNT_INITIAL_EQUALS_PRICE_PER_NIGHT: 0,
+    COUNT_PRICE_WITHOUT_FEES_EQUALS_PRICE_PER_NIGHT: 0, COUNT_TOTAL_EQUALS_PRICE_PER_NIGHT: 0,
+  };
+  if (!Array.isArray(records) || records.length === 0) {
+    return { perRecord: [], aggregates: emptyAgg, oneNightWarning: false, oneNightRecords: 0 };
+  }
+
+  const extractNum = v => (typeof v === 'number' && isFinite(v) ? v : null);
+  const extractFee = v => {
+    if (v === null || v === undefined) return null;
+    if (typeof v === 'number' && isFinite(v)) return v;
+    if (typeof v === 'object') return `[OBJ:${JSON.stringify(v).slice(0, 40)}]`;
+    return null;
+  };
+
+  const perRecord = records.map((r, idx) => {
+    const pd = r.pricing_details && typeof r.pricing_details === 'object' ? r.pricing_details : null;
+    return {
+      idx,
+      currency:                r.currency                              ?? null,
+      num_of_nights:           pd ? extractNum(pd.num_of_nights)           : null,
+      price:                   extractNum(r.price),
+      initial_price_per_night: pd ? extractNum(pd.initial_price_per_night) : null,
+      price_per_night:         pd ? extractNum(pd.price_per_night)         : null,
+      price_without_fees:      pd ? extractNum(pd.price_without_fees)      : null,
+      total_price:             extractNum(r.total_price),
+      cleaning_fee:            pd ? extractFee(pd.cleaning_fee)            : null,
+      airbnb_service_fee:      pd ? extractFee(pd.airbnb_service_fee)      : null,
+      taxes:                   pd ? extractFee(pd.taxes)                   : null,
+      special_offer:           pd ? extractFee(pd.special_offer)           : null,
+    };
+  });
+
+  let COUNT_PRICE_PER_NIGHT_PRESENT                    = 0;
+  let COUNT_INITIAL_PRICE_PER_NIGHT_PRESENT            = 0;
+  let COUNT_PRICE_EQUALS_PRICE_PER_NIGHT               = 0;
+  let COUNT_INITIAL_EQUALS_PRICE_PER_NIGHT             = 0;
+  let COUNT_PRICE_WITHOUT_FEES_EQUALS_PRICE_PER_NIGHT  = 0;
+  let COUNT_TOTAL_EQUALS_PRICE_PER_NIGHT               = 0;
+  let oneNightRecords                                  = 0;
+
+  perRecord.forEach(r => {
+    if (r.price_per_night         !== null) COUNT_PRICE_PER_NIGHT_PRESENT++;
+    if (r.initial_price_per_night !== null) COUNT_INITIAL_PRICE_PER_NIGHT_PRESENT++;
+    if (r.num_of_nights === 1) oneNightRecords++;
+    if (r.price !== null && r.price_per_night !== null && r.price === r.price_per_night)
+      COUNT_PRICE_EQUALS_PRICE_PER_NIGHT++;
+    if (r.initial_price_per_night !== null && r.price_per_night !== null
+        && r.initial_price_per_night === r.price_per_night)
+      COUNT_INITIAL_EQUALS_PRICE_PER_NIGHT++;
+    if (r.price_without_fees !== null && r.price_per_night !== null
+        && r.price_without_fees === r.price_per_night)
+      COUNT_PRICE_WITHOUT_FEES_EQUALS_PRICE_PER_NIGHT++;
+    if (r.total_price !== null && r.price_per_night !== null
+        && r.total_price === r.price_per_night)
+      COUNT_TOTAL_EQUALS_PRICE_PER_NIGHT++;
+  });
+
+  return {
+    perRecord,
+    aggregates: {
+      COUNT_PRICE_PER_NIGHT_PRESENT,
+      COUNT_INITIAL_PRICE_PER_NIGHT_PRESENT,
+      COUNT_PRICE_EQUALS_PRICE_PER_NIGHT,
+      COUNT_INITIAL_EQUALS_PRICE_PER_NIGHT,
+      COUNT_PRICE_WITHOUT_FEES_EQUALS_PRICE_PER_NIGHT,
+      COUNT_TOTAL_EQUALS_PRICE_PER_NIGHT,
+    },
+    oneNightWarning: oneNightRecords > 0,
+    oneNightRecords,
+  };
+}
+
+/**
+ * Scan all field names across records for bedroom/bed/guest/category sources.
+ * Returns: structuredFields, bedFields, guestFields, categoryFields, detailsTextFound, bestSource.
+ */
+function analyzeBedroomSources(records) {
+  const empty = { structuredFields: [], bedFields: [], guestFields: [], categoryFields: [], detailsTextFound: false, bestSource: 'UNAVAILABLE' };
+  if (!Array.isArray(records) || records.length === 0) return empty;
+
+  const structuredFields = [];
+  const bedFields        = [];
+  const guestFields      = [];
+  const categoryFields   = [];
+
+  const allKeys = new Set();
+  records.forEach(r => {
+    Object.keys(r).forEach(k => allKeys.add(k));
+    if (r.pricing_details && typeof r.pricing_details === 'object') {
+      Object.keys(r.pricing_details).forEach(k => allKeys.add(`pricing_details.${k}`));
+    }
+  });
+
+  allKeys.forEach(key => {
+    if (REDACTED_FIELDS.has(key)) return;
+    const k = key.toLowerCase();
+    if (/bedroom|num_bed|number_of_bed/.test(k)) {
+      if (!structuredFields.includes(key)) structuredFields.push(key);
+    } else if (/^beds?$|^num_beds?$|^number_of_beds?$/.test(k)) {
+      if (!bedFields.includes(key)) bedFields.push(key);
+    } else if (/\bguest|\bperson|\bpeople|\boccupan/.test(k) && !/check/.test(k) && !/guest_fee/.test(k)) {
+      if (!guestFields.includes(key)) guestFields.push(key);
+    } else if (/\bcategory\b|\broom_type\b|\bunit_type\b|\bproperty_type\b/.test(k)) {
+      if (!categoryFields.includes(key)) categoryFields.push(key);
+    }
+  });
+
+  const detailsTextFound = records.some(r => parseBedrooms(r.details) !== null);
+
+  let bestSource = 'UNAVAILABLE';
+  if (structuredFields.length > 0) bestSource = structuredFields[0];
+  else if (detailsTextFound)        bestSource = 'details[].bedroom_text';
+
+  return { structuredFields, bedFields, guestFields, categoryFields, detailsTextFound, bestSource };
+}
+
+/**
+ * Build a concise adapter decision from aggregated analysis results.
+ * Returns: RECOMMENDED_NIGHTLY_PRICE_FIELD, INITIAL_PRICE_FIELD, PRICE_WITHOUT_FEES_SEMANTICS,
+ *          TOTAL_PRICE_SEMANTICS, CURRENCY_VALIDATED, BEDROOM_SOURCE,
+ *          CAN_NORMALIZE_PRICE, CAN_NORMALIZE_BEDROOMS, CAN_BUILD_BRIGHTDATA_ADAPTER.
+ */
+function buildAdapterDecision(priceStructure, bedroomSources, currencyValues, requestedCurrency) {
+  const agg = priceStructure?.aggregates ?? {};
+  const pr  = priceStructure?.perRecord  ?? [];
+
+  let RECOMMENDED_NIGHTLY_PRICE_FIELD = 'NOT_FOUND';
+  if ((agg.COUNT_PRICE_PER_NIGHT_PRESENT ?? 0) > 0) {
+    RECOMMENDED_NIGHTLY_PRICE_FIELD = 'pricing_details.price_per_night';
+  } else if ((agg.COUNT_INITIAL_PRICE_PER_NIGHT_PRESENT ?? 0) > 0) {
+    RECOMMENDED_NIGHTLY_PRICE_FIELD = 'pricing_details.initial_price_per_night';
+  }
+
+  const INITIAL_PRICE_FIELD = (agg.COUNT_INITIAL_PRICE_PER_NIGHT_PRESENT ?? 0) > 0
+    ? 'pricing_details.initial_price_per_night' : 'ABSENT';
+
+  let PRICE_WITHOUT_FEES_SEMANTICS = 'ABSENT';
+  if (pr.some(r => r.price_without_fees !== null)) {
+    PRICE_WITHOUT_FEES_SEMANTICS = (agg.COUNT_PRICE_WITHOUT_FEES_EQUALS_PRICE_PER_NIGHT ?? 0) > 0
+      ? 'EQUALS_PRICE_PER_NIGHT_FOR_SOME_RECORDS'
+      : 'PRESENT_DIFFERS_FROM_PRICE_PER_NIGHT';
+  }
+
+  let TOTAL_PRICE_SEMANTICS = 'ABSENT';
+  if (pr.some(r => r.total_price !== null)) {
+    TOTAL_PRICE_SEMANTICS = (agg.COUNT_TOTAL_EQUALS_PRICE_PER_NIGHT ?? 0) > 0
+      ? 'SOMETIMES_EQUALS_PRICE_PER_NIGHT'
+      : 'LIKELY_TOTAL_WITH_FEES';
+  }
+
+  const CURRENCY_VALIDATED = (requestedCurrency && Array.isArray(currencyValues) && currencyValues.length > 0)
+    ? (currencyValues.every(c => c === requestedCurrency) ? 'YES' : 'MISMATCH')
+    : 'UNKNOWN';
+
+  const BEDROOM_SOURCE             = bedroomSources?.bestSource ?? 'UNAVAILABLE';
+  const CAN_NORMALIZE_PRICE        = RECOMMENDED_NIGHTLY_PRICE_FIELD !== 'NOT_FOUND' ? 'YES' : 'NO';
+  const CAN_NORMALIZE_BEDROOMS     = BEDROOM_SOURCE !== 'UNAVAILABLE' ? 'YES' : 'NO';
+  const CAN_BUILD_BRIGHTDATA_ADAPTER = CAN_NORMALIZE_PRICE === 'YES' ? 'YES' : 'NO_NEED_MORE_DATA';
+
+  return {
+    RECOMMENDED_NIGHTLY_PRICE_FIELD,
+    INITIAL_PRICE_FIELD,
+    PRICE_WITHOUT_FEES_SEMANTICS,
+    TOTAL_PRICE_SEMANTICS,
+    CURRENCY_VALIDATED,
+    BEDROOM_SOURCE,
+    CAN_NORMALIZE_PRICE,
+    CAN_NORMALIZE_BEDROOMS,
+    CAN_BUILD_BRIGHTDATA_ADAPTER,
+  };
+}
+
+/**
  * Analyze a full records array — price, currency, availability, bedrooms.
  * Only inspects up to 3 records structurally.
  */
@@ -344,6 +526,11 @@ function analyzeRecords(records, requestedCurrency) {
   // Inspect up to first 3 records only
   const sampledInspections = records.slice(0, 3).map((r, i) => inspectRecord(r, i));
 
+  // Extended analysis
+  const priceStructure  = analyzePriceStructure(records);
+  const bedroomSources  = analyzeBedroomSources(records);
+  const adapterDecision = buildAdapterDecision(priceStructure, bedroomSources, currencyValues, requestedCurrency);
+
   return {
     total:               records.length,
     pricePresent,
@@ -365,6 +552,9 @@ function analyzeRecords(records, requestedCurrency) {
     bedroomAltFields,
     ratingsPresent,
     sampledInspections,  // capped at 3
+    priceStructure,
+    bedroomSources,
+    adapterDecision,
   };
 }
 
@@ -470,6 +660,35 @@ function printSchemaAnalysisAndVerdict(records, currency, analysis) {
     }
   }
 
+  // Detailed per-record price analysis
+  if (analysis.priceStructure && analysis.priceStructure.perRecord.length > 0) {
+    const ps = analysis.priceStructure;
+    console.log('\n  ── DETAILED PRICE ANALYSIS (per record, no PII) ─────────────');
+    const hdrs = ['#', 'curr', 'nights', 'price', 'init_ppn', 'ppn', 'pwf', 'total', 'clean', 'svc', 'tax', 'offer'];
+    console.log('  ' + hdrs.map(h => h.padEnd(9)).join(' '));
+    ps.perRecord.forEach(r => {
+      const fmt = v => (v === null ? 'null' : String(v).slice(0, 9)).padEnd(9);
+      console.log('  ' + [
+        String(r.idx).padEnd(9), (r.currency || 'null').padEnd(9),
+        fmt(r.num_of_nights), fmt(r.price), fmt(r.initial_price_per_night),
+        fmt(r.price_per_night), fmt(r.price_without_fees), fmt(r.total_price),
+        fmt(r.cleaning_fee), fmt(r.airbnb_service_fee), fmt(r.taxes), fmt(r.special_offer),
+      ].join(' '));
+    });
+    const a = ps.aggregates;
+    console.log('\n  Aggregates:');
+    console.log(`  COUNT_PRICE_PER_NIGHT_PRESENT              : ${a.COUNT_PRICE_PER_NIGHT_PRESENT}`);
+    console.log(`  COUNT_INITIAL_PRICE_PER_NIGHT_PRESENT      : ${a.COUNT_INITIAL_PRICE_PER_NIGHT_PRESENT}`);
+    console.log(`  COUNT_PRICE_EQUALS_PRICE_PER_NIGHT         : ${a.COUNT_PRICE_EQUALS_PRICE_PER_NIGHT}`);
+    console.log(`  COUNT_INITIAL_EQUALS_PRICE_PER_NIGHT       : ${a.COUNT_INITIAL_EQUALS_PRICE_PER_NIGHT}`);
+    console.log(`  COUNT_PRICE_WITHOUT_FEES_EQ_PRICE_PER_NIGHT: ${a.COUNT_PRICE_WITHOUT_FEES_EQUALS_PRICE_PER_NIGHT}`);
+    console.log(`  COUNT_TOTAL_EQUALS_PRICE_PER_NIGHT         : ${a.COUNT_TOTAL_EQUALS_PRICE_PER_NIGHT}`);
+    if (ps.oneNightWarning) {
+      console.log(`\n  ⚠️  WARNING: ${ps.oneNightRecords} record(s) have num_of_nights=1.`);
+      console.log('      price_per_night may accidentally equal total_price for 1-night stays.');
+    }
+  }
+
   console.log('\n  ── CURRENCY ─────────────────────────────────────────────────');
   console.log(`  REQUESTED_CURRENCY           : ${currency ?? '(none)'}`);
   console.log(`  CURRENCY_VALUES_SEEN         : ${JSON.stringify(analysis.currencyValues)}`);
@@ -495,6 +714,17 @@ function printSchemaAnalysisAndVerdict(records, currency, analysis) {
     console.log('  BEDROOM_ALT_FIELDS           : none found outside details[]');
   }
 
+  if (analysis.bedroomSources) {
+    const bs = analysis.bedroomSources;
+    console.log('\n  ── BEDROOM SOURCE ANALYSIS ──────────────────────────────────');
+    console.log(`  STRUCTURED_BEDROOM_FIELDS    : ${JSON.stringify(bs.structuredFields)}`);
+    console.log(`  BED_FIELDS (not bedrooms)    : ${JSON.stringify(bs.bedFields)}`);
+    console.log(`  GUEST_FIELDS (not bedrooms)  : ${JSON.stringify(bs.guestFields)}`);
+    console.log(`  CATEGORY_FIELDS              : ${JSON.stringify(bs.categoryFields)}`);
+    console.log(`  DETAILS_TEXT_FOUND           : ${bs.detailsTextFound}`);
+    console.log(`  BEST_BEDROOM_SOURCE          : ${bs.bestSource}`);
+  }
+
   console.log('\n  ── SAMPLED RECORDS (first 3, no PII) ────────────────────────');
   analysis.sampledInspections.forEach(r => {
     if (r.error) { console.log(`  Record #${r.index}: ${r.error}`); return; }
@@ -518,9 +748,8 @@ function printSchemaAnalysisAndVerdict(records, currency, analysis) {
   });
 
   const pricePopulated  = analysis.pricePresent > 0;
-  const canBuildAdapter = pricePopulated        ? 'YES'
-    : records.length === 0 ? 'UNKNOWN_NO_RECORDS'
-    : 'NO — NEED_DATE_TEST';
+  const canBuildAdapter = analysis.adapterDecision?.CAN_BUILD_BRIGHTDATA_ADAPTER
+    ?? (pricePopulated ? 'YES' : records.length === 0 ? 'UNKNOWN_NO_RECORDS' : 'NO — NEED_DATE_TEST');
 
   console.log('\n' + '═'.repeat(70));
   console.log('  DIAGNOSTIC VERDICT');
@@ -548,7 +777,23 @@ function printSchemaAnalysisAndVerdict(records, currency, analysis) {
     console.log('    Add --check-in and --check-out to next diagnostic run.');
   }
 
-  return { priceIsNightly, pricePopulated, canBuildAdapter };
+  if (analysis.adapterDecision) {
+    const ad = analysis.adapterDecision;
+    console.log('\n' + '═'.repeat(70));
+    console.log('  ADAPTER DECISION');
+    console.log('═'.repeat(70));
+    console.log(`  RECOMMENDED_NIGHTLY_PRICE_FIELD   : ${ad.RECOMMENDED_NIGHTLY_PRICE_FIELD}`);
+    console.log(`  INITIAL_PRICE_FIELD               : ${ad.INITIAL_PRICE_FIELD}`);
+    console.log(`  PRICE_WITHOUT_FEES_SEMANTICS       : ${ad.PRICE_WITHOUT_FEES_SEMANTICS}`);
+    console.log(`  TOTAL_PRICE_SEMANTICS              : ${ad.TOTAL_PRICE_SEMANTICS}`);
+    console.log(`  CURRENCY_VALIDATED                 : ${ad.CURRENCY_VALIDATED}`);
+    console.log(`  BEDROOM_SOURCE                     : ${ad.BEDROOM_SOURCE}`);
+    console.log(`  CAN_NORMALIZE_PRICE                : ${ad.CAN_NORMALIZE_PRICE}`);
+    console.log(`  CAN_NORMALIZE_BEDROOMS             : ${ad.CAN_NORMALIZE_BEDROOMS}`);
+    console.log(`  CAN_BUILD_BRIGHTDATA_ADAPTER       : ${ad.CAN_BUILD_BRIGHTDATA_ADAPTER}`);
+  }
+
+  return { priceIsNightly, pricePopulated, canBuildAdapter, adapterDecision: analysis.adapterDecision };
 }
 
 // ── executeMode — exactly ONE Bright Data discovery job ───────────────────────
@@ -905,6 +1150,9 @@ module.exports = {
   snapshotResumeMode,
   parseBedrooms,
   analyzeRecords,
+  analyzePriceStructure,
+  analyzeBedroomSources,
+  buildAdapterDecision,
   inspectRecord,
   sanitizeErrorBody,
   redactSecrets,
