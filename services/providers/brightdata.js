@@ -51,6 +51,10 @@ function validateISO(d) {
  * Price rule: pricing_details.price_per_night ONLY.
  *   Never substitutes total_price, initial_price_per_night, price_without_fees, or nightly_price.
  * Bedrooms: always null — no reliable structured source in the observed dataset.
+ *
+ * Extended metadata (B5-F1 comparable selection):
+ *   providerListingId, latitude, longitude, guests, category, availableDates
+ *   These fields are preserved for the comparable filter and are ignored by calcMarketStats().
  */
 function parseBrightDataItem(item, requestedCurrency) {
   // Currency: required and must match after normalization
@@ -66,7 +70,10 @@ function parseBrightDataItem(item, requestedCurrency) {
   const price = parseFloat(pd.price_per_night);
   if (!Number.isFinite(price) || price <= 0) return { listing: null, reason: 'price' };
 
-  // Availability: accept boolean true/false or strings "true"/"false" defensively
+  // Availability: accept boolean true/false or strings "true"/"false" defensively.
+  // NOTE: availability=true for discovery results means "available for requested dates",
+  // NOT "generally unbooked". isBooked is preserved for backward compat but must NOT
+  // be used as market occupancy for Bright Data — see B5-F1 / calcBrightDataMarketStats.
   const avail = item.availability;
   let isBooked;
   if      (avail === true  || avail === 'true')  isBooked = false;
@@ -75,9 +82,43 @@ function parseBrightDataItem(item, requestedCurrency) {
 
   const stars = (() => { const v = parseFloat(item.ratings); return Number.isFinite(v) ? v : 0; })();
 
+  // ── Extended metadata for comparable selection (B5-F1) ──────────────────────
+  const latitude  = (typeof item.lat  === 'number' && Number.isFinite(item.lat))  ? item.lat  : null;
+  const longitude = (typeof item.long === 'number' && Number.isFinite(item.long)) ? item.long : null;
+
+  const rawGuests = item.guests;
+  let guests = null;
+  if (typeof rawGuests === 'number' && Number.isFinite(rawGuests) && rawGuests > 0) {
+    guests = Math.floor(rawGuests);
+  } else if (typeof rawGuests === 'string') {
+    const g = parseInt(rawGuests, 10);
+    if (g > 0) guests = g;
+  }
+
+  const category = (typeof item.category === 'string' && item.category.trim())
+    ? item.category.trim()
+    : null;
+
+  let availableDates = null;
+  if (Array.isArray(item.available_dates)) {
+    const valid = [...new Set(
+      item.available_dates.filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d))
+    )].sort();
+    availableDates = valid;
+  }
+
   return {
-    listing: { price, isBooked, bedrooms: null, stars },
-    reason:  null,
+    listing: {
+      price, isBooked, bedrooms: null, stars,
+      // Extended fields — ignored by calcMarketStats(), used by selectComparables()
+      providerListingId: (item.property_id != null) ? String(item.property_id) : null,
+      latitude,
+      longitude,
+      guests,
+      category,
+      availableDates,
+    },
+    reason: null,
   };
 }
 

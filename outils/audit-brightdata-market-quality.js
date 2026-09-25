@@ -649,7 +649,7 @@ async function executeMode(pool, { name, _now, _fetchImpl } = {}) {
   function printScenario(label, s) {
     if (!s) return;
     const occ = s.occupancyProxy != null
-      ? `occupancy_proxy=${s.occupancyProxy}% (${label.includes('30d') ? '30d' : '60d'} calendar)`
+      ? `occupancy_proxy=${s.occupancyProxy}% (${s.label.includes('30d') ? '30d' : '60d'} calendar)`
       : `occupancy=!availability → ${s.occupancy}%`;
     console.log(`  [${s.label || label}]  n=${s.count}  p25=${s.p25}  median=${s.median}  p75=${s.p75}  ${occ}`);
   }

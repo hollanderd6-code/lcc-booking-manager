@@ -29,6 +29,7 @@ const { applyDynamicPricingForProperty } = require('./pricing-apply');
 const { resolveMarketData } = require('./market-data-resolver');
 const { computeMarketContextKey } = require('./market-context-key');
 const marketProvider = require('../services/market-provider');
+const { selectComparables, calcBrightDataMarketStats } = require('../services/brightdata-comparable-filter');
 
 // ── Constantes ───────────────────────────────────────────────
 const APIFY_ACTOR_ID  = 'tri_angle~airbnb-scraper';
@@ -347,6 +348,26 @@ async function sendPricingPush(pool, userId, propertyName, message, type) {
   }
 }
 
+// ── Provider-aware market stats (B5-F1) ──────────────────────
+// Dispatches to calcBrightDataMarketStats+selectComparables for brightdata_live,
+// or to the shared bedroom-filtered calcMarketStats for all other providers.
+function calcProviderMarketStats(listings, cfg, dataSource) {
+  if (dataSource === 'brightdata_live') {
+    const tLat = cfg.latitude   != null ? parseFloat(cfg.latitude)   : null;
+    const tLon = cfg.longitude  != null ? parseFloat(cfg.longitude)  : null;
+    const tG   = cfg.max_guests != null ? parseInt(cfg.max_guests, 10) : null;
+    const { listings: cmp, status } = selectComparables(listings, { targetLat: tLat, targetLon: tLon, targetGuests: tG });
+    const today = (cfg.timezone
+      ? new Date().toLocaleString('sv-SE', { timeZone: cfg.timezone })
+      : new Date().toISOString()).slice(0, 10);
+    return calcBrightDataMarketStats(status === 'ok' ? cmp : listings, { today });
+  }
+  const f = cfg.bedrooms
+    ? listings.filter(l => l.bedrooms == null || Math.abs(l.bedrooms - cfg.bedrooms) <= 1)
+    : listings;
+  return calcMarketStats(f.length >= 5 ? f : listings);
+}
+
 // ── Job principal ────────────────────────────────────────────
 async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
   const weekStart = getCurrentWeekStart();
@@ -360,6 +381,7 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
               p.name    AS property_name,
               p.address AS property_address,
               p.latitude, p.longitude, p.country_code, p.currency,
+              p.max_guests, p.timezone,
               u.email   AS user_email,
               u.first_name AS user_first_name
        FROM pricing_config pc
@@ -441,13 +463,7 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       const { listings, isMock, zoneUsed, dataSource } = zoneCache[cacheKey];
       const zoneLabel = zoneUsed;
 
-      // Filtrer par nombre de chambres si renseigné
-      // B5-D: bedrooms:null (Bright Data) → keep; don't reject unknown-bedroom listings.
-      const filtered = cfg.bedrooms
-        ? listings.filter(l => l.bedrooms == null || Math.abs(l.bedrooms - cfg.bedrooms) <= 1)
-        : listings;
-
-      const marketStats = calcMarketStats(filtered.length >= 5 ? filtered : listings);
+      const marketStats = calcProviderMarketStats(listings, cfg, dataSource);
       if (!marketStats) {
         console.warn(`⚠️ [DP-CRON] Pas assez de données pour ${cfg.property_name}`);
         continue;
@@ -693,7 +709,8 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   // Sélectionner la config canonique via properties.user_id (jamais via le caller userId)
   const cfg = (await pool.query(
     `SELECT pc.*, p.name AS property_name, p.address AS property_address,
-            p.latitude, p.longitude, p.country_code, p.currency
+            p.latitude, p.longitude, p.country_code, p.currency,
+            p.max_guests, p.timezone
        FROM pricing_config pc
        JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
       WHERE pc.property_id = $1`,
@@ -741,11 +758,7 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   );
   const zoneLabel = zoneUsed;
 
-  const filtered = cfg.bedrooms
-    ? listings.filter(l => l.bedrooms == null || Math.abs(l.bedrooms - cfg.bedrooms) <= 1)
-    : listings;
-
-  const marketStats = calcMarketStats(filtered.length >= 5 ? filtered : listings);
+  const marketStats = calcProviderMarketStats(listings, cfg, dataSource);
   if (!marketStats) return { ok: false, error: 'Pas assez de données marché pour ce logement' };
 
   const writeResultOne = await writeScrapeResult(pool, {
