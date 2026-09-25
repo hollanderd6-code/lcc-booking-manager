@@ -150,13 +150,13 @@ await test('B4C-05 scrapeZone signature includes requestedCurrency parameter', (
   );
 });
 
-await test('B4C-06 scrapeZone passes requestedCurrency to scrapeWithApify', () => {
+await test('B4C-06 scrapeZone passes requestedCurrency to marketProvider.scrape (B5-D wired)', () => {
   const fnIdx = CRON_SRC.indexOf('async function scrapeZone');
   assert.ok(fnIdx !== -1, 'scrapeZone not found');
   const fnBody = CRON_SRC.slice(fnIdx, fnIdx + 800);
   assert.ok(
-    /scrapeWithApify\s*\([^)]*requestedCurrency/.test(fnBody),
-    'scrapeZone must pass requestedCurrency to scrapeWithApify'
+    /marketProvider\.scrape\s*\([^)]*requestedCurrency/.test(fnBody),
+    'scrapeZone must pass requestedCurrency to marketProvider.scrape (B5-D wired)'
   );
 });
 

@@ -337,30 +337,30 @@ await test('MP-13 calcMarketStats from cron.js produces identical output for kno
   assert.ok(stats.p75 > stats.median, 'p75 must be > median');
 });
 
-// ── MP-14 : no Bright Data path in new files ──────────────────────────────────
-console.log('\n── MP-14 : no Bright Data network path reachable ──');
+// ── MP-14 : providers/apify.js isolation + B5-D brightdata integration ────────
+console.log('\n── MP-14 : providers/apify.js isolation; market-provider.js requires brightdata (B5-D) ──');
 
-await test('MP-14 providers/apify.js and market-provider.js contain no executable Bright Data code', async () => {
+await test('MP-14 providers/apify.js has no brightdata refs; market-provider.js requires brightdata (B5-D active)', async () => {
   // apify.js must have zero brightdata references (not even in comments)
   assert.ok(!APIFY_SRC.includes('brightdata.com'),     'apify.js must not reference brightdata.com');
   assert.ok(!APIFY_SRC.includes('BRIGHTDATA_API_KEY'), 'apify.js must not use BRIGHTDATA_API_KEY');
   assert.ok(!APIFY_SRC.includes('brightdata_live'),    'apify.js must not reference brightdata_live');
 
-  // market-provider.js may document B5-C integration points in comments,
-  // but must contain NO executable Bright Data code or network calls.
+  // market-provider.js orchestrates both providers — must NOT reference brightdata.com directly
+  // (that lives inside providers/brightdata.js), but MUST require the brightdata provider (B5-D).
   const nonComment = src => src.split('\n')
     .filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
     .join('\n');
 
   const providerCode = nonComment(PROVIDER_SRC);
   assert.ok(!providerCode.includes('BRIGHTDATA_API_KEY'),
-    'market-provider.js non-comment code must not use BRIGHTDATA_API_KEY');
+    'market-provider.js non-comment code must not directly use BRIGHTDATA_API_KEY');
   assert.ok(!providerCode.includes('brightdata.com'),
-    'market-provider.js non-comment code must not call brightdata.com');
+    'market-provider.js non-comment code must not directly call brightdata.com');
   assert.ok(
-    !providerCode.includes("require('./providers/brightdata')") &&
-    !providerCode.includes("require('../services/providers/brightdata')"),
-    'market-provider.js must not yet require brightdata provider'
+    providerCode.includes("require('./providers/brightdata')") ||
+    providerCode.includes("require('../services/providers/brightdata')"),
+    'market-provider.js must require the brightdata provider (B5-D integration active)'
   );
 });
 
@@ -415,13 +415,13 @@ await test('MP-19 pricing-apply.js does not import market-provider or providers/
   assert.ok(!APPLY_SRC.includes('providers/apify'),  'pricing-apply.js must not import providers/apify');
 });
 
-// ── MP-20 : cron does not import market-provider (unchanged) ─────────────────
-console.log('\n── MP-20 : dynamic-pricing-cron.js does not import market-provider ──');
+// ── MP-20 : cron imports market-provider (B5-D wired) ────────────────────────
+console.log('\n── MP-20 : dynamic-pricing-cron.js imports market-provider (B5-D wired) ──');
 
-await test('MP-20 dynamic-pricing-cron.js still does not import market-provider (cron unchanged)', async () => {
-  assert.ok(!CRON_SRC.includes('market-provider'),   'cron must not import market-provider in B5-B');
-  assert.ok(!CRON_SRC.includes('providers/apify'),   'cron must not import providers/apify in B5-B');
-  // Verify cron structure is still intact
+await test('MP-20 dynamic-pricing-cron.js imports market-provider (B5-D wired); cron functions intact', async () => {
+  assert.ok(CRON_SRC.includes('market-provider'),    'cron must import market-provider in B5-D');
+  assert.ok(!CRON_SRC.includes('providers/apify'),   'cron must not directly import providers/apify');
+  // Verify cron structure is still intact (source-analysis tests require these)
   assert.ok(/async function scrapeWithApify/.test(CRON_SRC), 'scrapeWithApify must still exist in cron');
   assert.ok(/async function scrapeBestZone/.test(CRON_SRC),  'scrapeBestZone must still exist in cron');
   assert.ok(/async function scrapeZone/.test(CRON_SRC),      'scrapeZone must still exist in cron');

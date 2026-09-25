@@ -600,12 +600,12 @@ await test('BD5C-31 providers/brightdata.js imports no channex', async () => {
     'brightdata.js must not reference channex in executable code');
 });
 
-console.log('\n── BD5C-32 : market-provider.js does not require brightdata ──');
-await test('BD5C-32 market-provider.js does not require brightdata provider (Apify-only in production)', async () => {
+console.log('\n── BD5C-32 : market-provider.js requires brightdata (B5-D integration active) ──');
+await test('BD5C-32 market-provider.js requires brightdata provider (B5-D dual-provider integration active)', async () => {
   assert.ok(
-    !PROVIDER_SRC.includes("require('./providers/brightdata')") &&
-    !PROVIDER_SRC.includes("require('../services/providers/brightdata')"),
-    'market-provider.js must not yet require the brightdata provider (B5-D integration point)'
+    PROVIDER_SRC.includes("require('./providers/brightdata')") ||
+    PROVIDER_SRC.includes("require('../services/providers/brightdata')"),
+    'market-provider.js must require the brightdata provider (B5-D integration is now active)'
   );
 });
 
@@ -635,18 +635,17 @@ await test('BD5C-34 DATASET_ID matches gd_ld7ll037kqy322v05 (observed in B5-A3)'
     'DATASET_ID must match the real dataset observed during B5-A3 diagnostics');
 });
 
-console.log('\n── BD5C-35 : market-data-resolver.js still does not trust brightdata_live ──');
-await test('BD5C-35 market-data-resolver.js does not trust brightdata_live (B5-D will add it)', async () => {
-  // Resolver currently hardcodes: const trusted = row.data_source === 'apify_live'
+console.log('\n── BD5C-35 : market-data-resolver.js trusts both apify_live and brightdata_live (B5-D added it) ──');
+await test('BD5C-35 market-data-resolver.js trusts brightdata_live (B5-D added it); apify_live still trusted', async () => {
+  // B5-D replaced the hardcoded === check with a TRUSTED_SOURCES Set containing both providers.
   assert.ok(
-    !RESOLVER_SRC.includes("'brightdata_live'") &&
-    !RESOLVER_SRC.includes('"brightdata_live"'),
-    'brightdata_live must not appear as a trusted data_source in resolver — B5-D will add it'
+    RESOLVER_SRC.includes("'brightdata_live'") || RESOLVER_SRC.includes('"brightdata_live"'),
+    'brightdata_live must now appear as a trusted data_source in resolver (B5-D added it)'
   );
-  // Confirm apify_live is still the only trusted source
+  // apify_live must still be trusted
   assert.ok(
-    RESOLVER_SRC.includes("data_source === 'apify_live'"),
-    'apify_live must remain the only trusted data_source in resolver'
+    RESOLVER_SRC.includes("'apify_live'"),
+    'apify_live must remain trusted in resolver'
   );
 });
 

@@ -79,7 +79,10 @@ function classifyMarketData(row, { propertyContextKey, propertyCurrency, now } =
   }
 
   // ── Step 1: Provenance (B11 — provenance wins before location) ───────────────
-  const trusted = row.data_source === 'apify_live';
+  // B5-D: brightdata_live added as trusted source alongside apify_live.
+  // All other values (mock, unknown, arbitrary) remain untrusted.
+  const TRUSTED_SOURCES = new Set(['apify_live', 'brightdata_live']);
+  const trusted = TRUSTED_SOURCES.has(row.data_source);
   if (!trusted) {
     const knownStatus = { mock: 'mock', unknown: 'unknown' };
     const status = knownStatus[row.data_source] ?? 'invalid';

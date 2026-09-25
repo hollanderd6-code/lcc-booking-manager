@@ -28,6 +28,7 @@ const {
 const { applyDynamicPricingForProperty } = require('./pricing-apply');
 const { resolveMarketData } = require('./market-data-resolver');
 const { computeMarketContextKey } = require('./market-context-key');
+const marketProvider = require('../services/market-provider');
 
 // ── Constantes ───────────────────────────────────────────────
 const APIFY_ACTOR_ID  = 'tri_angle~airbnb-scraper';
@@ -138,7 +139,7 @@ function getFallbackZones(address, zoneLabel) {
 // Scrape en élargissant progressivement jusqu'à atteindre MIN_COMPARABLES.
 // Retourne le meilleur résultat (zone la plus dense si aucune n'atteint le seuil).
 async function scrapeBestZone(zones, medianFallback, maxListings, bedrooms, requestedCurrency) {
-  let best = { listings: [], isMock: false, zoneUsed: zones[zones.length - 1] || 'France' };
+  let best = { listings: [], isMock: true, dataSource: 'mock', zoneUsed: zones[zones.length - 1] || 'France' };
   for (const zone of zones) {
     let res;
     try {
@@ -148,15 +149,18 @@ async function scrapeBestZone(zones, medianFallback, maxListings, bedrooms, requ
       continue;
     }
     const listings = res.listings || [];
-    const filtered = bedrooms ? listings.filter(l => Math.abs((l.bedrooms || 1) - bedrooms) <= 1) : listings;
+    // B5-D: bedrooms:null (Bright Data) must not be rejected — keep listing when bedrooms unknown.
+    const filtered = bedrooms
+      ? listings.filter(l => l.bedrooms == null || Math.abs(l.bedrooms - bedrooms) <= 1)
+      : listings;
     const usable = filtered.length >= 5 ? filtered.length : listings.length;
-    console.log(`🔎 [DP] Zone "${zone}": ${listings.length} listings (${usable} exploitables, seuil ${MIN_COMPARABLES})`);
+    console.log(`🔎 [DP] Zone "${zone}": ${listings.length} listings (${usable} exploitables, seuil ${MIN_COMPARABLES}, source: ${res.dataSource})`);
 
     if (listings.length > best.listings.length) {
-      best = { listings, isMock: res.isMock, zoneUsed: zone };
+      best = { listings, isMock: res.isMock, dataSource: res.dataSource, zoneUsed: zone };
     }
     if (usable >= MIN_COMPARABLES) {
-      return { listings, isMock: res.isMock, zoneUsed: zone };
+      return { listings, isMock: res.isMock, dataSource: res.dataSource, zoneUsed: zone };
     }
   }
   if (best.zoneUsed) console.log(`ℹ️ [DP] Aucune zone ≥ seuil — on garde la plus dense: "${best.zoneUsed}" (${best.listings.length})`);
@@ -316,23 +320,13 @@ async function scrapeWithApify(location, maxListings, requestedCurrency) {
   return items.map(parseApifyItem).filter(Boolean);
 }
 
-// ── Scraping avec fallback mock ──────────────────────────────
+// ── Scraping via market provider abstraction (B5-D) ──────────
+// Provider selection, Bright Data ↔ Apify fallback, and mock fallback are
+// all handled inside marketProvider.scrape(). scrapeWithApify remains
+// available as a legacy reference (source-analysis tests require it).
 async function scrapeZone(location, medianFallback, maxListings, requestedCurrency) {
-  if (MOCK_MODE) {
-    console.log(`🎭 [DP-CRON] Mode MOCK pour "${location}" (APIFY_TOKEN absent)`);
-    const mock = getMockListings(location, medianFallback);
-    return { listings: mock.listings, isMock: true };
-  }
-
-  try {
-    const listings = await scrapeWithApify(location, maxListings, requestedCurrency);
-    return { listings, isMock: false };
-  } catch (err) {
-    console.error(`❌ [DP-CRON] Apify error pour "${location}":`, err.message);
-    console.log(`🎭 [DP-CRON] Fallback mock pour "${location}"`);
-    const mock = getMockListings(location, medianFallback);
-    return { listings: mock.listings, isMock: true };
-  }
+  const result = await marketProvider.scrape(location, maxListings, requestedCurrency, { medianFallback });
+  return { listings: result.listings, isMock: result.isMock, dataSource: result.dataSource };
 }
 
 // ── Notification push ────────────────────────────────────────
@@ -444,12 +438,13 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
         );
       }
 
-      const { listings, isMock, zoneUsed } = zoneCache[cacheKey];
+      const { listings, isMock, zoneUsed, dataSource } = zoneCache[cacheKey];
       const zoneLabel = zoneUsed;
 
       // Filtrer par nombre de chambres si renseigné
+      // B5-D: bedrooms:null (Bright Data) → keep; don't reject unknown-bedroom listings.
       const filtered = cfg.bedrooms
-        ? listings.filter(l => Math.abs((l.bedrooms || 1) - cfg.bedrooms) <= 1)
+        ? listings.filter(l => l.bedrooms == null || Math.abs(l.bedrooms - cfg.bedrooms) <= 1)
         : listings;
 
       const marketStats = calcMarketStats(filtered.length >= 5 ? filtered : listings);
@@ -459,7 +454,7 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       }
 
       // 4. INSERT market_data (upsert atomique avec vérification de contexte)
-      const dataSource = isMock ? 'mock' : 'apify_live';
+      // dataSource comes from the provider result (apify_live / brightdata_live / mock).
       const writeResult = await writeScrapeResult(pool, {
         userId: cfg.user_id, propertyId: cfg.property_id, weekStart,
         marketStats, zoneLabel, dataSource, capturedContextKey: marketContextKey,
@@ -737,7 +732,7 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
     return { ok: true, isMock: false, marketStats: null, apply };
   }
 
-  const { listings, isMock, zoneUsed } = await scrapeBestZone(
+  const { listings, isMock, zoneUsed, dataSource } = await scrapeBestZone(
     zones,
     (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
     MAX_LISTINGS,
@@ -747,16 +742,15 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   const zoneLabel = zoneUsed;
 
   const filtered = cfg.bedrooms
-    ? listings.filter(l => Math.abs((l.bedrooms || 1) - cfg.bedrooms) <= 1)
+    ? listings.filter(l => l.bedrooms == null || Math.abs(l.bedrooms - cfg.bedrooms) <= 1)
     : listings;
 
   const marketStats = calcMarketStats(filtered.length >= 5 ? filtered : listings);
   if (!marketStats) return { ok: false, error: 'Pas assez de données marché pour ce logement' };
 
-  const dataSourceOne = isMock ? 'mock' : 'apify_live';
   const writeResultOne = await writeScrapeResult(pool, {
     userId: cfg.user_id, propertyId, weekStart,
-    marketStats, zoneLabel, dataSource: dataSourceOne, capturedContextKey: marketContextKey,
+    marketStats, zoneLabel, dataSource, capturedContextKey: marketContextKey,
     capturedPropertyCurrency,
   });
 
