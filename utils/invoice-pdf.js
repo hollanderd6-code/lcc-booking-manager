@@ -23,7 +23,7 @@ const fmtDate = (d) => (d instanceof Date ? d : new Date(d))
 
 async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
   const {
-    clientName = '', clientEmail = '', clientAddress = '', clientPostalCode = '',
+    clientName = '', clientEmail = '', clientPhone = '', clientAddress = '', clientPostalCode = '',
     clientCity = '', clientSiret = '', clientCompany = '', freeNote = '',
     clientNationality = '', platform = '',
     propertyName = '', propertyAddress = '',
@@ -187,6 +187,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     if (cpCity)            { doc.text(cpCity, col2, yR); yR += 13; }
     if (clientNationality) { doc.text(`Nationalité : ${clientNationality}`, col2, yR); yR += 13; }
     if (clientEmail)       { doc.text(clientEmail, col2, yR); yR += 13; }
+    if (clientPhone)       { doc.text(clientPhone, col2, yR); yR += 13; }
     if (clientSiret)       { doc.text(`N° fiscal : ${clientSiret}`, col2, yR); yR += 13; }
     if (freeNote)          { doc.font('CG-Italic').fontSize(9).text(freeNote, col2, yR, { width: colW }); yR += 13; }
 
