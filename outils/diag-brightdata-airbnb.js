@@ -72,6 +72,46 @@ const REDACTED_FIELDS = new Set([
   'category_rating', 'travel_details',
 ]);
 
+// ── Error sanitization ────────────────────────────────────────────────────────
+
+const ERROR_BODY_MAX_CHARS = 4000;
+const ERROR_USEFUL_KEYS    = ['error', 'message', 'code', 'details', 'errors',
+                               'description', 'reason', 'status', 'statusCode', 'type'];
+
+function redactSecrets(text) {
+  if (typeof text !== 'string') return String(text);
+  return text
+    .replace(/Bearer\s+\S+/gi,                       'Bearer [REDACTED]')
+    .replace(/"[Aa]uthorization"\s*:\s*"[^"]*"/g,    '"authorization": "[REDACTED]"')
+    .replace(/"[Aa]pi_?[Kk]ey"\s*:\s*"[^"]*"/g,      '"api_key": "[REDACTED]"')
+    .replace(/"[Aa]pikey"\s*:\s*"[^"]*"/g,            '"apikey": "[REDACTED]"')
+    .replace(/"[Tt]oken"\s*:\s*"[^"]*"/g,             '"token": "[REDACTED]"')
+    .replace(/\bapi_?key=[^&\s"'<>]*/gi,              'api_key=[REDACTED]')
+    .replace(/\btoken=[^&\s"'<>]*/gi,                 'token=[REDACTED]');
+}
+
+/**
+ * Sanitize a Bright Data error response body for safe console display.
+ * Parses JSON when possible, redacts all secret patterns, truncates to maxLen.
+ */
+function sanitizeErrorBody(rawText, contentType, maxLen) {
+  if (maxLen === undefined) maxLen = ERROR_BODY_MAX_CHARS;
+  if (!rawText) return '(empty response body)';
+
+  // Always try JSON parse — Bright Data may not set content-type correctly
+  let jsonObj = null;
+  try { jsonObj = JSON.parse(rawText); } catch {}
+
+  if (jsonObj !== null && typeof jsonObj === 'object') {
+    const useful = {};
+    ERROR_USEFUL_KEYS.forEach(k => { if (jsonObj[k] !== undefined) useful[k] = jsonObj[k]; });
+    const pretty = JSON.stringify(Object.keys(useful).length > 0 ? useful : jsonObj, null, 2);
+    return redactSecrets(pretty).slice(0, maxLen);
+  }
+
+  return redactSecrets(rawText).slice(0, maxLen);
+}
+
 // ── Pure helpers ──────────────────────────────────────────────────────────────
 
 /**
@@ -321,10 +361,24 @@ async function executeMode({ location, currency }, deps = {}) {
     });
 
     if (!triggerRes.ok) {
-      const errText = await triggerRes.text();
-      // Never log the response body directly — may contain partial auth info
-      console.error(`⛔  Trigger failed: HTTP ${triggerRes.status}`);
-      return { ok: false, abort: `trigger_failed:${triggerRes.status}` };
+      const errText  = await triggerRes.text();
+      const ctHeader = (triggerRes.headers && typeof triggerRes.headers.get === 'function')
+        ? (triggerRes.headers.get('content-type') || '')
+        : '';
+      let sanitized  = sanitizeErrorBody(errText, ctHeader);
+      // Final safety net: if the actual token value somehow appears, redact it
+      if (token) sanitized = sanitized.split(token).join('[REDACTED]');
+
+      console.error('⛔  Trigger failed');
+      console.error(`  HTTP_STATUS              : ${triggerRes.status}`);
+      console.error(`  HTTP_STATUS_TEXT         : ${triggerRes.statusText || '(none)'}`);
+      console.error(`  RESPONSE_CONTENT_TYPE    : ${ctHeader || '(none)'}`);
+      console.error(`\n  SANITIZED_ERROR_BODY:\n${sanitized}`);
+      console.error('\n  BRIGHTDATA_JOB_CREATED   : false');
+      console.error('  SNAPSHOT_ID              : NONE');
+      console.error('  RECORDS_CONSUMED         : 0');
+
+      return { ok: false, abort: `trigger_failed:${triggerRes.status}`, httpStatus: triggerRes.status, sanitizedError: sanitized };
     }
     triggerData = await triggerRes.json();
   } catch (err) {
@@ -541,6 +595,8 @@ module.exports = {
   parseBedrooms,
   analyzeRecords,
   inspectRecord,
+  sanitizeErrorBody,
+  redactSecrets,
   DATASET_ID,
   MAX_RETURNED_RECORDS,
   MAX_WAIT_MS,

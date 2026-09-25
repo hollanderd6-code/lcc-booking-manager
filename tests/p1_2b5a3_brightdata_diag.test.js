@@ -65,6 +65,8 @@ const {
   parseBedrooms,
   analyzeRecords,
   inspectRecord,
+  sanitizeErrorBody,
+  redactSecrets,
   DATASET_ID,
   MAX_RETURNED_RECORDS,
   MAX_WAIT_MS,
@@ -74,6 +76,18 @@ const {
 
 function makeTriggerResponse(snapshotId) {
   return { ok: true, json: async () => ({ snapshot_id: snapshotId }) };
+}
+
+function make400Response(body, contentType = 'application/json') {
+  const bodyStr = typeof body === 'string' ? body : JSON.stringify(body);
+  return {
+    ok:         false,
+    status:     400,
+    statusText: 'Bad Request',
+    headers:    { get: h => h.toLowerCase() === 'content-type' ? contentType : null },
+    text:       async () => bodyStr,
+    json:       async () => { try { return JSON.parse(bodyStr); } catch { return {}; } },
+  };
 }
 
 function makeProgressResponse(status) {
@@ -650,6 +664,211 @@ await test('BD-27 tool source does not import dynamic-pricing or pricing executi
   assert.ok(!/ writeScrapeResult\s*\(/.test(nonCommentSrc),                'must not call writeScrapeResult()');
   assert.ok(!/ scheduleMarketRefresh\s*\(/.test(nonCommentSrc),            'must not call scheduleMarketRefresh()');
   assert.ok(!/ priceProperty\s*\(/.test(nonCommentSrc),                    'must not call priceProperty()');
+});
+
+// ── BD-28 : HTTP 400 JSON error body displayed ────────────────────────────────
+console.log('\n── BD-28 : HTTP 400 JSON error body displayed ──');
+
+await test('BD-28 executeMode includes sanitized JSON error in result.sanitizedError', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd28';
+  const errBody = { error: 'invalid_dataset', message: 'Dataset ID not found or access denied' };
+  const fetchFn = makeMockFetch([() => make400Response(errBody)]);
+  try {
+    const result = await executeMode({ location: 'Massy, France', currency: 'EUR' }, {
+      fetchFn, pollIntervalMs: 1, maxWaitMs: 100,
+    });
+    assert.strictEqual(result.ok, false);
+    assert.ok(result.sanitizedError, 'sanitizedError must be present on 400 result');
+    assert.ok(result.sanitizedError.includes('invalid_dataset'),
+      `sanitizedError must contain 'invalid_dataset', got: ${result.sanitizedError}`);
+    assert.ok(result.sanitizedError.includes('Dataset ID not found'),
+      `sanitizedError must contain error message, got: ${result.sanitizedError}`);
+    assert.strictEqual(result.httpStatus, 400, 'httpStatus must be 400');
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-29 : HTTP 400 plain-text error displayed ───────────────────────────────
+console.log('\n── BD-29 : HTTP 400 plain-text error displayed ──');
+
+await test('BD-29 executeMode includes plain-text error excerpt in result.sanitizedError', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd29';
+  const errBody = 'Bad Request: type=discover_new is not supported for this dataset';
+  const fetchFn = makeMockFetch([() => make400Response(errBody, 'text/plain')]);
+  try {
+    const result = await executeMode({ location: 'Massy, France', currency: 'EUR' }, {
+      fetchFn, pollIntervalMs: 1, maxWaitMs: 100,
+    });
+    assert.strictEqual(result.ok, false);
+    assert.ok(result.sanitizedError, 'sanitizedError must be present on 400 plain-text result');
+    assert.ok(result.sanitizedError.includes('not supported'),
+      `sanitizedError must contain error text, got: ${result.sanitizedError}`);
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-30 : error body bounded to <= 4000 chars ───────────────────────────────
+console.log('\n── BD-30 : error body bounded to <= 4000 chars ──');
+
+await test('BD-30 sanitizeErrorBody output is at most 4000 characters', async () => {
+  const longBody = 'x'.repeat(10_000);
+  const result   = sanitizeErrorBody(longBody, 'text/plain');
+  assert.ok(result.length <= 4000, `output must be ≤ 4000 chars, got ${result.length}`);
+  // Also check JSON path
+  const longJson = JSON.stringify({ message: 'x'.repeat(8_000) });
+  const result2  = sanitizeErrorBody(longJson, 'application/json');
+  assert.ok(result2.length <= 4000, `JSON output must be ≤ 4000 chars, got ${result2.length}`);
+});
+
+// ── BD-31 : Bearer token redacted ────────────────────────────────────────────
+console.log('\n── BD-31 : Bearer token redacted ──');
+
+await test('BD-31 redactSecrets removes Bearer token values', async () => {
+  const input    = 'Authorization: Bearer abc123xyz-secret-value';
+  const result   = redactSecrets(input);
+  assert.ok(!result.includes('abc123xyz-secret-value'), 'Bearer token value must be redacted');
+  assert.ok(result.includes('Bearer [REDACTED]'),       'must replace with Bearer [REDACTED]');
+  // Also in JSON structure
+  const jsonInput = '{"Authorization": "Bearer mytoken99"}';
+  const r2 = redactSecrets(jsonInput);
+  assert.ok(!r2.includes('mytoken99'), 'token in JSON Authorization must be redacted');
+});
+
+// ── BD-32 : authorization field value redacted ────────────────────────────────
+console.log('\n── BD-32 : authorization field value redacted ──');
+
+await test('BD-32 redactSecrets removes authorization JSON field values', async () => {
+  const input  = '{"authorization": "Bearer secrettoken", "other": "ok"}';
+  const result = redactSecrets(input);
+  assert.ok(!result.includes('secrettoken'), '"authorization" value must be redacted');
+  assert.ok(result.includes('[REDACTED]'),   'must contain [REDACTED] placeholder');
+  assert.ok(result.includes('"other": "ok"'), 'non-secret fields must be preserved');
+});
+
+// ── BD-33 : api_key value redacted ───────────────────────────────────────────
+console.log('\n── BD-33 : api_key value redacted ──');
+
+await test('BD-33 redactSecrets removes api_key JSON field values', async () => {
+  const input  = '{"api_key": "myprivatekey123", "error": "invalid"}';
+  const result = redactSecrets(input);
+  assert.ok(!result.includes('myprivatekey123'), '"api_key" value must be redacted');
+  // URL form
+  const urlForm = 'https://api.example.com?api_key=myprivatekey123&foo=bar';
+  const r2 = redactSecrets(urlForm);
+  assert.ok(!r2.includes('myprivatekey123'), 'api_key URL param must be redacted');
+});
+
+// ── BD-34 : token field value redacted ───────────────────────────────────────
+console.log('\n── BD-34 : token field value redacted ──');
+
+await test('BD-34 redactSecrets removes token JSON field values', async () => {
+  const input  = '{"token": "supersecret456", "message": "error"}';
+  const result = redactSecrets(input);
+  assert.ok(!result.includes('supersecret456'), '"token" value must be redacted');
+  // URL param
+  const urlParam = 'POST ?token=supersecret456&dataset_id=abc';
+  const r2 = redactSecrets(urlParam);
+  assert.ok(!r2.includes('supersecret456'), 'token URL param must be redacted');
+});
+
+// ── BD-35 : BRIGHTDATA_API_KEY value never in output ─────────────────────────
+console.log('\n── BD-35 : BRIGHTDATA_API_KEY value never appears ──');
+
+await test('BD-35 executeMode final safety net removes API key if echoed without Bearer prefix', async () => {
+  const secretKey = 'test-secret-finalnet-0000';
+  process.env.BRIGHTDATA_API_KEY = secretKey;
+  // Body echoes the raw key without Bearer prefix — bypasses regex redaction patterns
+  const errBody = { error: 'forbidden', echo_request_key: secretKey };
+  const fetchFn = makeMockFetch([() => make400Response(errBody)]);
+  try {
+    const result = await executeMode({ location: 'Massy, France', currency: 'EUR' }, {
+      fetchFn, pollIntervalMs: 1, maxWaitMs: 100,
+    });
+    assert.strictEqual(result.ok, false);
+    assert.ok(!result.sanitizedError.includes(secretKey),
+      `API key must not appear in sanitizedError, got: ${result.sanitizedError}`);
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-36 : no automatic retry after HTTP 400 ────────────────────────────────
+console.log('\n── BD-36 : no automatic retry after HTTP 400 ──');
+
+await test('BD-36 executeMode makes no retry fetch after HTTP 400', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd36';
+  const fetchFn = makeMockFetch([() => make400Response({ error: 'bad_request' })]);
+  try {
+    await executeMode({ location: 'Massy, France', currency: 'EUR' }, {
+      fetchFn, pollIntervalMs: 1, maxWaitMs: 100,
+    });
+    assert.strictEqual(fetchFn.calls.length, 1,
+      `must make exactly 1 fetch call (no retry), got ${fetchFn.calls.length}`);
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-37 : only one trigger POST attempted ───────────────────────────────────
+console.log('\n── BD-37 : only one trigger POST attempted ──');
+
+await test('BD-37 the single fetch call after 400 is the trigger POST to dataset URL', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd37';
+  const fetchFn = makeMockFetch([() => make400Response({ error: 'bad_request' })]);
+  try {
+    await executeMode({ location: 'Massy, France', currency: 'EUR' }, {
+      fetchFn, pollIntervalMs: 1, maxWaitMs: 100,
+    });
+    assert.strictEqual(fetchFn.calls.length, 1, 'must have exactly 1 fetch call total');
+    assert.strictEqual(fetchFn.calls[0].method, 'POST', 'the call must be POST');
+    assert.ok(fetchFn.calls[0].url.includes(DATASET_ID),
+      `trigger URL must contain DATASET_ID, got: ${fetchFn.calls[0].url}`);
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-38 : no snapshot polling after trigger failure ─────────────────────────
+console.log('\n── BD-38 : no snapshot polling after trigger failure ──');
+
+await test('BD-38 no GET to progress or snapshot endpoint after 400 trigger', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd38';
+  const fetchFn = makeMockFetch([() => make400Response({ error: 'bad_request' })]);
+  try {
+    await executeMode({ location: 'Massy, France', currency: 'EUR' }, {
+      fetchFn, pollIntervalMs: 1, maxWaitMs: 100,
+    });
+    const progressCalls = fetchFn.calls.filter(c => c.url.includes('/progress/'));
+    const snapshotCalls = fetchFn.calls.filter(c => c.url.includes('/snapshot/'));
+    assert.strictEqual(progressCalls.length, 0,
+      `no progress poll calls expected after 400, got ${progressCalls.length}`);
+    assert.strictEqual(snapshotCalls.length, 0,
+      `no snapshot download calls expected after 400, got ${snapshotCalls.length}`);
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-39 : no new DB/pricing/Channex modules introduced ─────────────────────
+console.log('\n── BD-39 : no new forbidden modules introduced ──');
+
+await test('BD-39 sanitizeErrorBody and redactSecrets exported; no new forbidden imports', async () => {
+  assert.strictEqual(typeof sanitizeErrorBody, 'function', 'sanitizeErrorBody must be exported');
+  assert.strictEqual(typeof redactSecrets,     'function', 'redactSecrets must be exported');
+  // Regression: new code must not introduce any forbidden imports (check non-comment lines only)
+  const nonCommentSrc = TOOL_SRC.split('\n')
+    .filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+    .join('\n');
+  assert.ok(!nonCommentSrc.includes("require('pg')"),               'no pg import');
+  assert.ok(!nonCommentSrc.includes("require('../channex')"),       'no channex import');
+  assert.ok(!nonCommentSrc.includes("require('./channex')"),        'no channex import');
+  assert.ok(!nonCommentSrc.includes("'dynamic-pricing-cron'"),      'no dynamic-pricing-cron import');
+  assert.ok(!/ scheduleMarketRefresh\s*\(/.test(nonCommentSrc),     'no scheduleMarketRefresh() call');
+  // Empty body handled gracefully
+  assert.strictEqual(sanitizeErrorBody('', 'application/json'), '(empty response body)');
+  assert.strictEqual(sanitizeErrorBody(null, 'text/plain'),     '(empty response body)');
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────
