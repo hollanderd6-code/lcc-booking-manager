@@ -32,6 +32,7 @@ const {
   normalizeBookingCurrency,
   previewMode,
   executeMode,
+  snapshotResumeMode,
   sanitizeErrorBody,
   redactSecrets,
   BOOKING_DATASET_ID,
@@ -39,7 +40,6 @@ const {
   BOOKING_PROGRESS_BASE,
   BOOKING_SNAPSHOT_BASE,
   BOOKING_INPUT_URL,
-  EXECUTE_BLOCKED_B5_BK_C,
   CONTRACT_CONFIDENCE,
   MAX_RECORDS,
 } = require('../outils/diag-brightdata-booking');
@@ -528,7 +528,6 @@ const SAMPLE_BOOKING_ITEM = {
       () => executeMode({
         name: 'M6', pool, _bdFetchImpl: mockFetch,
         _now: new Date('2026-09-25T12:00:00Z'),
-        _unlockExecute: true,  // bypass EXECUTE_BLOCKED_B5_BK_C for this test
       })
     );
     assert.strictEqual(postCount, 1, 'executeMode must trigger exactly 1 POST to BD trigger endpoint');
@@ -579,21 +578,174 @@ const SAMPLE_BOOKING_ITEM = {
       'Dataset ID confirmed as "Listings Search" on official Bright Data product page');
   });
 
-  await test('BK-57 executeMode returns blocked=true by default (B5-BK-C guard)', async () => {
-    const pool   = makeMockPool([MOCK_PROPERTY]);
-    const result = await withEnv(
-      { BRIGHTDATA_API_KEY: 'test-key-bk57', MARKET_PRIMARY_PROVIDER: undefined },
-      () => executeMode({ name: 'M6', pool, _now: new Date('2026-09-25T12:00:00Z') })
+  await test('BK-57 snapshotResumeMode makes 0 trigger POSTs (B5-BK-D)', async () => {
+    let postCount = 0;
+    const mockFetch = async (url, opts = {}) => {
+      const method = (opts.method || 'GET').toUpperCase();
+      if (method === 'POST') { postCount++; return { ok: true, status: 200 }; }
+      if (url.includes('progress')) {
+        return { ok: true, status: 200, json: async () => ({ status: 'ready' }) };
+      }
+      if (url.includes('snapshot')) {
+        return { ok: true, status: 200, json: async () => [SAMPLE_BOOKING_ITEM] };
+      }
+      throw new Error(`BK-57 unexpected: ${method} ${url}`);
+    };
+    await withEnv(
+      { BRIGHTDATA_API_KEY: 'test-key-bk57' },
+      () => snapshotResumeMode('snap-bk57-test', { _bdFetchImpl: mockFetch })
     );
-    assert.strictEqual(result.ok,      false,              'blocked executeMode must return ok=false');
-    assert.strictEqual(result.blocked, true,               'blocked executeMode must return blocked=true');
-    assert.strictEqual(result.reason,  'execute_blocked_b5bk_c',
-      'reason must identify the B5-BK-C block');
+    assert.strictEqual(postCount, 0, 'snapshotResumeMode must not POST to trigger endpoint');
   });
 
-  await test('BK-58 EXECUTE_BLOCKED_B5_BK_C is true (safety constant must not be silently disabled)', async () => {
-    assert.strictEqual(EXECUTE_BLOCKED_B5_BK_C, true,
-      'Execute block must remain true until B5-BK-D first live call confirms the contract');
+  await test('BK-58 triggerBookingJob timeout exposes snapshotId on the thrown error (B5-BK-D)', async () => {
+    let postCount = 0;
+    const mockFetch = async (url, opts = {}) => {
+      const method = (opts.method || 'GET').toUpperCase();
+      if (method === 'POST') {
+        postCount++;
+        return {
+          ok: true, status: 200,
+          text: async () => JSON.stringify({ snapshot_id: 'snap-timeout-test' }),
+          headers: { get: () => 'application/json' },
+        };
+      }
+      if (url.includes('progress')) {
+        return { ok: true, status: 200, json: async () => ({ status: 'pending' }) };
+      }
+      throw new Error(`BK-58 unexpected: ${method} ${url}`);
+    };
+    const pool = makeMockPool([MOCK_PROPERTY]);
+    const result = await withEnv(
+      { BRIGHTDATA_API_KEY: 'test-key-bk58', MARKET_PRIMARY_PROVIDER: undefined },
+      () => executeMode({
+        name: 'M6', pool, _bdFetchImpl: mockFetch,
+        _now: new Date('2026-09-25T12:00:00Z'),
+        _bdMaxWaitMs: 0,
+      })
+    );
+    assert.strictEqual(result.ok,      false, 'timeout must return ok=false');
+    assert.strictEqual(result.timeout, true,  'timeout must set timeout=true');
+    assert.strictEqual(result.snapshotId, 'snap-timeout-test', 'snapshotId must be exposed on timeout');
+  });
+
+  // ── B5-BK-D: url_collection body field assertions ──────────────────────────
+
+  await test('BK-59 executeMode trigger body has url=BOOKING_INPUT_URL', async () => {
+    let capturedBody;
+    const mockFetch = async (url, opts = {}) => {
+      const method = (opts.method || 'GET').toUpperCase();
+      if (method === 'POST') {
+        capturedBody = JSON.parse(opts.body);
+        return {
+          ok: true, status: 200,
+          text: async () => JSON.stringify({ snapshot_id: 'snap-bk59' }),
+          headers: { get: () => 'application/json' },
+        };
+      }
+      if (url.includes('progress')) return { ok: true, status: 200, json: async () => ({ status: 'ready' }) };
+      if (url.includes('snapshot')) return { ok: true, status: 200, json: async () => [SAMPLE_BOOKING_ITEM] };
+      throw new Error(`BK-59 unexpected: ${url}`);
+    };
+    const pool = makeMockPool([MOCK_PROPERTY]);
+    await withEnv(
+      { BRIGHTDATA_API_KEY: 'test-key-bk59', MARKET_PRIMARY_PROVIDER: undefined },
+      () => executeMode({ name: 'M6', pool, _bdFetchImpl: mockFetch, _now: new Date('2026-09-25T12:00:00Z') })
+    );
+    assert.ok(Array.isArray(capturedBody), 'trigger body must be an array');
+    assert.strictEqual(capturedBody[0].url, BOOKING_INPUT_URL, 'body[0].url must be BOOKING_INPUT_URL');
+  });
+
+  await test('BK-60 executeMode trigger body has location, adults, rooms, currency, check_in, check_out', async () => {
+    let capturedBody;
+    const mockFetch = async (url, opts = {}) => {
+      if ((opts.method || 'GET').toUpperCase() === 'POST') {
+        capturedBody = JSON.parse(opts.body);
+        return { ok: true, status: 200, text: async () => JSON.stringify({ snapshot_id: 'snap-bk60' }), headers: { get: () => 'application/json' } };
+      }
+      if (url.includes('progress')) return { ok: true, status: 200, json: async () => ({ status: 'ready' }) };
+      if (url.includes('snapshot')) return { ok: true, status: 200, json: async () => [SAMPLE_BOOKING_ITEM] };
+    };
+    const pool = makeMockPool([MOCK_PROPERTY]);
+    await withEnv(
+      { BRIGHTDATA_API_KEY: 'test-key-bk60', MARKET_PRIMARY_PROVIDER: undefined },
+      () => executeMode({ name: 'M6', pool, _bdFetchImpl: mockFetch, _now: new Date('2026-09-25T12:00:00Z') })
+    );
+    const b = capturedBody[0];
+    assert.ok(typeof b.location === 'string' && b.location, 'body.location must be non-empty string');
+    assert.strictEqual(typeof b.adults,   'number', 'body.adults must be a number');
+    assert.strictEqual(typeof b.rooms,    'number', 'body.rooms must be a number');
+    assert.ok(typeof b.currency === 'string' && b.currency, 'body.currency must be non-empty string');
+    assert.ok(b.check_in  && b.check_in.includes('T00:00:00.000Z'),  'check_in must be ISO8601');
+    assert.ok(b.check_out && b.check_out.includes('T00:00:00.000Z'), 'check_out must be ISO8601');
+  });
+
+  await test('BK-61 source has no type=discover_new query param construction (B5-BK-D)', async () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../outils/diag-brightdata-booking.js'), 'utf8'
+    );
+    // The old broken contract used type=discover_new in the trigger URL — confirmed HTTP 400.
+    // Check the dangerous pattern that caused the error is absent.
+    assert.ok(!src.includes('type=discover_new'),
+      'type=discover_new must not appear in source — this exact param caused HTTP 400');
+    assert.ok(!src.includes('BOOKING_DISCOVERY_TYPE'),
+      'BOOKING_DISCOVERY_TYPE constant must be absent — was removed in B5-BK-C');
+    assert.ok(!src.includes('BOOKING_DISCOVER_BY'),
+      'BOOKING_DISCOVER_BY constant must be absent — was removed in B5-BK-C');
+  });
+
+  await test('BK-62 executeMode limit_per_input equals MAX_RECORDS (10)', async () => {
+    let capturedUrl = '';
+    const mockFetch = async (url, opts = {}) => {
+      if ((opts.method || 'GET').toUpperCase() === 'POST') {
+        capturedUrl = url;
+        return { ok: true, status: 200, text: async () => JSON.stringify({ snapshot_id: 'snap-bk62' }), headers: { get: () => 'application/json' } };
+      }
+      if (url.includes('progress')) return { ok: true, status: 200, json: async () => ({ status: 'ready' }) };
+      if (url.includes('snapshot')) return { ok: true, status: 200, json: async () => [SAMPLE_BOOKING_ITEM] };
+    };
+    const pool = makeMockPool([MOCK_PROPERTY]);
+    await withEnv(
+      { BRIGHTDATA_API_KEY: 'test-key-bk62', MARKET_PRIMARY_PROVIDER: undefined },
+      () => executeMode({ name: 'M6', pool, _bdFetchImpl: mockFetch, _now: new Date('2026-09-25T12:00:00Z') })
+    );
+    assert.ok(capturedUrl.includes(`limit_per_input=${MAX_RECORDS}`),
+      `trigger URL must include limit_per_input=${MAX_RECORDS}`);
+  });
+
+  await test('BK-63 snapshotResumeMode returns ok=true and returnedCount when snapshot ready', async () => {
+    const mockFetch = async (url) => {
+      if (url.includes('progress')) return { ok: true, status: 200, json: async () => ({ status: 'ready' }) };
+      if (url.includes('snapshot')) return { ok: true, status: 200, json: async () => [SAMPLE_BOOKING_ITEM, SAMPLE_BOOKING_ITEM] };
+      throw new Error(`BK-63 unexpected: ${url}`);
+    };
+    const result = await withEnv(
+      { BRIGHTDATA_API_KEY: 'test-key-bk63' },
+      () => snapshotResumeMode('snap-bk63', { _bdFetchImpl: mockFetch })
+    );
+    assert.strictEqual(result.ok,            true,          'must return ok=true');
+    assert.strictEqual(result.returnedCount, 2,             'must return correct item count');
+    assert.strictEqual(result.snapshotId,    'snap-bk63',   'must echo snapshotId');
+  });
+
+  await test('BK-64 executeMode trigger body has no type= or discover_new in trigger URL', async () => {
+    let capturedUrl = '';
+    const mockFetch = async (url, opts = {}) => {
+      if ((opts.method || 'GET').toUpperCase() === 'POST') {
+        capturedUrl = url;
+        return { ok: true, status: 200, text: async () => JSON.stringify({ snapshot_id: 'snap-bk64' }), headers: { get: () => 'application/json' } };
+      }
+      if (url.includes('progress')) return { ok: true, status: 200, json: async () => ({ status: 'ready' }) };
+      if (url.includes('snapshot')) return { ok: true, status: 200, json: async () => [SAMPLE_BOOKING_ITEM] };
+    };
+    const pool = makeMockPool([MOCK_PROPERTY]);
+    await withEnv(
+      { BRIGHTDATA_API_KEY: 'test-key-bk64', MARKET_PRIMARY_PROVIDER: undefined },
+      () => executeMode({ name: 'M6', pool, _bdFetchImpl: mockFetch, _now: new Date('2026-09-25T12:00:00Z') })
+    );
+    assert.ok(!capturedUrl.includes('type='),        'type= must not appear in trigger URL');
+    assert.ok(!capturedUrl.includes('discover_new'), 'discover_new must not appear in trigger URL');
+    assert.ok(!capturedUrl.includes('discover_by'),  'discover_by must not appear in trigger URL');
   });
 
   await test('BK-53 previewMode requestBody uses B5-BK-C url_collection contract', async () => {

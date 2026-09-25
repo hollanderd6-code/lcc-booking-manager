@@ -2,20 +2,22 @@
 'use strict';
 require('dotenv').config();
 /**
- * P1.2-B5-BK-A/B/C — Bright Data Booking.com Contract Discovery
+ * P1.2-B5-BK-A/B/C/D — Bright Data Booking.com Contract Discovery
  *
  * Discovery diagnostic — investigates the Booking.com BD API contract.
  * Does NOT activate Booking.com in production.
  * Does NOT modify market-provider.js, dynamic-pricing-cron.js, or any production code.
  *
  * Usage:
- *   Preview:  node outils/diag-brightdata-booking.js --name "M6"
- *   Execute:  node outils/diag-brightdata-booking.js --name "M6" --execute
- *             (BLOCKED in B5-BK-C — see EXECUTE_BLOCKED_B5_BK_C constant)
+ *   Preview:     node outils/diag-brightdata-booking.js --name "M6"
+ *   Execute:     node outils/diag-brightdata-booking.js --name "M6" --execute
+ *   Resume:      node outils/diag-brightdata-booking.js --snapshot-id <id>
+ *                (0 trigger POSTs — polls + downloads existing snapshot, runs same analysis)
  *
  * SAFETY CONTRACT:
  *   Preview:  0 BD calls, 0 DB writes, 0 market_data writes
  *   Execute:  MAX 1 BD job, MAX 10 records, 0 DB writes, 0 pricing writes
+ *   Resume:   0 BD trigger POSTs, polls existing snapshot only
  *   NEVER:    market_data writes, pricing engine, Channex calls
  *
  * B5-BK-B additions:
@@ -30,7 +32,9 @@ require('dotenv').config();
  *   type= query param  → MUST NOT be sent (implicit url_collection for this dataset)
  *   discover_by=       → MUST NOT be sent
  *   body url field     → REQUIRED: "https://www.booking.com" (official BD docs)
- *   executeMode        → BLOCKED pending first controlled url_collection live call (B5-BK-D)
+ *
+ * B5-BK-D: Live contract validation (controlled real call):
+ *   executeMode unblocked, snapshotResumeMode added, raw field scan, price semantics verdict
  *
  * CONTRACT CONFIDENCE LEVELS (B5-BK-C update):
  *   BOOKING_DATASET_ID        gd_m4bf7a917zfezv9d5    CONFIRMED (BD "Listings Search" page)
@@ -70,9 +74,6 @@ const MAX_RECORDS            = 10;       // hard cap — discovery only
 const MAX_WAIT_MS            = 180_000;  // 3 minutes
 const POLL_INTERVAL_MS_LIVE  = 10_000;
 
-// B5-BK-C: executeMode blocked pending first successful url_collection live call.
-// Remove this guard (or pass _unlockExecute: true) only after B5-BK-D confirms the contract.
-const EXECUTE_BLOCKED_B5_BK_C = true;
 
 const CONTRACT_CONFIDENCE = {
   BOOKING_DATASET_ID:      'CONFIRMED',  // BD product page names gd_m4bf7a917zfezv9d5 "Listings Search"
@@ -406,7 +407,11 @@ async function triggerBookingJob(location, currency, checkIn, checkOut, opts = {
     if (progress?.status === 'failed') throw new Error('Booking.com BD snapshot terminé en erreur');
   }
 
-  if (!ready) throw new Error('Booking.com BD timeout: snapshot non prêt dans les délais');
+  if (!ready) {
+    const timeoutErr = new Error('Booking.com BD timeout: snapshot non prêt dans les délais');
+    timeoutErr.snapshotId = snapshotId;
+    throw timeoutErr;
+  }
 
   const snapshotRes = await _fetch(
     `${BOOKING_SNAPSHOT_BASE}/${snapshotId}?format=json`,
@@ -509,7 +514,8 @@ async function previewMode({ name, _now, pool } = {}) {
   console.log('    ✅ Dataset ID CONFIRMED    → gd_m4bf7a917zfezv9d5 = BD "Listings Search"');
   console.log('    ✅ url_collection CONFIRMED → body: url + location (not discover_new)');
 
-  console.log('\n  ⛔  --execute BLOQUÉ (B5-BK-C): contrat établi, appel réel = B5-BK-D.');
+  console.log('\n  Ready: node outils/diag-brightdata-booking.js --name <nom> --execute');
+  console.log('  Resume: node outils/diag-brightdata-booking.js --snapshot-id <id>');
   console.log('═'.repeat(72) + '\n');
 
   return {
@@ -527,16 +533,7 @@ async function previewMode({ name, _now, pool } = {}) {
 // ── Execute mode ──────────────────────────────────────────────────────────────
 // MAX_BD_CALLS=1  MAX_RECORDS=10  DB_WRITES=0  PRICING_WRITES=0  CHANNEX_WRITES=0
 
-async function executeMode({ name, _bdFetchImpl, _now, pool, _unlockExecute } = {}) {
-  // B5-BK-C: executeMode blocked until first controlled url_collection call confirms the contract.
-  if (EXECUTE_BLOCKED_B5_BK_C && !_unlockExecute) {
-    console.error('\n  ⛔  B5-BK-C: executeMode BLOQUÉ');
-    console.error('  Le contrat url_collection a été établi par B5-BK-C (preview CONFIRMED).');
-    console.error('  Le premier appel réel contrôlé sera effectué dans le ticket B5-BK-D.');
-    console.error('  Pour débloquer: passer _unlockExecute: true ou retirer EXECUTE_BLOCKED_B5_BK_C.');
-    return { ok: false, blocked: true, reason: 'execute_blocked_b5bk_c' };
-  }
-
+async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool } = {}) {
   console.log('\n' + '═'.repeat(72));
   console.log('  B5-BK BOOKING.COM CONTRACT DISCOVERY — EXECUTE MODE');
   console.log('  MAX_BD_CALLS=1 | MAX_RECORDS=10 | DB_WRITES=0 | PRICING_WRITES=0');
@@ -563,10 +560,23 @@ async function executeMode({ name, _bdFetchImpl, _now, pool, _unlockExecute } = 
 
   // 2. Trigger BD job (MAX 1 job, MAX 10 records)
   console.log(`\n  🔍 Calling Bright Data Booking.com (dataset=${BOOKING_DATASET_ID}, max=${MAX_RECORDS})…`);
-  const { snapshotId, items } = await triggerBookingJob(location, currency, checkIn, checkOut, {
-    _fetchImpl:    _bdFetchImpl,
-    pollIntervalMs: _bdFetchImpl ? 1 : POLL_INTERVAL_MS_LIVE,
-  });
+  let snapshotId, items;
+  try {
+    ({ snapshotId, items } = await triggerBookingJob(location, currency, checkIn, checkOut, {
+      _fetchImpl:     _bdFetchImpl,
+      pollIntervalMs: _bdFetchImpl ? 1 : POLL_INTERVAL_MS_LIVE,
+      maxWaitMs:      _bdMaxWaitMs !== undefined ? _bdMaxWaitMs : MAX_WAIT_MS,
+    }));
+  } catch (err) {
+    if (err.snapshotId) {
+      console.error(`\n  ⏱️  TIMEOUT — snapshot non prêt dans les délais`);
+      console.error(`  SNAPSHOT_ID: ${err.snapshotId}`);
+      console.error(`  Resume (sans nouveau job):`);
+      console.error(`    node outils/diag-brightdata-booking.js --snapshot-id ${err.snapshotId}`);
+      return { ok: false, timeout: true, snapshotId: err.snapshotId };
+    }
+    throw err;
+  }
   console.log(`  snapshot_id: ${snapshotId}`);
   console.log(`  Returned: ${items.length} raw items`);
 
@@ -575,6 +585,33 @@ async function executeMode({ name, _bdFetchImpl, _now, pool, _unlockExecute } = 
     console.log('  Possible causes: location not found by Booking.com, date range issue,');
     console.log('  currency filter, or limit_per_input=0.');
     return { ok: false, snapshotId, returnedCount: 0 };
+  }
+
+  // ── Phase 1b: Raw contract field scan ────────────────────────────────────
+  console.log('\n' + '─'.repeat(72));
+  console.log('  PHASE 1b — RAW CONTRACT FIELD SCAN');
+  console.log('─'.repeat(72));
+
+  const allTopLevel = new Set();
+  for (const item of items) Object.keys(item).forEach(k => allTopLevel.add(k));
+  const sortedFields = [...allTopLevel].sort();
+  console.log(`\n  ALL TOP-LEVEL FIELDS (${sortedFields.length} unique across ${items.length} items):`);
+  console.log(`  ${sortedFields.join(', ')}`);
+
+  const KEY_FIELD_NAMES = [
+    'final_price', 'nb_bedrooms', 'review_score',
+    'lat', 'lon', 'latitude', 'longitude', 'map_coordinates',
+    'id', 'hotel_id', 'url', 'availability', 'available_dates',
+  ];
+  console.log('\n  KEY FIELD SAMPLE (first item, sanitized):');
+  for (const k of KEY_FIELD_NAMES) {
+    if (items[0][k] !== undefined) {
+      const val = items[0][k];
+      const display = val === null ? 'null'
+        : typeof val === 'object' ? JSON.stringify(val).slice(0, 80)
+        : String(val).slice(0, 80);
+      console.log(`    ${k.padEnd(20)} = ${display}`);
+    }
   }
 
   // ── Phase 2: Output schema field presence ─────────────────────────────────
@@ -624,10 +661,13 @@ async function executeMode({ name, _bdFetchImpl, _now, pool, _unlockExecute } = 
     try { return Math.round((new Date(i.check_out) - new Date(i.check_in)) / 86400000) === 1; }
     catch { return false; }
   });
+  let priceSemantics;
   if (oneNight.length === items.length) {
+    priceSemantics = 'NEED_MULTI_NIGHT_TEST';
     console.log('\n  ⚠️  All items are 1-night stays — per-night vs total price indistinguishable.');
     console.log('  Semantics INFERRED as per-night. Verify with multi-night query separately.');
-  } else if (oneNight.length < items.length) {
+    console.log(`  PRICE_SEMANTICS = ${priceSemantics}`);
+  } else {
     const multi = items.filter(i => !oneNight.includes(i));
     const sample = multi.slice(0, 3).map(i => {
       const n = Math.round((new Date(i.check_out) - new Date(i.check_in)) / 86400000);
@@ -635,6 +675,7 @@ async function executeMode({ name, _bdFetchImpl, _now, pool, _unlockExecute } = 
     });
     console.log(`\n  Multi-night items: ${multi.length} → ${sample.join(', ')}`);
     console.log('  Compare final_price / nights to identify per-night vs total semantics.');
+    priceSemantics = 'NEEDS_ANALYSIS';
   }
 
   // ── Phase 5: Geo / coordinates analysis ───────────────────────────────────
@@ -661,22 +702,51 @@ async function executeMode({ name, _bdFetchImpl, _now, pool, _unlockExecute } = 
     console.log(`  ⚠️  Partial geo: ${coordExtracted}/${items.length} — geo-filter partially feasible`);
   }
 
-  // ── Phase 6: Availability / occupancy proxy analysis ──────────────────────
+  // ── Phase 6: Comparable metadata analysis ────────────────────────────────
   console.log('\n' + '─'.repeat(72));
-  console.log('  PHASE 6 — AVAILABILITY / OCCUPANCY PROXY FEASIBILITY');
+  console.log('  PHASE 6 — COMPARABLE METADATA ANALYSIS');
   console.log('─'.repeat(72));
 
   const availFieldCount   = items.filter(i => i.availability !== undefined).length;
   const availDatesCount   = items.filter(i => Array.isArray(i.available_dates)).length;
   const freeCancelCount   = items.filter(i => i.free_cancellation === true).length;
-  console.log(`  availability field:       ${availFieldCount}/${items.length} present`);
-  console.log(`  available_dates array:    ${availDatesCount}/${items.length} present`);
-  console.log(`  free_cancellation=true:   ${freeCancelCount}/${items.length}`);
+  const bedroomCount      = items.filter(i => i.nb_bedrooms != null && parseInt(i.nb_bedrooms, 10) > 0).length;
+  const reviewScoreCount  = items.filter(i => typeof i.review_score === 'number').length;
+  const adultsCount       = items.filter(i => i.adults != null).length;
+
+  const BEDROOM_SOURCE       = bedroomCount > 0 ? 'nb_bedrooms' : 'ABSENT';
+  const GUEST_CAPACITY_SRC   = adultsCount > 0  ? 'adults (input echo)' : 'ABSENT';
+  const RATING_SOURCE        = reviewScoreCount > 0 ? 'review_score (0-10)' : 'ABSENT';
+  const RATING_SCALE         = reviewScoreCount > 0 ? '0-10 → normalized /2 → 0-5' : 'N/A';
+  const GEO_SOURCE           = coordExtracted > 0 ? 'map_coordinates / full_location' : 'ABSENT';
+  const AVAILABILITY_SOURCE  = availDatesCount > 0 ? 'available_dates' : 'ABSENT';
+  const PROPERTY_ID_SOURCE   = items[0]?.id != null ? 'id (integer)' : 'ABSENT';
+
+  console.log(`\n  BEDROOM_SOURCE:          ${BEDROOM_SOURCE}  (${bedroomCount}/${items.length} items)`);
+  console.log(`  GUEST_CAPACITY_SOURCE:   ${GUEST_CAPACITY_SRC}  (${adultsCount}/${items.length} items)`);
+  console.log(`  RATING_SOURCE:           ${RATING_SOURCE}  (${reviewScoreCount}/${items.length} items)`);
+  console.log(`  RATING_SCALE:            ${RATING_SCALE}`);
+  console.log(`  GEO_SOURCE:              ${GEO_SOURCE}`);
+  console.log(`  AVAILABILITY_SOURCE:     ${AVAILABILITY_SOURCE}  (${availDatesCount}/${items.length} items)`);
+  console.log(`  PROPERTY_ID_SOURCE:      ${PROPERTY_ID_SOURCE}`);
+  console.log(`  free_cancellation=true:  ${freeCancelCount}/${items.length}`);
+
+  const CAN_FILTER_BY_BEDROOMS  = bedroomCount > 0;
+  const CAN_FILTER_BY_CAPACITY  = adultsCount > 0;
+  const CAN_FILTER_BY_GEO       = coordExtracted > 0;
+  const CAN_DEDUP_BOOKING        = false;
+  const CAN_CALC_CALENDAR_PROXY  = availDatesCount > 0;
+
+  console.log('\n  FILTER VERDICTS:');
+  console.log(`  CAN_FILTER_BY_BEDROOMS:  ${CAN_FILTER_BY_BEDROOMS ? '✅ YES' : '❌ NO'}`);
+  console.log(`  CAN_FILTER_BY_CAPACITY:  ${CAN_FILTER_BY_CAPACITY ? '✅ YES (adults echo)' : '❌ NO'}`);
+  console.log(`  CAN_FILTER_BY_GEO:       ${CAN_FILTER_BY_GEO ? '⚠️  PARTIAL' : '❌ NO (no lat/lon)'}`);
+  console.log(`  CAN_DEDUP_BOOKING:       ❌ NO (incompatible ID space with Airbnb)`);
+  console.log(`  CAN_CALC_CALENDAR_PROXY: ${CAN_CALC_CALENDAR_PROXY ? '✅ YES' : '❌ NO (no available_dates → occupancy always 0)'}`);
 
   if (availDatesCount === 0) {
-    console.log('  ❌ OCCUPANCY_PROXY_FEASIBLE = false (no available_dates calendar)');
+    console.log('\n  → calcBrightDataMarketStats occupancy signal is absent for Booking.com');
     console.log('  → occupancy_rate will always = 0 (insufficient_calendars semantics)');
-    console.log('  → calcBrightDataMarketStats occupancy signal is absent for Booking.com');
   }
 
   // ── Phase 7: NormalizedMarketListing mapping ───────────────────────────────
@@ -749,20 +819,81 @@ async function executeMode({ name, _bdFetchImpl, _now, pool, _unlockExecute } = 
   console.log('═'.repeat(72) + '\n');
 
   return {
-    ok:            true,
+    ok:             true,
     snapshotId,
-    returnedCount: items.length,
-    acceptedCount: accepted,
-    geoFeasible:   coordExtracted > 0,
-    occFeasible:   availDatesCount > 0,
-    priceUsable:   withFinalPrice.length === items.length,
+    returnedCount:  items.length,
+    acceptedCount:  accepted,
+    geoFeasible:    coordExtracted > 0,
+    occFeasible:    availDatesCount > 0,
+    priceUsable:    withFinalPrice.length === items.length,
+    priceSemantics,
+    rawFields:      sortedFields,
   };
+}
+
+// ── Snapshot resume mode ───────────────────────────────────────────────────────
+// BD_TRIGGER_POSTS=0  DB_WRITES=0  Polls existing snapshot, runs same analysis.
+
+async function snapshotResumeMode(snapshotId, { _bdFetchImpl, currency = 'EUR' } = {}) {
+  console.log('\n' + '═'.repeat(72));
+  console.log('  B5-BK BOOKING.COM CONTRACT DISCOVERY — SNAPSHOT RESUME MODE');
+  console.log('  BD_TRIGGER_POSTS=0 | DB_WRITES=0 | polls existing snapshot only');
+  console.log('═'.repeat(72));
+
+  if (!snapshotId) throw new Error('snapshotResumeMode: snapshotId requis');
+
+  const _fetch = _bdFetchImpl || fetch;
+  const key    = process.env.BRIGHTDATA_API_KEY;
+  if (!key) throw new Error('BRIGHTDATA_API_KEY non défini');
+
+  console.log(`\n  Resuming snapshot: ${snapshotId}`);
+
+  // Poll until ready
+  const deadline = Date.now() + MAX_WAIT_MS;
+  let ready = false;
+  while (Date.now() < deadline) {
+    const progressRes = await _fetch(
+      `${BOOKING_PROGRESS_BASE}/${snapshotId}`,
+      { headers: { 'Authorization': `Bearer ${key}` } }
+    );
+    if (!progressRes.ok) throw new Error(`BD progress échoué: ${progressRes.status}`);
+    const progress = await progressRes.json();
+    if (progress?.status === 'ready')  { ready = true; break; }
+    if (progress?.status === 'failed') throw new Error('BD snapshot terminé en erreur');
+    await new Promise(r => setTimeout(r, POLL_INTERVAL_MS_LIVE));
+  }
+  if (!ready) throw new Error(`snapshotResumeMode: snapshot ${snapshotId} non prêt dans les délais`);
+
+  // Download
+  const snapshotRes = await _fetch(
+    `${BOOKING_SNAPSHOT_BASE}/${snapshotId}?format=json`,
+    { headers: { 'Authorization': `Bearer ${key}` } }
+  );
+  if (!snapshotRes.ok) throw new Error(`BD snapshot fetch échoué: ${snapshotRes.status}`);
+
+  let items;
+  try   { items = await snapshotRes.json(); }
+  catch { throw new Error('BD snapshot: JSON malformé'); }
+  if (!Array.isArray(items)) throw new Error('BD snapshot: réponse non-tableau');
+
+  console.log(`  Snapshot ready — ${items.length} items`);
+
+  // Field presence
+  const fieldPresence = analyzeFieldPresence(items);
+  console.log('\n  Field                   Present   %');
+  for (const [f, s] of Object.entries(fieldPresence)) {
+    const icon = s.pct === 100 ? '✅' : s.pct === 0 ? '❌' : '⚠️ ';
+    console.log(`  ${icon} ${f.padEnd(24)} ${String(s.present).padStart(3)}/${s.total}  ${String(s.pct).padStart(3)}%`);
+  }
+
+  return { ok: true, snapshotId, returnedCount: items.length };
 }
 
 // ── Exports ────────────────────────────────────────────────────────────────────
 module.exports = {
   previewMode,
   executeMode,
+  snapshotResumeMode,
   parseBookingItem,
   analyzeFieldPresence,
   toISO8601Timestamp,
@@ -775,7 +906,6 @@ module.exports = {
   BOOKING_PROGRESS_BASE,
   BOOKING_SNAPSHOT_BASE,
   BOOKING_INPUT_URL,
-  EXECUTE_BLOCKED_B5_BK_C,
   CONTRACT_CONFIDENCE,
   BOOKING_EXPECTED_FIELDS,
   MAX_RECORDS,
@@ -783,24 +913,30 @@ module.exports = {
 
 // ── CLI ────────────────────────────────────────────────────────────────────────
 if (require.main === module) {
-  const args    = process.argv.slice(2);
-  const nameIdx = args.indexOf('--name');
-  const name    = nameIdx !== -1 ? args[nameIdx + 1] : null;
-  const execute = args.includes('--execute');
+  const args       = process.argv.slice(2);
+  const nameIdx    = args.indexOf('--name');
+  const name       = nameIdx !== -1 ? args[nameIdx + 1] : null;
+  const snapIdx    = args.indexOf('--snapshot-id');
+  const snapId     = snapIdx !== -1 ? args[snapIdx + 1] : null;
+  const execute    = args.includes('--execute');
 
-  if (!name) {
+  if (!name && !snapId) {
     console.error('Usage: node outils/diag-brightdata-booking.js --name <nom> [--execute]');
+    console.error('       node outils/diag-brightdata-booking.js --snapshot-id <id>');
     process.exit(1);
   }
 
   const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
-  const run = execute
-    ? executeMode({ name, pool })
-    : previewMode({ name, pool });
+  let run;
+  if (snapId) {
+    run = snapshotResumeMode(snapId).then(r => { pool.end().catch(() => {}); return r; });
+  } else {
+    run = (execute ? executeMode({ name, pool }) : previewMode({ name, pool }))
+      .then(r => { pool.end().catch(() => {}); return r; });
+  }
 
   run
-    .then(() => pool.end())
     .catch(err => {
       const msg  = (err.message || '').toLowerCase();
       const code = (err.code || '').toUpperCase();
