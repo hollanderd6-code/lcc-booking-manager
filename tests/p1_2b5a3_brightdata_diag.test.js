@@ -62,6 +62,7 @@ const TOOL_SRC  = fs.readFileSync(TOOL_PATH, 'utf8');
 const {
   previewMode,
   executeMode,
+  snapshotResumeMode,
   parseBedrooms,
   analyzeRecords,
   inspectRecord,
@@ -846,6 +847,273 @@ await test('BD-38 no GET to progress or snapshot endpoint after 400 trigger', as
       `no progress poll calls expected after 400, got ${progressCalls.length}`);
     assert.strictEqual(snapshotCalls.length, 0,
       `no snapshot download calls expected after 400, got ${snapshotCalls.length}`);
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-40 : --snapshot-id does not require --location ────────────────────────
+console.log('\n── BD-40 : --snapshot-id does not require --location ──');
+
+await test('BD-40 snapshotResumeMode succeeds without any location argument', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd40';
+  const responses = [
+    () => makeProgressResponse('ready'),
+    () => makeSnapshotResponse(SAMPLE_RECORDS_WITH_PRICE),
+  ];
+  const fetchFn = makeMockFetch(responses);
+  try {
+    const result = await snapshotResumeMode('snap-bd40', { fetchFn, pollIntervalMs: 1, maxWaitMs: 5000 });
+    assert.strictEqual(result.ok, true, 'must succeed without location');
+    assert.strictEqual(result.recordCount, SAMPLE_RECORDS_WITH_PRICE.length);
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-41 : --snapshot-id does not require --execute ─────────────────────────
+console.log('\n── BD-41 : --snapshot-id does not require --execute ──');
+
+await test('BD-41 snapshotResumeMode is exported and always executes (no --execute flag needed)', async () => {
+  assert.strictEqual(typeof snapshotResumeMode, 'function', 'snapshotResumeMode must be exported');
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd41';
+  const responses = [
+    () => makeProgressResponse('ready'),
+    () => makeSnapshotResponse(SAMPLE_RECORDS_NULL_PRICE),
+  ];
+  const fetchFn = makeMockFetch(responses);
+  try {
+    const result = await snapshotResumeMode('snap-bd41', { fetchFn, pollIntervalMs: 1, maxWaitMs: 5000 });
+    assert.strictEqual(result.ok, true, 'must execute and return ok=true without an execute flag');
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-42 : snapshot mode makes 0 POST /trigger ───────────────────────────────
+console.log('\n── BD-42 : snapshot mode makes 0 POST /trigger ──');
+
+await test('BD-42 snapshotResumeMode makes zero POST requests (never calls trigger)', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd42';
+  const responses = [
+    () => makeProgressResponse('ready'),
+    () => makeSnapshotResponse(SAMPLE_RECORDS_WITH_PRICE),
+  ];
+  const fetchFn = makeMockFetch(responses);
+  try {
+    await snapshotResumeMode('snap-bd42', { fetchFn, pollIntervalMs: 1, maxWaitMs: 5000 });
+    const posts = fetchFn.calls.filter(c => c.method === 'POST');
+    assert.strictEqual(posts.length, 0, `must make 0 POST calls, got ${posts.length}`);
+    const triggerCalls = fetchFn.calls.filter(c => c.url.includes('/trigger'));
+    assert.strictEqual(triggerCalls.length, 0, `must never call trigger endpoint, got ${triggerCalls.length}`);
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-43 : snapshot running → timeout + resume message ──────────────────────
+console.log('\n── BD-43 : snapshot running → timeout + resume message ──');
+
+await test('BD-43 snapshotResumeMode returns poll_timeout when running never becomes ready', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd43';
+  const fetchFn = async (url) => {
+    if (url.includes('/progress/')) return makeProgressResponse('running');
+    return makeSnapshotResponse([]);
+  };
+  try {
+    const result = await snapshotResumeMode('snap-bd43-running', {
+      fetchFn, pollIntervalMs: 1, maxWaitMs: 30,
+    });
+    assert.strictEqual(result.ok, false);
+    assert.strictEqual(result.abort, 'poll_timeout');
+    assert.strictEqual(result.snapshotId, 'snap-bd43-running');
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-44 : snapshot ready → downloads and analyzes ──────────────────────────
+console.log('\n── BD-44 : snapshot ready → downloads and analyzes ──');
+
+await test('BD-44 snapshotResumeMode ready path: polls, downloads, returns analysis', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd44';
+  const responses = [
+    () => makeProgressResponse('running'),   // first poll: still running
+    () => makeProgressResponse('ready'),     // second poll: ready
+    () => makeSnapshotResponse(SAMPLE_RECORDS_WITH_PRICE),
+  ];
+  const fetchFn = makeMockFetch(responses);
+  try {
+    const result = await snapshotResumeMode('snap-bd44', { fetchFn, pollIntervalMs: 1, maxWaitMs: 5000 });
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(result.snapshotId, 'snap-bd44');
+    assert.strictEqual(result.recordCount, SAMPLE_RECORDS_WITH_PRICE.length);
+    assert.ok(result.analysis, 'analysis must be present');
+    assert.ok(result.pricePopulated, 'pricePopulated must be true for SAMPLE_RECORDS_WITH_PRICE');
+    const snapshotCalls = fetchFn.calls.filter(c => c.url.includes('/snapshot/'));
+    assert.strictEqual(snapshotCalls.length, 1, 'exactly one snapshot download');
+    assert.ok(snapshotCalls[0].url.includes('format=json'), 'snapshot URL must include format=json');
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-45 : snapshot failed → ok=false ───────────────────────────────────────
+console.log('\n── BD-45 : snapshot failed → ok=false ──');
+
+await test('BD-45 snapshotResumeMode returns ok=false when job status is failed', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd45';
+  const fetchFn = makeMockFetch([() => makeProgressResponse('failed')]);
+  try {
+    const result = await snapshotResumeMode('snap-bd45', { fetchFn, pollIntervalMs: 1, maxWaitMs: 5000 });
+    assert.strictEqual(result.ok, false);
+    assert.ok(result.abort.startsWith('job_'), `abort must start with job_, got ${result.abort}`);
+    const snapshotCalls = fetchFn.calls.filter(c => c.url.includes('/snapshot/'));
+    assert.strictEqual(snapshotCalls.length, 0, 'no snapshot download after failed status');
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-46 : snapshot 404 → ok=false abort=snapshot_not_found ─────────────────
+console.log('\n── BD-46 : snapshot 404 → ok=false ──');
+
+await test('BD-46 snapshotResumeMode returns snapshot_not_found on 404 progress response', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd46';
+  const fetchFn = async () => ({
+    status:  404,
+    headers: { get: () => 'application/json' },
+    text:    async () => JSON.stringify({ error: 'snapshot_not_found', message: 'No such snapshot' }),
+    json:    async () => ({ error: 'snapshot_not_found' }),
+  });
+  try {
+    const result = await snapshotResumeMode('snap-does-not-exist', {
+      fetchFn, pollIntervalMs: 1, maxWaitMs: 5000,
+    });
+    assert.strictEqual(result.ok, false);
+    assert.strictEqual(result.abort, 'snapshot_not_found');
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-47 : no DB imports in new snapshot code ────────────────────────────────
+console.log('\n── BD-47 : no DB imports in new code ──');
+
+await test('BD-47 snapshotResumeMode introduces no DB/pg/pool imports', async () => {
+  const nonCommentSrc = TOOL_SRC.split('\n')
+    .filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+    .join('\n');
+  assert.ok(!nonCommentSrc.includes("require('pg')"), 'no pg import');
+  assert.ok(!nonCommentSrc.includes('new Pool('),     'no Pool instantiation');
+  assert.ok(!nonCommentSrc.includes('DATABASE_URL'),  'no DATABASE_URL reference');
+  // snapshotResumeMode body specifically
+  const resumeStart = TOOL_SRC.indexOf('async function snapshotResumeMode');
+  const resumeEnd   = TOOL_SRC.indexOf('\n// ── CLI', resumeStart);
+  const resumeBody  = TOOL_SRC.slice(resumeStart, resumeEnd > resumeStart ? resumeEnd : undefined);
+  assert.ok(!resumeBody.includes('pool.query'),  'snapshotResumeMode must not call pool.query');
+  assert.ok(!resumeBody.includes('INSERT INTO'), 'snapshotResumeMode must not INSERT');
+});
+
+// ── BD-48 : no pricing imports ────────────────────────────────────────────────
+console.log('\n── BD-48 : no pricing imports ──');
+
+await test('BD-48 snapshotResumeMode introduces no pricing execution imports', async () => {
+  const nonCommentSrc = TOOL_SRC.split('\n')
+    .filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+    .join('\n');
+  assert.ok(!/'dynamic-pricing-cron'/.test(nonCommentSrc),             'no dynamic-pricing-cron');
+  assert.ok(!/ writeScrapeResult\s*\(/.test(nonCommentSrc),            'no writeScrapeResult()');
+  assert.ok(!/ scheduleMarketRefresh\s*\(/.test(nonCommentSrc),        'no scheduleMarketRefresh()');
+  assert.ok(!/ runDynamicPricingForOneProperty\s*\(/.test(nonCommentSrc), 'no runDynamicPricingForOneProperty()');
+});
+
+// ── BD-49 : no Channex imports ────────────────────────────────────────────────
+console.log('\n── BD-49 : no Channex imports ──');
+
+await test('BD-49 snapshotResumeMode introduces no Channex imports or calls', async () => {
+  const nonCommentSrc = TOOL_SRC.split('\n')
+    .filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+    .join('\n');
+  assert.ok(!nonCommentSrc.includes("require('../channex')"),      'no channex import');
+  assert.ok(!nonCommentSrc.includes("require('./channex')"),       'no channex import');
+  assert.ok(!/ triggerChannexRatesSync\s*\(/.test(nonCommentSrc), 'no triggerChannexRatesSync()');
+});
+
+// ── BD-50 : API key never displayed in snapshot mode ─────────────────────────
+console.log('\n── BD-50 : API key never displayed in snapshot mode ──');
+
+await test('BD-50 snapshotResumeMode does not expose API key in result on 404', async () => {
+  const secretKey = 'test-secret-snapshot-bd50';
+  process.env.BRIGHTDATA_API_KEY = secretKey;
+  // Mock 404 that echoes the raw key in the body (no Bearer prefix)
+  const fetchFn = async () => ({
+    status:  404,
+    headers: { get: () => 'application/json' },
+    text:    async () => JSON.stringify({ error: 'not_found', key_echo: secretKey }),
+    json:    async () => ({}),
+  });
+  try {
+    const result = await snapshotResumeMode('snap-bd50', {
+      fetchFn, pollIntervalMs: 1, maxWaitMs: 5000,
+    });
+    assert.strictEqual(result.abort, 'snapshot_not_found');
+    assert.ok(!JSON.stringify(result).includes(secretKey),
+      `API key must not appear in result object`);
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-51 : old location+execute mode still works ────────────────────────────
+console.log('\n── BD-51 : old location+execute mode still works (regression) ──');
+
+await test('BD-51 executeMode still works correctly after snapshotResumeMode refactor', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd51';
+  const responses = [
+    () => makeTriggerResponse('snap-bd51'),
+    () => makeProgressResponse('ready'),
+    () => makeSnapshotResponse(SAMPLE_RECORDS_WITH_PRICE),
+  ];
+  const fetchFn = makeMockFetch(responses);
+  try {
+    const result = await executeMode({ location: 'Massy, France', currency: 'EUR' }, {
+      fetchFn, pollIntervalMs: 1, maxWaitMs: 5000,
+    });
+    assert.strictEqual(result.ok, true, 'executeMode must still work');
+    assert.strictEqual(result.snapshotId, 'snap-bd51');
+    assert.strictEqual(result.recordCount, SAMPLE_RECORDS_WITH_PRICE.length);
+    const posts = fetchFn.calls.filter(c => c.method === 'POST');
+    assert.strictEqual(posts.length, 1, 'executeMode must still make exactly 1 trigger POST');
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-52 : snapshot-id never falls into trigger path ────────────────────────
+console.log('\n── BD-52 : snapshot-id never reaches trigger path ──');
+
+await test('BD-52 snapshotResumeMode never calls trigger URL regardless of inputs', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd52';
+  const seenUrls = [];
+  const fetchFn  = async (url, opts) => {
+    seenUrls.push({ url, method: opts?.method || 'GET' });
+    if (url.includes('/progress/')) return makeProgressResponse('ready');
+    if (url.includes('/snapshot/')) return makeSnapshotResponse(SAMPLE_RECORDS_WITH_PRICE);
+    return { ok: false, status: 500, text: async () => '', json: async () => ({}) };
+  };
+  try {
+    const result = await snapshotResumeMode('snap-bd52', { fetchFn, pollIntervalMs: 1, maxWaitMs: 5000 });
+    assert.strictEqual(result.ok, true);
+    const triggerOrPost = seenUrls.filter(c => c.url.includes('/trigger') || c.method === 'POST');
+    assert.strictEqual(triggerOrPost.length, 0,
+      `No trigger or POST calls expected, got: ${JSON.stringify(triggerOrPost)}`);
+    seenUrls.forEach(c => {
+      assert.ok(
+        c.url.includes('/progress/') || c.url.includes('/snapshot/'),
+        `All URLs must be progress or snapshot, got: ${c.url}`
+      );
+    });
   } finally {
     delete process.env.BRIGHTDATA_API_KEY;
   }

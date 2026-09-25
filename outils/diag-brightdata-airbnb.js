@@ -39,6 +39,16 @@ require('dotenv').config();
  * Usage:
  *   node outils/diag-brightdata-airbnb.js --location "Massy, France" --currency EUR
  *   node outils/diag-brightdata-airbnb.js --location "Massy, France" --currency EUR --execute
+ *   node outils/diag-brightdata-airbnb.js --snapshot-id <id>        (resume existing snapshot)
+ *
+ * SNAPSHOT RESUME MODE (--snapshot-id):
+ *   BRIGHTDATA_TRIGGER_POSTS = 0  — never calls POST /trigger
+ *   NEW_JOBS_CREATED         = 0
+ *   DB_WRITES                = 0
+ *   CHANNEX_CALLS            = 0
+ *   PRICING_WRITES           = 0
+ *   --location is NOT required; --execute is NOT required
+ *   BRIGHTDATA_API_KEY is still required for GET /progress and GET /snapshot
  */
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -318,6 +328,96 @@ async function previewMode({ location, currency }) {
   return { ok: true, keyPresent, location, currency };
 }
 
+// ── Shared analysis print (used by executeMode and snapshotResumeMode) ───────
+
+function printSchemaAnalysisAndVerdict(records, currency, analysis) {
+  console.log('\n' + '═'.repeat(70));
+  console.log('  SCHEMA ANALYSIS');
+  console.log('═'.repeat(70));
+
+  console.log('\n  ── PRICE ────────────────────────────────────────────────────');
+  console.log(`  PRICE_PRESENT_COUNT          : ${analysis.pricePresent}`);
+  console.log(`  PRICE_NULL_COUNT             : ${analysis.priceNull}`);
+  console.log(`  TOTAL_PRICE_PRESENT_COUNT    : ${analysis.totalPricePresent}`);
+  console.log(`  PRICING_DETAILS_TYPE         : ${analysis.pricingDetailsType}`);
+  if (analysis.pricingDetailsFields) {
+    console.log(`  PRICING_DETAILS_FIELDS       : ${JSON.stringify(analysis.pricingDetailsFields)}`);
+  }
+  console.log(`  NIGHTLY_PRICE_CANDIDATES     : ${JSON.stringify(analysis.nightlyCandidates)}`);
+  const priceIsNightly = analysis.nightlyCandidates.length > 0 ? 'CANDIDATE_FOUND_IN_STRUCTURE'
+    : analysis.pricePresent > 0 ? 'UNKNOWN_STRUCTURE' : 'UNKNOWN_PRICE_NULL';
+  console.log(`  PRICE_IS_NIGHTLY             : ${priceIsNightly}`);
+
+  console.log('\n  ── CURRENCY ─────────────────────────────────────────────────');
+  console.log(`  REQUESTED_CURRENCY           : ${currency ?? '(none)'}`);
+  console.log(`  CURRENCY_VALUES_SEEN         : ${JSON.stringify(analysis.currencyValues)}`);
+  console.log(`  ALL_RETURNED_CURRENCIES_MATCH: ${analysis.allCurrencyMatch ?? 'UNKNOWN'}`);
+
+  console.log('\n  ── AVAILABILITY ─────────────────────────────────────────────');
+  console.log(`  AVAILABILITY_FIELD_PRESENT   : ${analysis.availPresent > 0}`);
+  console.log(`  AVAILABILITY_VALUES_SEEN     : ${JSON.stringify(analysis.availValues)}`);
+  console.log(`  AVAILABLE_DATES_PRESENT      : ${analysis.availDatesPresent > 0}`);
+  console.log(`  AVAILABLE_DATES_SAMPLE_LENGTH: ${analysis.availDatesSampleLen ?? 'N/A'}`);
+
+  console.log('\n  ── BEDROOMS ─────────────────────────────────────────────────');
+  console.log(`  BEDROOMS_PARSEABLE           : ${analysis.bedroomsParseable}/${analysis.total}`);
+  analysis.bedroomExamples.forEach((ex, i) => {
+    console.log(`  Example ${i}: ${JSON.stringify(ex.raw)} → ${ex.parsed}`);
+  });
+
+  console.log('\n  ── SAMPLED RECORDS (first 3, no PII) ────────────────────────');
+  analysis.sampledInspections.forEach(r => {
+    if (r.error) { console.log(`  Record #${r.index}: ${r.error}`); return; }
+    console.log(`\n  Record #${r.index} (${r.topLevelFieldCount} fields total, ${r.topLevelFields.length} shown):`);
+    console.log(`    fields         : ${r.topLevelFields.join(', ')}`);
+    console.log(`    property_id    : ${r.property_id}`);
+    console.log(`    currency       : ${r.currency}`);
+    console.log(`    pricing_details: ${r.pricingDetailsPresent ? r.pricingDetailsType : 'NULL'}`);
+    if (r.pricingDetailsFields) {
+      r.pricingDetailsFields.forEach(f =>
+        console.log(`      .${f.key} (${f.type}): ${f.sanitized}`)
+      );
+    }
+    console.log(`    total_price    : ${r.totalPrice}`);
+    console.log(`    availability   : ${r.availability}`);
+    console.log(`    available_dates: ${r.availableDatesCount !== null ? `[${r.availableDatesCount} dates]` : 'ABSENT'}`);
+    console.log(`    details        : ${JSON.stringify(r.detailsArray)}`);
+    console.log(`    bedrooms_parsed: ${r.bedroomsParsed}`);
+    console.log(`    ratings        : ${r.ratings}`);
+    console.log(`    lat/long       : ${r.latPresent ? '[PRESENT]' : 'ABSENT'} / ${r.longPresent ? '[PRESENT]' : 'ABSENT'}`);
+  });
+
+  const pricePopulated  = analysis.pricePresent > 0;
+  const canBuildAdapter = pricePopulated        ? 'YES'
+    : records.length === 0 ? 'UNKNOWN_NO_RECORDS'
+    : 'NO — NEED_DATE_TEST';
+
+  console.log('\n' + '═'.repeat(70));
+  console.log('  DIAGNOSTIC VERDICT');
+  console.log('═'.repeat(70));
+  console.log(`  LOCATION_ONLY_REQUEST_ACCEPTED : ${records.length > 0}`);
+  console.log(`  RECORDS_RETURNED               : ${records.length}`);
+  console.log(`  PRICE_POPULATED_WITHOUT_DATES  : ${pricePopulated}`);
+  console.log(`  PRICING_DETAILS_TYPE           : ${analysis.pricingDetailsType}`);
+  console.log(`  NIGHTLY_PRICE_FIELD            : ${analysis.nightlyCandidates[0] ?? 'NOT_FOUND'}`);
+  console.log(`  PRICE_IS_NIGHTLY               : ${priceIsNightly}`);
+  console.log(`  CURRENCY_FIELD_PRESENT         : ${analysis.currencyValues.length > 0}`);
+  console.log(`  CURRENCY_MATCH                 : ${analysis.allCurrencyMatch ?? 'UNKNOWN'}`);
+  console.log(`  AVAILABILITY_FIELD_PRESENT     : ${analysis.availPresent > 0}`);
+  console.log(`  AVAILABLE_DATES_PRESENT        : ${analysis.availDatesPresent > 0}`);
+  console.log(`  BEDROOMS_PARSEABLE             : ${analysis.bedroomsParseable}/${analysis.total}`);
+  console.log(`  RATING_FIELD_PRESENT           : ${analysis.ratingsPresent > 0}`);
+  console.log(`  CAN_BUILD_BRIGHTDATA_ADAPTER   : ${canBuildAdapter}`);
+
+  if (!pricePopulated && records.length > 0) {
+    console.log('\n  NEXT_REQUIRED_TEST =');
+    console.log('    "Controlled location + currency + future dates diagnostic"');
+    console.log('    Add --check-in and --check-out to next diagnostic run.');
+  }
+
+  return { priceIsNightly, pricePopulated, canBuildAdapter };
+}
+
 // ── executeMode — exactly ONE Bright Data discovery job ───────────────────────
 // deps = { fetchFn, pollIntervalMs, maxWaitMs } — all injectable for tests
 
@@ -458,92 +558,7 @@ async function executeMode({ location, currency }, deps = {}) {
 
   // ── Step 4: Analyze ────────────────────────────────────────────────────────
   const analysis = analyzeRecords(records, currency);
-
-  // Print schema analysis — sanitized, no PII
-  console.log('\n' + '═'.repeat(70));
-  console.log('  SCHEMA ANALYSIS');
-  console.log('═'.repeat(70));
-
-  console.log('\n  ── PRICE ────────────────────────────────────────────────────');
-  console.log(`  PRICE_PRESENT_COUNT          : ${analysis.pricePresent}`);
-  console.log(`  PRICE_NULL_COUNT             : ${analysis.priceNull}`);
-  console.log(`  TOTAL_PRICE_PRESENT_COUNT    : ${analysis.totalPricePresent}`);
-  console.log(`  PRICING_DETAILS_TYPE         : ${analysis.pricingDetailsType}`);
-  if (analysis.pricingDetailsFields) {
-    console.log(`  PRICING_DETAILS_FIELDS       : ${JSON.stringify(analysis.pricingDetailsFields)}`);
-  }
-  console.log(`  NIGHTLY_PRICE_CANDIDATES     : ${JSON.stringify(analysis.nightlyCandidates)}`);
-  const priceIsNightly = analysis.nightlyCandidates.length > 0 ? 'CANDIDATE_FOUND_IN_STRUCTURE'
-    : analysis.pricePresent > 0 ? 'UNKNOWN_STRUCTURE' : 'UNKNOWN_PRICE_NULL';
-  console.log(`  PRICE_IS_NIGHTLY             : ${priceIsNightly}`);
-
-  console.log('\n  ── CURRENCY ─────────────────────────────────────────────────');
-  console.log(`  REQUESTED_CURRENCY           : ${currency}`);
-  console.log(`  CURRENCY_VALUES_SEEN         : ${JSON.stringify(analysis.currencyValues)}`);
-  console.log(`  ALL_RETURNED_CURRENCIES_MATCH: ${analysis.allCurrencyMatch ?? 'UNKNOWN'}`);
-
-  console.log('\n  ── AVAILABILITY ─────────────────────────────────────────────');
-  console.log(`  AVAILABILITY_FIELD_PRESENT   : ${analysis.availPresent > 0}`);
-  console.log(`  AVAILABILITY_VALUES_SEEN     : ${JSON.stringify(analysis.availValues)}`);
-  console.log(`  AVAILABLE_DATES_PRESENT      : ${analysis.availDatesPresent > 0}`);
-  console.log(`  AVAILABLE_DATES_SAMPLE_LENGTH: ${analysis.availDatesSampleLen ?? 'N/A'}`);
-
-  console.log('\n  ── BEDROOMS ─────────────────────────────────────────────────');
-  console.log(`  BEDROOMS_PARSEABLE           : ${analysis.bedroomsParseable}/${analysis.total}`);
-  analysis.bedroomExamples.forEach((ex, i) => {
-    console.log(`  Example ${i}: ${JSON.stringify(ex.raw)} → ${ex.parsed}`);
-  });
-
-  console.log('\n  ── SAMPLED RECORDS (first 3, no PII) ────────────────────────');
-  analysis.sampledInspections.forEach(r => {
-    if (r.error) { console.log(`  Record #${r.index}: ${r.error}`); return; }
-    console.log(`\n  Record #${r.index} (${r.topLevelFieldCount} fields total, ${r.topLevelFields.length} shown):`);
-    console.log(`    fields         : ${r.topLevelFields.join(', ')}`);
-    console.log(`    property_id    : ${r.property_id}`);
-    console.log(`    currency       : ${r.currency}`);
-    console.log(`    pricing_details: ${r.pricingDetailsPresent ? r.pricingDetailsType : 'NULL'}`);
-    if (r.pricingDetailsFields) {
-      r.pricingDetailsFields.forEach(f =>
-        console.log(`      .${f.key} (${f.type}): ${f.sanitized}`)
-      );
-    }
-    console.log(`    total_price    : ${r.totalPrice}`);
-    console.log(`    availability   : ${r.availability}`);
-    console.log(`    available_dates: ${r.availableDatesCount !== null ? `[${r.availableDatesCount} dates]` : 'ABSENT'}`);
-    console.log(`    details        : ${JSON.stringify(r.detailsArray)}`);
-    console.log(`    bedrooms_parsed: ${r.bedroomsParsed}`);
-    console.log(`    ratings        : ${r.ratings}`);
-    console.log(`    lat/long       : ${r.latPresent ? '[PRESENT]' : 'ABSENT'} / ${r.longPresent ? '[PRESENT]' : 'ABSENT'}`);
-  });
-
-  // ── Final diagnostic verdict ───────────────────────────────────────────────
-  const pricePopulated     = analysis.pricePresent > 0;
-  const canBuildAdapter    = pricePopulated        ? 'YES'
-    : records.length === 0 ? 'UNKNOWN_NO_RECORDS'
-    : 'NO — NEED_DATE_TEST';
-
-  console.log('\n' + '═'.repeat(70));
-  console.log('  DIAGNOSTIC VERDICT');
-  console.log('═'.repeat(70));
-  console.log(`  LOCATION_ONLY_REQUEST_ACCEPTED : ${records.length > 0}`);
-  console.log(`  RECORDS_RETURNED               : ${records.length}`);
-  console.log(`  PRICE_POPULATED_WITHOUT_DATES  : ${pricePopulated}`);
-  console.log(`  PRICING_DETAILS_TYPE           : ${analysis.pricingDetailsType}`);
-  console.log(`  NIGHTLY_PRICE_FIELD            : ${analysis.nightlyCandidates[0] ?? 'NOT_FOUND'}`);
-  console.log(`  PRICE_IS_NIGHTLY               : ${priceIsNightly}`);
-  console.log(`  CURRENCY_FIELD_PRESENT         : ${analysis.currencyValues.length > 0}`);
-  console.log(`  CURRENCY_MATCH                 : ${analysis.allCurrencyMatch ?? 'UNKNOWN'}`);
-  console.log(`  AVAILABILITY_FIELD_PRESENT     : ${analysis.availPresent > 0}`);
-  console.log(`  AVAILABLE_DATES_PRESENT        : ${analysis.availDatesPresent > 0}`);
-  console.log(`  BEDROOMS_PARSEABLE             : ${analysis.bedroomsParseable}/${analysis.total}`);
-  console.log(`  RATING_FIELD_PRESENT           : ${analysis.ratingsPresent > 0}`);
-  console.log(`  CAN_BUILD_BRIGHTDATA_ADAPTER   : ${canBuildAdapter}`);
-
-  if (!pricePopulated && records.length > 0) {
-    console.log('\n  NEXT_REQUIRED_TEST =');
-    console.log('    "Controlled location + currency + future dates diagnostic"');
-    console.log('    Add --check-in and --check-out to next diagnostic run.');
-  }
+  const { pricePopulated, canBuildAdapter } = printSchemaAnalysisAndVerdict(records, currency, analysis);
 
   console.log('\n  DB_WRITES = 0 | CHANNEX_CALLS = 0 | PRICING_WRITES = 0');
   console.log('  BRIGHTDATA_JOBS_CREATED = 1');
@@ -559,29 +574,169 @@ async function executeMode({ location, currency }, deps = {}) {
   };
 }
 
+// ── snapshotResumeMode — resume an existing Bright Data snapshot ──────────────
+// deps = { fetchFn, pollIntervalMs, maxWaitMs, currency }
+// BRIGHTDATA_TRIGGER_POSTS = 0  — never calls POST /trigger
+
+async function snapshotResumeMode(snapshotId, deps = {}) {
+  const fetchFn        = deps.fetchFn        || fetch;
+  const pollIntervalMs = deps.pollIntervalMs ?? POLL_INTERVAL_MS;
+  const maxWaitMs      = deps.maxWaitMs      ?? MAX_WAIT_MS;
+  const currency       = deps.currency       ?? null;
+
+  const token = process.env.BRIGHTDATA_API_KEY;
+  if (!token) {
+    console.error('⛔  ABORT: BRIGHTDATA_API_KEY not set — no network call made');
+    return { ok: false, abort: 'missing_api_key' };
+  }
+
+  console.log('\n' + '═'.repeat(70));
+  console.log('  B5-A3 BRIGHT DATA DIAGNOSTIC — SNAPSHOT RESUME MODE');
+  console.log('  BRIGHTDATA_TRIGGER_POSTS = 0');
+  console.log('  NEW_JOBS_CREATED         = 0');
+  console.log('  DB_WRITES                = 0');
+  console.log('  CHANNEX_CALLS            = 0');
+  console.log('  PRICING_WRITES           = 0');
+  console.log('═'.repeat(70));
+  console.log(`\n  snapshot_id : ${snapshotId}`);
+  console.log(`  max_wait    : ${maxWaitMs / 1000}s`);
+
+  // ── Poll for status ────────────────────────────────────────────────────────
+  console.log('\n  Checking snapshot status...');
+
+  const deadline   = Date.now() + maxWaitMs;
+  let   lastStatus = 'unknown';
+
+  while (true) {
+    let progressData;
+    try {
+      const progressRes = await fetchFn(`${BD_PROGRESS_BASE}/${snapshotId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (progressRes.status === 404) {
+        const errText  = await progressRes.text();
+        const ctHeader = (progressRes.headers && typeof progressRes.headers.get === 'function')
+          ? (progressRes.headers.get('content-type') || '') : '';
+        let sanitized = sanitizeErrorBody(errText, ctHeader);
+        if (token) sanitized = sanitized.split(token).join('[REDACTED]');
+        console.error('⛔  Snapshot not found (404)');
+        console.error(`  SANITIZED_ERROR_BODY:\n${sanitized}`);
+        return { ok: false, abort: 'snapshot_not_found', snapshotId };
+      }
+
+      progressData = await progressRes.json();
+    } catch (err) {
+      console.warn(`  ⚠️   Poll network error: ${err.message}`);
+      if (Date.now() >= deadline) {
+        console.error(`⛔  TIMEOUT after network errors (${maxWaitMs / 1000}s)`);
+        return { ok: false, abort: 'poll_timeout', snapshotId, lastStatus };
+      }
+      await new Promise(r => setTimeout(r, pollIntervalMs));
+      continue;
+    }
+
+    lastStatus = progressData?.status ?? 'unknown';
+    console.log(`  ⏳  status: ${lastStatus}`);
+
+    if (lastStatus === 'ready') break;
+
+    if (['failed', 'error', 'aborted'].includes(lastStatus)) {
+      console.error(`⛔  Snapshot ended in error state: ${lastStatus}`);
+      return { ok: false, abort: `job_${lastStatus}`, snapshotId };
+    }
+
+    // running / pending — keep polling within deadline
+    if (Date.now() >= deadline) {
+      console.error(`⛔  TIMEOUT: snapshot not ready within ${maxWaitMs / 1000}s (last: ${lastStatus})`);
+      console.log(`\n  Snapshot is still processing. Resume with the same command when ready:`);
+      console.log(`    node outils/diag-brightdata-airbnb.js --snapshot-id ${snapshotId}`);
+      return { ok: false, abort: 'poll_timeout', snapshotId, lastStatus };
+    }
+
+    await new Promise(r => setTimeout(r, pollIntervalMs));
+  }
+
+  // ── Download snapshot ──────────────────────────────────────────────────────
+  console.log('\n  Downloading snapshot...');
+
+  let records;
+  try {
+    const snapshotRes = await fetchFn(`${BD_SNAPSHOT_BASE}/${snapshotId}?format=json`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!snapshotRes.ok) {
+      const errText  = await snapshotRes.text();
+      const ctHeader = (snapshotRes.headers && typeof snapshotRes.headers.get === 'function')
+        ? (snapshotRes.headers.get('content-type') || '') : '';
+      let sanitized = sanitizeErrorBody(errText, ctHeader);
+      if (token) sanitized = sanitized.split(token).join('[REDACTED]');
+      console.error(`⛔  Snapshot download failed: HTTP ${snapshotRes.status}`);
+      console.error(`  SANITIZED_ERROR_BODY:\n${sanitized}`);
+      return { ok: false, abort: `snapshot_failed:${snapshotRes.status}`, snapshotId };
+    }
+    records = await snapshotRes.json();
+  } catch (err) {
+    console.error(`⛔  Snapshot network error: ${err.message}`);
+    return { ok: false, abort: 'snapshot_network_error', snapshotId };
+  }
+
+  if (!Array.isArray(records)) {
+    console.error('⛔  Snapshot response is not an array');
+    return { ok: false, abort: 'snapshot_not_array', snapshotId };
+  }
+
+  console.log(`  ✅  ${records.length} record(s) returned`);
+  console.log(`  RETURNED_RECORD_COUNT = ${records.length}`);
+
+  // ── Analyze ────────────────────────────────────────────────────────────────
+  const analysis = analyzeRecords(records, currency);
+  const { pricePopulated, canBuildAdapter } = printSchemaAnalysisAndVerdict(records, currency, analysis);
+
+  console.log('\n  DB_WRITES = 0 | CHANNEX_CALLS = 0 | PRICING_WRITES = 0');
+  console.log('  BRIGHTDATA_TRIGGER_POSTS = 0 | NEW_JOBS_CREATED = 0');
+  console.log('═'.repeat(70) + '\n');
+
+  return {
+    ok:            true,
+    snapshotId,
+    recordCount:   records.length,
+    analysis,
+    pricePopulated,
+    canBuildAdapter,
+  };
+}
+
 // ── CLI ───────────────────────────────────────────────────────────────────────
 if (require.main === module) {
   const args = process.argv.slice(2);
-  let location = null;
-  let currency = 'EUR';
-  let execute  = false;
+  let location   = null;
+  let currency   = 'EUR';
+  let execute    = false;
+  let snapshotId = null;
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--location' && args[i + 1]) location = args[++i];
-    if (args[i] === '--currency' && args[i + 1]) currency = args[++i].toUpperCase();
-    if (args[i] === '--execute')                 execute  = true;
+    if (args[i] === '--location'    && args[i + 1]) location   = args[++i];
+    if (args[i] === '--currency'    && args[i + 1]) currency   = args[++i].toUpperCase();
+    if (args[i] === '--execute')                    execute    = true;
+    if (args[i] === '--snapshot-id' && args[i + 1]) snapshotId = args[++i];
   }
 
-  if (!location) {
-    console.error('Usage: node outils/diag-brightdata-airbnb.js --location "<location>" [--currency EUR] [--execute]');
-    console.error('  --location is mandatory');
-    console.error('  --execute requires BRIGHTDATA_API_KEY in environment');
+  let run;
+  if (snapshotId) {
+    run = snapshotResumeMode(snapshotId, { currency });
+  } else if (!location) {
+    console.error('Usage:');
+    console.error('  node outils/diag-brightdata-airbnb.js --location "<location>" [--currency EUR] [--execute]');
+    console.error('  node outils/diag-brightdata-airbnb.js --snapshot-id <id>');
+    console.error('--location is mandatory unless --snapshot-id is given');
+    console.error('--execute and --snapshot-id both require BRIGHTDATA_API_KEY in environment');
     process.exit(1);
+  } else {
+    run = execute
+      ? executeMode({ location, currency })
+      : previewMode({ location, currency });
   }
-
-  const run = execute
-    ? executeMode({ location, currency })
-    : previewMode({ location, currency });
 
   run.catch(err => {
     console.error('Fatal:', err.message);
@@ -592,6 +747,7 @@ if (require.main === module) {
 module.exports = {
   previewMode,
   executeMode,
+  snapshotResumeMode,
   parseBedrooms,
   analyzeRecords,
   inspectRecord,
