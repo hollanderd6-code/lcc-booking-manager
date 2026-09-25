@@ -393,8 +393,9 @@ function buildSchedule(rawCtx) {
 }
 
 // ────────────────────────────────────────────────────────────
-// ADAPTATEUR DB : lit reservations + market_data + pricing_config
+// ADAPTATEUR DB : lit reservations + pricing_config
 // et renvoie le planning par nuit prêt à pousser vers Channex.
+// Market input must be resolved upstream and passed as marketOverride.
 // ────────────────────────────────────────────────────────────
 async function buildBookedSet(pool, propertyId, today, horizonDays) {
   const end = addDays(today, horizonDays);
@@ -433,25 +434,15 @@ async function priceProperty(pool, opts) {
   const priceMin = cfgRow.price_min != null ? parseFloat(cfgRow.price_min) : 30;
   const priceMax = cfgRow.price_max != null ? parseFloat(cfgRow.price_max) : 1000;
 
-  // Market signal:
-  //   marketOverride key absent → legacy DB lookup (backward-compatible)
-  //   marketOverride = null     → explicitly neutral; no DB lookup performed
-  //   marketOverride = object   → use supplied value directly
-  let market;
-  if ('marketOverride' in opts) {
-    market = opts.marketOverride ?? null;
-    if (market != null && market.median != null) market.median = parseFloat(market.median);
-  } else {
-    const dbRow = (await pool.query(
-      `SELECT median_price AS median, occupancy_rate, comparable_count, tension_level
-         FROM market_data
-        WHERE property_id = $1
-        ORDER BY week_start DESC LIMIT 1`,
-      [property.id]
-    )).rows[0] || null;
-    if (dbRow && dbRow.median != null) dbRow.median = parseFloat(dbRow.median);
-    market = dbRow;
+  // Market signal contract (B4-F):
+  //   marketOverride = null   → valid, explicitly neutral (no market signal)
+  //   marketOverride = object → valid, explicitly supplied market
+  //   marketOverride absent / undefined → programming error — fail closed
+  if (!('marketOverride' in opts) || opts.marketOverride === undefined) {
+    throw new Error('priceProperty requires explicit marketOverride (object or null)');
   }
+  let market = opts.marketOverride;
+  if (market != null && market.median != null) market.median = parseFloat(market.median);
 
   const horizonDays = (configOverride?.horizonDays) || DEFAULTS.horizonDays;
   const bookedSet = await buildBookedSet(pool, property.id, today, horizonDays);

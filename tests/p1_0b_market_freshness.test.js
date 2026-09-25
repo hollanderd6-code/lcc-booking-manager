@@ -313,34 +313,38 @@ await test('MF-14 marketOverride=object with median → priceProperty uses it (d
   assert.ok(firstNight.breakdown.market > 1, `market factor should be > 1 when median=${marketObj.median} > base=${BASE_PROP_FOR_ENGINE.base_price}`);
 });
 
-await test('MF-15 marketOverride absent → legacy DB lookup is performed', async () => {
-  const pool = makeEnginePool({
-    trackMarketQuery: true,
-    marketRow: { median: 110, occupancy_rate: 0.65, comparable_count: 12, tension_level: 'medium' },
-  });
-  const result = await priceProperty(pool, {
-    userId: 'u1', property: BASE_PROP_FOR_ENGINE,
-    today: new Date('2026-09-23'), events: [], schoolHolidays: [],
-    // marketOverride intentionally absent
-  });
-  assert.strictEqual(pool._wasMarketQueried(), true, 'market_data DB MUST be queried when marketOverride is absent');
-  assert.ok(result.market !== null, 'market should come from DB lookup');
+await test('MF-15 marketOverride absent → fail-closed error (B4-F engine contract)', async () => {
+  // B4-F: legacy DB lookup removed. Missing marketOverride is a programming error.
+  const pool = makeEnginePool({ trackMarketQuery: true });
+  await assert.rejects(
+    () => priceProperty(pool, {
+      userId: 'u1', property: BASE_PROP_FOR_ENGINE,
+      today: new Date('2026-09-23'), events: [], schoolHolidays: [],
+      // marketOverride intentionally absent
+    }),
+    (err) => {
+      assert.ok(err.message.includes('explicit marketOverride'), `Wrong error: ${err.message}`);
+      return true;
+    }
+  );
+  assert.strictEqual(pool._wasMarketQueried(), false, 'market_data must NOT be queried — fail-closed before any query');
 });
 
-await test('MF-16 marketOverride present but undefined is impossible via destructuring — absent (undefined) = DB lookup', async () => {
-  // This tests that passing marketOverride: undefined (destructuring default) triggers DB lookup
+await test('MF-16 marketOverride=undefined → fail-closed error (B4-F engine contract)', async () => {
+  // B4-F: undefined is treated same as absent — both are programming errors.
   const pool = makeEnginePool({ trackMarketQuery: true });
-  // Explicitly passing undefined is the same as absent for 'in' check — correct behavior
-  const result = await priceProperty(pool, {
-    userId: 'u1', property: BASE_PROP_FOR_ENGINE,
-    today: new Date('2026-09-23'), events: [], schoolHolidays: [],
-    marketOverride: undefined,
-  });
-  // Note: undefined IS in opts (key exists with undefined value)
-  // Our guard: 'marketOverride' in opts → true → market = opts.marketOverride ?? null = null
-  // This is acceptable — callers who want DB lookup should omit the key entirely
-  // The apply layer correctly omits the key when marketOverride is undefined
-  assert.ok(true, 'No crash — undefined marketOverride handled');
+  await assert.rejects(
+    () => priceProperty(pool, {
+      userId: 'u1', property: BASE_PROP_FOR_ENGINE,
+      today: new Date('2026-09-23'), events: [], schoolHolidays: [],
+      marketOverride: undefined,
+    }),
+    (err) => {
+      assert.ok(err.message.includes('explicit marketOverride'), `Wrong error: ${err.message}`);
+      return true;
+    }
+  );
+  assert.strictEqual(pool._wasMarketQueried(), false, 'market_data must NOT be queried');
 });
 
 // ── PART 3: mock/stale market never reaches marketMult ────────────────────────
@@ -493,17 +497,21 @@ await test('MF-22 mock (isMock=true, marketOverride=null) → publisher NOT call
   assert.strictEqual(_publishCalled, false, 'publisher must NOT be called for mock');
 });
 
-await test('MF-23 missing (isMock=false, marketOverride absent) → publisher called (backward compat)', async () => {
+await test('MF-23 marketOverride absent → forwarded as undefined to engine (B4-F: real engine would throw)', async () => {
+  // B4-F: applyDynamicPricingForProperty always forwards marketOverride to priceProperty.
+  // Absent caller → marketOverride=undefined forwarded → real priceProperty throws.
+  // This test verifies the forwarding via mock (mock does not validate contract).
   _pricePropertyImpl = makeOnNight();
   _publishCalled = false;
   _lastEngineOpts = null;
   await applyDynamicPricingForProperty(makeApplyPool(), {
     cfg: makeCfg(), marketStats: null, isMock: false,
-    // marketOverride intentionally absent → legacy DB lookup path
+    // marketOverride intentionally absent
     sendPushNotification: null,
   });
-  assert.strictEqual(_publishCalled, true, 'publisher must be called when market is missing');
-  assert.ok(!('marketOverride' in (_lastEngineOpts || {})), 'marketOverride key must be absent in engine opts (legacy path)');
+  assert.strictEqual(_publishCalled, true, 'publisher still called via mock (real engine would have thrown)');
+  assert.ok('marketOverride' in (_lastEngineOpts || {}), 'marketOverride key must now be forwarded to engine (as undefined)');
+  assert.strictEqual(_lastEngineOpts.marketOverride, undefined, 'undefined marketOverride forwarded — real priceProperty would fail-closed');
 });
 
 // ── PART 5: booking recalc trigger ────────────────────────────────────────────

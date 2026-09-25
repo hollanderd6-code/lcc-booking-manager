@@ -133,8 +133,8 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
   }
 
   // 2. Moteur per-night (J → J+horizon)
-  // marketOverride present → pipeline resolved usability; pass it (null = neutral).
-  // marketOverride absent  → backward-compat: priceProperty does its own DB lookup.
+  // marketOverride must be explicit: null (neutral) or object (usable market).
+  // Absent/undefined is forwarded to priceProperty which fails closed (B4-F).
   const engineOpts = {
     userId: cfg.user_id,
     property: prop,
@@ -142,10 +142,8 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
     events: EVENTS_PARIS_2026,
     schoolHolidays: SCHOOL_HOLIDAYS_IDF_2025_2026,
     configOverride: configToOverride(cfg),
+    marketOverride,
   };
-  // marketOverride !== undefined means the caller explicitly resolved market usability.
-  // null = neutral (stale/untrusted). An object = use it. Absent (undefined) = legacy DB lookup.
-  if (marketOverride !== undefined) engineOpts.marketOverride = marketOverride;
 
   const result = await priceProperty(pool, engineOpts);
 
