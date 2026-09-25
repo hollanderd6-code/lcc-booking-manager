@@ -33,13 +33,10 @@ require('dotenv').config();
  */
 
 // ── Safe imports only (no pricing/channex) ─────────────────────────────────────
-const {
-  writeScrapeResult,
-  scrapeBestZone,
-  getFallbackZones,
-  getCurrentWeekStart,
-  calcMarketStats,
-} = require('../routes/dynamic-pricing-cron');
+// NOTE: dynamic-pricing-cron is required lazily inside executeMode only, to avoid
+// triggering the pre-existing circular dependency chain that goes through
+// dynamic-pricing-routes → market-refresh-trigger → dynamic-pricing-cron.
+// PREVIEW mode runs entirely without requiring that module.
 const { classifyMarketData, normalizeCurrency } = require('../routes/market-data-resolver');
 const { computeMarketContextKey }               = require('../routes/market-context-key');
 const { Pool }                                  = require('pg');
@@ -49,13 +46,15 @@ const MAX_LISTINGS        = 100;
 const REQUIRE_CURRENCY    = 'EUR';   // hard-coded for B4-H validation
 
 // ── SQL fragment reused for both target-lookup and fresh-read ─────────────────
+// zone_label lives in market_data, NOT pricing_config — do not select pc.zone_label.
+// getFallbackZones(address, undefined) derives zones from address when no zoneLabel given.
 const PROP_SELECT = `
   SELECT p.id, p.name, p.internal_name, p.address,
          p.currency AS property_currency,
          p.country_code, p.latitude, p.longitude,
          p.channex_enabled, p.channex_rate_plan_id,
          pc.is_active, pc.mode, pc.user_id,
-         pc.price_min, pc.price_max, pc.bedrooms, pc.zone_label
+         pc.price_min, pc.price_max, pc.bedrooms
   FROM properties p
   JOIN pricing_config pc ON pc.property_id = p.id AND pc.user_id = p.user_id
 `;
@@ -193,6 +192,14 @@ async function previewMode(pool, { name }) {
 
 // ── executeMode: performs scrape → write → classify ───────────────────────────
 async function executeMode(pool, { name }, deps = {}) {
+  // Lazy require: avoids triggering the cron→routes→trigger→cron circular dep in PREVIEW.
+  const {
+    writeScrapeResult,
+    scrapeBestZone,
+    getFallbackZones,
+    getCurrentWeekStart,
+    calcMarketStats,
+  } = require('../routes/dynamic-pricing-cron');
   // deps = { scrapeFn, writeFn } — injectable for tests; production uses real cron fns
   const scrapeFn = deps.scrapeFn || scrapeBestZone;
   const writeFn  = deps.writeFn  || writeScrapeResult;
