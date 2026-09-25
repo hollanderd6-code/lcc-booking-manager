@@ -82,6 +82,60 @@ const REDACTED_FIELDS = new Set([
   'category_rating', 'travel_details',
 ]);
 
+// Fields that match /night/ but are NOT prices — must NEVER become price candidates
+const NON_PRICE_FIELDS = new Set([
+  'minimum_nights', 'minimum_stay', 'min_nights', 'minimum_night',
+  'max_nights', 'maximum_nights', 'max_stay',
+  'nights',             // number of nights booked, not a monetary value
+  'checkin_time', 'checkout_time',
+  'guests', 'guest_count', 'min_guests', 'max_guests',
+  'ratings', 'rating', 'review_count', 'reviews_count',
+  'bedrooms', 'beds', 'bathrooms', 'rooms',
+]);
+
+/**
+ * Classify a pricing_details key into a price category.
+ * Returns one of: BASE_NIGHTLY | CLEANING_FEE | SERVICE_FEE | TAX | TOTAL | OTHER
+ */
+function classifyPricingField(key) {
+  const k = key.toLowerCase();
+  if (/\btotal\b|grand_total/.test(k))                                   return 'TOTAL';
+  if (/base|accommodation|room_rate|rate_per|per_night|nightly_rate|per_day/.test(k)) return 'BASE_NIGHTLY';
+  if (/clean/.test(k))                                                    return 'CLEANING_FEE';
+  if (/service|host_fee|guest_fee/.test(k))                               return 'SERVICE_FEE';
+  if (/\btax\b|vat|tva|gst/.test(k))                                     return 'TAX';
+  return 'OTHER';
+}
+
+/**
+ * Validate an optional check-in / check-out pair.
+ * Both must be present together, YYYY-MM-DD, check-out > check-in, future dates.
+ * Returns { ok: true, checkIn, checkOut, nights } or { ok: false, error: '...' }
+ */
+function validateDates(checkIn, checkOut) {
+  if (!checkIn && !checkOut) return { ok: true, checkIn: null, checkOut: null, nights: null };
+  if (checkIn  && !checkOut) return { ok: false, error: '--check-in requires --check-out' };
+  if (!checkIn && checkOut)  return { ok: false, error: '--check-out requires --check-in' };
+
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+  if (!ISO_DATE.test(checkIn))  return { ok: false, error: `--check-in format must be YYYY-MM-DD, got: "${checkIn}"` };
+  if (!ISO_DATE.test(checkOut)) return { ok: false, error: `--check-out format must be YYYY-MM-DD, got: "${checkOut}"` };
+
+  const inDate  = new Date(checkIn  + 'T00:00:00Z');
+  const outDate = new Date(checkOut + 'T00:00:00Z');
+
+  if (isNaN(inDate.getTime()))  return { ok: false, error: `--check-in is not a valid date: "${checkIn}"` };
+  if (isNaN(outDate.getTime())) return { ok: false, error: `--check-out is not a valid date: "${checkOut}"` };
+
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  if (inDate < today)    return { ok: false, error: `--check-in must be a future date, got: "${checkIn}"` };
+  if (outDate <= inDate) return { ok: false, error: `--check-out must be after --check-in (${checkIn} → ${checkOut})` };
+
+  const nights = Math.round((outDate - inDate) / (1000 * 60 * 60 * 24));
+  return { ok: true, checkIn, checkOut, nights };
+}
+
 // ── Error sanitization ────────────────────────────────────────────────────────
 
 const ERROR_BODY_MAX_CHARS = 4000;
@@ -172,6 +226,7 @@ function inspectRecord(record, index) {
   if (pdPresent && typeof pd === 'object') {
     pricingDetailsFields = Object.entries(pd).map(([k, v]) => ({
       key:       k,
+      category:  classifyPricingField(k),
       type:      typeof v,
       sanitized: sanitizePricingValue(v),
     }));
@@ -214,15 +269,21 @@ function analyzeRecords(records, requestedCurrency) {
     ? currencyValues.every(c => c === requestedCurrency)
     : null;
 
-  // Nightly price candidates (top-level + inside pricing_details)
+  // Nightly price candidates — numeric monetary values only.
+  // NON_PRICE_FIELDS explicitly excluded: minimum_nights, guests, ratings, etc.
   const nightlyCandidates = new Set();
   records.forEach(r => {
     Object.keys(r).forEach(k => {
-      if (/night|nightly|per_night/i.test(k) && r[k] != null) nightlyCandidates.add(k);
+      if (/night|nightly|per_night/i.test(k)
+          && !NON_PRICE_FIELDS.has(k)
+          && typeof r[k] === 'number'
+          && r[k] > 0) {
+        nightlyCandidates.add(k);
+      }
     });
     if (r.pricing_details && typeof r.pricing_details === 'object') {
       Object.keys(r.pricing_details).forEach(k => {
-        if (/night|nightly|per_night|rate/i.test(k))
+        if (/night|nightly|per_night|rate/i.test(k) && !NON_PRICE_FIELDS.has(k))
           nightlyCandidates.add(`pricing_details.${k}`);
       });
     }
@@ -252,6 +313,34 @@ function analyzeRecords(records, requestedCurrency) {
   // Ratings
   const ratingsPresent = records.filter(r => r.ratings != null).length;
 
+  // Price decomposition — classify each pricing_details key into a fee category
+  const priceDecomposition = { BASE_NIGHTLY: [], CLEANING_FEE: [], SERVICE_FEE: [], TAX: [], TOTAL: [], OTHER: [] };
+  records.forEach(r => {
+    if (r.pricing_details && typeof r.pricing_details === 'object') {
+      Object.keys(r.pricing_details).forEach(k => {
+        const cat = classifyPricingField(k);
+        if (!priceDecomposition[cat].includes(k)) priceDecomposition[cat].push(k);
+      });
+    }
+  });
+  // Warn: if total + at least one fee type → total_price ≠ nightly rate
+  const activeDecompCats = Object.entries(priceDecomposition).filter(([, v]) => v.length > 0).map(([k]) => k);
+  const totalPriceWarnMultiFee = totalPricePresent > 0
+    && activeDecompCats.length > 1
+    && activeDecompCats.includes('TOTAL')
+    && activeDecompCats.some(c => ['CLEANING_FEE', 'SERVICE_FEE', 'TAX'].includes(c));
+
+  // Bedroom alternative fields — scan top-level keys beyond details[] in case dates add a bedrooms field
+  const bedroomAltFields = [];
+  if (records.length > 0) {
+    const sample = records[0];
+    Object.keys(sample).filter(k => !REDACTED_FIELDS.has(k)).forEach(k => {
+      if (/bedroom|^beds?$|num_bed/i.test(k) && sample[k] != null) {
+        bedroomAltFields.push({ key: k, sampleValue: sample[k] });
+      }
+    });
+  }
+
   // Inspect up to first 3 records only
   const sampledInspections = records.slice(0, 3).map((r, i) => inspectRecord(r, i));
 
@@ -262,6 +351,8 @@ function analyzeRecords(records, requestedCurrency) {
     totalPricePresent,
     pricingDetailsType,
     pricingDetailsFields,
+    priceDecomposition,
+    totalPriceWarnMultiFee,
     currencyValues,
     allCurrencyMatch,
     nightlyCandidates: [...nightlyCandidates],
@@ -271,6 +362,7 @@ function analyzeRecords(records, requestedCurrency) {
     availDatesSampleLen,
     bedroomsParseable,
     bedroomExamples,
+    bedroomAltFields,
     ratingsPresent,
     sampledInspections,  // capped at 3
   };
@@ -278,7 +370,7 @@ function analyzeRecords(records, requestedCurrency) {
 
 // ── previewMode — ZERO network calls ─────────────────────────────────────────
 
-async function previewMode({ location, currency }) {
+async function previewMode({ location, currency, checkIn = null, checkOut = null }) {
   const keyPresent = !!process.env.BRIGHTDATA_API_KEY;
 
   console.log('\n' + '═'.repeat(70));
@@ -297,7 +389,14 @@ async function previewMode({ location, currency }) {
   console.log(`  limit_per_input      : ${MAX_RETURNED_RECORDS}`);
   console.log(`  location             : "${location}"`);
   console.log(`  currency             : ${currency}`);
-  console.log(`  check_in / check_out : NOT SENT (deliberate — testing price without dates)`);
+  if (checkIn && checkOut) {
+    const dv = validateDates(checkIn, checkOut);
+    console.log(`  check_in             : ${checkIn}`);
+    console.log(`  check_out            : ${checkOut}`);
+    console.log(`  nights               : ${dv.ok ? dv.nights : '(validation error)'}`);
+  } else {
+    console.log(`  check_in / check_out : NOT SENT (location+currency only mode)`);
+  }
 
   console.log('\n  ── READINESS ────────────────────────────────────────────────');
   console.log(`  BRIGHTDATA_API_KEY_PRESENT : ${keyPresent}`);
@@ -317,15 +416,19 @@ async function previewMode({ location, currency }) {
   }
 
   console.log('\n  ── EXECUTE PLAN ─────────────────────────────────────────────');
-  const triggerUrl = `${BD_TRIGGER_BASE}?dataset_id=${DATASET_ID}&format=json&type=discover_new&discover_by=location&limit_per_input=${MAX_RETURNED_RECORDS}`;
+  const triggerUrl  = `${BD_TRIGGER_BASE}?dataset_id=${DATASET_ID}&format=json&type=discover_new&discover_by=location&limit_per_input=${MAX_RETURNED_RECORDS}`;
+  const previewBody = checkIn && checkOut
+    ? [{ location, currency, check_in: checkIn, check_out: checkOut }]
+    : [{ location, currency }];
   console.log(`  1. POST ${triggerUrl}`);
-  console.log(`     body: [{ "location": "${location}", "currency": "${currency}" }]`);
+  console.log(`     EXACT BODY (sanitized):`);
+  JSON.stringify(previewBody, null, 2).split('\n').forEach(l => console.log(`       ${l}`));
   console.log(`  2. Poll: GET ${BD_PROGRESS_BASE}/<snapshot_id> (max ${MAX_WAIT_MS / 1000}s)`);
   console.log(`  3. Download: GET ${BD_SNAPSHOT_BASE}/<snapshot_id>?format=json`);
   console.log(`  4. Analyze first 3 records — zero writes`);
   console.log('═'.repeat(70) + '\n');
 
-  return { ok: true, keyPresent, location, currency };
+  return { ok: true, keyPresent, location, currency, checkIn, checkOut };
 }
 
 // ── Shared analysis print (used by executeMode and snapshotResumeMode) ───────
@@ -348,6 +451,25 @@ function printSchemaAnalysisAndVerdict(records, currency, analysis) {
     : analysis.pricePresent > 0 ? 'UNKNOWN_STRUCTURE' : 'UNKNOWN_PRICE_NULL';
   console.log(`  PRICE_IS_NIGHTLY             : ${priceIsNightly}`);
 
+  // Price decomposition
+  if (analysis.priceDecomposition) {
+    const d = analysis.priceDecomposition;
+    const hasDecomp = Object.values(d).some(v => v.length > 0);
+    if (hasDecomp) {
+      console.log('\n  ── PRICE DECOMPOSITION (pricing_details fields by category) ─');
+      console.log(`  BASE_NIGHTLY             : ${JSON.stringify(d.BASE_NIGHTLY)}`);
+      console.log(`  CLEANING_FEE             : ${JSON.stringify(d.CLEANING_FEE)}`);
+      console.log(`  SERVICE_FEE              : ${JSON.stringify(d.SERVICE_FEE)}`);
+      console.log(`  TAX                      : ${JSON.stringify(d.TAX)}`);
+      console.log(`  TOTAL                    : ${JSON.stringify(d.TOTAL)}`);
+      console.log(`  OTHER                    : ${JSON.stringify(d.OTHER)}`);
+    }
+    if (analysis.totalPriceWarnMultiFee) {
+      console.log('\n  ⚠️  WARNING: total_price includes multiple fee types.');
+      console.log('      total_price ≠ nightly_rate. Use BASE_NIGHTLY field for the accommodation rate.');
+    }
+  }
+
   console.log('\n  ── CURRENCY ─────────────────────────────────────────────────');
   console.log(`  REQUESTED_CURRENCY           : ${currency ?? '(none)'}`);
   console.log(`  CURRENCY_VALUES_SEEN         : ${JSON.stringify(analysis.currencyValues)}`);
@@ -360,10 +482,18 @@ function printSchemaAnalysisAndVerdict(records, currency, analysis) {
   console.log(`  AVAILABLE_DATES_SAMPLE_LENGTH: ${analysis.availDatesSampleLen ?? 'N/A'}`);
 
   console.log('\n  ── BEDROOMS ─────────────────────────────────────────────────');
-  console.log(`  BEDROOMS_PARSEABLE           : ${analysis.bedroomsParseable}/${analysis.total}`);
+  console.log(`  BEDROOMS_PARSEABLE (details[]): ${analysis.bedroomsParseable}/${analysis.total}`);
   analysis.bedroomExamples.forEach((ex, i) => {
     console.log(`  Example ${i}: ${JSON.stringify(ex.raw)} → ${ex.parsed}`);
   });
+  if (analysis.bedroomAltFields && analysis.bedroomAltFields.length > 0) {
+    console.log('  BEDROOM_ALT_FIELDS:');
+    analysis.bedroomAltFields.forEach(f => {
+      console.log(`    ${f.key} : ${JSON.stringify(f.sampleValue)}`);
+    });
+  } else {
+    console.log('  BEDROOM_ALT_FIELDS           : none found outside details[]');
+  }
 
   console.log('\n  ── SAMPLED RECORDS (first 3, no PII) ────────────────────────');
   analysis.sampledInspections.forEach(r => {
@@ -375,7 +505,7 @@ function printSchemaAnalysisAndVerdict(records, currency, analysis) {
     console.log(`    pricing_details: ${r.pricingDetailsPresent ? r.pricingDetailsType : 'NULL'}`);
     if (r.pricingDetailsFields) {
       r.pricingDetailsFields.forEach(f =>
-        console.log(`      .${f.key} (${f.type}): ${f.sanitized}`)
+        console.log(`      .${f.key} [${f.category}] (${f.type}): ${f.sanitized}`)
       );
     }
     console.log(`    total_price    : ${r.totalPrice}`);
@@ -397,9 +527,12 @@ function printSchemaAnalysisAndVerdict(records, currency, analysis) {
   console.log('═'.repeat(70));
   console.log(`  LOCATION_ONLY_REQUEST_ACCEPTED : ${records.length > 0}`);
   console.log(`  RECORDS_RETURNED               : ${records.length}`);
-  console.log(`  PRICE_POPULATED_WITHOUT_DATES  : ${pricePopulated}`);
+  console.log(`  PRICE_POPULATED                : ${pricePopulated}`);
   console.log(`  PRICING_DETAILS_TYPE           : ${analysis.pricingDetailsType}`);
   console.log(`  NIGHTLY_PRICE_FIELD            : ${analysis.nightlyCandidates[0] ?? 'NOT_FOUND'}`);
+  if (analysis.totalPriceWarnMultiFee) {
+    console.log(`  TOTAL_PRICE_WARN_MULTI_FEE     : true — inspect BASE_NIGHTLY, not total_price`);
+  }
   console.log(`  PRICE_IS_NIGHTLY               : ${priceIsNightly}`);
   console.log(`  CURRENCY_FIELD_PRESENT         : ${analysis.currencyValues.length > 0}`);
   console.log(`  CURRENCY_MATCH                 : ${analysis.allCurrencyMatch ?? 'UNKNOWN'}`);
@@ -421,7 +554,7 @@ function printSchemaAnalysisAndVerdict(records, currency, analysis) {
 // ── executeMode — exactly ONE Bright Data discovery job ───────────────────────
 // deps = { fetchFn, pollIntervalMs, maxWaitMs } — all injectable for tests
 
-async function executeMode({ location, currency }, deps = {}) {
+async function executeMode({ location, currency, checkIn = null, checkOut = null }, deps = {}) {
   const fetchFn        = deps.fetchFn        || fetch;
   const pollIntervalMs = deps.pollIntervalMs ?? POLL_INTERVAL_MS;
   const maxWaitMs      = deps.maxWaitMs      ?? MAX_WAIT_MS;
@@ -441,11 +574,20 @@ async function executeMode({ location, currency }, deps = {}) {
   console.log(`\n  location         : "${location}"`);
   console.log(`  currency         : ${currency}`);
   console.log(`  max_results      : ${MAX_RETURNED_RECORDS}`);
-  console.log(`  dates            : NOT SENT (deliberate diagnostic for location+currency only)`);
+  if (checkIn && checkOut) {
+    const dv = validateDates(checkIn, checkOut);
+    console.log(`  check_in         : ${checkIn}`);
+    console.log(`  check_out        : ${checkOut}`);
+    console.log(`  nights           : ${dv.ok ? dv.nights : '(validation error)'}`);
+  } else {
+    console.log(`  dates            : NOT SENT (location+currency only)`);
+  }
 
   // ── Step 1: Trigger ONE discovery job ─────────────────────────────────────
   const triggerUrl = `${BD_TRIGGER_BASE}?dataset_id=${DATASET_ID}&format=json&type=discover_new&discover_by=location&limit_per_input=${MAX_RETURNED_RECORDS}`;
-  const inputBody  = [{ location, currency }];
+  const inputBody  = checkIn && checkOut
+    ? [{ location, currency, check_in: checkIn, check_out: checkOut }]
+    : [{ location, currency }];
 
   console.log('\n  Triggering Bright Data discovery job...');
 
@@ -714,12 +856,25 @@ if (require.main === module) {
   let currency   = 'EUR';
   let execute    = false;
   let snapshotId = null;
+  let checkIn    = null;
+  let checkOut   = null;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--location'    && args[i + 1]) location   = args[++i];
     if (args[i] === '--currency'    && args[i + 1]) currency   = args[++i].toUpperCase();
     if (args[i] === '--execute')                    execute    = true;
     if (args[i] === '--snapshot-id' && args[i + 1]) snapshotId = args[++i];
+    if (args[i] === '--check-in'    && args[i + 1]) checkIn    = args[++i];
+    if (args[i] === '--check-out'   && args[i + 1]) checkOut   = args[++i];
+  }
+
+  // Validate dates when provided (applies to both preview and execute)
+  if (!snapshotId && (checkIn || checkOut)) {
+    const dv = validateDates(checkIn, checkOut);
+    if (!dv.ok) {
+      console.error(`Error: ${dv.error}`);
+      process.exit(1);
+    }
   }
 
   let run;
@@ -727,15 +882,15 @@ if (require.main === module) {
     run = snapshotResumeMode(snapshotId, { currency });
   } else if (!location) {
     console.error('Usage:');
-    console.error('  node outils/diag-brightdata-airbnb.js --location "<location>" [--currency EUR] [--execute]');
+    console.error('  node outils/diag-brightdata-airbnb.js --location "<loc>" [--currency EUR] [--check-in YYYY-MM-DD --check-out YYYY-MM-DD] [--execute]');
     console.error('  node outils/diag-brightdata-airbnb.js --snapshot-id <id>');
     console.error('--location is mandatory unless --snapshot-id is given');
-    console.error('--execute and --snapshot-id both require BRIGHTDATA_API_KEY in environment');
+    console.error('--check-in and --check-out must be provided together');
     process.exit(1);
   } else {
     run = execute
-      ? executeMode({ location, currency })
-      : previewMode({ location, currency });
+      ? executeMode({ location, currency, checkIn, checkOut })
+      : previewMode({ location, currency, checkIn, checkOut });
   }
 
   run.catch(err => {
@@ -753,6 +908,8 @@ module.exports = {
   inspectRecord,
   sanitizeErrorBody,
   redactSecrets,
+  validateDates,
+  classifyPricingField,
   DATASET_ID,
   MAX_RETURNED_RECORDS,
   MAX_WAIT_MS,

@@ -68,6 +68,8 @@ const {
   inspectRecord,
   sanitizeErrorBody,
   redactSecrets,
+  validateDates,
+  classifyPricingField,
   DATASET_ID,
   MAX_RETURNED_RECORDS,
   MAX_WAIT_MS,
@@ -1117,6 +1119,174 @@ await test('BD-52 snapshotResumeMode never calls trigger URL regardless of input
   } finally {
     delete process.env.BRIGHTDATA_API_KEY;
   }
+});
+
+// ── BD-53 : check-in alone rejected ──────────────────────────────────────────
+console.log('\n── BD-53 : check-in alone rejected ──');
+
+await test('BD-53 validateDates rejects check-in without check-out', async () => {
+  const r = validateDates('2026-10-06', null);
+  assert.strictEqual(r.ok, false);
+  assert.ok(r.error.includes('--check-out'), `error must mention --check-out, got: ${r.error}`);
+});
+
+// ── BD-54 : check-out alone rejected ─────────────────────────────────────────
+console.log('\n── BD-54 : check-out alone rejected ──');
+
+await test('BD-54 validateDates rejects check-out without check-in', async () => {
+  const r = validateDates(null, '2026-10-07');
+  assert.strictEqual(r.ok, false);
+  assert.ok(r.error.includes('--check-in'), `error must mention --check-in, got: ${r.error}`);
+});
+
+// ── BD-55 : bad format rejected ───────────────────────────────────────────────
+console.log('\n── BD-55 : bad format rejected ──');
+
+await test('BD-55 validateDates rejects non-YYYY-MM-DD formats', async () => {
+  assert.strictEqual(validateDates('06/10/2026', '07/10/2026').ok, false, 'DD/MM/YYYY rejected');
+  assert.strictEqual(validateDates('2026-10-6',  '2026-10-7').ok,  false, 'single-digit day rejected');
+  assert.strictEqual(validateDates('not-a-date', '2026-10-07').ok, false, 'non-date string rejected');
+  assert.strictEqual(validateDates('2026-13-01', '2026-13-02').ok, false, 'month 13 rejected as invalid date');
+});
+
+// ── BD-56 : checkout <= checkin rejected ─────────────────────────────────────
+console.log('\n── BD-56 : checkout <= checkin rejected ──');
+
+await test('BD-56 validateDates rejects check-out <= check-in', async () => {
+  const same = validateDates('2026-10-06', '2026-10-06');
+  assert.strictEqual(same.ok, false, 'same date rejected');
+  const reversed = validateDates('2026-10-07', '2026-10-06');
+  assert.strictEqual(reversed.ok, false, 'check-out before check-in rejected');
+});
+
+// ── BD-57 : past dates rejected ───────────────────────────────────────────────
+console.log('\n── BD-57 : past dates rejected ──');
+
+await test('BD-57 validateDates rejects check-in in the past', async () => {
+  // 2020-01-01 is well in the past (today is 2026-09-25)
+  const r = validateDates('2020-01-01', '2020-01-02');
+  assert.strictEqual(r.ok, false, 'past check-in date rejected');
+  assert.ok(r.error.includes('future'), `error must say "future", got: ${r.error}`);
+});
+
+// ── BD-58 : valid date pair accepted ─────────────────────────────────────────
+console.log('\n── BD-58 : valid date pair accepted ──');
+
+await test('BD-58 validateDates accepts a valid future 1-night stay', async () => {
+  const r = validateDates('2026-10-06', '2026-10-07');
+  assert.strictEqual(r.ok, true, 'valid future pair must be accepted');
+  assert.strictEqual(r.checkIn,  '2026-10-06');
+  assert.strictEqual(r.checkOut, '2026-10-07');
+  assert.strictEqual(r.nights, 1, '1 night');
+  // Multi-night
+  const r2 = validateDates('2026-10-06', '2026-10-09');
+  assert.strictEqual(r2.ok, true);
+  assert.strictEqual(r2.nights, 3, '3 nights');
+  // Both null → ok (no-date mode)
+  const r3 = validateDates(null, null);
+  assert.strictEqual(r3.ok, true);
+  assert.strictEqual(r3.nights, null);
+});
+
+// ── BD-59 : dates sent correctly in trigger body ──────────────────────────────
+console.log('\n── BD-59 : dates sent correctly in trigger body ──');
+
+await test('BD-59 executeMode includes check_in and check_out in trigger request body', async () => {
+  process.env.BRIGHTDATA_API_KEY = 'test-token-bd59';
+  const responses = [
+    () => makeTriggerResponse('snap-bd59'),
+    () => makeProgressResponse('ready'),
+    () => makeSnapshotResponse(SAMPLE_RECORDS_WITH_PRICE),
+  ];
+  const fetchFn = makeMockFetch(responses);
+  try {
+    await executeMode(
+      { location: 'Massy, France', currency: 'EUR', checkIn: '2026-10-06', checkOut: '2026-10-07' },
+      { fetchFn, pollIntervalMs: 1, maxWaitMs: 5000 }
+    );
+    const triggerCall = fetchFn.calls[0];
+    assert.strictEqual(triggerCall.method, 'POST', 'first call must be POST');
+    const body = JSON.parse(triggerCall.body);
+    assert.ok(Array.isArray(body) && body.length === 1, 'body must be array of 1');
+    assert.strictEqual(body[0].check_in,  '2026-10-06', 'check_in must be in body');
+    assert.strictEqual(body[0].check_out, '2026-10-07', 'check_out must be in body');
+    assert.strictEqual(body[0].currency,  'EUR',        'currency must be in body');
+    assert.strictEqual(body[0].location,  'Massy, France', 'location must be in body');
+  } finally {
+    delete process.env.BRIGHTDATA_API_KEY;
+  }
+});
+
+// ── BD-60 : minimum_nights never classified as price ─────────────────────────
+console.log('\n── BD-60 : minimum_nights never classified as price ──');
+
+await test('BD-60 analyzeRecords never includes minimum_nights or stay-duration fields in nightlyCandidates', async () => {
+  const tricky = [{
+    property_id:     'prop-tricky',
+    currency:        'EUR',
+    minimum_nights:  2,       // NOT a price — duration constraint
+    minimum_stay:    3,       // NOT a price
+    nights:          1,       // NOT a price
+    pricing_details: null,
+    total_price:     null,
+    availability:    false,
+    available_dates: [],
+    details:         [],
+    ratings:         4.5,
+    lat:             48.7,
+    long:            2.3,
+  }];
+  const result = analyzeRecords(tricky, 'EUR');
+  assert.ok(!result.nightlyCandidates.includes('minimum_nights'),
+    'minimum_nights must NOT be a nightly price candidate');
+  assert.ok(!result.nightlyCandidates.includes('minimum_stay'),
+    'minimum_stay must NOT be a nightly price candidate');
+  assert.ok(!result.nightlyCandidates.includes('nights'),
+    'nights must NOT be a nightly price candidate');
+  // classifyPricingField should not classify minimum_nights as a price category
+  assert.notStrictEqual(classifyPricingField('minimum_nights'), 'BASE_NIGHTLY',
+    'minimum_nights must not be BASE_NIGHTLY');
+});
+
+// ── BD-61 : total_price never auto-assimilated to nightly price ───────────────
+console.log('\n── BD-61 : total_price ≠ nightly price warning ──');
+
+await test('BD-61 analyzeRecords warns when total_price likely includes multiple fee types', async () => {
+  const multiFeePricing = [{
+    property_id:     'prop-multi-fee',
+    currency:        'EUR',
+    pricing_details: {
+      rate_per_night: 80,    // BASE_NIGHTLY
+      cleaning_fee:   20,    // CLEANING_FEE
+      service_fee:    12,    // SERVICE_FEE
+      total:          112,   // TOTAL — sum of above
+    },
+    total_price:     112,
+    availability:    true,
+    available_dates: ['2026-10-06'],
+    details:         ['2 guests', '1 bedroom'],
+    ratings:         4.8,
+    lat:             48.7,
+    long:            2.3,
+  }];
+  const result = analyzeRecords(multiFeePricing, 'EUR');
+  // Price decomposition must separate the categories
+  assert.ok(result.priceDecomposition.BASE_NIGHTLY.includes('rate_per_night'),
+    'rate_per_night must be in BASE_NIGHTLY');
+  assert.ok(result.priceDecomposition.CLEANING_FEE.includes('cleaning_fee'),
+    'cleaning_fee must be in CLEANING_FEE');
+  assert.ok(result.priceDecomposition.SERVICE_FEE.includes('service_fee'),
+    'service_fee must be in SERVICE_FEE');
+  assert.ok(result.priceDecomposition.TOTAL.includes('total'),
+    'total must be in TOTAL');
+  // Warning must be set
+  assert.strictEqual(result.totalPriceWarnMultiFee, true,
+    'totalPriceWarnMultiFee must be true when TOTAL + fee types present');
+  // NIGHTLY candidate must be rate_per_night, NOT total
+  assert.ok(result.nightlyCandidates.includes('pricing_details.rate_per_night'),
+    'rate_per_night must be a nightly candidate');
+  assert.ok(!result.nightlyCandidates.includes('pricing_details.total'),
+    'total must NOT be a nightly candidate');
 });
 
 // ── BD-39 : no new DB/pricing/Channex modules introduced ─────────────────────
