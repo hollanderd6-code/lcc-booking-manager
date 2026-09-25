@@ -54,11 +54,13 @@ function abort(msg) { throw new AbortError(msg); }
 
 // ── Property lookup ───────────────────────────────────────────────────────────
 async function resolvePropByName(pool, name) {
+  // zone_label lives in market_data, NOT pricing_config — do not select pc.zone_label.
+  // getFallbackZones(address, null) derives zones from address when no zoneLabel given.
   const rows = (await pool.query(
     `SELECT p.id, p.user_id, p.name, p.internal_name, p.address,
             p.latitude, p.longitude, p.country_code, p.timezone,
             p.currency, p.channex_enabled,
-            pc.is_active, pc.mode, pc.zone_label
+            pc.is_active, pc.mode
        FROM properties p
        LEFT JOIN pricing_config pc ON pc.property_id = p.id AND pc.user_id = p.user_id
       WHERE LOWER(p.name) = LOWER($1) OR LOWER(p.internal_name) = LOWER($1)`,
@@ -101,7 +103,7 @@ async function previewMode(pool, { name, _now } = {}) {
 
   // Derive location using production zone logic (lazy require to avoid circular dep)
   const { getFallbackZones } = require('../routes/dynamic-pricing-cron');
-  const zones    = getFallbackZones(prop.address, prop.zone_label || null);
+  const zones    = getFallbackZones(prop.address, null);
   const location = zones[0];
 
   // ── Print PROPERTY ──────────────────────────────────────────
@@ -253,7 +255,7 @@ async function executeMode(pool, { name, _now, _bdScrape } = {}) {
   console.log(`\n  checkIn=${checkIn}  checkOut=${checkOut}  timezone=${timezone}`);
 
   // ── 6. Zone derivation (production logic) ────────────────────
-  const zones    = getFallbackZones(prop.address, prop.zone_label || null);
+  const zones    = getFallbackZones(prop.address, null);
   const location = zones[0];
   console.log(`  location=${location}  (zones: ${zones.join(' → ')})`);
 
@@ -485,6 +487,10 @@ if (require.main === module) {
     }
     if (code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT') {
       return 'DB_CONNECTION_ERROR';
+    }
+    if (msg.includes('column') || msg.includes('does not exist') || msg.includes('relation') ||
+        msg.includes('syntax error') || code === '42703' || code === '42P01' || code === '42601') {
+      return 'DB_SCHEMA_ERROR';
     }
     if (msg.includes('property') || msg.includes('propriét') || msg.includes('market_data')) {
       return 'PROPERTY_LOOKUP_ERROR';
