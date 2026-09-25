@@ -1,6 +1,6 @@
 'use strict';
 /**
- * P1.2-B5-F1 — Bright Data Comparable Market Quality Policy
+ * P1.2-B5-F1/F4 — Bright Data Comparable Market Quality Policy
  *
  * Pure comparable-selection and BD-specific market statistics.
  * Applied BEFORE calcMarketStats() in the pricing cron, only for brightdata_live.
@@ -24,15 +24,23 @@
  *   This is NOT factual Airbnb occupancy.
  *   The market_data column name (occupancy_rate) is intentionally not renamed
  *   in B5-F1 — the semantics distinction lives in occupancy_semantics field.
+ *
+ * RADIUS SELECTION POLICY (B5-F4):
+ *   Phase A — Local priority: first radius ≤ LOCAL_PRIORITY_RADIUS_KM with ≥ FALLBACK.
+ *             Avoids expanding to distant markets merely to reach TARGET count.
+ *   Phase B — Wider radii, prefer TARGET: first radius > LOCAL with ≥ TARGET.
+ *   Phase C — Wider radii, accept FALLBACK: first radius > LOCAL with ≥ FALLBACK.
+ *   Phase D — insufficient_comparables if no radius yields FALLBACK.
  */
 
-const RADIUS_BANDS_KM          = [1, 2, 3, 5, 10, 20];
-const MIN_COMPARABLES_TARGET   = 8;   // preferred minimum
-const MIN_COMPARABLES_FALLBACK = 5;   // acceptable minimum
-const MAX_RADIUS_KM            = 20;  // never exceed
-const MIN_GUEST_DELTA          = 2;   // abs(listing.guests - target) must be <= this
-const CALENDAR_WINDOW_DAYS     = 60;  // 60-day unavailability proxy window
-const MIN_CALENDAR_COMPARABLES = 5;   // proxy requires at least 5 usable calendars
+const RADIUS_BANDS_KM           = [1, 2, 3, 5, 10, 20];
+const MIN_COMPARABLES_TARGET    = 8;   // preferred minimum (wider-radius search)
+const MIN_COMPARABLES_FALLBACK  = 5;   // acceptable minimum
+const LOCAL_PRIORITY_RADIUS_KM  = 5;   // radii ≤ this km: select at FALLBACK threshold immediately
+const MAX_RADIUS_KM             = 20;  // never exceed
+const MIN_GUEST_DELTA           = 2;   // abs(listing.guests - target) must be <= this
+const CALENDAR_WINDOW_DAYS      = 60;  // 60-day unavailability proxy window
+const MIN_CALENDAR_COMPARABLES  = 5;   // proxy requires at least 5 usable calendars
 
 // Tension level thresholds — mirrors dynamic-pricing-routes.js.
 // NOT imported to avoid a services → routes circular dependency.
@@ -107,9 +115,13 @@ function addDaysToDate(dateStr, days) {
  *   1. Deduplicate by providerListingId
  *   2. Category filter (configurable per target property type)
  *   3. Capacity filter (abs(guests - targetGuests) <= MIN_GUEST_DELTA)
- *   4. Adaptive geographic radius (1→2→3→5→10→20 km, first ≥ MIN_COMPARABLES_TARGET)
- *      Fallback: first ≥ MIN_COMPARABLES_FALLBACK
- *      If no radius yields MIN_COMPARABLES_FALLBACK: status='insufficient_comparables'
+ *   4. Adaptive geographic radius with local-cluster priority (B5-F4):
+ *      Phase A: first radius ≤ LOCAL_PRIORITY_RADIUS_KM (5 km) with ≥ FALLBACK (5)
+ *               → select immediately, do not expand to reach TARGET.
+ *      Phase B: if no local radius qualifies, scan wider radii (10, 20 km),
+ *               prefer first radius with ≥ TARGET (8).
+ *      Phase C: if no wider TARGET found, accept first wider radius with ≥ FALLBACK.
+ *      Phase D: if none found, status='insufficient_comparables'.
  *   Listings without coordinates are excluded from geographic statistics.
  *
  * @param {Array}  listings
@@ -213,21 +225,39 @@ function selectComparables(listings, {
   }
   diag.radiusCandidateCounts = radiusCandidateCounts;
 
-  // Adaptive radius selection — prefer ≥ MIN_COMPARABLES_TARGET, fall back to ≥ MIN_COMPARABLES_FALLBACK
+  // Adaptive radius selection — three-phase local-cluster priority (B5-F4)
   let selectedRadius = null;
   let selected       = [];
 
+  // Phase A: local cluster priority — first radius ≤ LOCAL_PRIORITY_RADIUS_KM with ≥ FALLBACK.
+  // A valid tight local cluster is preferred over expanding to meet TARGET at a wider radius.
   for (const r of RADIUS_BANDS_KM) {
+    if (r > LOCAL_PRIORITY_RADIUS_KM) break;
     const inBand = withDist.filter(d => d._dist <= r);
-    if (inBand.length >= MIN_COMPARABLES_TARGET) {
+    if (inBand.length >= MIN_COMPARABLES_FALLBACK) {
       selectedRadius = r;
       selected       = inBand.map(d => d.listing);
       break;
     }
   }
 
+  // Phase B: wider radii — prefer first radius reaching TARGET.
   if (!selectedRadius) {
     for (const r of RADIUS_BANDS_KM) {
+      if (r <= LOCAL_PRIORITY_RADIUS_KM) continue;
+      const inBand = withDist.filter(d => d._dist <= r);
+      if (inBand.length >= MIN_COMPARABLES_TARGET) {
+        selectedRadius = r;
+        selected       = inBand.map(d => d.listing);
+        break;
+      }
+    }
+  }
+
+  // Phase C: wider radii — accept FALLBACK when no TARGET radius exists.
+  if (!selectedRadius) {
+    for (const r of RADIUS_BANDS_KM) {
+      if (r <= LOCAL_PRIORITY_RADIUS_KM) continue;
       const inBand = withDist.filter(d => d._dist <= r);
       if (inBand.length >= MIN_COMPARABLES_FALLBACK) {
         selectedRadius = r;
@@ -326,6 +356,7 @@ module.exports = {
   RADIUS_BANDS_KM,
   MIN_COMPARABLES_TARGET,
   MIN_COMPARABLES_FALLBACK,
+  LOCAL_PRIORITY_RADIUS_KM,
   MAX_RADIUS_KM,
   MIN_GUEST_DELTA,
   CALENDAR_WINDOW_DAYS,
