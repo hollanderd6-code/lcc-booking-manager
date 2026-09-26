@@ -991,7 +991,7 @@ async function processChannexBooking(pool, bookingData) {
       // mais Channex envoie quand même le webhook d'annulation.
       // On retourne un objet minimal cancelled pour que le webhook handler nettoie le store.
       // Sans ce retour, result = null → le store garde la résa fantôme indéfiniment.
-      console.warn(`⚠️ [CHANNEX] Annulation reçue pour booking_id=${booking_id} absent de la DB → nettoyage du store uniquement`);
+      console.warn(`⚠️ [CHANNEX] Annulation reçue pour booking_id=${booking_id} absent de la DB (ota_code=${ota_reservation_code ?? 'null'}, dates=${reservationStart ?? 'null'}→${reservationEnd ?? 'null'}) → nettoyage du store uniquement`);
       return {
         uid: `CHX_${booking_id}`,
         channex_booking_id: booking_id,

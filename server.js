@@ -41805,6 +41805,7 @@ app.post('/api/channex/webhook', async (req, res) => {
     // ── Persister l'événement AVANT tout traitement ──────────
     // Garantit une trace même si la suite échoue (réseau, crash, timeout Channex).
     let _webhookEventId = null;
+    let _webhookCancelMissed = false;
     try {
       const _evType = payload.event || payload.event_type || 'booking';
       const _evRow = await pool.query(
@@ -41879,7 +41880,36 @@ app.post('/api/channex/webhook', async (req, res) => {
     for (let booking of bookings) {
       // bookingId et revisionId déjà définis plus haut
 
-      const result = await processChannexBooking(pool, booking);
+      let result = await processChannexBooking(pool, booking);
+
+      // ── Fallback force-cancel : _not_in_db pour une annulation ────────────
+      // Cause probable : attrs.booking_id absent du BookingRevision Channex →
+      // booking_id résout vers le revision_id, tous les lookups échouent.
+      // bookingId (extrait directement du payload webhook) est l'ID fiable.
+      if (result && result._not_in_db && result.status === 'cancelled' && bookingId) {
+        console.warn(`⚠️ [CHANNEX WEBHOOK] _not_in_db — force-cancel via bookingId webhook=${bookingId} (revision=${revisionId})`);
+        try {
+          const _forced = await pool.query(
+            `UPDATE reservations
+                SET status = 'cancelled', updated_at = NOW()
+              WHERE channex_booking_id = $1
+                AND status != 'cancelled'
+              RETURNING id, uid, property_id, user_id, start_date, end_date,
+                        channex_booking_id, status`,
+            [bookingId]
+          );
+          if ((_forced.rowCount ?? 0) > 0) {
+            console.log(`✅ [CHANNEX WEBHOOK] Force-cancel appliqué: ${_forced.rows[0].uid} (channex_booking_id=${bookingId})`);
+            result = { ..._forced.rows[0], _not_in_db: false };
+          } else {
+            console.error(`❌ [CHANNEX WEBHOOK] Force-cancel: aucune résa avec channex_booking_id=${bookingId} — annulation non répercutée`);
+            _webhookCancelMissed = true;
+          }
+        } catch (_forceErr) {
+          console.error(`❌ [CHANNEX WEBHOOK] Force-cancel DB error: ${_forceErr.message}`);
+          _webhookCancelMissed = true;
+        }
+      }
 
       // ── Acknowledge immédiat — requis par Channex (via revision_id) ──
       const ackId = revisionId || bookingId;
@@ -42624,10 +42654,18 @@ app.post('/api/channex/webhook', async (req, res) => {
     }
 
     if (_webhookEventId) {
-      await pool.query(
-        `UPDATE webhook_events SET status = 'ok', updated_at = NOW() WHERE id = $1`,
-        [_webhookEventId]
-      ).catch(() => {});
+      if (_webhookCancelMissed) {
+        await pool.query(
+          `UPDATE webhook_events SET status = 'error',
+            error_message = $1, updated_at = NOW() WHERE id = $2`,
+          [`Annulation reçue mais aucune résa trouvée en DB pour channex_booking_id=${bookingId}`, _webhookEventId]
+        ).catch(() => {});
+      } else {
+        await pool.query(
+          `UPDATE webhook_events SET status = 'ok', updated_at = NOW() WHERE id = $1`,
+          [_webhookEventId]
+        ).catch(() => {});
+      }
     }
     res.status(200).json({ success: true });
   } catch (e) {
