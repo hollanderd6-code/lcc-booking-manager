@@ -231,6 +231,7 @@ async function processTodayArrivals(pool, io) {
        LEFT JOIN reservations r ON (r.channex_booking_id = c.channex_booking_id AND c.channex_booking_id IS NOT NULL)
                                 OR (r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date) AND c.channex_booking_id IS NULL)
        WHERE DATE(c.reservation_start_date) = $1
+       AND c.status != 'cancelled'
        ORDER BY c.id`,
       [todayStr]
     );
@@ -285,7 +286,7 @@ async function sendImmediateArrivalMessage(pool, io, conversationId) {
        LEFT JOIN properties p ON c.property_id = p.id
        LEFT JOIN reservations r ON (r.channex_booking_id = c.channex_booking_id AND c.channex_booking_id IS NOT NULL)
                                 OR (r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date) AND c.channex_booking_id IS NULL)
-       WHERE c.id = $1 LIMIT 1`,
+       WHERE c.id = $1 AND c.status != 'cancelled' LIMIT 1`,
       [conversationId]
     );
     if (result.rows.length === 0) return false;

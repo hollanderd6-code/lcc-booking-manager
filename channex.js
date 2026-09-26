@@ -868,17 +868,21 @@ async function processChannexBooking(pool, bookingData) {
       }
     }
 
-    // 3. Fallback par dates : même logement + mêmes dates (Channex peut changer le booking_id lors d'une modif)
-    if (existing.rows.length === 0 && reservationStart && reservationEnd && property_id) {
+    // 3. Fallback par dates : même property Channex + mêmes dates (Channex peut changer le booking_id lors d'une modif)
+    // On cherche sur TOUS les logements BH partageant le même channex_property_id pour résister au
+    // cas où une révision d'annulation n'inclut pas rooms[].room_type_id — le LIMIT 1 sur
+    // property_id seul peut alors retourner un logement différent de celui de la réservation initiale.
+    if (existing.rows.length === 0 && reservationStart && reservationEnd && channex_property_id) {
       const dupCheck = await pool.query(
-        `SELECT id, uid FROM reservations
-         WHERE property_id = $1
-           AND start_date = $2
-           AND end_date = $3
-           AND status != 'cancelled'
-           AND source = 'channex'
-         ORDER BY created_at DESC LIMIT 1`,
-        [property_id, reservationStart, reservationEnd]
+        `SELECT r.id, r.uid FROM reservations r
+         JOIN properties p ON p.id = r.property_id
+         WHERE p.channex_property_id = $1
+           AND r.start_date = $2
+           AND r.end_date = $3
+           AND r.status != 'cancelled'
+           AND r.source = 'channex'
+         ORDER BY r.created_at DESC LIMIT 1`,
+        [channex_property_id, reservationStart, reservationEnd]
       );
       if (dupCheck.rows.length > 0) {
         console.log(`⚠️ [CHANNEX] Doublon détecté par dates: booking_id=${booking_id} correspond à ${dupCheck.rows[0].uid} → mise à jour au lieu de créer`);
