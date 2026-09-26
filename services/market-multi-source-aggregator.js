@@ -293,15 +293,25 @@ const {
 } = require('./market-cross-source-policy');
 
 /**
- * Quality score extended with optional metadata completeness.
+ * Quality score extended with optional metadata and geo coverage scores.
  *
- * metadataScore ∈ [0, 1], e.g. 0.85-0.95 from computeMetadataScore().
- * Defaults to 1.0 (no penalty) when not provided, preserving backward compat
- * with callers that don't supply metadata scores.
+ * metadataScore    ∈ [0, 1], from computeMetadataScore().   Default 1.0 (no penalty).
+ * geoCoverageScore ∈ [0, 1], from evaluateSourceGeoQuality. Default 1.0 (no penalty).
+ *
+ * A geoCoverageScore = 0.00 (UNUSABLE geo) results in quality = 0.00, giving the
+ * source zero weight in the consensus. Callers should additionally check
+ * geoQuality.usableForConsensus to decide whether to exclude the source entirely
+ * from validSources (see aggregateMarketSourcesCalibrated).
+ *
+ * No double-counting between radiusScore and geoCoverageScore:
+ *   radiusScore measures the selected radius (how far we had to go to find ANY comparables).
+ *   geoCoverageScore measures local density (how many comparables exist near the target).
+ *   They can diverge: 0 within 5km but 12 at 20km → radiusScore(20)=0.55, geoScore=0.00.
  */
-function qualityScoreCalibrated(comparableCount, selectedRadiusKm, metadataScore) {
-  const ms = (metadataScore != null && Number.isFinite(metadataScore)) ? metadataScore : 1.0;
-  return countScore(comparableCount) * radiusScore(selectedRadiusKm) * ms;
+function qualityScoreCalibrated(comparableCount, selectedRadiusKm, metadataScore, geoCoverageScore) {
+  const ms = (metadataScore    != null && Number.isFinite(metadataScore))    ? metadataScore    : 1.0;
+  const gs = (geoCoverageScore != null && Number.isFinite(geoCoverageScore)) ? geoCoverageScore : 1.0;
+  return countScore(comparableCount) * radiusScore(selectedRadiusKm) * ms * gs;
 }
 
 /**
@@ -324,23 +334,48 @@ function qualityScoreCalibrated(comparableCount, selectedRadiusKm, metadataScore
  * SAFETY: pure function — no network, no DB, no Channex, no env vars.
  *
  * @param {object} inputs
- * @param {object|null} inputs.airbnb   — { stats, comparableCount, selectedRadiusKm, metadataScore? }
- * @param {object|null} inputs.booking  — { stats, comparableCount, selectedRadiusKm, metadataScore? }
+ * @param {object|null} inputs.airbnb   — { stats, comparableCount, selectedRadiusKm,
+ *                                          metadataScore?, geoCoverageScore?,
+ *                                          geoQuality?: { usableForConsensus, status, reason } }
+ * @param {object|null} inputs.booking  — same shape
  * @param {number|null} [inputs.commonRadiusKm] — the radius at which both sources were selected
+ *
+ * Geo gate (B5-BK-J):
+ *   If a source provides geoQuality.usableForConsensus === false, it is excluded
+ *   from validSources (treated as if stats were invalid). This prevents a geo-unusable
+ *   source from contributing ~50% weight in the consensus merely because it has
+ *   sufficient listings at a wide radius.
+ *
+ *   Alternatively, a source can pass geoCoverageScore = 0.00 explicitly, which
+ *   achieves the same zero-weight result through the quality formula without full
+ *   exclusion from validSources.
+ *
+ * Output includes sourceUsage for transparency on why a source was included/excluded.
  */
 function aggregateMarketSourcesCalibrated({
   airbnb  = null,
   booking = null,
   commonRadiusKm = null,
 } = {}) {
-  const airbnbValid  = isSourceValid(airbnb);
-  const bookingValid = isSourceValid(booking);
+  // Geo gate: a source with geoQuality.usableForConsensus === false is excluded
+  const airbnbGeoOk  = !(airbnb?.geoQuality?.usableForConsensus === false);
+  const bookingGeoOk = !(booking?.geoQuality?.usableForConsensus === false);
+
+  const airbnbStatValid  = isSourceValid(airbnb);
+  const bookingStatValid = isSourceValid(booking);
+
+  const airbnbValid  = airbnbStatValid  && airbnbGeoOk;
+  const bookingValid = bookingStatValid && bookingGeoOk;
 
   const airbnbQuality  = airbnbValid
-    ? qualityScoreCalibrated(airbnb.comparableCount,  airbnb.selectedRadiusKm,  airbnb.metadataScore)
+    ? qualityScoreCalibrated(
+        airbnb.comparableCount,  airbnb.selectedRadiusKm,
+        airbnb.metadataScore,    airbnb.geoCoverageScore)
     : 0;
   const bookingQuality = bookingValid
-    ? qualityScoreCalibrated(booking.comparableCount, booking.selectedRadiusKm, booking.metadataScore)
+    ? qualityScoreCalibrated(
+        booking.comparableCount, booking.selectedRadiusKm,
+        booking.metadataScore,   booking.geoCoverageScore)
     : 0;
 
   const sourceSummary = (source, valid, quality) => ({
@@ -352,11 +387,27 @@ function aggregateMarketSourcesCalibrated({
     comparableCount:  (source && source.comparableCount  != null) ? source.comparableCount  : null,
     selectedRadiusKm: (source && source.selectedRadiusKm != null) ? source.selectedRadiusKm : null,
     metadataScore:    (source && source.metadataScore    != null) ? source.metadataScore    : null,
+    geoCoverageScore: (source && source.geoCoverageScore != null) ? source.geoCoverageScore : null,
   });
 
   const sources = {
     airbnb:  sourceSummary(airbnb,  airbnbValid,  airbnbQuality),
     booking: sourceSummary(booking, bookingValid, bookingQuality),
+  };
+
+  // sourceUsage: transparency for callers on what was included and why
+  const mkUsage = (source, statValid, geoOk, quality, weight) => {
+    const included       = statValid && geoOk;
+    let   exclusionReason = null;
+    if (!statValid) exclusionReason = 'invalid_stats';
+    else if (!geoOk) exclusionReason = source?.geoQuality?.reason ?? 'geo_unusable';
+    return {
+      status:           included ? (source?.geoQuality?.status ?? 'GOOD') : exclusionReason,
+      included,
+      exclusionReason,
+      effectiveQuality: included ? Math.round(quality * 10000) / 10000 : 0,
+      weight:           weight != null ? Math.round(weight * 10000) / 10000 : 0,
+    };
   };
 
   const validSources = [
@@ -427,20 +478,35 @@ function aggregateMarketSourcesCalibrated({
     };
   }
 
-  const diagnostics = {
-    validSourceCount:    validSources.length,
-    airbnbQuality:       airbnbValid  ? Math.round(airbnbQuality  * 10000) / 10000 : null,
-    bookingQuality:      bookingValid ? Math.round(bookingQuality * 10000) / 10000 : null,
-    airbnbCountScore:    airbnbValid  ? countScore(airbnb.comparableCount)           : null,
-    airbnbRadiusScore:   airbnbValid  ? radiusScore(airbnb.selectedRadiusKm)         : null,
-    airbnbMetadataScore: airbnbValid && airbnb.metadataScore != null ? airbnb.metadataScore : null,
-    bookingCountScore:   bookingValid ? countScore(booking.comparableCount)          : null,
-    bookingRadiusScore:  bookingValid ? radiusScore(booking.selectedRadiusKm)        : null,
-    bookingMetadataScore: bookingValid && booking.metadataScore != null ? booking.metadataScore : null,
-    calibrated:          true,
+  // Compute final weights for sourceUsage transparency
+  let finalAirbnbW  = 0;
+  let finalBookingW = 0;
+  if (consensus) {
+    finalAirbnbW  = consensus.weights?.airbnb  ?? 0;
+    finalBookingW = consensus.weights?.booking ?? 0;
+  }
+
+  const sourceUsage = {
+    airbnb:  mkUsage(airbnb,  airbnbStatValid,  airbnbGeoOk,  airbnbQuality,  finalAirbnbW),
+    booking: mkUsage(booking, bookingStatValid, bookingGeoOk, bookingQuality, finalBookingW),
   };
 
-  return { sources, consensus, marketSignal, diagnostics };
+  const diagnostics = {
+    validSourceCount:     validSources.length,
+    airbnbQuality:        airbnbValid  ? Math.round(airbnbQuality  * 10000) / 10000 : null,
+    bookingQuality:       bookingValid ? Math.round(bookingQuality * 10000) / 10000 : null,
+    airbnbCountScore:     airbnbValid  ? countScore(airbnb.comparableCount)            : null,
+    airbnbRadiusScore:    airbnbValid  ? radiusScore(airbnb.selectedRadiusKm)          : null,
+    airbnbMetadataScore:  airbnbValid && airbnb.metadataScore     != null ? airbnb.metadataScore     : null,
+    airbnbGeoScore:       airbnbValid && airbnb.geoCoverageScore  != null ? airbnb.geoCoverageScore  : null,
+    bookingCountScore:    bookingValid ? countScore(booking.comparableCount)           : null,
+    bookingRadiusScore:   bookingValid ? radiusScore(booking.selectedRadiusKm)         : null,
+    bookingMetadataScore: bookingValid && booking.metadataScore    != null ? booking.metadataScore   : null,
+    bookingGeoScore:      bookingValid && booking.geoCoverageScore != null ? booking.geoCoverageScore : null,
+    calibrated:           true,
+  };
+
+  return { sources, consensus, marketSignal, diagnostics, sourceUsage };
 }
 
 module.exports = {
@@ -466,4 +532,4 @@ module.exports = {
   CROSS_SOURCE_DIVERGENCE_LOW,
   CROSS_SOURCE_DIVERGENCE_MODERATE,
   CROSS_SOURCE_DIVERGENCE_HIGH,
-};
+}; // end of exports

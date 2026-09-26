@@ -765,20 +765,25 @@ function printCounterfactuals(cf) {
   }
 }
 
-function printTopComparables(listings, label, max = 25) {
+function printTopComparables(listings, label, max = 25, targetLat = null, targetLon = null) {
   if (!listings.length) { console.log(`\n  ${label}: no comparables`); return; }
   console.log(`\n  ${label} TOP COMPARABLES (max ${max})`);
   console.log('  ' + '─'.repeat(72));
   console.log('  id               | dist km | nightly | beds | guests | category');
   const show = listings.slice(0, max);
-  // distance would need targetLat/Lon — show without if not provided
+  const hasTarget = Number.isFinite(targetLat) && Number.isFinite(targetLon);
   for (const l of show) {
-    const id   = (l.providerListingId || '?').slice(-10).padEnd(16);
-    const p    = fmt(l.price, 2).padStart(7);
-    const bed  = l.bedrooms != null ? String(l.bedrooms).padStart(4) : 'null';
-    const g    = l.guests   != null ? String(l.guests).padStart(6)   : '  null';
-    const cat  = (l.category || 'null').slice(0, 25);
-    console.log(`  ${id} | ${'?'.padStart(7)} | ${p} | ${bed} | ${g} | ${cat}`);
+    const id = (l.providerListingId || '?').slice(-10).padEnd(16);
+    const p  = fmt(l.price, 2).padStart(7);
+    const bed = l.bedrooms != null ? String(l.bedrooms).padStart(4) : 'null';
+    const g   = l.guests   != null ? String(l.guests).padStart(6)   : '  null';
+    const cat = (l.category || 'null').slice(0, 25);
+    let distStr = '      ?';
+    if (hasTarget && Number.isFinite(l.latitude) && Number.isFinite(l.longitude)) {
+      const d = haversineKm(targetLat, targetLon, l.latitude, l.longitude);
+      distStr = d.toFixed(2).padStart(7);
+    }
+    console.log(`  ${id} | ${distStr} | ${p} | ${bed} | ${g} | ${cat}`);
   }
 }
 
@@ -928,8 +933,8 @@ async function executeMode({ name, maxListings = DEFAULT_MAX, _airbnbScrape, _bo
   console.log(`  Booking: status=${sb.status}  radius=${sb.selectedRadiusKm ?? 'null'}km  count=${sb.listings.length}`);
   if (audit.bookingStats) console.log(`    median=${fmt(audit.bookingStats.median)} p25=${fmt(audit.bookingStats.p25)} p75=${fmt(audit.bookingStats.p75)} occupancy=null tension=null`);
 
-  printTopComparables(sa.listings, 'AIRBNB');
-  printTopComparables(sb.listings, 'BOOKING');
+  printTopComparables(sa.listings, 'AIRBNB',  25, targetLat, targetLon);
+  printTopComparables(sb.listings, 'BOOKING', 25, targetLat, targetLon);
 
   console.log('\n  SEARCH GEO COVERAGE');
   console.log('  ' + '─'.repeat(40));
