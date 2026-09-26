@@ -28,6 +28,7 @@ const fs       = require('fs');
 const {
   parseBookingItem,
   analyzeFieldPresence,
+  validateCustomDates,
   toISO8601Timestamp,
   normalizeBookingCurrency,
   previewMode,
@@ -42,6 +43,7 @@ const {
   BOOKING_INPUT_URL,
   CONTRACT_CONFIDENCE,
   MAX_RECORDS,
+  MAX_DIAGNOSTIC_NIGHTS,
 } = require('../outils/diag-brightdata-booking');
 
 // ── Helper: temp env override ──────────────────────────────────────────────────
@@ -261,9 +263,10 @@ const SAMPLE_BOOKING_ITEM = {
     assert.strictEqual(listing.longitude, 2.35);
   });
 
-  await test('BK-22 parseBookingItem adults echoed as guests', async () => {
+  await test('BK-22 parseBookingItem guests is null — adults is input echo, not listing capacity (B5-BK-E)', async () => {
     const { listing } = parseBookingItem(SAMPLE_BOOKING_ITEM, 'EUR');
-    assert.strictEqual(listing.guests, 2);
+    assert.strictEqual(listing.guests, null,
+      'guests must be null — adults echoes our input, CAN_FILTER_BY_CAPACITY=NO');
   });
 
   await test('BK-23 parseBookingItem category always null (no Booking.com equivalent)', async () => {
@@ -308,8 +311,11 @@ const SAMPLE_BOOKING_ITEM = {
       'No available_dates in schema → occupancy proxy is CONFIRMED not feasible');
   });
 
-  await test('BK-28 CONTRACT_CONFIDENCE CROSS_PLATFORM_DEDUP is CONFIRMED not feasible', async () => {
-    assert.strictEqual(CONTRACT_CONFIDENCE.CROSS_PLATFORM_DEDUP, 'CONFIRMED');
+  await test('BK-28 CONTRACT_CONFIDENCE CROSS_PLATFORM_DEDUP_BY_ID is CONFIRMED not feasible (B5-BK-E)', async () => {
+    assert.strictEqual(CONTRACT_CONFIDENCE.CROSS_PLATFORM_DEDUP_BY_ID, 'CONFIRMED',
+      'Cross-platform dedup by ID is CONFIRMED not feasible — incompatible ID spaces');
+    assert.strictEqual(CONTRACT_CONFIDENCE.CROSS_PLATFORM_GEO_DISTANCE, 'CONFIRMED',
+      'Geo distance comparison is CONFIRMED technically possible (but unsafe as dedup)');
   });
 
   // ── previewMode (mock DB, 0 BD calls) ──────────────────────────────────────
@@ -778,6 +784,163 @@ const SAMPLE_BOOKING_ITEM = {
       'body.currency must be a non-empty string');
     assert.strictEqual(typeof body.adults, 'number', 'body.adults must be a number');
     assert.strictEqual(typeof body.rooms,  'number', 'body.rooms must be a number');
+  });
+
+  // ── B5-BK-E: GEO corrections ───────────────────────────────────────────────
+
+  await test('BK-65 parseBookingItem extracts lat/lon from map_coordinates.lat/.lon (confirmed live format)', async () => {
+    const item = {
+      ...SAMPLE_BOOKING_ITEM,
+      map_coordinates: { lat: 48.87, lon: 2.33 },
+    };
+    const { listing } = parseBookingItem(item, 'EUR');
+    assert.strictEqual(listing.latitude,  48.87, 'Expected latitude from .lat field');
+    assert.strictEqual(listing.longitude, 2.33,  'Expected longitude from .lon field');
+  });
+
+  await test('BK-66 parseBookingItem map_coordinates with invalid lat/lon → null (NaN rejected)', async () => {
+    const item = {
+      ...SAMPLE_BOOKING_ITEM,
+      map_coordinates: { lat: 'not_a_number', lon: null },
+    };
+    const { listing } = parseBookingItem(item, 'EUR');
+    assert.strictEqual(listing.latitude,  null, 'Invalid lat must produce null');
+    assert.strictEqual(listing.longitude, null, 'Invalid lon must produce null');
+  });
+
+  await test('BK-67 parseBookingItem guests is null — adults is input echo, not listing capacity', async () => {
+    const item = { ...SAMPLE_BOOKING_ITEM, adults: 4 };
+    const { listing } = parseBookingItem(item, 'EUR');
+    assert.strictEqual(listing.guests, null,
+      'guests must be null — adults echoes our input, not the listing max capacity');
+  });
+
+  await test('BK-68 parseBookingItem category set from property_type when present', async () => {
+    const item = { ...SAMPLE_BOOKING_ITEM, property_type: 'Apartment' };
+    const { listing } = parseBookingItem(item, 'EUR');
+    assert.strictEqual(listing.category, 'apartment', 'property_type must map to lowercase category');
+  });
+
+  await test('BK-68b parseBookingItem category null when property_type absent', async () => {
+    const item = { ...SAMPLE_BOOKING_ITEM };
+    delete item.property_type;
+    const { listing } = parseBookingItem(item, 'EUR');
+    assert.strictEqual(listing.category, null, 'category must be null when property_type absent');
+  });
+
+  await test('BK-69 BEDROOM_FIELD_PRESENT vs PARSEABLE distinction (nb_bedrooms=0 → parseable=false)', async () => {
+    const itemZero  = { ...SAMPLE_BOOKING_ITEM, nb_bedrooms: 0 };
+    const itemTwo   = { ...SAMPLE_BOOKING_ITEM, nb_bedrooms: 2 };
+    const { listing: l0 } = parseBookingItem(itemZero, 'EUR');
+    const { listing: l2 } = parseBookingItem(itemTwo,  'EUR');
+    // Field present in both cases, but only > 0 is parseable
+    assert.strictEqual(l0.bedrooms, null, 'nb_bedrooms=0 must not produce a parseable bedroom count');
+    assert.strictEqual(l2.bedrooms, 2,    'nb_bedrooms=2 must produce bedrooms=2');
+  });
+
+  await test('BK-70 CONTRACT_CONFIDENCE LAT_LON_AVAILABLE is CONFIRMED and docs reflect live result', async () => {
+    assert.strictEqual(CONTRACT_CONFIDENCE.LAT_LON_AVAILABLE, 'CONFIRMED',
+      'LAT_LON_AVAILABLE must remain CONFIRMED — map_coordinates.lat/lon present 10/10 in live M6 run');
+  });
+
+  // ── B5-BK-E: validateCustomDates ──────────────────────────────────────────
+
+  await test('BK-71 validateCustomDates returns correct nights for valid range', async () => {
+    const nights = validateCustomDates('2026-10-01', '2026-10-04');
+    assert.strictEqual(nights, 3, 'Expected 3 nights for 01→04');
+  });
+
+  await test('BK-72 validateCustomDates throws when check_out <= check_in', async () => {
+    assert.throws(
+      () => validateCustomDates('2026-10-05', '2026-10-05'),
+      /strictement après/,
+      'Same-day check-in/out must throw'
+    );
+    assert.throws(
+      () => validateCustomDates('2026-10-05', '2026-10-04'),
+      /strictement après/,
+      'check_out before check_in must throw'
+    );
+  });
+
+  await test('BK-73 validateCustomDates throws on invalid date format', async () => {
+    assert.throws(() => validateCustomDates('26-10-01', '2026-10-04'), /invalide/);
+    assert.throws(() => validateCustomDates('2026-10-01', 'not-a-date'), /invalide/);
+  });
+
+  await test('BK-74 validateCustomDates throws when nights > MAX_DIAGNOSTIC_NIGHTS', async () => {
+    // Compute far date relative to checkIn, not Date.now()
+    const base = new Date('2026-10-01T00:00:00Z');
+    base.setDate(base.getDate() + MAX_DIAGNOSTIC_NIGHTS + 1);
+    const farStr = base.toISOString().slice(0, 10);
+    assert.throws(
+      () => validateCustomDates('2026-10-01', farStr),
+      /trop long|MAX_DIAGNOSTIC_NIGHTS/i
+    );
+  });
+
+  await test('BK-75 previewMode uses custom check-in/check-out when provided', async () => {
+    const pool   = makeMockPool([MOCK_PROPERTY]);
+    const result = await withEnv(
+      { MARKET_PRIMARY_PROVIDER: undefined },
+      () => previewMode({
+        name: 'M6', pool,
+        _now: new Date('2026-09-25T12:00:00Z'),
+        checkIn: '2026-11-01', checkOut: '2026-11-04',
+      })
+    );
+    assert.strictEqual(result.ok,              true,         'previewMode with custom dates must succeed');
+    assert.strictEqual(result.checkIn,         '2026-11-01', 'checkIn must be custom value');
+    assert.strictEqual(result.checkOut,        '2026-11-04', 'checkOut must be custom value');
+    assert.strictEqual(result.requestedNights, 3,            'requestedNights must be 3 for 01→04');
+    const body = result.requestBody[0];
+    assert.ok(body.check_in.startsWith('2026-11-01'), 'request body check_in must use custom date');
+    assert.ok(body.check_out.startsWith('2026-11-04'), 'request body check_out must use custom date');
+  });
+
+  await test('BK-76 executeMode uses custom check-in/check-out in trigger body', async () => {
+    let capturedBody;
+    const mockFetch = async (url, opts = {}) => {
+      if ((opts.method || 'GET').toUpperCase() === 'POST') {
+        capturedBody = JSON.parse(opts.body);
+        return { ok: true, status: 200, text: async () => JSON.stringify({ snapshot_id: 'snap-bk76' }), headers: { get: () => 'application/json' } };
+      }
+      if (url.includes('progress')) return { ok: true, status: 200, json: async () => ({ status: 'ready' }) };
+      if (url.includes('snapshot')) return { ok: true, status: 200, json: async () => [SAMPLE_BOOKING_ITEM] };
+    };
+    const pool = makeMockPool([MOCK_PROPERTY]);
+    const result = await withEnv(
+      { BRIGHTDATA_API_KEY: 'test-key-bk76', MARKET_PRIMARY_PROVIDER: undefined },
+      () => executeMode({
+        name: 'M6', pool, _bdFetchImpl: mockFetch,
+        _now: new Date('2026-09-25T12:00:00Z'),
+        checkIn: '2026-11-01', checkOut: '2026-11-03',
+      })
+    );
+    assert.strictEqual(result.requestedNights, 2, 'executeMode must compute correct requestedNights');
+    assert.ok(capturedBody[0].check_in.startsWith('2026-11-01'),  'trigger body check_in must use custom date');
+    assert.ok(capturedBody[0].check_out.startsWith('2026-11-03'), 'trigger body check_out must use custom date');
+  });
+
+  await test('BK-77 executeMode priceSemantics = NEED_MULTI_NIGHT_TEST for 1-night items', async () => {
+    const mockFetch = async (url, opts = {}) => {
+      if ((opts.method || 'GET').toUpperCase() === 'POST')
+        return { ok: true, status: 200, text: async () => JSON.stringify({ snapshot_id: 'snap-bk77' }), headers: { get: () => 'application/json' } };
+      if (url.includes('progress')) return { ok: true, status: 200, json: async () => ({ status: 'ready' }) };
+      if (url.includes('snapshot')) return { ok: true, status: 200, json: async () => [SAMPLE_BOOKING_ITEM] };
+    };
+    const pool = makeMockPool([MOCK_PROPERTY]);
+    const result = await withEnv(
+      { BRIGHTDATA_API_KEY: 'test-key-bk77', MARKET_PRIMARY_PROVIDER: undefined },
+      () => executeMode({ name: 'M6', pool, _bdFetchImpl: mockFetch, _now: new Date('2026-09-25T12:00:00Z') })
+    );
+    assert.strictEqual(result.priceSemantics, 'NEED_MULTI_NIGHT_TEST',
+      'priceSemantics must be NEED_MULTI_NIGHT_TEST when all items are 1-night stays');
+  });
+
+  await test('BK-78 MAX_DIAGNOSTIC_NIGHTS is a positive integer', async () => {
+    assert.ok(typeof MAX_DIAGNOSTIC_NIGHTS === 'number' && MAX_DIAGNOSTIC_NIGHTS > 0 && Number.isInteger(MAX_DIAGNOSTIC_NIGHTS),
+      'MAX_DIAGNOSTIC_NIGHTS must be a positive integer');
   });
 
 })();

@@ -2,7 +2,7 @@
 'use strict';
 require('dotenv').config();
 /**
- * P1.2-B5-BK-A/B/C/D — Bright Data Booking.com Contract Discovery
+ * P1.2-B5-BK-A/B/C/D/E — Bright Data Booking.com Contract Discovery
  *
  * Discovery diagnostic — investigates the Booking.com BD API contract.
  * Does NOT activate Booking.com in production.
@@ -36,19 +36,28 @@ require('dotenv').config();
  * B5-BK-D: Live contract validation (controlled real call):
  *   executeMode unblocked, snapshotResumeMode added, raw field scan, price semantics verdict
  *
- * CONTRACT CONFIDENCE LEVELS (B5-BK-C update):
+ * B5-BK-E: Geo correction, multi-night CLI, price semantics analysis:
+ *   map_coordinates.lat/lon CONFIRMED present 10/10 in live M6 run (B5-BK-D reversed prior schema assumption)
+ *   --check-in/--check-out CLI params for multi-night price semantics test
+ *   parseBookingItem corrected: guests=null (adults is input echo, not listing capacity)
+ *   property_type → category mapping added
+ *   Phase 4 enhanced: per-item nights/divided price table + PER_NIGHT/TOTAL_STAY/UNKNOWN verdict
+ *   Phase 8 split: CAN_COMPARE_GEO_DISTANCE / CAN_CROSS_PLATFORM_DEDUP_BY_ID / CAN_CROSS_PLATFORM_DEDUP_BY_GEO_ONLY
+ *
+ * CONTRACT CONFIDENCE LEVELS (B5-BK-E update):
  *   BOOKING_DATASET_ID        gd_m4bf7a917zfezv9d5    CONFIRMED (BD "Listings Search" page)
  *   BOOKING_TRIGGER_BASE      /datasets/v3/trigger    CONFIRMED (same as Airbnb)
  *   URL_COLLECTION_SUPPORTED  url_collection          CONFIRMED (API error + official docs)
  *   INPUT_URL_FIELD           https://www.booking.com CONFIRMED (official BD examples)
  *   INPUT_DATE_FORMAT         ISO8601 full timestamp  CONFIRMED (official BD examples)
  *   PRICE_FIELD               final_price             CONFIRMED (HuggingFace schema)
- *   PRICE_SEMANTICS           per-night for dates     INFERRED (unconfirmed without live data)
- *   LAT_LON_AVAILABLE         FALSE                   CONFIRMED (map_coordinates=null)
+ *   PRICE_SEMANTICS           per-night for dates     INFERRED (multi-night test needed for B5-BK-E)
+ *   LAT_LON_AVAILABLE         TRUE                    CONFIRMED (map_coordinates.lat/lon live M6 10/10)
  *   BEDROOMS_AVAILABLE        TRUE                    CONFIRMED (nb_bedrooms field)
- *   RATING_FIELD              review_score 0-10       CONFIRMED (HuggingFace schema)
+ *   RATING_FIELD              review_score 0-10       INFERRED (absent in M6 live run — schema only)
  *   OCCUPANCY_PROXY           NOT FEASIBLE            CONFIRMED (no available_dates)
- *   CROSS_PLATFORM_DEDUP      NOT FEASIBLE            CONFIRMED (no shared ID space)
+ *   CROSS_PLATFORM_DEDUP_ID   NOT FEASIBLE            CONFIRMED (incompatible ID spaces)
+ *   CROSS_PLATFORM_GEO_DIST   TECHNICALLY_POSSIBLE    CONFIRMED (lat/lon available, but unsafe as dedup)
  */
 
 // ── Safe imports only ─────────────────────────────────────────────────────────
@@ -73,21 +82,22 @@ const BOOKING_DEFAULT_ROOMS  = 1;
 const MAX_RECORDS            = 10;       // hard cap — discovery only
 const MAX_WAIT_MS            = 180_000;  // 3 minutes
 const POLL_INTERVAL_MS_LIVE  = 10_000;
-
+const MAX_DIAGNOSTIC_NIGHTS  = 30;       // upper bound for custom --check-in/--check-out
 
 const CONTRACT_CONFIDENCE = {
-  BOOKING_DATASET_ID:      'CONFIRMED',  // BD product page names gd_m4bf7a917zfezv9d5 "Listings Search"
-  URL_COLLECTION_SUPPORTED:'CONFIRMED',  // real API error: "Supported types: ['url_collection']"
-  INPUT_URL_FIELD:         'CONFIRMED',  // official docs: url="https://www.booking.com" + location
-  INPUT_DATE_FORMAT:       'CONFIRMED',  // ISO8601 timestamps — shown in official BD examples
-  PRICE_FIELD:             'CONFIRMED',  // final_price
-  PRICE_SEMANTICS:         'INFERRED',   // per-night — semantics unconfirmed without live data
-  CURRENCY_FIELD:          'CONFIRMED',  // item.currency
-  LAT_LON_AVAILABLE:       'CONFIRMED',  // FALSE — map_coordinates null in observed data
-  BEDROOMS_AVAILABLE:      'CONFIRMED',  // nb_bedrooms field present
-  RATING_FIELD:            'CONFIRMED',  // review_score 0-10 scale
-  OCCUPANCY_PROXY:         'CONFIRMED',  // NOT FEASIBLE — no available_dates
-  CROSS_PLATFORM_DEDUP:    'CONFIRMED',  // NOT FEASIBLE — incompatible ID spaces
+  BOOKING_DATASET_ID:            'CONFIRMED',  // BD product page names gd_m4bf7a917zfezv9d5 "Listings Search"
+  URL_COLLECTION_SUPPORTED:      'CONFIRMED',  // real API error: "Supported types: ['url_collection']"
+  INPUT_URL_FIELD:               'CONFIRMED',  // official docs: url="https://www.booking.com" + location
+  INPUT_DATE_FORMAT:             'CONFIRMED',  // ISO8601 timestamps — shown in official BD examples
+  PRICE_FIELD:                   'CONFIRMED',  // final_price
+  PRICE_SEMANTICS:               'INFERRED',   // per-night — multi-night test needed to confirm
+  CURRENCY_FIELD:                'CONFIRMED',  // item.currency
+  LAT_LON_AVAILABLE:             'CONFIRMED',  // TRUE — map_coordinates.lat/lon present 10/10 in live M6 run
+  BEDROOMS_AVAILABLE:            'CONFIRMED',  // nb_bedrooms field present
+  RATING_FIELD:                  'INFERRED',   // review_score absent in M6 live run — confirmed in schema only
+  OCCUPANCY_PROXY:               'CONFIRMED',  // NOT FEASIBLE — no available_dates
+  CROSS_PLATFORM_DEDUP_BY_ID:    'CONFIRMED',  // NOT FEASIBLE — incompatible ID spaces
+  CROSS_PLATFORM_GEO_DISTANCE:   'CONFIRMED',  // TECHNICALLY_POSSIBLE (lat/lon available) — but NOT safe as dedup
 };
 
 // ── Error body observability (B5-BK-B) ────────────────────────────────────────
@@ -182,10 +192,12 @@ function toISO8601Timestamp(dateStr) {
  * Parse one Booking.com raw record into a NormalizedMarketListing candidate.
  *
  * Key differences from parseBrightDataItem (Airbnb):
- *   - Price field: final_price (integer, INFERRED as per-night)
- *   - Lat/lon: not extracted (map_coordinates null in observed data)
- *   - Bedrooms: nb_bedrooms (reliably present — unlike Airbnb which is always null)
- *   - Rating: review_score 0-10 → normalized to 0-5 for NormalizedListing compat
+ *   - Price field: final_price (CONFIRMED — semantics per-night INFERRED, multi-night test needed)
+ *   - Geo: map_coordinates.lat/lon CONFIRMED present 10/10 in live M6 run (B5-BK-E)
+ *   - Bedrooms: nb_bedrooms (CONFIRMED field — unlike Airbnb which is always null)
+ *   - Rating: review_score 0-10 → normalized to 0-5 (absent in M6 live run — schema only)
+ *   - Guests: NULL — adults is input echo (not listing capacity); no native capacity field found
+ *   - Category: property_type → category if present
  *   - Availability: no explicit boolean; discovery = available (isBooked=false always)
  *   - availableDates: NULL (no calendar array — occupancy proxy NOT FEASIBLE)
  *
@@ -206,17 +218,13 @@ function parseBookingItem(item, requestedCurrency) {
     return { listing: null, reason: 'price' };
   }
 
-  // Geo: map_coordinates (CONFIRMED null in observed schema)
-  // Attempt extraction in case a future schema version populates it.
+  // Geo: map_coordinates.lat/lon (CONFIRMED present 10/10 in live M6 run — B5-BK-E)
+  // Prioritize .lat/.lon (confirmed live field names), fallback to .latitude/.longitude variants.
   let latitude = null, longitude = null;
-  if (item.map_coordinates != null) {
-    if (typeof item.map_coordinates === 'object') {
-      const lat = parseFloat(item.map_coordinates.latitude  ?? item.map_coordinates.lat);
-      const lon = parseFloat(
-        item.map_coordinates.longitude ?? item.map_coordinates.lon ?? item.map_coordinates.lng
-      );
-      if (Number.isFinite(lat) && Number.isFinite(lon)) { latitude = lat; longitude = lon; }
-    }
+  if (item.map_coordinates != null && typeof item.map_coordinates === 'object') {
+    const lat = parseFloat(item.map_coordinates.lat ?? item.map_coordinates.latitude);
+    const lon = parseFloat(item.map_coordinates.lon ?? item.map_coordinates.lng ?? item.map_coordinates.longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lon)) { latitude = lat; longitude = lon; }
   }
   // Try full_location JSON if map_coordinates failed
   if (latitude == null && item.full_location != null) {
@@ -224,10 +232,8 @@ function parseBookingItem(item, requestedCurrency) {
       const fl = typeof item.full_location === 'string'
         ? JSON.parse(item.full_location)
         : item.full_location;
-      const lat = parseFloat(fl?.latitude ?? fl?.lat ?? fl?.coordinates?.lat ?? fl?.coordinates?.latitude);
-      const lon = parseFloat(
-        fl?.longitude ?? fl?.lon ?? fl?.lng ?? fl?.coordinates?.lon ?? fl?.coordinates?.lng ?? fl?.coordinates?.longitude
-      );
+      const lat = parseFloat(fl?.lat ?? fl?.latitude ?? fl?.coordinates?.lat ?? fl?.coordinates?.latitude);
+      const lon = parseFloat(fl?.lon ?? fl?.lng ?? fl?.longitude ?? fl?.coordinates?.lon ?? fl?.coordinates?.longitude);
       if (Number.isFinite(lat) && Number.isFinite(lon)) { latitude = lat; longitude = lon; }
     } catch (_) {}
   }
@@ -240,16 +246,19 @@ function parseBookingItem(item, requestedCurrency) {
   }
 
   // Rating: review_score (0-10 scale) → normalize to 0-5 for NormalizedListing compat
+  // Note: absent in M6 live run — schema-confirmed but not observed in first real call
   const rawScore = parseFloat(item.review_score);
   const stars    = Number.isFinite(rawScore) ? rawScore / 2 : 0;
 
-  // Guests: adults (echoed from input — INFERRED as guest capacity proxy)
-  let guests = null;
-  if (typeof item.adults === 'number' && item.adults > 0) {
-    guests = item.adults;
-  } else if (typeof item.adults === 'string') {
-    const n = parseInt(item.adults, 10);
-    if (n > 0) guests = n;
+  // Guests: NULL — adults field is our own input echoed back, not the listing's max capacity.
+  // No native listing-capacity field found in B5-BK-E audit. CAN_FILTER_BY_CAPACITY = NO.
+  const guests = null;
+
+  // Category: property_type field if present (B5-BK-E addition)
+  let category = null;
+  if (item.property_type != null) {
+    const pt = String(item.property_type).trim();
+    if (pt) category = pt.toLowerCase();
   }
 
   // Availability: Booking.com discovery returns only listings bookable for requested dates.
@@ -266,11 +275,34 @@ function parseBookingItem(item, requestedCurrency) {
       latitude,
       longitude,
       guests,
-      category:      null,  // no Booking.com equivalent of Airbnb category
+      category,
       availableDates,
     },
     reason: null,
   };
+}
+
+// ── Date validation helper ─────────────────────────────────────────────────────
+
+/**
+ * Validate custom check-in/check-out dates for diagnostic use.
+ * @returns {number} requested_nights
+ * @throws {Error} on invalid input
+ */
+function validateCustomDates(checkIn, checkOut) {
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRe.test(checkIn))  throw new Error(`--check-in invalide: "${checkIn}" (format YYYY-MM-DD requis)`);
+  if (!dateRe.test(checkOut)) throw new Error(`--check-out invalide: "${checkOut}" (format YYYY-MM-DD requis)`);
+  const ci = new Date(checkIn  + 'T00:00:00Z');
+  const co = new Date(checkOut + 'T00:00:00Z');
+  if (isNaN(ci.getTime())) throw new Error(`--check-in non parseable: "${checkIn}"`);
+  if (isNaN(co.getTime())) throw new Error(`--check-out non parseable: "${checkOut}"`);
+  if (co <= ci) throw new Error(`--check-out doit être strictement après --check-in (${checkIn} → ${checkOut})`);
+  const nights = Math.round((co - ci) / 86400000);
+  if (nights > MAX_DIAGNOSTIC_NIGHTS) {
+    throw new Error(`Séjour trop long: ${nights} nuits > MAX_DIAGNOSTIC_NIGHTS=${MAX_DIAGNOSTIC_NIGHTS}`);
+  }
+  return nights;
 }
 
 // ── Schema field presence analysis ────────────────────────────────────────────
@@ -283,7 +315,7 @@ const BOOKING_EXPECTED_FIELDS = [
   'review_score', 'review_count',
   'nb_bedrooms', 'nb_bathrooms', 'nb_kitchens', 'nb_livingrooms', 'nb_all_beds',
   'free_cancellation', 'no_prepayment', 'free_cancellation_until',
-  'map_coordinates', 'star_rating',
+  'map_coordinates', 'star_rating', 'property_type',
   // Fields to check for absence (expected NOT present in Booking.com)
   'availability',       // Airbnb boolean — likely absent from Booking.com
   'available_dates',    // Airbnb calendar — likely absent
@@ -430,7 +462,7 @@ async function triggerBookingJob(location, currency, checkIn, checkOut, opts = {
 // ── Preview mode ──────────────────────────────────────────────────────────────
 // BD_CALLS=0  DB_WRITES=0  MARKET_DATA_WRITES=0  PRICING_WRITES=0
 
-async function previewMode({ name, _now, pool } = {}) {
+async function previewMode({ name, _now, pool, checkIn: checkInCustom, checkOut: checkOutCustom } = {}) {
   console.log('\n' + '═'.repeat(72));
   console.log('  B5-BK BOOKING.COM CONTRACT DISCOVERY — PREVIEW MODE');
   console.log('  BD_CALLS=0 | DB_WRITES=0 | MARKET_DATA_WRITES=0 | PRICING_WRITES=0');
@@ -449,7 +481,16 @@ async function previewMode({ name, _now, pool } = {}) {
   const prop     = rows[0];
   const timezone = prop.timezone || 'Europe/Paris';
   const currency = normalizeCurrency(prop.currency);
-  const { checkIn, checkOut } = getBrightDataMarketDates({ timezone, now: _now });
+
+  let checkIn, checkOut, requestedNights;
+  if (checkInCustom && checkOutCustom) {
+    requestedNights = validateCustomDates(checkInCustom, checkOutCustom);
+    checkIn  = checkInCustom;
+    checkOut = checkOutCustom;
+  } else {
+    ({ checkIn, checkOut } = getBrightDataMarketDates({ timezone, now: _now }));
+    requestedNights = 1;
+  }
   const zones    = getFallbackZones(prop.address, null);
   const ctxKey   = computeMarketContextKey({
     countryCode: prop.country_code,
@@ -466,6 +507,9 @@ async function previewMode({ name, _now, pool } = {}) {
   console.log(`    max_guests:        ${prop.max_guests ?? 'NULL'}`);
   console.log(`    bedrooms:          ${prop.bedrooms ?? 'NULL'}`);
   console.log(`    context_key:       ${ctxKey}`);
+  console.log(`    check_in:          ${checkIn}  (${checkInCustom ? 'custom' : 'auto'})`);
+  console.log(`    check_out:         ${checkOut}  (${checkOutCustom ? 'custom' : 'auto'})`);
+  console.log(`    requested_nights:  ${requestedNights}`);
 
   // ── EXACT REQUEST CONTRACT (B5-BK-B/C) ──────────────────────────────────
   const location    = zones[0];
@@ -504,36 +548,40 @@ async function previewMode({ name, _now, pool } = {}) {
     console.log(`    ${icon} ${k.padEnd(28)} ${v}`);
   }
 
-  console.log('\n  KNOWN LIMITATIONS (confirmed from schema research):');
-  console.log('    ❌ lat/lon unavailable     → selectComparables geo-filter disabled');
+  console.log('\n  KNOWN CAPABILITIES / LIMITATIONS (B5-BK-E update):');
+  console.log('    ✅ lat/lon CONFIRMED       → map_coordinates.lat/lon present 10/10 in live M6 run');
+  console.log('    ⚠️  geo distance possible  → CAN_COMPARE_GEO_DISTANCE=YES (BUT unsafe as cross-platform dedup)');
   console.log('    ❌ available_dates absent  → occupancy proxy NOT feasible (always 0)');
-  console.log('    ❌ no shared ID w/ Airbnb  → cross-platform dedup NOT feasible');
+  console.log('    ❌ no shared ID w/ Airbnb  → CAN_CROSS_PLATFORM_DEDUP_BY_ID=NO');
+  console.log('    ❌ geo alone unsafe dedup  → CAN_CROSS_PLATFORM_DEDUP_BY_GEO_ONLY=NO');
   console.log('    ✅ nb_bedrooms present     → bedroom count filter feasible');
   console.log('    ✅ final_price present     → nightly price parseable (semantics INFERRED)');
-  console.log('    ✅ review_score present    → rating quality filter feasible (0-10 → 0-5)');
+  console.log('    ⚠️  review_score INFERRED  → absent in M6 live run; schema-confirmed only');
   console.log('    ✅ Dataset ID CONFIRMED    → gd_m4bf7a917zfezv9d5 = BD "Listings Search"');
-  console.log('    ✅ url_collection CONFIRMED → body: url + location (not discover_new)');
+  console.log('    ✅ url_collection CONFIRMED → body: url + location');
 
   console.log('\n  Ready: node outils/diag-brightdata-booking.js --name <nom> --execute');
   console.log('  Resume: node outils/diag-brightdata-booking.js --snapshot-id <id>');
   console.log('═'.repeat(72) + '\n');
 
   return {
-    ok:         true,
-    propertyId: prop.id,
+    ok:              true,
+    propertyId:      prop.id,
     currency,
     zones,
     checkIn,
     checkOut,
+    requestedNights,
     triggerUrl,
-    requestBody: reqBody,
+    requestBody:     reqBody,
   };
 }
 
 // ── Execute mode ──────────────────────────────────────────────────────────────
 // MAX_BD_CALLS=1  MAX_RECORDS=10  DB_WRITES=0  PRICING_WRITES=0  CHANNEX_WRITES=0
 
-async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool } = {}) {
+async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool,
+                              checkIn: checkInCustom, checkOut: checkOutCustom } = {}) {
   console.log('\n' + '═'.repeat(72));
   console.log('  B5-BK BOOKING.COM CONTRACT DISCOVERY — EXECUTE MODE');
   console.log('  MAX_BD_CALLS=1 | MAX_RECORDS=10 | DB_WRITES=0 | PRICING_WRITES=0');
@@ -549,13 +597,21 @@ async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool } = {}
   const currency = normalizeCurrency(prop.currency);
   if (!currency) throw new Error('Devise propriété invalide ou absente');
 
-  const { checkIn, checkOut } = getBrightDataMarketDates({ timezone, now: _now });
+  let checkIn, checkOut, requestedNights;
+  if (checkInCustom && checkOutCustom) {
+    requestedNights = validateCustomDates(checkInCustom, checkOutCustom);
+    checkIn  = checkInCustom;
+    checkOut = checkOutCustom;
+  } else {
+    ({ checkIn, checkOut } = getBrightDataMarketDates({ timezone, now: _now }));
+    requestedNights = 1;
+  }
   const zones    = getFallbackZones(prop.address, null);
   const location = zones[0];
 
   console.log(`\n  Target: ${prop.internal_name || prop.name} [${String(prop.id).slice(-8)}]`);
   console.log(`  Location: ${location}  currency=${currency}`);
-  console.log(`  checkIn=${checkIn}  checkOut=${checkOut}`);
+  console.log(`  checkIn=${checkIn}  checkOut=${checkOut}  nights=${requestedNights}`);
   console.log(`  ISO8601 input: check_in=${toISO8601Timestamp(checkIn)}`);
 
   // 2. Trigger BD job (MAX 1 job, MAX 10 records)
@@ -599,7 +655,7 @@ async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool } = {}
   console.log(`  ${sortedFields.join(', ')}`);
 
   const KEY_FIELD_NAMES = [
-    'final_price', 'nb_bedrooms', 'review_score',
+    'final_price', 'nb_bedrooms', 'review_score', 'property_type',
     'lat', 'lon', 'latitude', 'longitude', 'map_coordinates',
     'id', 'hotel_id', 'url', 'availability', 'available_dates',
   ];
@@ -647,35 +703,60 @@ async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool } = {}
 
   const withFinalPrice = items.filter(i => typeof i.final_price === 'number' && i.final_price > 0);
   console.log(`  final_price positive: ${withFinalPrice.length}/${items.length}`);
+  console.log(`  requested_nights:     ${requestedNights}`);
 
-  console.log('\n  Sample (id, final_price, original_price, nights):');
-  for (const item of items.slice(0, 5)) {
-    const nights = (() => {
+  // Per-item table: id, nights, final_price, final/nights, original_price, orig/nights, currency
+  console.log('\n  id           nights  final    /night   original /night  currency');
+  console.log('  ' + '─'.repeat(68));
+  for (const item of items.slice(0, 8)) {
+    const itemNights = (() => {
       try { return Math.round((new Date(item.check_out) - new Date(item.check_in)) / 86400000); }
-      catch { return '?'; }
+      catch { return requestedNights; }
     })();
-    console.log(`    id=${String(item.id ?? '?').slice(-6)}  final=${item.final_price ?? 'N/A'}  orig=${item.original_price ?? 'N/A'}  nights=${nights}  currency=${item.currency}`);
+    const n = itemNights > 0 ? itemNights : requestedNights;
+    const fp  = item.final_price    != null ? item.final_price    : 'N/A';
+    const op  = item.original_price != null ? item.original_price : 'N/A';
+    const fpn = (typeof fp === 'number' && n > 0) ? (fp / n).toFixed(2) : 'N/A';
+    const opn = (typeof op === 'number' && n > 0) ? (op / n).toFixed(2) : 'N/A';
+    const idStr = String(item.id ?? '?').slice(-8).padEnd(12);
+    console.log(`  ${idStr} ${String(n).padStart(5)}  ${String(fp).padStart(7)}  ${String(fpn).padStart(7)}  ${String(op).padStart(7)}  ${String(opn).padStart(6)}  ${item.currency ?? '?'}`);
   }
 
-  const oneNight = items.filter(i => {
-    try { return Math.round((new Date(i.check_out) - new Date(i.check_in)) / 86400000) === 1; }
-    catch { return false; }
+  const itemNightsArr = items.map(i => {
+    try { return Math.round((new Date(i.check_out) - new Date(i.check_in)) / 86400000); }
+    catch { return requestedNights; }
   });
+  const allOneNight = itemNightsArr.every(n => n === 1);
+  const allSameAsRequested = itemNightsArr.every(n => n === requestedNights);
+
   let priceSemantics;
-  if (oneNight.length === items.length) {
+  if (allOneNight && requestedNights === 1) {
     priceSemantics = 'NEED_MULTI_NIGHT_TEST';
     console.log('\n  ⚠️  All items are 1-night stays — per-night vs total price indistinguishable.');
-    console.log('  Semantics INFERRED as per-night. Verify with multi-night query separately.');
+    console.log('  Semantics INFERRED as per-night. Run with --check-in / --check-out for multi-night.');
     console.log(`  PRICE_SEMANTICS = ${priceSemantics}`);
+  } else if (requestedNights > 1 && allSameAsRequested) {
+    // Multi-night: compare final_price with final_price/nights
+    // Heuristic: if final_price/nights is close to 1-night reference prices, it's PER_NIGHT
+    // We can't conclude definitively without a reference, but show the data
+    const avgFinalPerNight = withFinalPrice.reduce((s, i) => s + i.final_price, 0) / (withFinalPrice.length || 1) / requestedNights;
+    const avgFinalTotal    = withFinalPrice.reduce((s, i) => s + i.final_price, 0) / (withFinalPrice.length || 1);
+    console.log(`\n  Multi-night analysis (${requestedNights} nights):`);
+    console.log(`    avg final_price (raw):       ${avgFinalTotal.toFixed(2)}`);
+    console.log(`    avg final_price / nights:    ${avgFinalPerNight.toFixed(2)}`);
+    console.log(`  Interpretation: if avg/night (~${avgFinalPerNight.toFixed(0)}) matches 1-night reference prices → PRICE = PER_NIGHT`);
+    console.log(`  1-night M6 reference range: 69–77 EUR (from B5-BK-D)`);
+    if (avgFinalPerNight >= 50 && avgFinalPerNight <= 200) {
+      priceSemantics = 'PER_NIGHT';
+      console.log(`  ✅ PRICE_SEMANTICS = PER_NIGHT (final_price/nights in plausible per-night range)`);
+    } else {
+      priceSemantics = 'UNKNOWN';
+      console.log(`  ⚠️  PRICE_SEMANTICS = UNKNOWN (final_price/nights out of expected per-night range)`);
+    }
+    console.log(`  PRICE_SEMANTICS = ${priceSemantics} (verify manually against reference)`);
   } else {
-    const multi = items.filter(i => !oneNight.includes(i));
-    const sample = multi.slice(0, 3).map(i => {
-      const n = Math.round((new Date(i.check_out) - new Date(i.check_in)) / 86400000);
-      return `final=${i.final_price} nights=${n}`;
-    });
-    console.log(`\n  Multi-night items: ${multi.length} → ${sample.join(', ')}`);
-    console.log('  Compare final_price / nights to identify per-night vs total semantics.');
-    priceSemantics = 'NEEDS_ANALYSIS';
+    priceSemantics = 'UNKNOWN';
+    console.log(`\n  ⚠️  PRICE_SEMANTICS = UNKNOWN (mixed nights or unexpected date echo)`);
   }
 
   // ── Phase 5: Geo / coordinates analysis ───────────────────────────────────
@@ -694,12 +775,15 @@ async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool } = {}
   console.log(`  full_location present:    ${fullLocPresent}/${items.length}`);
   console.log(`  Extractable lat/lon:      ${coordExtracted}/${items.length}`);
 
-  if (coordExtracted === 0) {
-    console.log('  ❌ GEO_FILTERING_FEASIBLE = false');
-    console.log('  ❌ selectComparables() geo-filter will be DISABLED for all Booking.com listings');
-    console.log('  → All capacity+category-qualified listings will be used regardless of distance');
+  if (coordExtracted === items.length && items.length > 0) {
+    console.log('  ✅ GEO_FILTERING_FEASIBLE = true (map_coordinates.lat/lon 100% present)');
+    console.log('  ✅ CAN_COMPARE_GEO_DISTANCE = YES');
+    console.log('  ❌ CAN_CROSS_PLATFORM_DEDUP_BY_GEO_ONLY = NO (geo proximity ≠ same listing)');
+  } else if (coordExtracted > 0) {
+    console.log(`  ⚠️  GEO_FILTERING_FEASIBLE = PARTIAL (${coordExtracted}/${items.length})`);
   } else {
-    console.log(`  ⚠️  Partial geo: ${coordExtracted}/${items.length} — geo-filter partially feasible`);
+    console.log('  ❌ GEO_FILTERING_FEASIBLE = false');
+    console.log('  → All capacity+category-qualified listings will be used regardless of distance');
   }
 
   // ── Phase 6: Comparable metadata analysis ────────────────────────────────
@@ -707,42 +791,52 @@ async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool } = {}
   console.log('  PHASE 6 — COMPARABLE METADATA ANALYSIS');
   console.log('─'.repeat(72));
 
-  const availFieldCount   = items.filter(i => i.availability !== undefined).length;
-  const availDatesCount   = items.filter(i => Array.isArray(i.available_dates)).length;
-  const freeCancelCount   = items.filter(i => i.free_cancellation === true).length;
-  const bedroomCount      = items.filter(i => i.nb_bedrooms != null && parseInt(i.nb_bedrooms, 10) > 0).length;
-  const reviewScoreCount  = items.filter(i => typeof i.review_score === 'number').length;
-  const adultsCount       = items.filter(i => i.adults != null).length;
+  const availFieldCount      = items.filter(i => i.availability !== undefined).length;
+  const availDatesCount      = items.filter(i => Array.isArray(i.available_dates)).length;
+  const freeCancelCount      = items.filter(i => i.free_cancellation === true).length;
+  // Bedroom: distinguish FIELD_PRESENT (nb_bedrooms non-null) vs VALUE_PARSEABLE (integer > 0)
+  const bedroomFieldPresent  = items.filter(i => i.nb_bedrooms != null).length;
+  const bedroomParseable     = items.filter(i => i.nb_bedrooms != null && parseInt(i.nb_bedrooms, 10) > 0).length;
+  const reviewScoreCount     = items.filter(i => typeof i.review_score === 'number').length;
+  const adultsCount          = items.filter(i => i.adults != null).length;
+  const propTypeCount        = items.filter(i => i.property_type != null && String(i.property_type).trim()).length;
 
-  const BEDROOM_SOURCE       = bedroomCount > 0 ? 'nb_bedrooms' : 'ABSENT';
-  const GUEST_CAPACITY_SRC   = adultsCount > 0  ? 'adults (input echo)' : 'ABSENT';
-  const RATING_SOURCE        = reviewScoreCount > 0 ? 'review_score (0-10)' : 'ABSENT';
-  const RATING_SCALE         = reviewScoreCount > 0 ? '0-10 → normalized /2 → 0-5' : 'N/A';
-  const GEO_SOURCE           = coordExtracted > 0 ? 'map_coordinates / full_location' : 'ABSENT';
-  const AVAILABILITY_SOURCE  = availDatesCount > 0 ? 'available_dates' : 'ABSENT';
-  const PROPERTY_ID_SOURCE   = items[0]?.id != null ? 'id (integer)' : 'ABSENT';
+  const BEDROOM_SOURCE      = bedroomFieldPresent > 0 ? 'nb_bedrooms' : 'ABSENT';
+  const PROPERTY_TYPE_SRC   = propTypeCount > 0 ? 'property_type' : 'ABSENT';
+  // adults is our input echo — NOT the listing's max occupancy
+  const GUEST_CAPACITY_SRC  = 'ABSENT (adults = input echo, not listing capacity)';
+  const RATING_SOURCE       = reviewScoreCount > 0 ? 'review_score (0-10 → /2 → 0-5)' : 'ABSENT (not seen in live run)';
+  const GEO_SOURCE          = coordExtracted > 0 ? 'map_coordinates.lat / map_coordinates.lon' : 'ABSENT';
+  const AVAILABILITY_SOURCE = availDatesCount > 0 ? 'available_dates' : 'ABSENT';
+  const PROPERTY_ID_SOURCE  = items[0]?.id != null ? 'id (integer)' : 'ABSENT';
 
-  console.log(`\n  BEDROOM_SOURCE:          ${BEDROOM_SOURCE}  (${bedroomCount}/${items.length} items)`);
-  console.log(`  GUEST_CAPACITY_SOURCE:   ${GUEST_CAPACITY_SRC}  (${adultsCount}/${items.length} items)`);
-  console.log(`  RATING_SOURCE:           ${RATING_SOURCE}  (${reviewScoreCount}/${items.length} items)`);
-  console.log(`  RATING_SCALE:            ${RATING_SCALE}`);
-  console.log(`  GEO_SOURCE:              ${GEO_SOURCE}`);
-  console.log(`  AVAILABILITY_SOURCE:     ${AVAILABILITY_SOURCE}  (${availDatesCount}/${items.length} items)`);
-  console.log(`  PROPERTY_ID_SOURCE:      ${PROPERTY_ID_SOURCE}`);
-  console.log(`  free_cancellation=true:  ${freeCancelCount}/${items.length}`);
+  console.log(`\n  BEDROOM_SOURCE:            ${BEDROOM_SOURCE}`);
+  console.log(`    FIELD_PRESENT:           ${bedroomFieldPresent}/${items.length} items`);
+  console.log(`    VALUE_PARSEABLE (>0):    ${bedroomParseable}/${items.length} items`);
+  console.log(`  GUEST_CAPACITY_SOURCE:     ${GUEST_CAPACITY_SRC}`);
+  console.log(`  PROPERTY_TYPE_SOURCE:      ${PROPERTY_TYPE_SRC}  (${propTypeCount}/${items.length} items)`);
+  console.log(`  RATING_SOURCE:             ${RATING_SOURCE}  (${reviewScoreCount}/${items.length} items)`);
+  console.log(`  GEO_SOURCE:                ${GEO_SOURCE}  (${coordExtracted}/${items.length} extractable)`);
+  console.log(`  AVAILABILITY_SOURCE:       ${AVAILABILITY_SOURCE}  (${availDatesCount}/${items.length} items)`);
+  console.log(`  PROPERTY_ID_SOURCE:        ${PROPERTY_ID_SOURCE}`);
+  console.log(`  free_cancellation=true:    ${freeCancelCount}/${items.length}`);
 
-  const CAN_FILTER_BY_BEDROOMS  = bedroomCount > 0;
-  const CAN_FILTER_BY_CAPACITY  = adultsCount > 0;
-  const CAN_FILTER_BY_GEO       = coordExtracted > 0;
-  const CAN_DEDUP_BOOKING        = false;
-  const CAN_CALC_CALENDAR_PROXY  = availDatesCount > 0;
+  const CAN_FILTER_BY_BEDROOMS        = bedroomParseable > 0;
+  const CAN_FILTER_BY_CAPACITY        = false;  // no native capacity field — adults is input echo
+  const CAN_FILTER_BY_GEO             = coordExtracted > 0;
+  const CAN_COMPARE_GEO_DISTANCE      = coordExtracted > 0;
+  const CAN_CROSS_PLATFORM_DEDUP_ID   = false;
+  const CAN_CROSS_PLATFORM_DEDUP_GEO  = false;  // geo proximity ≠ same listing
+  const CAN_CALC_CALENDAR_PROXY       = availDatesCount > 0;
 
   console.log('\n  FILTER VERDICTS:');
-  console.log(`  CAN_FILTER_BY_BEDROOMS:  ${CAN_FILTER_BY_BEDROOMS ? '✅ YES' : '❌ NO'}`);
-  console.log(`  CAN_FILTER_BY_CAPACITY:  ${CAN_FILTER_BY_CAPACITY ? '✅ YES (adults echo)' : '❌ NO'}`);
-  console.log(`  CAN_FILTER_BY_GEO:       ${CAN_FILTER_BY_GEO ? '⚠️  PARTIAL' : '❌ NO (no lat/lon)'}`);
-  console.log(`  CAN_DEDUP_BOOKING:       ❌ NO (incompatible ID space with Airbnb)`);
-  console.log(`  CAN_CALC_CALENDAR_PROXY: ${CAN_CALC_CALENDAR_PROXY ? '✅ YES' : '❌ NO (no available_dates → occupancy always 0)'}`);
+  console.log(`  CAN_FILTER_BY_BEDROOMS:        ${CAN_FILTER_BY_BEDROOMS ? '✅ YES' : '❌ NO'}`);
+  console.log(`  CAN_FILTER_BY_CAPACITY:        ❌ NO (adults = input echo, no native capacity field)`);
+  console.log(`  CAN_FILTER_BY_GEO:             ${CAN_FILTER_BY_GEO ? '✅ YES (map_coordinates.lat/lon)' : '❌ NO'}`);
+  console.log(`  CAN_COMPARE_GEO_DISTANCE:      ${CAN_COMPARE_GEO_DISTANCE ? '✅ YES' : '❌ NO'}`);
+  console.log(`  CAN_CROSS_PLATFORM_DEDUP_ID:   ❌ NO (incompatible ID space with Airbnb)`);
+  console.log(`  CAN_CROSS_PLATFORM_DEDUP_GEO:  ❌ NO (geo proximity ≠ same listing — unsafe)`);
+  console.log(`  CAN_CALC_CALENDAR_PROXY:       ${CAN_CALC_CALENDAR_PROXY ? '✅ YES' : '❌ NO (no available_dates → occupancy always 0)'}`);
 
   if (availDatesCount === 0) {
     console.log('\n  → calcBrightDataMarketStats occupancy signal is absent for Booking.com');
@@ -774,29 +868,38 @@ async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool } = {}
                 `lat=${l.latitude ?? 'null'}  guests=${l.guests ?? 'null'}  isBooked=${l.isBooked}`);
   }
 
+  const latVerdict = coordExtracted > 0
+    ? `map_coordinates.lat   CONFIRMED (${coordExtracted}/${items.length} extracted)`
+    : `NULL (no valid coords)  OBSERVED`;
+  const catVerdict = propTypeCount > 0
+    ? `property_type           CONFIRMED (${propTypeCount}/${items.length} items)`
+    : `null (property_type absent in this run)`;
+
   console.log('\n  Field mapping verdict:');
-  console.log(`    price          → final_price            CONFIRMED (semantics INFERRED as per-night)`);
+  console.log(`    price          → final_price            CONFIRMED (semantics ${priceSemantics})`);
   console.log(`    currency       → currency               CONFIRMED`);
-  console.log(`    latitude       → NULL (no map_coords)   CONFIRMED — geo-filter blocked`);
-  console.log(`    longitude      → NULL                   CONFIRMED`);
-  console.log(`    bedrooms       → nb_bedrooms            CONFIRMED (unlike Airbnb always-null)`);
-  console.log(`    stars          → review_score / 2       CONFIRMED (0-10 → 0-5 normalization)`);
-  console.log(`    guests         → adults (input echo)    INFERRED`);
+  console.log(`    latitude       → ${latVerdict}`);
+  console.log(`    longitude      → map_coordinates.lon    (same source as latitude)`);
+  console.log(`    bedrooms       → nb_bedrooms            CONFIRMED (${bedroomParseable}/${items.length} parseable)`);
+  console.log(`    stars          → review_score / 2       ${reviewScoreCount > 0 ? 'CONFIRMED' : 'INFERRED (absent in this run)'}`);
+  console.log(`    guests         → null                   CONFIRMED (adults = input echo, not listing capacity)`);
   console.log(`    isBooked       → false (discovery)      INFERRED (same as Airbnb discover)`);
   console.log(`    availableDates → null                   CONFIRMED — no occupancy proxy`);
   console.log(`    providerListingId → id                  CONFIRMED`);
-  console.log(`    category       → null                   CONFIRMED (no equivalent field)`);
+  console.log(`    category       → ${catVerdict}`);
 
   // ── Phase 8: Cross-platform dedup assessment ───────────────────────────────
   console.log('\n' + '─'.repeat(72));
   console.log('  PHASE 8 — CROSS-PLATFORM DEDUP ASSESSMENT');
   console.log('─'.repeat(72));
-  console.log(`  Airbnb IDs:          property_id (string, e.g. "12345678")`);
-  console.log(`  Booking.com IDs:     id (integer, e.g. ${items[0]?.id ?? '?'})`);
-  console.log('  Shared ID scheme:    NONE — incompatible ID spaces');
-  console.log('  Geo-based dedup:     NOT FEASIBLE — Booking.com lat/lon unavailable');
-  console.log('  URL-based dedup:     NOT FEASIBLE — airbnb.com vs booking.com domains');
-  console.log('  VERDICT:             CROSS_PLATFORM_DEDUP = NOT_FEASIBLE (CONFIRMED)');
+  console.log(`  Airbnb IDs:                   property_id (string, e.g. "12345678")`);
+  console.log(`  Booking.com IDs:              id (integer, e.g. ${items[0]?.id ?? '?'})`);
+  console.log(`  CAN_CROSS_PLATFORM_DEDUP_BY_ID:  ❌ NO — incompatible ID spaces, no mapping`);
+  console.log(`  CAN_COMPARE_GEO_DISTANCE:        ${coordExtracted > 0 ? '✅ YES' : '❌ NO'} — lat/lon ${coordExtracted > 0 ? `present ${coordExtracted}/${items.length}` : 'unavailable'}`);
+  console.log(`  CAN_CROSS_PLATFORM_DEDUP_BY_GEO: ❌ NO — geo proximity ≠ same listing (unsafe)`);
+  console.log('  URL-based dedup:              ❌ NO — airbnb.com vs booking.com domains');
+  console.log('  VERDICT: CROSS_PLATFORM_DEDUP_BY_ID = NOT_FEASIBLE (CONFIRMED)');
+  console.log('           GEO_DISTANCE_COMPARISON = TECHNICALLY_POSSIBLE (but not safe as dedup)');
 
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log('\n' + '═'.repeat(72));
@@ -804,30 +907,34 @@ async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool } = {}
   console.log('─'.repeat(72));
   console.log(`  Items returned:          ${items.length}`);
   console.log(`  Items parseable:         ${accepted}`);
-  console.log(`  Geo filtering:           ${coordExtracted > 0 ? '⚠️  PARTIAL' : '❌ NOT FEASIBLE'}`);
+  console.log(`  Geo filtering:           ${coordExtracted === items.length && items.length > 0 ? '✅ FEASIBLE (100%)' : coordExtracted > 0 ? '⚠️  PARTIAL' : '❌ NOT FEASIBLE'}`);
   console.log(`  Occupancy proxy:         ${availDatesCount > 0 ? '✅ FEASIBLE' : '❌ NOT FEASIBLE (always 0)'}`);
   console.log(`  Price field usable:      ${withFinalPrice.length === items.length ? '✅ YES' : '⚠️  SOME MISSING'}`);
-  console.log(`  Bedroom filter:          ✅ FEASIBLE (nb_bedrooms confirmed)`);
-  console.log(`  Cross-platform dedup:    ❌ NOT FEASIBLE`);
+  console.log(`  Price semantics:         ${priceSemantics}`);
+  console.log(`  Bedroom filter:          ${bedroomParseable > 0 ? `✅ FEASIBLE (${bedroomParseable}/${items.length} parseable)` : '❌ NOT FEASIBLE'}`);
+  console.log(`  Capacity filter:         ❌ NOT FEASIBLE (no native capacity field)`);
+  console.log(`  Cross-platform dedup ID: ❌ NOT FEASIBLE`);
+  console.log(`  Geo distance comparison: ${coordExtracted > 0 ? '✅ POSSIBLE (but unsafe as dedup)' : '❌ NOT FEASIBLE'}`);
   console.log(`  Min viable adapter:      ${accepted >= 5 ? '⚠️  POSSIBLE with constraints' : '❌ INSUFFICIENT DATA'}`);
   console.log('─'.repeat(72));
   console.log('  CONSTRAINTS FOR PRODUCTION ADAPTER:');
-  console.log('    • selectComparables() used without geo-filter (lat/lon unavailable)');
+  console.log('    • geo-filter feasible (lat/lon confirmed) — selectComparables can use distance');
   console.log('    • occupancy_rate will be 0 for all Booking.com market data rows');
-  console.log('    • price semantics (per-night vs total) must be verified before adapting');
-  console.log('    • BOOKING_DATASET_ID must be confirmed via a successful trigger');
+  console.log('    • price semantics must be confirmed (multi-night test with --check-in/--check-out)');
+  console.log('    • capacity filter disabled — adults is input echo, not listing max');
   console.log('═'.repeat(72) + '\n');
 
   return {
-    ok:             true,
+    ok:              true,
     snapshotId,
-    returnedCount:  items.length,
-    acceptedCount:  accepted,
-    geoFeasible:    coordExtracted > 0,
-    occFeasible:    availDatesCount > 0,
-    priceUsable:    withFinalPrice.length === items.length,
+    returnedCount:   items.length,
+    acceptedCount:   accepted,
+    geoFeasible:     coordExtracted > 0,
+    occFeasible:     availDatesCount > 0,
+    priceUsable:     withFinalPrice.length === items.length,
     priceSemantics,
-    rawFields:      sortedFields,
+    requestedNights,
+    rawFields:       sortedFields,
   };
 }
 
@@ -896,6 +1003,7 @@ module.exports = {
   snapshotResumeMode,
   parseBookingItem,
   analyzeFieldPresence,
+  validateCustomDates,
   toISO8601Timestamp,
   normalizeBookingCurrency,
   resolvePropByName,
@@ -909,20 +1017,29 @@ module.exports = {
   CONTRACT_CONFIDENCE,
   BOOKING_EXPECTED_FIELDS,
   MAX_RECORDS,
+  MAX_DIAGNOSTIC_NIGHTS,
 };
 
 // ── CLI ────────────────────────────────────────────────────────────────────────
 if (require.main === module) {
-  const args       = process.argv.slice(2);
-  const nameIdx    = args.indexOf('--name');
-  const name       = nameIdx !== -1 ? args[nameIdx + 1] : null;
-  const snapIdx    = args.indexOf('--snapshot-id');
-  const snapId     = snapIdx !== -1 ? args[snapIdx + 1] : null;
-  const execute    = args.includes('--execute');
+  const args         = process.argv.slice(2);
+  const nameIdx      = args.indexOf('--name');
+  const name         = nameIdx !== -1 ? args[nameIdx + 1] : null;
+  const snapIdx      = args.indexOf('--snapshot-id');
+  const snapId       = snapIdx !== -1 ? args[snapIdx + 1] : null;
+  const ciIdx        = args.indexOf('--check-in');
+  const checkInArg   = ciIdx !== -1 ? args[ciIdx + 1] : null;
+  const coIdx        = args.indexOf('--check-out');
+  const checkOutArg  = coIdx !== -1 ? args[coIdx + 1] : null;
+  const execute      = args.includes('--execute');
 
   if (!name && !snapId) {
-    console.error('Usage: node outils/diag-brightdata-booking.js --name <nom> [--execute]');
+    console.error('Usage: node outils/diag-brightdata-booking.js --name <nom> [--execute] [--check-in YYYY-MM-DD --check-out YYYY-MM-DD]');
     console.error('       node outils/diag-brightdata-booking.js --snapshot-id <id>');
+    process.exit(1);
+  }
+  if ((checkInArg && !checkOutArg) || (!checkInArg && checkOutArg)) {
+    console.error('--check-in et --check-out doivent être fournis ensemble');
     process.exit(1);
   }
 
@@ -932,7 +1049,8 @@ if (require.main === module) {
   if (snapId) {
     run = snapshotResumeMode(snapId).then(r => { pool.end().catch(() => {}); return r; });
   } else {
-    run = (execute ? executeMode({ name, pool }) : previewMode({ name, pool }))
+    const modeOpts = { name, pool, ...(checkInArg ? { checkIn: checkInArg, checkOut: checkOutArg } : {}) };
+    run = (execute ? executeMode(modeOpts) : previewMode(modeOpts))
       .then(r => { pool.end().catch(() => {}); return r; });
   }
 
