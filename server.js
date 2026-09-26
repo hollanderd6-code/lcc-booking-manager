@@ -36785,6 +36785,29 @@ cron.schedule('0 4 * * *', async () => {
 }, { timezone: 'Europe/Paris' });
 console.log('CRON Channex nightly sync configuré (4h00, Europe/Paris)');
 
+// ── Alerte quotidienne : webhook_events en erreur (4h05, juste après le nightly) ──
+cron.schedule('5 4 * * *', async () => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, event_type, booking_id, error_message, received_at
+         FROM webhook_events
+        WHERE status = 'error'
+          AND received_at > NOW() - INTERVAL '24 hours'
+        ORDER BY received_at DESC`
+    );
+    if (rows.length === 0) return;
+    const lines = rows.map(r =>
+      `#${r.id} ${r.event_type} booking=${r.booking_id ?? '?'} — ${(r.error_message || '').slice(0, 80)}`
+    );
+    const body = `${rows.length} webhook(s) en erreur (24h) :\n${lines.join('\n')}`;
+    console.error(`🚨 [WEBHOOK ALERT] ${body}`);
+    await _sendAlert('🚨 Webhooks Channex en erreur', body, { type: 'webhook_error_daily' });
+  } catch (e) {
+    console.error('❌ [WEBHOOK ALERT] Erreur cron:', e.message);
+  }
+}, { timezone: 'Europe/Paris' });
+console.log('CRON alerte webhook_events erreurs configuré (4h05, Europe/Paris)');
+
 // ============================================
 // CHARGER LES RÉSERVATIONS MANUELLES DEPUIS LA DB
 // ============================================
@@ -41357,6 +41380,21 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
       });
     }
 
+    // ── Guard unicité : refuser un room_type_id déjà mappé sur une autre propriété BH ──
+    // Protège contre le scénario Ingrid/Allenby (incident 2026-09-26).
+    if (result.channex_room_type_id) {
+      const rtClash = await pool.query(
+        `SELECT id FROM properties WHERE channex_room_type_id = $1 AND id != $2 LIMIT 1`,
+        [result.channex_room_type_id, property_id]
+      );
+      if (rtClash.rows.length > 0) {
+        console.error(`❌ [CHANNEX CONNECT] channex_room_type_id=${result.channex_room_type_id} déjà utilisé par property ${rtClash.rows[0].id} — connexion refusée`);
+        return res.status(409).json({
+          error: `Ce room type Channex (${result.channex_room_type_id}) est déjà associé à un autre logement BH. Vérifiez le mapping Channex.`
+        });
+      }
+    }
+
     const resaResult = await pool.query(
       "SELECT start_date, end_date FROM reservations WHERE property_id = $1 AND status = 'confirmed'",
       [property_id]
@@ -41827,7 +41865,17 @@ app.post('/api/channex/webhook', async (req, res) => {
         : `/bookings/${bookingId}`;
       const revRes = await channexAPI.get(endpoint);
       fullBooking = revRes.data?.data || null;
-      if (fullBooking) console.log(`✅ [CHANNEX] Booking récupéré via ${endpoint}`);
+      if (fullBooking) {
+        console.log(`✅ [CHANNEX] Booking récupéré via ${endpoint}`);
+        // S'assurer que attrs.booking_id porte le vrai booking_id (pas le revision_id).
+        // Certaines révisions Channex n'incluent pas attrs.booking_id dans leur réponse API ;
+        // sans ce correctif, processChannexBooking résout booking_id vers bookingData.id = revision_id.
+        if (!fullBooking.attributes) fullBooking.attributes = {};
+        if (!fullBooking.attributes.booking_id && bookingId) {
+          fullBooking.attributes.booking_id = bookingId;
+          console.log(`🔧 [CHANNEX WEBHOOK] attrs.booking_id absent du BookingRevision — injecté depuis payload: ${bookingId}`);
+        }
+      }
     } catch (revErr) {
       console.error(`❌ [CHANNEX] Impossible de récupérer le booking:`, revErr.message);
       if (_webhookEventId) {
@@ -41881,6 +41929,18 @@ app.post('/api/channex/webhook', async (req, res) => {
       // bookingId et revisionId déjà définis plus haut
 
       let result = await processChannexBooking(pool, booking);
+
+      // ── Propriété inconnue de BH → result null ────────────────────────────
+      // processChannexBooking retourne null quand la propriété n'existe pas en DB.
+      // Pour une annulation, aucun UPDATE n'a eu lieu → passer en erreur explicite.
+      if (result === null) {
+        const bStatus = (booking.attributes || booking).status || '';
+        if (bStatus === 'cancelled' || bStatus === 'canceled') {
+          const cpid = (booking.attributes || booking).property_id || '?';
+          console.error(`❌ [CHANNEX WEBHOOK] Annulation ignorée : channex_property_id=${cpid} inconnu de BH (booking_id=${bookingId})`);
+          _webhookCancelMissed = true;
+        }
+      }
 
       // ── Fallback force-cancel : _not_in_db pour une annulation ────────────
       // Cause probable : attrs.booking_id absent du BookingRevision Channex →
@@ -41947,7 +42007,7 @@ app.post('/api/channex/webhook', async (req, res) => {
               dates_blocked: result.status === 'cancelled' ? [] : dates_blocked,
               dates_to_update: dates_blocked // Toujours envoyer les dates concernées
             });
-            console.log(`✅ [CHANNEX SYNC] Availability pushed après booking ${result.uid} (${dates_blocked.length} dates modifiées, status: ${result.status})`);
+            console.log(`✅ [CHANNEX SYNC] Availability pushed après booking ${result.uid} — property=${result.property_id} channex_property=${prop.channex_property_id} room_type=${prop.channex_room_type_id} (${dates_blocked.length} dates, status: ${result.status})`);
           }
         } catch (availErr) {
           console.warn(`⚠️ [CHANNEX SYNC] Erreur push availability (non bloquant):`, availErr.message);
@@ -42089,16 +42149,20 @@ app.post('/api/channex/webhook', async (req, res) => {
       }
 
       // ── Notification push annulation ────────────────────────
-      if (result && result.uid && result.status === 'cancelled' && !result._not_in_db) {
-        // Mettre à jour le statut de la conversation
+      // La conversation est annulée dès qu'on sait que le booking est annulé,
+      // que la résa ait été trouvée en DB ou non (cas force-cancel + cas _not_in_db pur).
+      const _isKnownCancellation = result && result.status === 'cancelled';
+      if (_isKnownCancellation && bookingId) {
         try {
-          await pool.query(
+          const _convUpd = await pool.query(
             `UPDATE conversations SET status = 'cancelled', updated_at = NOW()
-             WHERE channex_booking_id = $1`,
+             WHERE channex_booking_id = $1 AND status != 'cancelled'`,
             [bookingId]
           );
-          console.log(`✅ [CHANNEX] Conversation annulée pour booking ${bookingId}`);
+          if (_convUpd.rowCount > 0) console.log(`✅ [CHANNEX] Conversation annulée pour booking ${bookingId}`);
         } catch(e) { console.warn('⚠️ [CHANNEX] Erreur update conv cancelled:', e.message); }
+      }
+      if (result && result.uid && result.status === 'cancelled' && !result._not_in_db) {
         try {
           const attrs     = booking.attributes || booking;
           const otaName   = attrs.ota_name || 'Channex';

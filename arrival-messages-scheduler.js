@@ -232,6 +232,7 @@ async function processTodayArrivals(pool, io) {
                                 OR (r.property_id = c.property_id AND DATE(r.start_date) = DATE(c.reservation_start_date) AND c.channex_booking_id IS NULL)
        WHERE DATE(c.reservation_start_date) = $1
        AND c.status != 'cancelled'
+       AND (r.id IS NULL OR r.status != 'cancelled')
        ORDER BY c.id`,
       [todayStr]
     );

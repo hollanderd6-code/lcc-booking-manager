@@ -123,9 +123,22 @@ async function addRoomTypeToProperty(pool, { user_id, property_id, channex_prope
       });
       const rts = existingRts.data?.data || [];
       if (rts.length > 0) {
-        channex_room_type_id = rts[0].attributes?.id || rts[0].id;
-        console.log(`♻️ [CHANNEX] Room Type existant réutilisé: ${channex_room_type_id}`);
-      } else {
+        const candidateId = rts[0].attributes?.id || rts[0].id;
+        // Guard : refuser de réutiliser un room_type_id déjà mappé sur UNE AUTRE propriété BH.
+        // Scénario incident Ingrid/Allenby : deux clients se retrouvaient sur le même room_type.
+        const clash = await pool.query(
+          `SELECT id FROM properties WHERE channex_room_type_id = $1 AND id != $2 LIMIT 1`,
+          [candidateId, property_id]
+        );
+        if (clash.rows.length > 0) {
+          console.warn(`⚠️ [CHANNEX] Room Type ${candidateId} déjà utilisé par property ${clash.rows[0].id} — création d'un nouveau room type`);
+          // Tomber dans la branche création ci-dessous
+        } else {
+          channex_room_type_id = candidateId;
+          console.log(`♻️ [CHANNEX] Room Type existant réutilisé: ${channex_room_type_id}`);
+        }
+      }
+      if (!channex_room_type_id) {
         const rtRes = await channexAPI.post('/room_types', {
           room_type: {
             property_id: channex_property_id,
@@ -629,6 +642,9 @@ async function processChannexBooking(pool, bookingData) {
     const attrs = bookingData.attributes || bookingData;
     // booking_id = le vrai ID du booking (pas de la revision)
     const booking_id = attrs.booking_id || bookingData.id || bookingData.attributes?.id;
+    if (!attrs.booking_id && booking_id) {
+      console.warn(`⚠️ [CHANNEX] attrs.booking_id absent — booking_id résolu via bookingData.id=${booking_id} (probablement revision_id). Si annulation, le force-cancel webhook corrigera via payload.booking_id.`);
+    }
 
     const {
       property_id: channex_property_id,
@@ -881,10 +897,14 @@ async function processChannexBooking(pool, bookingData) {
            AND r.end_date = $3
            AND r.status != 'cancelled'
            AND r.source = 'channex'
-         ORDER BY r.created_at DESC LIMIT 1`,
+         ORDER BY r.created_at DESC LIMIT 2`,
         [channex_property_id, reservationStart, reservationEnd]
       );
-      if (dupCheck.rows.length > 0) {
+      if (dupCheck.rows.length > 1) {
+        // Ambiguïté : plusieurs candidats → ne modifier aucun, laisser le force-cancel webhook prendre le relais
+        const candidates = dupCheck.rows.map(r => r.uid).join(', ');
+        console.warn(`⚠️ [CHANNEX] Niveau 3 ambigu : ${dupCheck.rows.length} candidats (${candidates}) pour booking_id=${booking_id} dates=${reservationStart}→${reservationEnd} — aucune modification`);
+      } else if (dupCheck.rows.length === 1) {
         console.log(`⚠️ [CHANNEX] Doublon détecté par dates: booking_id=${booking_id} correspond à ${dupCheck.rows[0].uid} → mise à jour au lieu de créer`);
         await pool.query(
           'UPDATE reservations SET channex_booking_id = $1, updated_at = NOW() WHERE id = $2',
