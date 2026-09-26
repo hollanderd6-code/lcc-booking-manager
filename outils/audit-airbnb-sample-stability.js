@@ -46,6 +46,7 @@ const {
 } = require('../services/market-geo-quality');
 const { getFallbackZones }  = require('../routes/dynamic-pricing-cron');
 const { normalizeCurrency } = require('../routes/market-data-resolver');
+const { computeCrossSnapshotLocalDifferenceReason } = require('../services/market-repeated-snapshot-stability');
 
 const DEFAULT_NIGHTS = 3;
 const MAX_LISTINGS_A = 50;
@@ -80,10 +81,13 @@ async function resolveProp(pool, name) {
 
 // ── distanceDistribution (Phase 3) ────────────────────────────────────────────
 
-function printDistanceDistribution(listings, targetLat, targetLon, label) {
+// callMeta: { requestedMax, rawReturnedCount } — distinguishes requested vs actual vs accepted
+function printDistanceDistribution(listings, targetLat, targetLon, label, callMeta = {}) {
   const geoMetrics = calculateGeoCoverageQuality(listings, targetLat, targetLon);
   console.log(`\n  [${label}] DISTANCE DISTRIBUTION`);
-  console.log(`    RAW_COUNT:         ${listings.length}`);
+  if (callMeta.requestedMax     != null) console.log(`    REQUESTED_MAX_LISTINGS: ${callMeta.requestedMax}`);
+  if (callMeta.rawReturnedCount != null) console.log(`    RAW_RETURNED_COUNT:     ${callMeta.rawReturnedCount}`);
+  console.log(`    ADAPTER_ACCEPTED_COUNT: ${listings.length}`);
   console.log(`    WITH_GEO:          ${geoMetrics.geoListingCount}`);
   console.log(`    WITHOUT_GEO:       ${geoMetrics.noGeoCount}`);
   if (geoMetrics.geoListingCount > 0) {
@@ -206,8 +210,10 @@ async function executeMode({ name, _airbnbScrape, _now, pool } = {}) {
   console.log('  PHASE 3 — DISTANCE DISTRIBUTIONS');
   console.log('─'.repeat(72));
 
-  printDistanceDistribution(listingsA, targetLat, targetLon, `CALL_A limit=${MAX_LISTINGS_A}`);
-  printDistanceDistribution(listingsB, targetLat, targetLon, `CALL_B limit=${MAX_LISTINGS_B}`);
+  printDistanceDistribution(listingsA, targetLat, targetLon, `CALL_A limit=${MAX_LISTINGS_A}`,
+    { requestedMax: MAX_LISTINGS_A, rawReturnedCount: diagA.returnedCount });
+  printDistanceDistribution(listingsB, targetLat, targetLon, `CALL_B limit=${MAX_LISTINGS_B}`,
+    { requestedMax: MAX_LISTINGS_B, rawReturnedCount: diagB.returnedCount });
 
   // After quality filters
   const idsA = listingsA.map(l => l.providerListingId).filter(Boolean);
@@ -335,6 +341,9 @@ async function executeMode({ name, _airbnbScrape, _now, pool } = {}) {
   const attrBand5 = attrition.find(b => b.radiusKm === 5) || {};
   console.log(`  @ 5km: raw_geo=${attrBand5.rawGeoCount ?? 0}  after_cat=${attrBand5.afterCatCount ?? 0}  after_cap=${attrBand5.afterCapCount ?? 0}`);
 
+  const crossReason = computeCrossSnapshotLocalDifferenceReason(geoQA, geoQB, overlap);
+  console.log(`  CROSS_SNAPSHOT_LOCAL_DIFFERENCE_REASON: ${crossReason}`);
+
   // ── Phase 11: Sample size policy recommendation ───────────────────────────────
   console.log('\n' + '─'.repeat(72));
   console.log('  PHASE 11 — SAMPLE SIZE POLICY');
@@ -392,8 +401,12 @@ async function executeMode({ name, _airbnbScrape, _now, pool } = {}) {
   console.log(`\n  CALL_A  snapshot: ${snapshotIdA}  ts: ${tsA}`);
   console.log(`  CALL_B  snapshot: ${snapshotIdB}`);
   console.log(`  query_fingerprint: ${queryFingerprint}`);
-  console.log(`\n  AIRBNB_50_RAW_COUNT:    ${diagA.returnedCount ?? listingsA.length}`);
-  console.log(`  AIRBNB_100_RAW_COUNT:   ${diagB.returnedCount ?? listingsB.length}`);
+  console.log(`\n  AIRBNB_50_REQUESTED_MAX:           ${MAX_LISTINGS_A}`);
+  console.log(`  AIRBNB_50_RAW_RETURNED_COUNT:      ${diagA.returnedCount ?? 'unknown'}`);
+  console.log(`  AIRBNB_50_ADAPTER_ACCEPTED_COUNT:  ${listingsA.length}`);
+  console.log(`  AIRBNB_100_REQUESTED_MAX:          ${MAX_LISTINGS_B}`);
+  console.log(`  AIRBNB_100_RAW_RETURNED_COUNT:     ${diagB.returnedCount ?? 'unknown'}`);
+  console.log(`  AIRBNB_100_ADAPTER_ACCEPTED_COUNT: ${listingsB.length}`);
   console.log(`  AIRBNB_50_WITHIN_2KM:   ${calculateGeoCoverageQuality(listingsA, targetLat, targetLon).within2km}`);
   console.log(`  AIRBNB_100_WITHIN_2KM:  ${calculateGeoCoverageQuality(listingsB, targetLat, targetLon).within2km}`);
   console.log(`  AIRBNB_50_WITHIN_5KM:   ${calculateGeoCoverageQuality(listingsA, targetLat, targetLon).within5km}`);
@@ -408,8 +421,12 @@ async function executeMode({ name, _airbnbScrape, _now, pool } = {}) {
   console.log('─'.repeat(72));
   const rawGeoA = calculateGeoCoverageQuality(listingsA, targetLat, targetLon);
   const rawGeoB = calculateGeoCoverageQuality(listingsB, targetLat, targetLon);
-  console.log(`  AIRBNB_50_RAW_COUNT:           ${diagA.returnedCount ?? listingsA.length}`);
-  console.log(`  AIRBNB_100_RAW_COUNT:          ${diagB.returnedCount ?? listingsB.length}`);
+  console.log(`  AIRBNB_50_REQUESTED_MAX:              ${MAX_LISTINGS_A}`);
+  console.log(`  AIRBNB_50_RAW_RETURNED_COUNT:         ${diagA.returnedCount ?? 'unknown'}`);
+  console.log(`  AIRBNB_50_ADAPTER_ACCEPTED_COUNT:     ${listingsA.length}`);
+  console.log(`  AIRBNB_100_REQUESTED_MAX:             ${MAX_LISTINGS_B}`);
+  console.log(`  AIRBNB_100_RAW_RETURNED_COUNT:        ${diagB.returnedCount ?? 'unknown'}`);
+  console.log(`  AIRBNB_100_ADAPTER_ACCEPTED_COUNT:    ${listingsB.length}`);
   console.log(`  AIRBNB_50_WITHIN_2KM:          ${rawGeoA.within2km}`);
   console.log(`  AIRBNB_100_WITHIN_2KM:         ${rawGeoB.within2km}`);
   console.log(`  AIRBNB_50_WITHIN_5KM:          ${rawGeoA.within5km}`);
@@ -423,8 +440,9 @@ async function executeMode({ name, _airbnbScrape, _now, pool } = {}) {
   console.log(`  OVERLAP_100_PCT:               ${overlap.overlapPct100}%`);
   console.log(`  FIRST_50_OF_100_MATCH_50:      ${overlap.first50Of100MatchSet50}`);
   console.log(`  AIRBNB_RESULT_ORDERING:        ${overlap.ordering}`);
-  console.log(`  PRIMARY_LOCAL_ATTRITION_REASON: ${primaryAttrition}`);
-  console.log(`  AIRBNB_SAMPLE_STABILITY_VERDICT: ${stabilityVerdict}`);
+  console.log(`  PRIMARY_LOCAL_ATTRITION_REASON:       ${primaryAttrition}`);
+  console.log(`  CROSS_SNAPSHOT_LOCAL_DIFFERENCE_REASON: ${crossReason}`);
+  console.log(`  AIRBNB_SAMPLE_STABILITY_VERDICT:      ${stabilityVerdict}`);
   console.log(`  AIRBNB_RECOMMENDED_MAX_LISTINGS: ${recommendedMax}`);
   console.log(`  M6_GEO_COVERAGE_SCORE_50:       ${fmt(geoQA.geoCoverageScore)}`);
   console.log(`  M6_GEO_COVERAGE_SCORE_100:      ${fmt(geoQB.geoCoverageScore)}`);
@@ -446,7 +464,8 @@ async function executeMode({ name, _airbnbScrape, _now, pool } = {}) {
     geoQuality50:        geoQA,
     geoQuality100:       geoQB,
     overlap,
-    primaryAttritionReason: primaryAttrition,
+    primaryAttritionReason:            primaryAttrition,
+    crossSnapshotLocalDifferenceReason: crossReason,
     stabilityVerdict,
     recommendedMaxListings: recommendedMax,
   };

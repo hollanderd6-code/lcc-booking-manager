@@ -242,6 +242,7 @@ async function scrapeWithBrightData(location, maxListings, requestedCurrency, op
 
   return {
     listings,
+    snapshotId,
     isMock:     false,
     provider:   'brightdata',
     dataSource: 'brightdata_live',
