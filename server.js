@@ -41533,6 +41533,9 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
 
   } catch (e) {
     console.error('❌ [CHANNEX CONNECT]', e.message);
+    if (e.code === 'ROOM_TYPE_CLASH') {
+      return res.status(409).json({ error: e.message });
+    }
     res.status(500).json({ error: 'Erreur lors de l\'activation de la diffusion' });
   } finally {
     _connectingProperties.delete(property_id);
@@ -41946,7 +41949,11 @@ app.post('/api/channex/webhook', async (req, res) => {
       // Cause probable : attrs.booking_id absent du BookingRevision Channex →
       // booking_id résout vers le revision_id, tous les lookups échouent.
       // bookingId (extrait directement du payload webhook) est l'ID fiable.
-      if (result && result._not_in_db && result.status === 'cancelled' && bookingId) {
+      // Exception : niveau 3 ambigu → pas d'UPDATE automatique, intervention manuelle.
+      if (result && result._not_in_db && result._level3Ambiguous && result.status === 'cancelled') {
+        console.error(`❌ [CHANNEX WEBHOOK] Niveau 3 ambigu — force-cancel supprimé, intervention manuelle requise (booking_id=${bookingId})`);
+        _webhookCancelMissed = true;
+      } else if (result && result._not_in_db && result.status === 'cancelled' && bookingId) {
         console.warn(`⚠️ [CHANNEX WEBHOOK] _not_in_db — force-cancel via bookingId webhook=${bookingId} (revision=${revisionId})`);
         try {
           const _forced = await pool.query(
