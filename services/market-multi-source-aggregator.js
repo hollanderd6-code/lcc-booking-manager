@@ -1,6 +1,7 @@
 'use strict';
 /**
  * P1.2-B5-BK-G — Multi-Source Market Aggregator
+ * P1.2-B5-BK-I — aggregateMarketSourcesCalibrated (cross-source calibration)
  *
  * Pure function — no network, no DB, no Channex, no env vars.
  * Accepts already-computed per-source statistics and returns a quality-weighted
@@ -282,8 +283,170 @@ function aggregateMarketSources({ airbnb = null, booking = null } = {}) {
   return { sources, consensus, marketSignal, diagnostics };
 }
 
+// ── B5-BK-I: Calibrated aggregator ───────────────────────────────────────────
+
+const {
+  computeCrossSourceDivergenceLevel,
+  CROSS_SOURCE_DIVERGENCE_LOW,
+  CROSS_SOURCE_DIVERGENCE_MODERATE,
+  CROSS_SOURCE_DIVERGENCE_HIGH,
+} = require('./market-cross-source-policy');
+
+/**
+ * Quality score extended with optional metadata completeness.
+ *
+ * metadataScore ∈ [0, 1], e.g. 0.85-0.95 from computeMetadataScore().
+ * Defaults to 1.0 (no penalty) when not provided, preserving backward compat
+ * with callers that don't supply metadata scores.
+ */
+function qualityScoreCalibrated(comparableCount, selectedRadiusKm, metadataScore) {
+  const ms = (metadataScore != null && Number.isFinite(metadataScore)) ? metadataScore : 1.0;
+  return countScore(comparableCount) * radiusScore(selectedRadiusKm) * ms;
+}
+
+/**
+ * Calibrated variant of aggregateMarketSources for cross-source (Airbnb + Booking)
+ * consensus where both sources were selected at a COMMON radius.
+ *
+ * Differences from aggregateMarketSources:
+ *   1. Accepts optional `metadataScore` per source (from computeMetadataScore).
+ *      Quality formula: countScore × radiusScore × metadataScore.
+ *   2. Uses calibrated divergence thresholds: LOW<15, MODERATE<30, HIGH<50.
+ *   3. commonRadiusKm (optional) recorded in output for traceability.
+ *
+ * INVARIANTS inherited from aggregateMarketSources:
+ *   - Raw listings NEVER naively merged.
+ *   - Consensus from per-source statistics only.
+ *   - Booking occupancy never averaged with Airbnb.
+ *   - Market signal (occupancy) from Airbnb only.
+ *   - null never transformed to 0.
+ *
+ * SAFETY: pure function — no network, no DB, no Channex, no env vars.
+ *
+ * @param {object} inputs
+ * @param {object|null} inputs.airbnb   — { stats, comparableCount, selectedRadiusKm, metadataScore? }
+ * @param {object|null} inputs.booking  — { stats, comparableCount, selectedRadiusKm, metadataScore? }
+ * @param {number|null} [inputs.commonRadiusKm] — the radius at which both sources were selected
+ */
+function aggregateMarketSourcesCalibrated({
+  airbnb  = null,
+  booking = null,
+  commonRadiusKm = null,
+} = {}) {
+  const airbnbValid  = isSourceValid(airbnb);
+  const bookingValid = isSourceValid(booking);
+
+  const airbnbQuality  = airbnbValid
+    ? qualityScoreCalibrated(airbnb.comparableCount,  airbnb.selectedRadiusKm,  airbnb.metadataScore)
+    : 0;
+  const bookingQuality = bookingValid
+    ? qualityScoreCalibrated(booking.comparableCount, booking.selectedRadiusKm, booking.metadataScore)
+    : 0;
+
+  const sourceSummary = (source, valid, quality) => ({
+    valid,
+    quality:          valid ? Math.round(quality * 10000) / 10000 : null,
+    median:           valid ? source.stats.median : null,
+    p25:              valid ? source.stats.p25    : null,
+    p75:              valid ? source.stats.p75    : null,
+    comparableCount:  (source && source.comparableCount  != null) ? source.comparableCount  : null,
+    selectedRadiusKm: (source && source.selectedRadiusKm != null) ? source.selectedRadiusKm : null,
+    metadataScore:    (source && source.metadataScore    != null) ? source.metadataScore    : null,
+  });
+
+  const sources = {
+    airbnb:  sourceSummary(airbnb,  airbnbValid,  airbnbQuality),
+    booking: sourceSummary(booking, bookingValid, bookingQuality),
+  };
+
+  const validSources = [
+    airbnbValid  ? { key: 'airbnb',  quality: airbnbQuality,  stats: airbnb.stats  } : null,
+    bookingValid ? { key: 'booking', quality: bookingQuality, stats: booking.stats } : null,
+  ].filter(Boolean);
+
+  let consensus = null;
+
+  if (validSources.length >= 2) {
+    const totalQuality = validSources.reduce((s, vs) => s + vs.quality, 0);
+    const airbnbW  = totalQuality > 0 ? airbnbQuality  / totalQuality : 0.5;
+    const bookingW = totalQuality > 0 ? bookingQuality / totalQuality : 0.5;
+
+    const airbnbMedian  = airbnb.stats.median;
+    const bookingMedian = booking.stats.median;
+
+    const rawConsensusMedian = airbnbMedian * airbnbW + bookingMedian * bookingW;
+    const consensusMedian    = Math.round(rawConsensusMedian * 100) / 100;
+
+    const dp     = divergencePct(airbnbMedian, bookingMedian);
+    const dLevel = computeCrossSourceDivergenceLevel(dp);
+
+    const minQuality = Math.min(airbnbQuality, bookingQuality);
+    const confLevel  = confidenceLevel(validSources.length, dLevel, minQuality);
+
+    consensus = {
+      median:          consensusMedian,
+      weights:         { airbnb: Math.round(airbnbW * 10000) / 10000, booking: Math.round(bookingW * 10000) / 10000 },
+      divergencePct:   dp != null ? Math.round(dp * 100) / 100 : null,
+      divergenceLevel: dLevel,
+      confidenceLevel: confLevel,
+      commonRadiusKm:  commonRadiusKm != null ? commonRadiusKm : null,
+    };
+  } else if (validSources.length === 1) {
+    const sole      = validSources[0];
+    const confLevel = confidenceLevel(1, null, null);
+    consensus = {
+      median:          sole.stats.median,
+      weights:         sole.key === 'airbnb'
+        ? { airbnb: 1.00, booking: 0.00 }
+        : { airbnb: 0.00, booking: 1.00 },
+      divergencePct:   null,
+      divergenceLevel: null,
+      confidenceLevel: confLevel,
+      commonRadiusKm:  commonRadiusKm != null ? commonRadiusKm : null,
+    };
+  }
+
+  // Market signal: Airbnb only — Booking occupancy never available
+  let marketSignal = {
+    occupancy:           null,
+    occupancy_semantics: null,
+    tensionLevel:        null,
+    source:              null,
+  };
+
+  if (
+    airbnbValid &&
+    airbnb.stats.occupancy_semantics === 'calendar_unavailability_proxy' &&
+    airbnb.stats.occupancy != null
+  ) {
+    marketSignal = {
+      occupancy:           airbnb.stats.occupancy,
+      occupancy_semantics: 'calendar_unavailability_proxy',
+      tensionLevel:        airbnb.stats.tensionLevel ?? null,
+      source:              'airbnb',
+    };
+  }
+
+  const diagnostics = {
+    validSourceCount:    validSources.length,
+    airbnbQuality:       airbnbValid  ? Math.round(airbnbQuality  * 10000) / 10000 : null,
+    bookingQuality:      bookingValid ? Math.round(bookingQuality * 10000) / 10000 : null,
+    airbnbCountScore:    airbnbValid  ? countScore(airbnb.comparableCount)           : null,
+    airbnbRadiusScore:   airbnbValid  ? radiusScore(airbnb.selectedRadiusKm)         : null,
+    airbnbMetadataScore: airbnbValid && airbnb.metadataScore != null ? airbnb.metadataScore : null,
+    bookingCountScore:   bookingValid ? countScore(booking.comparableCount)          : null,
+    bookingRadiusScore:  bookingValid ? radiusScore(booking.selectedRadiusKm)        : null,
+    bookingMetadataScore: bookingValid && booking.metadataScore != null ? booking.metadataScore : null,
+    calibrated:          true,
+  };
+
+  return { sources, consensus, marketSignal, diagnostics };
+}
+
 module.exports = {
   aggregateMarketSources,
+  aggregateMarketSourcesCalibrated,
+  qualityScoreCalibrated,
   // Exported for tests
   countScore,
   radiusScore,
@@ -299,4 +462,8 @@ module.exports = {
   DIVERGENCE_MODERATE,
   DIVERGENCE_HIGH,
   CONFIDENCE_MIN_QUALITY,
+  // B5-BK-I calibrated constants (re-exported for tests)
+  CROSS_SOURCE_DIVERGENCE_LOW,
+  CROSS_SOURCE_DIVERGENCE_MODERATE,
+  CROSS_SOURCE_DIVERGENCE_HIGH,
 };
