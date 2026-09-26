@@ -84,13 +84,17 @@ const MAX_WAIT_MS            = 180_000;  // 3 minutes
 const POLL_INTERVAL_MS_LIVE  = 10_000;
 const MAX_DIAGNOSTIC_NIGHTS  = 30;       // upper bound for custom --check-in/--check-out
 
+// CONFIRMED from live M6 3-night run (B5-BK-F):
+//   id=54238 → 1 night=72€, 3 nights=147€ → 147/3=49€/night → final_price = STAY TOTAL
+const FINAL_PRICE_SEMANTICS  = 'STAY_TOTAL';
+
 const CONTRACT_CONFIDENCE = {
   BOOKING_DATASET_ID:            'CONFIRMED',  // BD product page names gd_m4bf7a917zfezv9d5 "Listings Search"
   URL_COLLECTION_SUPPORTED:      'CONFIRMED',  // real API error: "Supported types: ['url_collection']"
   INPUT_URL_FIELD:               'CONFIRMED',  // official docs: url="https://www.booking.com" + location
   INPUT_DATE_FORMAT:             'CONFIRMED',  // ISO8601 timestamps — shown in official BD examples
   PRICE_FIELD:                   'CONFIRMED',  // final_price
-  PRICE_SEMANTICS:               'INFERRED',   // per-night — multi-night test needed to confirm
+  PRICE_SEMANTICS:               'CONFIRMED',  // STAY_TOTAL — id=54238: 1n=72€, 3n=147€ → 147/3=49€/night (B5-BK-F)
   CURRENCY_FIELD:                'CONFIRMED',  // item.currency
   LAT_LON_AVAILABLE:             'CONFIRMED',  // TRUE — map_coordinates.lat/lon present 10/10 in live M6 run
   BEDROOMS_AVAILABLE:            'CONFIRMED',  // nb_bedrooms field present
@@ -210,7 +214,7 @@ function parseBookingItem(item, requestedCurrency) {
     return { listing: null, reason: 'currency' };
   }
 
-  // Price: final_price (CONFIRMED field, INFERRED as per-night for requested dates)
+  // Price: final_price = STAY_TOTAL (CONFIRMED B5-BK-F: id=54238, 1n=72€, 3n=147€ → 147/3=49€/night)
   const price = typeof item.final_price === 'number'
     ? item.final_price
     : parseFloat(item.final_price);
@@ -555,7 +559,7 @@ async function previewMode({ name, _now, pool, checkIn: checkInCustom, checkOut:
   console.log('    ❌ no shared ID w/ Airbnb  → CAN_CROSS_PLATFORM_DEDUP_BY_ID=NO');
   console.log('    ❌ geo alone unsafe dedup  → CAN_CROSS_PLATFORM_DEDUP_BY_GEO_ONLY=NO');
   console.log('    ✅ nb_bedrooms present     → bedroom count filter feasible');
-  console.log('    ✅ final_price present     → nightly price parseable (semantics INFERRED)');
+  console.log('    ✅ final_price = STAY_TOTAL → nightly = final_price / nights (CONFIRMED B5-BK-F)');
   console.log('    ⚠️  review_score INFERRED  → absent in M6 live run; schema-confirmed only');
   console.log('    ✅ Dataset ID CONFIRMED    → gd_m4bf7a917zfezv9d5 = BD "Listings Search"');
   console.log('    ✅ url_collection CONFIRMED → body: url + location');
@@ -736,24 +740,18 @@ async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool,
     console.log('  Semantics INFERRED as per-night. Run with --check-in / --check-out for multi-night.');
     console.log(`  PRICE_SEMANTICS = ${priceSemantics}`);
   } else if (requestedNights > 1 && allSameAsRequested) {
-    // Multi-night: compare final_price with final_price/nights
-    // Heuristic: if final_price/nights is close to 1-night reference prices, it's PER_NIGHT
-    // We can't conclude definitively without a reference, but show the data
-    const avgFinalPerNight = withFinalPrice.reduce((s, i) => s + i.final_price, 0) / (withFinalPrice.length || 1) / requestedNights;
-    const avgFinalTotal    = withFinalPrice.reduce((s, i) => s + i.final_price, 0) / (withFinalPrice.length || 1);
+    // CONFIRMED B5-BK-F: final_price = STAY_TOTAL (id=54238 — 1n=72€, 3n=147€ → 147/3=49€/night)
+    priceSemantics = FINAL_PRICE_SEMANTICS; // 'STAY_TOTAL'
+    const avgFinalTotal = withFinalPrice.reduce((s, i) => s + i.final_price, 0) / (withFinalPrice.length || 1);
+    const avgNightly    = avgFinalTotal / requestedNights;
     console.log(`\n  Multi-night analysis (${requestedNights} nights):`);
-    console.log(`    avg final_price (raw):       ${avgFinalTotal.toFixed(2)}`);
-    console.log(`    avg final_price / nights:    ${avgFinalPerNight.toFixed(2)}`);
-    console.log(`  Interpretation: if avg/night (~${avgFinalPerNight.toFixed(0)}) matches 1-night reference prices → PRICE = PER_NIGHT`);
-    console.log(`  1-night M6 reference range: 69–77 EUR (from B5-BK-D)`);
-    if (avgFinalPerNight >= 50 && avgFinalPerNight <= 200) {
-      priceSemantics = 'PER_NIGHT';
-      console.log(`  ✅ PRICE_SEMANTICS = PER_NIGHT (final_price/nights in plausible per-night range)`);
-    } else {
-      priceSemantics = 'UNKNOWN';
-      console.log(`  ⚠️  PRICE_SEMANTICS = UNKNOWN (final_price/nights out of expected per-night range)`);
-    }
-    console.log(`  PRICE_SEMANTICS = ${priceSemantics} (verify manually against reference)`);
+    console.log(`    avg final_price (raw, STAY_TOTAL):  ${avgFinalTotal.toFixed(2)}`);
+    console.log(`    avg final_price / nights (nightly): ${avgNightly.toFixed(2)}`);
+    console.log(`\n  ✅ FINAL_PRICE_SEMANTICS       = ${FINAL_PRICE_SEMANTICS}`);
+    console.log(`  ✅ REQUESTED_NIGHTS            = ${requestedNights}`);
+    console.log(`  ✅ NORMALIZATION_FORMULA       = final_price / requestedNights`);
+    console.log(`  ✅ NORMALIZED_PRICE_SEMANTICS  = NIGHTLY_PRICE`);
+    console.log(`  (Evidence: id=54238 — 1 night=72€, 3 nights=147€ → 147/3=49€/night)`);
   } else {
     priceSemantics = 'UNKNOWN';
     console.log(`\n  ⚠️  PRICE_SEMANTICS = UNKNOWN (mixed nights or unexpected date echo)`);
@@ -839,8 +837,9 @@ async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool,
   console.log(`  CAN_CALC_CALENDAR_PROXY:       ${CAN_CALC_CALENDAR_PROXY ? '✅ YES' : '❌ NO (no available_dates → occupancy always 0)'}`);
 
   if (availDatesCount === 0) {
-    console.log('\n  → calcBrightDataMarketStats occupancy signal is absent for Booking.com');
-    console.log('  → occupancy_rate will always = 0 (insufficient_calendars semantics)');
+    console.log('\n  → Booking.com has no available_dates — occupancy proxy NOT FEASIBLE');
+    console.log('  → calcBrightDataBookingMarketStats returns occupancy: null, occupancy_semantics: "unavailable"');
+    console.log('  → Do NOT use 0 — that would imply empty market (false signal)');
   }
 
   // ── Phase 7: NormalizedMarketListing mapping ───────────────────────────────
@@ -908,7 +907,7 @@ async function executeMode({ name, _bdFetchImpl, _bdMaxWaitMs, _now, pool,
   console.log(`  Items returned:          ${items.length}`);
   console.log(`  Items parseable:         ${accepted}`);
   console.log(`  Geo filtering:           ${coordExtracted === items.length && items.length > 0 ? '✅ FEASIBLE (100%)' : coordExtracted > 0 ? '⚠️  PARTIAL' : '❌ NOT FEASIBLE'}`);
-  console.log(`  Occupancy proxy:         ${availDatesCount > 0 ? '✅ FEASIBLE' : '❌ NOT FEASIBLE (always 0)'}`);
+  console.log(`  Occupancy proxy:         ${availDatesCount > 0 ? '✅ FEASIBLE' : '❌ NOT FEASIBLE (null — no available_dates)'}`);
   console.log(`  Price field usable:      ${withFinalPrice.length === items.length ? '✅ YES' : '⚠️  SOME MISSING'}`);
   console.log(`  Price semantics:         ${priceSemantics}`);
   console.log(`  Bedroom filter:          ${bedroomParseable > 0 ? `✅ FEASIBLE (${bedroomParseable}/${items.length} parseable)` : '❌ NOT FEASIBLE'}`);

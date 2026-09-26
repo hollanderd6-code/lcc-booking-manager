@@ -345,9 +345,53 @@ function calcBrightDataMarketStats(comparables, opts = {}) {
   return { median, p25, p75, occupancy, tensionLevel, count: n, occupancy_semantics };
 }
 
+// ── Booking.com–specific market statistics ────────────────────────────────────
+
+/**
+ * Calculate market statistics from Booking.com Bright Data comparables.
+ *
+ * Booking.com discovery has no available_dates → occupancy proxy is NOT FEASIBLE.
+ * Returns occupancy: null, occupancy_semantics: 'unavailable' (never 0, which
+ * would falsely imply an empty market).
+ *
+ * Returns extended shape with percentile distribution:
+ *   { median, p10, p25, p75, p90, mean, min, max, count,
+ *     occupancy: null, occupancy_semantics: 'unavailable', tensionLevel: null }
+ *
+ * @param {Array} comparables  — NormalizedMarketListing[] (price field is nightly)
+ */
+function calcBrightDataBookingMarketStats(comparables) {
+  const prices = comparables.map(l => l.price).filter(p => p > 0).sort((a, b) => a - b);
+  if (!prices.length) return null;
+
+  const n   = prices.length;
+  const mid = Math.floor(n / 2);
+  const median = n % 2 === 1 ? prices[mid] : (prices[mid - 1] + prices[mid]) / 2;
+
+  const percentile = (pct) => prices[Math.floor(n * pct)];
+
+  const mean = prices.reduce((s, p) => s + p, 0) / n;
+
+  return {
+    median,
+    p10: percentile(0.10),
+    p25: percentile(0.25),
+    p75: percentile(0.75),
+    p90: percentile(0.90),
+    mean: Math.round(mean * 100) / 100,
+    min: prices[0],
+    max: prices[n - 1],
+    count: n,
+    occupancy: null,
+    occupancy_semantics: 'unavailable',
+    tensionLevel: null,
+  };
+}
+
 module.exports = {
   selectComparables,
   calcBrightDataMarketStats,
+  calcBrightDataBookingMarketStats,
   haversineKm,
   isCategoryCompatible,
   isCapacityCompatible,
