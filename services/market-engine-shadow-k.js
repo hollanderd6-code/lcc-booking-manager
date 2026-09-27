@@ -408,6 +408,7 @@ async function runShadowMarketEngine(opts = {}) {
 
     _airbnbPooled:  airbnbPooled,
     _airbnbGate:    airbnbGate,
+    _airbnbUnique:  airbnbUnique,
     _bookingRaw:    bookingRaw,
     _crossSource:   crossSource,
     _aggregation:   aggregation,
