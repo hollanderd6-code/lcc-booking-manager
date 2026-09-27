@@ -971,9 +971,15 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
 
       const newMessage = result.rows[0];
 
-      // Désescalade si réponse hôte
+      // Désescalade + dismiss brouillon si réponse hôte
       if (sender_type === 'owner' || sender_type === 'property') {
         await deescalateConversation(pool, conversation_id, '/api/chat/send');
+        await pool.query(
+          `UPDATE conversations SET owner_suggestion_status = 'dismissed', updated_at = NOW()
+           WHERE id = $1 AND owner_suggestion_status = 'pending'
+             AND owner_suggestion IS NOT NULL AND owner_suggestion <> ''`,
+          [conversation_id]
+        );
       }
 
       // Marquer conversation comme active

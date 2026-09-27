@@ -2553,7 +2553,7 @@ ON invoice_download_tokens(token);
       await pool.query(`
         ALTER TABLE conversations ADD COLUMN IF NOT EXISTS owner_suggestion TEXT;
         ALTER TABLE conversations ADD COLUMN IF NOT EXISTS owner_suggestion_at TIMESTAMPTZ;
-        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS owner_suggestion_status TEXT DEFAULT 'pending';
+        ALTER TABLE conversations ADD COLUMN IF NOT EXISTS owner_suggestion_status TEXT;
       `);
       console.log('✅ Colonnes owner_suggestion OK');
     } catch(e) { console.log('ℹ️ owner_suggestion:', e.message); }
@@ -43426,6 +43426,13 @@ app.post('/api/chat/conversations/:conversationId/send-platform', authenticateAn
     const { delivered, deliveryError } = await transmitToChannex(pool, conversationId, finalMessage, savedMsg.id);
 
     await deescalateConversation(pool, conversationId, 'send-platform');
+
+    await pool.query(
+      `UPDATE conversations SET owner_suggestion_status = 'dismissed', updated_at = NOW()
+       WHERE id = $1 AND owner_suggestion_status = 'pending'
+         AND owner_suggestion IS NOT NULL AND owner_suggestion <> ''`,
+      [conversationId]
+    );
 
     // Notifier via Socket.io
     if (io) {
