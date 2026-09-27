@@ -6257,7 +6257,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     // Booking    : payé J+1 après départ   → paymentDate = end + 1 jour
     // Direct/BHG : payé immédiatement      → paymentDate = start
     const caByProperty = {};
-    let caTotal = 0;
+    const caTotalByCur = {};
 
     function getPaymentDate(r) {
       const rawStart = r.start || r.startDate;
@@ -6305,10 +6305,11 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       const amount = parseFloat(r.amount_total || r.amountTotal || r.host_payout || r.hostPayout || r.amount_rooms || r.amountRooms || 0);
       if (!amount) return;
 
-      caTotal += amount;
+      const rCur = (r.currency && /^[A-Z]{3}$/.test(r.currency)) ? r.currency : 'EUR';
+      caTotalByCur[rCur] = (caTotalByCur[rCur] || 0) + amount;
       const pid = String(r.propertyId || r.property_id || (r.property && typeof r.property === 'object' ? r.property.id : r.property) || 'unknown');
       const propName = (properties.find(p => String(p.id) === pid) || {}).name || 'Logement';
-      if (!caByProperty[pid]) caByProperty[pid] = { name: propName, amount: 0, count: 0, nights: 0 };
+      if (!caByProperty[pid]) caByProperty[pid] = { name: propName, currency: rCur, amount: 0, count: 0, nights: 0 };
       caByProperty[pid].amount += amount;
       caByProperty[pid].count += 1;
       // Calculer les nuits
@@ -6319,14 +6320,27 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       }
     });
     window._kpiCaByProperty = caByProperty;
-    window._kpiCaTotal = caTotal;
+    window._kpiCaTotalByCur = caTotalByCur;
+    window._kpiCaTotal = Object.values(caTotalByCur).reduce((s, v) => s + v, 0);
     const caVal = document.getElementById('kpiCaValue');
     const caSub = document.getElementById('kpiCaSub');
     if (caVal) {
       caVal.style.color = '#FFFFFF';
       caVal.style.fontWeight = '400';
-      if (window.bhAnimateValue) window.bhAnimateValue(caVal, Math.round(caTotal), { suffix: '€' });
-      else caVal.textContent = (caTotal > 0 ? Math.round(caTotal).toLocaleString('fr-FR') : '0') + '€';
+      const _curKeys = Object.keys(caTotalByCur);
+      if (_curKeys.length === 0) {
+        caVal.textContent = fmtMoney(0, 'EUR');
+      } else if (_curKeys.length === 1) {
+        const _onlyCur = _curKeys[0];
+        const _total = caTotalByCur[_onlyCur];
+        if (_onlyCur === 'EUR' && window.bhAnimateValue) {
+          window.bhAnimateValue(caVal, Math.round(_total), { suffix: '€' });
+        } else {
+          caVal.textContent = fmtMoney(_total, _onlyCur);
+        }
+      } else {
+        caVal.textContent = _curKeys.map(c => fmtMoney(Math.round(caTotalByCur[c]), c)).join(' · ');
+      }
     }
     const monthNames = ['Jan','Fév','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
     if (caSub) caSub.textContent = monthNames[m] + ' ' + y;
@@ -6337,7 +6351,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       for (let k = 5; k >= 0; k--) {
         const ms = new Date(y, m - k, 1, 0, 0, 0, 0);
         const me = new Date(y, m - k + 1, 0, 23, 59, 59, 999);
-        months.push({ start: ms, end: me, total: 0 });
+        months.push({ start: ms, end: me, totalByCur: {} });
       }
       (reservations || []).forEach((r) => {
         if (r.type === 'block' || r.source === 'BLOCK') return;
@@ -6346,8 +6360,12 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         if (!pd) return;
         const amt = parseFloat(r.amount_total || r.amountTotal || r.host_payout || r.hostPayout || r.amount_rooms || r.amountRooms || 0);
         if (!amt) return;
+        const sCur = (r.currency && /^[A-Z]{3}$/.test(r.currency)) ? r.currency : 'EUR';
         for (const mo of months) {
-          if (pd >= mo.start && pd <= mo.end) { mo.total += amt; break; }
+          if (pd >= mo.start && pd <= mo.end) {
+            mo.totalByCur[sCur] = (mo.totalByCur[sCur] || 0) + amt;
+            break;
+          }
         }
       });
       const spark = document.getElementById('kpiCaSpark');
@@ -6365,20 +6383,28 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       const finReelle = new Date(y, m, 0, 23, 59, 59, 999);
       const refFinBornee = refFin > finReelle ? finReelle : refFin;
 
-      let prev = 0;
+      const prevByCur = {};
       (reservations || []).forEach((r) => {
         if (r.type === 'block' || r.source === 'BLOCK') return;
         if (r.status === 'cancelled') return;
         const pd = getPaymentDate(r);
         if (!pd || pd < refDebut || pd > refFinBornee) return;
         const amt = parseFloat(r.amount_total || r.amountTotal || r.host_payout || r.hostPayout || r.amount_rooms || r.amountRooms || 0);
-        if (amt) prev += amt;
+        if (!amt) return;
+        const dCur = (r.currency && /^[A-Z]{3}$/.test(r.currency)) ? r.currency : 'EUR';
+        prevByCur[dCur] = (prevByCur[dCur] || 0) + amt;
       });
 
+      const _deltaCurKeys = Object.keys(caTotalByCur);
+      const _singleDeltaCur = _deltaCurKeys.length === 1 ? _deltaCurKeys[0] : null;
+      const caTotal = window._kpiCaTotal;
+      const prev = _singleDeltaCur ? (prevByCur[_singleDeltaCur] || 0) : 0;
+
       if (delta) {
-        // Reference vide : aucun pourcentage n'aurait de sens.
-        if (prev > 0) {
-          const pct = Math.round(((caTotal - prev) / prev) * 100);
+        // Reference vide ou multi-devise : aucun pourcentage n'aurait de sens.
+        if (prev > 0 && _singleDeltaCur) {
+          const curCaTotal = caTotalByCur[_singleDeltaCur] || 0;
+          const pct = Math.round(((curCaTotal - prev) / prev) * 100);
           const moisRef = monthNames[(m + 11) % 12].toLowerCase();
           // Tant que le mois n'est pas revolu, on dit sur quelle duree porte
           // la comparaison : sans cela on croit lire deux mois entiers.
@@ -6392,7 +6418,7 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         } else { delta.textContent = ''; }
       }
       if (spark) {
-        const vals = months.map(mo => mo.total);
+        const vals = months.map(mo => Object.values(mo.totalByCur).reduce((s, v) => s + v, 0));
         const max = Math.max.apply(null, vals.concat([1]));
         const pts = vals.map((v, i) => {
           const x = (i / (vals.length - 1)) * 300;
@@ -6437,28 +6463,36 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
     var now2 = new Date();
     var mNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
     var caByProp = window._kpiCaByProperty || {};
+    var caTotalByCur2 = window._kpiCaTotalByCur || {};
     var caTotal2 = window._kpiCaTotal || 0;
-    var fmtAmt = function(v) { return Math.round(v).toLocaleString('fr-FR') + '€'; };
+    var _curKeys2 = Object.keys(caTotalByCur2);
+    var _singleCur2 = _curKeys2.length === 1 ? _curKeys2[0] : null;
+    var _totalFmt2 = _curKeys2.length === 0
+      ? fmtMoney(0, 'EUR')
+      : _curKeys2.map(function(c) { return fmtMoney(Math.round(caTotalByCur2[c]), c); }).join(' · ');
+    var fmtAmt = function(v, cur) { return fmtMoney(v, cur || 'EUR'); };
     var entries = Object.values(caByProp).sort(function(a,b){return b.amount-a.amount;});
 
     if (subtitle) subtitle.textContent = mNames[now2.getMonth()] + ' ' + now2.getFullYear();
-    if (totalEl) totalEl.textContent = fmtAmt(caTotal2);
+    if (totalEl) totalEl.textContent = _totalFmt2;
 
     if (!entries.length) {
       content.innerHTML = bhEmptyState('invoice', 'Aucun revenu ce mois-ci', 'Renseignez les montants sur vos réservations pour suivre votre CA.');
     } else {
       var daysInMonth = new Date(now2.getFullYear(), now2.getMonth() + 1, 0).getDate();
       content.innerHTML = entries.map(function(p) {
-        var pct = caTotal2 > 0 ? Math.round((p.amount/caTotal2)*100) : 0;
+        var propCurTotal = _singleCur2 ? (caTotalByCur2[_singleCur2] || 0) : 0;
+        var pct = (_singleCur2 && propCurTotal > 0) ? Math.round((p.amount/propCurTotal)*100) : null;
         var occPct = Math.min(100, Math.round((p.nights / daysInMonth) * 100));
+        var pctStr = pct !== null ? ' · '+pct+'% du CA' : '';
         return '<div style="background:rgba(255,255,255,.6);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">'
           + '<div style="width:36px;height:36px;border-radius:9px;background:rgba(14,59,46,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-home" style="color:#0E3B2E;font-size:14px;"></i></div>'
           + '<div style="flex:1;min-width:0;">'
           + '<div style="font-size:13px;font-weight:600;color:#0D1117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.name+'</div>'
-          + '<div style="font-size:11px;color:#7A8695;margin-top:2px;">'+p.count+' rés. · '+p.nights+' nuits · '+pct+'% du CA</div>'
+          + '<div style="font-size:11px;color:#7A8695;margin-top:2px;">'+p.count+' rés. · '+p.nights+' nuits'+pctStr+'</div>'
           + '<div style="margin-top:6px;height:4px;background:rgba(200,184,154,.3);border-radius:99px;"><div style="height:4px;width:'+occPct+'%;background:#0E3B2E;border-radius:99px;"></div></div>'
           + '</div>'
-          + '<div style="font-size:16px;font-weight:700;color:#0E3B2E;flex-shrink:0;">'+fmtAmt(p.amount)+'</div>'
+          + '<div style="font-size:16px;font-weight:700;color:#0E3B2E;flex-shrink:0;">'+fmtAmt(p.amount, p.currency)+'</div>'
           + '</div>';
       }).join('');
     }

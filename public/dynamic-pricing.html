@@ -1659,7 +1659,11 @@ async function loadDashboard() {
     }
 
     // Summary stats
-    $('stat-gain').textContent    = data.weeklyGain > 0 ? `+${data.weeklyGain}€` : '—';
+    const _gainByCur = data.weeklyGainByCurrency || {};
+    const _gainEntries = Object.entries(_gainByCur).filter(([, v]) => v > 0);
+    $('stat-gain').textContent = _gainEntries.length > 0
+      ? _gainEntries.map(([cur, v]) => '+' + v + ' ' + cur).join(' · ')
+      : '—';
     $('stat-count').textContent   = `${data.properties.length}/${data.properties.length}`;
     $('stat-pending').textContent = data.pendingCount || '0';
 
@@ -1788,6 +1792,7 @@ async function loadConfig() {
       return {
         propertyId: p.id,
         propertyName: p.name || p.internal_name || p.id,
+        propertyCurrency: (p.currency && /^[A-Z]{3}$/.test(p.currency)) ? p.currency : 'EUR',
         isActive: cfg?.isActive ?? false,
         priceMin: cfg?.priceMin ?? 40,
         priceMax: cfg?.priceMax ?? 200,
@@ -1925,6 +1930,7 @@ function renderConfigCard(cfg, idx) {
   const isOn = cfg.isActive;
   const modeAuto = cfg.mode === 'auto';
   const pid = cfg.propertyId;
+  const curLabel = cfg.propertyCurrency || 'EUR';
   return `
   <div class="prop-config-row" id="pcfg-${pid}" style="border:1px solid ${isOn ? 'rgba(14,59,46,.25)' : 'rgba(200,184,154,.3)'};border-radius:14px;padding:16px;margin-bottom:12px;background:${isOn ? 'rgba(14,59,46,.03)' : 'white'};transition:all .2s;">
     <!-- Header : nom + toggle -->
@@ -1955,7 +1961,7 @@ function renderConfigCard(cfg, idx) {
           <input type="number" value="${cfg.priceMin}" id="pmin-${pid}"
             style="border:none;padding:8px 10px;width:100%;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;outline:none;"
             oninput="markDirty('${pid}')"/>
-          <span style="padding:8px 10px;background:#f9fafb;color:var(--muted);font-size:13px;font-weight:600;border-left:1px solid rgba(13,17,23,.08);">€</span>
+          <span style="padding:8px 10px;background:#f9fafb;color:var(--muted);font-size:13px;font-weight:600;border-left:1px solid rgba(13,17,23,.08);">${curLabel}</span>
         </div>
       </div>
       <div>
@@ -1964,7 +1970,7 @@ function renderConfigCard(cfg, idx) {
           <input type="number" value="${cfg.priceMax}" id="pmax-${pid}"
             style="border:none;padding:8px 10px;width:100%;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;outline:none;"
             oninput="markDirty('${pid}')"/>
-          <span style="padding:8px 10px;background:#f9fafb;color:var(--muted);font-size:13px;font-weight:600;border-left:1px solid rgba(13,17,23,.08);">€</span>
+          <span style="padding:8px 10px;background:#f9fafb;color:var(--muted);font-size:13px;font-weight:600;border-left:1px solid rgba(13,17,23,.08);">${curLabel}</span>
         </div>
       </div>
     </div>

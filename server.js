@@ -18590,7 +18590,8 @@ app.get('/api/properties',
         bookingCommissionPct: p.bookingCommissionPct ?? p.booking_commission_pct ?? 15,
         booking_commission_pct: p.bookingCommissionPct ?? p.booking_commission_pct ?? 15,
         lastIcalSyncAt: p.last_ical_sync_at || null,
-        icalSyncStatus: p.ical_sync_status || null
+        icalSyncStatus: p.ical_sync_status || null,
+        currency: p.currency || null,
       };
     });
 
@@ -19926,7 +19927,8 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
              base_price, weekend_price,
              cleaning_fee, tourist_tax_per_night, concierge_pct,
              COALESCE(airbnb_commission_pct, 3) as airbnb_commission_pct,
-             COALESCE(booking_commission_pct, 15) as booking_commission_pct
+             COALESCE(booking_commission_pct, 15) as booking_commission_pct,
+             currency AS property_currency
       FROM properties WHERE user_id = ANY($1::text[])
       ${property_id ? 'AND id = $2' : ''}
       ORDER BY display_order ASC, created_at ASC
@@ -19947,6 +19949,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         r.guest_name, r.nb_guests,
         r.amount_total, r.ota_commission, r.host_payout,
         r.amount_rooms, r.amount_cleaning, r.amount_taxes,
+        r.currency,
         EXTRACT(YEAR FROM r.start_date) as year,
         EXTRACT(MONTH FROM r.start_date) as month,
         (r.end_date::date - r.start_date::date) as nights
@@ -20113,7 +20116,8 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         netMargin: Math.round(netMargin * 100) / 100,
         netMarginPct,
         isBlock,
-        isPending
+        isPending,
+        currency: r.currency || prop.property_currency || 'EUR',
       };
     });
 
@@ -20183,6 +20187,7 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     properties.forEach(p => {
       byProperty[p.id] = {
         id: p.id, name: p.name, color: p.color,
+        currency: p.property_currency || null,
         bookings: 0, nights: 0, occupancyRate: 0,
         grossRevenue: 0, netRevenue: 0,
         touristTax: 0, cleaningFee: 0,
@@ -20269,6 +20274,8 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     })).sort((a, b) => b.bookings - a.bookings);
 
     // ── Résumé global ───────────────────────────────────────────
+    const _uniqueCurrencies = [...new Set(realResas.map(r => r.currency))];
+    const _singleCurrency = _uniqueCurrencies.length === 1 ? _uniqueCurrencies[0] : null;
     const summary = {
       totalBookings,
       totalNights:            realResas.reduce((s, r) => s + r.nights, 0),
@@ -20283,7 +20290,9 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
         ? Math.round(realResas.reduce((s, r) => s + r.nights, 0) / totalBookings * 10) / 10
         : 0,
       pendingBookings:     pendingResas.length,
-      pendingGrossRevenue: Math.round(pendingResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100
+      pendingGrossRevenue: Math.round(pendingResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100,
+      currencies:     _uniqueCurrencies,
+      singleCurrency: _singleCurrency,
     };
 
     res.json({
@@ -20333,8 +20342,10 @@ app.get('/api/export/reservations', authenticateAny, async (req, res) => {
         r.uid, r.property_id, r.start_date, r.end_date,
         r.price, r.platform, r.ota_name, r.status,
         r.guest_name, r.nb_guests,
+        COALESCE(r.currency, p.currency, 'EUR') AS currency,
         (r.end_date::date - r.start_date::date) AS nights
       FROM reservations r
+      LEFT JOIN properties p ON p.id = r.property_id
       WHERE r.user_id = ANY($1::text[])
         AND r.status IN ('confirmed', 'completed')
         AND r.uid NOT LIKE 'block_%'
@@ -20397,14 +20408,15 @@ app.get('/api/export/reservations', authenticateAny, async (req, res) => {
     lines.push(`# Genere le : ${fmtDate(new Date())} a ${new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}`);
     lines.push(`# boostinghost.fr`);
     lines.push('');
-    lines.push(['N reservation','Logement','Voyageur','Nb voyageurs','Plateforme','Arrivee','Depart','Nuits','Prix sejour (EUR)','Frais menage (EUR)','Taxe sejour (EUR)','Total (EUR)','Statut'].join(';'));
+    lines.push(['N reservation','Logement','Voyageur','Nb voyageurs','Plateforme','Arrivee','Depart','Nuits','Devise','Prix sejour','Frais menage','Taxe sejour','Total','Statut'].join(';'));
 
-    let totalGeneral = 0;
+    const totalByCurrency = {};
 
     for (const r of result.rows) {
       const prop = propMap[r.property_id] || {};
       const nights = parseInt(r.nights) || 1;
       const nbGuests = parseInt(r.nb_guests) || 1;
+      const currency = r.currency || 'EUR';
 
       // Prix : r.price > overrides jour par jour > base_price/weekend_price
       let rawPrice = parseFloat(r.price) || 0;
@@ -20429,7 +20441,7 @@ app.get('/api/export/reservations', authenticateAny, async (req, res) => {
       const cleaningFee = parseFloat(prop.cleaning_fee) || 0;
       const touristTax  = (parseFloat(prop.tourist_tax_per_night) || 0) * nights * Math.max(nbGuests, 1);
       const totalLine   = rawPrice + cleaningFee + touristTax;
-      totalGeneral += totalLine;
+      totalByCurrency[currency] = (totalByCurrency[currency] || 0) + totalLine;
 
       lines.push([
         r.uid,
@@ -20440,6 +20452,7 @@ app.get('/api/export/reservations', authenticateAny, async (req, res) => {
         fmtDate(r.start_date),
         fmtDate(r.end_date),
         nights,
+        currency,
         fmt(rawPrice),
         fmt(cleaningFee),
         fmt(touristTax),
@@ -20449,7 +20462,9 @@ app.get('/api/export/reservations', authenticateAny, async (req, res) => {
     }
 
     lines.push('');
-    lines.push(`;;;;;;;;;Total;;${fmt(totalGeneral)};`);
+    Object.entries(totalByCurrency).forEach(([cur, total]) => {
+      lines.push(`;;;;;;;;;;Total ${cur};;${fmt(total)};`);
+    });
 
     const filename = `boostinghost_reservations_${periodFile}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');

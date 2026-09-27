@@ -849,7 +849,15 @@ async function loadReport() {
 }
 
 // ── Formatters ────────────────────────────────────────────────
-const fmt   = n => n == null || isNaN(n) ? '—' : new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(n) + ' €';
+// fmt reads _data at call time so it picks up the singleCurrency after load.
+// Pass explicitCur for per-entity calls (per-property, per-reservation).
+// Returns '—' when no currency is determinable (multi-currency aggregates).
+const fmt = (n, explicitCur) => {
+  if (n == null || isNaN(n)) return '—';
+  const cur = explicitCur || (_data && _data.summary && _data.summary.singleCurrency);
+  if (!cur) return '—';
+  return fmtMoney(n, cur);
+};
 const fmtN  = n => new Intl.NumberFormat('fr-FR').format(n || 0);
 
 // ── Render ────────────────────────────────────────────────────
@@ -939,8 +947,8 @@ function renderConcierge(d) {
           <div style="width:8px;height:8px;border-radius:50%;background:${p.color};flex-shrink:0;"></div>
           <div style="font-size:12px;font-weight:600;color:#374151;">${p.name}</div>
         </div>
-        <div class="concierge-kpi-value" style="font-size:16px;">${fmt(p.conciergeAmount)}</div>
-        <div class="concierge-kpi-label">${p.conciergePct}% sur ${fmt(p.grossRevenue)}</div>
+        <div class="concierge-kpi-value" style="font-size:16px;">${fmt(p.conciergeAmount, p.currency)}</div>
+        <div class="concierge-kpi-label">${p.conciergePct}% sur ${fmt(p.grossRevenue, p.currency)}</div>
       </div>
     `).join('')}
   `;
@@ -972,7 +980,7 @@ function renderBarChart(monthly, type) {
       plugins: { legend:{ display:false }, tooltip:{ callbacks:{ label: c => fmt(c.raw) }}},
       scales: {
         x: { grid:{ display:false }, ticks:{ font:{ family:'DM Sans', size:11 }, color:'#9CA3AF' }},
-        y: { grid:{ color:'rgba(0,0,0,.04)' }, ticks:{ font:{ family:'DM Sans', size:11 }, color:'#9CA3AF', callback: v => v===0?'0':(v>=1000?(v/1000).toFixed(0)+'k€':v+'€') }}
+        y: { grid:{ color:'rgba(0,0,0,.04)' }, ticks:{ font:{ family:'DM Sans', size:11 }, color:'#9CA3AF', callback: v => { if (v===0) return '0'; const suf = (_data&&_data.summary&&_data.summary.singleCurrency)?' '+_data.summary.singleCurrency:''; return v>=1000?(v/1000).toFixed(0)+'k'+suf:v+suf; } }}
       }
     }
   });
@@ -1058,9 +1066,9 @@ function renderPropTable(props) {
       </td>
       <td>${fmtN(p.bookings)}</td>
       <td>${fmtN(p.nights)}</td>
-      <td style="font-weight:600;">${fmt(p.grossRevenue)}</td>
-      <td>${fmt(p.netRevenue)}</td>
-      ${hasConcierge ? `<td class="${!p.conciergeAmount?'zero':''}">${p.conciergeAmount>0?fmt(p.conciergeAmount):'—'}</td><td style="font-weight:600;">${fmt(p.ownerRevenue)}</td>` : ''}
+      <td style="font-weight:600;">${fmt(p.grossRevenue, p.currency)}</td>
+      <td>${fmt(p.netRevenue, p.currency)}</td>
+      ${hasConcierge ? `<td class="${!p.conciergeAmount?'zero':''}">${p.conciergeAmount>0?fmt(p.conciergeAmount,p.currency):'—'}</td><td style="font-weight:600;">${fmt(p.ownerRevenue,p.currency)}</td>` : ''}
       <td><span class="occ-badge" style="background:${occCol}18;color:${occCol};">${occ}%</span></td>
     </tr>`;
   }).join('')}</tbody>`;
@@ -1299,11 +1307,13 @@ function switchRentab(mode, btn) {
   document.getElementById('rentabResa').style.display     = mode === 'reservation' ? '' : 'none';
 }
 
-function fmtE(n) {
+function fmtE(n, cur) {
   if (n == null || isNaN(n)) return '—';
+  const c = cur || (_data && _data.summary && _data.summary.singleCurrency);
+  if (!c) return '—';
   const abs = Math.abs(n);
   const str = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(abs);
-  return (n < 0 ? '−' : '') + str + ' €';
+  return (n < 0 ? '−' : '') + str + ' ' + c;
 }
 
 function margeClass(pct) {
@@ -1344,25 +1354,25 @@ function renderRentabLogement(byProp) {
       <div>
         <div class="rentab-row">
           <span>Revenu brut</span>
-          <span class="rentab-row-val">${fmtE(revBrut)}</span>
+          <span class="rentab-row-val">${fmtE(revBrut, p.currency)}</span>
         </div>
         <div class="rentab-row">
           <span>− Commission OTA (${p.airbnbCommissionPct || 3}% / ${p.bookingCommissionPct || 15}%)</span>
-          <span class="rentab-row-val neg">${fmtE(-commOTA)}</span>
+          <span class="rentab-row-val neg">${fmtE(-commOTA, p.currency)}</span>
         </div>
         <div class="rentab-row">
           <span>− Frais de ménage</span>
-          <span class="rentab-row-val neg">${fmtE(-fraisMenage)}</span>
+          <span class="rentab-row-val neg">${fmtE(-fraisMenage, p.currency)}</span>
         </div>
         <div class="rentab-row">
           <span>− Commission conciergerie (${p.conciergePct || 0}%)</span>
-          <span class="rentab-row-val neg">${fmtE(-commConc)}</span>
+          <span class="rentab-row-val neg">${fmtE(-commConc, p.currency)}</span>
         </div>
       </div>
       <div class="rentab-marge-block">
         <div>
           <div class="rentab-marge-label">Marge nette</div>
-          <div class="rentab-marge-val">${fmtE(margeNette)}</div>
+          <div class="rentab-marge-val">${fmtE(margeNette, p.currency)}</div>
         </div>
         <span class="rentab-marge-pct ${mc}">${margePct}%</span>
       </div>
@@ -1473,11 +1483,11 @@ function renderRentabResa(reservations) {
       <td class="muted">${r.platform || '—'}</td>
       <td class="muted">${date}</td>
       <td class="muted">${r.nights || 0}</td>
-      <td>${fmtE(r.rawPrice)}</td>
-      <td class="neg">${fmtE(-(r.otaCommissionAmount || 0))}</td>
-      <td class="neg">${fmtE(-(r.cleaningFee || 0))}</td>
-      <td class="neg">${fmtE(-(r.conciergeAmount || 0))}</td>
-      <td class="pos">${fmtE(r.netMargin)}</td>
+      <td>${fmtE(r.rawPrice, r.currency)}</td>
+      <td class="neg">${fmtE(-(r.otaCommissionAmount || 0), r.currency)}</td>
+      <td class="neg">${fmtE(-(r.cleaningFee || 0), r.currency)}</td>
+      <td class="neg">${fmtE(-(r.conciergeAmount || 0), r.currency)}</td>
+      <td class="pos">${fmtE(r.netMargin, r.currency)}</td>
       <td><span style="background:${badgeColor};color:white;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">${r.netMarginPct || 0}%</span></td>
     </tr>`;
   }).join('');
@@ -1608,11 +1618,11 @@ function renderComparator() {
   const labelB = (monthB ? MONTHS[monthB] + ' ' : '') + yearB;
 
   const metrics = [
-    { label: "CA Brut",           valA: mA.grossRevenue,  valB: mB.grossRevenue,  format: v => new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(v||0) + ' €', higher: true },
-    { label: "Réservations",      valA: mA.bookings,      valB: mB.bookings,      format: v => v||0,          higher: true },
-    { label: "Nuits louées",      valA: mA.nights,        valB: mB.nights,        format: v => v||0,          higher: true },
-    { label: "Taux d'occupation", valA: mA.occupancyRate, valB: mB.occupancyRate, format: v => (v||0)+'%',    higher: true },
-    { label: "Revenu net",        valA: mA.netRevenue,    valB: mB.netRevenue,    format: v => new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(v||0) + ' €', higher: true },
+    { label: "CA Brut",           valA: mA.grossRevenue,  valB: mB.grossRevenue,  format: v => fmt(v), higher: true },
+    { label: "Réservations",      valA: mA.bookings,      valB: mB.bookings,      format: v => v||0,   higher: true },
+    { label: "Nuits louées",      valA: mA.nights,        valB: mB.nights,        format: v => v||0,   higher: true },
+    { label: "Taux d'occupation", valA: mA.occupancyRate, valB: mB.occupancyRate, format: v => (v||0)+'%', higher: true },
+    { label: "Revenu net",        valA: mA.netRevenue,    valB: mB.netRevenue,    format: v => fmt(v), higher: true },
     { label: "Score qualité",     valA: scoreA?.score,    valB: scoreB?.score,    format: v => v != null ? v+'/100' : '—', higher: true }
   ];
 
@@ -1765,7 +1775,8 @@ function renderComparator() {
 #reportContent .view-tab.active,
 .card .view-tab.active { background: var(--bh-vert) !important; color: white !important; }
 </style>
-<script src="/js/bh-onboarding-pages.js?v=313cb8ca"></script>   
+<script src="/js/bh-onboarding-pages.js?v=313cb8ca"></script>
+<script src="/js/money-formatter.js"></script>
 <style id="bh-luxe-reporting">
 /* ════════════════════════════════════════════════════════════
    COUCHE LUXE REPORTING — cohérente v2

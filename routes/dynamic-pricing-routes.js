@@ -149,12 +149,16 @@ async function getSelfOccupancy(pool, propertyId) {
  * Génère le HTML de l'email récapitulatif hebdomadaire.
  */
 function buildWeeklyEmailHtml(firstName, rows, weekLabel) {
-  const totalDelta = rows.reduce((sum, r) => {
+  const totalDeltaByCurrency = {};
+  for (const r of rows) {
     if (r.status === 'applied' && r.price_applied && r.price_before) {
-      return sum + (parseFloat(r.price_applied) - parseFloat(r.price_before));
+      const cur = (r.property_currency && /^[A-Z]{3}$/.test(r.property_currency))
+        ? r.property_currency : 'EUR';
+      const delta = parseFloat(r.price_applied) - parseFloat(r.price_before);
+      totalDeltaByCurrency[cur] = (totalDeltaByCurrency[cur] || 0) + delta;
     }
-    return sum;
-  }, 0);
+  }
+  const positiveDeltaEntries = Object.entries(totalDeltaByCurrency).filter(([, v]) => v > 0);
 
   const rowsHtml = rows.map(r => {
     const before = r.price_before ? `${Math.round(r.price_before)}€` : '—';
@@ -223,10 +227,10 @@ function buildWeeklyEmailHtml(firstName, rows, weekLabel) {
         <tbody>${rowsHtml}</tbody>
       </table>
 
-      ${totalDelta > 0 ? `
+      ${positiveDeltaEntries.length > 0 ? `
       <div style="background:#F0FDF4;border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:14px 16px;margin-bottom:24px;">
         <span style="font-size:14px;font-weight:700;color:#065F46;">
-          💰 Hausse de prix appliquée cette semaine : <span style="color:#10b981;">+${Math.round(totalDelta)}€</span> par nuit, tous logements confondus
+          💰 Hausse de prix appliquée cette semaine : <span style="color:#10b981;">${positiveDeltaEntries.map(([cur, v]) => '+' + Math.round(v) + ' ' + cur).join(' · ')}</span> par nuit, tous logements confondus
         </span>
       </div>` : ''}
 
@@ -404,7 +408,7 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
 
       // 4. Assembler la réponse
       let pendingCount = 0;
-      let weeklyGain = 0;
+      const weeklyGainByCurrency = {};
 
       const properties = configs.rows.map(cfg => {
         const market  = marketMap[cfg.property_id] || null;
@@ -412,7 +416,10 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
 
         if (history?.status === 'pending') pendingCount++;
         if (history?.status === 'applied' && history.price_applied && history.price_before) {
-          weeklyGain += parseFloat(history.price_applied) - parseFloat(history.price_before);
+          const cur = (cfg.property_currency && /^[A-Z]{3}$/.test(cfg.property_currency))
+            ? cfg.property_currency : 'EUR';
+          const delta = parseFloat(history.price_applied) - parseFloat(history.price_before);
+          weeklyGainByCurrency[cur] = (weeklyGainByCurrency[cur] || 0) + delta;
         }
 
         const propertyContextKey = computeMarketContextKey({
@@ -467,7 +474,9 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
       res.json({
         properties,
         pendingCount,
-        weeklyGain: Math.round(weeklyGain),
+        weeklyGainByCurrency: Object.fromEntries(
+          Object.entries(weeklyGainByCurrency).map(([cur, v]) => [cur, Math.round(v)])
+        ),
         weekStart,
       });
 
@@ -938,7 +947,7 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
         try {
           // Historique de la semaine pour cet user
           const histResult = await pool.query(
-            `SELECT ph.*, p.name AS property_name
+            `SELECT ph.*, p.name AS property_name, p.currency AS property_currency
              FROM pricing_history ph
              LEFT JOIN properties p ON p.id = ph.property_id
              WHERE ph.user_id = $1 AND ph.week_start = $2

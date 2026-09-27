@@ -213,11 +213,11 @@ describe('H — String numeric input', () => {
 
 // ── Section I: INTL-2H isolation — aggregations not modified ─────────────────
 
-describe('I — INTL-2H: reporting aggregations deferred to INTL-3', () => {
-  test('I-01 reporting.html does not import money-formatter.js', () => {
-    expect(REPORTING_SRC).not.toMatch(/money-formatter\.js/);
+describe('I — INTL-3G: reporting.html updated', () => {
+  test('I-01 reporting.html now imports money-formatter.js (INTL-3G)', () => {
+    expect(REPORTING_SRC).toMatch(/money-formatter\.js/);
   });
-  test('I-02 reporting.html still uses its own formatting (not replaced)', () => {
+  test('I-02 reporting.html still uses Intl.NumberFormat for fmtN and other formatters', () => {
     expect(REPORTING_SRC).toMatch(/Intl\.NumberFormat|\.toFixed|toLocaleString/);
   });
 });
