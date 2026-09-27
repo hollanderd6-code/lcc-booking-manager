@@ -1328,6 +1328,7 @@ html[data-theme-v3="1"] .header-actions .btn-ghost { display: none !important; }
 <script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
 <script src="/js/mobile-tabs-handler.js?v=03a5b1c7"></script>
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
+<script src="/js/money-formatter.js"></script>
 
 <script>
 'use strict';
@@ -1347,7 +1348,6 @@ const state = {
 
 // ── Helpers ─────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const fmtEuro = n => n != null ? `${Math.round(n)}€` : '—';
 const fmtDate = iso => {
   if (!iso) return '';
   const d = new Date(iso);
@@ -1487,18 +1487,20 @@ function renderTensionPill(level, label) {
   return `<span class="tension-pill ${tensionCss(level)}">${tensionIcon(level)}${label || level}</span>`;
 }
 
-function renderPriceDelta(before, after) {
+function renderPriceDelta(before, after, currency) {
   if (after == null || before == null) return '';
   const diff = Math.round(after - before);
   if (diff === 0) return `<span class="price-delta stable">stable</span>`;
-  const icon = diff > 0 ? 'fa-arrow-up' : 'fa-arrow-down';
-  const cls  = diff > 0 ? 'up' : 'down';
-  return `<span class="price-delta ${cls}"><i class="fas ${icon}" style="font-size:9px;"></i> ${diff > 0 ? '+' : ''}${diff}€</span>`;
+  const icon    = diff > 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+  const cls     = diff > 0 ? 'up' : 'down';
+  const diffFmt = fmtMoney(Math.abs(diff), currency);
+  return `<span class="price-delta ${cls}"><i class="fas ${icon}" style="font-size:9px;"></i> ${diff > 0 ? '+' : '-'}${diffFmt}</span>`;
 }
 
 function renderPropCard(p) {
-  const h = p.history;
-  const m = p.market;
+  const h   = p.history;
+  const m   = p.market;
+  const cur = p.propertyCurrency || 'EUR';
   const isPending = h?.status === 'pending';
   const isStable  = !h || h.status === 'skipped';
   const cardClass = isPending ? 'pending' : (isStable ? 'stable' : '');
@@ -1511,11 +1513,11 @@ function renderPropCard(p) {
   const marketHtml = m ? `
     <div class="market-stats">
       <div class="market-stat">
-        <div class="mval">${fmtEuro(m.medianPrice)}</div>
+        <div class="mval">${fmtMoney(m.medianPrice, cur)}</div>
         <div class="mlbl">Médiane marché</div>
       </div>
       <div class="market-stat">
-        <div class="mval" style="font-size:13px;">${fmtEuro(m.priceP25)}–${fmtEuro(m.priceP75)}</div>
+        <div class="mval" style="font-size:13px;">${fmtMoney(m.priceP25, cur)}–${fmtMoney(m.priceP75, cur)}</div>
         <div class="mlbl">Fourchette marché</div>
       </div>
       <div class="market-stat">
@@ -1545,18 +1547,18 @@ function renderPropCard(p) {
     <div class="price-compare">
       <div class="price-compare-item">
         <div class="pcl">Prix actuel</div>
-        <div class="pcv">${fmtEuro(h.priceBefore)}</div>
+        <div class="pcv">${fmtMoney(h.priceBefore, cur)}</div>
       </div>
       <span class="price-arrow"><i class="fas fa-${isStable ? 'equals' : 'arrow-right'}"></i></span>
       <div class="price-compare-item">
         <div class="pcl">${pcLabel}</div>
         <div class="pcv recommended" style="${priceColor};">
-          ${fmtEuro(displayPrice)} ${renderPriceDelta(h.priceBefore, displayPrice)}
+          ${fmtMoney(displayPrice, cur)} ${renderPriceDelta(h.priceBefore, displayPrice, cur)}
         </div>
       </div>
       <div class="price-compare-item" style="text-align:right;">
         <div class="pcl">Fourchette</div>
-        <div class="pcv" style="font-size:13px;color:var(--muted);">${fmtEuro(p.priceMin)}–${fmtEuro(p.priceMax)}</div>
+        <div class="pcv" style="font-size:13px;color:var(--muted);">${fmtMoney(p.priceMin, cur)}–${fmtMoney(p.priceMax, cur)}</div>
       </div>
     </div>`;
   }
@@ -1566,13 +1568,13 @@ function renderPropCard(p) {
   if (isPending) {
     actionsHtml = `
     <div class="prop-pricing-actions">
-      <button class="btn-accept" onclick="submitDecision(${h._historyId ?? 'null'}, 'apply', '${p.propertyId}', ${h.priceCalculated})">
-        <i class="fas fa-check"></i> Appliquer ${fmtEuro(h.priceCalculated)}
+      <button class="btn-accept" onclick="submitDecision(${h._historyId ?? 'null'}, 'apply', '${p.propertyId}', ${h.priceCalculated}, '${cur}')">
+        <i class="fas fa-check"></i> Appliquer ${fmtMoney(h.priceCalculated, cur)}
       </button>
-      <button class="btn-decline" onclick="submitDecision(${h._historyId ?? 'null'}, 'decline', '${p.propertyId}', ${h.priceBefore})">
-        Garder ${fmtEuro(h.priceBefore)}
+      <button class="btn-decline" onclick="submitDecision(${h._historyId ?? 'null'}, 'decline', '${p.propertyId}', ${h.priceBefore}, '${cur}')">
+        Garder ${fmtMoney(h.priceBefore, cur)}
       </button>
-      <button class="btn-detail" onclick="openAlgoModal('${p.propertyName.replace(/'/g,"\\'")}', ${m?.medianPrice||0}, ${h.priceCalculated}, ${m?.occupancyRate||0}, 0, ${h.factorSeason})">
+      <button class="btn-detail" onclick="openAlgoModal('${p.propertyName.replace(/'/g,"\\'")}', ${m?.medianPrice||0}, ${h.priceCalculated}, ${m?.occupancyRate||0}, 0, ${h.factorSeason}, '${cur}')">
         <i class="fas fa-info-circle"></i>
       </button>
     </div>`;
@@ -1582,7 +1584,7 @@ function renderPropCard(p) {
     <div class="prop-status-line success" style="margin-top:12px;">
       <i class="fas fa-check-circle"></i> Mis à jour sur Airbnb & Booking${ago}
     </div>
-    <button class="btn-detail" style="margin-top:6px;" onclick="openAlgoModal('${p.propertyName.replace(/'/g,"\\'")}', ${m?.medianPrice||0}, ${h.priceApplied}, ${m?.occupancyRate||0}, 0, ${h.factorSeason})">
+    <button class="btn-detail" style="margin-top:6px;" onclick="openAlgoModal('${p.propertyName.replace(/'/g,"\\'")}', ${m?.medianPrice||0}, ${h.priceApplied}, ${m?.occupancyRate||0}, 0, ${h.factorSeason}, '${cur}')">
       <i class="fas fa-calculator"></i> Voir le détail du calcul
     </button>`;
   } else {
@@ -1712,11 +1714,12 @@ async function loadDashboard() {
 }
 
 // ── Décision sur une suggestion (accept / decline) ───────────
-async function submitDecision(historyId, action, propertyId, price) {
+async function submitDecision(historyId, action, propertyId, price, currency) {
   const card = $('pcard-' + propertyId);
+  const cur  = currency || 'EUR';
   if (!historyId) {
     // Pas encore en DB (données mockées ou première config) — affichage local
-    showToast(action === 'apply' ? `${fmtEuro(price)} appliqué ✓` : 'Prix conservé', action === 'apply' ? 'success' : '');
+    showToast(action === 'apply' ? `${fmtMoney(price, cur)} appliqué ✓` : 'Prix conservé', action === 'apply' ? 'success' : '');
     if (card) card.classList.remove('pending');
     loadDashboard();
     return;
@@ -1734,15 +1737,15 @@ async function submitDecision(historyId, action, propertyId, price) {
     if (action === 'apply') {
       let toastMsg;
       if (data.otaSynced) {
-        toastMsg = `${fmtEuro(data.priceApplied)} appliqué sur Airbnb & Booking ✓`;
+        toastMsg = `${fmtMoney(data.priceApplied, cur)} appliqué sur Airbnb & Booking ✓`;
       } else if (data.publishStatus === 'partial') {
-        toastMsg = `${fmtEuro(data.priceApplied)} enregistré — synchronisation OTA partielle`;
+        toastMsg = `${fmtMoney(data.priceApplied, cur)} enregistré — synchronisation OTA partielle`;
       } else if (data.publishStatus === 'error') {
-        toastMsg = `${fmtEuro(data.priceApplied)} enregistré — erreur de synchronisation OTA`;
+        toastMsg = `${fmtMoney(data.priceApplied, cur)} enregistré — erreur de synchronisation OTA`;
       } else if (data.publishStatus && data.publishStatus.startsWith('skipped_external')) {
-        toastMsg = `${fmtEuro(data.priceApplied)} enregistré — tarification externe active`;
+        toastMsg = `${fmtMoney(data.priceApplied, cur)} enregistré — tarification externe active`;
       } else {
-        toastMsg = `${fmtEuro(data.priceApplied)} enregistré dans Boostinghost — synchronisation OTA non confirmée`;
+        toastMsg = `${fmtMoney(data.priceApplied, cur)} enregistré dans Boostinghost — synchronisation OTA non confirmée`;
       }
       showToast(toastMsg, 'success');
     } else {
@@ -2162,10 +2165,11 @@ function renderHistoryWeek(weekStart, rows, gain) {
   }[s] || s);
 
   const rowsHtml = rows.map(h => {
-    const occ     = Math.round(h.marketOccupancy || 0);
+    const cur      = h.propertyCurrency || 'EUR';
+    const occ      = Math.round(h.marketOccupancy || 0);
     const barColor = occ >= 65 ? 'var(--danger)' : occ >= 45 ? 'var(--warning)' : 'var(--muted)';
-    const toColor = h.status === 'applied' && h.priceApplied > h.priceBefore ? 'up'
-                  : h.status === 'applied' && h.priceApplied < h.priceBefore ? 'down' : '';
+    const toColor  = h.status === 'applied' && h.priceApplied > h.priceBefore ? 'up'
+                   : h.status === 'applied' && h.priceApplied < h.priceBefore ? 'down' : '';
     const afterVal = h.priceApplied ?? h.priceCalculated;
     return `<tr>
       <td>
@@ -2174,9 +2178,9 @@ function renderHistoryWeek(weekStart, rows, gain) {
       </td>
       <td>
         <div class="price-change">
-          <span class="from">${fmtEuro(h.priceBefore)}</span>
+          <span class="from">${fmtMoney(h.priceBefore, cur)}</span>
           <span class="arr">${h.status === 'skipped' ? '=' : '→'}</span>
-          <span class="to ${toColor}">${fmtEuro(afterVal)}${h.status === 'pending' ? ' ⏳' : ''}</span>
+          <span class="to ${toColor}">${fmtMoney(afterVal, cur)}${h.status === 'pending' ? ' ⏳' : ''}</span>
         </div>
       </td>
       <td>
@@ -2305,17 +2309,18 @@ async function saveNotifPref(cle, el) {
 }
 
 // ── Modale algo ──────────────────────────────────────────────
-function openAlgoModal(name, median, reco, marketOcc, selfOcc, season) {
+function openAlgoModal(name, median, reco, marketOcc, selfOcc, season, currency) {
+  const cur      = currency || 'EUR';
   const fMarket  = marketOcc >= 80 ? 1.22 : marketOcc >= 65 ? 1.15 : marketOcc >= 45 ? 1.02 : marketOcc >= 25 ? 0.92 : 0.82;
   const fSelf    = selfOcc >= 80 ? 1.08 : selfOcc >= 60 ? 1.03 : selfOcc >= 40 ? 0.98 : 0.93;
   const fSeason  = parseFloat(season) || 1;
 
   $('modal-prop-name').textContent = name;
-  $('f-base').textContent   = fmtEuro(median);
+  $('f-base').textContent   = fmtMoney(median, cur);
   $('f-occ').textContent    = '× ' + fMarket.toFixed(2);
   $('f-self').textContent   = '× ' + fSelf.toFixed(2);
   $('f-season').textContent = '× ' + fSeason.toFixed(2);
-  $('f-result').textContent = fmtEuro(reco);
+  $('f-result').textContent = fmtMoney(reco, cur);
   $('sig-market-occ').textContent = `${Math.round(marketOcc)}% des concurrents réservés — ${tensionLabel(marketOcc >= 80 ? 'high' : marketOcc >= 65 ? 'elevated' : marketOcc >= 45 ? 'medium' : 'low')}`;
   $('sig-self-occ').textContent   = `${Math.round(selfOcc)}% de vos nuits réservées ce mois`;
   $('sig-factor-1').textContent   = '× ' + fMarket.toFixed(2);

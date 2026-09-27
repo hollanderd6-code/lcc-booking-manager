@@ -783,7 +783,8 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
 
       const result = await pool.query(
         `SELECT ph.*,
-                p.name AS property_name
+                p.name     AS property_name,
+                p.currency AS property_currency
          FROM pricing_history ph
          JOIN properties p ON p.id = ph.property_id AND p.user_id = ph.user_id
          WHERE ${canonicalWhere}
@@ -820,8 +821,9 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
         factorMarket:    parseFloat(h.factor_market || 1),
         factorSelf:      parseFloat(h.factor_self || 1),
         factorSeason:    parseFloat(h.factor_season || 1),
-        appliedAt:       h.applied_at,
-        createdAt:       h.created_at,
+        appliedAt:        h.applied_at,
+        createdAt:        h.created_at,
+        propertyCurrency: h.property_currency || null,
       }));
 
       res.json({

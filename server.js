@@ -536,9 +536,14 @@ async function sendNotificationToMultipleLogged(tokens, title, body, data) {
 }
 
 // ── Notifications 4.0 : formatage cohérent + constructeur unique ──
-function bhFmtAmount(v){
-  const n = Math.round(Number(v) || 0);
-  return new Intl.NumberFormat('fr-FR').format(n) + ' \u20AC';
+function bhFmtAmount(v, currency = 'EUR', locale = 'fr-FR') {
+  const n = Number(v);
+  if (v == null || isNaN(n)) return '\u2014';
+  const safeCurrency = /^[A-Z]{3}$/.test(currency) ? currency : 'EUR';
+  const safeLocale   = /^[a-z]{2}-[A-Z]{2}$/.test(locale) ? locale : 'fr-FR';
+  return new Intl.NumberFormat(safeLocale, {
+    style: 'currency', currency: safeCurrency,
+  }).format(n);
 }
 function bhFmtDate(d){
   const x = d instanceof Date ? d : new Date(d);

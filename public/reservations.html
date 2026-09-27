@@ -759,7 +759,7 @@ function hasRealNote(r) {
 function fmtAmount(r) {
   const a = r.amount_total || r.amountTotal || r.price || r.totalPrice || null;
   if (!a) return '—';
-  return new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR', maximumFractionDigits:0 }).format(a);
+  return fmtMoney(a, r.currency || r.property_currency);
 }
 
 // ─── LOAD ─────────────────────────────────
@@ -1092,7 +1092,7 @@ function _resaCanViewFinances() {
   } catch(e){ return true; }
 }
 function _num(x){ return (x==null||x===''||isNaN(Number(x))) ? null : Number(x); }
-function _money(x){ x=_num(x); return x==null ? null : x.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+function _money(x, cur){ x=_num(x); return x==null ? null : fmtMoney(x, cur || 'EUR'); }
 function _telHref(p){ return String(p||'').replace(/[^\d+]/g,''); }
 function _countryFlag(cc){ return cc ? String(cc).toUpperCase().replace(/./g, c => String.fromCodePoint(c.charCodeAt(0)+127397)) : ''; }
 
@@ -1101,6 +1101,7 @@ function openDetail(r) {
   const body = document.getElementById('detailBody');
   const plt  = normPlatform(r);
   const s = r.start||r.startDate||'', e = r.end||r.endDate||'';
+  const cur = r.currency || r.property_currency || 'EUR';
 
   // ── Montants ──
   const fin = _resaCanViewFinances();
@@ -1135,17 +1136,17 @@ function openDetail(r) {
 
   // ── Lignes du bloc Montant ──
   const amountRows = [];
-  if (_money(_rooms))  amountRows.push(`<div class="bh-modal-row"><span class="bh-modal-row-label">Hébergement (nuits)</span><span class="bh-modal-row-val">${_money(_rooms)}</span></div>`);
-  if (_money(ac))      amountRows.push(`<div class="bh-modal-row"><span class="bh-modal-row-label">Ménage</span><span class="bh-modal-row-val">${_money(ac)}</span></div>`);
-  if (_money(ax))      amountRows.push(`<div class="bh-modal-row"><span class="bh-modal-row-label">Taxe de séjour</span><span class="bh-modal-row-val">${_money(ax)}</span></div>`);
-  if (_money(oc))      amountRows.push(`<div class="bh-modal-row"><span class="bh-modal-row-label">Commission OTA</span><span class="bh-modal-row-val" style="color:#dc2626;">− ${_money(oc)}</span></div>`);
-  const amountBlock = (fin && (_money(at) || amountRows.length)) ? `
+  if (_money(_rooms, cur))  amountRows.push(`<div class="bh-modal-row"><span class="bh-modal-row-label">Hébergement (nuits)</span><span class="bh-modal-row-val">${_money(_rooms, cur)}</span></div>`);
+  if (_money(ac, cur))      amountRows.push(`<div class="bh-modal-row"><span class="bh-modal-row-label">Ménage</span><span class="bh-modal-row-val">${_money(ac, cur)}</span></div>`);
+  if (_money(ax, cur))      amountRows.push(`<div class="bh-modal-row"><span class="bh-modal-row-label">Taxe de séjour</span><span class="bh-modal-row-val">${_money(ax, cur)}</span></div>`);
+  if (_money(oc, cur))      amountRows.push(`<div class="bh-modal-row"><span class="bh-modal-row-label">Commission OTA</span><span class="bh-modal-row-val" style="color:#dc2626;">− ${_money(oc, cur)}</span></div>`);
+  const amountBlock = (fin && (_money(at, cur) || amountRows.length)) ? `
     <div class="bh-modal-section">
       <div class="bh-modal-label">Montant</div>
       <div class="bh-modal-card">
         ${amountRows.join('')}
-        ${_money(at) ? `<div class="bh-modal-row" style="border-top:1px solid rgba(0,0,0,.08);"><span class="bh-modal-row-label" style="font-weight:700;color:var(--text);">Total voyageur</span><span class="bh-modal-row-val" style="font-size:16px;font-weight:800;color:var(--green);">${_money(at)}</span></div>` : ''}
-        ${_money(_net) ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Net hôte${_netEst?' (estimé)':''}</span><span class="bh-modal-row-val" style="font-weight:700;">${_money(_net)}</span></div>` : ''}
+        ${_money(at, cur) ? `<div class="bh-modal-row" style="border-top:1px solid rgba(0,0,0,.08);"><span class="bh-modal-row-label" style="font-weight:700;color:var(--text);">Total voyageur</span><span class="bh-modal-row-val" style="font-size:16px;font-weight:800;color:var(--green);">${_money(at, cur)}</span></div>` : ''}
+        ${_money(_net, cur) ? `<div class="bh-modal-row"><span class="bh-modal-row-label">Net hôte${_netEst?' (estimé)':''}</span><span class="bh-modal-row-val" style="font-weight:700;">${_money(_net, cur)}</span></div>` : ''}
       </div>
     </div>` : '';
 
@@ -1153,7 +1154,7 @@ function openDetail(r) {
   let payBlock = '';
   if (fin && Array.isArray(r.payments) && r.payments.length) {
     const rows = r.payments.map(p => {
-      const amt = _money((p.amount_cents!=null ? p.amount_cents/100 : p.amount));
+      const amt = _money((p.amount_cents!=null ? p.amount_cents/100 : p.amount), cur);
       const st  = ({authorized:'Empreinte',captured:'Débité',pending:'En attente',cancelled:'Annulé',refunded:'Remboursé'})[p.status] || p.status || '';
       return `<div class="bh-modal-row"><span class="bh-modal-row-label">${st}</span><span class="bh-modal-row-val">${amt||'—'}</span></div>`;
     }).join('');
@@ -1342,6 +1343,7 @@ loadData();
 <script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
 <script src="/js/mobile-tabs-handler.js?v=03a5b1c7"></script>
 <script src="/js/bh-onboarding-pages.js?v=313cb8ca"></script>
+<script src="/js/money-formatter.js"></script>
 <script>
 // ── Mode Agence : banner, exit, refresh token ─────────────────
 (function() {
