@@ -38450,6 +38450,71 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
 })();
 
 // ============================================================
+// 🌍 INTL-4.1 / INTL-4.2 — International Owner Invoicing — DB Foundation + Backfill
+// ============================================================
+(async () => {
+  try {
+    // INTL-4.1B — owner_invoices: international columns
+    await pool.query(`ALTER TABLE owner_invoices ADD COLUMN IF NOT EXISTS currency TEXT
+      CONSTRAINT chk_owner_invoices_currency CHECK (currency IS NULL OR currency ~ '^[A-Z]{3}$')`);
+    await pool.query(`ALTER TABLE owner_invoices ADD COLUMN IF NOT EXISTS country TEXT
+      CONSTRAINT chk_owner_invoices_country CHECK (country IS NULL OR country ~ '^[A-Z]{2}$')`);
+    await pool.query(`ALTER TABLE owner_invoices ADD COLUMN IF NOT EXISTS locale TEXT
+      CONSTRAINT chk_owner_invoices_locale CHECK (locale IS NULL OR locale ~ '^[a-z]{2}-[A-Z]{2}$')`);
+    await pool.query(`ALTER TABLE owner_invoices ADD COLUMN IF NOT EXISTS issuer_snapshot JSONB`);
+    await pool.query(`ALTER TABLE owner_invoices ADD COLUMN IF NOT EXISTS issuer_snapshot_source TEXT`);
+    await pool.query(`ALTER TABLE owner_invoices ADD COLUMN IF NOT EXISTS vat_exempt_label TEXT`);
+    await pool.query(`ALTER TABLE owner_invoices ADD COLUMN IF NOT EXISTS tax_label TEXT`);
+
+    // INTL-4.1C — users: abstract legal identifier columns (do NOT replace siret / vat_number)
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS legal_identifier_label TEXT`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS legal_identifier_value TEXT`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS tax_identifier_label TEXT`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS tax_identifier_value TEXT`);
+
+    // INTL-4.2A — Backfill currency / country / locale for all historical invoices
+    await pool.query(`UPDATE owner_invoices SET currency = 'EUR' WHERE currency IS NULL`);
+    await pool.query(`UPDATE owner_invoices SET country  = 'FR'    WHERE country  IS NULL`);
+    await pool.query(`UPDATE owner_invoices SET locale   = 'fr-FR' WHERE locale   IS NULL`);
+
+    // INTL-4.2B — Backfill tax_label
+    await pool.query(`UPDATE owner_invoices SET tax_label = 'TVA' WHERE tax_label IS NULL`);
+
+    // INTL-4.2C — Backfill vat_exempt_label for historical invoices where 293 B was shown.
+    // Both PDF paths use: if (vatAmt > 0) { TVA line } else { "TVA non applicable..." }
+    // where vatAmt = parseFloat(inv.vat_amount || 0). The column vat_applicable is NOT the
+    // condition — only vat_amount matters. COALESCE(vat_amount,0) <= 0 reproduces this exactly,
+    // including zero-amount invoices and avoirs with negative vat_amount.
+    await pool.query(`UPDATE owner_invoices
+      SET vat_exempt_label = 'TVA non applicable, art. 293 B du CGI'
+      WHERE vat_exempt_label IS NULL
+        AND COALESCE(vat_amount, 0) <= 0`);
+
+    // INTL-4.2D — Backfill legal_identifier_* from users.siret
+    await pool.query(`UPDATE users
+      SET legal_identifier_label = 'SIRET',
+          legal_identifier_value = siret
+      WHERE siret IS NOT NULL
+        AND legal_identifier_label IS NULL
+        AND legal_identifier_value IS NULL`);
+    // Backfill tax_identifier_* from users.vat_number
+    await pool.query(`UPDATE users
+      SET tax_identifier_label = 'N° TVA',
+          tax_identifier_value = vat_number
+      WHERE vat_number IS NOT NULL
+        AND tax_identifier_label IS NULL
+        AND tax_identifier_value IS NULL`);
+
+    // INTL-4.2E — issuer_snapshot: Option A — NULL for historical invoices
+    // No reliable pre-creation source exists; PDF generation continues to read live from users.
+
+    console.log('✅ INTL-4.1/4.2 migrations OK');
+  } catch(e) {
+    console.error('❌ INTL-4.1/4.2 migration:', e.message);
+  }
+})();
+
+// ============================================================
 // 🧾 DÉBOURS — Routes CRUD
 // ============================================================
 
