@@ -26052,6 +26052,94 @@ app.get('/api/owner-invoices',
   }
 });
 
+// ============================================================
+// 🌍 INTL-4.4 — resolveOwnerInvoiceContext
+// Résout currency / country / locale / issuer_snapshot pour une
+// nouvelle facture propriétaire. Utilisé par POST et credit-note.
+// FAIL CLOSED : currency inconnue ou mélange de devises → 400.
+// ============================================================
+async function resolveOwnerInvoiceContext(pool, userId, propertyIds, agencyIds = null) {
+  // 1. Profil émetteur
+  const uRes = await pool.query(
+    `SELECT email, default_currency, country, locale,
+            first_name, last_name, company, account_type,
+            address, postal_code, city, siret, phone, invoice_email, website,
+            vat_regime, vat_number, legal_form,
+            legal_identifier_label, legal_identifier_value,
+            tax_identifier_label, tax_identifier_value
+     FROM users WHERE id = $1`,
+    [userId]
+  );
+  if (!uRes.rows.length) throw Object.assign(new Error('Utilisateur introuvable'), { status: 401 });
+  const u = uRes.rows[0];
+
+  // 2. Devise — FAIL CLOSED sur les logements
+  // Isolation tenant : seuls les logements appartenant à ce compte (ou ses délégués) sont acceptés.
+  const ownerIds = (Array.isArray(agencyIds) && agencyIds.length > 0) ? agencyIds : [userId];
+  let currency;
+  if (Array.isArray(propertyIds) && propertyIds.length > 0) {
+    // Dédoublonnage des IDs pour ne pas fausser le comptage
+    const uniqueIds = [...new Set(propertyIds)];
+    const propRes = await pool.query(
+      'SELECT id, currency FROM properties WHERE id = ANY($1::text[]) AND user_id = ANY($2::text[])',
+      [uniqueIds, ownerIds]
+    );
+    // Vérifier que chaque logement unique demandé est trouvé avec une devise valide
+    for (const propId of uniqueIds) {
+      const row = propRes.rows.find(r => r.id === propId);
+      const c = row?.currency || null;
+      if (!c || !/^[A-Z]{3}$/.test(c)) {
+        throw Object.assign(new Error(
+          `La devise d'un logement doit être configurée avant de créer la facture (logement : ${propId}).`
+        ), { status: 400 });
+      }
+    }
+    const currencies = new Set(propRes.rows.map(r => r.currency));
+    if (currencies.size > 1) {
+      throw Object.assign(new Error(
+        'Une facture ne peut pas contenir des logements utilisant des devises différentes.'
+      ), { status: 400 });
+    }
+    currency = [...currencies][0];
+  } else {
+    // Aucun logement — utiliser default_currency du profil (fallback EUR pour legacy)
+    const dc = u.default_currency;
+    currency = (dc && /^[A-Z]{3}$/.test(dc)) ? dc : 'EUR';
+  }
+
+  // 3. Country / locale snapshots (fallback FR/fr-FR pour compatibilité legacy)
+  const country = (u.country && /^[A-Z]{2}$/.test(u.country)) ? u.country : 'FR';
+  const locale  = (u.locale  && /^[a-z]{2}-[A-Z]{2}$/.test(u.locale))  ? u.locale  : 'fr-FR';
+
+  // 4. Snapshot émetteur — construit côté serveur, jamais depuis req.body
+  const issuerSnapshot = {
+    company:   u.company    || null,
+    firstName: u.first_name || null,
+    lastName:  u.last_name  || null,
+    accountType: u.account_type || null,
+    email:      u.email        || null,
+    invoiceEmail: u.invoice_email || null,
+    phone:      u.phone        || null,
+    website:    u.website      || null,
+    address:    u.address      || null,
+    postalCode: u.postal_code  || null,
+    city:       u.city         || null,
+    country,
+    siret:      u.siret        || null,
+    vatNumber:  u.vat_number   || null,
+    vatRegime:  u.vat_regime   || null,
+    legalForm:  u.legal_form   || null,
+    legalIdentifierLabel: u.legal_identifier_label || null,
+    legalIdentifierValue: u.legal_identifier_value || null,
+    taxIdentifierLabel:   u.tax_identifier_label   || null,
+    taxIdentifierValue:   u.tax_identifier_value   || null,
+    defaultCurrency: currency,
+    locale
+  };
+
+  return { currency, country, locale, issuerSnapshot, issuerSnapshotSource: 'user_profile' };
+}
+
 // 2. CRÉER UNE NOUVELLE FACTURE PROPRIÉTAIRE (BROUILLON PAR DÉFAUT)
 app.post('/api/owner-invoices',
   authenticateAny, requireFeature('facturation_proprietaires'),
@@ -26079,6 +26167,7 @@ app.post('/api/owner-invoices',
       issueDate,
       dueDate,
       items = [],
+      propertyIds: _rawPropertyIds,
       vatApplicable,
       vatRate,
       discountType,
@@ -26086,10 +26175,28 @@ app.post('/api/owner-invoices',
       notes,
       internalNotes
     } = req.body;
+    const propertyIds = Array.isArray(_rawPropertyIds) ? _rawPropertyIds : [];
 
     if (!clientId || !issueDate || !dueDate || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Données facture incomplètes' });
     }
+
+    // INTL-4.4 — Résoudre currency / country / locale / issuer_snapshot AVANT toute écriture.
+    // FAIL CLOSED : property currency manquante ou mélange de devises → 400.
+    // agencyIds : isolation tenant sur les logements (délégations comprises).
+    const _postAgencyIds = await getAgencyUserIds(req, userId);
+    let _ctx;
+    try {
+      _ctx = await resolveOwnerInvoiceContext(pool, userId, propertyIds, _postAgencyIds);
+    } catch (ctxErr) {
+      return res.status(ctxErr.status || 400).json({ error: ctxErr.message });
+    }
+    const { currency: invoiceCurrency, country: invoiceCountry, locale: invoiceLocale,
+            issuerSnapshot, issuerSnapshotSource } = _ctx;
+    const taxLabel     = 'TVA';
+    const vatExemptLabel = (invoiceCountry === 'FR' && !vatApplicable)
+      ? 'TVA non applicable, art. 293 B du CGI'
+      : null;
 
     // Vérifier si le clientId est bien dans owner_clients (pas un agency_client)
     let resolvedClientId = clientId;
@@ -26170,6 +26277,13 @@ app.post('/api/owner-invoices',
         notes,
         internal_notes,
         status,
+        currency,
+        country,
+        locale,
+        issuer_snapshot,
+        issuer_snapshot_source,
+        tax_label,
+        vat_exempt_label,
         created_at
       ) VALUES (
         gen_random_uuid(),
@@ -26180,6 +26294,9 @@ app.post('/api/owner-invoices',
         $19,$20,$21,$22,
         $23,$24,
         $25,
+        $26,$27,$28,
+        $29::jsonb,$30,
+        $31,$32,
         NOW()
       )
       RETURNING *
@@ -26208,7 +26325,14 @@ app.post('/api/owner-invoices',
       totalTtc,
       notes || null,
       internalNotes || null,
-      'draft'
+      'draft',
+      invoiceCurrency,
+      invoiceCountry,
+      invoiceLocale,
+      JSON.stringify(issuerSnapshot),
+      issuerSnapshotSource,
+      taxLabel,
+      vatExemptLabel
     ]);
 
     const invoice = invoiceResult.rows[0];
@@ -26243,17 +26367,16 @@ app.post('/api/owner-invoices',
         item.deboursId || null
       ]);
     }
-// Sauvegarder les logements liés
-const propertyIds = req.body.propertyIds || [];
-if (Array.isArray(propertyIds) && propertyIds.length > 0) {
-  for (const propId of propertyIds) {
-    await client.query(`
-      INSERT INTO owner_invoice_properties (id, invoice_id, property_id)
-      VALUES (gen_random_uuid(), $1, $2)
-      ON CONFLICT DO NOTHING
-    `, [invoiceId, propId]);
-  }
-}
+    // Sauvegarder les logements liés (propertyIds déjà résolu en amont)
+    if (propertyIds.length > 0) {
+      for (const propId of propertyIds) {
+        await client.query(`
+          INSERT INTO owner_invoice_properties (id, invoice_id, property_id)
+          VALUES (gen_random_uuid(), $1, $2)
+          ON CONFLICT DO NOTHING
+        `, [invoiceId, propId]);
+      }
+    }
     await client.query('COMMIT');
 
     res.json({ invoice });
@@ -26773,6 +26896,8 @@ app.post('/api/owner-invoices/:id/credit-note',
       creditTotalTtc        = -r2(htNet + tva + debours);
     }
 
+    // INTL-4.4 — L'avoir hérite du contexte comptable de la facture originale.
+    // Ne pas relire users : currency/country/locale/snapshot sont des snapshots immuables.
     // Créer la facture d'avoir (statut "invoiced" directement)
     const insertResult = await client.query(`
       INSERT INTO owner_invoices (
@@ -26797,6 +26922,13 @@ app.post('/api/owner-invoices/:id/credit-note',
         status,
         is_credit_note,
         original_invoice_id,
+        currency,
+        country,
+        locale,
+        issuer_snapshot,
+        issuer_snapshot_source,
+        vat_exempt_label,
+        tax_label,
         created_at
       )
       VALUES (
@@ -26811,6 +26943,9 @@ app.post('/api/owner-invoices/:id/credit-note',
         'invoiced',
         TRUE,
         $17,
+        $18,$19,$20,
+        $21::jsonb,$22,
+        $23,$24,
         NOW()
       )
       RETURNING *
@@ -26831,7 +26966,14 @@ app.post('/api/owner-invoices/:id/credit-note',
       creditTotalTtc,
       orig.notes,
       orig.internal_notes,
-      orig.id
+      orig.id,
+      orig.currency,
+      orig.country,
+      orig.locale,
+      orig.issuer_snapshot ? JSON.stringify(orig.issuer_snapshot) : null,
+      orig.issuer_snapshot_source,
+      orig.vat_exempt_label,
+      orig.tax_label
     ]);
 
     const credit = insertResult.rows[0];
@@ -28220,7 +28362,24 @@ app.put('/api/owner-invoices/:id',
 
     // Sync logements liés — uniquement si propertyIds est présent dans le body.
     // Un tableau vide efface toutes les associations ; undefined les laisse intactes.
+    // INTL-4.4 — guard mono-devise sur le nouveau jeu de logements.
+    // currency/country/locale/issuer_snapshot sont des snapshots immuables :
+    // ils ne sont PAS dans le SET ci-dessus et ne peuvent pas être écrasés via req.body.
     if (Array.isArray(propertyIds)) {
+      if (propertyIds.length > 0) {
+        let _putCtx;
+        try {
+          _putCtx = await resolveOwnerInvoiceContext(pool, userId, propertyIds, agencyIds);
+        } catch (ctxErr) {
+          await client.query('ROLLBACK');
+          return res.status(ctxErr.status || 400).json({ error: ctxErr.message });
+        }
+        // Mettre à jour la devise snapshot du brouillon pour refléter le nouveau jeu de logements
+        await client.query(
+          'UPDATE owner_invoices SET currency = $1 WHERE id = $2',
+          [_putCtx.currency, req.params.id]
+        );
+      }
       await client.query(
         'DELETE FROM owner_invoice_properties WHERE invoice_id = $1',
         [req.params.id]
