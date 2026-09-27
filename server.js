@@ -1336,7 +1336,11 @@ async function syncSingleIcalUrl(pool, property, entry) {
              UNION SELECT delegate_user_id FROM account_delegations
               WHERE delegator_user_id = $1::text AND status = 'accepted'
            ) AND trigger_type = ANY($3) AND active = TRUE
-           AND (property_id IS NULL OR property_id::text = $2::text)`,
+           AND (
+             (property_id IS NULL AND (property_ids IS NULL OR property_ids = '[]'::jsonb) AND is_global IS TRUE)
+             OR property_id::text = $2::text
+             OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb AND property_ids @> to_jsonb($2::text))
+           )`,
           [property.user_id, property.id, triggerTypes]
         );
 
@@ -2340,6 +2344,9 @@ ON invoice_download_tokens(token);
       await pool.query(`ALTER TABLE message_templates ADD COLUMN IF NOT EXISTS trigger_offset_days INTEGER DEFAULT 0`).catch(()=>{});
       await pool.query(`ALTER TABLE message_templates ADD COLUMN IF NOT EXISTS send_condition TEXT DEFAULT 'always'`).catch(()=>{});
       await pool.query(`ALTER TABLE message_templates ADD COLUMN IF NOT EXISTS property_ids JSONB DEFAULT '[]'`).catch(()=>{});
+      await pool.query(`ALTER TABLE message_templates ADD COLUMN IF NOT EXISTS is_global BOOLEAN`).catch(()=>{});
+      // One-time migration: templates sans logement ciblé = global intentionnel ; les autres = false
+      await pool.query(`UPDATE message_templates SET is_global = (property_id IS NULL AND (property_ids IS NULL OR property_ids = '[]'::jsonb)) WHERE is_global IS NULL`).catch(()=>{});
       console.log('✅ Table message_templates OK');
 
       // ── Table fiches individuelles de police (check-in étrangers) ──
@@ -5176,7 +5183,11 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
              UNION SELECT delegate_user_id FROM account_delegations
               WHERE delegator_user_id = $1::text AND status = 'accepted'
            ) AND trigger_type = 'on_booking' AND active = TRUE
-                           AND (property_id IS NULL OR property_id::text = $2::text)`,
+                           AND (
+                             (property_id IS NULL AND (property_ids IS NULL OR property_ids = '[]'::jsonb) AND is_global IS TRUE)
+                             OR property_id::text = $2::text
+                             OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb AND property_ids @> to_jsonb($2::text))
+                           )`,
                           [ownerId, propId]
                         );
                         if (tplTemplates.rows.length > 0) {
@@ -7576,7 +7587,7 @@ async function handleDepositPaid(depositId, io) {
                 WHERE delegator_user_id = $1::text AND status = 'accepted'
              ) AND mt.trigger_type = 'on_arrival' AND mt.active = TRUE
              AND (
-               mt.property_id IS NULL
+               (mt.property_id IS NULL AND (mt.property_ids IS NULL OR mt.property_ids = '[]'::jsonb) AND mt.is_global IS TRUE)
                OR mt.property_id::text = $2::text
                OR (mt.property_ids IS NOT NULL AND mt.property_ids != '[]'::jsonb
                    AND mt.property_ids @> to_jsonb($2::text))
@@ -32416,7 +32427,7 @@ async function retryCheckinLinkForConv(pool, io, convId) {
           WHERE delegator_user_id = $1::text AND status = 'accepted'
        )
        AND (
-         mt.property_id IS NULL
+         (mt.property_id IS NULL AND (mt.property_ids IS NULL OR mt.property_ids = '[]'::jsonb) AND mt.is_global IS TRUE)
          OR mt.property_id::text = $2::text
          OR (mt.property_ids IS NOT NULL AND mt.property_ids != '[]'::jsonb
              AND mt.property_ids @> to_jsonb($2::text))
@@ -33787,11 +33798,13 @@ app.post('/api/message-templates', authenticateToken, async (req, res) => {
     const proprio = await proprietaireDesLogements(pool, req, property_ids, property_id);
     if (proprio.erreur) return res.status(400).json({ error: proprio.erreur });
 
+    const _isGlobalNew = !(property_id) && !(property_ids && property_ids.length > 0);
     const result = await pool.query(
-      `INSERT INTO message_templates (user_id, property_id, title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, property_ids)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      `INSERT INTO message_templates (user_id, property_id, title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, property_ids, is_global)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [proprio.global ? proprio.userId : userId, property_id || null, title, message, trigger_type, trigger_offset_hours || 0, trigger_offset_days || 0, send_condition || 'always',
-       JSON.stringify(property_ids && property_ids.length > 0 ? property_ids : [])]
+       JSON.stringify(property_ids && property_ids.length > 0 ? property_ids : []),
+       _isGlobalNew]
     );
     // Règle : un template ciblé appartient au propriétaire de ses logements (partagé entre ses agences).
     const { repartirTemplateParProprietaire } = require('./utils/templates-proprietaire');
@@ -33892,7 +33905,26 @@ app.put('/api/message-templates/:id', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const agencyIds = await getAgencyUserIds(req, userId);
-    const { title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, active, property_id, property_ids } = req.body;
+    const { title, message, trigger_type, trigger_offset_hours, trigger_offset_days, send_condition, active } = req.body;
+
+    // Lire l'état actuel pour ne pas écraser le rattachement logement si non transmis dans le body.
+    // Un délégué qui édite seulement le texte ne doit pas vider property_id / property_ids.
+    const cur = await pool.query(
+      'SELECT property_id, property_ids, is_global FROM message_templates WHERE id = $1 AND user_id = ANY($2::text[])',
+      [req.params.id, agencyIds]
+    );
+    if (!cur.rows[0]) return res.status(404).json({ error: 'Template non trouvé' });
+
+    const effPropertyId  = 'property_id'  in req.body ? (req.body.property_id  || null)  : cur.rows[0].property_id;
+    const rawEffPIds     = 'property_ids' in req.body ? req.body.property_ids              : (cur.rows[0].property_ids || []);
+    const effPropertyIds = Array.isArray(rawEffPIds) ? rawEffPIds : [];
+    const hasBinding     = !!effPropertyId || effPropertyIds.length > 0;
+    // is_global : explicite dans le body → valeur du body ;
+    // sinon true seulement si pas de rattachement ET était déjà global (évite l'orphelin accidentel).
+    const effIsGlobal    = 'is_global' in req.body
+      ? !!req.body.is_global
+      : (!hasBinding && !!(cur.rows[0].is_global));
+
     const result = await pool.query(
       `UPDATE message_templates SET
         title = COALESCE($1, title),
@@ -33902,14 +33934,17 @@ app.put('/api/message-templates/:id', authenticateToken, async (req, res) => {
         active = COALESCE($5, active),
         property_id = $6,
         property_ids = $11::jsonb,
+        is_global = $12,
         trigger_offset_days = COALESCE($9, trigger_offset_days),
         send_condition = COALESCE($10, send_condition),
         updated_at = NOW()
        WHERE id = $7 AND user_id = ANY($8::text[]) RETURNING *`,
-      [title, message, trigger_type, trigger_offset_hours, active, property_id || null, req.params.id, agencyIds,
+      [title, message, trigger_type, trigger_offset_hours, active,
+       effPropertyId, req.params.id, agencyIds,
        trigger_offset_days !== undefined ? trigger_offset_days : null,
        send_condition || null,
-       JSON.stringify(Array.isArray(property_ids) && property_ids.length > 0 ? property_ids : [])]
+       JSON.stringify(effPropertyIds.length > 0 ? effPropertyIds : []),
+       effIsGlobal]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Template non trouvé' });
     const { repartirTemplateParProprietaire } = require('./utils/templates-proprietaire');
@@ -34161,7 +34196,7 @@ app.get('/api/message-template-scheduled', authenticateToken, async (req, res) =
           : (tmpl.property_id ? [tmpl.property_id] : []);
         const propFilter = propIds.length > 0
           ? `AND c.property_id IN (${propIds.map(id => `'${id.replace(/'/g,"''")}'`).join(',')})`
-          : '';
+          : tmpl.is_global === true ? '' : 'AND FALSE';
 
         const convs = await pool.query(
           `SELECT c.id, c.guest_name, p.name as property_name, c.property_id, c.reservation_start_date,
@@ -34475,7 +34510,7 @@ async function runTemplatesCron(triggerTypes) {
              const ids = tmpl.property_ids
                ? (Array.isArray(tmpl.property_ids) ? tmpl.property_ids : (() => { try { return JSON.parse(tmpl.property_ids); } catch(e) { return []; } })())
                : (tmpl.property_id ? [tmpl.property_id] : []);
-             if (ids.length === 0) return '';
+             if (ids.length === 0) return tmpl.is_global === true ? '' : 'AND FALSE';
              if (ids.length === 1) return `AND c.property_id = '${ids[0].replace(/'/g,"''")}'`;
              return `AND c.property_id IN (${ids.map(id => `'${id.replace(/'/g,"''")}'`).join(',')})`;
            })()}`,
@@ -42551,7 +42586,7 @@ app.post('/api/channex/webhook', async (req, res) => {
               WHERE delegator_user_id = $1::text AND status = 'accepted'
            ) AND trigger_type = ANY($3) AND active = TRUE
              AND (
-               property_id IS NULL
+               (property_id IS NULL AND (property_ids IS NULL OR property_ids = '[]'::jsonb) AND is_global IS TRUE)
                OR property_id::text = $2::text
                OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
                    AND property_ids @> to_jsonb($2::text))
@@ -42608,7 +42643,7 @@ app.post('/api/channex/webhook', async (req, res) => {
            ) AND active = TRUE
                  AND trigger_type IN ('before_arrival', 'on_booking', 'on_arrival')
                  AND (
-                   property_id IS NULL
+                   (property_id IS NULL AND (property_ids IS NULL OR property_ids = '[]'::jsonb) AND is_global IS TRUE)
                    OR property_id::text = $2::text
                    OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
                        AND property_ids @> to_jsonb($2::text))
@@ -46442,9 +46477,12 @@ app.post('/api/guest/book', async (req, res) => {
              UNION SELECT delegate_user_id FROM account_delegations
               WHERE delegator_user_id = $1::text AND status = 'accepted'
            ) AND trigger_type = ANY($3) AND active = TRUE
-           AND (property_id IS NULL OR property_id::text = $2::text
-                OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
-                    AND property_ids @> to_jsonb($2::text)))
+           AND (
+             (property_id IS NULL AND (property_ids IS NULL OR property_ids = '[]'::jsonb) AND is_global IS TRUE)
+             OR property_id::text = $2::text
+             OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
+                 AND property_ids @> to_jsonb($2::text))
+           )
            ORDER BY trigger_type = 'on_booking' DESC`,
           [prop.owner_user_id, property_id, triggersToRun]
         );
@@ -49700,9 +49738,12 @@ N'hésitez pas à nous contacter via cette messagerie pour toute question. Bon s
              UNION SELECT delegate_user_id FROM account_delegations
               WHERE delegator_user_id = $1::text AND status = 'accepted'
            ) AND trigger_type = ANY($3) AND active = TRUE
-             AND (property_id IS NULL OR property_id::text = $2::text
-                  OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
-                      AND property_ids @> to_jsonb($2::text)))
+             AND (
+               (property_id IS NULL AND (property_ids IS NULL OR property_ids = '[]'::jsonb) AND is_global IS TRUE)
+               OR property_id::text = $2::text
+               OR (property_ids IS NOT NULL AND property_ids != '[]'::jsonb
+                   AND property_ids @> to_jsonb($2::text))
+             )
              ORDER BY trigger_type = 'on_booking' DESC`,
             [prop.owner_user_id, property_id, triggersToRun]
           );
