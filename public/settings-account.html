@@ -1461,6 +1461,33 @@ html[data-theme-v3="1"] .subscription-card {
 </div>
 </div>
 
+<!-- Informations légales (INTL-4.3) -->
+<div class="form-row" style="border-top:1px solid var(--border-color);padding-top:16px;margin-top:4px;">
+  <label style="font-weight:700;font-size:13px;color:var(--text-primary);margin-bottom:8px;display:block;">
+    <i class="fas fa-landmark" style="color:#0E3B2E;margin-right:6px;"></i>Informations légales
+  </label>
+  <p class="settings-hint" style="margin-bottom:12px;">Pour les comptes français, utilisez le champ SIRET ci-dessus. Pour les comptes hors France, renseignez ici votre identifiant légal.</p>
+  <!-- legalIdentifierRow masqué pour country=FR, visible sinon -->
+  <div id="legalIdentifierRow" style="display:none;">
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;align-items:center;margin-bottom:8px;">
+      <label style="font-size:12px;color:var(--text-secondary);font-weight:600;">Identifiant légal — libellé</label>
+      <input id="profileLegalIdentifierLabel" type="text" placeholder="ex : Company No., TZ, CIF" style="padding:7px 10px;border:1px solid var(--border-color);border-radius:8px;font-size:13px;width:100%;box-sizing:border-box;"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;align-items:center;margin-bottom:8px;">
+      <label style="font-size:12px;color:var(--text-secondary);font-weight:600;">Identifiant légal — valeur</label>
+      <input id="profileLegalIdentifierValue" type="text" placeholder="ex : 515123456, B-12345678" style="padding:7px 10px;border:1px solid var(--border-color);border-radius:8px;font-size:13px;width:100%;box-sizing:border-box;"/>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;align-items:center;margin-bottom:8px;">
+    <label style="font-size:12px;color:var(--text-secondary);font-weight:600;">Identifiant fiscal — libellé</label>
+    <input id="profileTaxIdentifierLabel" type="text" placeholder="ex : N° TVA, VAT Number" style="padding:7px 10px;border:1px solid var(--border-color);border-radius:8px;font-size:13px;width:100%;box-sizing:border-box;"/>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;align-items:center;margin-bottom:4px;">
+    <label style="font-size:12px;color:var(--text-secondary);font-weight:600;">Identifiant fiscal — valeur</label>
+    <input id="profileTaxIdentifierValue" type="text" placeholder="ex : FR12345678901, IL123456789" style="padding:7px 10px;border:1px solid var(--border-color);border-radius:8px;font-size:13px;width:100%;box-sizing:border-box;"/>
+  </div>
+</div>
+
 <!-- Champs personnalisés -->
 <div class="form-row" style="border-top:1px solid var(--border-color);padding-top:16px;margin-top:4px;">
   <label style="font-weight:700;font-size:13px;color:var(--text-primary);margin-bottom:8px;display:block;">
@@ -2407,6 +2434,18 @@ if (logoInput && logoPreview) {
       accountTypeIndividual.addEventListener('change', toggleSiretField);
       accountTypeBusiness.addEventListener('change', toggleSiretField);
 
+      // INTL-4.3 — afficher/masquer les champs identifiant légal générique selon le pays
+      // FR : SIRET legacy utilisé, les champs génériques sont masqués.
+      // Non-FR (ou pays non défini) : champs génériques visibles.
+      const legalIdentifierRow = document.getElementById('legalIdentifierRow');
+      function toggleLegalIdentifierFields() {
+        if (!legalIdentifierRow) return;
+        const countryVal = (document.getElementById('profileCountry') || {}).value || '';
+        legalIdentifierRow.style.display = (countryVal === 'FR') ? 'none' : 'block';
+      }
+      const _profileCountryEl = document.getElementById('profileCountry');
+      if (_profileCountryEl) _profileCountryEl.addEventListener('change', toggleLegalIdentifierFields);
+
       // Formatage automatique du SIRET (ajout des espaces)
       if (siretInput) {
         siretInput.addEventListener('input', function(e) {
@@ -2500,6 +2539,17 @@ if (logoInput && logoPreview) {
   const defaultCurrencyInput  = document.getElementById('profileDefaultCurrency');
   if (countryInput && profile.country)               countryInput.value          = profile.country;
   if (defaultCurrencyInput && profile.defaultCurrency) defaultCurrencyInput.value = profile.defaultCurrency;
+  // Informations légales (INTL-4.3)
+  const legalLabelInput = document.getElementById('profileLegalIdentifierLabel');
+  const legalValueInput = document.getElementById('profileLegalIdentifierValue');
+  const taxLabelInput   = document.getElementById('profileTaxIdentifierLabel');
+  const taxValueInput   = document.getElementById('profileTaxIdentifierValue');
+  if (legalLabelInput && profile.legalIdentifierLabel != null) legalLabelInput.value = profile.legalIdentifierLabel;
+  if (legalValueInput && profile.legalIdentifierValue != null) legalValueInput.value = profile.legalIdentifierValue;
+  if (taxLabelInput   && profile.taxIdentifierLabel   != null) taxLabelInput.value   = profile.taxIdentifierLabel;
+  if (taxValueInput   && profile.taxIdentifierValue   != null) taxValueInput.value   = profile.taxIdentifierValue;
+  // Appliquer la visibilité des champs légaux selon le pays chargé
+  if (typeof toggleLegalIdentifierFields === 'function') toggleLegalIdentifierFields();
   // Champs personnalisés — vider d'abord pour éviter les doublons au rechargement
   const existingList = document.getElementById('customFieldsList');
   if (existingList) existingList.innerHTML = '';
@@ -2579,6 +2629,18 @@ if (logoInput && logoPreview) {
     const defaultCurrencyVal = (document.getElementById('profileDefaultCurrency') || {}).value || '';
     if (countryVal)         formData.append('country', countryVal);
     if (defaultCurrencyVal) formData.append('defaultCurrency', defaultCurrencyVal);
+    // Informations légales (INTL-4.3)
+    // legalIdentifierLabel/Value : uniquement si le row est visible (non-FR)
+    const _liRow = document.getElementById('legalIdentifierRow');
+    const _liVisible = _liRow && _liRow.style.display !== 'none';
+    const legalLabelVal = ((document.getElementById('profileLegalIdentifierLabel') || {}).value || '').trim();
+    const legalValueVal = ((document.getElementById('profileLegalIdentifierValue') || {}).value || '').trim();
+    const taxLabelVal   = ((document.getElementById('profileTaxIdentifierLabel')   || {}).value || '').trim();
+    const taxValueVal   = ((document.getElementById('profileTaxIdentifierValue')   || {}).value || '').trim();
+    if (_liVisible && legalLabelVal) formData.append('legalIdentifierLabel', legalLabelVal);
+    if (_liVisible && legalValueVal) formData.append('legalIdentifierValue', legalValueVal);
+    if (taxLabelVal)   formData.append('taxIdentifierLabel',   taxLabelVal);
+    if (taxValueVal)   formData.append('taxIdentifierValue',   taxValueVal);
     // Champs personnalisés
     const customFields = getCustomFields();
     formData.append('customFields', JSON.stringify(customFields));
@@ -2604,6 +2666,10 @@ if (logoInput && logoPreview) {
       website: websiteVal.trim(),
       country: countryVal,
       defaultCurrency: defaultCurrencyVal,
+      legalIdentifierLabel: legalLabelVal,
+      legalIdentifierValue: legalValueVal,
+      taxIdentifierLabel:   taxLabelVal,
+      taxIdentifierValue:   taxValueVal,
       customFields: customFields
     };
 

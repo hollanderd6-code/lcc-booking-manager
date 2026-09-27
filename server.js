@@ -11046,6 +11046,10 @@ app.get('/api/user/profile', authenticateAny, async (req, res) => {
         country,
         default_currency,
         locale,
+        legal_identifier_label,
+        legal_identifier_value,
+        tax_identifier_label,
+        tax_identifier_value,
         created_at
        FROM users
        WHERE id = $1`,
@@ -11080,6 +11084,10 @@ app.get('/api/user/profile', authenticateAny, async (req, res) => {
       country: row.country,
       defaultCurrency: row.default_currency,
       locale: row.locale,
+      legalIdentifierLabel: row.legal_identifier_label,
+      legalIdentifierValue: row.legal_identifier_value,
+      taxIdentifierLabel:   row.tax_identifier_label,
+      taxIdentifierValue:   row.tax_identifier_value,
       createdAt: row.created_at
     });
   } catch (error) {
@@ -11138,7 +11146,11 @@ app.put('/api/user/profile', authenticateAny, upload.single('logo'), async (req,
       legalForm,
       country,
       defaultCurrency,
-      locale
+      locale,
+      legalIdentifierLabel,
+      legalIdentifierValue,
+      taxIdentifierLabel,
+      taxIdentifierValue
     } = req.body;
 
     // Validation du type de compte
@@ -11146,16 +11158,6 @@ app.put('/api/user/profile', authenticateAny, upload.single('logo'), async (req,
       return res.status(400).json({
         error: 'Type de compte invalide. Doit être "individual" ou "business"'
       });
-    }
-
-    // Validation du SIRET si entreprise
-    if (accountType === 'business' && siret) {
-      const siretClean = siret.replace(/\s/g, '');
-      if (siretClean.length !== 14 || !/^\d{14}$/.test(siretClean)) {
-        return res.status(400).json({
-          error: 'Le numéro SIRET doit contenir exactement 14 chiffres'
-        });
-      }
     }
 
     // INTL-1 normalization + validation
@@ -11171,6 +11173,22 @@ app.put('/api/user/profile', authenticateAny, upload.single('logo'), async (req,
     }
     if (locale != null && !/^[a-z]{2}-[A-Z]{2}$/.test(locale)) {
       return res.status(400).json({ error: 'locale doit être au format BCP 47 (ex: fr-FR, he-IL)' });
+    }
+
+    // INTL-4.3D — effectiveCountry: body country > DB country > FR default
+    // Needed to apply SIRET validation only for FR accounts.
+    const _ecRow = await pool.query('SELECT country FROM users WHERE id = $1', [user.id]);
+    const _dbCountry = _ecRow.rows[0]?.country ?? null;
+    const effectiveCountry = countryNorm ?? (_dbCountry ?? 'FR');
+
+    // INTL-4.3E — SIRET validation: FR only (effectiveCountry-aware)
+    if (accountType === 'business' && siret && effectiveCountry === 'FR') {
+      const siretClean = siret.replace(/\s/g, '');
+      if (siretClean.length !== 14 || !/^\d{14}$/.test(siretClean)) {
+        return res.status(400).json({
+          error: 'Le numéro SIRET doit contenir exactement 14 chiffres'
+        });
+      }
     }
 
     // Gérer le logo uploadé
@@ -11201,7 +11219,11 @@ if (req.file) {
          legal_form = COALESCE($16, legal_form),
          country = COALESCE($17, country),
          default_currency = COALESCE($18, default_currency),
-         locale = COALESCE($19, locale)
+         locale = COALESCE($19, locale),
+         legal_identifier_label = COALESCE($20, legal_identifier_label),
+         legal_identifier_value = COALESCE($21, legal_identifier_value),
+         tax_identifier_label   = COALESCE($22, tax_identifier_label),
+         tax_identifier_value   = COALESCE($23, tax_identifier_value)
        WHERE id = $10
        RETURNING
          id,
@@ -11223,7 +11245,11 @@ if (req.file) {
          legal_form,
          country,
          default_currency,
-         locale`,
+         locale,
+         legal_identifier_label,
+         legal_identifier_value,
+         tax_identifier_label,
+         tax_identifier_value`,
       [
         firstName || null,
         lastName || null,
@@ -11243,7 +11269,11 @@ if (req.file) {
         legalForm || null,
         countryNorm || null,
         defaultCurrencyNorm || null,
-        locale || null
+        locale || null,
+        legalIdentifierLabel != null ? String(legalIdentifierLabel).trim() || null : null,
+        legalIdentifierValue != null ? String(legalIdentifierValue).trim() || null : null,
+        taxIdentifierLabel   != null ? String(taxIdentifierLabel).trim()   || null : null,
+        taxIdentifierValue   != null ? String(taxIdentifierValue).trim()   || null : null
       ]
     );
 
@@ -11281,7 +11311,11 @@ if (req.file) {
         legalForm: updated.legal_form,
         country: updated.country,
         defaultCurrency: updated.default_currency,
-        locale: updated.locale
+        locale: updated.locale,
+        legalIdentifierLabel: updated.legal_identifier_label,
+        legalIdentifierValue: updated.legal_identifier_value,
+        taxIdentifierLabel:   updated.tax_identifier_label,
+        taxIdentifierValue:   updated.tax_identifier_value
       }
     });
 
