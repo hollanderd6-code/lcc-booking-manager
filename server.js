@@ -57,6 +57,7 @@ const { geocodeAddress } = require('./services/property-geocoder');
 const { computeMarketContextKey } = require('./routes/market-context-key');
 const { scheduleMarketRefresh } = require('./routes/market-refresh-trigger');
 const { normalizeCurrency } = require('./routes/market-data-resolver');
+const { resolvePropertyCurrency } = require('./services/property-currency-resolver');
 
 // ============================================
 // 📨 IMPORT SYSTÈME DE MESSAGES D'ARRIVÉE AUTOMATIQUES
@@ -11018,11 +11019,11 @@ app.get('/api/user/profile', authenticateAny, async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT 
-        id, 
-        email, 
-        first_name, 
-        last_name, 
+      `SELECT
+        id,
+        email,
+        first_name,
+        last_name,
         company,
         account_type,
         address,
@@ -11037,8 +11038,11 @@ app.get('/api/user/profile', authenticateAny, async (req, res) => {
         vat_regime,
         vat_number,
         legal_form,
+        country,
+        default_currency,
+        locale,
         created_at
-       FROM users 
+       FROM users
        WHERE id = $1`,
       [user.id]
     );
@@ -11068,6 +11072,9 @@ app.get('/api/user/profile', authenticateAny, async (req, res) => {
       vatRegime: row.vat_regime,
       vatNumber: row.vat_number,
       legalForm: row.legal_form,
+      country: row.country,
+      defaultCurrency: row.default_currency,
+      locale: row.locale,
       createdAt: row.created_at
     });
   } catch (error) {
@@ -11123,13 +11130,16 @@ app.put('/api/user/profile', authenticateAny, upload.single('logo'), async (req,
       website,
       vatRegime,
       vatNumber,
-      legalForm
+      legalForm,
+      country,
+      defaultCurrency,
+      locale
     } = req.body;
 
     // Validation du type de compte
     if (accountType && !['individual', 'business'].includes(accountType)) {
-      return res.status(400).json({ 
-        error: 'Type de compte invalide. Doit être "individual" ou "business"' 
+      return res.status(400).json({
+        error: 'Type de compte invalide. Doit être "individual" ou "business"'
       });
     }
 
@@ -11137,10 +11147,25 @@ app.put('/api/user/profile', authenticateAny, upload.single('logo'), async (req,
     if (accountType === 'business' && siret) {
       const siretClean = siret.replace(/\s/g, '');
       if (siretClean.length !== 14 || !/^\d{14}$/.test(siretClean)) {
-        return res.status(400).json({ 
-          error: 'Le numéro SIRET doit contenir exactement 14 chiffres' 
+        return res.status(400).json({
+          error: 'Le numéro SIRET doit contenir exactement 14 chiffres'
         });
       }
+    }
+
+    // INTL-1 normalization + validation
+    // country and defaultCurrency: normalize to uppercase ('il' → 'IL', 'ils' → 'ILS')
+    // locale: kept as-is (BCP 47 is case-sensitive: language lowercase, region uppercase)
+    const countryNorm         = country         ? String(country).trim().toUpperCase()         : null;
+    const defaultCurrencyNorm = defaultCurrency ? String(defaultCurrency).trim().toUpperCase() : null;
+    if (countryNorm != null && !/^[A-Z]{2}$/.test(countryNorm)) {
+      return res.status(400).json({ error: 'country doit être un code ISO 3166-1 alpha-2 (ex: FR, IL)' });
+    }
+    if (defaultCurrencyNorm != null && !/^[A-Z]{3}$/.test(defaultCurrencyNorm)) {
+      return res.status(400).json({ error: 'defaultCurrency doit être un code ISO 4217 à 3 lettres (ex: EUR, ILS)' });
+    }
+    if (locale != null && !/^[a-z]{2}-[A-Z]{2}$/.test(locale)) {
+      return res.status(400).json({ error: 'locale doit être au format BCP 47 (ex: fr-FR, he-IL)' });
     }
 
     // Gérer le logo uploadé
@@ -11152,8 +11177,8 @@ if (req.file) {
 
     // Mise à jour dans la base de données
     const result = await pool.query(
-      `UPDATE users 
-       SET 
+      `UPDATE users
+       SET
          first_name = COALESCE($1, first_name),
          last_name = COALESCE($2, last_name),
          company = COALESCE($3, company),
@@ -11168,13 +11193,16 @@ if (req.file) {
          website = COALESCE($13, website),
          vat_regime = COALESCE($14, vat_regime),
          vat_number = COALESCE($15, vat_number),
-         legal_form = COALESCE($16, legal_form)
+         legal_form = COALESCE($16, legal_form),
+         country = COALESCE($17, country),
+         default_currency = COALESCE($18, default_currency),
+         locale = COALESCE($19, locale)
        WHERE id = $10
-       RETURNING 
-         id, 
-         email, 
-         first_name, 
-         last_name, 
+       RETURNING
+         id,
+         email,
+         first_name,
+         last_name,
          company,
          account_type,
          address,
@@ -11187,7 +11215,10 @@ if (req.file) {
          website,
          vat_regime,
          vat_number,
-         legal_form`,
+         legal_form,
+         country,
+         default_currency,
+         locale`,
       [
         firstName || null,
         lastName || null,
@@ -11204,7 +11235,10 @@ if (req.file) {
         website || null,
         vatRegime || null,
         vatNumber || null,
-        legalForm || null
+        legalForm || null,
+        countryNorm || null,
+        defaultCurrencyNorm || null,
+        locale || null
       ]
     );
 
@@ -11239,7 +11273,10 @@ if (req.file) {
         website: updated.website,
         vatRegime: updated.vat_regime,
         vatNumber: updated.vat_number,
-        legalForm: updated.legal_form
+        legalForm: updated.legal_form,
+        country: updated.country,
+        defaultCurrency: updated.default_currency,
+        locale: updated.locale
       }
     });
 
@@ -18970,6 +19007,15 @@ app.post('/api/properties',
       });
     }
 
+    // ✅ INTL-1D: Resolve currency before INSERT
+    // Priority: payload > user.default_currency > 'EUR'
+    const rawBodyCurrency = body.currency ? String(body.currency).trim().toUpperCase() : null;
+    if (rawBodyCurrency && !/^[A-Z]{3}$/.test(rawBodyCurrency)) {
+      return res.status(400).json({ error: 'currency doit être un code ISO 4217 à 3 lettres majuscules (ex: EUR, ILS, CHF)' });
+    }
+    const userCurrRow = await pool.query(`SELECT default_currency FROM users WHERE id = $1`, [userId]);
+    const resolvedCurrency = resolvePropertyCurrency(rawBodyCurrency, userCurrRow.rows[0]?.default_currency);
+
     // ✅ INSERT si elle n'existe pas
     console.log('🆕 INSERT - Création nouvelle propriété...');
 
@@ -18983,7 +19029,7 @@ app.post('/api/properties',
          base_price, weekend_price,
          cleaning_fee, tourist_tax_per_night, concierge_pct,
          max_guests, bedrooms, beds, bathrooms, internal_name,
-         airbnb_commission_pct, booking_commission_pct
+         airbnb_commission_pct, booking_commission_pct, currency
        )
        VALUES (
          $1, $2, $3, $4, $5,
@@ -18995,7 +19041,7 @@ app.post('/api/properties',
          $18, $19, $20, $21, $22,
          $23, $24, $25, $26, $27,
          $28, $29, $30, $31, $32,
-         $33, $34
+         $33, $34, $35
        )`,
       [
         id,
@@ -19031,7 +19077,8 @@ app.post('/api/properties',
         bathrooms != null && bathrooms !== '' ? parseInt(bathrooms, 10) : null,
         internal_name != null && String(internal_name).trim() !== '' ? String(internal_name).trim() : null,
         body.airbnbCommissionPct != null && body.airbnbCommissionPct !== '' ? parseFloat(body.airbnbCommissionPct) : 3,
-        body.bookingCommissionPct != null && body.bookingCommissionPct !== '' ? parseFloat(body.bookingCommissionPct) : 15
+        body.bookingCommissionPct != null && body.bookingCommissionPct !== '' ? parseFloat(body.bookingCommissionPct) : 15,
+        resolvedCurrency
       ]
     );
 
@@ -38359,6 +38406,24 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS vat_regime TEXT`);   // 'assujetti' | 'franchise'
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS vat_number TEXT`);   // N° TVA intracommunautaire
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS legal_form TEXT`);   // SAS, SARL, SCI, EI, micro...
+    // INTL-1B — Account Currency Foundation
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT DEFAULT 'FR'
+      CONSTRAINT chk_users_country CHECK (country IS NULL OR country ~ '^[A-Z]{2}$')`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS default_currency TEXT DEFAULT 'EUR'
+      CONSTRAINT chk_users_default_currency CHECK (default_currency IS NULL OR default_currency ~ '^[A-Z]{3}$')`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS locale TEXT DEFAULT 'fr-FR'
+      CONSTRAINT chk_users_locale CHECK (locale IS NULL OR locale ~ '^[a-z]{2}-[A-Z]{2}$')`);
+    // Idempotent: set DEFAULT in case columns already existed without a default
+    await pool.query(`ALTER TABLE users ALTER COLUMN country SET DEFAULT 'FR'`);
+    await pool.query(`ALTER TABLE users ALTER COLUMN default_currency SET DEFAULT 'EUR'`);
+    await pool.query(`ALTER TABLE users ALTER COLUMN locale SET DEFAULT 'fr-FR'`);
+    // Backfill historical accounts (rows created before this migration)
+    await pool.query(`UPDATE users SET country = 'FR' WHERE country IS NULL`);
+    await pool.query(`UPDATE users SET default_currency = 'EUR' WHERE default_currency IS NULL`);
+    await pool.query(`UPDATE users SET locale = 'fr-FR' WHERE locale IS NULL`);
+    // INTL-1C — Backfill properties.currency (column already exists from P1.1-B)
+    await pool.query(`UPDATE properties SET currency = 'EUR' WHERE currency IS NULL`);
+    console.log('✅ INTL-1 migrations OK');
   } catch(e) {
     console.error('❌ Migration debours:', e.message);
   }

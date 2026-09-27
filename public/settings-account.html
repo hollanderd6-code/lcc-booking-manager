@@ -1424,6 +1424,42 @@ html[data-theme-v3="1"] .subscription-card {
 <label for="profileWebsite">Site internet</label>
 <input id="profileWebsite" placeholder="www.monentreprise.fr" type="text"/>
 </div>
+<div class="form-row-inline">
+<div class="form-row">
+<label for="profileCountry">Pays</label>
+<select id="profileCountry" style="width:100%;padding:8px 10px;border:1px solid var(--border-color);border-radius:8px;font-size:13px;background:#fff;">
+  <option value="">-- Sélectionner --</option>
+  <option value="FR">France</option>
+  <option value="BE">Belgique</option>
+  <option value="CH">Suisse</option>
+  <option value="LU">Luxembourg</option>
+  <option value="DE">Allemagne</option>
+  <option value="ES">Espagne</option>
+  <option value="IT">Italie</option>
+  <option value="PT">Portugal</option>
+  <option value="NL">Pays-Bas</option>
+  <option value="IL">Israël</option>
+  <option value="GB">Royaume-Uni</option>
+  <option value="US">États-Unis</option>
+</select>
+<p class="settings-hint">Code ISO 3166-1 alpha-2. Utilisé pour les nouveaux logements.</p>
+</div>
+<div class="form-row">
+<label for="profileDefaultCurrency">Devise par défaut</label>
+<select id="profileDefaultCurrency" style="width:100%;padding:8px 10px;border:1px solid var(--border-color);border-radius:8px;font-size:13px;background:#fff;">
+  <option value="">-- Sélectionner --</option>
+  <option value="EUR">EUR — Euro</option>
+  <option value="CHF">CHF — Franc suisse</option>
+  <option value="GBP">GBP — Livre sterling</option>
+  <option value="USD">USD — Dollar US</option>
+  <option value="ILS">ILS — Shekel israélien</option>
+  <option value="SEK">SEK — Couronne suédoise</option>
+  <option value="NOK">NOK — Couronne norvégienne</option>
+  <option value="DKK">DKK — Couronne danoise</option>
+</select>
+<p class="settings-hint">Appliquée aux nouveaux logements uniquement. Ne modifie pas les logements existants.</p>
+</div>
+</div>
 
 <!-- Champs personnalisés -->
 <div class="form-row" style="border-top:1px solid var(--border-color);padding-top:16px;margin-top:4px;">
@@ -2460,6 +2496,10 @@ if (logoInput && logoPreview) {
   if (phoneInput && profile.phone)         phoneInput.value         = profile.phone;
   if (invoiceEmailInput && profile.invoiceEmail) invoiceEmailInput.value = profile.invoiceEmail;
   if (websiteInput && profile.website)     websiteInput.value       = profile.website;
+  const countryInput          = document.getElementById('profileCountry');
+  const defaultCurrencyInput  = document.getElementById('profileDefaultCurrency');
+  if (countryInput && profile.country)               countryInput.value          = profile.country;
+  if (defaultCurrencyInput && profile.defaultCurrency) defaultCurrencyInput.value = profile.defaultCurrency;
   // Champs personnalisés — vider d'abord pour éviter les doublons au rechargement
   const existingList = document.getElementById('customFieldsList');
   if (existingList) existingList.innerHTML = '';
@@ -2535,6 +2575,10 @@ if (logoInput && logoPreview) {
     formData.append('phone', phoneVal.trim());
     formData.append('invoiceEmail', invEmailVal.trim());
     formData.append('website', websiteVal.trim());
+    const countryVal         = (document.getElementById('profileCountry') || {}).value || '';
+    const defaultCurrencyVal = (document.getElementById('profileDefaultCurrency') || {}).value || '';
+    if (countryVal)         formData.append('country', countryVal);
+    if (defaultCurrencyVal) formData.append('defaultCurrency', defaultCurrencyVal);
     // Champs personnalisés
     const customFields = getCustomFields();
     formData.append('customFields', JSON.stringify(customFields));
@@ -2558,6 +2602,8 @@ if (logoInput && logoPreview) {
       phone: phoneVal.trim(),
       invoiceEmail: invEmailVal.trim(),
       website: websiteVal.trim(),
+      country: countryVal,
+      defaultCurrency: defaultCurrencyVal,
       customFields: customFields
     };
 
