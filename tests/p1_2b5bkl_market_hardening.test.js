@@ -953,3 +953,276 @@ describe('L-I: integration — L modules on K result', () => {
     assert.equal(r.policy, 'INSUFFICIENT_EVIDENCE');
   });
 });
+
+// ── L-J: L-FIX regression — productionSignal scope + _airbnbUnique handoff ───
+
+describe('L-J: L-FIX regression tests', () => {
+
+  // ── J1-J2: productionSignal scope bug (Phase 9 ReferenceError) ───────────────
+
+  it('L-J01: analyzeProductionSignalSanity accepts prodSignal object without throwing', () => {
+    // Validates that calling the function with a proper object (like prodSignal from DB)
+    // does not raise a ReferenceError — regression for the `productionSignal` vs `prodSignal` bug
+    const prodSignal = {
+      median_price:     345.45,
+      price_p25:        123.25,
+      price_p75:        462.18,
+      occupancy_rate:   0,
+      comparable_count: 93,
+      tension_level:    'very_low',
+      data_source:      'brightdata_live',
+      scraped_at:       new Date().toISOString(),
+    };
+    assert.doesNotThrow(() => {
+      analyzeProductionSignalSanity({
+        productionSignal: prodSignal,
+        shadowConsensus: 80,
+      });
+    });
+  });
+
+  it('L-J02: Phase 9 with null production signal does not throw', () => {
+    assert.doesNotThrow(() => {
+      analyzeProductionSignalSanity({ productionSignal: null, shadowConsensus: 80 });
+    });
+    const r = analyzeProductionSignalSanity({ productionSignal: null, shadowConsensus: 80 });
+    assert.equal(r.available, false);
+    assert.equal(r.vsConsensus.classification, 'INSUFFICIENT_DATA');
+  });
+
+  // ── J3-J7: _airbnbUnique handoff — unstable Airbnb must reach diagnostic ─────
+
+  it('L-J03: _airbnbUnique populated even when Airbnb reliability is UNSTABLE_OR_INSUFFICIENT', async () => {
+    // Uses small snap (4 listings) → UNSTABLE_OR_INSUFFICIENT, but _airbnbUnique should still be populated
+    function makeSmallSnap() {
+      return Array.from({ length: 4 }, (_, i) =>
+        ({ price: 100+i*10, latitude: TARGET_LAT+0.001*i, longitude: TARGET_LON,
+           providerListingId: 'sm'+i, category: 'entire_place', guests: 4,
+           isBooked: false, bedrooms: null, availableDates: [] })
+      );
+    }
+    let call = 0;
+    const airbnbScrape = async () => {
+      const listings = makeSmallSnap();
+      call++;
+      return { snapshotId: 'test-'+call, listings, diagnostics: {} };
+    };
+    const bookingScrape = async () => ({
+      listings: [], isMock: false, provider: 'brightdata_booking',
+      dataSource: 'brightdata_booking_live', diagnostics: { requestedNights: 3 },
+    });
+    const r = await runShadowMarketEngine({
+      targetLat: TARGET_LAT, targetLon: TARGET_LON,
+      targetGuests: 4, targetBedrooms: 2, targetPropertyType: 'entire_place',
+      location: 'Paris, France', currency: CURRENCY,
+      checkIn: CHECK_IN, checkOut: CHECK_OUT, today: TODAY,
+      _airbnbScrape: airbnbScrape, _bookingScrape: bookingScrape,
+    });
+    // Airbnb must be unstable (only 4 listings, below MIN_ABC_COMPARABLES=8)
+    assert.notEqual(r.AIRBNB_RELIABILITY_STATUS, 'STABLE_LOCAL_POOL');
+    // _airbnbUnique must still be populated (not empty [])
+    assert.ok(Array.isArray(r._airbnbUnique));
+    assert.ok(r._airbnbUnique.length > 0,
+      `_airbnbUnique should be populated even when unstable, got length=${r._airbnbUnique.length}`);
+  });
+
+  it('L-J04: _airbnbUnique populated for stable Airbnb too (no regression)', async () => {
+    const STABLE_SNAPS = [
+      makeStableAirbnbSnap(100), makeStableAirbnbSnap(120), makeStableAirbnbSnap(110),
+    ];
+    let call = 0;
+    const airbnbScrape = async () => {
+      const listings = STABLE_SNAPS[call] || [];
+      call++;
+      return { snapshotId: 'st-'+call, listings, diagnostics: {} };
+    };
+    const bookingScrape = async () => ({
+      listings: makeStableBookingSnap(100), isMock: false, provider: 'brightdata_booking',
+      dataSource: 'brightdata_booking_live', diagnostics: { requestedNights: 3 },
+    });
+    const r = await runShadowMarketEngine({
+      targetLat: TARGET_LAT, targetLon: TARGET_LON,
+      targetGuests: 4, targetBedrooms: 2, targetPropertyType: 'entire_place',
+      location: 'Paris, France', currency: CURRENCY,
+      checkIn: CHECK_IN, checkOut: CHECK_OUT, today: TODAY,
+      _airbnbScrape: airbnbScrape, _bookingScrape: bookingScrape,
+    });
+    assert.equal(r.AIRBNB_RELIABILITY_STATUS, 'STABLE_LOCAL_POOL');
+    assert.ok(r._airbnbUnique.length > 0);
+  });
+
+  it('L-J05: unstable Airbnb _airbnbUnique reaches diagnostic with correct price schema', async () => {
+    // 6 listings → not stable (below MIN_ABC=8) but enough for diagnostic (≥5)
+    function makeEnoughSnap(base) {
+      return Array.from({ length: 6 }, (_, i) =>
+        ({ price: base+i*5, latitude: TARGET_LAT+0.001*i, longitude: TARGET_LON,
+           providerListingId: 'en'+base+'_'+i, category: 'entire_place', guests: 4,
+           isBooked: false, bedrooms: null, availableDates: [] })
+      );
+    }
+    let call = 0;
+    const snaps = [makeEnoughSnap(100), makeEnoughSnap(105), makeEnoughSnap(103)];
+    const airbnbScrape = async () => {
+      const listings = snaps[call] || [];
+      call++;
+      return { snapshotId: 'en-'+call, listings, diagnostics: {} };
+    };
+    const bookingScrape = async () => ({
+      listings: makeStableBookingSnap(100), isMock: false, provider: 'brightdata_booking',
+      dataSource: 'brightdata_booking_live', diagnostics: { requestedNights: 3 },
+    });
+    const r = await runShadowMarketEngine({
+      targetLat: TARGET_LAT, targetLon: TARGET_LON,
+      targetGuests: 4, targetBedrooms: 2, targetPropertyType: 'entire_place',
+      location: 'Paris, France', currency: CURRENCY,
+      checkIn: CHECK_IN, checkOut: CHECK_OUT, today: TODAY,
+      _airbnbScrape: airbnbScrape, _bookingScrape: bookingScrape,
+    });
+    // Even if unstable, _airbnbUnique must have price field
+    assert.ok(r._airbnbUnique.length > 0);
+    for (const l of r._airbnbUnique) {
+      assert.ok('price' in l, 'listing must have price field');
+    }
+  });
+
+  it('L-J06: unstable Airbnb with ≥5 valid listings → diagnostic eligible', async () => {
+    // 6 unique listings with valid price+geo → diagnostic eligible even if not stable
+    const listings6 = Array.from({ length: 6 }, (_, i) =>
+      ({ price: 100+i*10, latitude: TARGET_LAT+0.001*i, longitude: TARGET_LON,
+         providerListingId: 'd6_'+i, category: 'entire_place', guests: 4,
+         isBooked: false, bedrooms: null, availableDates: [] })
+    );
+    const r = computeMarketDiagnosticCrossSource({
+      airbnbUniqueListings:  listings6,
+      bookingRawListings:    makeStableBookingSnap(80),
+      targetLat: TARGET_LAT, targetLon: TARGET_LON,
+      targetGuests: 4, targetBedrooms: 2, targetPropertyType: 'entire_place',
+    });
+    assert.equal(r.diagnosticEligibility.airbnb.eligible, true,
+      `Expected airbnb diagnostic eligible, got reason: ${r.diagnosticEligibility.airbnb.reason}`);
+  });
+
+  it('L-J07: unstable Airbnb contributing to diagnostic does NOT change consensus eligibility', async () => {
+    const listings6 = Array.from({ length: 6 }, (_, i) =>
+      ({ price: 100+i*10, latitude: TARGET_LAT+0.001*i, longitude: TARGET_LON,
+         providerListingId: 'ce'+i, category: 'entire_place', guests: 4,
+         isBooked: false, bedrooms: null, availableDates: [] })
+    );
+    const consensusElig = { included: false, reliability: 'UNSTABLE_OR_INSUFFICIENT' };
+    const r = computeMarketDiagnosticCrossSource({
+      airbnbUniqueListings:        listings6,
+      bookingRawListings:          makeStableBookingSnap(80),
+      targetLat: TARGET_LAT, targetLon: TARGET_LON,
+      airbnbConsensusEligibility:  consensusElig,
+    });
+    // Diagnostic may run, but consensusEligibility.airbnb.included must remain false
+    assert.equal(r.consensusEligibility.airbnb.included, false,
+      'Diagnostic must never upgrade consensus eligibility');
+  });
+
+  // ── J8: inputStats observability ───────────────────────────────────────────
+
+  it('L-J08: diagnostic result always exposes inputStats', () => {
+    // INSUFFICIENT_DIAGNOSTIC_SOURCE path
+    const r1 = computeMarketDiagnosticCrossSource({
+      airbnbUniqueListings: [],
+      bookingRawListings:   makeStableBookingSnap(80),
+      targetLat: TARGET_LAT, targetLon: TARGET_LON,
+    });
+    assert.ok('inputStats' in r1, 'inputStats must be present on INSUFFICIENT_DIAGNOSTIC_SOURCE');
+    assert.equal(r1.inputStats.airbnb.inputCount, 0);
+
+    // DIAGNOSTIC_AVAILABLE path
+    const listings6 = Array.from({ length: 6 }, (_, i) =>
+      ({ price: 100+i*10, latitude: TARGET_LAT+0.001*i, longitude: TARGET_LON,
+         providerListingId: 'is'+i, category: 'entire_place', guests: 4,
+         isBooked: false, bedrooms: null, availableDates: [] })
+    );
+    const r2 = computeMarketDiagnosticCrossSource({
+      airbnbUniqueListings: listings6,
+      bookingRawListings:   makeStableBookingSnap(80),
+      targetLat: TARGET_LAT, targetLon: TARGET_LON,
+    });
+    assert.ok('inputStats' in r2, 'inputStats must be present on DIAGNOSTIC_AVAILABLE');
+    assert.equal(r2.inputStats.airbnb.inputCount, 6);
+    assert.ok(r2.inputStats.airbnb.withPrice >= 6);
+    assert.ok(r2.inputStats.airbnb.withGeo >= 6);
+  });
+
+  it('L-J09: inputStats airbnb.withPrice = 0 when all price=0 → surfaced in reason', () => {
+    const zeroPriceListings = Array.from({ length: 6 }, (_, i) =>
+      ({ price: 0, latitude: TARGET_LAT+0.001*i, longitude: TARGET_LON,
+         providerListingId: 'zp'+i, category: 'entire_place', guests: 4,
+         isBooked: false, bedrooms: null, availableDates: [] })
+    );
+    const r = computeMarketDiagnosticCrossSource({
+      airbnbUniqueListings: zeroPriceListings,
+      bookingRawListings:   makeStableBookingSnap(80),
+      targetLat: TARGET_LAT, targetLon: TARGET_LON,
+    });
+    assert.equal(r.diagnosticEligibility.airbnb.eligible, false);
+    assert.equal(r.inputStats.airbnb.withPrice, 0);
+    assert.ok(r.reason.includes('insufficient_priced_listings'));
+  });
+
+  // ── J10: unstable Airbnb NEVER in consensus ───────────────────────────────
+
+  it('L-J10: unstable Airbnb diagnostic does not leak into consensus (K engine check)', async () => {
+    // 6-listing snap: not stable (< MIN_ABC_COMPARABLES=8), but diagnostic eligible
+    function makeEnoughSnap2(base) {
+      return Array.from({ length: 6 }, (_, i) =>
+        ({ price: base+i*5, latitude: TARGET_LAT+0.001*i, longitude: TARGET_LON,
+           providerListingId: 'ck'+base+'_'+i, category: 'entire_place', guests: 4,
+           isBooked: false, bedrooms: null, availableDates: [] })
+      );
+    }
+    let call = 0;
+    const snaps = [makeEnoughSnap2(100), makeEnoughSnap2(104), makeEnoughSnap2(102)];
+    const airbnbScrape = async () => {
+      const listings = snaps[call] || [];
+      call++;
+      return { snapshotId: 'ck-'+call, listings, diagnostics: {} };
+    };
+    const bookingScrape = async () => ({
+      listings: makeStableBookingSnap(100), isMock: false, provider: 'brightdata_booking',
+      dataSource: 'brightdata_booking_live', diagnostics: { requestedNights: 3 },
+    });
+    const r = await runShadowMarketEngine({
+      targetLat: TARGET_LAT, targetLon: TARGET_LON,
+      targetGuests: 4, targetBedrooms: 2, targetPropertyType: 'entire_place',
+      location: 'Paris, France', currency: CURRENCY,
+      checkIn: CHECK_IN, checkOut: CHECK_OUT, today: TODAY,
+      _airbnbScrape: airbnbScrape, _bookingScrape: bookingScrape,
+    });
+    // Airbnb must NOT be in consensus
+    assert.equal(r.MARKET_SOURCE_USAGE.airbnb.included, false,
+      'Unstable Airbnb must never appear in consensus');
+    // Even with populated _airbnbUnique
+    assert.ok(r._airbnbUnique.length > 0);
+  });
+
+  // ── J11-J13: safety — no writes introduced ───────────────────────────────
+
+  it('L-J11: actionability validator L uses prodSignal (not productionSignal)', () => {
+    const src = fs.readFileSync(path.join(__dirname, '../outils/validate-market-engine-shadow-l.js'), 'utf8');
+    // productionSignal (with no prefix) should not appear as a standalone variable
+    // The correct name is prodSignal. Check that productionSignal: prodSignal pattern is used.
+    assert.ok(src.includes('productionSignal: prodSignal'),
+      'Phase 9 must pass prodSignal as productionSignal argument');
+    assert.ok(!src.match(/analyzeProductionSignalSanity\(\s*\{[^}]*\bproductionSignal,/),
+      'productionSignal must not be used as standalone variable in analyzeProductionSignalSanity call');
+  });
+
+  it('L-J12: multidate validator uses prodSignal (not productionSignal)', () => {
+    const src = fs.readFileSync(path.join(__dirname, '../outils/validate-market-engine-multidate-l.js'), 'utf8');
+    assert.ok(src.includes('productionSignal: prodSignal'),
+      'Multidate validator must pass prodSignal as productionSignal argument');
+  });
+
+  it('L-J13: diagnostic module has no DB writes and no network', () => {
+    const src = fs.readFileSync(path.join(__dirname, '../services/market-diagnostic-cross-source.js'), 'utf8');
+    assert.ok(!src.includes(['INS', 'ERT '].join('')), 'no SQL INSERT');
+    assert.ok(!src.includes(['new', ' Pool('].join('')), 'no DB pool');
+    assert.ok(!src.includes('require(\'pg\')'), 'no pg import');
+  });
+});

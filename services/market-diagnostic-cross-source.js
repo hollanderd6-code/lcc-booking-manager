@@ -84,14 +84,42 @@ function computeMarketDiagnosticCrossSource({
   const airbnbWithPrice  = airbnbQPool.listings.filter(l => l.price > 0);
   const bookingWithPrice = bookingQPool.listings.filter(l => l.price > 0);
 
-  const airbnbHasGeo  = airbnbQPool.listings.some(
+  const airbnbWithGeoCount  = airbnbQPool.listings.filter(
     l => Number.isFinite(l.latitude) && Number.isFinite(l.longitude)
-  );
-  const bookingHasGeo = bookingQPool.listings.some(
+  ).length;
+  const bookingWithGeoCount = bookingQPool.listings.filter(
     l => Number.isFinite(l.latitude) && Number.isFinite(l.longitude)
-  );
+  ).length;
 
-  const hasTargetGeo = Number.isFinite(targetLat) && Number.isFinite(targetLon);
+  const airbnbHasGeo  = airbnbWithGeoCount  > 0;
+  const bookingHasGeo = bookingWithGeoCount > 0;
+
+  // validCount = listings with BOTH valid price AND geo (or all-price when no geo required)
+  const hasTargetGeoEarly = Number.isFinite(targetLat) && Number.isFinite(targetLon);
+  const airbnbValidCount  = hasTargetGeoEarly
+    ? airbnbQPool.listings.filter(l => l.price > 0 && Number.isFinite(l.latitude) && Number.isFinite(l.longitude)).length
+    : airbnbWithPrice.length;
+  const bookingValidCount = hasTargetGeoEarly
+    ? bookingQPool.listings.filter(l => l.price > 0 && Number.isFinite(l.latitude) && Number.isFinite(l.longitude)).length
+    : bookingWithPrice.length;
+
+  // Expose input counts for observability — surfaces "11 pooled → 0 diagnostic" immediately
+  const inputStats = {
+    airbnb: {
+      inputCount: airbnbQPool.listings.length,
+      withPrice:  airbnbWithPrice.length,
+      withGeo:    airbnbWithGeoCount,
+      validCount: airbnbValidCount,
+    },
+    booking: {
+      inputCount: bookingQPool.listings.length,
+      withPrice:  bookingWithPrice.length,
+      withGeo:    bookingWithGeoCount,
+      validCount: bookingValidCount,
+    },
+  };
+
+  const hasTargetGeo = hasTargetGeoEarly;
 
   function checkEligibility(withPrice, hasGeo, providerName) {
     if (withPrice.length < MIN_DIAGNOSTIC_COMPARABLES) {
@@ -138,6 +166,7 @@ function computeMarketDiagnosticCrossSource({
       divergenceLevel:    null,
       consensusEligibility,
       diagnosticEligibility,
+      inputStats,
       reason,
     };
   }
@@ -193,6 +222,7 @@ function computeMarketDiagnosticCrossSource({
       divergenceLevel:    null,
       consensusEligibility,
       diagnosticEligibility,
+      inputStats,
       reason:             'no_common_radius_with_min_comparables',
     };
   }
@@ -236,6 +266,7 @@ function computeMarketDiagnosticCrossSource({
     divergenceLevel:    divLevel,
     consensusEligibility,
     diagnosticEligibility,
+    inputStats,
     reason:             null,
   };
 }

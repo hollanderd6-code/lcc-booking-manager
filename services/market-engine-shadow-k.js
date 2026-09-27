@@ -240,10 +240,9 @@ async function runShadowMarketEngine(opts = {}) {
   let airbnbAtCommonListings  = [];
   let bookingAtCommonListings = [];
 
-  // Unique Airbnb listings (from quality snapshots, merged+deduped) for cross-source
-  const { uniqueListings: airbnbUnique } = airbnbStable
-    ? mergeAndDedup(qualitySnapshots)
-    : { uniqueListings: [] };
+  // Always compute unique listings — needed for diagnostic even when Airbnb is unstable.
+  // The cross-source consensus block below still gates on airbnbStable.
+  const { uniqueListings: airbnbUnique } = mergeAndDedup(qualitySnapshots);
 
   if (airbnbStable && bookingRaw && !bookingErr) {
     crossSource = selectCommonComparisonRadius(

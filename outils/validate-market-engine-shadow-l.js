@@ -278,6 +278,22 @@ async function executeMode({ name, pool, _now, _checkIn, _checkOut } = {}) {
     bookingConsensusEligibility: bookingConsensusElig,
   });
 
+  // Diagnostic input observability — visible before eligibility verdict
+  const ins = diagResult.inputStats;
+  if (ins) {
+    section('Diagnostic input counts (pre-eligibility)');
+    const ia = ins.airbnb;
+    const ib = ins.booking;
+    console.log(`  AIRBNB_DIAGNOSTIC_INPUT_COUNT:  ${ia.inputCount}`);
+    console.log(`  AIRBNB_DIAGNOSTIC_WITH_PRICE:   ${ia.withPrice}`);
+    console.log(`  AIRBNB_DIAGNOSTIC_WITH_GEO:     ${ia.withGeo}`);
+    console.log(`  AIRBNB_DIAGNOSTIC_VALID_COUNT:  ${ia.validCount}`);
+    console.log(`  BOOKING_DIAGNOSTIC_INPUT_COUNT: ${ib.inputCount}`);
+    console.log(`  BOOKING_DIAGNOSTIC_WITH_PRICE:  ${ib.withPrice}`);
+    console.log(`  BOOKING_DIAGNOSTIC_WITH_GEO:    ${ib.withGeo}`);
+    console.log(`  BOOKING_DIAGNOSTIC_VALID_COUNT: ${ib.validCount}`);
+  }
+
   console.log(`  DIAGNOSTIC_STATUS:         ${diagResult.diagnosticStatus}`);
   console.log(`  COMMON_RADIUS_KM:          ${fmt(diagResult.commonRadiusKm, ' km')}`);
 
@@ -371,7 +387,7 @@ async function executeMode({ name, pool, _now, _checkIn, _checkOut } = {}) {
   banner(9, 'PRODUCTION SANITY');
 
   const sanityResult = analyzeProductionSignalSanity({
-    productionSignal,
+    productionSignal: prodSignal,
     airbnbDiagMedian:  diagResult.airbnb?.median  ?? null,
     bookingDiagMedian: diagResult.booking?.median ?? null,
     shadowConsensus:   result.MARKET_CONSENSUS_MEDIAN,

@@ -240,7 +240,7 @@ async function executeMode({ name, pool, windowsDays = DEFAULT_WINDOWS_DAYS, _no
 
     // L4 — production sanity
     const sanityResult = analyzeProductionSignalSanity({
-      productionSignal,
+      productionSignal: prodSignal,
       airbnbDiagMedian:  diagResult.airbnb?.median  ?? null,
       bookingDiagMedian: diagResult.booking?.median ?? null,
       shadowConsensus:   result.MARKET_CONSENSUS_MEDIAN,
