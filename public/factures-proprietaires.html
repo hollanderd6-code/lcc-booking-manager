@@ -1444,7 +1444,15 @@ html[data-theme-v3="1"] .invoice-paper {
         <div><label style="font-size:12px;">Prénom du contact</label><input class="form-control" id="clientBusinessFirstName" type="text" placeholder="Optionnel"/></div>
         <div><label style="font-size:12px;">Nom du contact</label><input class="form-control" id="clientBusinessLastName" type="text" placeholder="Optionnel"/></div>
       </div>
-      <div><label style="font-size:12px;">SIRET</label><input class="form-control" id="clientSiret" type="text" placeholder="Ex: 123 456 789 00012"/></div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:8px;">
+        <div><label style="font-size:12px;">Label identifiant légal</label><input class="form-control" id="clientLegalIdentifierLabel" type="text" placeholder="Ex: SIRET, EIN, UID"/></div>
+        <div><label style="font-size:12px;">Valeur</label><input class="form-control" id="clientLegalIdentifierValue" type="text" placeholder="Ex: 123 456 789 00012"/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
+        <div><label style="font-size:12px;">Label identifiant fiscal</label><input class="form-control" id="clientTaxIdentifierLabel" type="text" placeholder="Ex: N° TVA, VAT ID"/></div>
+        <div><label style="font-size:12px;">Valeur</label><input class="form-control" id="clientTaxIdentifierValue" type="text" placeholder="Optionnel"/></div>
+      </div>
+      <input type="hidden" id="clientSiret"/>
     </div>
     <div class="form-group"><label>Email</label><input class="form-control" id="clientEmail" type="email"/></div>
     <div class="form-group"><label>Téléphone</label><input class="form-control" id="clientPhone" type="tel" placeholder="06 XX XX XX XX"/></div>
@@ -1534,6 +1542,9 @@ window.bhConfirmDanger = function(message, title) {
   let currentUser = null;
   let _invoiceCtx = { currency: 'EUR', locale: 'fr-FR', legalLabel: null, legalValue: null, taxLabel: 'TVA', vatExemptLabel: null, country: null };
   let _invoiceCtxBase = null;
+  // INTL-4.7R — stores the client identity snapshot of the currently loaded invoice.
+  // null = new invoice (use live owner_clients). Set when loading draft or read-only invoice.
+  let _currentInvoiceClientSnap = null;
 
   // Fonction pour formater les montants en français
   function formatMoney(amount) {
@@ -2495,13 +2506,27 @@ window.deleteOwnerInvoice = async function (id) {
     const logoSrc = (window.emitterProfile && window.emitterProfile.logoDataUrl) || (window.userProfile && window.userProfile.logoUrl) || '';
     const logoHtml = logoSrc ? `<img src="${logoSrc}" style="max-height:64px;max-width:140px;object-fit:contain;display:block;">` : '';
 
-    // Infos client
-    const clientAddr = client ? [
-      client.address,
-      ((client.postal_code||'') + ' ' + (client.city||'')).trim(),
-      client.country || '',
-      client.email
-    ].filter(Boolean).map(l => `<div>${escHtml(l)}</div>`).join('') : '';
+    // INTL-4.7R — snapshot authority: use only what was stored in the invoice snapshot.
+    // No live owner_clients fallback — changes to the client after invoice creation must not drift in.
+    const _cliLegalLabel = inv.client_legal_identifier_label
+      || (inv.client_siret ? 'SIRET' : null)
+      || null;
+    const _cliLegalValue = inv.client_legal_identifier_value
+      || inv.client_siret
+      || null;
+    const _cliTaxLabel = inv.client_tax_identifier_label || null;
+    const _cliTaxValue = inv.client_tax_identifier_value || null;
+    const _cliLegalLine = (_cliLegalLabel && _cliLegalValue)
+      ? `<div>${escHtml(_cliLegalLabel + ' : ' + _cliLegalValue)}</div>` : '';
+    const _cliTaxLine = (_cliTaxLabel && _cliTaxValue)
+      ? `<div>${escHtml(_cliTaxLabel + ' : ' + _cliTaxValue)}</div>` : '';
+    const clientAddr = [
+      inv.client_address || (client ? client.address : ''),
+      ((inv.client_postal_code || (client ? client.postal_code : '') || '') + ' ' + (inv.client_city || (client ? client.city : '') || '')).trim(),
+      _cliLegalLine,
+      _cliTaxLine,
+      inv.client_email || (client ? client.email : '') || ''
+    ].filter(Boolean).map(l => l.startsWith('<div>') ? l : `<div>${escHtml(l)}</div>`).join('');
 
     // Infos émetteur
     const _emLegalLine = (ep.siret && _dlCtx.legalLabel) ? escHtml(_dlCtx.legalLabel + ' : ' + ep.siret) : '';
@@ -2943,7 +2968,19 @@ if (window.userProfile && window.userProfile.logoUrl) {
     if(client) {
       const name = client.company_name || `${client.first_name} ${client.last_name}`;
       document.getElementById('previewClientName').textContent = name;
-      document.getElementById('previewClientDetails').innerHTML = `${client.address || ''}<br>${client.postal_code || ''} ${client.city || ''}`;
+      // INTL-4.7R — snapshot authority for existing invoices.
+      // Same client as loaded → use invoice snapshot (historically immutable).
+      // New invoice or intentionally changed client → use live owner_clients.
+      let _pCLegalLbl, _pCLegalVal;
+      if (editingInvoiceId && _currentInvoiceClientSnap && String(_currentInvoiceClientSnap.clientId) === String(cliId)) {
+        _pCLegalLbl = _currentInvoiceClientSnap.legalLabel;
+        _pCLegalVal = _currentInvoiceClientSnap.legalValue;
+      } else {
+        _pCLegalLbl = client.legal_identifier_label || (client.siret ? 'SIRET' : null);
+        _pCLegalVal = client.legal_identifier_value || client.siret || null;
+      }
+      const _pCLegalLine = (_pCLegalLbl && _pCLegalVal) ? `<br>${escHtml(_pCLegalLbl + ' : ' + _pCLegalVal)}` : '';
+      document.getElementById('previewClientDetails').innerHTML = `${escHtml(client.address || '')}<br>${escHtml((client.postal_code || '') + ' ' + (client.city || ''))}${_pCLegalLine}`;
     }
 
     // Dates
@@ -3210,6 +3247,7 @@ function resolveSelectedPropertyCurrency() {
       if (res.ok) {
         // Fix #1 : la facture enregistrée n'est plus la facture en cours
         editingInvoiceId = null;
+        _currentInvoiceClientSnap = null;
         isReadOnlyMode = false;
         _draftEditMode = false;
         _editingClientName = null;
@@ -3244,6 +3282,7 @@ function resolveSelectedPropertyCurrency() {
     if (banner) banner.style.display = 'none';
 
     editingInvoiceId = null;
+    _currentInvoiceClientSnap = null;
     _invoiceCtx = getOwnerInvoiceDisplayContext(null);
     _invoiceCtxBase = { ..._invoiceCtx };
     prestations = [];
@@ -3298,6 +3337,12 @@ window.editOwnerInvoiceDraft = async function(id) {
     const items = json.items || [];
     _invoiceCtx = getOwnerInvoiceDisplayContext(inv);
     _invoiceCtxBase = { ..._invoiceCtx };
+    // INTL-4.7R — cache the client identity snapshot so updatePreview() can enforce immutability
+    _currentInvoiceClientSnap = {
+      clientId: String(inv.client_id || ''),
+      legalLabel: inv.client_legal_identifier_label || (inv.client_siret ? 'SIRET' : null) || null,
+      legalValue: inv.client_legal_identifier_value || inv.client_siret || null
+    };
 
     // Mode édition (pas lecture seule)
     isReadOnlyMode = false;
@@ -3364,6 +3409,12 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     const items = json.items || [];
     _invoiceCtx = getOwnerInvoiceDisplayContext(inv);
     _invoiceCtxBase = { ..._invoiceCtx };
+    // INTL-4.7R — cache the client identity snapshot so updatePreview() can enforce immutability
+    _currentInvoiceClientSnap = {
+      clientId: String(inv.client_id || ''),
+      legalLabel: inv.client_legal_identifier_label || (inv.client_siret ? 'SIRET' : null) || null,
+      legalValue: inv.client_legal_identifier_value || inv.client_siret || null
+    };
 
     // Activer le mode lecture seule
     isReadOnlyMode = true;
@@ -3458,7 +3509,9 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
     if (radioInd) radioInd.checked = true;
     toggleClientType();
 
-    ['clientFirstName','clientLastName','clientCompanyName','clientBusinessFirstName','clientBusinessLastName','clientSiret','clientPhone','clientEmail','clientAddress','clientPostalCode','clientCity']
+    ['clientFirstName','clientLastName','clientCompanyName','clientBusinessFirstName','clientBusinessLastName',
+     'clientSiret','clientLegalIdentifierLabel','clientLegalIdentifierValue','clientTaxIdentifierLabel','clientTaxIdentifierValue',
+     'clientPhone','clientEmail','clientAddress','clientPostalCode','clientCity']
       .forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
@@ -3527,6 +3580,10 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
   document.getElementById('clientBusinessFirstName').value = client.business_first_name || client.first_name || '';
   document.getElementById('clientBusinessLastName').value = client.business_last_name || client.last_name || '';
   document.getElementById('clientSiret').value = client.siret || '';
+  document.getElementById('clientLegalIdentifierLabel').value = client.legal_identifier_label || '';
+  document.getElementById('clientLegalIdentifierValue').value = client.legal_identifier_value || '';
+  document.getElementById('clientTaxIdentifierLabel').value = client.tax_identifier_label || '';
+  document.getElementById('clientTaxIdentifierValue').value = client.tax_identifier_value || '';
   document.getElementById('clientPhone').value = client.phone || '';
   document.getElementById('clientEmail').value = client.email || '';
   document.getElementById('clientAddress').value = client.address || '';
@@ -3584,6 +3641,10 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
         lastName: isBusinessType ? document.getElementById('clientBusinessLastName').value : document.getElementById('clientLastName').value,
         companyName: document.getElementById('clientCompanyName').value,
         siret: document.getElementById('clientSiret').value,
+        legalIdentifierLabel: document.getElementById('clientLegalIdentifierLabel').value.trim() || null,
+        legalIdentifierValue: document.getElementById('clientLegalIdentifierValue').value.trim() || null,
+        taxIdentifierLabel: document.getElementById('clientTaxIdentifierLabel').value.trim() || null,
+        taxIdentifierValue: document.getElementById('clientTaxIdentifierValue').value.trim() || null,
         phone: document.getElementById('clientPhone').value,
         email: document.getElementById('clientEmail').value,
         address: document.getElementById('clientAddress').value,

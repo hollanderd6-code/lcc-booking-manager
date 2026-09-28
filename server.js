@@ -25724,7 +25724,11 @@ app.post('/api/owner-clients', authenticateAny, requireFeature('facturation_prop
       address,
       postalCode,
       city,
-      defaultCommissionRate
+      defaultCommissionRate,
+      legalIdentifierLabel,
+      legalIdentifierValue,
+      taxIdentifierLabel,
+      taxIdentifierValue
     } = req.body;
 
     // Validation simple
@@ -25748,8 +25752,12 @@ app.post('/api/owner-clients', authenticateAny, requireFeature('facturation_prop
         address,
         postal_code,
         city,
-        default_commission_rate
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+        default_commission_rate,
+        legal_identifier_label,
+        legal_identifier_value,
+        tax_identifier_label,
+        tax_identifier_value
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
       RETURNING *`,
       [
         user.id,
@@ -25763,7 +25771,11 @@ app.post('/api/owner-clients', authenticateAny, requireFeature('facturation_prop
         address || null,
         postalCode || null,
         city || null,
-        defaultCommissionRate || 20
+        defaultCommissionRate || 20,
+        legalIdentifierLabel ? String(legalIdentifierLabel).trim() : null,
+        legalIdentifierValue ? String(legalIdentifierValue).trim() : null,
+        taxIdentifierLabel ? String(taxIdentifierLabel).trim() : null,
+        taxIdentifierValue ? String(taxIdentifierValue).trim() : null
       ]
     );
 
@@ -25781,37 +25793,46 @@ app.put('/api/owner-clients/:id', authenticateAny, requireFeature('facturation_p
     const clientId = req.params.id;
     const {
       clientType, firstName, lastName, companyName,
-      email, phone, siret, address, postalCode, city, defaultCommissionRate
+      email, phone, siret, address, postalCode, city, defaultCommissionRate,
+      legalIdentifierLabel, legalIdentifierValue, taxIdentifierLabel, taxIdentifierValue
     } = req.body;
-  
+
     const result = await pool.query(`
       UPDATE owner_clients SET
-        client_type = $1, 
-        first_name = $2, 
-        last_name = $3, 
+        client_type = $1,
+        first_name = $2,
+        last_name = $3,
         company_name = $4,
         email = $5,
         phone = $6,
         siret = $7,
-        address = $8, 
-        postal_code = $9, 
+        address = $8,
+        postal_code = $9,
         city = $10,
-        default_commission_rate = $11
-      WHERE id = $12 AND user_id = $13
+        default_commission_rate = $11,
+        legal_identifier_label = $12,
+        legal_identifier_value = $13,
+        tax_identifier_label = $14,
+        tax_identifier_value = $15
+      WHERE id = $16 AND user_id = $17
       RETURNING *
     `, [
-      clientType, 
-      firstName || null, 
-      lastName || null, 
+      clientType,
+      firstName || null,
+      lastName || null,
       companyName || null,
       email || null,
       phone || null,
       siret || null,
-      address || null, 
-      postalCode || null, 
+      address || null,
+      postalCode || null,
       city || null,
       defaultCommissionRate || 20,
-      clientId, 
+      legalIdentifierLabel ? String(legalIdentifierLabel).trim() : null,
+      legalIdentifierValue ? String(legalIdentifierValue).trim() : null,
+      taxIdentifierLabel ? String(taxIdentifierLabel).trim() : null,
+      taxIdentifierValue ? String(taxIdentifierValue).trim() : null,
+      clientId,
       user.id
     ]);
 
@@ -26259,18 +26280,42 @@ app.post('/api/owner-invoices',
       if (clientCheck.rows.length === 0) resolvedClientId = null;
     }
 
+    // Read client row for identity snapshot (source of truth for generic identity)
+    let _clientRow = null;
+    if (resolvedClientId) {
+      try {
+        const _cr = await pool.query('SELECT * FROM owner_clients WHERE id = $1', [resolvedClientId]);
+        _clientRow = _cr.rows[0] || null;
+      } catch(e) { /* non-blocking — snapshot degrades gracefully */ }
+    }
+
     // Snapshot des coordonnées du client conservé directement sur la facture.
     // Indispensable pour les clients agence (client_id NULL) mais utile aussi
     // comme figeage comptable pour tous les clients.
+    // req.body fields take priority for name/address; fall back to live client row.
+    const _crName = _clientRow
+      ? (_clientRow.company_name || `${_clientRow.first_name||''} ${_clientRow.last_name||''}`.trim() || null)
+      : null;
     const snap = {
-      name:       clientName       ? String(clientName).trim()       : null,
-      address:    clientAddress    ? String(clientAddress).trim()    : null,
-      postalCode: clientPostalCode ? String(clientPostalCode).trim() : null,
-      city:       clientCity       ? String(clientCity).trim()       : null,
-      siret:      clientSiret      ? String(clientSiret).trim()      : null,
-      email:      clientEmail      ? String(clientEmail).trim()      : null,
-      phone:      clientPhone      ? String(clientPhone).trim()      : null
+      name:       (clientName       ? String(clientName).trim()       : null) || _crName,
+      address:    (clientAddress    ? String(clientAddress).trim()    : null) || (_clientRow ? _clientRow.address || null : null),
+      postalCode: (clientPostalCode ? String(clientPostalCode).trim() : null) || (_clientRow ? _clientRow.postal_code || null : null),
+      city:       (clientCity       ? String(clientCity).trim()       : null) || (_clientRow ? _clientRow.city || null : null),
+      siret:      (clientSiret      ? String(clientSiret).trim()      : null) || (_clientRow ? _clientRow.siret || null : null),
+      email:      (clientEmail      ? String(clientEmail).trim()      : null) || (_clientRow ? _clientRow.email || null : null),
+      phone:      (clientPhone      ? String(clientPhone).trim()      : null) || (_clientRow ? _clientRow.phone || null : null),
     };
+
+    // Generic client identity snapshot — source: owner_clients generic fields
+    // Legacy fallback: siret → SIRET only when generic fields absent
+    const _snapClientLegalLabel = _clientRow
+      ? (_clientRow.legal_identifier_label || (_clientRow.siret ? 'SIRET' : null))
+      : null;
+    const _snapClientLegalValue = _clientRow
+      ? (_clientRow.legal_identifier_value || _clientRow.siret || null)
+      : null;
+    const _snapClientTaxLabel = _clientRow ? (_clientRow.tax_identifier_label || null) : null;
+    const _snapClientTaxValue = _clientRow ? (_clientRow.tax_identifier_value || null) : null;
 
     await client.query('BEGIN');
 
@@ -26334,6 +26379,10 @@ app.post('/api/owner-invoices',
         issuer_snapshot_source,
         tax_label,
         vat_exempt_label,
+        client_legal_identifier_label,
+        client_legal_identifier_value,
+        client_tax_identifier_label,
+        client_tax_identifier_value,
         created_at
       ) VALUES (
         gen_random_uuid(),
@@ -26347,6 +26396,7 @@ app.post('/api/owner-invoices',
         $26,$27,$28,
         $29::jsonb,$30,
         $31,$32,
+        $33,$34,$35,$36,
         NOW()
       )
       RETURNING *
@@ -26382,7 +26432,11 @@ app.post('/api/owner-invoices',
       JSON.stringify(issuerSnapshot),
       issuerSnapshotSource,
       taxLabel,
-      vatExemptLabel
+      vatExemptLabel,
+      _snapClientLegalLabel,
+      _snapClientLegalValue,
+      _snapClientTaxLabel,
+      _snapClientTaxValue
     ]);
 
     const invoice = invoiceResult.rows[0];
@@ -26549,12 +26603,22 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     const senderPhone = _emitterIdentity.phone      || _pdfCtx.issuerPhone;
     const senderWeb   = _emitterIdentity.website    || _pdfCtx.issuerWeb;
 
-    // 🌍 INTL-4.5 — invoice snapshot fields take priority; live owner_clients only fills genuinely missing fields
+    // 🌍 INTL-4.5/4.7 — invoice snapshot fields take priority; live owner_clients only fills genuinely missing fields
     const clientName  = inv.client_name || client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim() || 'Client';
     const clientAddr  = inv.client_address || client.address || '';
     const clientCP    = inv.client_postal_code || client.postal_code || '';
     const clientCity  = inv.client_city || client.city || '';
     const clientEmail = inv.client_email || client.email || '';
+    // INTL-4.7R — snapshot authority: existing invoices must not drift when owner_clients changes.
+    // No live owner_clients fallback here — use only what was snapshotted at creation/last client change.
+    const clientLegalLabel = inv.client_legal_identifier_label
+      || (inv.client_siret ? 'SIRET' : null)
+      || null;
+    const clientLegalValue = inv.client_legal_identifier_value
+      || inv.client_siret
+      || null;
+    const clientTaxLabel = inv.client_tax_identifier_label || null;
+    const clientTaxValue = inv.client_tax_identifier_value || null;
 
     // Générer PDF avec PDFKit
     const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
@@ -26659,6 +26723,8 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     let yR = boxTop + 36;
     if (clientAddr)  { doc.text(clientAddr, col2+8, yR, {width:colW-16}); yR+=13; }
     if (clientCP||clientCity) { doc.text(`${clientCP} ${clientCity}`.trim(), col2+8, yR); yR+=13; }
+    if (clientLegalLabel && clientLegalValue) { doc.text(`${clientLegalLabel} : ${clientLegalValue}`, col2+8, yR, {width:colW-16}); yR+=13; }
+    if (clientTaxLabel && clientTaxValue)    { doc.text(`${clientTaxLabel} : ${clientTaxValue}`, col2+8, yR, {width:colW-16}); yR+=13; }
     if (clientEmail) { doc.text(clientEmail, col2+8, yR); }
 
     y = boxTop + 130;
@@ -26955,13 +27021,24 @@ app.post('/api/owner-invoices/:id/credit-note',
     }
 
     // INTL-4.4 — L'avoir hérite du contexte comptable de la facture originale.
-    // Ne pas relire users : currency/country/locale/snapshot sont des snapshots immuables.
-    // Créer la facture d'avoir (statut "invoiced" directement)
+    // INTL-4.7 — L'avoir hérite aussi du snapshot client identity de la facture originale.
+    // Ne pas relire users ni owner_clients : tous les champs sont des snapshots immuables.
     const insertResult = await client.query(`
       INSERT INTO owner_invoices (
         id,
         user_id,
         client_id,
+        client_name,
+        client_address,
+        client_postal_code,
+        client_city,
+        client_siret,
+        client_email,
+        client_phone,
+        client_legal_identifier_label,
+        client_legal_identifier_value,
+        client_tax_identifier_label,
+        client_tax_identifier_value,
         period_start,
         period_end,
         issue_date,
@@ -26991,25 +27068,38 @@ app.post('/api/owner-invoices/:id/credit-note',
       )
       VALUES (
         gen_random_uuid(),
-        $1,$2,$3,$4,
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,
+        $10,$11,$12,$13,
+        $14,$15,
         CURRENT_DATE,
-        $5,
-        $6,$7,
-        $8,$9,$10,
-        $11,$12,$13,$14,
-        $15,$16,
+        $16,
+        $17,$18,
+        $19,$20,$21,
+        $22,$23,$24,$25,
+        $26,$27,
         'invoiced',
         TRUE,
-        $17,
-        $18,$19,$20,
-        $21::jsonb,$22,
-        $23,$24,
+        $28,
+        $29,$30,$31,
+        $32::jsonb,$33,
+        $34,$35,
         NOW()
       )
       RETURNING *
     `, [
       orig.user_id,
       orig.client_id,
+      orig.client_name,
+      orig.client_address,
+      orig.client_postal_code,
+      orig.client_city,
+      orig.client_siret,
+      orig.client_email,
+      orig.client_phone,
+      orig.client_legal_identifier_label,
+      orig.client_legal_identifier_value,
+      orig.client_tax_identifier_label,
+      orig.client_tax_identifier_value,
       orig.period_start,
       orig.period_end,
       orig.due_date,
@@ -28335,7 +28425,7 @@ app.put('/api/owner-invoices/:id',
     // Vérifier que c'est un brouillon (périmètre agence inclus)
     const agencyIds = await getAgencyUserIds(req, userId);
     const checkResult = await client.query(
-      'SELECT status FROM owner_invoices WHERE id = $1 AND user_id = ANY($2::text[])',
+      'SELECT status, client_id FROM owner_invoices WHERE id = $1 AND user_id = ANY($2::text[])',
       [req.params.id, agencyIds]
     );
 
@@ -28354,7 +28444,8 @@ app.put('/api/owner-invoices/:id',
       propertyIds,
       vatApplicable, vatRate,
       discountType, discountValue,
-      notes, internalNotes
+      notes, internalNotes,
+      clientId: newClientId
     } = req.body;
 
     // Recalculer totaux
@@ -28398,6 +28489,52 @@ app.put('/api/owner-invoices/:id',
       notes, internalNotes,
       req.params.id
     ]);
+
+    // INTL-4.7R — client change on draft: re-snapshot identity from new owner_clients
+    // Only when clientId is explicitly sent AND differs from the current snapshot.
+    const _currentClientId = checkResult.rows[0].client_id;
+    if (newClientId && String(newClientId) !== String(_currentClientId)) {
+      const _ncRes = await client.query(
+        'SELECT * FROM owner_clients WHERE id = $1 AND user_id = ANY($2::text[])',
+        [newClientId, agencyIds]
+      );
+      if (_ncRes.rows.length > 0) {
+        const _nc = _ncRes.rows[0];
+        const _ncName = _nc.company_name || (`${_nc.first_name || ''} ${_nc.last_name || ''}`).trim() || null;
+        const _ncLegalLabel = _nc.legal_identifier_label || (_nc.siret ? 'SIRET' : null) || null;
+        const _ncLegalValue = _nc.legal_identifier_value || _nc.siret || null;
+        await client.query(`
+          UPDATE owner_invoices SET
+            client_id = $1,
+            client_name = $2,
+            client_address = $3,
+            client_postal_code = $4,
+            client_city = $5,
+            client_siret = $6,
+            client_email = $7,
+            client_phone = $8,
+            client_legal_identifier_label = $9,
+            client_legal_identifier_value = $10,
+            client_tax_identifier_label = $11,
+            client_tax_identifier_value = $12
+          WHERE id = $13
+        `, [
+          newClientId,
+          _ncName,
+          _nc.address || null,
+          _nc.postal_code || null,
+          _nc.city || null,
+          _nc.siret || null,
+          _nc.email || null,
+          _nc.phone || null,
+          _ncLegalLabel,
+          _ncLegalValue,
+          _nc.tax_identifier_label || null,
+          _nc.tax_identifier_value || null,
+          req.params.id
+        ]);
+      }
+    }
 
     // Supprimer anciennes lignes
     await client.query('DELETE FROM owner_invoice_items WHERE invoice_id = $1', [req.params.id]);
@@ -28629,7 +28766,7 @@ app.post('/api/owner-invoices/:id/finalize',
 // ============================================================
 // ENVOI EMAIL FACTURE PROPRIÉTAIRE
 // ============================================================
-async function sendOwnerInvoiceEmail({ invoiceNumber, issueDate, clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret, userLegalLabel, userTaxLabel, userTaxValue, userLogo, deboursPhotos, currency, locale, taxLabel, vatExemptLabel, paymentDelay, paymentMode, lateInterest }) {
+async function sendOwnerInvoiceEmail({ invoiceNumber, issueDate, clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret, clientLegalIdentifierLabel, clientLegalIdentifierValue, clientTaxIdentifierLabel, clientTaxIdentifierValue, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret, userLegalLabel, userTaxLabel, userTaxValue, userLogo, deboursPhotos, currency, locale, taxLabel, vatExemptLabel, paymentDelay, paymentMode, lateInterest }) {
   deboursPhotos = deboursPhotos || {};
   if (!clientEmail) throw new Error('Email client manquant');
   // 🌍 INTL-4.5 defaults
@@ -28745,7 +28882,11 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, issueDate, clientName, cli
     let cy2 = y + 36;
     if (clientAddress)                { doc.text(clientAddress, col2+10, cy2, { width: colW-20 }); cy2 += 13; }
     if (clientPostalCode || clientCity) { doc.text(((clientPostalCode||'')+' '+(clientCity||'')).trim(), col2+10, cy2, { width: colW-20 }); cy2 += 13; }
-    if (clientSiret)                  { doc.text('SIRET : '+clientSiret, col2+10, cy2, { width: colW-20 }); cy2 += 11; }
+    // INTL-4.7 — generic client identity: use label/value; legacy clientSiret fallback
+    const _cLegalLbl = clientLegalIdentifierLabel || (clientSiret ? 'SIRET' : null);
+    const _cLegalVal = clientLegalIdentifierValue || clientSiret || '';
+    if (_cLegalLbl && _cLegalVal) { doc.text(_cLegalLbl + ' : ' + _cLegalVal, col2+10, cy2, { width: colW-20 }); cy2 += 11; }
+    if (clientTaxIdentifierLabel && clientTaxIdentifierValue) { doc.text(clientTaxIdentifierLabel + ' : ' + clientTaxIdentifierValue, col2+10, cy2, { width: colW-20 }); cy2 += 11; }
     if (clientEmail)                  { doc.text(clientEmail, col2+10, cy2, { width: colW-20 }); cy2 += 13; }
 
     y += boxH + 16;
@@ -29062,7 +29203,12 @@ app.post('/api/owner-invoices/:id/send',
           clientAddress:  invoice.client_address || client.address || '',
           clientPostalCode: invoice.client_postal_code || client.postal_code || '',
           clientCity:     invoice.client_city || client.city || '',
-          clientSiret:    invoice.client_siret || client.siret || '',
+          clientSiret:    invoice.client_siret || '',
+          // INTL-4.7R — snapshot authority: no live owner_clients fallback for existing invoice identity
+          clientLegalIdentifierLabel: invoice.client_legal_identifier_label || (invoice.client_siret ? 'SIRET' : null) || '',
+          clientLegalIdentifierValue: invoice.client_legal_identifier_value || invoice.client_siret || '',
+          clientTaxIdentifierLabel:   invoice.client_tax_identifier_label  || '',
+          clientTaxIdentifierValue:   invoice.client_tax_identifier_value  || '',
           periodStart:    invoice.period_start,
           periodEnd:      invoice.period_end,
           totalTtc:       invoice.total_ttc,
@@ -38786,6 +38932,46 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
     console.log('✅ INTL-4.1/4.2 migrations OK');
   } catch(e) {
     console.error('❌ INTL-4.1/4.2 migration:', e.message);
+  }
+})();
+
+// ============================================================
+// 🌍 INTL-4.7 — Owner Client Identity Internationalization
+// ============================================================
+(async () => {
+  try {
+    // Schema: owner_clients — generic legal/tax identifier fields
+    await pool.query(`ALTER TABLE owner_clients ADD COLUMN IF NOT EXISTS legal_identifier_label TEXT`);
+    await pool.query(`ALTER TABLE owner_clients ADD COLUMN IF NOT EXISTS legal_identifier_value TEXT`);
+    await pool.query(`ALTER TABLE owner_clients ADD COLUMN IF NOT EXISTS tax_identifier_label TEXT`);
+    await pool.query(`ALTER TABLE owner_clients ADD COLUMN IF NOT EXISTS tax_identifier_value TEXT`);
+
+    // Schema: owner_invoices — client identity snapshot fields
+    await pool.query(`ALTER TABLE owner_invoices ADD COLUMN IF NOT EXISTS client_legal_identifier_label TEXT`);
+    await pool.query(`ALTER TABLE owner_invoices ADD COLUMN IF NOT EXISTS client_legal_identifier_value TEXT`);
+    await pool.query(`ALTER TABLE owner_invoices ADD COLUMN IF NOT EXISTS client_tax_identifier_label TEXT`);
+    await pool.query(`ALTER TABLE owner_invoices ADD COLUMN IF NOT EXISTS client_tax_identifier_value TEXT`);
+
+    // Backfill owner_clients: siret → generic legal identifier (guard: both-null only)
+    await pool.query(`UPDATE owner_clients
+      SET legal_identifier_label = 'SIRET',
+          legal_identifier_value = siret
+      WHERE siret IS NOT NULL
+        AND legal_identifier_label IS NULL
+        AND legal_identifier_value IS NULL`);
+
+    // Backfill owner_invoices: client_siret → client generic identifier snapshot
+    // Never reconstruct from live owner_clients — historical data must not drift
+    await pool.query(`UPDATE owner_invoices
+      SET client_legal_identifier_label = 'SIRET',
+          client_legal_identifier_value = client_siret
+      WHERE client_siret IS NOT NULL
+        AND client_legal_identifier_label IS NULL
+        AND client_legal_identifier_value IS NULL`);
+
+    console.log('✅ INTL-4.7 migrations OK');
+  } catch(e) {
+    console.error('❌ INTL-4.7 migration:', e.message);
   }
 })();
 
