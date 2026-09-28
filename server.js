@@ -19671,6 +19671,7 @@ app.get('/api/pricing/calendar', authenticateAny, async (req, res) => {
       }
 
       result[pid] = {
+        currency: prop.currency || 'EUR',
         basePrice,
         weekendPrice,
         prices,

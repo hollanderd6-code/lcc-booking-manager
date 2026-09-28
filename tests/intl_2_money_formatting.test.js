@@ -278,9 +278,11 @@ describe('L — Structure: wiring, no fmtEuro, r.currency propagated', () => {
     const src = fs.readFileSync(path.resolve(__dirname, '../services/money-formatter.js'), 'utf8');
     expect(src).not.toMatch(/maximumFractionDigits/);
   });
-  test('L-10 frontend money-formatter.js does NOT force maximumFractionDigits:0', () => {
+  test('L-10 fmtMoney function does NOT force maximumFractionDigits:0 (fmtMoneyCompact may)', () => {
     const src = fs.readFileSync(path.resolve(__dirname, '../public/js/money-formatter.js'), 'utf8');
-    expect(src).not.toMatch(/maximumFractionDigits/);
+    const fmtMoneyFn = src.match(/function fmtMoney\b[\s\S]+?\n\}/)?.[0] || '';
+    expect(fmtMoneyFn.length).toBeGreaterThan(0);
+    expect(fmtMoneyFn).not.toMatch(/maximumFractionDigits/);
   });
   test('L-11 dynamic-pricing-routes history query includes p.currency', () => {
     const src = fs.readFileSync(path.resolve(__dirname, '../routes/dynamic-pricing-routes.js'), 'utf8');

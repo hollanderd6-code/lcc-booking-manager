@@ -25,3 +25,28 @@ function fmtMoney(amount, currency, locale) {
     currency: safeCurrency,
   }).format(amount);
 }
+
+// Returns the narrow currency symbol for a given ISO 4217 code (e.g. 'EUR' → '€', 'ILS' → '₪').
+function getCurrencySymbol(currency) {
+  const cur = (currency && _CURRENCY_RE.test(currency)) ? currency : 'EUR';
+  try {
+    const parts = new Intl.NumberFormat('fr-FR', {
+      style: 'currency', currency: cur, currencyDisplay: 'narrowSymbol'
+    }).formatToParts(0);
+    const sym = parts.find(function(p) { return p.type === 'currency'; });
+    return sym ? sym.value : cur;
+  } catch(e) { return cur; }
+}
+
+// Compact variant for calendar cells — no decimals, narrow symbol.
+function fmtMoneyCompact(amount, currency) {
+  if (amount == null || isNaN(amount)) return '—';
+  const safeCurrency = (currency && _CURRENCY_RE.test(currency)) ? currency : 'EUR';
+  return new Intl.NumberFormat('fr-FR', {
+    style:                 'currency',
+    currency:              safeCurrency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+    currencyDisplay:       'narrowSymbol',
+  }).format(amount);
+}

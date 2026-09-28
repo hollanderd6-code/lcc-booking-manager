@@ -14,6 +14,7 @@
 
 <!-- Script auth + user + logout -->
 <script src="/js/auth-fetch.js?v=cd78753d"></script>
+<script src="/js/money-formatter.js"></script>
 <script>
     (function () {
       const token = localStorage.getItem('lcc_token');
@@ -1420,7 +1421,7 @@ html[data-theme-v3="1"] .sidebar {
 </label>
 <div class="input-with-suffix">
 <input id="propertyDeposit" min="0" placeholder="Laisser vide si aucune" step="1" type="number"/>
-<span>€</span>
+<span class="prop-cur">€</span>
 </div>
 </div>
 <div class="form-group" id="depositReleaseDaysGroup">
@@ -1465,7 +1466,7 @@ html[data-theme-v3="1"] .sidebar {
     <label for="upsellLatePrice"><span>Tarif au-delà</span></label>
     <div class="input-with-suffix">
       <input id="upsellLatePrice" min="0" step="0.5" type="number" placeholder="Ex: 10"/>
-      <span>€/h</span>
+      <span class="prop-cur" data-suffix="/h">€/h</span>
     </div>
   </div>
   <div class="form-group">
@@ -1496,7 +1497,7 @@ html[data-theme-v3="1"] .sidebar {
     <label for="upsellEarlyPrice"><span>Tarif au-delà</span></label>
     <div class="input-with-suffix">
       <input id="upsellEarlyPrice" min="0" step="0.5" type="number" placeholder="Ex: 10"/>
-      <span>€/h</span>
+      <span class="prop-cur" data-suffix="/h">€/h</span>
     </div>
   </div>
   <div class="form-group">
@@ -1520,7 +1521,7 @@ html[data-theme-v3="1"] .sidebar {
     <label for="upsellBasketPrice"><span>Prix du panier</span></label>
     <div class="input-with-suffix">
       <input id="upsellBasketPrice" min="0" step="0.5" type="number" placeholder="Ex: 25"/>
-      <span>€</span>
+      <span class="prop-cur">€</span>
     </div>
   </div>
   <div class="form-group" style="grid-column:1 / -1;">
@@ -1563,6 +1564,28 @@ html[data-theme-v3="1"] .sidebar {
 </div>
 </div>
 
+<!-- ✅ SECTION : DEVISE DU LOGEMENT -->
+<div class="form-group" style="margin-top:12px;">
+  <label for="propertyCurrency">
+    <i class="fas fa-coins"></i>
+    <span>Devise du logement</span>
+    <span class="bh-tooltip-wrap"><i class="bh-tooltip-icon">?</i><span class="bh-tooltip-box">Devise utilisée pour l'affichage des prix de ce logement. Chaque logement peut avoir une devise indépendante.</span></span>
+  </label>
+  <select id="propertyCurrency" class="form-control" onchange="onPropertyCurrencyChange()">
+    <option value="EUR">EUR — Euro (€)</option>
+    <option value="CHF">CHF — Franc suisse (CHF)</option>
+    <option value="GBP">GBP — Livre sterling (£)</option>
+    <option value="USD">USD — Dollar américain ($)</option>
+    <option value="ILS">ILS — Shekel israélien (₪)</option>
+    <option value="SEK">SEK — Couronne suédoise (kr)</option>
+    <option value="NOK">NOK — Couronne norvégienne (kr)</option>
+    <option value="DKK">DKK — Couronne danoise (kr)</option>
+  </select>
+  <div id="propertyCurrencyWarning" style="display:none;margin-top:6px;padding:8px 10px;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;font-size:12px;color:#92400e;">
+    <i class="fas fa-triangle-exclamation"></i> Modifier la devise n'ajuste pas les montants saisis — vérifiez vos tarifs ci-dessous.
+  </div>
+</div>
+
 <!-- ✅ SECTION : TARIFICATION PAR NUIT -->
 <div class="form-grid-2">
 <div class="form-group">
@@ -1573,7 +1596,7 @@ html[data-theme-v3="1"] .sidebar {
 </label>
 <div class="input-with-suffix">
 <input id="propertyBasePrice" min="0" placeholder="Ex: 75" step="1" type="number"/>
-<span>€</span>
+<span class="prop-cur">€</span>
 </div>
 <small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Affiché sur le calendrier (jours de semaine)</small>
 </div>
@@ -1584,7 +1607,7 @@ html[data-theme-v3="1"] .sidebar {
 </label>
 <div class="input-with-suffix">
 <input id="propertyWeekendPrice" min="0" placeholder="Ex: 90" step="1" type="number"/>
-<span>€</span>
+<span class="prop-cur">€</span>
 </div>
 <small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Nuits du vendredi et du samedi (laisser vide = même tarif)</small>
 </div>
@@ -1600,7 +1623,7 @@ html[data-theme-v3="1"] .sidebar {
 </label>
 <div class="input-with-suffix">
 <input id="propertyCleaningFee" min="0" placeholder="Ex: 40" step="1" type="number"/>
-<span>€</span>
+<span class="prop-cur">€</span>
 </div>
 <small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Par séjour (pour le reporting)</small>
 </div>
@@ -1612,7 +1635,7 @@ html[data-theme-v3="1"] .sidebar {
 </label>
 <div class="input-with-suffix">
 <input id="propertyTouristTax" min="0" placeholder="Ex: 0.83" step="0.01" type="number"/>
-<span>€/nuit/pers</span>
+<span class="prop-cur" data-suffix="/nuit/pers">€/nuit/pers</span>
 </div>
 <small style="display:block;margin-top:4px;font-size:11px;color:#64748b;">Par nuit par voyageur</small>
 </div>

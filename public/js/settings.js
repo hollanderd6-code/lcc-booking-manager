@@ -17,6 +17,28 @@ function getBaseUrl() {
 let properties = [];
 let currentEditingProperty = null;
 let ownerClients = [];
+let _originalPropertyCurrency = null;
+
+// ========================================
+// CURRENCY HELPERS (PMS-INTL-2)
+// ========================================
+
+function updatePropertyCurrencySymbols(currency) {
+  const sym = getCurrencySymbol(currency || 'EUR');
+  document.querySelectorAll('.prop-cur').forEach(function(el) {
+    const suffix = el.dataset.suffix || '';
+    el.textContent = sym + suffix;
+  });
+}
+
+function onPropertyCurrencyChange() {
+  const sel = document.getElementById('propertyCurrency');
+  if (!sel) return;
+  updatePropertyCurrencySymbols(sel.value);
+  const warn = document.getElementById('propertyCurrencyWarning');
+  const pid = document.getElementById('propertyId')?.value;
+  if (warn) warn.style.display = pid ? 'block' : 'none';
+}
 
 // ========================================
 // GROUPES DE LOGEMENTS — DB-SYNCED
@@ -728,6 +750,8 @@ async function saveProperty(event) {
 
 const ownerId = document.getElementById('propertyOwnerId')?.value ?? '';
 formData.append('ownerId', ownerId); // Toujours envoyer, même vide (pour effacer)
+const currencyVal = document.getElementById('propertyCurrency')?.value || 'EUR';
+formData.append('currency', currencyVal);
   if (photoInput && photoInput.files && photoInput.files[0]) {
     formData.append('photo', photoInput.files[0]);
   }
@@ -932,6 +956,13 @@ function resetPropertyForm() {
   // ✅ Reset raccourcis messages
   const qrList = document.getElementById('quickRepliesList');
   if (qrList) qrList.innerHTML = '';
+  // Reset devise
+  const curSel = document.getElementById('propertyCurrency');
+  if (curSel) curSel.value = 'EUR';
+  const curWarn = document.getElementById('propertyCurrencyWarning');
+  if (curWarn) curWarn.style.display = 'none';
+  _originalPropertyCurrency = null;
+  updatePropertyCurrencySymbols('EUR');
 }
 
 function openAddPropertyModal() {
@@ -939,6 +970,11 @@ function openAddPropertyModal() {
   const modal = document.getElementById("editPropertyModal");
   const titleEl = document.getElementById("modalTitle");
   if (titleEl) titleEl.querySelector("span").textContent = "Ajouter un logement";
+
+  const defaultCur = (window.userProfile && window.userProfile.defaultCurrency) || 'EUR';
+  const curSel = document.getElementById('propertyCurrency');
+  if (curSel) curSel.value = defaultCur;
+  updatePropertyCurrencySymbols(defaultCur);
 
   if (modal) modal.classList.add("active");
 }
@@ -991,6 +1027,12 @@ function duplicateProperty(propertyId) {
   setVal('propertyConciergePct', property.conciergePct ?? property.concierge_pct ?? '');
   setVal('propertyAirbnbCommissionPct', property.airbnbCommissionPct ?? property.airbnb_commission_pct ?? '3');
   setVal('propertyBookingCommissionPct', property.bookingCommissionPct ?? property.booking_commission_pct ?? '15');
+
+  // Devise
+  const dupCur = property.currency || 'EUR';
+  const dupCurSel = document.getElementById('propertyCurrency');
+  if (dupCurSel) dupCurSel.value = dupCur;
+  updatePropertyCurrencySymbols(dupCur);
 
   // Capacité
   setVal('propertyMaxGuests', property.maxGuests ?? property.max_guests ?? '');
@@ -1134,6 +1176,15 @@ function openEditPropertyModal(propertyId) {
     const bc = property.bookingCommissionPct ?? property.booking_commission_pct;
     document.getElementById("propertyBookingCommissionPct").value = bc != null ? bc : "15";
   }
+
+  // Devise
+  const editCur = property.currency || 'EUR';
+  _originalPropertyCurrency = editCur;
+  const editCurSel = document.getElementById('propertyCurrency');
+  if (editCurSel) editCurSel.value = editCur;
+  const editCurWarn = document.getElementById('propertyCurrencyWarning');
+  if (editCurWarn) editCurWarn.style.display = 'none';
+  updatePropertyCurrencySymbols(editCur);
 
   // Capacité d'accueil
   if (document.getElementById("propertyMaxGuests"))

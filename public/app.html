@@ -51,6 +51,7 @@
 <!-- Simplification mobile : KPI + calendrier uniquement -->
 
 <script src="/js/auth-fetch.js?v=cd78753d"></script>
+<script src="/js/money-formatter.js"></script>
 
     <!-- 📱 Styles Mobile Natifs -->
 
@@ -8003,7 +8004,7 @@ try {
         if (inMonth2 && !compactMode) {
           var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;pointer-events:none;color:'+(isWknd2?'#B7791F':'#0E3B2E')+';');
           priceEl.className = 'cell-price';
-          if (prop.basePrice) priceEl.textContent = Math.round(isWknd2?(prop.weekendPrice||prop.basePrice):prop.basePrice);
+          if (prop.basePrice) priceEl.textContent = fmtMoneyCompact(Math.round(isWknd2?(prop.weekendPrice||prop.basePrice):prop.basePrice), prop.currency||'EUR');
           dcell.appendChild(priceEl);
         }
 
@@ -8348,7 +8349,7 @@ try {
       // Normalize properties
       if (properties.length) {
         state.properties = properties.map(function(p,i) {
-          return { id: p.id!=null?String(p.id):String(i), name: p.internalName||p.internal_name||p.name||('Logement '+(i+1)), basePrice: p.basePrice||p.base_price||p.defaultPrice||null, weekendPrice: p.weekendPrice||p.weekend_price||null, color: p.color||'#0E3B2E' };
+          return { id: p.id!=null?String(p.id):String(i), name: p.internalName||p.internal_name||p.name||('Logement '+(i+1)), basePrice: p.basePrice||p.base_price||p.defaultPrice||null, weekendPrice: p.weekendPrice||p.weekend_price||null, color: p.color||'#0E3B2E', currency: p.currency||'EUR' };
         });
       } else {
         var map={};
@@ -8420,7 +8421,7 @@ try {
     <div class="form-group"><label>Logement</label><select class="form-control" id="dayPricePropertySelect"></select></div>
     <div class="form-group"><label for="dayPriceFrom">Du</label><input class="form-control" id="dayPriceFrom" type="date"/></div>
     <div class="form-group"><label for="dayPriceTo">Au</label><input class="form-control" id="dayPriceTo" type="date"/></div>
-    <div class="form-group"><label for="dayPriceValue">Prix (€) — vide = prix de base</label><input class="form-control" id="dayPriceValue" type="number" min="0" placeholder="ex: 85"/></div>
+    <div class="form-group"><label for="dayPriceValue">Prix (<span id="dayPriceCurrencySymbol">€</span>) — vide = prix de base</label><input class="form-control" id="dayPriceValue" type="number" min="0" placeholder="ex: 85"/></div>
     <div class="form-group"><label for="dayMinStayValue">Nuitées minimum — vide = réglage par défaut</label><input class="form-control" id="dayMinStayValue" type="number" min="1" max="30" placeholder="ex: 2"/><small style="color:#6B7280;margin-top:4px;display:block">⚠️ Sur Booking.com, vérifiez que la case « Restrictions » est cochée dans le calendrier de l'extranet pour que le minimum de nuits soit appliqué.</small></div>
   </div>
   <div id="tabContentResa" style="display:none;overflow-y:auto;padding:24px 20px;text-align:center;">
@@ -8794,7 +8795,17 @@ try {
 // Script complet pour le blocage de dates
 (function() {
   let propertiesLoaded = false;
-  
+
+  function updateDayPriceCurrencySymbol(fallbackPid) {
+    var symEl = document.getElementById('dayPriceCurrencySymbol');
+    if (!symEl) return;
+    var sel = document.getElementById('dayPricePropertySelect');
+    var pid = (sel && sel.value) || fallbackPid || '';
+    var props = window.LCC_PROPERTIES || (window.calendarState && window.calendarState.properties) || [];
+    var prop = props.find(function(p) { return String(p.id) === String(pid); });
+    symEl.textContent = getCurrencySymbol((prop && prop.currency) || 'EUR');
+  }
+
   // Remplir la liste des logements
   function loadPropertiesInBlockModal() {
     const token = localStorage.getItem('lcc_token');
@@ -8821,6 +8832,8 @@ try {
 
   document.addEventListener('DOMContentLoaded', function() {
     loadPropertiesInBlockModal();
+    var dpSel = document.getElementById('dayPricePropertySelect');
+    if (dpSel) dpSel.addEventListener('change', function() { updateDayPriceCurrencySymbol(); });
   });
   
   window._currentBlockId = null;
@@ -8843,6 +8856,7 @@ try {
     ['blockStartDate','dayPriceFrom'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=dateStr;});
     ['blockEndDate','dayPriceTo'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=endStr;});
     ['blockPropertySelect','dayPricePropertySelect'].forEach(function(id){var s=document.getElementById(id);if(s&&propertyId)s.value=propertyId;});
+    updateDayPriceCurrencySymbol(propertyId);
     if (blockId) { switchBlockTab('unblock'); } else { switchBlockTab('block'); }
   };
 
@@ -9015,13 +9029,13 @@ try {
 
     <!-- Prix actuel -->
     <div style="background:#F5F2EC;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
-      <label style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px;">
-        <i class="fas fa-tag"></i> Prix de cette nuit (€)
+      <label id="cellPriceLabel" style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px;">
+        <i class="fas fa-tag"></i> Prix de cette nuit
       </label>
       <div style="display:flex;align-items:center;gap:10px;">
         <input id="cellPriceInput" type="number" min="0" step="1" placeholder="Ex: 90"
           style="flex:1;padding:10px 14px;border:1.5px solid #E8E0D0;border-radius:10px;font-size:16px;font-weight:700;color:#0D1117;background:white;outline:none;font-family:'DM Sans',sans-serif;" />
-        <span style="font-size:13px;color:#6B7280;">€</span>
+        <span id="cellPriceCurrencySymbol" style="font-size:13px;color:#6B7280;">€</span>
       </div>
       <div style="font-size:11px;color:#9CA3AF;margin-top:6px;">Laissez vide pour utiliser le tarif par défaut du logement</div>
     </div>
@@ -9160,7 +9174,7 @@ window.applyPricingRulesToCells = function() {
       if (result.hasRule) {
         cell.classList.add('has-rule');
         if (priceEl) {
-          priceEl.textContent = Math.round(result.price);
+          priceEl.textContent = fmtMoneyCompact(Math.round(result.price), prop.currency||'EUR');
           priceEl.classList.remove('cell-price-override');
         }
       } else {
@@ -9224,26 +9238,27 @@ window.applyPricingOverridesFromCache = function() {
       var propId = cell.getAttribute('data-property-id');
       var cacheKey = propId + '_' + date;
       var priceEl = cell.querySelector('.cell-price');
+      var _allProps = window.LCC_PROPERTIES || window.allProperties || [];
+      var _prop = _allProps.find(function(p) { return String(p.id) === String(propId); });
+      var _cur = (_prop && _prop.currency) || 'EUR';
       if (overrides[cacheKey] != null) {
         if (priceEl) {
-          priceEl.textContent = Math.round(overrides[cacheKey]);
+          priceEl.textContent = fmtMoneyCompact(Math.round(overrides[cacheKey]), _cur);
           priceEl.classList.add('cell-price-override');
         } else if (!cell.querySelector('.booking-block')) {
           var newEl = document.createElement('span');
           newEl.className = 'cell-price cell-price-override';
-          newEl.textContent = Math.round(overrides[cacheKey]);
+          newEl.textContent = fmtMoneyCompact(Math.round(overrides[cacheKey]), _cur);
           cell.appendChild(newEl);
         }
       } else if (priceEl && priceEl.classList.contains('cell-price-override')) {
         priceEl.classList.remove('cell-price-override');
-        var props = window.LCC_PROPERTIES || window.allProperties || [];
-        var prop = props.find(function(p) { return String(p.id) === String(propId); });
-        if (prop) {
+        if (_prop) {
           var d = new Date(date + 'T12:00:00');
           var dow = d.getDay();
           var isPremium = (dow === 5 || dow === 6);
-          var defPrice = (isPremium && prop.weekendPrice != null) ? prop.weekendPrice : (prop.basePrice != null ? prop.basePrice : null);
-          priceEl.textContent = defPrice !== null ? Math.round(defPrice) : '';
+          var defPrice = (isPremium && _prop.weekendPrice != null) ? _prop.weekendPrice : (_prop.basePrice != null ? _prop.basePrice : null);
+          priceEl.textContent = defPrice !== null ? fmtMoneyCompact(Math.round(defPrice), _cur) : '';
         } else { priceEl.textContent = ''; }
       }
     });
@@ -9316,6 +9331,13 @@ window.loadPricingOverrides = async function(properties) {
     var titleEl = document.getElementById('cellModalTitle');
     titleEl.textContent = prop ? prop.name : 'Options du jour';
 
+    var _symEl = document.getElementById('cellPriceCurrencySymbol');
+    if (_symEl && prop && prop.currency) {
+      _symEl.textContent = getCurrencySymbol(prop.currency);
+    } else if (_symEl) {
+      _symEl.textContent = '€';
+    }
+
     document.getElementById('cellModal').style.display = 'flex';
     setTimeout(function() { input.focus(); input.select(); }, 100);
 
@@ -9381,30 +9403,31 @@ window.loadPricingOverrides = async function(properties) {
       // Mettre à jour l'affichage immédiatement
       var selector = '.calendar-cell[data-date="' + _cellDate + '"][data-property-id="' + _cellPropertyId + '"]';
       var cell = document.querySelector(selector);
+      var _saveProps = window.LCC_PROPERTIES || window.allProperties || [];
+      var _saveProp = _saveProps.find(function(p) { return String(p.id) === String(_cellPropertyId); });
+      var _saveCur = (_saveProp && _saveProp.currency) || 'EUR';
       if (cell) {
         var priceEl = cell.querySelector('.cell-price');
         if (priceToSend !== null) {
           if (priceEl) {
-            priceEl.textContent = priceToSend;
+            priceEl.textContent = fmtMoneyCompact(priceToSend, _saveCur);
             priceEl.classList.add('cell-price-override');
           } else {
             var newEl = document.createElement('span');
             newEl.className = 'cell-price cell-price-override';
-            newEl.textContent = priceToSend;
+            newEl.textContent = fmtMoneyCompact(priceToSend, _saveCur);
             cell.appendChild(newEl);
           }
         } else {
           // Supprimer : revenir au prix par défaut du logement
           if (priceEl) {
-            var props = window.LCC_PROPERTIES || window.allProperties || [];
-            var prop = props.find(function(p) { return String(p.id) === String(_cellPropertyId); });
             var d2 = new Date(_cellDate + 'T12:00:00');
             var isPremium2 = (d2.getDay() === 5 || d2.getDay() === 6);
-            var defPrice = prop
-              ? ((isPremium2 && prop.weekendPrice != null) ? prop.weekendPrice : prop.basePrice)
+            var defPrice = _saveProp
+              ? ((isPremium2 && _saveProp.weekendPrice != null) ? _saveProp.weekendPrice : _saveProp.basePrice)
               : null;
             priceEl.classList.remove('cell-price-override');
-            priceEl.textContent = defPrice !== null ? Math.round(defPrice) : '';
+            priceEl.textContent = defPrice !== null ? fmtMoneyCompact(Math.round(defPrice), _saveCur) : '';
           }
         }
       }
@@ -9420,7 +9443,7 @@ window.loadPricingOverrides = async function(properties) {
 
       if (typeof window.showToast === 'function') {
         window.showToast(priceToSend !== null
-          ? 'Prix ' + priceToSend + '€ enregistré pour le ' + _cellDate
+          ? 'Prix ' + fmtMoney(priceToSend, _saveCur) + ' enregistré pour le ' + _cellDate
           : 'Prix remis au tarif par défaut', 'success');
       }
 
@@ -9767,7 +9790,7 @@ console.log('👤 DEBUG GUEST:', {
     // Prix
     const price  = booking.amount_total || booking.price || booking.amount || booking.totalPrice || booking.total_price || null;
     const priceFormatted = price != null
-      ? Number(price).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+      ? fmtMoney(Number(price), booking.currency || 'EUR')
       : null;
 
     // Nuits
@@ -9823,7 +9846,7 @@ console.log('👤 DEBUG GUEST:', {
 
     function fmtAmount(val) {
       if (val == null || val === '' || isNaN(Number(val))) return null;
-      return Number(val).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+      return fmtMoney(Number(val), currency);
     }
 
     const _canViewFinances = (() => {
@@ -15381,7 +15404,7 @@ body.notif-panel-open {
         <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Prix par nuit</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <input type="number" id="batchPrice" min="0" step="0.5" placeholder="Ex: 90" style="flex:1;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;color:#0D1117;outline:none;" />
-          <span style="font-size:16px;color:#7A8695;font-weight:600;">€</span>
+          <span id="batchCurrencySymbol" style="font-size:16px;color:#7A8695;font-weight:600;">€</span>
         </div>
         <div style="font-size:11px;color:#9ca3af;margin-top:6px;">Laissez vide pour supprimer les overrides et revenir au prix par défaut</div>
       </div>
@@ -15419,7 +15442,16 @@ body.notif-panel-open {
 // ============================================================
 // ÉDITION GROUPÉE — LOGIQUE
 // ============================================================
-var _batchAction = 'price'; // 'price', 'block', 'unblock'
+var _batchAction = 'price';
+
+function _updateBatchCurrencySymbol() {
+  var symEl = document.getElementById('batchCurrencySymbol');
+  if (!symEl) return;
+  var checked = Array.from(document.querySelectorAll('#batchPropertiesList input[type="checkbox"]:checked'));
+  if (checked.length === 0) { symEl.textContent = '€'; return; }
+  var currencies = [...new Set(checked.map(function(cb) { return cb.getAttribute('data-currency') || 'EUR'; }))];
+  symEl.textContent = currencies.length === 1 ? getCurrencySymbol(currencies[0]) : '?';
+} // 'price', 'block', 'unblock'
 
 function openBatchEditModal() {
   const modal = document.getElementById('batchEditModal');
@@ -15441,7 +15473,7 @@ function openBatchEditModal() {
     : props.map(p => {
         const name = p.internalName || p.internal_name || p.name || p.id;
         return `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;background:white;transition:all .15s;" onmouseover="this.style.borderColor='#0E3B2E'" onmouseout="this.style.borderColor=this.querySelector('input').checked?'#0E3B2E':'#e2e8f0'">
-          <input type="checkbox" data-property-id="${p.id}" style="width:18px;height:18px;accent-color:#0E3B2E;cursor:pointer;" onchange="this.closest('label').style.borderColor=this.checked?'#0E3B2E':'#e2e8f0';this.closest('label').style.background=this.checked?'#e8f5f1':'white'" />
+          <input type="checkbox" data-property-id="${p.id}" data-currency="${p.currency||'EUR'}" style="width:18px;height:18px;accent-color:#0E3B2E;cursor:pointer;" onchange="this.closest('label').style.borderColor=this.checked?'#0E3B2E':'#e2e8f0';this.closest('label').style.background=this.checked?'#e8f5f1':'white';_updateBatchCurrencySymbol()" />
           <span style="font-size:13px;font-weight:500;color:#0D1117;">${name}</span>
         </label>`;
       }).join('');
@@ -15485,6 +15517,7 @@ function toggleAllBatchProperties() {
       label.style.background = cb.checked ? '#e8f5f1' : 'white';
     }
   });
+  _updateBatchCurrencySymbol();
 }
 
 function toggleAllBatchDays() {
