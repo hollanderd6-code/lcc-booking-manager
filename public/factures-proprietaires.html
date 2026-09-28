@@ -1200,11 +1200,11 @@ html[data-theme-v3="1"] .invoice-paper {
   </div>
   <div class="stat-card" onclick="openStatsModal('billed')" style="cursor:pointer;">
     <span class="stat-label">Total facturé (mois)</span>
-    <span class="stat-value" id="statsRevenue">0,00 €</span>
+    <span class="stat-value" id="statsRevenue">—</span>
   </div>
   <div class="stat-card" onclick="openStatsModal('pending')" style="cursor:pointer;">
     <span class="stat-label">Factures en attente</span>
-    <span class="stat-value" id="statsPending" style="color:#f59e0b;">0,00 €</span>
+    <span class="stat-value" id="statsPending" style="color:#f59e0b;">—</span>
   </div>
 </div>
 <div class="nav-tabs">
@@ -1263,6 +1263,7 @@ html[data-theme-v3="1"] .invoice-paper {
 <div id="propertyCheckboxList" style="max-height:150px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px;">
 <!-- Cases à cocher générées dynamiquement -->
 </div>
+<div id="propertyCurrencyError" style="display:none;margin-top:6px;font-size:12px;color:#dc2626;"></div>
 <small style="display:block;margin-top:4px;font-size:11px;color:#6b7280;">
     Sélectionnez le(s) logement(s) concerné(s) par cette facture
   </small>
@@ -1288,7 +1289,7 @@ html[data-theme-v3="1"] .invoice-paper {
 </div>
 </div>
 <div class="form-group">
-<label>SIRET</label>
+<label id="emitterSiretLabel">SIRET</label>
 <input class="form-control" id="emitterSiret" oninput="updateEmitterProfile()" placeholder="534 392 600" type="text"/>
 </div>
 <div class="form-group">
@@ -1327,9 +1328,9 @@ html[data-theme-v3="1"] .invoice-paper {
 <input id="invoiceVatRate" onchange="updatePreview()" style="width:50px; display:none;" type="number" value="20"/>
 </div>
 <div style="background:#f9fafb; padding:12px; border-radius:8px; font-size:13px;">
-<div style="display:flex; justify-content:space-between;"><span>Total HT</span><strong id="displayTotalHT">0.00 €</strong></div>
-<div style="display:flex; justify-content:space-between; margin-top:4px;"><span>TVA</span><strong id="displayTotalVAT">0.00 €</strong></div>
-<div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb; color:var(--primary); font-size:15px;"><span>NET À PAYER</span><strong id="displayTotalTTC">0.00 €</strong></div>
+<div style="display:flex; justify-content:space-between;"><span>Total HT</span><strong id="displayTotalHT">—</strong></div>
+<div style="display:flex; justify-content:space-between; margin-top:4px;"><span id="displayVatLabel">TVA</span><strong id="displayTotalVAT">—</strong></div>
+<div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid #e5e7eb; color:var(--primary); font-size:15px;"><span>NET À PAYER</span><strong id="displayTotalTTC">—</strong></div>
 </div>
 <div style="display:flex; justify-content:center; margin-top:20px;">
 <button class="btn btn-primary" onclick="createInvoice(true)" style="min-width:160px;">Éditer</button>
@@ -1376,12 +1377,10 @@ html[data-theme-v3="1"] .invoice-paper {
 </table>
 <div class="paper-totals">
 <div class="totals-box">
-<div class="total-row"><span>Total HT</span><span id="previewTotalHT">0,00 €</span></div>
-<div class="total-row"><span>TVA</span><span id="previewTotalVAT">0,00 €</span></div>
-<div class="total-row final"><span>Net à payer</span><span id="previewTotalTTC">0,00 €</span></div>
-<div id="previewVatLegalMention" style="margin-top:6px; font-size:11px; color:#6b7280; display:none;">
-  TVA non applicable, art. 293 B du CGI
-</div>
+<div class="total-row"><span>Total HT</span><span id="previewTotalHT">—</span></div>
+<div class="total-row"><span id="previewVatLabel">TVA</span><span id="previewTotalVAT">—</span></div>
+<div class="total-row final"><span>Net à payer</span><span id="previewTotalTTC">—</span></div>
+<div id="previewVatLegalMention" style="margin-top:6px; font-size:11px; color:#6b7280; display:none;"></div>
 </div>
 </div>
 <!-- FOOTER PAPER -->
@@ -1533,6 +1532,8 @@ window.bhConfirmDanger = function(message, title) {
     logoDataUrl: ''
   };
   let currentUser = null;
+  let _invoiceCtx = { currency: 'EUR', locale: 'fr-FR', legalLabel: null, legalValue: null, taxLabel: 'TVA', vatExemptLabel: null, country: null };
+  let _invoiceCtxBase = null;
 
   // Fonction pour formater les montants en français
   function formatMoney(amount) {
@@ -1562,6 +1563,60 @@ window.bhConfirmDanger = function(message, title) {
     } catch(e) {
       return '';
     }
+  }
+
+  function escHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatOwnerInvoiceMoney(value, currency, locale) {
+    const v = parseFloat(value) || 0;
+    const cur = (currency && /^[A-Z]{3}$/.test(currency)) ? currency : 'EUR';
+    const loc = (locale && /^[a-z]{2}-[A-Z]{2}$/.test(locale)) ? locale : 'fr-FR';
+    try {
+      return new Intl.NumberFormat(loc, { style: 'currency', currency: cur }).format(v);
+    } catch(e) {
+      return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v);
+    }
+  }
+
+  function getOwnerInvoiceDisplayContext(invoice) {
+    const prof = window.userProfile || {};
+    if (invoice && invoice.currency) {
+      const currency = invoice.currency;
+      const locale = (invoice.locale && /^[a-z]{2}-[A-Z]{2}$/.test(invoice.locale)) ? invoice.locale : (prof.locale || 'fr-FR');
+      const country = invoice.country || prof.country || null;
+      let snap = null;
+      if (invoice.issuer_snapshot) {
+        if (typeof invoice.issuer_snapshot === 'string') {
+          try { snap = JSON.parse(invoice.issuer_snapshot); } catch(e) { snap = null; }
+        } else if (typeof invoice.issuer_snapshot === 'object') {
+          snap = invoice.issuer_snapshot;
+        }
+      }
+      const _isFrLegal = country === 'FR' || !country;
+      const legalLabel = (snap && (snap.legalIdentifierLabel || (snap.siret && _isFrLegal ? 'SIRET' : null)))
+        || prof.legalIdentifierLabel
+        || (prof.siret && _isFrLegal ? 'SIRET' : null)
+        || null;
+      const legalValue = (snap && (snap.legalIdentifierValue || snap.siret))
+        || prof.legalIdentifierValue
+        || (prof.siret && _isFrLegal ? prof.siret : null)
+        || null;
+      const taxLabel = invoice.tax_label || 'TVA';
+      const vatExemptLabel = invoice.vat_exempt_label || null;
+      return { currency, locale, legalLabel, legalValue, taxLabel, vatExemptLabel, country };
+    }
+    const currency = (prof.defaultCurrency && /^[A-Z]{3}$/.test(prof.defaultCurrency)) ? prof.defaultCurrency : 'EUR';
+    const locale = (prof.locale && /^[a-z]{2}-[A-Z]{2}$/.test(prof.locale)) ? prof.locale : 'fr-FR';
+    const country = prof.country || null;
+    const _isFrProf = country === 'FR' || !country;
+    const legalLabel = prof.legalIdentifierLabel || (prof.siret && _isFrProf ? 'SIRET' : null) || null;
+    const legalValue = prof.legalIdentifierValue || (prof.siret && _isFrProf ? prof.siret : null) || null;
+    const taxLabel = 'TVA';
+    const vatExemptLabel = null;
+    return { currency, locale, legalLabel, legalValue, taxLabel, vatExemptLabel, country };
   }
 
   // --- INIT ---
@@ -1597,7 +1652,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Profil émetteur (APRÈS loadUserProfile)
   loadEmitterProfile();
-  
+  _invoiceCtx = getOwnerInvoiceDisplayContext(null);
+  _invoiceCtxBase = { ..._invoiceCtx };
+
   // Ajout d'une ligne par défaut (seulement si vide)
   if (prestations.length === 0) addPrestation('commission');
   
@@ -1698,9 +1755,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           // Stats factures
           const stats = invStatsByClient[c.id] || { total: 0, last: null, count: 0 };
-          const totalFormatted = stats.total.toFixed(2).replace('.', ',') + ' €';
+          const _pCli = window.userProfile || {};
+          const totalFormatted = formatOwnerInvoiceMoney(stats.total, _pCli.defaultCurrency, _pCli.locale);
           const lastInvHtml = stats.last
-            ? `<span style="font-size:12px;color:#6b7280;">Dernière : <strong>${formatDate(stats.last.issue_date)}</strong> — ${(parseFloat(stats.last.total_amount)||0).toFixed(2).replace('.',',') + ' €'}</span>`
+            ? `<span style="font-size:12px;color:#6b7280;">Dernière : <strong>${formatDate(stats.last.issue_date, _pCli.locale)}</strong> — ${formatOwnerInvoiceMoney(parseFloat(stats.last.total_amount)||0, _pCli.defaultCurrency, _pCli.locale)}</span>`
             : `<span style="font-size:12px;color:#9ca3af;font-style:italic;">Aucune facture</span>`;
 
           // Coordonnées
@@ -1813,6 +1871,10 @@ async function loadUserProfile() {
         siretInput.value = profile.siret;
       }
     }
+    const siretLabelEl = document.getElementById('emitterSiretLabel');
+    if (siretLabelEl && profile.legalIdentifierLabel) {
+      siretLabelEl.textContent = profile.legalIdentifierLabel;
+    }
     
     // Charger le logo si présent
     if (profile.logoUrl) {
@@ -1908,9 +1970,9 @@ window.openStatsModal = function(type) {
     } else {
       htmlContent = '<div style="display:flex;flex-direction:column;gap:8px;">';
       filtered.forEach(function(inv) {
-        const dateStr = formatDate(inv.issue_date);
+        const dateStr = formatDate(inv.issue_date, (window.userProfile||{}).locale);
         const num = inv.invoice_number || 'Brouillon';
-        const total = (parseFloat(inv.total_ttc || 0) || 0).toFixed(2) + ' €';
+        const total = formatOwnerInvoiceMoney(parseFloat(inv.total_ttc || 0) || 0, inv.currency, (window.userProfile||{}).locale);
         htmlContent += '<div style="background:#f9fafb;border-radius:8px;padding:12px;">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
             '<span style="font-weight:700;font-size:13px;color:#0E3B2E;">' + num + '</span>' +
@@ -1933,7 +1995,7 @@ window.openStatsModal = function(type) {
       htmlContent = '<div style="display:flex;flex-direction:column;gap:8px;">';
       filtered.forEach(function(inv) {
         const num = inv.invoice_number || 'Brouillon';
-        const total = (parseFloat(inv.total_ttc || 0) || 0).toFixed(2) + ' €';
+        const total = formatOwnerInvoiceMoney(parseFloat(inv.total_ttc || 0) || 0, inv.currency, (window.userProfile||{}).locale);
         const status = inv.status || '';
         const statusLabel = status === 'sent' ? 'Envoyée' : status === 'invoiced' ? 'Facturée' : status === 'paid' ? 'Payée' : status;
         const statusColor = status === 'sent' ? '#2563eb' : status === 'invoiced' ? '#d97706' : '#6b7280';
@@ -2124,8 +2186,9 @@ async function loadInvoices() {
     if (invs.length === 0) {
       console.log('⚠️ Aucune facture trouvée');
       container.innerHTML = '<div style="padding:40px; text-align:center; grid-column: 1 / -1;">Aucune facture.</div>';
-      document.getElementById('statsRevenue').textContent = '0,00 €';
-      document.getElementById('statsPending').textContent = '0,00 €';
+      const _p0 = window.userProfile || {};
+      document.getElementById('statsRevenue').textContent = formatOwnerInvoiceMoney(0, _p0.defaultCurrency, _p0.locale);
+      document.getElementById('statsPending').textContent = formatOwnerInvoiceMoney(0, _p0.defaultCurrency, _p0.locale);
       return;
     }
 
@@ -2243,7 +2306,7 @@ function renderFpGrid(invs) {
               </div>
               <div class="invoice-info-item">
                 <div class="invoice-info-label">Montant TTC</div>
-                <div class="invoice-info-value amount">${formatMoney(total)}</div>
+                <div class="invoice-info-value amount">${formatOwnerInvoiceMoney(total, (window.userProfile||{}).defaultCurrency, (window.userProfile||{}).locale)}</div>
               </div>
             </div>
           </div>
@@ -2260,8 +2323,9 @@ function renderFpGrid(invs) {
       container.innerHTML += cardHtml;
     });
 
-    document.getElementById('statsRevenue').textContent = formatMoney(totalRev);
-    document.getElementById('statsPending').textContent = formatMoney(totalPending);
+    const _pGrid = window.userProfile || {};
+    document.getElementById('statsRevenue').textContent = formatOwnerInvoiceMoney(totalRev, _pGrid.defaultCurrency, _pGrid.locale);
+    document.getElementById('statsPending').textContent = formatOwnerInvoiceMoney(totalPending, _pGrid.defaultCurrency, _pGrid.locale);
 }
 
 window.toggleInvoiceActions = function (id, btn) {
@@ -2369,18 +2433,21 @@ window.deleteOwnerInvoice = async function (id) {
     const json = await res.json();
     const inv = json.invoice;
     const items = json.items || [];
-    
+
+    // Contexte i18n pour ce téléchargement
+    const _dlCtx = getOwnerInvoiceDisplayContext(inv);
+
     // Trouver le client
     const client = clients.find(c => c.id == inv.client_id);
     const clientName = client ? (client.company_name || `${client.first_name || ''} ${client.last_name || ''}`.trim()) : 'Client';
-    
+
     // Créer un conteneur temporaire invisible avec la facture
     const tempContainer = document.createElement('div');
     tempContainer.style.position = 'fixed';
     tempContainer.style.left = '-9999px';
     tempContainer.style.top = '0';
     document.body.appendChild(tempContainer);
-    
+
     // Générer le HTML de la facture
     let itemsHtml = '';
     items.forEach(item => {
@@ -2388,28 +2455,27 @@ window.deleteOwnerInvoice = async function (id) {
       const total = parseFloat(item.total || 0);
       let qtyDisplay, priceDisplay;
       if (item.item_type === 'commission') {
-        // Commission : Base loyer × taux%
-        qtyDisplay = parseFloat(item.rental_amount || 0).toFixed(2) + ' €';
+        qtyDisplay = formatOwnerInvoiceMoney(item.rental_amount || 0, _dlCtx.currency, _dlCtx.locale);
         priceDisplay = parseFloat(item.commission_rate || 0) + ' %';
       } else {
         qtyDisplay = item.quantity || 1;
-        priceDisplay = parseFloat(item.unit_price || 0).toFixed(2) + ' €';
+        priceDisplay = formatOwnerInvoiceMoney(item.unit_price || 0, _dlCtx.currency, _dlCtx.locale);
       }
       const rowBg = itemsHtml.split('<tr').length % 2 === 0 ? 'background:#f9fafb;' : '';
       itemsHtml += `
     <tr style="border-bottom:1px solid #e5e7eb;${rowBg}">
-      <td style="padding:9px 10px;">${desc}</td>
+      <td style="padding:9px 10px;">${escHtml(desc)}</td>
       <td style="padding:9px 10px;text-align:right;">${qtyDisplay}</td>
       <td style="padding:9px 10px;text-align:right;">${priceDisplay}</td>
-      <td style="padding:9px 10px;text-align:right;font-weight:600;">${total.toFixed(2)} €</td>
+      <td style="padding:9px 10px;text-align:right;font-weight:600;">${formatOwnerInvoiceMoney(total, _dlCtx.currency, _dlCtx.locale)}</td>
     </tr>
       `;
     });
-    
+
     const subtotal = parseFloat(inv.subtotal_ht || 0);
     const vatAmount = parseFloat(inv.vat_amount || 0);
     const totalTtc = parseFloat(inv.total_ttc || 0);
-    
+
     // Coordonnées émetteur
     const ep = window.emitterProfile || {};
     const up = window.userProfile || {};
@@ -2417,13 +2483,13 @@ window.deleteOwnerInvoice = async function (id) {
     const addrParts = [];
     if (ep.address) addrParts.push(ep.address);
     if (ep.postalCode || ep.city) addrParts.push(((ep.postalCode||'') + ' ' + (ep.city||'')).trim());
-    if (ep.siret) addrParts.push('SIRET : ' + ep.siret);
+    if (ep.siret && _dlCtx.legalLabel) addrParts.push(escHtml(_dlCtx.legalLabel + ' : ' + ep.siret));
     if (up.email) addrParts.push(up.email);
     const senderAddress = addrParts.join('<br>');
-    const issDate = inv.issue_date ? formatDate(inv.issue_date) : new Date().toLocaleDateString('fr-FR');
-    const dueDate = inv.due_date ? formatDate(inv.due_date) : '';
-    const periodStart = inv.period_start ? formatDate(inv.period_start) : '';
-    const periodEnd = inv.period_end ? formatDate(inv.period_end) : '';
+    const issDate = inv.issue_date ? formatDate(inv.issue_date, _dlCtx.locale) : new Date().toLocaleDateString(_dlCtx.locale);
+    const dueDate = inv.due_date ? formatDate(inv.due_date, _dlCtx.locale) : '';
+    const periodStart = inv.period_start ? formatDate(inv.period_start, _dlCtx.locale) : '';
+    const periodEnd = inv.period_end ? formatDate(inv.period_end, _dlCtx.locale) : '';
 
     // Logo émetteur
     const logoSrc = (window.emitterProfile && window.emitterProfile.logoDataUrl) || (window.userProfile && window.userProfile.logoUrl) || '';
@@ -2433,24 +2499,35 @@ window.deleteOwnerInvoice = async function (id) {
     const clientAddr = client ? [
       client.address,
       ((client.postal_code||'') + ' ' + (client.city||'')).trim(),
-      client.country || 'France',
+      client.country || '',
       client.email
-    ].filter(Boolean).map(l => `<div>${l}</div>`).join('') : '';
+    ].filter(Boolean).map(l => `<div>${escHtml(l)}</div>`).join('') : '';
 
     // Infos émetteur
+    const _emLegalLine = (ep.siret && _dlCtx.legalLabel) ? escHtml(_dlCtx.legalLabel + ' : ' + ep.siret) : '';
     const emitterLines = [
       ep.address || up.address,
       ((ep.postalCode||up.postalCode||'') + ' ' + (ep.city||up.city||'')).trim(),
-      'France',
-      ep.siret ? 'SIRET : ' + ep.siret : (up.siret || ''),
+      _dlCtx.country || '',
+      _emLegalLine,
       up.phone || '',
       up.email || '',
       up.website || ''
     ].filter(Boolean).map(l => `<div style="margin-bottom:3px;">${l}</div>`).join('');
 
+    // Conditions de paiement
+    const payDelay    = escHtml(inv.payment_delay    || '');
+    const payMode     = escHtml(inv.payment_mode     || '');
+    const payInterest = escHtml(inv.late_interest    || '');
+
     // Numéro de facture — titre
     const invTitle = inv.is_credit_note ? 'AVOIR' : 'FACTURE';
     const invRef = inv.invoice_number || 'BROUILLON';
+
+    // TVA / exonération
+    const _dlTaxLabel = escHtml(_dlCtx.taxLabel || 'TVA');
+    const _dlIsFr = _dlCtx.country === 'FR' || !_dlCtx.country;
+    const _dlVatExempt = escHtml(_dlCtx.vatExemptLabel || (_dlIsFr ? 'TVA non applicable, art. 293 B du CGI' : ''));
 
     tempContainer.innerHTML = `
   <div id="tempInvoicePaper" style="background:white;width:210mm;min-height:297mm;padding:16mm 18mm;font-family:Arial,Helvetica,sans-serif;color:#1f2937;box-sizing:border-box;font-size:12px;line-height:1.5;">
@@ -2469,13 +2546,13 @@ window.deleteOwnerInvoice = async function (id) {
       <!-- Émetteur -->
       <div style="flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:5mm;">
         <div style="font-size:11px;font-weight:700;color:#0E3B2E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Émetteur</div>
-        <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${senderName}</div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${escHtml(senderName)}</div>
         <div style="color:#4b5563;font-size:11px;">${emitterLines}</div>
       </div>
       <!-- Destinataire -->
       <div style="flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:5mm;">
         <div style="font-size:11px;font-weight:700;color:#0E3B2E;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Destinataire</div>
-        <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${clientName}</div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${escHtml(clientName)}</div>
         <div style="color:#4b5563;font-size:11px;">${clientAddr}</div>
       </div>
     </div>
@@ -2501,21 +2578,21 @@ window.deleteOwnerInvoice = async function (id) {
       <!-- Conditions -->
       <div style="flex:1;font-size:11px;color:#4b5563;">
         <div style="font-weight:700;color:#0E3B2E;margin-bottom:4px;text-transform:uppercase;font-size:10px;letter-spacing:.06em;">Conditions</div>
-        <div style="margin-bottom:2px;"><strong>Conditions de règlement :</strong> 30 jours</div>
-        <div style="margin-bottom:2px;"><strong>Mode de règlement :</strong> Virement bancaire</div>
-        <div style="margin-bottom:2px;"><strong>Intérêts de retard :</strong> 3× taux légal</div>
-        ${inv.notes ? `<div style="margin-top:6px;"><strong>Notes :</strong> ${inv.notes}</div>` : ''}
+        <div style="margin-bottom:2px;"><strong>Conditions de règlement :</strong> ${payDelay}</div>
+        <div style="margin-bottom:2px;"><strong>Mode de règlement :</strong> ${payMode}</div>
+        <div style="margin-bottom:2px;"><strong>Intérêts de retard :</strong> ${payInterest}</div>
+        ${inv.notes ? `<div style="margin-top:6px;"><strong>Notes :</strong> ${escHtml(inv.notes)}</div>` : ''}
       </div>
       <!-- Totaux -->
       <div style="min-width:200px;">
         <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:#4b5563;border-top:1px solid #e5e7eb;">
           <span>Total HT</span>
-          <span style="font-weight:600;">${subtotal.toFixed(2)} €</span>
+          <span style="font-weight:600;">${formatOwnerInvoiceMoney(subtotal, _dlCtx.currency, _dlCtx.locale)}</span>
         </div>
-        ${vatAmount > 0 ? `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:#4b5563;"><span>TVA (${inv.vat_rate}%)</span><span style="font-weight:600;">${vatAmount.toFixed(2)} €</span></div>` : `<div style="font-size:10px;color:#6b7280;padding:4px 0;">TVA non applicable, art. 293 B du CGI</div>`}
+        ${vatAmount > 0 ? `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:#4b5563;"><span>${_dlTaxLabel} (${inv.vat_rate}%)</span><span style="font-weight:600;">${formatOwnerInvoiceMoney(vatAmount, _dlCtx.currency, _dlCtx.locale)}</span></div>` : (_dlVatExempt ? `<div style="font-size:10px;color:#6b7280;padding:4px 0;">${_dlVatExempt}</div>` : '')}
         <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:15px;font-weight:700;color:#0E3B2E;border-top:2px solid #0E3B2E;margin-top:4px;">
           <span>Total</span>
-          <span>${totalTtc.toFixed(2)} €</span>
+          <span>${formatOwnerInvoiceMoney(totalTtc, _dlCtx.currency, _dlCtx.locale)}</span>
         </div>
       </div>
     </div>
@@ -2678,7 +2755,7 @@ window.markOwnerInvoicePaid = async function (id) {
 
   // Surtout : on NE re-render PAS toute la liste ici
   const totalEl = document.querySelector(`[data-total-for="${id}"]`);
-  if (totalEl) totalEl.textContent = calculateLineTotal(p).toFixed(2) + ' €';
+  if (totalEl) totalEl.textContent = formatOwnerInvoiceMoney(calculateLineTotal(p), _invoiceCtx.currency, _invoiceCtx.locale);
   updatePreview();
 };
 
@@ -2701,7 +2778,7 @@ window.markOwnerInvoicePaid = async function (id) {
         badgeClass = 'badge-commission';
         inputs = `
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <div><label style="font-size:10px;">Loyer (€)</label><input type="number" class="form-control" value="${p.rentalAmount}" oninput="updatePrestation('${p.id}','rentalAmount',this.value)"></div>
+            <div><label style="font-size:10px;">Loyer (${escHtml(_invoiceCtx.currency)})</label><input type="number" class="form-control" value="${p.rentalAmount}" oninput="updatePrestation('${p.id}','rentalAmount',this.value)"></div>
             <div><label style="font-size:10px;">Taux (%)</label><input type="number" class="form-control" value="${p.commissionRate}" oninput="updatePrestation('${p.id}','commissionRate',this.value)"></div>
           </div>`;
       } else {
@@ -2729,7 +2806,7 @@ window.markOwnerInvoicePaid = async function (id) {
           </div>
           ${inputs}
           <div style="text-align:right; font-weight:700; font-size:12px; margin-top:8px;" data-total-for="${p.id}">
-            ${calculateLineTotal(p).toFixed(2)} €
+            ${formatOwnerInvoiceMoney(calculateLineTotal(p), _invoiceCtx.currency, _invoiceCtx.locale)}
           </div>
         </div>
       `;
@@ -2826,7 +2903,10 @@ if (window.userProfile && window.userProfile.logoUrl) {
     if (emitterProfile.address) parts.push(emitterProfile.address);
     const cityLine = (emitterProfile.postalCode || '') + ' ' + (emitterProfile.city || '');
     if (cityLine.trim()) parts.push(cityLine.trim());
-    if (emitterProfile.siret) parts.push('SIRET : ' + emitterProfile.siret);
+    if (emitterProfile.siret) {
+      const _legalLbl = _invoiceCtx.legalLabel;
+      if (_legalLbl) parts.push(_legalLbl + ' : ' + emitterProfile.siret);
+    }
 
     const textarea = document.getElementById('senderAddressInput');
     if (textarea) {
@@ -2875,8 +2955,8 @@ if (window.userProfile && window.userProfile.logoUrl) {
     const dStart = startVal ? parseLocalDate(startVal) : null;
     const dEnd = endVal ? parseLocalDate(endVal) : null;
 
-    if(dIss && !isNaN(dIss)) document.getElementById('previewDate').textContent = dIss.toLocaleDateString('fr-FR');
-    if(dStart && dEnd && !isNaN(dStart) && !isNaN(dEnd)) document.getElementById('previewPeriod').textContent = `${dStart.toLocaleDateString('fr-FR')} au ${dEnd.toLocaleDateString('fr-FR')}`;
+    if(dIss && !isNaN(dIss)) document.getElementById('previewDate').textContent = dIss.toLocaleDateString(_invoiceCtx.locale);
+    if(dStart && dEnd && !isNaN(dStart) && !isNaN(dEnd)) document.getElementById('previewPeriod').textContent = `${dStart.toLocaleDateString(_invoiceCtx.locale)} au ${dEnd.toLocaleDateString(_invoiceCtx.locale)}`;
 
     // Afficher le logo si présent
     if (window.userProfile && window.userProfile.logoUrl) {
@@ -2893,6 +2973,20 @@ if (window.userProfile && window.userProfile.logoUrl) {
     // Afficher les logements sélectionnés
     const selectedProps = getSelectedProperties();
     const propertyContainer = document.getElementById('previewProperties');
+
+    if (!isReadOnlyMode && _invoiceCtxBase) {
+      const _pCurr = resolveSelectedPropertyCurrency();
+      const _errEl = document.getElementById('propertyCurrencyError');
+      if (_pCurr.valid) {
+        if (_errEl) _errEl.style.display = 'none';
+        _invoiceCtx = _pCurr.currency
+          ? { ..._invoiceCtxBase, currency: _pCurr.currency }
+          : { ..._invoiceCtxBase };
+      } else {
+        if (_errEl) { _errEl.textContent = _pCurr.message; _errEl.style.display = 'block'; }
+        _invoiceCtx = { ..._invoiceCtxBase };
+      }
+    }
 
     if (selectedProps.length > 0 && window.allProperties) {
       const propNames = selectedProps.map(id => {
@@ -2921,20 +3015,20 @@ if (window.userProfile && window.userProfile.logoUrl) {
     prestations.forEach(p => {
       const lineTotal = calculateLineTotal(p);
       totalHT += lineTotal;
-      
+
       let qtyDisplay = p.type === 'commission'
-        ? parseFloat(p.rentalAmount||0).toFixed(2) + ' €'
+        ? formatOwnerInvoiceMoney(p.rentalAmount||0, _invoiceCtx.currency, _invoiceCtx.locale)
         : p.quantity;
       let priceDisplay = p.type === 'commission'
         ? parseFloat(p.commissionRate||0) + ' %'
-        : parseFloat(p.unitPrice||0).toFixed(2) + ' €';
+        : formatOwnerInvoiceMoney(p.unitPrice||0, _invoiceCtx.currency, _invoiceCtx.locale);
 
       tbody.innerHTML += `
         <tr>
           <td>${p.description}</td>
           <td style="text-align:center;">${qtyDisplay}</td>
           <td style="text-align:right;">${priceDisplay}</td>
-          <td style="text-align:right; font-weight:600;">${lineTotal.toFixed(2)} €</td>
+          <td style="text-align:right; font-weight:600;">${formatOwnerInvoiceMoney(lineTotal, _invoiceCtx.currency, _invoiceCtx.locale)}</td>
         </tr>`;
     });
 
@@ -2962,9 +3056,16 @@ if (window.userProfile && window.userProfile.logoUrl) {
 
     // --- MàJ affichage totaux ---
 
-    const strHT  = totalHT.toFixed(2) + ' €';
-    const strVAT = vatAmount.toFixed(2) + ' €';
-    const strTTC = totalTTC.toFixed(2) + ' €';
+    const strHT  = formatOwnerInvoiceMoney(totalHT, _invoiceCtx.currency, _invoiceCtx.locale);
+    const strVAT = formatOwnerInvoiceMoney(vatAmount, _invoiceCtx.currency, _invoiceCtx.locale);
+    const strTTC = formatOwnerInvoiceMoney(totalTTC, _invoiceCtx.currency, _invoiceCtx.locale);
+
+    // Mettre à jour les libellés TVA (sidebar + aperçu papier)
+    const _taxLbl = _invoiceCtx.taxLabel || 'TVA';
+    const elTaxLblDisplay = document.getElementById('displayVatLabel');
+    const elTaxLblPreview = document.getElementById('previewVatLabel');
+    if (elTaxLblDisplay) elTaxLblDisplay.textContent = _taxLbl;
+    if (elTaxLblPreview) elTaxLblPreview.textContent = _taxLbl;
 
     // Bloc de droite (éditeur)
     const elHT  = document.getElementById('displayTotalHT');
@@ -2982,10 +3083,17 @@ if (window.userProfile && window.userProfile.logoUrl) {
     if (pTVA) pTVA.textContent = strVAT;
     if (pTTC) pTTC.textContent = strTTC;
 
-    // Mention "TVA non applicable, art. 293 B du CGI"
+    // Mention TVA non applicable
     const mentionEl = document.getElementById('previewVatLegalMention');
     if (mentionEl) {
-      mentionEl.style.display = hasVat ? 'none' : 'block';
+      if (!hasVat) {
+        const _isFrCtx = _invoiceCtx.country === 'FR' || !_invoiceCtx.country;
+        const _vatText = _invoiceCtx.vatExemptLabel || (_isFrCtx ? 'TVA non applicable, art. 293 B du CGI' : '');
+        mentionEl.textContent = _vatText;
+        mentionEl.style.display = _vatText ? 'block' : 'none';
+      } else {
+        mentionEl.style.display = 'none';
+      }
     }
 
 
@@ -3023,6 +3131,33 @@ function getSelectedProperties() {
   const checkboxes = document.querySelectorAll('.property-checkbox:checked');
   return Array.from(checkboxes).map(cb => cb.value);
 }
+
+function resolveSelectedPropertyCurrency() {
+  const selected = getSelectedProperties();
+  if (!selected || selected.length === 0) {
+    return { valid: true, currency: null, reason: 'none', message: '' };
+  }
+  if (!window.allProperties) {
+    return { valid: true, currency: null, reason: 'no-data', message: '' };
+  }
+  const currencies = new Set();
+  selected.forEach(id => {
+    const prop = window.allProperties.find(p => String(p.id) === String(id));
+    if (prop && prop.currency) currencies.add(prop.currency);
+  });
+  if (currencies.size === 0) {
+    return { valid: true, currency: null, reason: 'no-currency', message: '' };
+  }
+  if (currencies.size === 1) {
+    return { valid: true, currency: [...currencies][0], reason: 'ok', message: '' };
+  }
+  return {
+    valid: false,
+    currency: null,
+    reason: 'mixed',
+    message: 'Les logements sélectionnés ont des devises différentes. Sélectionnez des logements de même devise.'
+  };
+}
   // --- SAVE ---
   window.createInvoice = async function(send) {
     // Fix #3 : lecture seule → aucune écriture
@@ -3030,6 +3165,9 @@ function getSelectedProperties() {
 
     const clientId = document.getElementById('invoiceClientId').value;
     if(!clientId) return alert('Veuillez sélectionner un client');
+
+    const _propCurrCheck = resolveSelectedPropertyCurrency();
+    if (!_propCurrCheck.valid) return alert(_propCurrCheck.message);
 
     const data = {
       clientId: clientId, // UUID string, pas parseInt
@@ -3104,8 +3242,10 @@ function getSelectedProperties() {
     if (sidebar) sidebar.classList.remove('readonly');
     const banner = document.getElementById('readonlyBanner');
     if (banner) banner.style.display = 'none';
-    
+
     editingInvoiceId = null;
+    _invoiceCtx = getOwnerInvoiceDisplayContext(null);
+    _invoiceCtxBase = { ..._invoiceCtx };
     prestations = [];
     prestationCounter = 0;
     addPrestation('commission');
@@ -3121,7 +3261,8 @@ function getSelectedProperties() {
     const d2 = new Date(); d2.setDate(d2.getDate()+30);
     document.getElementById('invoiceDueDate').value = toYMD(d2);
     document.getElementById('invoiceVatApplicable').checked = false;
-    document.getElementById('invoiceVatRate').value = 20;
+    const _isNewFr = _invoiceCtx.country === 'FR' || !_invoiceCtx.country;
+    document.getElementById('invoiceVatRate').value = _isNewFr ? 20 : 0;
     
     renderEditorPrestations();
     updatePreview();
@@ -3155,6 +3296,8 @@ window.editOwnerInvoiceDraft = async function(id) {
 
     const inv = json.invoice;
     const items = json.items || [];
+    _invoiceCtx = getOwnerInvoiceDisplayContext(inv);
+    _invoiceCtxBase = { ..._invoiceCtx };
 
     // Mode édition (pas lecture seule)
     isReadOnlyMode = false;
@@ -3219,6 +3362,8 @@ window.viewOwnerInvoiceReadOnly = async function(id) {
 
     const inv = json.invoice;
     const items = json.items || [];
+    _invoiceCtx = getOwnerInvoiceDisplayContext(inv);
+    _invoiceCtxBase = { ..._invoiceCtx };
 
     // Activer le mode lecture seule
     isReadOnlyMode = true;
