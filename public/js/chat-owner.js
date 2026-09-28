@@ -11,6 +11,8 @@ console.log('🔌 [SOCKET] API_URL:', API_URL, '(Native:', IS_NATIVE + ')');
 
 let socket = null;
 let currentChannexBookingId = null; // null si pas de lien Channex
+let _selectedFiles = [];       // fichiers outbound en attente d'envoi (ATTACHMENTS-7C)
+let _uploadInProgress = false; // protection double-envoi
 window._chatSocket = null; // exposé pour messages.html
 let allConversations = [];
 let searchQuery = '';
@@ -802,6 +804,13 @@ async function openChat(conversationId) {
     copyLinkBtn.style.display = 'none';
   }
   
+  // Nettoyer les fichiers outbound de la conversation précédente (ATTACHMENTS-7C)
+  _selectedFiles = [];
+  _uploadInProgress = false;
+  _bhClearOutboundPreviews();
+  const _pBtn = document.getElementById('photoUploadBtn');
+  if (_pBtn) _pBtn.style.display = 'none'; // _checkChannexConversation rétablira si pertinent
+
   // Détecter Channex en arrière-plan (après que showInlineChat ait rendu l'UI)
   currentChannexBookingId = null;
   window._currentChannexBookingId = null;
@@ -874,7 +883,12 @@ function closeChat() {
   if (socket && currentConversationId) {
     socket.emit('leave_conversation', currentConversationId);
   }
-  
+
+  // Libérer les object URLs et réinitialiser l'état outbound (ATTACHMENTS-7C)
+  _selectedFiles = [];
+  _uploadInProgress = false;
+  _bhClearOutboundPreviews();
+
   currentConversationId = null;
 }
 
@@ -934,9 +948,12 @@ function displayMessages(messages) {
   });
 
   // ✅ Filtrer les messages sans date ET sans contenu (artefacts vides)
+  // ATTACHMENTS-6 : un message media-only (texte vide + attachments) doit passer
   const filtered = sorted.filter(msg => {
     const hasDate = msg.created_at && !isNaN(new Date(msg.created_at).getTime());
-    const hasContent = (msg.message || '').trim().length > 0;
+    const hasText = (msg.message || '').trim().length > 0;
+    const hasAtt  = (msg.attachments && msg.attachments.length > 0) || !!msg.photo_url;
+    const hasContent = hasText || hasAtt;
     if (!hasDate && !hasContent) return false;
     return true;
   });
@@ -1062,6 +1079,442 @@ function appendLinkified(container, text) {
     last = m.index + m[0].length;
   }
   if (last < str.length) container.appendChild(document.createTextNode(str.slice(last)));
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ATTACHMENTS-6 — Affichage des pièces jointes
+// ══════════════════════════════════════════════════════════════════════════════
+
+function _ensureBhAttachStyles() {
+  if (document.getElementById('bhAttachStyles')) return;
+  const st = document.createElement('style');
+  st.id = 'bhAttachStyles';
+  st.textContent = `
+.bh-attach-wrap{margin-top:6px;}
+.bh-attach-grid{display:grid;gap:4px;max-width:280px;}
+.bh-attach-grid.cnt-1{grid-template-columns:1fr;}
+.bh-attach-grid.cnt-2{grid-template-columns:1fr 1fr;max-width:240px;}
+.bh-attach-grid.cnt-m{grid-template-columns:repeat(3,1fr);max-width:240px;}
+.bh-att-img-w{position:relative;cursor:pointer;border-radius:8px;overflow:hidden;background:#e5e7eb;}
+.bh-attach-grid.cnt-1 .bh-att-img-w{aspect-ratio:4/3;}
+.bh-attach-grid.cnt-2 .bh-att-img-w,.bh-attach-grid.cnt-m .bh-att-img-w{aspect-ratio:1;}
+.bh-att-img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .2s;}
+.bh-att-img.loading{opacity:0;}
+.bh-att-video{max-width:280px;border-radius:8px;display:block;margin-top:4px;}
+.bh-att-doc{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(0,0,0,.06);border-radius:8px;font-size:13px;margin-top:4px;max-width:280px;}
+.bh-att-doc a{color:inherit;text-decoration:none;font-weight:500;}
+.bh-att-doc a:hover{text-decoration:underline;}
+.bh-att-pending{color:#9ca3af;font-size:12px;font-style:italic;display:flex;align-items:center;gap:6px;padding:4px 0;margin-top:4px;}
+.bh-att-pending::before{content:'';display:inline-block;width:10px;height:10px;border:2px solid #9ca3af;border-top-color:transparent;border-radius:50%;animation:bhAttSpin .8s linear infinite;}
+@keyframes bhAttSpin{to{transform:rotate(360deg)}}
+.bh-att-failed{color:#d1d5db;font-size:12px;font-style:italic;padding:4px 0;margin-top:4px;}
+#bhLightbox{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;cursor:zoom-out;}
+#bhLightbox img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:6px;cursor:default;box-shadow:0 8px 40px rgba(0,0,0,.6);}
+#bhLightboxClose{position:absolute;top:14px;right:18px;color:#fff;font-size:36px;cursor:pointer;background:none;border:none;padding:4px 8px;line-height:1;opacity:.8;}
+#bhLightboxClose:hover{opacity:1;}
+.bh-att-sent-badge{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;border-radius:10px;padding:1px 6px;pointer-events:none;}
+.bh-outbound-preview-zone{display:flex;flex-wrap:wrap;gap:6px;padding:6px 8px;border-top:1px solid rgba(0,0,0,.08);}
+.bh-outbound-thumb{position:relative;width:52px;height:52px;border-radius:6px;overflow:hidden;background:#e5e7eb;flex-shrink:0;}
+.bh-outbound-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.bh-outbound-thumb button{position:absolute;top:1px;right:1px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;}
+.bh-outbound-progress{height:3px;background:rgba(0,0,0,.08);overflow:hidden;}
+.bh-outbound-progress-fill{height:100%;background:#0E3B2E;transition:width .15s;}
+  `.trim();
+  document.head.appendChild(st);
+}
+
+// Lightbox — instance unique partagée
+function _bhLightboxShow(src, alt) {
+  _ensureBhAttachStyles();
+  let lb = document.getElementById('bhLightbox');
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = 'bhLightbox';
+    lb.setAttribute('role', 'dialog');
+    lb.setAttribute('aria-modal', 'true');
+    lb.setAttribute('aria-label', 'Visionneuse photo');
+
+    const closeBtn = document.createElement('button');
+    closeBtn.id = 'bhLightboxClose';
+    closeBtn.textContent = '×';
+    closeBtn.setAttribute('aria-label', 'Fermer');
+    closeBtn.onclick = _bhLightboxHide;
+
+    const img = document.createElement('img');
+    img.id = 'bhLightboxImg';
+    img.onclick = e => e.stopPropagation();
+
+    lb.appendChild(closeBtn);
+    lb.appendChild(img);
+    lb.onclick = _bhLightboxHide;
+
+    document.body.appendChild(lb);
+
+    document.addEventListener('keydown', function _escHandler(e) {
+      if (e.key === 'Escape') _bhLightboxHide();
+    });
+  }
+  const img = lb.querySelector('#bhLightboxImg');
+  img.src = src;
+  img.alt = alt || 'Photo jointe au message';
+  lb.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function _bhLightboxHide() {
+  const lb = document.getElementById('bhLightbox');
+  if (lb) lb.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// Renouveler l'URL signée d'un attachment (1 seul retry max)
+async function _bhRefreshAttachUrl(attId) {
+  try {
+    const token = localStorage.getItem('lcc_token');
+    const r = await fetch(`/api/chat/attachments/${attId}`, {
+      headers: { 'Authorization': 'Bearer ' + (token || '') }
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.url || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ATTACHMENTS-7C — Envoi d'images outbound côté client
+// ══════════════════════════════════════════════════════════════════════════════
+
+function _supportsOutboundImage(platform) {
+  if (!platform || typeof platform !== 'string') return false;
+  const p = platform.toLowerCase().trim();
+  if (p.includes('airbnb') || p === 'abb') return true;
+  if (p.includes('booking') || p === 'bdc') return true;
+  if (p.includes('expedia')) return true;
+  return false;
+}
+
+window.openPhotoUpload = function openPhotoUpload() {
+  if (_uploadInProgress) return;
+  const conv = allConversations.find(c => c.id == currentConversationId);
+  if (!conv || !_supportsOutboundImage(conv.platform)) {
+    showToast('Pièces jointes non disponibles sur cette plateforme', 'error');
+    return;
+  }
+  let fi = document.getElementById('_bhOutboundFileInput');
+  if (!fi) {
+    fi = document.createElement('input');
+    fi.type = 'file';
+    fi.id = '_bhOutboundFileInput';
+    fi.multiple = true;
+    fi.accept = 'image/jpeg,image/png,image/webp';
+    fi.style.display = 'none';
+    fi.addEventListener('change', _bhHandleFileSelection);
+    document.body.appendChild(fi);
+  }
+  fi.value = '';
+  fi.click();
+};
+
+function _bhHandleFileSelection(e) {
+  const MAX_FILES = 5;
+  const MAX_BYTES = 10 * 1024 * 1024;
+  const ALLOWED   = new Set(['image/jpeg', 'image/png', 'image/webp']);
+  const incoming  = Array.from(e.target.files || []);
+  for (const f of incoming) {
+    if (_selectedFiles.length >= MAX_FILES) {
+      showToast(`Maximum ${MAX_FILES} images à la fois`, 'error');
+      break;
+    }
+    if (f.size > MAX_BYTES) { showToast(`${f.name} : fichier trop lourd (max 10 Mo)`, 'error'); continue; }
+    if (!ALLOWED.has(f.type)) { showToast(`${f.name} : format non accepté (JPEG, PNG, WEBP uniquement)`, 'error'); continue; }
+    _selectedFiles.push(f);
+  }
+  _bhRefreshPreviewZone();
+}
+
+function _bhRefreshPreviewZone() {
+  _ensureBhAttachStyles();
+  let zone = document.getElementById('_bhOutboundPreviewZone');
+  if (!zone) {
+    zone = document.createElement('div');
+    zone.id = '_bhOutboundPreviewZone';
+    zone.className = 'bh-outbound-preview-zone';
+    zone.style.display = 'none';
+    const ia = document.getElementById('chatInputArea');
+    if (ia && ia.parentNode) ia.parentNode.insertBefore(zone, ia);
+  }
+  zone.querySelectorAll('img[data-obj-url]').forEach(img => URL.revokeObjectURL(img.src));
+  zone.innerHTML = '';
+  if (!_selectedFiles.length) { zone.style.display = 'none'; return; }
+  zone.style.display = 'flex';
+  _selectedFiles.forEach((file, idx) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'bh-outbound-thumb';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.setAttribute('data-obj-url', '1');
+    img.alt = file.name;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Retirer ' + file.name);
+    btn.textContent = '×';
+    btn.addEventListener('click', () => {
+      URL.revokeObjectURL(img.src);
+      _selectedFiles.splice(idx, 1);
+      _bhRefreshPreviewZone();
+    });
+    thumb.appendChild(img);
+    thumb.appendChild(btn);
+    zone.appendChild(thumb);
+  });
+}
+
+function _bhClearOutboundPreviews() {
+  const zone = document.getElementById('_bhOutboundPreviewZone');
+  if (!zone) return;
+  zone.querySelectorAll('img[data-obj-url]').forEach(img => URL.revokeObjectURL(img.src));
+  zone.innerHTML = '';
+  zone.style.display = 'none';
+}
+
+function _bhUpdateUploadProgress(pct) {
+  let bar = document.getElementById('_bhOutboundProgressBar');
+  if (pct <= 0 || pct >= 100) {
+    if (bar) bar.style.display = 'none';
+    return;
+  }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = '_bhOutboundProgressBar';
+    bar.className = 'bh-outbound-progress';
+    bar.innerHTML = '<div class="bh-outbound-progress-fill" style="width:0"></div>';
+    const ia = document.getElementById('chatInputArea');
+    if (ia && ia.parentNode) ia.parentNode.insertBefore(bar, ia);
+  }
+  bar.style.display = 'block';
+  const fill = bar.querySelector('.bh-outbound-progress-fill');
+  if (fill) fill.style.width = pct + '%';
+}
+
+// Retourne true si le serveur a répondu (même avec erreur HTTP) — le backend a traité le lot,
+// ne pas re-envoyer pour éviter les doublons. Retourne false si erreur réseau pure → retry safe.
+async function _sendOutboundImages(conversationId) {
+  if (!_selectedFiles.length) return true;
+  const token = localStorage.getItem('lcc_token');
+  const fd = new FormData();
+  _selectedFiles.forEach(f => fd.append('files', f));
+  _bhUpdateUploadProgress(1);
+  let _serverResponded = false;
+  await new Promise(resolve => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_URL}/api/chat/conversations/${conversationId}/attachments`);
+    xhr.setRequestHeader('Authorization', 'Bearer ' + (token || ''));
+    xhr.upload.addEventListener('progress', ev => {
+      if (ev.lengthComputable) _bhUpdateUploadProgress(Math.round(ev.loaded / ev.total * 99));
+    });
+    xhr.addEventListener('load', () => {
+      _serverResponded = true;
+      _bhUpdateUploadProgress(100);
+      if (xhr.status === 413) {
+        showToast('Fichier trop lourd (max 10 Mo)', 'error');
+      } else if (xhr.status >= 400) {
+        let msg = 'Erreur envoi images';
+        try { msg = JSON.parse(xhr.responseText).error || msg; } catch (_e) {}
+        showToast(msg, 'error');
+      } else {
+        try {
+          const d = JSON.parse(xhr.responseText);
+          const nFailed = (d.results || []).filter(r => !r.ok).length;
+          if (nFailed) showToast(`${nFailed} image(s) non envoyée(s)`, 'error');
+        } catch (_e) {}
+      }
+      resolve();
+    });
+    xhr.addEventListener('error', () => { showToast('Erreur réseau (images)', 'error'); resolve(); });
+    xhr.send(fd);
+  });
+  return _serverResponded;
+}
+
+// Construire l'élément DOM pour un seul attachment
+function _bhRenderOneAttachment(att, inGrid) {
+  _ensureBhAttachStyles();
+
+  if (att.status === 'pending') {
+    const el = document.createElement('div');
+    el.className = 'bh-att-pending';
+    el.setAttribute('data-att-id', att.id);
+    if (att.type)       el.setAttribute('data-att-type',     att.type);
+    if (att.mime_type)  el.setAttribute('data-att-mime',     att.mime_type);
+    if (att.filename)   el.setAttribute('data-att-filename', att.filename);
+    if (att.size_bytes) el.setAttribute('data-att-size',     att.size_bytes);
+    el.textContent = 'Pièce jointe en cours de récupération…';
+    return el;
+  }
+
+  if (att.status === 'failed' || !att.url) {
+    if (att.status === 'failed') {
+      const el = document.createElement('div');
+      el.className = 'bh-att-failed';
+      el.setAttribute('data-att-id', att.id);
+      el.textContent = 'Pièce jointe indisponible';
+      return el;
+    }
+    // stored mais url null (ne devrait pas arriver en prod)
+    const el = document.createElement('div');
+    el.className = 'bh-att-failed';
+    el.setAttribute('data-att-id', att.id);
+    el.textContent = 'Pièce jointe indisponible';
+    return el;
+  }
+
+  // stored + url disponible
+  if (att.type === 'image') {
+    const wrap = document.createElement('div');
+    wrap.className = 'bh-att-img-w';
+    wrap.setAttribute('data-att-id', att.id);
+
+    const img = document.createElement('img');
+    img.className = 'bh-att-img loading';
+    img.src = att.url;
+    img.alt = att.filename ? att.filename : 'Photo jointe au message';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.setAttribute('data-att-id', att.id);
+    img.setAttribute('data-att-url', att.url);
+
+    img.onload = () => img.classList.remove('loading');
+    img.onclick = () => _bhLightboxShow(img.src, img.alt);
+
+    // URL expirée → retry unique
+    let _retried = false;
+    img.onerror = async () => {
+      if (_retried) return;
+      _retried = true;
+      const fresh = await _bhRefreshAttachUrl(att.id);
+      if (fresh) {
+        img.src = fresh;
+        img.setAttribute('data-att-url', fresh);
+      } else {
+        wrap.innerHTML = '';
+        const fb = document.createElement('div');
+        fb.className = 'bh-att-failed';
+        fb.textContent = 'Pièce jointe indisponible';
+        wrap.appendChild(fb);
+      }
+    };
+
+    wrap.appendChild(img);
+    return wrap;
+  }
+
+  if (att.type === 'video') {
+    const vid = document.createElement('video');
+    vid.className = 'bh-att-video';
+    vid.controls = true;
+    vid.setAttribute('playsinline', '');
+    vid.preload = 'metadata';
+    vid.setAttribute('data-att-id', att.id);
+    const src = document.createElement('source');
+    src.src = att.url;
+    if (att.mime_type) src.type = att.mime_type;
+    vid.appendChild(src);
+    return vid;
+  }
+
+  // document / other
+  const card = document.createElement('div');
+  card.className = 'bh-att-doc';
+  card.setAttribute('data-att-id', att.id);
+
+  const icon = document.createElement('span');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = '📄';
+
+  const info = document.createElement('div');
+  info.style.cssText = 'flex:1;overflow:hidden;';
+
+  const name = document.createElement('div');
+  name.style.cssText = 'font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+  name.textContent = att.filename || 'Document'; // textContent — XSS safe
+
+  if (att.size_bytes) {
+    const sz = document.createElement('div');
+    sz.style.cssText = 'font-size:11px;color:#888;';
+    sz.textContent = att.size_bytes > 1048576
+      ? (att.size_bytes / 1048576).toFixed(1) + ' Mo'
+      : Math.round(att.size_bytes / 1024) + ' Ko';
+    info.appendChild(sz);
+  }
+  info.insertBefore(name, info.firstChild);
+
+  const link = document.createElement('a');
+  link.href = att.url;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = 'Ouvrir';
+  link.setAttribute('aria-label', 'Ouvrir ' + (att.filename || 'le document'));
+
+  card.appendChild(icon);
+  card.appendChild(info);
+  card.appendChild(link);
+  return card;
+}
+
+// Ajouter les pièces jointes à un message (après la bulle texte)
+function _bhRenderAttachments(contentDiv, attachments, photoUrl) {
+  _ensureBhAttachStyles();
+
+  // Priorité : attachments (ATTACHMENTS-5) > photo_url legacy
+  const atts = Array.isArray(attachments) ? attachments : [];
+
+  if (atts.length === 0 && photoUrl) {
+    // Legacy photo_url — afficher comme image simple
+    const wrap = document.createElement('div');
+    wrap.className = 'bh-attach-wrap';
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'bh-attach-grid cnt-1';
+    const inner = document.createElement('div');
+    inner.className = 'bh-att-img-w';
+    const img = document.createElement('img');
+    img.className = 'bh-att-img loading';
+    img.src = photoUrl;
+    img.alt = 'Photo jointe au message';
+    img.loading = 'lazy';
+    img.onload = () => img.classList.remove('loading');
+    img.onclick = () => _bhLightboxShow(img.src, img.alt);
+    inner.appendChild(img);
+    imgWrap.appendChild(inner);
+    wrap.appendChild(imgWrap);
+    contentDiv.appendChild(wrap);
+    return;
+  }
+
+  if (atts.length === 0) return;
+
+  // Séparer images (pour la grille) des autres types
+  const images = atts.filter(a => a.type === 'image' && a.status === 'stored' && a.url);
+  const others = atts.filter(a => !(a.type === 'image' && a.status === 'stored' && a.url));
+
+  const wrap = document.createElement('div');
+  wrap.className = 'bh-attach-wrap';
+
+  // Grille d'images
+  if (images.length > 0) {
+    const grid = document.createElement('div');
+    const gridCls = images.length === 1 ? 'cnt-1' : images.length === 2 ? 'cnt-2' : 'cnt-m';
+    grid.className = 'bh-attach-grid ' + gridCls;
+    images.forEach(att => grid.appendChild(_bhRenderOneAttachment(att, true)));
+    wrap.appendChild(grid);
+  }
+
+  // Autres (vidéo, document, pending, failed, images pending/failed)
+  const nonImageAtts = atts.filter(a => a.type !== 'image' || a.status !== 'stored' || !a.url);
+  nonImageAtts.forEach(att => wrap.appendChild(_bhRenderOneAttachment(att, false)));
+
+  if (wrap.children.length > 0) contentDiv.appendChild(wrap);
 }
 
 function appendMessage(message) {
@@ -1262,10 +1715,12 @@ function appendMessage(message) {
     txBar.appendChild(txBtn);
     contentDiv.appendChild(txBar);
   }
-  
+
+  _bhRenderAttachments(contentDiv, message.attachments, message.photo_url);
+
   messageDiv.appendChild(avatar);
   messageDiv.appendChild(contentDiv);
-  
+
   container.appendChild(messageDiv);
   scrollToBottom();
 }
@@ -1339,7 +1794,7 @@ async function sendMessageOwner() {
   if (!input || !currentConversationId) return;
 
   let message = input.value.trim();
-  if (!message) return;
+  if (!message && _selectedFiles.length === 0) return;
 
   // ── Résoudre les raccourcis {{variable}} avant l'envoi ──
   if (message.includes('{{') || message.includes('{')) {
@@ -1354,6 +1809,12 @@ async function sendMessageOwner() {
     }
   }
 
+  if (_uploadInProgress) return;
+  const _files = [..._selectedFiles]; // snapshot avant tout await
+  if (_files.length) _uploadInProgress = true;
+  // Vrai seulement après succès confirmé — conserve les fichiers sur échec pour retry
+  let _clearFiles = !_files.length;
+
   const sendBtn = document.getElementById('sendBtn');
   if (sendBtn) sendBtn.disabled = true;
 
@@ -1362,24 +1823,37 @@ async function sendMessageOwner() {
 
     // ── Si conversation liée à Channex : envoyer via plateforme ──
     if (currentChannexBookingId) {
-      const response = await fetch(`${API_URL}/api/chat/conversations/${currentConversationId}/send-platform`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ message })
-      });
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || 'Erreur envoi plateforme');
+      if (message) {
+        const response = await fetch(`${API_URL}/api/chat/conversations/${currentConversationId}/send-platform`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ message })
+        });
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || 'Erreur envoi plateforme');
+        }
+        const data = await response.json();
+        input.value = '';
+        input.style.height = 'auto';
+        // Afficher immédiatement le message avec son vrai id (pas de doublon possible via socket)
+        const savedMsg = data.message || { content: message, sender_type: 'property', created_at: new Date().toISOString(), id: 'tmp_' + Date.now() };
+        appendMessage({ ...savedMsg, sender_type: 'owner' });
+        hideAiThinking(); // l'hôte a pris la main → plus besoin de "l'IA réfléchit…"
+        scrollToBottom();
+        if (!_files.length) showToast('✅ Envoyé sur la plateforme', 'success');
+      } else {
+        input.value = '';
+        input.style.height = 'auto';
       }
-      const data = await response.json();
-      input.value = '';
-      input.style.height = 'auto';
-      // Afficher immédiatement le message avec son vrai id (pas de doublon possible via socket)
-      const savedMsg = data.message || { content: message, sender_type: 'property', created_at: new Date().toISOString(), id: 'tmp_' + Date.now() };
-      appendMessage({ ...savedMsg, sender_type: 'owner' });
-      hideAiThinking(); // l'hôte a pris la main → plus besoin de "l'IA réfléchit…"
-      scrollToBottom();
-      showToast('✅ Envoyé sur la plateforme', 'success');
+      // Images envoyées après le texte (messages Channex séparés, OTA l'exige)
+      if (_files.length) {
+        const dispatched = await _sendOutboundImages(currentConversationId);
+        if (dispatched) _clearFiles = true;
+        // réseau coupé → dispatched=false → fichiers conservés pour retry
+      } else {
+        _clearFiles = true; // texte seul envoyé avec succès
+      }
       return;
     }
 
@@ -1401,13 +1875,22 @@ async function sendMessageOwner() {
 
     input.value = '';
     input.style.height = 'auto';
+    _clearFiles = true; // BH classique — pas de fichiers de toute façon
     // Le message sera ajouté via Socket.IO
 
   } catch (error) {
     console.error('❌ Erreur envoi message:', error);
     showToast('Erreur lors de l\'envoi : ' + error.message, 'error');
+    // _clearFiles reste false → fichiers conservés pour retry
   } finally {
     if (sendBtn) sendBtn.disabled = false;
+    if (_files.length) {
+      _uploadInProgress = false; // toujours libérer le verrou
+      if (_clearFiles) {
+        _bhClearOutboundPreviews();
+        _selectedFiles = [];
+      }
+    }
   }
 }
 
@@ -1708,6 +2191,60 @@ function connectSocket() {
     showToast('💬 Nouveau message voyageur', 'info');
   });
 
+  // ── Mise à jour d'une pièce jointe (traitement async terminé) ──
+  socket.on('attachment_updated', (data) => {
+    if (!currentConversationId || data.conversation_id !== currentConversationId) return;
+
+    const chat = document.getElementById('chatMessages');
+    if (!chat) return;
+
+    // Inbound prêt (ATTACHMENTS-4/6) : status stored avec URL signée
+    if (data.status === 'stored' && data.url) {
+      const oldEls = chat.querySelectorAll(`[data-att-id="${data.attachment_id}"]`);
+      oldEls.forEach(oldEl => {
+        const attObj = {
+          id: data.attachment_id,
+          status: 'stored',
+          url: data.url,
+          type:       oldEl.getAttribute('data-att-type')     || 'document',
+          mime_type:  oldEl.getAttribute('data-att-mime')     || null,
+          filename:   oldEl.getAttribute('data-att-filename') || null,
+          size_bytes: oldEl.getAttribute('data-att-size')     ? parseInt(oldEl.getAttribute('data-att-size'), 10) : null,
+        };
+        const inGrid = !!oldEl.closest('.bh-attach-grid.cnt-2, .bh-attach-grid.cnt-m');
+        const newEl = _bhRenderOneAttachment(attObj, inGrid);
+        oldEl.parentNode.replaceChild(newEl, oldEl);
+      });
+      return;
+    }
+
+    // Outbound confirmé envoyé vers l'OTA (ATTACHMENTS-7B/7C)
+    if (data.status === 'sent') {
+      _ensureBhAttachStyles();
+      chat.querySelectorAll(`.bh-att-img-w[data-att-id="${data.attachment_id}"]`).forEach(wrap => {
+        if (!wrap.querySelector('.bh-att-sent-badge')) {
+          const badge = document.createElement('span');
+          badge.className = 'bh-att-sent-badge';
+          badge.setAttribute('aria-label', 'Envoyé');
+          badge.textContent = '✓';
+          wrap.appendChild(badge);
+        }
+      });
+      return;
+    }
+
+    // Outbound échoué définitivement
+    if (data.status === 'failed') {
+      chat.querySelectorAll(`.bh-att-img-w[data-att-id="${data.attachment_id}"]`).forEach(wrap => {
+        const failed = document.createElement('div');
+        failed.className = 'bh-att-failed';
+        failed.setAttribute('data-att-id', String(data.attachment_id));
+        failed.textContent = 'Envoi échoué';
+        if (wrap.parentNode) wrap.parentNode.replaceChild(failed, wrap);
+      });
+    }
+  });
+
   // Exposer le socket pour messages.html
   window._chatSocket = socket;
 }
@@ -1821,6 +2358,19 @@ async function _checkChannexConversation(conversationId, conv) {
       const chatInput = document.getElementById('chatInput');
       if (chatInput) chatInput.placeholder = `Répondre via ${platformLabel}…`;
 
+      // Afficher photoUploadBtn uniquement pour les plateformes qui supportent les images
+      const photoBtn = document.getElementById('photoUploadBtn');
+      if (photoBtn) {
+        if (_supportsOutboundImage(platform)) {
+          photoBtn.style.display = '';
+          photoBtn.title = 'Envoyer une image';
+        } else {
+          photoBtn.style.display = 'none';
+          _selectedFiles = [];
+          _bhClearOutboundPreviews();
+        }
+      }
+
       // Injecter messages Channex non encore en DB
       if (chxData.channex_messages && chxData.channex_messages.length > 0) {
         _injectChannexMessages(chxData.channex_messages);
@@ -1833,6 +2383,12 @@ async function _checkChannexConversation(conversationId, conv) {
       if (sendBtn) { sendBtn.style.background = ''; sendBtn.title = 'Envoyer'; }
       const chatInput = document.getElementById('chatInput');
       if (chatInput) chatInput.placeholder = 'Répondre à…';
+      const photoBtn = document.getElementById('photoUploadBtn');
+      if (photoBtn) {
+        photoBtn.style.display = 'none';
+        _selectedFiles = [];
+        _bhClearOutboundPreviews();
+      }
     }
   } catch(e) {
     console.warn('⚠️ [CHANNEX] check:', e.message);
@@ -1847,6 +2403,7 @@ window.displayMessages = displayMessages;
 window.loadMessages = loadMessages;
 window.closeChat = closeChat;
 window.sendMessageOwner = sendMessageOwner;
+// openPhotoUpload already assigned above (ATTACHMENTS-7C)
 window.loadQuickReplies = loadQuickReplies;
 window.openBookingMessageModal = openBookingMessageModal;
 window.copyInviteLink = copyInviteLink;

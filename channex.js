@@ -1252,6 +1252,38 @@ async function sendBookingMessage(channex_booking_id, message) {
   }
 }
 
+// ── 7. Upload d'une pièce jointe vers Channex (ATTACHMENTS-7B) ──────────────
+// Encode buffer → base64, POST /attachments, retourne l'attachment_id Channex.
+// IMPORTANT : ne jamais logger le contenu base64 ni le buffer.
+async function uploadChannexAttachment(fileBuffer, filename, mimeType) {
+  const base64 = fileBuffer.toString('base64');
+  const res = await channexAPI.post('/attachments', {
+    attachment: {
+      file:      base64,
+      file_name: filename,
+      file_type: mimeType,
+    },
+  });
+  const channexAttId = res.data?.data?.id;
+  if (!channexAttId) {
+    throw new Error('[CHANNEX] uploadChannexAttachment: ID absent de la réponse');
+  }
+  console.log(`✅ [CHANNEX] Attachment uploadé → ${channexAttId}`);
+  return channexAttId;
+}
+
+// ── 8. Envoyer un attachment_id comme message (ATTACHMENTS-7B) ───────────────
+// CRITIQUE : le champ "message" DOIT être absent du payload.
+// Channex confirme : si "message" est présent, l'attachment est ignoré.
+async function sendBookingAttachment(channex_booking_id, attachment_id) {
+  console.log(`📤 [CHANNEX] Envoi attachment ${attachment_id} → booking ${channex_booking_id}`);
+  const res = await channexAPI.post(`/bookings/${channex_booking_id}/messages`, {
+    message: { attachment_id },
+  });
+  console.log(`✅ [CHANNEX] Attachment envoyé`);
+  return res.data?.data || null;
+}
+
 // ── Lister les propriétés existantes dans Channex ────────────
 async function listChannexProperties() {
   try {
@@ -1360,6 +1392,8 @@ module.exports = {
   processChannexBooking,
   getBookingMessages,
   sendBookingMessage,
+  uploadChannexAttachment,
+  sendBookingAttachment,
   logChannex,
   channexAPI,
   CHANNEX_HTTP_TIMEOUT_MS,

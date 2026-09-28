@@ -439,7 +439,7 @@ async function loadFewShotExamples(pool, conversationId, propertyId) {
 async function handleIncomingMessage(message, conversation, pool, io) {
   try {
     const channexId = conversation.channex_booking_id || null;
-    console.log(`📩 [HANDLER] Message de ${conversation.guest_name || 'client'}: "${message.message.substring(0, 60)}"`);
+    console.log(`📩 [HANDLER] Message de ${conversation.guest_name || 'client'}: "${(message.message || '').substring(0, 60)}"`);
 
     if (message.sender_type !== 'guest') return false;
 
@@ -2262,5 +2262,6 @@ module.exports = {
   generateOwnerSuggestion,
   confirmUpsellPaid,
   checkExistingScheduleDecision,
-  collectHostQuestionRecipients
+  collectHostQuestionRecipients,
+  escalateToOwner,
 };

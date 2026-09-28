@@ -840,6 +840,11 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
 
       const messages = await messagesQuery;
 
+      // ATTACHMENTS-5 : enrichir les messages avec leurs pièces jointes (1 requête batch)
+      const { fetchAttachmentsByMessageIds } = require('../services/attachment-processor');
+      const _attMap = await fetchAttachmentsByMessageIds(messages.rows.map(m => m.id), pool);
+      const messagesWithAtts = messages.rows.map(m => ({ ...m, attachments: _attMap[m.id] || [] }));
+
       const convPayload = {
         id: conversation.id,
         guest_first_name: conversation.guest_first_name,
@@ -857,7 +862,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
         convPayload.ai_disabled  = conversation.ai_disabled;
       }
 
-      res.json({ success: true, messages: messages.rows, conversation: convPayload });
+      res.json({ success: true, messages: messagesWithAtts, conversation: convPayload });
 
     } catch (error) {
       console.error('❌ Erreur récupération messages:', error);
@@ -1599,6 +1604,160 @@ if (sender_type === 'owner' && (message && message.trim())) {
       res.status(500).json({ error: 'Erreur serveur' });
     }
   });
+
+  // ============================================
+  // 9. UPLOAD PIÈCE JOINTE HÔTE (OUTBOUND → CHANNEX)
+  // POST /api/chat/conversations/:id/attachments
+  // multipart/form-data, champ "files" (max 5 fichiers, 10 Mo chacun)
+  // Auth: hôte uniquement (authenticateAny)
+  // ============================================
+  const _multerMemory = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 5 } });
+
+  app.post('/api/chat/conversations/:id/attachments',
+    authenticateAny,
+    (req, res, next) => {
+      _multerMemory.array('files', 5)(req, res, (err) => {
+        if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'Fichier trop volumineux (max 10 Mo)' });
+        if (err) return res.status(400).json({ error: 'Erreur upload : ' + err.message });
+        next();
+      });
+    },
+    async (req, res) => {
+      try {
+        const conversationId = parseInt(req.params.id, 10);
+        if (!conversationId || isNaN(conversationId)) return res.status(400).json({ error: 'ID conversation invalide' });
+        if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'Aucun fichier fourni (champ "files")' });
+
+        // Ownership
+        const userId = await getRealUserId(pool, req);
+        const comptes = await comptesAutorises(pool, userId);
+
+        const convRes = await pool.query(
+          `SELECT id, user_id, property_id, platform, channex_booking_id FROM conversations WHERE id = $1`,
+          [conversationId]
+        );
+        if (!convRes.rows.length) return res.status(404).json({ error: 'Conversation introuvable' });
+        const conv = convRes.rows[0];
+
+        if (!comptes.includes(String(conv.user_id))) {
+          let allowed = false;
+          if (req.user && req.user.isSubAccount) {
+            const r = await pool.query(
+              'SELECT accessible_property_ids FROM sub_account_data WHERE sub_account_id = $1',
+              [req.user.subAccountId]
+            );
+            const ids = r.rows[0]?.accessible_property_ids || [];
+            allowed = ids.length === 0 || ids.includes(conv.property_id);
+          }
+          if (!allowed) return res.status(403).json({ error: 'Accès refusé à cette conversation' });
+        }
+
+        const crypto = require('crypto');
+        const cloudinary = require('cloudinary').v2;
+        const { Readable } = require('stream');
+        const { validateOutboundImageBuffer, sendOutboundAttachment } = require('../services/channex-attachment-sender');
+        const { sanitizeAttachmentForClient } = require('../services/attachment-processor');
+
+        const OUTBOUND_ALLOWED_MIME = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+
+        const results = [];
+
+        for (const file of req.files) {
+          const buf = file.buffer;
+
+          // Valider magic bytes (images outbound uniquement — ne jamais faire confiance au MIME navigateur)
+          const fileCheck = validateOutboundImageBuffer(buf);
+          if (!fileCheck.ok) {
+            results.push({ filename: file.originalname, ok: false, error: fileCheck.error });
+            continue;
+          }
+
+          if (!OUTBOUND_ALLOWED_MIME.has(fileCheck.detectedType)) {
+            results.push({ filename: file.originalname, ok: false, error: 'MIME_NOT_ALLOWED_OUTBOUND' });
+            continue;
+          }
+
+          // Sanitiser le nom de fichier
+          const safeFilename = (file.originalname || 'image')
+            .replace(/[^a-zA-Z0-9._\-]/g, '_')
+            .substring(0, 200) || 'image';
+
+          // Upload vers Cloudinary (authenticated, resource_type image)
+          const publicId = `out_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
+          let cloudResult;
+          try {
+            cloudResult = await new Promise((resolve, reject) => {
+              const stream = cloudinary.uploader.upload_stream(
+                { folder: 'boostinghost/chat-attachments', public_id: publicId, resource_type: 'image', type: 'authenticated' },
+                (err, result) => { if (err) reject(err); else resolve(result); }
+              );
+              Readable.from(buf).pipe(stream);
+            });
+          } catch (cloudErr) {
+            console.error('❌ [ATTACH-7B] Cloudinary upload:', cloudErr.message);
+            results.push({ filename: safeFilename, ok: false, error: 'CLOUDINARY_ERROR' });
+            continue;
+          }
+
+          // INSERT message parent (vide)
+          const msgRes = await pool.query(
+            `INSERT INTO messages (conversation_id, sender_type, sender_name, message, is_read, created_at)
+             VALUES ($1, 'property', 'Hôte', '', TRUE, NOW())
+             RETURNING id, conversation_id, sender_type, sender_name, message, is_read,
+                       is_bot_response, is_auto_response, created_at`,
+            [conversationId]
+          );
+          const newMsg = msgRes.rows[0];
+
+          // INSERT message_attachments (outbound, stored)
+          const attRes = await pool.query(
+            `INSERT INTO message_attachments
+               (message_id, conversation_id, type, mime_type, filename, size_bytes,
+                cloudinary_public_id, storage_url, direction, status, created_at, updated_at)
+             VALUES ($1, $2, 'image', $3, $4, $5, $6, $7, 'outbound', 'stored', NOW(), NOW())
+             RETURNING id, message_id, conversation_id, type, mime_type, filename,
+                       size_bytes, cloudinary_public_id, direction, status`,
+            [newMsg.id, conversationId, fileCheck.detectedType, safeFilename,
+             buf.length, cloudResult.public_id, cloudResult.secure_url]
+          );
+          const newAtt = attRes.rows[0];
+
+          await pool.query(
+            `UPDATE conversations SET status='active', last_message_at=NOW() WHERE id=$1`,
+            [conversationId]
+          );
+
+          // Socket.io — public uniquement
+          const pubAtt = sanitizeAttachmentForClient({ ...newAtt, status: 'stored' });
+          const msgWithAtt = { ...newMsg, attachments: [pubAtt] };
+          if (io) {
+            io.to(`conversation_${conversationId}`).emit('new_message', msgWithAtt);
+            io.to(`user_${conv.user_id}`).emit('new_message', msgWithAtt);
+          }
+
+          // Envoi asynchrone vers Channex
+          setImmediate(async () => {
+            try {
+              await sendOutboundAttachment(newAtt.id, pool, io);
+            } catch (e) {
+              console.error(`⚠️ [ATTACH-7B] setImmediate #${newAtt.id}:`, e.message);
+            }
+          });
+
+          results.push({ ok: true, filename: safeFilename, attachment: pubAtt, message_id: newMsg.id });
+        }
+
+        const allFailed = results.length > 0 && results.every(r => !r.ok);
+        if (allFailed) return res.status(422).json({ error: 'Tous les fichiers ont été rejetés', results });
+
+        return res.json({ success: true, results });
+
+      } catch (error) {
+        console.error('❌ [ATTACH-7B] /attachments:', error);
+        return res.status(500).json({ error: 'Erreur serveur' });
+      }
+    }
+  );
 
 }
 
