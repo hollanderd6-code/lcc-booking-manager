@@ -325,68 +325,68 @@ describe('G. _bhUpdateUploadProgress — barre de progression', () => {
   });
 });
 
-// ── H. sendMessageOwner — modifications outbound ──────────────────────────────
-describe('H. sendMessageOwner — modifications outbound', () => {
-  test('H-01 : permet l\'envoi image-only (plus de blocage si !message seul)', () => {
-    expect(src).toMatch(/if\s*\(\s*!message\s*&&\s*_selectedFiles\.length\s*===\s*0\s*\)\s*return/);
+// ── H. sendMessageOwner — texte uniquement (PROD-FIX-2) ──────────────────────
+describe('H. sendMessageOwner — texte uniquement (PROD-FIX-2)', () => {
+  test('H-01 : retourne tôt si message vide (images → _bhSendPhotos)', () => {
+    const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
+    // Nouvelle garde : if (!message) return — sans condition _selectedFiles
+    expect(fnBlock).toMatch(/if\s*\(\s*!message\s*\)\s*return/);
+    // Pas d'ancienne garde combinée
+    expect(fnBlock).not.toMatch(/!message\s*&&\s*_selectedFiles/);
   });
 
-  test('H-02 : protection double-envoi (_uploadInProgress)', () => {
+  test('H-02 : sendMessageOwner ne gère plus _uploadInProgress', () => {
     const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    expect(fnBlock).toMatch(/if\s*\(\s*_uploadInProgress\s*\)\s*return/);
+    expect(fnBlock).not.toMatch(/if\s*\(\s*_uploadInProgress\s*\)\s*return/);
+    expect(fnBlock).not.toMatch(/_uploadInProgress\s*=\s*true/);
   });
 
-  test('H-03 : snapshot _files = [..._selectedFiles] avant await', () => {
+  test('H-03 : pas de snapshot _files dans sendMessageOwner', () => {
     const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    expect(fnBlock).toMatch(/const\s+_files\s*=\s*\[\s*\.\.\._selectedFiles\s*\]/);
+    expect(fnBlock).not.toMatch(/const\s+_files\s*=\s*\[\s*\.\.\._selectedFiles\s*\]/);
   });
 
-  test('H-04 : set _uploadInProgress = true si fichiers', () => {
+  test('H-04 : sendMessageOwner ne touche pas _selectedFiles', () => {
     const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    expect(fnBlock).toMatch(/_uploadInProgress\s*=\s*true/);
+    expect(fnBlock).not.toMatch(/_selectedFiles/);
   });
 
-  test('H-05 : texte envoyé avant images (send-platform dans if(message))', () => {
+  test('H-05 : send-platform présent dans sendMessageOwner (envoi texte Channex)', () => {
     const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    const posText = fnBlock.indexOf('send-platform');
-    const posImg  = fnBlock.indexOf('_sendOutboundImages');
-    expect(posText).toBeGreaterThan(0);
-    expect(posImg).toBeGreaterThan(0);
-    expect(posText).toBeLessThan(posImg);
+    expect(fnBlock).toMatch(/send-platform/);
   });
 
-  test('H-06 : _sendOutboundImages appelé avec currentConversationId', () => {
+  test('H-06 : sendMessageOwner n\'appelle PAS _sendOutboundImages (découplement)', () => {
     const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    expect(fnBlock).toMatch(/_sendOutboundImages\s*\(\s*currentConversationId\s*\)/);
+    expect(fnBlock).not.toMatch(/_sendOutboundImages/);
   });
 
-  test('H-07 : nettoyage dans finally (_bhClearOutboundPreviews)', () => {
+  test('H-07 : finally de sendMessageOwner ne contient pas _bhClearOutboundPreviews', () => {
     const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    const posFinally = fnBlock.indexOf('finally');
-    const posClean   = fnBlock.indexOf('_bhClearOutboundPreviews');
-    expect(posFinally).toBeGreaterThan(0);
-    expect(posClean).toBeGreaterThan(posFinally);
+    const posFinally = fnBlock.lastIndexOf('finally');
+    const finallyBlock = posFinally >= 0 ? fnBlock.slice(posFinally) : '';
+    expect(finallyBlock).not.toMatch(/_bhClearOutboundPreviews/);
   });
 
-  test('H-08 : _selectedFiles réinitialisé dans finally', () => {
+  test('H-08 : finally de sendMessageOwner ne réinitialise pas _selectedFiles', () => {
     const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    const posFinally = fnBlock.indexOf('finally');
-    const posReset   = fnBlock.lastIndexOf('_selectedFiles = []');
-    expect(posReset).toBeGreaterThan(posFinally);
+    const posFinally = fnBlock.lastIndexOf('finally');
+    const finallyBlock = posFinally >= 0 ? fnBlock.slice(posFinally) : '';
+    expect(finallyBlock).not.toMatch(/_selectedFiles\s*=\s*\[\]/);
   });
 
-  test('H-09 : _uploadInProgress réinitialisé dans finally', () => {
+  test('H-09 : finally de sendMessageOwner libère uniquement sendBtn', () => {
     const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    const posFinally = fnBlock.indexOf('finally');
-    const posReset   = fnBlock.lastIndexOf('_uploadInProgress = false');
-    expect(posReset).toBeGreaterThan(posFinally);
+    const posFinally = fnBlock.lastIndexOf('finally');
+    const finallyBlock = posFinally >= 0 ? fnBlock.slice(posFinally) : '';
+    expect(finallyBlock).toMatch(/sendBtn\.disabled\s*=\s*false/);
+    expect(finallyBlock).not.toMatch(/_uploadInProgress\s*=\s*false/);
   });
 
-  test('H-10 : input.value vidé même pour image-only', () => {
+  test('H-10 : pas de branche else image-only dans sendMessageOwner', () => {
     const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    // Dans la branche else (image-only), l'input est aussi vidé
-    const elseBlock = fnBlock.match(/\} else \{[\s\S]*?input\.value\s*=\s*['"]{2}/);
-    expect(elseBlock).toBeTruthy();
+    // L'ancien else { input.value = '' } pour image-only a été supprimé
+    expect(fnBlock).not.toMatch(/\}\s*else\s*\{[\s\S]{0,100}input\.value\s*=\s*['"]{2}/);
   });
 });
 
@@ -523,49 +523,48 @@ describe('N. ATTACHMENTS-7C-FIX — correctifs', () => {
     expect(src).toMatch(/fi\.accept\s*=\s*['"]image\/jpeg,image\/png,image\/webp['"]/);
   });
 
-  // N-02 : image-only — le chemin else { input.value=''; } existe pour skip texte vide
-  test('N-02 : branche else pour image-only (skip envoi texte vide)', () => {
-    const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    // La branche else s'exécute quand message est vide mais des fichiers sont présents
-    expect(fnBlock).toMatch(/if\s*\(\s*message\s*\)\s*\{[\s\S]*?\}\s*else\s*\{[\s\S]*?input\.value/);
+  // N-02 : image-only géré par _bhSendPhotos — sendMessageOwner ne traite plus les images
+  test('N-02 : _bhSendPhotos définie pour envoi image-only (PROD-FIX-2)', () => {
+    expect(src).toMatch(/async\s+function\s+_bhSendPhotos\s*\(/);
   });
 
-  // N-03 : aucun texte vide envoyé vers Channex — send-platform seulement dans if(message)
-  test('N-03 : send-platform uniquement dans if(message) — jamais message vide envoyé', () => {
+  // N-03 : aucun texte vide envoyé vers Channex — garde if(!message) en amont
+  test('N-03 : send-platform présent dans sendMessageOwner, message vide intercepté en amont', () => {
     const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    // L'appel send-platform doit être dans un bloc conditionnel if(message)
-    const textBlock = fnBlock.match(/if\s*\(\s*message\s*\)\s*\{[\s\S]*?send-platform[\s\S]*?\}/)?.[0] || '';
-    expect(textBlock.length).toBeGreaterThan(0);
+    expect(fnBlock).toMatch(/send-platform/);
+    // La garde précoce suffit — message toujours non-vide quand send-platform est atteint
+    expect(fnBlock).toMatch(/if\s*\(\s*!message\s*\)\s*return/);
   });
 
-  // N-04 : ordre texte → images via position dans le source
-  test('N-04 : send-platform avant _sendOutboundImages dans sendMessageOwner', () => {
-    const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    expect(fnBlock.indexOf('send-platform')).toBeLessThan(fnBlock.indexOf('_sendOutboundImages'));
+  // N-04 : _sendOutboundImages dans _bhSendPhotos, pas dans sendMessageOwner
+  test('N-04 : _sendOutboundImages appelé depuis _bhSendPhotos (pas sendMessageOwner)', () => {
+    const sendFn = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
+    const photosFn = src.match(/async\s+function\s+_bhSendPhotos[\s\S]*?^\}/m)?.[0] || '';
+    expect(sendFn).not.toMatch(/_sendOutboundImages/);
+    expect(photosFn).toMatch(/_sendOutboundImages\s*\(\s*currentConversationId\s*\)/);
   });
 
-  // N-05 : _clearFiles flag introduit
-  test('N-05 : flag _clearFiles déclaré dans sendMessageOwner', () => {
-    const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    expect(fnBlock).toMatch(/let\s+_clearFiles\s*=/);
+  // N-05 : _clearFiles dans _bhSendPhotos (déplacé depuis sendMessageOwner)
+  test('N-05 : flag _clearFiles dans _bhSendPhotos', () => {
+    const block = src.match(/async\s+function\s+_bhSendPhotos[\s\S]*?^\}/m)?.[0] || '';
+    expect(block).toMatch(/let\s+_clearFiles\s*=/);
   });
 
-  // N-06 : finally conditionnel — nettoyage seulement si _clearFiles
-  test('N-06 : finally nettoie uniquement si _clearFiles est true', () => {
-    const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    const finallyIdx = fnBlock.lastIndexOf('finally');
-    const finallyBlock = fnBlock.slice(finallyIdx);
+  // N-06 : finally conditionnel dans _bhSendPhotos — nettoyage seulement si _clearFiles
+  test('N-06 : finally de _bhSendPhotos nettoie uniquement si _clearFiles', () => {
+    const block = src.match(/async\s+function\s+_bhSendPhotos[\s\S]*?^\}/m)?.[0] || '';
+    const finallyIdx = block.lastIndexOf('finally');
+    const finallyBlock = block.slice(finallyIdx);
     expect(finallyBlock).toMatch(/if\s*\(\s*_clearFiles\s*\)/);
     expect(finallyBlock).toMatch(/_bhClearOutboundPreviews/);
     expect(finallyBlock).toMatch(/_selectedFiles\s*=\s*\[\]/);
   });
 
-  // N-07 : _uploadInProgress libéré dans finally même sans nettoyage (retry possible)
-  test('N-07 : _uploadInProgress toujours libéré dans finally (même sur échec)', () => {
-    const fnBlock = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
-    const finallyIdx = fnBlock.lastIndexOf('finally');
-    const finallyBlock = fnBlock.slice(finallyIdx);
-    // _uploadInProgress = false doit être AVANT le if(_clearFiles) pour toujours s'exécuter
+  // N-07 : _uploadInProgress toujours libéré dans finally de _bhSendPhotos (retry possible)
+  test('N-07 : _uploadInProgress libéré avant if(_clearFiles) dans _bhSendPhotos', () => {
+    const block = src.match(/async\s+function\s+_bhSendPhotos[\s\S]*?^\}/m)?.[0] || '';
+    const finallyIdx = block.lastIndexOf('finally');
+    const finallyBlock = block.slice(finallyIdx);
     const posRelease = finallyBlock.indexOf('_uploadInProgress = false');
     const posCheck   = finallyBlock.indexOf('if (_clearFiles)');
     expect(posRelease).toBeGreaterThan(0);
@@ -582,7 +581,6 @@ describe('N. ATTACHMENTS-7C-FIX — correctifs', () => {
   test('N-09 : _serverResponded vrai dans load, absent de error', () => {
     const block = src.match(/async\s+function\s+_sendOutboundImages[\s\S]*?^\}/m)?.[0] || '';
     expect(block).toMatch(/_serverResponded\s*=\s*true/);
-    // Dans le handler error, _serverResponded ne doit pas être mis à true
     const errorHandler = block.match(/addEventListener\s*\(\s*['"]error['"][\s\S]*?\}\s*\)/)?.[0] || '';
     expect(errorHandler).not.toMatch(/_serverResponded\s*=\s*true/);
   });
@@ -609,9 +607,7 @@ describe('N. ATTACHMENTS-7C-FIX — correctifs', () => {
     const handler = handlerIdx >= 0 && handlerEnd > handlerIdx ? src.slice(handlerIdx, handlerEnd) : src;
     const failedIdx = handler.indexOf("data.status === 'failed'");
     const failedBlock = failedIdx >= 0 ? handler.slice(failedIdx, failedIdx + 500) : '';
-    // Message visible
     expect(failedBlock).toMatch(/Envoi échoué|envoi échoué|échec/i);
-    // Pas de détails internes exposés dans textContent
     expect(failedBlock).not.toMatch(/Channex|cloudinary|HTTP|stack/i);
   });
 
@@ -630,6 +626,126 @@ describe('N. ATTACHMENTS-7C-FIX — correctifs', () => {
   test('N-14 : double clic bloqué dans openPhotoUpload (_uploadInProgress)', () => {
     const block = src.match(/openPhotoUpload\s*=\s*function[\s\S]*?^};/m)?.[0] || '';
     expect(block).toMatch(/if\s*\(\s*_uploadInProgress\s*\)\s*return/);
+  });
+});
+
+// ── P. ATTACHMENTS-PROD-FIX-2 — confirmation explicite avant envoi ─────────
+describe('P. PROD-FIX-2 — confirmation explicite avant envoi image', () => {
+
+  // P-01 : sélection de fichiers != envoi — _bhHandleFileSelection n'appelle pas _bhSendPhotos
+  test('P-01 : sélection fichiers ne déclenche pas l\'envoi', () => {
+    const block = src.match(/function\s+_bhHandleFileSelection[\s\S]*?^}/m)?.[0] || '';
+    expect(block).not.toMatch(/_bhSendPhotos/);
+    expect(block).not.toMatch(/sendMessageOwner/);
+    expect(block).not.toMatch(/fetch|XMLHttpRequest/);
+  });
+
+  // P-02 : _bhCancelOutbound définie — ne contient aucun réseau
+  test('P-02 : _bhCancelOutbound définie sans requête réseau', () => {
+    expect(src).toMatch(/function\s+_bhCancelOutbound\s*\(/);
+    const block = src.match(/function\s+_bhCancelOutbound[\s\S]*?^}/m)?.[0] || '';
+    expect(block).not.toMatch(/fetch|XMLHttpRequest|FormData|ajax/i);
+    expect(block).toMatch(/_selectedFiles\s*=\s*\[\]/);
+    expect(block).toMatch(/_bhClearOutboundPreviews/);
+  });
+
+  // P-03 : _bhSendPhotos appelle _sendOutboundImages (image-only fonctionne)
+  test('P-03 : _bhSendPhotos appelle _sendOutboundImages', () => {
+    const block = src.match(/async\s+function\s+_bhSendPhotos[\s\S]*?^\}/m)?.[0] || '';
+    expect(block).toMatch(/_sendOutboundImages\s*\(/);
+  });
+
+  // P-04 : sendMessageOwner n'appelle pas _sendOutboundImages ni _bhSendPhotos (découplement)
+  test('P-04 : sendMessageOwner ne déclenche PAS l\'envoi d\'images', () => {
+    const block = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
+    expect(block).not.toMatch(/_sendOutboundImages/);
+    // Pas d'appel (parenthèse) — le commentaire explicatif est toléré
+    expect(block).not.toMatch(/_bhSendPhotos\s*\(/);
+  });
+
+  // P-05 : bouton dédié .bh-outbound-send-btn créé dans _bhRefreshPreviewZone
+  test('P-05 : bouton dédié bh-outbound-send-btn créé dans la zone de confirmation', () => {
+    const block = src.match(/function\s+_bhRefreshPreviewZone[\s\S]*?^}/m)?.[0] || '';
+    expect(block).toMatch(/bh-outbound-send-btn/);
+    expect(block).toMatch(/bh-outbound-cancel-btn/);
+    expect(block).toMatch(/_bhSendPhotos/);
+    expect(block).toMatch(/_bhCancelOutbound/);
+  });
+
+  // P-06 : double clic impossible — _uploadInProgress vérifié dans _bhSendPhotos
+  test('P-06 : double clic bloqué — _uploadInProgress dans _bhSendPhotos', () => {
+    const block = src.match(/async\s+function\s+_bhSendPhotos[\s\S]*?^\}/m)?.[0] || '';
+    expect(block).toMatch(/if\s*\(\s*_uploadInProgress\s*\)\s*return/);
+    expect(block).toMatch(/_uploadInProgress\s*=\s*true/);
+  });
+
+  // P-07 : erreur réseau conserve previews — _clearFiles reste false si !dispatched
+  test('P-07 : erreur réseau conserve les previews (dispatched=false → réactive boutons)', () => {
+    const block = src.match(/async\s+function\s+_bhSendPhotos[\s\S]*?^\}/m)?.[0] || '';
+    // La branche else du finally réactive les boutons
+    const finallyIdx = block.lastIndexOf('finally');
+    const finallyBlock = block.slice(finallyIdx);
+    expect(finallyBlock).toMatch(/\.disabled\s*=\s*false/);
+    expect(finallyBlock).toMatch(/bh-outbound-send-btn/);
+  });
+
+  // P-08 : succès nettoie previews — _clearFiles=true si dispatched
+  test('P-08 : succès nettoie previews et _selectedFiles', () => {
+    const block = src.match(/async\s+function\s+_bhSendPhotos[\s\S]*?^\}/m)?.[0] || '';
+    const finallyIdx = block.lastIndexOf('finally');
+    const finallyBlock = block.slice(finallyIdx);
+    expect(finallyBlock).toMatch(/_bhClearOutboundPreviews/);
+    expect(finallyBlock).toMatch(/_selectedFiles\s*=\s*\[\]/);
+  });
+
+  // P-09 : object URLs révoquées à l'annulation (_bhCancelOutbound → _bhClearOutboundPreviews)
+  test('P-09 : _bhCancelOutbound révoque les object URLs via _bhClearOutboundPreviews', () => {
+    const cancelBlock = src.match(/function\s+_bhCancelOutbound[\s\S]*?^}/m)?.[0] || '';
+    expect(cancelBlock).toMatch(/_bhClearOutboundPreviews/);
+    // _bhClearOutboundPreviews contient revokeObjectURL
+    const clearBlock = src.match(/function\s+_bhClearOutboundPreviews[\s\S]*?^}/m)?.[0] || '';
+    expect(clearBlock).toMatch(/URL\.revokeObjectURL/);
+  });
+
+  // P-10 : multi-images — libellé pluriel "Envoyer les photos"
+  test('P-10 : bouton affiche "Envoyer les photos" pour plusieurs images', () => {
+    const block = src.match(/function\s+_bhRefreshPreviewZone[\s\S]*?^}/m)?.[0] || '';
+    expect(block).toMatch(/Envoyer la photo/);
+    expect(block).toMatch(/Envoyer les photos/);
+    // Choix conditionnel selon le nombre de fichiers
+    expect(block).toMatch(/_selectedFiles\.length\s*===\s*1/);
+  });
+
+  // P-11 : changement de conversation nettoie la sélection
+  test('P-11 : openChat réinitialise _selectedFiles et previews (changement conversation)', () => {
+    const block = src.match(/async\s+function\s+openChat[\s\S]*?^\}/m)?.[0] || '';
+    expect(block).toMatch(/_selectedFiles\s*=\s*\[\]/);
+    expect(block).toMatch(/_bhClearOutboundPreviews/);
+    expect(block).toMatch(/_uploadInProgress\s*=\s*false/);
+  });
+
+  // P-12 : canal incompatible → photoUploadBtn caché, _selectedFiles vidés
+  test('P-12 : canal non supporté masque photoUploadBtn et vide la sélection', () => {
+    const block = src.match(/async\s+function\s+_checkChannexConversation[\s\S]*?^\}/m)?.[0] || '';
+    expect(block).toMatch(/_supportsOutboundImage/);
+    expect(block).toMatch(/photoBtn\.style\.display\s*=\s*['"]none['"]/);
+    expect(block).toMatch(/_bhClearOutboundPreviews/);
+  });
+
+  // P-13 : CSS boutons confirmation définis
+  test('P-13 : CSS .bh-outbound-cancel-btn et .bh-outbound-send-btn définis', () => {
+    expect(src).toMatch(/\.bh-outbound-cancel-btn\s*\{/);
+    expect(src).toMatch(/\.bh-outbound-send-btn\s*\{/);
+    expect(src).toMatch(/\.bh-outbound-confirm-actions\s*\{/);
+    expect(src).toMatch(/\.bh-outbound-confirm-thumbs\s*\{/);
+  });
+
+  // P-14 : boutons désactivés pendant l'upload — disabled = true avant await
+  test('P-14 : boutons désactivés pendant l\'upload', () => {
+    const block = src.match(/async\s+function\s+_bhSendPhotos[\s\S]*?^\}/m)?.[0] || '';
+    const beforeAwait = block.slice(0, block.indexOf('await _sendOutboundImages'));
+    expect(beforeAwait).toMatch(/sendBtn\.disabled\s*=\s*true/);
+    expect(beforeAwait).toMatch(/cancelBtn\.disabled\s*=\s*true/);
   });
 });
 

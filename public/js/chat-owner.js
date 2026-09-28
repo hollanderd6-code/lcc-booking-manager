@@ -1113,10 +1113,17 @@ function _ensureBhAttachStyles() {
 #bhLightboxClose{position:absolute;top:14px;right:18px;color:#fff;font-size:36px;cursor:pointer;background:none;border:none;padding:4px 8px;line-height:1;opacity:.8;}
 #bhLightboxClose:hover{opacity:1;}
 .bh-att-sent-badge{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;border-radius:10px;padding:1px 6px;pointer-events:none;}
-.bh-outbound-preview-zone{display:flex;flex-wrap:wrap;gap:6px;padding:6px 8px;border-top:1px solid rgba(0,0,0,.08);}
+.bh-outbound-preview-zone{display:flex;flex-direction:column;padding:6px 8px;border-top:1px solid rgba(0,0,0,.08);}
+.bh-outbound-confirm-thumbs{display:flex;flex-wrap:wrap;gap:6px;}
 .bh-outbound-thumb{position:relative;width:52px;height:52px;border-radius:6px;overflow:hidden;background:#e5e7eb;flex-shrink:0;}
 .bh-outbound-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .bh-outbound-thumb button{position:absolute;top:1px;right:1px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;}
+.bh-outbound-confirm-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:6px;}
+.bh-outbound-cancel-btn{background:transparent;border:1px solid #d1d5db;color:#6b7280;border-radius:6px;padding:5px 12px;font-size:13px;cursor:pointer;font-weight:500;}
+.bh-outbound-cancel-btn:hover{background:#f3f4f6;}
+.bh-outbound-send-btn{background:#0E3B2E;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:13px;cursor:pointer;font-weight:500;}
+.bh-outbound-send-btn:hover{background:#0a2e23;}
+.bh-outbound-send-btn:disabled,.bh-outbound-cancel-btn:disabled{opacity:.5;cursor:not-allowed;}
 .bh-outbound-progress{height:3px;background:rgba(0,0,0,.08);overflow:hidden;}
 .bh-outbound-progress-fill{height:100%;background:#0E3B2E;transition:width .15s;}
   `.trim();
@@ -1249,6 +1256,10 @@ function _bhRefreshPreviewZone() {
   zone.innerHTML = '';
   if (!_selectedFiles.length) { zone.style.display = 'none'; return; }
   zone.style.display = 'flex';
+
+  // Ligne de miniatures
+  const thumbsRow = document.createElement('div');
+  thumbsRow.className = 'bh-outbound-confirm-thumbs';
   _selectedFiles.forEach((file, idx) => {
     const thumb = document.createElement('div');
     thumb.className = 'bh-outbound-thumb';
@@ -1267,8 +1278,26 @@ function _bhRefreshPreviewZone() {
     });
     thumb.appendChild(img);
     thumb.appendChild(btn);
-    zone.appendChild(thumb);
+    thumbsRow.appendChild(thumb);
   });
+  zone.appendChild(thumbsRow);
+
+  // Ligne d'actions confirmation (PROD-FIX-2)
+  const actionsRow = document.createElement('div');
+  actionsRow.className = 'bh-outbound-confirm-actions';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button';
+  cancelBtn.className = 'bh-outbound-cancel-btn';
+  cancelBtn.textContent = 'Annuler';
+  cancelBtn.addEventListener('click', _bhCancelOutbound);
+  const sendPhotoBtn = document.createElement('button');
+  sendPhotoBtn.type = 'button';
+  sendPhotoBtn.className = 'bh-outbound-send-btn';
+  sendPhotoBtn.textContent = _selectedFiles.length === 1 ? 'Envoyer la photo' : 'Envoyer les photos';
+  sendPhotoBtn.addEventListener('click', _bhSendPhotos);
+  actionsRow.appendChild(cancelBtn);
+  actionsRow.appendChild(sendPhotoBtn);
+  zone.appendChild(actionsRow);
 }
 
 function _bhClearOutboundPreviews() {
@@ -1277,6 +1306,53 @@ function _bhClearOutboundPreviews() {
   zone.querySelectorAll('img[data-obj-url]').forEach(img => URL.revokeObjectURL(img.src));
   zone.innerHTML = '';
   zone.style.display = 'none';
+}
+
+// Annuler la sélection — aucun réseau, révoque les object URLs (PROD-FIX-2)
+function _bhCancelOutbound() {
+  _selectedFiles = [];
+  _bhClearOutboundPreviews();
+}
+
+// Envoyer les images via le bouton dédié — découplé de sendMessageOwner (PROD-FIX-2)
+async function _bhSendPhotos() {
+  // Sync conversation id (messages.html peut maintenir un id différent)
+  if (window.currentConversationId
+      && String(window.currentConversationId) !== String(currentConversationId)) {
+    currentConversationId = window.currentConversationId;
+    currentChannexBookingId = window._currentChannexBookingId || null;
+  } else if (!currentConversationId && window.currentConversationId) {
+    currentConversationId = window.currentConversationId;
+  }
+  if (_uploadInProgress) return;
+  if (!_selectedFiles.length) return;
+  if (!currentConversationId) return;
+
+  _uploadInProgress = true;
+  const zone = document.getElementById('_bhOutboundPreviewZone');
+  const sendBtn = zone && zone.querySelector('.bh-outbound-send-btn');
+  const cancelBtn = zone && zone.querySelector('.bh-outbound-cancel-btn');
+  if (sendBtn) sendBtn.disabled = true;
+  if (cancelBtn) cancelBtn.disabled = true;
+
+  let _clearFiles = false;
+  try {
+    const dispatched = await _sendOutboundImages(currentConversationId);
+    if (dispatched) _clearFiles = true;
+    // dispatched=false → réseau coupé → fichiers conservés, boutons réactivés pour retry
+  } finally {
+    _uploadInProgress = false;
+    if (_clearFiles) {
+      _bhClearOutboundPreviews();
+      _selectedFiles = [];
+    } else {
+      const z = document.getElementById('_bhOutboundPreviewZone');
+      const sb = z && z.querySelector('.bh-outbound-send-btn');
+      const cb = z && z.querySelector('.bh-outbound-cancel-btn');
+      if (sb) sb.disabled = false;
+      if (cb) cb.disabled = false;
+    }
+  }
 }
 
 function _bhUpdateUploadProgress(pct) {
@@ -1794,7 +1870,7 @@ async function sendMessageOwner() {
   if (!input || !currentConversationId) return;
 
   let message = input.value.trim();
-  if (!message && _selectedFiles.length === 0) return;
+  if (!message) return; // images → _bhSendPhotos uniquement (PROD-FIX-2)
 
   // ── Résoudre les raccourcis {{variable}} avant l'envoi ──
   if (message.includes('{{') || message.includes('{')) {
@@ -1809,12 +1885,6 @@ async function sendMessageOwner() {
     }
   }
 
-  if (_uploadInProgress) return;
-  const _files = [..._selectedFiles]; // snapshot avant tout await
-  if (_files.length) _uploadInProgress = true;
-  // Vrai seulement après succès confirmé — conserve les fichiers sur échec pour retry
-  let _clearFiles = !_files.length;
-
   const sendBtn = document.getElementById('sendBtn');
   if (sendBtn) sendBtn.disabled = true;
 
@@ -1823,37 +1893,24 @@ async function sendMessageOwner() {
 
     // ── Si conversation liée à Channex : envoyer via plateforme ──
     if (currentChannexBookingId) {
-      if (message) {
-        const response = await fetch(`${API_URL}/api/chat/conversations/${currentConversationId}/send-platform`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ message })
-        });
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          throw new Error(err.error || 'Erreur envoi plateforme');
-        }
-        const data = await response.json();
-        input.value = '';
-        input.style.height = 'auto';
-        // Afficher immédiatement le message avec son vrai id (pas de doublon possible via socket)
-        const savedMsg = data.message || { content: message, sender_type: 'property', created_at: new Date().toISOString(), id: 'tmp_' + Date.now() };
-        appendMessage({ ...savedMsg, sender_type: 'owner' });
-        hideAiThinking(); // l'hôte a pris la main → plus besoin de "l'IA réfléchit…"
-        scrollToBottom();
-        if (!_files.length) showToast('✅ Envoyé sur la plateforme', 'success');
-      } else {
-        input.value = '';
-        input.style.height = 'auto';
+      const response = await fetch(`${API_URL}/api/chat/conversations/${currentConversationId}/send-platform`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ message })
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Erreur envoi plateforme');
       }
-      // Images envoyées après le texte (messages Channex séparés, OTA l'exige)
-      if (_files.length) {
-        const dispatched = await _sendOutboundImages(currentConversationId);
-        if (dispatched) _clearFiles = true;
-        // réseau coupé → dispatched=false → fichiers conservés pour retry
-      } else {
-        _clearFiles = true; // texte seul envoyé avec succès
-      }
+      const data = await response.json();
+      input.value = '';
+      input.style.height = 'auto';
+      // Afficher immédiatement le message avec son vrai id (pas de doublon possible via socket)
+      const savedMsg = data.message || { content: message, sender_type: 'property', created_at: new Date().toISOString(), id: 'tmp_' + Date.now() };
+      appendMessage({ ...savedMsg, sender_type: 'owner' });
+      hideAiThinking(); // l'hôte a pris la main → plus besoin de "l'IA réfléchit…"
+      scrollToBottom();
+      showToast('✅ Envoyé sur la plateforme', 'success');
       return;
     }
 
@@ -1875,22 +1932,13 @@ async function sendMessageOwner() {
 
     input.value = '';
     input.style.height = 'auto';
-    _clearFiles = true; // BH classique — pas de fichiers de toute façon
     // Le message sera ajouté via Socket.IO
 
   } catch (error) {
     console.error('❌ Erreur envoi message:', error);
     showToast('Erreur lors de l\'envoi : ' + error.message, 'error');
-    // _clearFiles reste false → fichiers conservés pour retry
   } finally {
     if (sendBtn) sendBtn.disabled = false;
-    if (_files.length) {
-      _uploadInProgress = false; // toujours libérer le verrou
-      if (_clearFiles) {
-        _bhClearOutboundPreviews();
-        _selectedFiles = [];
-      }
-    }
   }
 }
 
