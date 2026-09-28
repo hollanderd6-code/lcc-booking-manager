@@ -1734,7 +1734,7 @@ function isMobileDevice() { return false; }
 window.isMobileDevice = function() { return false; };
 </script>
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/chat-owner.js?v=f78c0252"></script>
+<script src="/js/chat-owner.js?v=attachments-prod-fix-4"></script>
 <!-- Auth + User -->
 <script>
     (async function() {
@@ -2539,63 +2539,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         btn.innerHTML = '<i class="fas fa-file-invoice"></i>';
       };
     }
-  };
-
-  // ── Photo upload (Cloudinary) ──
-  window.openPhotoUpload = function() {
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.multiple = true;
-    input.style.display = 'none';
-
-    input.addEventListener('change', async function(e) {
-      var files = Array.from(e.target.files);
-      if (!files.length) { input.remove(); return; }
-
-      var btn = document.getElementById('photoUploadBtn');
-      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
-
-      try {
-        for (var i = 0; i < files.length; i++) {
-          var file = files[i];
-          if (!file.type.startsWith('image/')) throw new Error('Doit être une image');
-          if (file.size > 5 * 1024 * 1024) throw new Error('Max 5MB');
-
-          var formData = new FormData();
-          formData.append('file', file);
-          formData.append('upload_preset', 'chat-photos');
-
-          var res = await fetch('https://api.cloudinary.com/v1_1/dvn95fhbx/image/upload', {
-            method: 'POST', body: formData
-          });
-          if (!res.ok) throw new Error('Erreur upload Cloudinary');
-          var data = await res.json();
-          var imageUrl = data.secure_url;
-
-          // Send via API (correct field names from server.js)
-          var token = localStorage.getItem('lcc_token');
-          await fetch('/api/chat/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-            body: JSON.stringify({
-              conversation_id: window.currentConversationId,
-              message: '[IMAGE:' + imageUrl + ']',
-              sender_type: 'owner',
-              sender_name: 'Vous'
-            })
-          });
-        }
-      } catch(err) {
-        alert('Erreur photo: ' + err.message);
-      } finally {
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-image"></i>'; }
-        input.remove();
-      }
-    });
-
-    document.body.appendChild(input);
-    input.click();
   };
 
   // ── Render [IMAGE:url] as actual <img> in bubbles ──

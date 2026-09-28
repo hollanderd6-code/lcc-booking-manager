@@ -777,3 +777,86 @@ describe('M. Non-régression ATTACHMENTS-6', () => {
     expect(src).toMatch(/window\.sendMessageOwner\s*=\s*sendMessageOwner/);
   });
 });
+
+// ── Q. ATTACHMENTS-PROD-FIX-4 — anti-régression cross-file messages.html ─────
+// Tests croisés : garantissent que messages.html ne peut plus masquer
+// la définition de window.openPhotoUpload de chat-owner.js.
+describe('Q. PROD-FIX-4 — anti-régression messages.html vs chat-owner.js', () => {
+  const html = require('fs').readFileSync(
+    require('path').join(__dirname, '../public/messages.html'),
+    'utf8'
+  );
+
+  // Q-01 : messages.html ne définit plus window.openPhotoUpload
+  test('Q-01 : messages.html ne définit PAS window.openPhotoUpload', () => {
+    expect(html).not.toMatch(/window\.openPhotoUpload\s*=/);
+  });
+
+  // Q-02 : messages.html peut APPELER openPhotoUpload mais ne doit pas l'implémenter
+  test('Q-02 : messages.html peut appeler openPhotoUpload (bouton HTML)', () => {
+    expect(html).toMatch(/openPhotoUpload\s*\(\s*\)/);
+    expect(html).not.toMatch(/window\.openPhotoUpload\s*=\s*function/);
+  });
+
+  // Q-03 : chat-owner.js est l'unique implémentation frontend propriétaire
+  test('Q-03 : chat-owner.js contient l\'unique window.openPhotoUpload du frontend', () => {
+    const count = (src.match(/window\.openPhotoUpload\s*=/g) || []).length;
+    expect(count).toBe(1);
+  });
+
+  // Q-04 : messages.html ne fait PAS de fetch vers api.cloudinary.com
+  test('Q-04 : aucun upload direct Cloudinary dans messages.html', () => {
+    expect(html).not.toMatch(/api\.cloudinary\.com/);
+    expect(html).not.toMatch(/upload_preset/);
+  });
+
+  // Q-05 : messages.html ne construit plus de message [IMAGE:<url>] à envoyer
+  test('Q-05 : messages.html ne produit plus de tag [IMAGE:url]', () => {
+    // Le reader (fixImageBubbles) est toléré — seul le producer est interdit
+    // Le producer construisait : '[IMAGE:' + imageUrl + ']' envoyé via fetch
+    // On cherche la combinaison distinctive : [IMAGE: + /api/chat/send dans le même contexte
+    const imageProducerPattern = /\[IMAGE:.*fetch\s*\(.*\/api\/chat\/send/s;
+    expect(html).not.toMatch(imageProducerPattern);
+    // Vérification supplémentaire : pas de '[IMAGE:' + variable (construction dynamique)
+    expect(html).not.toMatch(/\[IMAGE:\s*['"]\s*\+\s*\w/);
+  });
+
+  // Q-06 : le chemin ATTACHMENTS — sélection ne provoque aucun réseau dans messages.html
+  test('Q-06 : openPhotoUpload dans messages.html ne contient aucun fetch inline', () => {
+    // Comme window.openPhotoUpload n'est plus définie dans messages.html,
+    // il ne peut y avoir aucun fetch inline dans ce bloc inexistant
+    expect(html).not.toMatch(/window\.openPhotoUpload\s*=[\s\S]*?fetch\s*\(/);
+  });
+
+  // Q-07 : _bhSendPhotos est l'unique déclencheur réseau pour les images (dans chat-owner.js)
+  test('Q-07 : _bhSendPhotos est le seul point d\'envoi réseau image (chat-owner.js)', () => {
+    const block = src.match(/async\s+function\s+_bhSendPhotos[\s\S]*?^\}/m)?.[0] || '';
+    expect(block).toMatch(/_sendOutboundImages/);
+    // _sendOutboundImages utilise XHR (XMLHttpRequest), PAS fetch — c'est la garantie de l'upload stream
+    const sendBlock = src.match(/async\s+function\s+_sendOutboundImages[\s\S]*?^\}/m)?.[0] || '';
+    expect(sendBlock).toMatch(/XMLHttpRequest/);
+    expect(sendBlock).not.toMatch(/\bfetch\s*\(/);
+  });
+
+  // Q-08 : Annuler → _bhCancelOutbound — pas de réseau dans messages.html ni chat-owner.js cancel
+  test('Q-08 : _bhCancelOutbound ne contient aucun appel réseau', () => {
+    const block = src.match(/function\s+_bhCancelOutbound[\s\S]*?^}/m)?.[0] || '';
+    expect(block).not.toMatch(/fetch|XMLHttpRequest|FormData/);
+  });
+
+  // Q-09 : le cache-busting chat-owner.js dans messages.html est différent de l'ancienne valeur
+  test('Q-09 : version chat-owner.js dans messages.html ≠ ancienne valeur f78c0252', () => {
+    expect(html).toMatch(/chat-owner\.js\?v=/);
+    expect(html).not.toMatch(/chat-owner\.js\?v=f78c0252/);
+  });
+
+  // Q-10 : une seule définition de window.openPhotoUpload dans tout le frontend propriétaire
+  test('Q-10 : une seule définition globale de window.openPhotoUpload (chat-owner.js uniquement)', () => {
+    // messages.html : 0 définitions
+    const htmlDefs = (html.match(/window\.openPhotoUpload\s*=/g) || []).length;
+    expect(htmlDefs).toBe(0);
+    // chat-owner.js : exactement 1 définition
+    const jsDefs = (src.match(/window\.openPhotoUpload\s*=/g) || []).length;
+    expect(jsDefs).toBe(1);
+  });
+});
