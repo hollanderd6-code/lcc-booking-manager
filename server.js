@@ -26140,6 +26140,56 @@ async function resolveOwnerInvoiceContext(pool, userId, propertyIds, agencyIds =
   return { currency, country, locale, issuerSnapshot, issuerSnapshotSource: 'user_profile' };
 }
 
+// 🌍 INTL-4.5 — resolveOwnerInvoicePdfContext (pure, no DB writes)
+// Builds display context for owner invoice PDF: snapshot-first, live-user fallback.
+function resolveOwnerInvoicePdfContext(inv, liveUser) {
+  const snap = inv.issuer_snapshot || null;
+  const currency = (inv.currency && /^[A-Z]{3}$/.test(inv.currency)) ? inv.currency : 'EUR';
+  const locale   = (inv.locale   && /^[a-z]{2}-[A-Z]{2}$/.test(inv.locale))  ? inv.locale  : 'fr-FR';
+
+  let issuerName, issuerAddr, issuerCP, issuerCity, issuerEmail, issuerPhone, issuerWeb;
+  let issuerLegalLabel, issuerLegalValue, issuerTaxLabel, issuerTaxValue;
+
+  if (snap) {
+    issuerName  = snap.company || (snap.firstName ? `${snap.firstName} ${snap.lastName || ''}`.trim() : '') || 'Votre entreprise';
+    issuerAddr  = snap.address    || '';
+    issuerCP    = snap.postalCode || '';
+    issuerCity  = snap.city       || '';
+    issuerEmail = snap.invoiceEmail || snap.email || '';
+    issuerPhone = snap.phone    || '';
+    issuerWeb   = snap.website  || '';
+    issuerLegalLabel = snap.legalIdentifierLabel || (snap.siret ? 'SIRET' : null);
+    issuerLegalValue = snap.legalIdentifierValue || snap.siret || null;
+    issuerTaxLabel   = snap.taxIdentifierLabel   || null;
+    issuerTaxValue   = snap.taxIdentifierValue   || snap.vatNumber || null;
+  } else {
+    const u = liveUser || {};
+    issuerName  = u.company || (u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : '') || 'Votre entreprise';
+    issuerAddr  = u.address      || '';
+    issuerCP    = u.postal_code  || '';
+    issuerCity  = u.city         || '';
+    issuerEmail = u.invoice_email || u.email || '';
+    issuerPhone = u.phone    || '';
+    issuerWeb   = u.website  || '';
+    issuerLegalLabel = u.legal_identifier_label || (u.siret ? 'SIRET' : null);
+    issuerLegalValue = u.legal_identifier_value || u.siret || null;
+    issuerTaxLabel   = u.tax_identifier_label   || null;
+    issuerTaxValue   = u.tax_identifier_value   || u.vat_number || null;
+  }
+
+  const taxLabel       = inv.tax_label        || 'TVA';
+  const vatExemptLabel = inv.vat_exempt_label || null;
+
+  return {
+    currency, locale,
+    issuerName, issuerAddr, issuerCP, issuerCity,
+    issuerEmail, issuerPhone, issuerWeb,
+    issuerLegalLabel, issuerLegalValue,
+    issuerTaxLabel, issuerTaxValue,
+    taxLabel, vatExemptLabel
+  };
+}
+
 // 2. CRÉER UNE NOUVELLE FACTURE PROPRIÉTAIRE (BROUILLON PAR DÉFAUT)
 app.post('/api/owner-invoices',
   authenticateAny, requireFeature('facturation_proprietaires'),
@@ -26476,28 +26526,35 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
       } catch(e) {}
     }));
 
-    // Profil émetteur : priorité au body (données locales du frontend), fallback DB
+    // 🌍 INTL-4.5 — snapshot-first: emitter body blocked for identity when snapshot present.
+    // Logo remains a residual visual dependency (not snapshotted) — emitter.logo still allowed.
     const emitter = req.body?.emitter || {};
     const userRes = await pool.query(
-      'SELECT company, address, postal_code, city, siret, email FROM users WHERE id = $1',
+      `SELECT company, first_name, last_name, address, postal_code, city, siret, email,
+              invoice_email, phone, website, vat_number,
+              legal_identifier_label, legal_identifier_value,
+              tax_identifier_label,   tax_identifier_value
+       FROM users WHERE id = $1`,
       [ownerUserId]
     );
     const u = userRes.rows[0] || {};
+    const _snapActive = !!inv.issuer_snapshot;
+    const _pdfCtx = resolveOwnerInvoicePdfContext(inv, u);
+    const _emitterIdentity = _snapActive ? {} : emitter;
+    const senderName  = _emitterIdentity.company    || _pdfCtx.issuerName;
+    const senderAddr  = _emitterIdentity.address    || _pdfCtx.issuerAddr;
+    const senderCP    = _emitterIdentity.postalCode || _pdfCtx.issuerCP;
+    const senderCity  = _emitterIdentity.city       || _pdfCtx.issuerCity;
+    const senderEmail = _emitterIdentity.email      || _pdfCtx.issuerEmail;
+    const senderPhone = _emitterIdentity.phone      || _pdfCtx.issuerPhone;
+    const senderWeb   = _emitterIdentity.website    || _pdfCtx.issuerWeb;
 
-    const senderName  = emitter.company    || u.company      || 'Votre entreprise';
-    const senderAddr  = emitter.address    || u.address      || '';
-    const senderCP    = emitter.postalCode || u.postal_code  || '';
-    const senderCity  = emitter.city       || u.city         || '';
-    const senderEmail = emitter.email      || u.invoice_email || u.email || '';
-    const senderSiret = emitter.siret      || u.siret        || '';
-    const senderPhone = emitter.phone      || u.phone         || '';
-    const senderWeb   = emitter.website    || u.website       || '';
-
-    const clientName  = client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim() || inv.client_name || 'Client';
-    const clientAddr  = client.address || inv.client_address || '';
-    const clientCP    = client.postal_code || inv.client_postal_code || '';
-    const clientCity  = client.city || inv.client_city || '';
-    const clientEmail = client.email || inv.client_email || '';
+    // 🌍 INTL-4.5 — invoice snapshot fields take priority; live owner_clients only fills genuinely missing fields
+    const clientName  = inv.client_name || client.company_name || `${client.first_name||''} ${client.last_name||''}`.trim() || 'Client';
+    const clientAddr  = inv.client_address || client.address || '';
+    const clientCP    = inv.client_postal_code || client.postal_code || '';
+    const clientCity  = inv.client_city || client.city || '';
+    const clientEmail = inv.client_email || client.email || '';
 
     // Générer PDF avec PDFKit
     const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
@@ -26567,7 +26624,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     // Le titre inclut le numéro de facture (ex. "FACTURE FACT-2026-0019"), comme dans l'aperçu HTML.
     doc.font('Helvetica-Bold').fontSize(22).fillColor(GREEN).text(invTitle + (invRef ? ' ' + invRef : ''), mg, y);
     y += 28;
-    const issDate = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR');
+    const issDate = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString(_pdfCtx.locale) : new Date().toLocaleDateString(_pdfCtx.locale);
     doc.font('Helvetica').fontSize(10).fillColor(GRAY).text(issDate, mg, y);
     y += 14; // ← augmenté pour que la date soit au-dessus de la ligne
 
@@ -26588,7 +26645,8 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     let yL = boxTop + 36;
     if (senderAddr)  { doc.text(senderAddr, mg+8, yL, {width:colW-16}); yL+=13; }
     if (senderCP||senderCity) { doc.text(`${senderCP} ${senderCity}`.trim(), mg+8, yL); yL+=13; }
-    if (senderSiret) { doc.text(`SIRET : ${senderSiret}`, mg+8, yL); yL+=13; }
+    if (_pdfCtx.issuerLegalValue) { doc.text(`${_pdfCtx.issuerLegalLabel || 'SIRET'} : ${_pdfCtx.issuerLegalValue}`, mg+8, yL); yL+=13; }
+    if (_pdfCtx.issuerTaxValue)   { doc.text(`${_pdfCtx.issuerTaxLabel   || 'N° TVA'} : ${_pdfCtx.issuerTaxValue}`, mg+8, yL); yL+=13; }
     if (senderPhone) { doc.text(senderPhone, mg+8, yL); yL+=13; }
     if (senderEmail) { doc.text(senderEmail, mg+8, yL); yL+=13; }
     if (senderWeb)   { doc.text(senderWeb, mg+8, yL); }
@@ -26607,14 +26665,14 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
 
     // Échéance + Période
     if (inv.due_date) {
-      const dueDate = new Date(inv.due_date).toLocaleDateString('fr-FR');
+      const dueDate = new Date(inv.due_date).toLocaleDateString(_pdfCtx.locale);
       doc.font('Helvetica').fontSize(10).fillColor(GRAY).text('Échéance : ', mg, y, {continued:true});
       doc.font('Helvetica-Bold').fillColor(DARK).text(dueDate);
       y += 16;
     }
     if (inv.period_start && inv.period_end) {
-      const ps = new Date(inv.period_start).toLocaleDateString('fr-FR');
-      const pe = new Date(inv.period_end).toLocaleDateString('fr-FR');
+      const ps = new Date(inv.period_start).toLocaleDateString(_pdfCtx.locale);
+      const pe = new Date(inv.period_end).toLocaleDateString(_pdfCtx.locale);
       doc.font('Helvetica').fontSize(10).fillColor(GRAY).text(`Période : du ${ps} au ${pe}`, mg, y);
       y += 16;
     }
@@ -26668,18 +26726,18 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
       let baseStr, tauxStr;
 
       if (item.item_type === 'commission') {
-        baseStr = parseFloat(item.rental_amount||0).toFixed(2) + ' €';
+        baseStr = bhFmtAmount(item.rental_amount||0, _pdfCtx.currency, _pdfCtx.locale);
         tauxStr = parseFloat(item.commission_rate||0) + ' %';
       } else {
         baseStr = String(item.quantity || 1);
-        tauxStr = parseFloat(item.unit_price||0).toFixed(2) + ' €';
+        tauxStr = bhFmtAmount(item.unit_price||0, _pdfCtx.currency, _pdfCtx.locale);
       }
 
       doc.font('Helvetica').fontSize(10).fillColor(DARK);
       doc.text(desc, colDesc+6, y+9, {width:240});
       doc.text(baseStr, colBase, y+9, {width:80, align:'right'});
       doc.text(tauxStr, colTaux, y+9, {width:75, align:'right'});
-      doc.font('Helvetica-Bold').text(total.toFixed(2)+' €', colTotal, y+9, {width:totalW, align:'right'});
+      doc.font('Helvetica-Bold').text(bhFmtAmount(total, _pdfCtx.currency, _pdfCtx.locale), colTotal, y+9, {width:totalW, align:'right'});
       y += thisRowH;
     });
 
@@ -26699,15 +26757,15 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
 
     doc.font('Helvetica').fontSize(10).fillColor(GRAY);
     doc.text('Total HT', totX, y, {width:140});
-    doc.font('Helvetica-Bold').fillColor(DARK).text(subtotal.toFixed(2)+' €', totX+132, y, {width:80, align:'right'});
+    doc.font('Helvetica-Bold').fillColor(DARK).text(bhFmtAmount(subtotal, _pdfCtx.currency, _pdfCtx.locale), totX+132, y, {width:80, align:'right'});
     y += 16;
 
     if (vatAmt > 0) {
-      doc.font('Helvetica').fontSize(10).fillColor(GRAY).text(`TVA (${inv.vat_rate}%)`, totX, y, {width:140});
-      doc.font('Helvetica-Bold').fillColor(DARK).text(vatAmt.toFixed(2)+' €', totX+132, y, {width:80, align:'right'});
+      doc.font('Helvetica').fontSize(10).fillColor(GRAY).text(`${_pdfCtx.taxLabel} (${inv.vat_rate}%)`, totX, y, {width:140});
+      doc.font('Helvetica-Bold').fillColor(DARK).text(bhFmtAmount(vatAmt, _pdfCtx.currency, _pdfCtx.locale), totX+132, y, {width:80, align:'right'});
       y += 16;
-    } else {
-      doc.font('Helvetica').fontSize(9).fillColor(GRAY).text('TVA non applicable, art. 293 B du CGI', mg, y);
+    } else if (_pdfCtx.vatExemptLabel) {
+      doc.font('Helvetica').fontSize(9).fillColor(GRAY).text(_pdfCtx.vatExemptLabel, mg, y);
       y += 14;
     }
 
@@ -26715,7 +26773,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     doc.rect(totX, y, 220, 1.5).fill(GREEN);
     y += 8;
     doc.font('Helvetica-Bold').fontSize(13).fillColor(GREEN).text('Total', totX, y, {width:140});
-    doc.text(totalTtc.toFixed(2)+' €', totX+132, y, {width:80, align:'right'});
+    doc.text(bhFmtAmount(totalTtc, _pdfCtx.currency, _pdfCtx.locale), totX+132, y, {width:80, align:'right'});
     y += 26;
 
     // Conditions
@@ -26750,7 +26808,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
 
       for (const it of deboursWithPhotos) {
         const photoUrl = deboursPhotos[it.debours_id];
-        const total = parseFloat(it.total||0).toFixed(2);
+        const total = parseFloat(it.total||0);
         const ax = col === 0 ? mg : mg + imgW + 20;
 
         if (col === 0 && ay + 180 > 780) {
@@ -26761,7 +26819,7 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
         // Cadre
         doc.rect(ax, ay, imgW, 160).strokeColor(BORDER).lineWidth(1).stroke();
         doc.font('Helvetica-Bold').fontSize(9).fillColor(DARK)
-           .text(`${it.description || 'Débours'} — ${total} €`, ax+6, ay+6, {width:imgW-12});
+           .text(`${it.description || 'Débours'} — ${bhFmtAmount(total, _pdfCtx.currency, _pdfCtx.locale)}`, ax+6, ay+6, {width:imgW-12});
 
         // Télécharger et intégrer l'image
         try {
@@ -28571,9 +28629,14 @@ app.post('/api/owner-invoices/:id/finalize',
 // ============================================================
 // ENVOI EMAIL FACTURE PROPRIÉTAIRE
 // ============================================================
-async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret, userLogo, deboursPhotos }) {
+async function sendOwnerInvoiceEmail({ invoiceNumber, issueDate, clientName, clientEmail, clientAddress, clientPostalCode, clientCity, clientSiret, periodStart, periodEnd, totalTtc, vatAmount, vatRate, vatApplicable, items, userCompany, userEmail, userAddress, userPostalCode, userCity, userSiret, userLegalLabel, userTaxLabel, userTaxValue, userLogo, deboursPhotos, currency, locale, taxLabel, vatExemptLabel, paymentDelay, paymentMode, lateInterest }) {
   deboursPhotos = deboursPhotos || {};
   if (!clientEmail) throw new Error('Email client manquant');
+  // 🌍 INTL-4.5 defaults
+  const _cur = (currency && /^[A-Z]{3}$/.test(currency)) ? currency : 'EUR';
+  const _loc = (locale   && /^[a-z]{2}-[A-Z]{2}$/.test(locale))  ? locale  : 'fr-FR';
+  const _taxLabel  = taxLabel || 'TVA';
+  const _vatExempt = vatExemptLabel || null;
 
   const toDateOnly = d => {
     if (!d) return null;
@@ -28585,8 +28648,8 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
     if (!isNaN(parsed.getTime())) return parsed.toISOString().substring(0, 10);
     return null;
   };
-  const periodStartFr = periodStart ? new Date(toDateOnly(periodStart) + 'T00:00:00').toLocaleDateString('fr-FR') : '';
-  const periodEndFr   = periodEnd   ? new Date(toDateOnly(periodEnd)   + 'T00:00:00').toLocaleDateString('fr-FR') : '';
+  const periodStartFr = periodStart ? new Date(toDateOnly(periodStart) + 'T00:00:00').toLocaleDateString(_loc) : '';
+  const periodEndFr   = periodEnd   ? new Date(toDateOnly(periodEnd)   + 'T00:00:00').toLocaleDateString(_loc) : '';
   const period = (periodStartFr || periodEndFr) ? `du ${periodStartFr} au ${periodEndFr}` : '';
 
   const fromName   = userCompany || 'Boostinghost';
@@ -28647,7 +28710,7 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
     doc.font('Helvetica-Bold').fontSize(22).fillColor(GREEN)
        .text(invTitle + ' ' + (invoiceNumber || 'BROUILLON'), mg, y, { width: 320 });
     doc.font('Helvetica').fontSize(10).fillColor(GRAY)
-       .text(new Date().toLocaleDateString('fr-FR'), mg, y + 28);
+       .text(issueDate ? new Date(issueDate).toLocaleDateString(_loc) : new Date().toLocaleDateString(_loc), mg, y + 28);
 
     // Ligne verte séparatrice
     doc.rect(mg, y + 44, W - mg*2, 2).fill(GREEN);
@@ -28668,7 +28731,8 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
     let ey = y + 36;
     if (userAddress)              { doc.text(userAddress, mg+10, ey, { width: colW-20 }); ey += 13; }
     if (userPostalCode||userCity) { doc.text(((userPostalCode||'')+' '+(userCity||'')).trim(), mg+10, ey); ey += 13; }
-    if (userSiret)                { doc.text('SIRET : '+userSiret, mg+10, ey); ey += 11; }
+    if (userSiret)                { doc.text(`${userLegalLabel || 'SIRET'} : ${userSiret}`, mg+10, ey); ey += 11; }
+    if (userTaxValue)             { doc.text(`${userTaxLabel || 'N° TVA'} : ${userTaxValue}`, mg+10, ey); ey += 11; }
     if (userEmail)                { doc.text(userEmail, mg+10, ey); }
 
     // Cadre destinataire
@@ -28728,11 +28792,11 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
       const total = parseFloat(item.total || 0);
       let baseDisp, rateDisp;
       if (item.item_type === 'commission') {
-        baseDisp = parseFloat(item.rental_amount || 0).toFixed(2) + ' €';
+        baseDisp = bhFmtAmount(item.rental_amount || 0, _cur, _loc);
         rateDisp = parseFloat(item.commission_rate || 0) + ' %';
       } else {
         baseDisp = String(item.quantity || 1);
-        rateDisp = parseFloat(item.unit_price || 0).toFixed(2) + ' €';
+        rateDisp = bhFmtAmount(item.unit_price || 0, _cur, _loc);
       }
 
       if (alt) doc.rect(mg, y, W-mg*2, thisRowH).fill(LIGHT);
@@ -28741,7 +28805,7 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
          .text(baseDisp, colBase,   y+7, { width: 80, align: 'right' })
          .text(rateDisp, colTaux,   y+7, { width: 75, align: 'right' });
       doc.font('Helvetica-Bold').fillColor(DARK)
-         .text(total.toFixed(2)+' €', colTotal, y+7, { width: totalW, align: 'right' });
+         .text(bhFmtAmount(total, _cur, _loc), colTotal, y+7, { width: totalW, align: 'right' });
       doc.rect(mg, y+thisRowH, W-mg*2, 0.5).fill(BORDER);
       y += thisRowH; alt = !alt;
     });
@@ -28754,30 +28818,33 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
     const totW = 200, totX = W - mg - totW;
     doc.font('Helvetica').fontSize(10).fillColor(GRAY)
        .text('Total HT', totX, y)
-       .text(ht.toFixed(2)+' €', totX+100, y, { width: totW-108, align: 'right' });
+       .text(bhFmtAmount(ht, _cur, _loc), totX+100, y, { width: totW-108, align: 'right' });
     y += 16;
     if (vatAmt > 0) {
-      doc.text('TVA (' + (vatRate||0) + '%)', totX, y)
-         .text(vatAmt.toFixed(2)+' €', totX+100, y, { width: totW-108, align: 'right' });
+      doc.text(`${_taxLabel} (${vatRate||0}%)`, totX, y)
+         .text(bhFmtAmount(vatAmt, _cur, _loc), totX+100, y, { width: totW-108, align: 'right' });
       y += 14;
-    } else {
+    } else if (_vatExempt) {
       doc.font('Helvetica').fontSize(8).fillColor(GRAY)
-         .text('TVA non applicable, art. 293 B du CGI', totX, y, { width: totW });
+         .text(_vatExempt, totX, y, { width: totW });
       y += 12;
     }
     doc.rect(totX, y, totW, 1.5).fill(GREEN); y += 5;
     doc.font('Helvetica-Bold').fontSize(12).fillColor(GREEN)
        .text('Total', totX, y+2)
-       .text(ttc.toFixed(2)+' €', totX+100, y+2, { width: totW-108, align: 'right' });
+       .text(bhFmtAmount(ttc, _cur, _loc), totX+100, y+2, { width: totW-108, align: 'right' });
     y += 26;
 
     // ── CONDITIONS ─────────────────────────────────────────────
-    doc.rect(mg, y, W-mg*2, 1).fill(BORDER); y += 8;
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN).text('CONDITIONS', mg, y); y += 12;
-    doc.font('Helvetica').fontSize(9).fillColor(DARK)
-       .text('Conditions de règlement : 30 jours', mg, y); y += 12;
-    doc.text('Mode de règlement : Virement bancaire', mg, y); y += 12;
-    doc.text("Intérêts de retard : 3× taux légal", mg, y); y += 20;
+    if (paymentDelay || paymentMode || lateInterest) {
+      doc.rect(mg, y, W-mg*2, 1).fill(BORDER); y += 8;
+      doc.font('Helvetica-Bold').fontSize(8).fillColor(GREEN).text('CONDITIONS', mg, y); y += 12;
+      doc.font('Helvetica').fontSize(9).fillColor(DARK);
+      if (paymentDelay)  { doc.text(`Délai de règlement : ${paymentDelay}`, mg, y); y += 12; }
+      if (paymentMode)   { doc.text(`Mode de règlement : ${paymentMode}`, mg, y); y += 12; }
+      if (lateInterest)  { doc.text(`Intérêts de retard : ${lateInterest}`, mg, y); y += 12; }
+      y += 8;
+    }
 
     // ── FOOTER ─────────────────────────────────────────────────
     doc.rect(mg, H-36, W-mg*2, 1).fill(BORDER);
@@ -28801,12 +28868,12 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
       const http  = require('http');
       for (const it of deboursWithPhotos) {
         const photoUrl = deboursPhotos[it.debours_id];
-        const total = parseFloat(it.total||0).toFixed(2);
+        const total = parseFloat(it.total||0);
         const ax = col === 0 ? mg : mg + imgW + 20;
         if (col === 0 && ay + 180 > 780) { doc.addPage(); ay = mg; }
         doc.rect(ax, ay, imgW, 160).strokeColor(BORDER).lineWidth(1).stroke();
         doc.font('Helvetica-Bold').fontSize(9).fillColor(DARK)
-           .text(`${it.description || 'Débours'} — ${total} €`, ax+6, ay+6, {width:imgW-12});
+           .text(`${it.description || 'Débours'} — ${bhFmtAmount(total, _cur, _loc)}`, ax+6, ay+6, {width:imgW-12});
         try {
           const imageBuffer = await new Promise((resolve, reject) => {
             const proto = photoUrl.startsWith('https') ? https : http;
@@ -28841,12 +28908,12 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, clientName, clientEmail, c
         <table style="width:100%;border-collapse:collapse;">
           ${(items||[]).map(item => {
             const total = parseFloat(item.total || 0);
-            return `<tr><td style="padding:5px 0;color:#666;">${escapeHtml(item.description || 'Prestation')}</td><td style="padding:5px 0;font-weight:600;text-align:right;">${total.toFixed(2)} €</td></tr>`;
+            return `<tr><td style="padding:5px 0;color:#666;">${escapeHtml(item.description || 'Prestation')}</td><td style="padding:5px 0;font-weight:600;text-align:right;">${escapeHtml(bhFmtAmount(total, _cur, _loc))}</td></tr>`;
           }).join('')}
-          ${vatAmt > 0 ? `<tr><td style="padding:5px 0;color:#666;">TVA (${vatRate}%)</td><td style="padding:5px 0;text-align:right;">${vatAmt.toFixed(2)} €</td></tr>` : ''}
+          ${vatAmt > 0 ? `<tr><td style="padding:5px 0;color:#666;">${escapeHtml(_taxLabel)} (${vatRate}%)</td><td style="padding:5px 0;text-align:right;">${escapeHtml(bhFmtAmount(vatAmt, _cur, _loc))}</td></tr>` : ''}
         </table>
         <table style="width:100%;border-top:2px solid #0E3B2E;margin-top:10px;border-collapse:collapse;">
-          <tr><td style="padding-top:10px;font-weight:700;font-size:16px;">TOTAL TTC</td><td style="padding-top:10px;font-weight:700;font-size:16px;color:#0E3B2E;text-align:right;">${ttc.toFixed(2)} €</td></tr>
+          <tr><td style="padding-top:10px;font-weight:700;font-size:16px;">TOTAL TTC</td><td style="padding-top:10px;font-weight:700;font-size:16px;color:#0E3B2E;text-align:right;">${escapeHtml(bhFmtAmount(ttc, _cur, _loc))}</td></tr>
         </table>
       </div>
       ${emailCard('success', '📎 Votre facture PDF est jointe à cet email.')}
@@ -28951,13 +29018,17 @@ app.post('/api/owner-invoices/:id/send',
       ['sent', invoice.invoice_number, req.params.id]
     );
 
-    // Envoyer email
-    // Récupérer le profil complet + email du client via JOIN
+    // 🌍 INTL-4.5 — Envoyer email avec contexte snapshot-first
     const profileResult = await pool.query(
-      'SELECT company, email, address, postal_code, city, siret, logo_url FROM users WHERE id = $1',
+      `SELECT company, first_name, last_name, email, address, postal_code, city, siret, logo_url,
+              invoice_email, phone, website, vat_number,
+              legal_identifier_label, legal_identifier_value,
+              tax_identifier_label,   tax_identifier_value
+       FROM users WHERE id = $1`,
       [ownerUserId]
     );
     const profile = profileResult.rows[0] || {};
+    const _sendPdfCtx = resolveOwnerInvoicePdfContext(invoice, profile);
 
     const clientResult = await pool.query(
       'SELECT * FROM owner_clients WHERE id = $1',
@@ -28965,9 +29036,9 @@ app.post('/api/owner-invoices/:id/send',
     );
     const client = clientResult.rows[0] || {};
     // Fallback sur le snapshot de la facture quand il n'y a pas d'owner_client lié
-    // (client agence : invoice.client_id est NULL → owner_clients vide).
-    const clientEmail = client.email || invoice.client_email || '';
-    const clientName  = (client.company_name || ((client.first_name || '') + ' ' + (client.last_name || '')).trim()) || invoice.client_name || 'Client';
+    // 🌍 INTL-4.5 — invoice snapshot fields take priority; live owner_clients only fills genuinely missing fields
+    const clientEmail = invoice.client_email || client.email || '';
+    const clientName  = invoice.client_name || client.company_name || ((client.first_name || '') + ' ' + (client.last_name || '')).trim() || 'Client';
 
     if (clientEmail) {
       try {
@@ -28985,12 +29056,13 @@ app.post('/api/owner-invoices/:id/send',
 
         await sendOwnerInvoiceEmail({
           invoiceNumber:  invoice.invoice_number,
+          issueDate:      invoice.issue_date,
           clientName,
           clientEmail,
-          clientAddress:  client.address || invoice.client_address || '',
-          clientPostalCode: client.postal_code || invoice.client_postal_code || '',
-          clientCity:     client.city || invoice.client_city || '',
-          clientSiret:    client.siret || invoice.client_siret || '',
+          clientAddress:  invoice.client_address || client.address || '',
+          clientPostalCode: invoice.client_postal_code || client.postal_code || '',
+          clientCity:     invoice.client_city || client.city || '',
+          clientSiret:    invoice.client_siret || client.siret || '',
           periodStart:    invoice.period_start,
           periodEnd:      invoice.period_end,
           totalTtc:       invoice.total_ttc,
@@ -28998,15 +29070,25 @@ app.post('/api/owner-invoices/:id/send',
           vatRate:        invoice.vat_rate,
           vatApplicable:  invoice.vat_applicable,
           items:          itemsResult.rows,
-          userCompany:    profile.company,
-          userEmail:      profile.email,
-          userAddress:    profile.address,
-          userPostalCode: profile.postal_code,
-          userCity:       profile.city,
-          userSiret:      profile.siret,
+          userCompany:    _sendPdfCtx.issuerName,
+          userEmail:      _sendPdfCtx.issuerEmail,
+          userAddress:    _sendPdfCtx.issuerAddr,
+          userPostalCode: _sendPdfCtx.issuerCP,
+          userCity:       _sendPdfCtx.issuerCity,
+          userSiret:      _sendPdfCtx.issuerLegalValue,
+          userLegalLabel: _sendPdfCtx.issuerLegalLabel,
+          userTaxLabel:   _sendPdfCtx.issuerTaxLabel,
+          userTaxValue:   _sendPdfCtx.issuerTaxValue,
+          currency:       _sendPdfCtx.currency,
+          locale:         _sendPdfCtx.locale,
+          taxLabel:       _sendPdfCtx.taxLabel,
+          vatExemptLabel: _sendPdfCtx.vatExemptLabel,
+          paymentDelay:   invoice.payment_delay,
+          paymentMode:    invoice.payment_mode,
+          lateInterest:   invoice.late_interest,
           // Logo : priorité au PNG converti par le front (req.body.emitter.logo),
           // sinon fallback sur l'URL en base (qui peut être WebP/SVG → souvent rejeté).
-          userLogo:       (req.body && req.body.emitter && req.body.emitter.logo) || profile.logo_url || '',
+          userLogo:       (!invoice.issuer_snapshot && req.body?.emitter?.logo) || profile.logo_url || '',
           deboursPhotos
         });
         console.log('✅ Email facture propriétaire envoyé à:', clientEmail);
