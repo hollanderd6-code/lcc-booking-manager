@@ -2224,24 +2224,27 @@ function renderFpGrid(invs) {
     return;
   }
 
-    let totalRev = 0;
-    let totalPending = 0;
+    // INTL-4.9 — currency-aware aggregation; no cross-currency addition.
+    const _revByCur  = {};
+    const _pendByCur = {};
     container.innerHTML = '';
-    
+
     console.log('🔄 Génération des cartes de factures...');
 
     invs.forEach(function(inv) {
       const total = parseFloat(inv.total_ttc || 0) || 0;
       const status = inv.status || '';
+      const _pGrid = window.userProfile || {};
+      const invCur = inv.currency || _pGrid.defaultCurrency || 'EUR';
 
       // Total facturé : toutes les factures non brouillon et non avoir
       if (!inv.is_credit_note && status !== 'draft') {
-        totalRev += total;
+        _revByCur[invCur] = (_revByCur[invCur] || 0) + total;
       }
 
       // En attente : factures non brouillon, non avoir, non payées
       if (!inv.is_credit_note && status !== 'draft' && status !== 'paid') {
-        totalPending += total;
+        _pendByCur[invCur] = (_pendByCur[invCur] || 0) + total;
       }
 
       const rawNum = inv.invoice_number || '';
@@ -2297,7 +2300,8 @@ function renderFpGrid(invs) {
         ].join('');
       }
 
-      const issueDate = formatDate(inv.issue_date);
+      // INTL-4.9 — use invoice's own stored locale; profile locale as legacy fallback.
+      const issueDate = formatDate(inv.issue_date, inv.locale || (window.userProfile||{}).locale);
 
       const cardHtml = `
         <div class="invoice-card">
@@ -2317,7 +2321,7 @@ function renderFpGrid(invs) {
               </div>
               <div class="invoice-info-item">
                 <div class="invoice-info-label">Montant TTC</div>
-                <div class="invoice-info-value amount">${formatOwnerInvoiceMoney(total, (window.userProfile||{}).defaultCurrency, (window.userProfile||{}).locale)}</div>
+                <div class="invoice-info-value amount">${formatOwnerInvoiceMoney(total, inv.currency || (window.userProfile||{}).defaultCurrency, inv.locale || (window.userProfile||{}).locale)}</div>
               </div>
             </div>
           </div>
@@ -2334,9 +2338,23 @@ function renderFpGrid(invs) {
       container.innerHTML += cardHtml;
     });
 
+    // INTL-4.9 — display per-currency stats. Single currency → plain textContent.
+    // Multiple currencies → innerHTML with <br> separator (amounts are safe; Intl.NumberFormat
+    // never produces HTML special characters).
     const _pGrid = window.userProfile || {};
-    document.getElementById('statsRevenue').textContent = formatOwnerInvoiceMoney(totalRev, _pGrid.defaultCurrency, _pGrid.locale);
-    document.getElementById('statsPending').textContent = formatOwnerInvoiceMoney(totalPending, _pGrid.defaultCurrency, _pGrid.locale);
+    const _gl = _pGrid.locale || 'fr-FR';
+    function _setStatEl(el, byCur) {
+      const entries = Object.entries(byCur);
+      if (entries.length === 0) {
+        el.textContent = formatOwnerInvoiceMoney(0, _pGrid.defaultCurrency, _gl);
+      } else if (entries.length === 1) {
+        el.textContent = formatOwnerInvoiceMoney(entries[0][1], entries[0][0], _gl);
+      } else {
+        el.innerHTML = entries.map(([c, a]) => escHtml(formatOwnerInvoiceMoney(a, c, _gl))).join('<br>');
+      }
+    }
+    _setStatEl(document.getElementById('statsRevenue'), _revByCur);
+    _setStatEl(document.getElementById('statsPending'), _pendByCur);
 }
 
 window.toggleInvoiceActions = function (id, btn) {

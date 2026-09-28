@@ -20541,6 +20541,7 @@ app.get('/api/export/invoices', authenticateAny, async (req, res) => {
           i.client_name
         ) AS client_name,
         c.email AS client_email,
+        i.currency,
         i.subtotal_ht, i.subtotal_debours, i.vat_amount, i.total_ttc,
         i.status, i.is_credit_note
       FROM owner_invoices i
@@ -20572,7 +20573,8 @@ app.get('/api/export/invoices', authenticateAny, async (req, res) => {
     lines.push(`# Genere le : ${fmtDate(new Date())} a ${new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}`);
     lines.push(`# boostinghost.fr`);
     lines.push('');
-    lines.push(['N facture','Date emission','Date echeance','Periode debut','Periode fin','Client','Email client','Sous-total HT (EUR)','Debours (EUR)','TVA (EUR)','Total TTC (EUR)','Statut','Type'].join(';'));
+    // INTL-4.9 — currency column added; headers no longer hardcode (EUR).
+    lines.push(['N facture','Date emission','Date echeance','Periode debut','Periode fin','Client','Email client','Devise','Sous-total HT','Debours','TVA','Total TTC','Statut','Type'].join(';'));
 
     for (const inv of result.rows) {
       lines.push([
@@ -20583,6 +20585,7 @@ app.get('/api/export/invoices', authenticateAny, async (req, res) => {
         fmtDate(inv.period_end),
         `"${(inv.client_name || '').replace(/"/g,'""')}"`,
         inv.client_email || '',
+        inv.currency || '',
         fmtNum(inv.subtotal_ht),
         fmtNum(inv.subtotal_debours),
         fmtNum(inv.vat_amount),
@@ -20592,9 +20595,16 @@ app.get('/api/export/invoices', authenticateAny, async (req, res) => {
       ].join(';'));
     }
 
-    const totalTTC = result.rows.reduce((s, i) => s + (parseFloat(i.total_ttc) || 0), 0);
+    // Per-currency totals — no cross-currency addition.
+    const totalByCurrency = {};
+    for (const inv of result.rows) {
+      const cur = inv.currency || 'EUR';
+      totalByCurrency[cur] = (totalByCurrency[cur] || 0) + (parseFloat(inv.total_ttc) || 0);
+    }
     lines.push('');
-    lines.push(`;;;;;;;;;Total;;;${fmtNum(totalTTC)};`);
+    Object.entries(totalByCurrency).forEach(([cur, total]) => {
+      lines.push(`;;;;;;;${cur};;;${fmtNum(total)};;`);
+    });
 
     const filename = `boostinghost_factures_${periodFile}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -26027,6 +26037,8 @@ app.get('/api/owner-invoices',
           i.client_id,
           i.is_credit_note,
           i.original_invoice_id,
+          i.currency,
+          i.locale,
           COALESCE(
             c.company_name,
             NULLIF(TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,'')), ''),
@@ -26051,6 +26063,8 @@ app.get('/api/owner-invoices',
             i.client_id,
             i.is_credit_note,
             i.original_invoice_id,
+            i.currency,
+            i.locale,
             COALESCE(
               c.company_name,
               NULLIF(TRIM(COALESCE(c.first_name,'') || ' ' || COALESCE(c.last_name,'')), '')
@@ -26264,7 +26278,11 @@ app.post('/api/owner-invoices',
     }
     const { currency: invoiceCurrency, country: invoiceCountry, locale: invoiceLocale,
             issuerSnapshot, issuerSnapshotSource } = _ctx;
-    const taxLabel     = 'TVA';
+    // INTL-4.9 — taxLabel: use caller-provided value, then country-aware default.
+    // FR keeps 'TVA' as legacy default. Non-FR uses 'Tax' (neutral) rather than
+    // fabricating a jurisdiction-specific term. Historical stored tax_label is
+    // authoritative and never overwritten here (this is new invoice creation only).
+    const taxLabel = req.body.taxLabel || (invoiceCountry === 'FR' ? 'TVA' : 'Tax');
     const vatExemptLabel = (invoiceCountry === 'FR' && !vatApplicable)
       ? 'TVA non applicable, art. 293 B du CGI'
       : null;
@@ -26709,8 +26727,11 @@ app.post('/api/owner-invoices/:id/pdf', authenticateAny, requireFeature('factura
     let yL = boxTop + 36;
     if (senderAddr)  { doc.text(senderAddr, mg+8, yL, {width:colW-16}); yL+=13; }
     if (senderCP||senderCity) { doc.text(`${senderCP} ${senderCity}`.trim(), mg+8, yL); yL+=13; }
-    if (_pdfCtx.issuerLegalValue) { doc.text(`${_pdfCtx.issuerLegalLabel || 'SIRET'} : ${_pdfCtx.issuerLegalValue}`, mg+8, yL); yL+=13; }
-    if (_pdfCtx.issuerTaxValue)   { doc.text(`${_pdfCtx.issuerTaxLabel   || 'N° TVA'} : ${_pdfCtx.issuerTaxValue}`, mg+8, yL); yL+=13; }
+    // INTL-4.9 — render only when both label AND value are present.
+    // The label is already resolved in resolveOwnerInvoicePdfContext (snap.siret → 'SIRET').
+    // No fabricated label at render time.
+    if (_pdfCtx.issuerLegalLabel && _pdfCtx.issuerLegalValue) { doc.text(`${_pdfCtx.issuerLegalLabel} : ${_pdfCtx.issuerLegalValue}`, mg+8, yL); yL+=13; }
+    if (_pdfCtx.issuerTaxLabel   && _pdfCtx.issuerTaxValue)   { doc.text(`${_pdfCtx.issuerTaxLabel} : ${_pdfCtx.issuerTaxValue}`, mg+8, yL); yL+=13; }
     if (senderPhone) { doc.text(senderPhone, mg+8, yL); yL+=13; }
     if (senderEmail) { doc.text(senderEmail, mg+8, yL); yL+=13; }
     if (senderWeb)   { doc.text(senderWeb, mg+8, yL); }
@@ -28868,8 +28889,10 @@ async function sendOwnerInvoiceEmail({ invoiceNumber, issueDate, clientName, cli
     let ey = y + 36;
     if (userAddress)              { doc.text(userAddress, mg+10, ey, { width: colW-20 }); ey += 13; }
     if (userPostalCode||userCity) { doc.text(((userPostalCode||'')+' '+(userCity||'')).trim(), mg+10, ey); ey += 13; }
-    if (userSiret)                { doc.text(`${userLegalLabel || 'SIRET'} : ${userSiret}`, mg+10, ey); ey += 11; }
-    if (userTaxValue)             { doc.text(`${userTaxLabel || 'N° TVA'} : ${userTaxValue}`, mg+10, ey); ey += 11; }
+    // INTL-4.9 — render only when both label AND value present. Label resolved in
+    // resolveOwnerInvoicePdfContext (siret → 'SIRET' already); no render-time fabrication.
+    if (userLegalLabel && userSiret)    { doc.text(`${userLegalLabel} : ${userSiret}`, mg+10, ey); ey += 11; }
+    if (userTaxLabel   && userTaxValue) { doc.text(`${userTaxLabel} : ${userTaxValue}`, mg+10, ey); ey += 11; }
     if (userEmail)                { doc.text(userEmail, mg+10, ey); }
 
     // Cadre destinataire

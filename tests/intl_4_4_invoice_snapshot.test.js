@@ -66,9 +66,12 @@ describe('A — Snapshot FR/EUR: context helper produces correct values', () => 
     expect(helperBlock).toMatch(/issuerSnapshotSource:\s*'user_profile'/);
   });
 
-  test('A-09 POST inserts tax_label', () => {
+  test('A-09 POST inserts tax_label (INTL-4.9: country-aware, not unconditional TVA)', () => {
     expect(postBlock).toMatch(/INSERT INTO owner_invoices[\s\S]+?tax_label/);
-    expect(postBlock).toMatch(/taxLabel\s*=\s*'TVA'/);
+    // INTL-4.9: taxLabel is now country-aware — FR keeps 'TVA', non-FR gets 'Tax'
+    expect(postBlock).toMatch(/invoiceCountry\s*===\s*'FR'\s*\?\s*'TVA'/);
+    // The old unconditional `const taxLabel = 'TVA'` must not exist
+    expect(postBlock).not.toMatch(/^const taxLabel\s*=\s*'TVA'\s*;/m);
   });
 
   test('A-10 POST inserts vat_exempt_label', () => {

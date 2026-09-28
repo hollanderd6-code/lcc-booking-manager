@@ -251,8 +251,14 @@ describe('I — PATH A: generic legal/tax identifier display', () => {
     expect(pathABlock).not.toMatch(/`SIRET : \$\{senderSiret\}`/);
   });
 
-  test('I-03 PATH A has fallback label SIRET for missing legalLabel', () => {
-    expect(pathABlock).toMatch(/issuerLegalLabel.*'SIRET'/s);
+  test('I-03 PATH A: SIRET fallback in context resolution, not at render time (INTL-4.9)', () => {
+    // INTL-4.9: render guard requires BOTH label AND value — no || 'SIRET' at render time.
+    // The legacy SIRET label is now resolved in resolveOwnerInvoicePdfContext (snap.siret → 'SIRET').
+    const pdfCtxFn = src.match(/function resolveOwnerInvoicePdfContext[\s\S]+?return \{/)?.[0] || '';
+    expect(pdfCtxFn).toMatch(/snap\.siret\s*\?\s*'SIRET'\s*:\s*null/);
+    // Render line must require both label and value, no || 'SIRET' fallback
+    expect(pathABlock).toMatch(/_pdfCtx\.issuerLegalLabel\s*&&\s*_pdfCtx\.issuerLegalValue/);
+    expect(pathABlock).not.toMatch(/issuerLegalLabel\s*\|\|\s*'SIRET'/);
   });
 
   test('I-04 PATH A shows tax identifier when present', () => {
