@@ -33,6 +33,7 @@ boostinghost-poc/node_modules/
 # ── Environnement ──
 .env
 .env.local
+boostinghost-poc/.env
 
 # ── Previews générés localement ──
 tmp/

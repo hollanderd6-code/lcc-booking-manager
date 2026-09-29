@@ -6,6 +6,7 @@
 const { getGroqResponse, getOwnerDraftResponse, requiresHumanIntervention } = require('./groq-ai');
 const { getProximityContext } = require('./geo-proximity');
 const { createUpsellPaymentLink } = require('./upsell-service');
+const { normalizeCurrency } = require('./routes/market-data-resolver');
 
 const Stripe = require('stripe');
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -287,7 +288,7 @@ async function ensureDepositExists(pool, conversation) {
     const startDate  = conversation.reservation_start_date;
 
     const propResult = await pool.query(
-      'SELECT id, name, deposit_amount FROM properties WHERE id = $1', [propertyId]
+      'SELECT id, name, deposit_amount, currency FROM properties WHERE id = $1', [propertyId]
     );
     const property = propResult.rows[0];
     if (!property || !property.deposit_amount || parseFloat(property.deposit_amount) <= 0) return null;
@@ -328,10 +329,13 @@ async function ensureDepositExists(pool, conversation) {
     const startDateStr = new Date(reservation.start_date).toISOString().split('T')[0];
     const endDateStr   = reservation.end_date ? new Date(reservation.end_date).toISOString().split('T')[0] : '';
 
+    // INTL-DEPOSIT-STRIPE — rule A: new deposit uses property currency
+    const icdDepositCurrency = (normalizeCurrency(property.currency) || 'EUR').toLowerCase();
+
     const sessionParams = {
       payment_method_types: ['card'],
       mode: 'payment',
-      line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: `Caution - ${property.name}`, description: `Réservation du ${startDateStr} au ${endDateStr}` } }, quantity: 1 }],
+      line_items: [{ price_data: { currency: icdDepositCurrency, unit_amount: amountCents, product_data: { name: `Caution - ${property.name}`, description: `Réservation du ${startDateStr} au ${endDateStr}` } }, quantity: 1 }],
       payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId, reservation_uid: reservation.uid } },
       metadata: { deposit_id: depositId, reservation_uid: reservation.uid, user_id: user.user_id },
       success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
@@ -343,12 +347,12 @@ async function ensureDepositExists(pool, conversation) {
       : await stripe.checkout.sessions.create(sessionParams);
 
     await pool.query(
-      `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, NOW(), NOW())`,
-      [depositId, user.user_id, reservation.uid, propertyId, amountCents, session.id, session.url]
+      `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, currency, status, stripe_session_id, checkout_url, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, NOW(), NOW())`,
+      [depositId, user.user_id, reservation.uid, propertyId, amountCents, icdDepositCurrency, session.id, session.url]
     );
 
-    console.log(`✅ [DEPOSIT-AUTO] Caution créée: ${depositId} (${amountCents/100}€)`);
+    console.log(`✅ [DEPOSIT-AUTO] Caution créée: ${depositId} (${amountCents/100} ${icdDepositCurrency.toUpperCase()})`);
     return { depositExists: true, alreadyValid: false, checkout_url: session.url, amount_cents: amountCents };
 
   } catch (error) {
@@ -1109,7 +1113,18 @@ async function handleIncomingMessage(message, conversation, pool, io) {
               const billedMin = Math.max(0, delayMin - toleranceMin);
               const billedHours = Math.max(1, Math.ceil(billedMin / 60));
               const amountCents = Math.round(billedHours * pricePerHour * 100);
-              const priceLabel = (amountCents / 100).toFixed(2).replace(/\.00$/, '') + '€';
+              let upsellCurrency = normalizeCurrency(property?.currency) || 'EUR';
+              try {
+                const _uCurrRow = await pool.query(
+                  `SELECT r.currency FROM reservations r
+                   WHERE (r.channex_booking_id = $1 AND $1 IS NOT NULL)
+                      OR (r.property_id = $2 AND DATE(r.start_date) = DATE($3) AND r.status != 'cancelled')
+                   ORDER BY (r.channex_booking_id = $1) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
+                  [conversation.channex_booking_id || null, conversation.property_id, conversation.reservation_start_date]
+                );
+                const _uResaCurr = normalizeCurrency(_uCurrRow.rows[0]?.currency);
+                if (_uResaCurr) upsellCurrency = _uResaCurr;
+              } catch (_e) { /* non-blocking */ }
 
               const link = await createUpsellPaymentLink({
                 pool, stripe, conversation, property,
@@ -1117,10 +1132,12 @@ async function handleIncomingMessage(message, conversation, pool, io) {
                 label: `Départ tardif jusqu'à ${reqLabel}`,
                 description: `${property.name || 'Logement'} — ${billedHours}h après ${depLabel}`,
                 amountCents,
+                currency: upsellCurrency,
                 extraMeta: { req_label: reqLabel, ref_label: depLabel, billed_hours: String(billedHours) },
               });
 
               if (link && link.url) {
+                const priceLabel = (() => { try { return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: link.currency || upsellCurrency }).format(amountCents / 100); } catch(_e) { return (amountCents / 100).toFixed(2) + ' ' + (link.currency || upsellCurrency); } })();
                 const payMsg = {
                   fr: `Un départ tardif jusqu'à ${reqLabel} est possible ! 😊\n\nCette prestation est à ${priceLabel} (${billedHours}h après l'heure de départ habituelle de ${depLabel}). Pour la réserver, il vous suffit de régler ici :\n\n${link.url}\n\nDès le paiement validé, c'est confirmé et noté pour le ménage. À très vite !`,
                   en: `A late checkout until ${reqLabel} is possible! 😊\n\nThis option costs ${priceLabel} (${billedHours}h after the usual ${depLabel} checkout). To book it, simply pay here:\n\n${link.url}\n\nOnce payment is confirmed, you're all set. See you soon!`,
@@ -1257,7 +1274,18 @@ async function handleIncomingMessage(message, conversation, pool, io) {
               const billedMin = Math.max(0, earlyMin - toleranceMin);
               const billedHours = Math.max(1, Math.ceil(billedMin / 60));
               const amountCents = Math.round(billedHours * pricePerHour * 100);
-              const priceLabel = (amountCents / 100).toFixed(2).replace(/\.00$/, '') + '€';
+              let upsellCurrency = normalizeCurrency(property?.currency) || 'EUR';
+              try {
+                const _uCurrRow = await pool.query(
+                  `SELECT r.currency FROM reservations r
+                   WHERE (r.channex_booking_id = $1 AND $1 IS NOT NULL)
+                      OR (r.property_id = $2 AND DATE(r.start_date) = DATE($3) AND r.status != 'cancelled')
+                   ORDER BY (r.channex_booking_id = $1) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
+                  [conversation.channex_booking_id || null, conversation.property_id, conversation.reservation_start_date]
+                );
+                const _uResaCurr = normalizeCurrency(_uCurrRow.rows[0]?.currency);
+                if (_uResaCurr) upsellCurrency = _uResaCurr;
+              } catch (_e) { /* non-blocking */ }
 
               const link = await createUpsellPaymentLink({
                 pool, stripe, conversation, property,
@@ -1265,10 +1293,12 @@ async function handleIncomingMessage(message, conversation, pool, io) {
                 label: `Arrivée anticipée dès ${reqLabel}`,
                 description: `${property.name || 'Logement'} — ${billedHours}h avant ${arrLabel}`,
                 amountCents,
+                currency: upsellCurrency,
                 extraMeta: { req_label: reqLabel, ref_label: arrLabel, billed_hours: String(billedHours) },
               });
 
               if (link && link.url) {
+                const priceLabel = (() => { try { return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: link.currency || upsellCurrency }).format(amountCents / 100); } catch(_e) { return (amountCents / 100).toFixed(2) + ' ' + (link.currency || upsellCurrency); } })();
                 const payMsg = {
                   fr: `Une arrivée anticipée dès ${reqLabel} est possible ! 😊\n\nCette prestation est à ${priceLabel} (${billedHours}h avant l'heure d'arrivée habituelle de ${arrLabel}). Pour la réserver, réglez simplement ici :\n\n${link.url}\n\nDès le paiement validé, c'est confirmé. À très vite !`,
                   en: `An early check-in from ${reqLabel} is possible! 😊\n\nThis option costs ${priceLabel} (${billedHours}h before the usual ${arrLabel} check-in). To book it, simply pay here:\n\n${link.url}\n\nOnce payment is confirmed, you're all set. See you soon!`,
@@ -1441,10 +1471,22 @@ async function handleIncomingMessage(message, conversation, pool, io) {
         try {
           if (context.welcomeBasketEnabled && context.welcomeBasketPrice > 0) {
             const amountCents = Math.round(context.welcomeBasketPrice * 100);
-            const priceLabel = (amountCents / 100).toFixed(2).replace(/\.00$/, '') + '€';
             const desc = context.welcomeBasketDescription
               ? context.welcomeBasketDescription
               : (language === 'en' ? 'Welcome basket' : 'Panier d\'accueil');
+
+            let upsellCurrency = normalizeCurrency(property?.currency) || 'EUR';
+            try {
+              const _uCurrRow = await pool.query(
+                `SELECT r.currency FROM reservations r
+                 WHERE (r.channex_booking_id = $1 AND $1 IS NOT NULL)
+                    OR (r.property_id = $2 AND DATE(r.start_date) = DATE($3) AND r.status != 'cancelled')
+                 ORDER BY (r.channex_booking_id = $1) DESC NULLS LAST, r.created_at DESC LIMIT 1`,
+                [conversation.channex_booking_id || null, conversation.property_id, conversation.reservation_start_date]
+              );
+              const _uResaCurr = normalizeCurrency(_uCurrRow.rows[0]?.currency);
+              if (_uResaCurr) upsellCurrency = _uResaCurr;
+            } catch (_e) { /* non-blocking */ }
 
             const link = await createUpsellPaymentLink({
               pool, stripe, conversation, property,
@@ -1452,10 +1494,12 @@ async function handleIncomingMessage(message, conversation, pool, io) {
               label: (language === 'en' ? 'Welcome basket' : "Panier d'accueil") + ` — ${property.name || ''}`.trim(),
               description: desc,
               amountCents,
+              currency: upsellCurrency,
               extraMeta: {},
             });
 
             if (link && link.url) {
+              const priceLabel = (() => { try { return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: link.currency || upsellCurrency }).format(amountCents / 100); } catch(_e) { return (amountCents / 100).toFixed(2) + ' ' + (link.currency || upsellCurrency); } })();
               const payMsg = {
                 fr: `${cleanMsg ? cleanMsg + '\n\n' : ''}Avec plaisir ! Notre panier d'accueil (${desc}) est à ${priceLabel}. Pour en profiter, réglez simplement ici :\n\n${link.url}\n\nDès le paiement validé, nous le préparons pour votre arrivée 😊`,
                 en: `${cleanMsg ? cleanMsg + '\n\n' : ''}With pleasure! Our welcome basket (${desc}) costs ${priceLabel}. To enjoy it, simply pay here:\n\n${link.url}\n\nOnce payment is confirmed, we'll prepare it for your arrival 😊`,

@@ -3,6 +3,7 @@
 // ============================================================
 
 const axios = require('axios');
+const { normalizeCurrency } = require('./routes/market-data-resolver');
 
 const CHANNEX_API_URL = process.env.CHANNEX_ENV === 'production'
   ? 'https://app.channex.io/api/v1'
@@ -51,11 +52,19 @@ async function logChannex(pool, { user_id, property_id, channex_property_id, eve
   }
 }
 
+// ── Currency resolver (F8) — normalise puis fallback EUR ─────
+// Seule source d'autorité pour les devises sortantes vers Channex.
+function resolveChannexCurrency(value) {
+  return normalizeCurrency(value) || 'EUR';
+}
+
 // ── 1. Créer une propriété dans Channex ──────────────────────
 
-async function createChannexProperty(pool, { user_id, property_id, name, address, city }) {
+async function createChannexProperty(pool, { user_id, property_id, name, address, city, currency }) {
   try {
+    const resolvedCurrency = resolveChannexCurrency(currency);
     console.log(`🏠 [CHANNEX] Création propriété: ${name}`);
+    console.log(`[INTL-CHANNEX-CURRENCY] createChannexProperty: property_id=${property_id} → ${resolvedCurrency}`);
 
     const res = await channexAPI.post('/properties', {
       property: {
@@ -63,7 +72,7 @@ async function createChannexProperty(pool, { user_id, property_id, name, address
         address: address || '',
         city: city || '',
         country_code: 'FR',
-        currency: 'EUR',
+        currency: resolvedCurrency,
         timezone: 'Europe/Paris',
         property_type: 'apartment',
         email: 'contact@boostinghost.fr'
@@ -80,7 +89,7 @@ async function createChannexProperty(pool, { user_id, property_id, name, address
       [channex_property_id, property_id]
     );
 
-    return await addRoomTypeToProperty(pool, { user_id, property_id, channex_property_id, name });
+    return await addRoomTypeToProperty(pool, { user_id, property_id, channex_property_id, name, currency: resolvedCurrency });
 
   } catch (e) {
     const errDetail = e.response?.data || e.message;
@@ -100,9 +109,11 @@ async function createChannexProperty(pool, { user_id, property_id, name, address
 // ── 1b. Rattacher un logement BH à une Channex property existante ──
 // Crée un nouveau room type + rate plan sur la property, met à jour la DB.
 
-async function addRoomTypeToProperty(pool, { user_id, property_id, channex_property_id, name }) {
+async function addRoomTypeToProperty(pool, { user_id, property_id, channex_property_id, name, currency }) {
   try {
+    const resolvedCurrency = resolveChannexCurrency(currency);
     console.log(`🏠 [CHANNEX] Ajout room type "${name}" sur property ${channex_property_id}`);
+    console.log(`[INTL-CHANNEX-CURRENCY] addRoomTypeToProperty: property_id=${property_id} → ${resolvedCurrency}`);
 
     // ── Récupérer l'état partiel éventuellement déjà en DB (reprise après interruption) ──
     const dbState = await pool.query(
@@ -174,6 +185,7 @@ async function addRoomTypeToProperty(pool, { user_id, property_id, channex_prope
         channex_rate_plan_id = rps[0].attributes?.id || rps[0].id;
         console.log(`♻️ [CHANNEX] Rate Plan existant réutilisé: ${channex_rate_plan_id}`);
       } else {
+        console.log(`[INTL-CHANNEX-CURRENCY] rate plan standard: property_id=${property_id} currency=${resolvedCurrency}`);
         const rpRes = await channexAPI.post('/rate_plans', {
           rate_plan: {
             property_id: channex_property_id,
@@ -181,7 +193,7 @@ async function addRoomTypeToProperty(pool, { user_id, property_id, channex_prope
             title: 'Tarif standard',
             sell_mode: 'per_room',
             rate_mode: 'manual',
-            currency: 'EUR',
+            currency: resolvedCurrency,
             options: [{ occupancy: 2, is_primary: true, rate: 0 }]
           }
         });
@@ -430,7 +442,7 @@ const LIBELLE_PLATEFORME = {
 
 async function assurerPlansMajores(pool, property_id) {
   const { rows } = await pool.query(
-    `SELECT channex_property_id, channex_room_type_id,
+    `SELECT channex_property_id, channex_room_type_id, channex_rate_plan_id, currency,
             COALESCE(platform_markups, '{}'::jsonb)          AS markups,
             COALESCE(channex_markup_rate_plans, '{}'::jsonb) AS plans
        FROM properties WHERE id = $1`,
@@ -445,6 +457,22 @@ async function assurerPlansMajores(pool, property_id) {
   const actifs = [];
   let modifie = false;
 
+  // ── F8: devise du rate plan parent = autorité pour les plans majorés ─────────
+  const propertyChannexCurrency = resolveChannexCurrency(p.currency);
+  let markupCurrency = propertyChannexCurrency;
+  if (p.channex_rate_plan_id) {
+    const parentResult = await getChannexRatePlanCurrency(p.channex_rate_plan_id);
+    if (parentResult.ok) {
+      if (parentResult.currency !== propertyChannexCurrency) {
+        console.error(`❌ [INTL-CHANNEX-CURRENCY] Conflit devise plans majorés: rate_plan_parent=${parentResult.currency}, logement_BH=${propertyChannexCurrency} (property_id=${property_id}). Plans non créés.`);
+        return actifs;
+      }
+      markupCurrency = parentResult.currency;
+    } else {
+      console.warn(`⚠️ [INTL-CHANNEX-CURRENCY] Devise rate_plan_parent illisible (${parentResult.error}), utilisation logement_BH: ${propertyChannexCurrency} (property_id=${property_id})`);
+    }
+  }
+
   for (const code of Object.keys(LIBELLE_PLATEFORME)) {
     const pct = parseFloat(markups[code]);
     if (!pct || !(pct > 0)) continue;   // 0, absent ou négatif : pas de plan dédié
@@ -452,6 +480,7 @@ async function assurerPlansMajores(pool, property_id) {
     if (!plans[code]) {
       // Le titre porte le pourcentage : dans l'interface du partenaire, on doit
       // pouvoir mapper le bon canal sur le bon plan sans avoir à deviner.
+      console.log(`[INTL-CHANNEX-CURRENCY] markup rate plan ${code}: property_id=${property_id} currency=${markupCurrency}`);
       const res = await channexAPI.post('/rate_plans', {
         rate_plan: {
           property_id: p.channex_property_id,
@@ -459,7 +488,7 @@ async function assurerPlansMajores(pool, property_id) {
           title: 'Tarif ' + LIBELLE_PLATEFORME[code] + ' +' + pct + '%',
           sell_mode: 'per_room',
           rate_mode: 'manual',
-          currency: 'EUR',
+          currency: markupCurrency,
           options: [{ occupancy: 2, is_primary: true, rate: 0 }]
         }
       });

@@ -80,11 +80,15 @@ async function _makeShortLink(pool, longUrl, userId, paymentId) {
 //   label               : nom produit affiché au paiement (ex "Départ tardif jusqu'à 14h00")
 //   description         : sous-texte
 //   amountCents         : montant total TTC payé par le voyageur (entier)
+//   currency            : ISO-4217 resolved server-side (reservation.currency > property.currency > EUR)
 //   extraMeta           : objet additionnel stocké dans metadata
-// Retour : { url, paymentId, feeCents } ou null
-async function createUpsellPaymentLink({ pool, stripe, conversation, property, kind, label, description, amountCents, extraMeta = {} }) {
+// Retour : { url, paymentId, feeCents, currency } ou null
+async function createUpsellPaymentLink({ pool, stripe, conversation, property, kind, label, description, amountCents, currency, extraMeta = {} }) {
   if (!stripe) { console.warn('⚠️ [UPSELL] Stripe non configuré'); return null; }
   if (!amountCents || amountCents < 50) { console.warn('⚠️ [UPSELL] Montant invalide:', amountCents); return null; }
+
+  // Currency authority: caller resolves reservation > property > EUR; we just validate
+  const upsellCurrency = (/^[A-Z]{3}$/.test(String(currency)) ? currency : null) || 'EUR';
 
   const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
   const paymentId = 'pay_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
@@ -110,7 +114,7 @@ async function createUpsellPaymentLink({ pool, stripe, conversation, property, k
         id, user_id, reservation_uid, property_id,
         amount_cents, platform_fee_cents, currency,
         status, metadata
-      ) VALUES ($1,$2,$3,$4,$5,$6,'eur','pending',$7)
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,'pending',$8)
       ON CONFLICT (id) DO NOTHING
     `, [
       paymentId,
@@ -119,6 +123,7 @@ async function createUpsellPaymentLink({ pool, stripe, conversation, property, k
       conversation.property_id || null,
       amountCents,
       feeCents,
+      upsellCurrency.toLowerCase(),
       JSON.stringify(metadata),
     ]);
   } catch(e) {
@@ -132,7 +137,7 @@ async function createUpsellPaymentLink({ pool, stripe, conversation, property, k
     payment_method_types: ['card'],
     line_items: [{
       price_data: {
-        currency: 'eur',
+        currency: upsellCurrency.toLowerCase(),
         unit_amount: amountCents,
         product_data: {
           name: label || 'Prestation',
@@ -167,9 +172,9 @@ async function createUpsellPaymentLink({ pool, stripe, conversation, property, k
   } catch(e) {}
 
   const shortUrl = await _makeShortLink(pool, session.url, conversation.user_id, paymentId);
-  console.log(`💸 [UPSELL] Lien ${kind} créé (${(amountCents/100).toFixed(2)}€, commission ${(feeCents/100).toFixed(2)}€, ${isConnected ? 'Connect' : 'plateforme'}) → ${shortUrl}`);
+  console.log(`💸 [UPSELL] Lien ${kind} créé (${(amountCents/100).toFixed(2)} ${upsellCurrency}, commission ${(feeCents/100).toFixed(2)} ${upsellCurrency}, ${isConnected ? 'Connect' : 'plateforme'}) → ${shortUrl}`);
 
-  return { url: shortUrl, paymentId, feeCents };
+  return { url: shortUrl, paymentId, feeCents, currency: upsellCurrency };
 }
 
 module.exports = {

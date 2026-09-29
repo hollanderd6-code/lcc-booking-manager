@@ -236,8 +236,11 @@ describe('J — INTL-2I: invoice fmtAmt deferred', () => {
 // ── Section K: INTL-2J isolation — Stripe EUR preserved ─────────────────────
 
 describe('K — INTL-2J: Stripe/subscription billing stays EUR', () => {
-  test('K-01 server.js Stripe section references EUR', () => {
-    expect(SERVER_SRC).toMatch(/currency:\s*['"]eur['"]/i);
+  test('K-01 server.js SaaS billing uses Stripe priceIds (EUR encoded in price, not hardcoded currency field)', () => {
+    // SaaS subscription sessions use mode:'subscription' with price: priceId — EUR is in the priceId.
+    // After INTL-DEPOSIT-STRIPE-1B all deposit/payment sessions are dynamic; billing has no explicit currency: field.
+    expect(SERVER_SRC).toMatch(/mode:\s*['"]subscription['"]/);
+    expect(SERVER_SRC).toMatch(/price:\s*\w*[Pp]rice[Ii]d/);
   });
   test('K-02 money-formatter.js helpers contain no Stripe reference', () => {
     const backendSrc  = fs.readFileSync(path.resolve(__dirname, '../services/money-formatter.js'), 'utf8');

@@ -10,11 +10,16 @@ const _BH_LOGO_IMG = path.join(__dirname, '..', 'assets', 'brand', 'bh-monogram-
 // Dimensions du PNG recadré : 621×627 → ratio quasi carré
 const _BH_LOGO_RATIO = 621 / 627;
 
-// Format montant — toLocaleString fr-FR peut produire U+202F (espace fine insécable)
-// absent de Manrope woff → carré dans le PDF. On remplace par U+0020 ordinaire.
-const formatEuro = (n) => Number(n || 0)
-  .toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  .replace(/[  ]/g, ' ') + ' €';
+// Format montant multidevise — Intl.NumberFormat fr-FR + nettoyage U+202F → U+0020.
+// Préserve le comportement EUR historique (même arrondi, même locale).
+const fmtAmount = (n, currency = 'EUR') => {
+  const safeCur = /^[A-Z]{3}$/.test(String(currency).trim().toUpperCase())
+    ? String(currency).trim().toUpperCase() : 'EUR';
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency', currency: safeCur,
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  }).format(Number(n || 0)).replace(/[  ]/g, ' ');
+};
 
 // Format date — même sanitisation pour cohérence
 const fmtDate = (d) => (d instanceof Date ? d : new Date(d))
@@ -30,7 +35,8 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     checkinDate = '', checkoutDate = '', nights = 0,
     rentAmount = 0, touristTaxAmount = 0, cleaningFee = 0,
     vatRate = 0, invoiceNumber = '',
-    serviceFee = 0, paid = false, paidDate = ''
+    serviceFee = 0, paid = false, paidDate = '',
+    currency = 'EUR'
   } = data;
   const emitterVatRegime = user?.vat_regime || data.emitterVatRegime || '';
 
@@ -243,7 +249,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
       doc.font('MN-Regular').fontSize(9.5).fillColor(BODY)
          .text(label, mg + 14, y + 9, { width: 280 });
       doc.font('MN-SemiBold').fontSize(9.5).fillColor(BODY)
-         .text(formatEuro(amount), W - mg - 90, y + 9, { width: 78, align: 'right' });
+         .text(fmtAmount(amount, currency), W - mg - 90, y + 9, { width: 78, align: 'right' });
       doc.rect(mg, y + ROW_H, W - mg * 2, 0.5).fill(BORDER);
       y += ROW_H; alt = !alt;
     };
@@ -259,10 +265,10 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     if (parseFloat(vatRate || 0) > 0) {
       doc.font('MN-Regular').fontSize(9).fillColor(MUTED)
          .text('Sous-total HT', totX, y, { width: 130 })
-         .text(formatEuro(subtotal), totX + 130, y, { width: 88, align: 'right' });
+         .text(fmtAmount(subtotal, currency), totX + 130, y, { width: 88, align: 'right' });
       y += 16;
       doc.text(`TVA (${vatRate} %)`, totX, y, { width: 130 })
-         .text(formatEuro(vatAmount), totX + 130, y, { width: 88, align: 'right' });
+         .text(fmtAmount(vatAmount, currency), totX + 130, y, { width: 88, align: 'right' });
       y += 16;
     }
     // Ligne accent
@@ -272,7 +278,7 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
     doc.font('CG-Bold').fontSize(16).fillColor('#FFFFFF')
        .text('Total', totX + 14, y + 10, { width: 120 });
     doc.font('MN-Bold').fontSize(16).fillColor('#FFFFFF')
-       .text(formatEuro(total), totX + 14, y + 10, { width: totW - 28, align: 'right' });
+       .text(fmtAmount(total, currency), totX + 14, y + 10, { width: totW - 28, align: 'right' });
 
     // ── Tampon FACTURE ACQUITTÉE — rouge, encadré, à gauche du total ──
     if (paid) {
@@ -339,4 +345,4 @@ async function generateInvoicePdf(outputPath, data, user, ownerInfo) {
   });
 }
 
-module.exports = { generateInvoicePdf, formatEuro };
+module.exports = { generateInvoicePdf, fmtAmount };

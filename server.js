@@ -2841,6 +2841,43 @@ ON invoice_download_tokens(token);
     } catch(e) {
       console.log('ℹ️ bhguest_holds déjà existante:', e.message);
     }
+    // INTL-F9 — snapshot devise au moment de la création du hold (immuable)
+    try {
+      await pool.query(`
+        ALTER TABLE bhguest_holds ADD COLUMN IF NOT EXISTS currency TEXT;
+      `);
+      console.log('✅ bhguest_holds.currency OK');
+    } catch(e) {
+      console.log('ℹ️ bhguest_holds.currency:', e.message);
+    }
+    // INTL-F9 backfill — reconstruit currency des holds converted depuis la réservation liée
+    try {
+      await pool.query(`
+        UPDATE bhguest_holds h
+        SET currency = r.currency
+        FROM reservations r
+        WHERE h.status = 'converted'
+          AND h.currency IS NULL
+          AND r.property_id = h.property_id
+          AND r.start_date::date = h.checkin
+          AND r.end_date::date = h.checkout
+          AND r.source = 'guest_app'
+          AND r.currency IS NOT NULL
+          AND r.status = 'confirmed'
+          AND (
+            SELECT COUNT(*) FROM reservations r2
+            WHERE r2.property_id = h.property_id
+              AND r2.start_date::date = h.checkin
+              AND r2.end_date::date = h.checkout
+              AND r2.source = 'guest_app'
+              AND r2.currency IS NOT NULL
+              AND r2.status = 'confirmed'
+          ) = 1
+      `);
+      console.log('✅ bhguest_holds backfill currency depuis réservations OK');
+    } catch(e) {
+      console.log('ℹ️ bhguest_holds backfill currency:', e.message);
+    }
     try {
       await pool.query(`
         ALTER TABLE sub_account_permissions ADD COLUMN IF NOT EXISTS can_view_payments BOOLEAN DEFAULT FALSE;
@@ -5411,7 +5448,8 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
             // 🔔 Notif compte principal : paiement reçu
             try {
               const pmtRow2 = await pool.query(
-                `SELECT p.user_id, r.guest_name, pr.name as property_name, pr.internal_name as property_internal_name, p.amount_cents
+                `SELECT p.user_id, r.guest_name, pr.name as property_name, pr.internal_name as property_internal_name, p.amount_cents,
+                        COALESCE(r.currency, p.currency) as payment_currency
                  FROM payments p
                  LEFT JOIN properties pr ON pr.id = p.property_id
                  LEFT JOIN reservations r ON r.uid = p.reservation_uid
@@ -5420,9 +5458,10 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                 [paymentId, session.id]
               );
               if (pmtRow2.rows.length > 0) {
-                const { user_id, guest_name, amount_cents } = pmtRow2.rows[0];
+                const { user_id, guest_name, amount_cents, payment_currency } = pmtRow2.rows[0];
                 const property_name = pmtRow2.rows[0].property_internal_name || pmtRow2.rows[0].property_name;
-                const amt = amount_cents ? (amount_cents / 100).toFixed(2) + ' €' : '';
+                const pmtCur = normalizeCurrency(payment_currency) || 'EUR';
+                const amt = amount_cents ? bhFmtAmount(amount_cents / 100, pmtCur) : '';
                 const guestLabel = guest_name || 'Voyageur';
                 const propLabel = property_name ? ` — ${property_name}` : '';
                 const tokensRes = await pool.query(
@@ -5474,17 +5513,35 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
             }
             
             console.log(`Caution confirmee: ${depositId} (statut: ${depositStatus})`);
-            
+
+            // INTL-DEPOSIT-STRIPE — sync currency from Stripe session to DB (mismatch detection)
+            if (session.currency) {
+              const sessionCurrNorm = (normalizeCurrency(session.currency.toUpperCase()) || session.currency.toUpperCase()).toLowerCase();
+              const depCurrRow = await pool.query(
+                `SELECT currency FROM deposits WHERE id = $1 OR stripe_session_id = $2 LIMIT 1`,
+                [depositId, session.id]
+              );
+              const dbCurr = depCurrRow.rows[0]?.currency;
+              if (dbCurr && dbCurr.toLowerCase() !== sessionCurrNorm) {
+                console.warn(`⚠️ [INTL][CURRENCY_MISMATCH] deposit ${depositId}: DB=${dbCurr} ≠ Stripe=${sessionCurrNorm} — mise à jour vers Stripe`);
+              }
+              await pool.query(
+                `UPDATE deposits SET currency = $1 WHERE id = $2 OR stripe_session_id = $3`,
+                [sessionCurrNorm, depositId, session.id]
+              );
+            }
+
             // 🔔 Notif sous-comptes : caution payée
             try {
               const depRow = await pool.query(
-                `SELECT d.user_id, pr.name as property_name, pr.internal_name as property_internal_name, d.amount_cents FROM deposits d LEFT JOIN properties pr ON pr.id = d.property_id WHERE d.id = $1 OR d.stripe_session_id = $2 LIMIT 1`,
+                `SELECT d.user_id, pr.name as property_name, pr.internal_name as property_internal_name, d.amount_cents, d.currency as deposit_currency FROM deposits d LEFT JOIN properties pr ON pr.id = d.property_id WHERE d.id = $1 OR d.stripe_session_id = $2 LIMIT 1`,
                 [depositId, session.id]
               );
               if (depRow.rows.length > 0) {
-                const { user_id, amount_cents } = depRow.rows[0];
+                const { user_id, amount_cents, deposit_currency } = depRow.rows[0];
                 const property_name = depRow.rows[0].property_internal_name || depRow.rows[0].property_name;
-                const amt = amount_cents ? (amount_cents / 100).toFixed(2) + ' €' : '';
+                const depCur = normalizeCurrency(deposit_currency) || 'EUR';
+                const amt = amount_cents ? bhFmtAmount(amount_cents / 100, depCur) : '';
                 await sendNotificationToSubAccountsOf(
                   user_id, 'can_view_deposits',
                   '💰 Caution autorisée' + (property_name ? ` — ${property_name}` : ''),
@@ -5498,7 +5555,7 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
             // 🔔 Notif compte principal : caution autorisée
             try {
               const depRow2 = await pool.query(
-                `SELECT d.user_id, r.guest_name, pr.name as property_name, pr.internal_name as property_internal_name, d.amount_cents
+                `SELECT d.user_id, r.guest_name, pr.name as property_name, pr.internal_name as property_internal_name, d.amount_cents, d.currency as deposit_currency
                  FROM deposits d
                  LEFT JOIN properties pr ON pr.id = d.property_id
                  LEFT JOIN reservations r ON r.uid = d.reservation_uid
@@ -5507,9 +5564,10 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                 [depositId, session.id]
               );
               if (depRow2.rows.length > 0) {
-                const { user_id, guest_name, amount_cents } = depRow2.rows[0];
+                const { user_id, guest_name, amount_cents, deposit_currency } = depRow2.rows[0];
                 const property_name = depRow2.rows[0].property_internal_name || depRow2.rows[0].property_name;
-                const amt = amount_cents ? (amount_cents / 100).toFixed(2) + ' €' : '';
+                const dep2Cur = normalizeCurrency(deposit_currency) || 'EUR';
+                const amt = amount_cents ? bhFmtAmount(amount_cents / 100, dep2Cur) : '';
                 const guestLabel = guest_name || 'Voyageur';
                 const propLabel = property_name ? ` — ${property_name}` : '';
                 const tokensRes = await pool.query(
@@ -7258,8 +7316,8 @@ async function sendDepositRequestMessages(io) {
 
     // Récupérer toutes les conversations arrivant dans 2 jours (Booking uniquement)
     const conversationsResult = await pool.query(`
-      SELECT c.*, p.name as property_name, p.deposit_amount, u.stripe_account_id,
-             r.uid as reservation_uid
+      SELECT c.*, p.name as property_name, p.deposit_amount, p.currency AS property_currency,
+             u.stripe_account_id, r.uid as reservation_uid
       FROM conversations c
       LEFT JOIN properties p ON p.id = c.property_id
       LEFT JOIN users u ON u.id = c.user_id
@@ -7345,14 +7403,17 @@ async function sendDepositRequestMessages(io) {
         const depositId = 'dep_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
         const amountCents = Math.round(parseFloat(conv.deposit_amount) * 100);
 
+        // INTL-DEPOSIT-STRIPE — rule A: new deposit uses property currency
+        const sdrDepositCurrency = normalizeCurrency(conv.property_currency) || 'EUR';
+
         const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
-        
+
         const sessionParams = {
           payment_method_types: ['card'],
           mode: 'payment',
           line_items: [{
             price_data: {
-              currency: 'eur',
+              currency: sdrDepositCurrency.toLowerCase(),
               unit_amount: amountCents,
               product_data: {
                 name: `Caution - ${conv.property_name}`,
@@ -7391,9 +7452,9 @@ async function sendDepositRequestMessages(io) {
 
         // Sauvegarder en DB
         await pool.query(`
-          INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
-          VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, NOW(), NOW())
-        `, [depositId, conv.user_id, conv.reservation_uid || '', conv.property_id, amountCents, session.id, session.url]);
+          INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, currency, status, stripe_session_id, checkout_url, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, NOW(), NOW())
+        `, [depositId, conv.user_id, conv.reservation_uid || '', conv.property_id, amountCents, sdrDepositCurrency.toLowerCase(), session.id, session.url]);
 
         depositUrl = session.url;
       }
@@ -8299,7 +8360,8 @@ async function captureDeposit(depositId, amountCents = null) {
     // 🔔 Notification FCM au gestionnaire
     try {
       const guestName = depositData.guest_name || depositData.reservation_uid || 'Voyageur';
-      const amountEur = (capturedAmount / 100).toFixed(2);
+      const depositCurrency = normalizeCurrency(depositData.currency) || 'EUR';
+      const depositAmount = capturedAmount / 100;
       const propRes = await pool.query('SELECT name FROM properties WHERE id = $1', [depositData.property_id]);
       const propName = propRes.rows[0]?.name || depositData.property_id;
 
@@ -8309,14 +8371,14 @@ async function captureDeposit(depositId, amountCents = null) {
       );
       if (tokensRes.rows.length > 0) {
         const _pCaution = bhPush({
-          emoji: '💸', event: 'Caution débitée', context: amountEur + ' €',
+          emoji: '💸', event: 'Caution débitée', context: bhFmtAmount(depositAmount, depositCurrency),
           parts: [ guestName, propName ],
           data: { type: 'deposit_captured', depositId: String(depositId), amount: String(capturedAmount) },
           group: { by: 'property', id: depositData.property_id }
         });
         await sendNotificationToMultipleLogged(tokensRes.rows.map(r => r.fcm_token), _pCaution.title, _pCaution.body, _pCaution.data);
       }
-      console.log(`🔔 Notification caution débitée: ${amountEur}€ (${guestName})`);
+      console.log(`🔔 Notification caution débitée: ${bhFmtAmount(depositAmount, depositCurrency)} (${guestName})`);
     } catch (notifErr) {
       console.warn('⚠️ Notification caution (non bloquant):', notifErr.message);
     }
@@ -10202,6 +10264,7 @@ app.get('/api/reservations', authenticateAny, checkSubscription, async (req, res
           expires_at: hold.expires_at,
           holdToken: hold.link_token,
           fixedPrice: hold.fixed_price != null ? parseFloat(hold.fixed_price) : null,
+          holdCurrency: hold.currency || null,
           guestEmail: hold.guest_email || null,
           guestPhone: hold.guest_phone || null
         });
@@ -20299,50 +20362,92 @@ app.get('/api/reporting', authenticateAny, requirePermission(pool, 'can_view_rep
     filteredResas.forEach(r => {
       if (r.isBlock || r.isPending) return;
       if (!platformStats[r.platform]) {
-        platformStats[r.platform] = { bookings: 0, nights: 0, revenue: 0, pendingRevenue: 0 };
+        platformStats[r.platform] = { bookings: 0, nights: 0, _revenueSum: 0, _revenueByCurrency: {}, pendingRevenue: 0 };
       }
-      platformStats[r.platform].bookings++;
-      platformStats[r.platform].nights    += r.nights;
-      platformStats[r.platform].revenue   += r.grossRevenue;
+      const _ps = platformStats[r.platform];
+      _ps.bookings++;
+      _ps.nights += r.nights;
+      _ps._revenueSum += r.grossRevenue;
+      _ps._revenueByCurrency[r.currency] = Math.round(((_ps._revenueByCurrency[r.currency] || 0) + r.grossRevenue) * 100) / 100;
     });
     // Accumuler le revenu pending par plateforme
     filteredResas.forEach(r => {
       if (r.isBlock || !r.isPending) return;
       if (!platformStats[r.platform]) {
-        platformStats[r.platform] = { bookings: 0, nights: 0, revenue: 0, pendingRevenue: 0 };
+        platformStats[r.platform] = { bookings: 0, nights: 0, _revenueSum: 0, _revenueByCurrency: {}, pendingRevenue: 0 };
       }
       platformStats[r.platform].pendingRevenue += r.grossRevenue;
     });
     const totalBookings = realResas.length;
-    const platformArray = Object.entries(platformStats).map(([name, stats]) => ({
-      name,
-      bookings: stats.bookings,
-      nights: stats.nights,
-      revenue: Math.round(stats.revenue * 100) / 100,
-      pendingRevenue: Math.round(stats.pendingRevenue * 100) / 100,
-      pct: totalBookings > 0 ? Math.round(stats.bookings / totalBookings * 100) : 0
-    })).sort((a, b) => b.bookings - a.bookings);
+    const platformArray = Object.entries(platformStats).map(([name, stats]) => {
+      const _platCurrencies = Object.keys(stats._revenueByCurrency);
+      return {
+        name,
+        bookings: stats.bookings,
+        nights: stats.nights,
+        revenue: _platCurrencies.length <= 1 ? Math.round(stats._revenueSum * 100) / 100 : null,
+        revenueByCurrency: stats._revenueByCurrency,
+        pendingRevenue: Math.round(stats.pendingRevenue * 100) / 100,
+        pct: totalBookings > 0 ? Math.round(stats.bookings / totalBookings * 100) : 0
+      };
+    }).sort((a, b) => b.bookings - a.bookings);
 
     // ── Résumé global ───────────────────────────────────────────
     const _uniqueCurrencies = [...new Set(realResas.map(r => r.currency))];
     const _singleCurrency = _uniqueCurrencies.length === 1 ? _uniqueCurrencies[0] : null;
+
+    // Agrégats par devise (toujours corrects quelle que soit la diversité)
+    const _totalsByCurrency = {};
+    for (const r of realResas) {
+      const cur = r.currency;
+      if (!_totalsByCurrency[cur]) _totalsByCurrency[cur] = { grossRevenue: 0, netRevenue: 0, ownerRevenue: 0, concierge: 0, otaCommission: 0, cleaningFee: 0, touristTax: 0 };
+      _totalsByCurrency[cur].grossRevenue    += r.grossRevenue;
+      _totalsByCurrency[cur].netRevenue      += r.netRevenue;
+      _totalsByCurrency[cur].ownerRevenue    += r.ownerRevenue;
+      _totalsByCurrency[cur].concierge       += r.conciergeAmount;
+      _totalsByCurrency[cur].otaCommission   += r.otaCommissionAmount;
+      _totalsByCurrency[cur].cleaningFee     += r.cleaningFee;
+      _totalsByCurrency[cur].touristTax      += r.touristTax;
+    }
+    const totalsByCurrency = {};
+    for (const [cur, v] of Object.entries(_totalsByCurrency)) {
+      totalsByCurrency[cur] = {
+        grossRevenue:  Math.round(v.grossRevenue  * 100) / 100,
+        netRevenue:    Math.round(v.netRevenue    * 100) / 100,
+        ownerRevenue:  Math.round(v.ownerRevenue  * 100) / 100,
+        concierge:     Math.round(v.concierge     * 100) / 100,
+        otaCommission: Math.round(v.otaCommission * 100) / 100,
+        cleaningFee:   Math.round(v.cleaningFee   * 100) / 100,
+        touristTax:    Math.round(v.touristTax    * 100) / 100,
+      };
+    }
+
+    const _pendingUniqCur = [...new Set(pendingResas.map(r => r.currency))];
+    const pendingGrossRevenueByCurrency = {};
+    for (const r of pendingResas) {
+      pendingGrossRevenueByCurrency[r.currency] = Math.round(((pendingGrossRevenueByCurrency[r.currency] || 0) + r.grossRevenue) * 100) / 100;
+    }
+
     const summary = {
       totalBookings,
       totalNights:            realResas.reduce((s, r) => s + r.nights, 0),
-      totalGrossRevenue:      Math.round(realResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100,
-      totalNetRevenue:        Math.round(realResas.reduce((s, r) => s + r.netRevenue, 0) * 100) / 100,
-      totalTouristTax:        Math.round(realResas.reduce((s, r) => s + r.touristTax, 0) * 100) / 100,
-      totalCleaningFee:       Math.round(realResas.reduce((s, r) => s + r.cleaningFee, 0) * 100) / 100,
-      totalConcierge:         Math.round(realResas.reduce((s, r) => s + r.conciergeAmount, 0) * 100) / 100,
-      totalOwnerRevenue:      Math.round(realResas.reduce((s, r) => s + r.ownerRevenue, 0) * 100) / 100,
-      totalOtaCommission:     Math.round(realResas.reduce((s, r) => s + r.otaCommissionAmount, 0) * 100) / 100,
+      // Cross-currency monetary totals: null when mixed, numeric when mono-currency
+      totalGrossRevenue:      _singleCurrency ? Math.round(realResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100 : null,
+      totalNetRevenue:        _singleCurrency ? Math.round(realResas.reduce((s, r) => s + r.netRevenue, 0) * 100) / 100 : null,
+      totalTouristTax:        _singleCurrency ? Math.round(realResas.reduce((s, r) => s + r.touristTax, 0) * 100) / 100 : null,
+      totalCleaningFee:       _singleCurrency ? Math.round(realResas.reduce((s, r) => s + r.cleaningFee, 0) * 100) / 100 : null,
+      totalConcierge:         _singleCurrency ? Math.round(realResas.reduce((s, r) => s + r.conciergeAmount, 0) * 100) / 100 : null,
+      totalOwnerRevenue:      _singleCurrency ? Math.round(realResas.reduce((s, r) => s + r.ownerRevenue, 0) * 100) / 100 : null,
+      totalOtaCommission:     _singleCurrency ? Math.round(realResas.reduce((s, r) => s + r.otaCommissionAmount, 0) * 100) / 100 : null,
       avgNightsPerBooking: totalBookings > 0
         ? Math.round(realResas.reduce((s, r) => s + r.nights, 0) / totalBookings * 10) / 10
         : 0,
       pendingBookings:     pendingResas.length,
-      pendingGrossRevenue: Math.round(pendingResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100,
-      currencies:     _uniqueCurrencies,
-      singleCurrency: _singleCurrency,
+      pendingGrossRevenue: _pendingUniqCur.length <= 1 ? Math.round(pendingResas.reduce((s, r) => s + r.grossRevenue, 0) * 100) / 100 : null,
+      pendingGrossRevenueByCurrency,
+      currencies:         _uniqueCurrencies,
+      singleCurrency:     _singleCurrency,
+      totalsByCurrency,
     };
 
     res.json({
@@ -21120,6 +21225,21 @@ userId: userId
     const newCurrencyNorm = body.currency !== undefined
       ? normalizeCurrency(body.currency)
       : oldCurrencyNorm;
+
+    // ── F8: guard — devise immuable si Channex actif ───────────────────────────
+    // La devise du rate plan Channex est fixée à la création et ne peut pas
+    // être modifiée via l'API Channex. pushRates n'envoie pas de currency :
+    // la dénomination est implicite dans le rate plan. Changer la devise BH
+    // sans reconfigurer Channex produirait des rates mal-dénominées en silence.
+    if (property.channex_enabled && property.channex_property_id &&
+        body.currency !== undefined &&
+        newCurrencyNorm !== oldCurrencyNorm) {
+      console.log(`[INTL-CHANNEX-CURRENCY] currency-change blocked: property_id=${propertyId} ${oldCurrencyNorm} → ${body.currency} (Channex connecté)`);
+      return res.status(409).json({
+        error: 'CHANNEX_CURRENCY_CHANGE_REQUIRES_RECONNECT',
+        message: 'La devise ne peut pas être modifiée tant que ce logement est connecté au channel manager. Déconnectez et reconfigurez d\'abord la connexion Channex.'
+      });
+    }
 
     const result = await pool.query(
       `UPDATE properties
@@ -22751,7 +22871,7 @@ cron.schedule('0 8 * * *', async () => {
               html: bhEmailTemplate({
                 icon: '⚠️', title: 'Paiement refusé', subtitle: 'Action requise',
                 bodyHtml: `<p>Bonjour ${escapeHtml(d.guest_name || '')},</p>
-                  <p>Le prélèvement de <strong>${(d.amount_cents / 100).toFixed(2)}€</strong> pour votre séjour a été refusé par votre banque.</p>
+                  <p>Le prélèvement de <strong>${(d.amount_cents / 100).toFixed(2)} ${deferredCaptureCurrency}</strong> pour votre séjour a été refusé par votre banque.</p>
                   ${emailCard('danger', `Nous réessaierons demain. <strong>Sans paiement sous ${3 - attempts} jour(s), votre réservation sera annulée.</strong><br>Vérifiez votre carte (provision, expiration) ou contactez votre hôte.`)}`,
                 footerNote: 'BHGuest'
               })
@@ -22826,7 +22946,7 @@ app.get('/api/guest/reservations/:uid/cancel-preview', async (req, res) => {
   if (!email) return res.status(401).json({ error: 'Non connecté' });
   try {
     const r = await pool.query(
-      'SELECT uid, guest_email, start_date, amount_total, status FROM reservations WHERE uid = $1',
+      'SELECT uid, guest_email, start_date, amount_total, status, currency FROM reservations WHERE uid = $1',
       [req.params.uid]
     );
     const resa = r.rows[0];
@@ -22834,6 +22954,7 @@ app.get('/api/guest/reservations/:uid/cancel-preview', async (req, res) => {
       return res.status(404).json({ error: 'Réservation introuvable' });
     }
     if (resa.status === 'cancelled') return res.status(409).json({ error: 'Déjà annulée' });
+    const reservationCurrency = normalizeCurrency(resa.currency) || 'EUR';
 
     // 💳 Paiement différé non encore prélevé → annulation totalement gratuite
     const def = await pool.query(
@@ -22845,12 +22966,13 @@ app.get('/api/guest/reservations/:uid/cancel-preview', async (req, res) => {
         daysUntil: daysUntilDate(resa.start_date),
         refundAmount: 0, feeAmount: 0,
         amountTotal: parseFloat(resa.amount_total) || 0,
+        currency: reservationCurrency,
         freeDays: GUEST_CANCEL_FREE_DAYS, feePct: 0
       });
     }
 
     const pol = guestCancelPolicy(resa.start_date, resa.amount_total);
-    res.json({ ...pol, notCharged: false, amountTotal: parseFloat(resa.amount_total) || 0, freeDays: GUEST_CANCEL_FREE_DAYS, feePct: GUEST_CANCEL_FEE_PCT });
+    res.json({ ...pol, notCharged: false, amountTotal: parseFloat(resa.amount_total) || 0, currency: reservationCurrency, freeDays: GUEST_CANCEL_FREE_DAYS, feePct: GUEST_CANCEL_FEE_PCT });
   } catch(e) { res.status(500).json({ error: 'Erreur serveur' }); }
 });
 
@@ -22922,6 +23044,7 @@ app.post('/api/guest/reservations/:uid/cancel', async (req, res) => {
     }
 
     const pol = guestCancelPolicy(resa.start_date, resa.amount_total);
+    const cancelCurrency = normalizeCurrency(resa.currency) || 'EUR';
 
     // ── Remboursement partiel Stripe (97%) si dans la fenêtre ──
     let refunded = false;
@@ -22978,7 +23101,7 @@ app.post('/api/guest/reservations/:uid/cancel', async (req, res) => {
             <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour ${escapeHtml(resa.guest_name || '')},</p>
             <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Votre séjour du <strong>${fmtD(resa.start_date)}</strong> au <strong>${fmtD(resa.end_date)}</strong> est annulé.</p>
             ${pol.refundable
-              ? emailCard('success', `<strong>Remboursement : ${pol.refundAmount.toFixed(2)}€</strong> (${pol.feeAmount.toFixed(2)}€ de frais de traitement retenus) — sur votre compte sous 5 à 10 jours ouvrés.`)
+              ? emailCard('success', `<strong>Remboursement : ${bhFmtAmount(pol.refundAmount, cancelCurrency)}</strong> (${bhFmtAmount(pol.feeAmount, cancelCurrency)} de frais de traitement retenus) — sur votre compte sous 5 à 10 jours ouvrés.`)
               : emailCard('warning', `Votre annulation intervient à moins de ${GUEST_CANCEL_FREE_DAYS} jours de l'arrivée : conformément à la politique d'annulation, ce séjour n'est pas remboursable.`)}`,
           footerNote: 'BHGuest'
         })
@@ -23007,7 +23130,7 @@ app.post('/api/guest/reservations/:uid/cancel', async (req, res) => {
       }
     } catch(e2) { console.warn('⚠️ [GUEST CANCEL] Email hôte:', e2.message); }
 
-    res.json({ success: true, refunded, refundAmount: pol.refundAmount, feeAmount: pol.feeAmount, refundable: pol.refundable });
+    res.json({ success: true, refunded, refundAmount: pol.refundAmount, feeAmount: pol.feeAmount, refundable: pol.refundable, currency: cancelCurrency });
   } catch(e) {
     console.error('❌ [GUEST CANCEL]:', e.message);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -23213,6 +23336,7 @@ app.get('/api/host/stats', authenticateToken, async (req, res) => {
     // Réservations confirmées des N derniers mois
     const rows = await pool.query(`
       SELECT r.uid, r.start_date, r.end_date, r.amount_total, r.status, r.created_at,
+             r.currency,
              p.id AS property_id, p.name AS property_name,
              COALESCE(p.marketplace_fee_pct, 7) AS fee_pct
       FROM reservations r
@@ -23226,27 +23350,48 @@ app.get('/api/host/stats', authenticateToken, async (req, res) => {
     const nightsOf = r => Math.max(1, Math.round((new Date(r.end_date) - new Date(r.start_date)) / 86400000));
     const confirmed = rows.rows.filter(r => r.status !== 'cancelled');
 
+    // ── Détection mono/multi-devise ───────────────────────────────────────────
+    const _statsUniqueCurrencies = [...new Set(confirmed.map(r => normalizeCurrency(r.currency) || 'EUR'))];
+    const _statsSingleCurrency   = _statsUniqueCurrencies.length === 1 ? _statsUniqueCurrencies[0] : null;
+
     // Série mensuelle : revenus nets, nuits vendues, réservations
+    // Agrégats monétaires par devise + nuits/réservations préservés
     const series = {};
     const key = d => String(d).slice(0, 7); // AAAA-MM
     for (let i = months - 1; i >= 0; i--) {
       const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
-      series[d.toISOString().slice(0, 7)] = { month: d.toISOString().slice(0, 7), gross: 0, net: 0, nights: 0, bookings: 0 };
+      series[d.toISOString().slice(0, 7)] = { month: d.toISOString().slice(0, 7), gross: 0, net: 0, nights: 0, bookings: 0, _byCurrency: {} };
     }
     for (const r of confirmed) {
       const k = key(r.start_date);
       if (!series[k]) continue;
       const gross = parseFloat(r.amount_total) || 0;
+      const rCur = normalizeCurrency(r.currency) || 'EUR';
       series[k].gross += gross;
       series[k].net += gross * (1 - parseFloat(r.fee_pct) / 100);
       series[k].nights += nightsOf(r);
       series[k].bookings += 1;
+      if (!series[k]._byCurrency[rCur]) series[k]._byCurrency[rCur] = { gross: 0, net: 0 };
+      series[k]._byCurrency[rCur].gross += gross;
+      series[k]._byCurrency[rCur].net   += gross * (1 - parseFloat(r.fee_pct) / 100);
     }
-    const monthly = Object.values(series).map(m => ({
-      ...m,
-      gross: Math.round(m.gross * 100) / 100,
-      net: Math.round(m.net * 100) / 100
-    }));
+    const monthly = Object.values(series).map(m => {
+      const mCurrencies = Object.keys(m._byCurrency);
+      const mSingle = mCurrencies.length === 1 ? mCurrencies[0] : null;
+      const byCurrency = {};
+      for (const [cur, v] of Object.entries(m._byCurrency)) {
+        byCurrency[cur] = { gross: Math.round(v.gross * 100) / 100, net: Math.round(v.net * 100) / 100 };
+      }
+      return {
+        month: m.month,
+        // Monetary fields: valid only when mono-currency
+        gross: mSingle ? Math.round(m.gross * 100) / 100 : null,
+        net:   mSingle ? Math.round(m.net   * 100) / 100 : null,
+        nights: m.nights, bookings: m.bookings,
+        singleCurrency: mSingle,
+        byCurrency: Object.keys(byCurrency).length > 0 ? byCurrency : undefined,
+      };
+    });
 
     // Taux d'occupation : nuits vendues / nuits disponibles
     const propsRes = await pool.query(
@@ -23264,20 +23409,29 @@ app.get('/api/host/stats', authenticateToken, async (req, res) => {
     // Par logement
     const byProp = {};
     for (const r of confirmed) {
-      const b = (byProp[r.property_id] = byProp[r.property_id] || { id: r.property_id, name: r.property_name, net: 0, nights: 0, bookings: 0 });
+      const b = (byProp[r.property_id] = byProp[r.property_id] || { id: r.property_id, name: r.property_name, net: 0, nights: 0, bookings: 0, _currencies: new Set() });
       const gross = parseFloat(r.amount_total) || 0;
       b.net += gross * (1 - parseFloat(r.fee_pct) / 100);
       b.nights += nightsOf(r);
       b.bookings += 1;
+      b._currencies.add(normalizeCurrency(r.currency) || 'EUR');
     }
-    const properties = Object.values(byProp)
-      .map(b => ({ ...b, net: Math.round(b.net * 100) / 100, avgNight: b.nights ? Math.round(b.net / b.nights) : 0 }))
-      .sort((a, b) => b.net - a.net);
+    const properties = Object.values(byProp).map(b => {
+      const propSingle = b._currencies.size === 1 ? [...b._currencies][0] : null;
+      return {
+        id: b.id, name: b.name,
+        net: propSingle ? Math.round(b.net * 100) / 100 : null,
+        nights: b.nights, bookings: b.bookings,
+        singleCurrency: propSingle,
+        avgNight: propSingle && b.nights ? Math.round(b.net / b.nights) : null,
+      };
+    }).sort((a, b) => (b.net || 0) - (a.net || 0));
 
     // Totaux
     const totalNet = Math.round(confirmed.reduce((a, r) => a + (parseFloat(r.amount_total) || 0) * (1 - parseFloat(r.fee_pct) / 100), 0) * 100) / 100;
     const totalNights = confirmed.reduce((a, r) => a + nightsOf(r), 0);
     const upcoming = confirmed.filter(r => new Date(r.start_date) > today);
+    const upcomingNet = Math.round(upcoming.reduce((a, r) => a + (parseFloat(r.amount_total) || 0) * (1 - parseFloat(r.fee_pct) / 100), 0) * 100) / 100;
 
     // Délai moyen entre réservation et arrivée
     const leads = confirmed
@@ -23286,19 +23440,47 @@ app.get('/api/host/stats', authenticateToken, async (req, res) => {
       .filter(v => v >= 0 && v < 400);
     const avgLead = leads.length ? Math.round(leads.reduce((a, b) => a + b, 0) / leads.length) : null;
 
+    // Agrégats monétaires par devise (totaux globaux)
+    const _netByCurrency = {};
+    const _upcomingNetByCurrency = {};
+    for (const r of confirmed) {
+      const rCur = normalizeCurrency(r.currency) || 'EUR';
+      const net = (parseFloat(r.amount_total) || 0) * (1 - parseFloat(r.fee_pct) / 100);
+      _netByCurrency[rCur] = (_netByCurrency[rCur] || 0) + net;
+      if (new Date(r.start_date) > today) {
+        _upcomingNetByCurrency[rCur] = (_upcomingNetByCurrency[rCur] || 0) + net;
+      }
+    }
+    const monetaryByCurrency = {};
+    for (const [cur, net] of Object.entries(_netByCurrency)) {
+      const uNet = _upcomingNetByCurrency[cur] || 0;
+      const nights4cur = confirmed.filter(r => (normalizeCurrency(r.currency) || 'EUR') === cur).reduce((a, r) => a + nightsOf(r), 0);
+      monetaryByCurrency[cur] = {
+        net: Math.round(net * 100) / 100,
+        upcomingNet: Math.round(uNet * 100) / 100,
+        avgNightly: nights4cur ? Math.round(net / nights4cur) : 0,
+      };
+    }
+
     res.json({
       months, listings,
       totals: {
-        net: totalNet,
+        // Monetary: valid only when mono-currency; null when multi-currency
+        net:         _statsSingleCurrency ? totalNet : null,
+        upcomingNet: _statsSingleCurrency ? Math.round(upcomingNet * 100) / 100 : null,
+        avgNightly:  _statsSingleCurrency && totalNights ? Math.round(totalNet / totalNights) : null,
+        // Non-monetary: always valid
         bookings: confirmed.length,
         nights: totalNights,
         avgStay: confirmed.length ? Math.round(totalNights / confirmed.length * 10) / 10 : 0,
-        avgNightly: totalNights ? Math.round(totalNet / totalNights) : 0,
         occupancy,
         cancelled: rows.rows.length - confirmed.length,
         upcomingCount: upcoming.length,
-        upcomingNet: Math.round(upcoming.reduce((a, r) => a + (parseFloat(r.amount_total) || 0) * (1 - parseFloat(r.fee_pct) / 100), 0) * 100) / 100,
-        avgLeadDays: avgLead
+        avgLeadDays: avgLead,
+        // Currency metadata
+        singleCurrency: _statsSingleCurrency,
+        currencies: _statsUniqueCurrencies,
+        monetaryByCurrency,
       },
       monthly,
       properties
@@ -24415,13 +24597,24 @@ app.post('/api/deposits',
 
     const amountCents = Math.round(amount * 100);
 
+    // INTL-DEPOSIT-STRIPE — rule A: new deposit takes its currency from the property
+    let depositPropertyCurrency = property?.currency || null;
+    if (!depositPropertyCurrency && freeModePropertyId) {
+      const propCurrRes = await pool.query('SELECT currency FROM properties WHERE id = $1', [freeModePropertyId]);
+      depositPropertyCurrency = propCurrRes.rows[0]?.currency || null;
+    }
+    const depositCurrency = normalizeCurrency(depositPropertyCurrency) || 'EUR';
+    if (depositPropertyCurrency && !normalizeCurrency(depositPropertyCurrency)) {
+      console.warn(`⚠️ [INTL] POST /api/deposits: devise invalide « ${depositPropertyCurrency} » — fallback EUR`);
+    }
+
     // Créer l'objet "caution"
     const depositId = 'dep_' + Date.now().toString(36);
     const deposit = {
       id: depositId,
       reservationUid,
       amountCents,
-      currency: 'eur',
+      currency: depositCurrency.toLowerCase(),
       status: 'pending',
       stripeSessionId: null,
       checkoutUrl: null,
@@ -24451,7 +24644,7 @@ app.post('/api/deposits',
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
-          currency: 'eur',
+          currency: depositCurrency.toLowerCase(),
           product_data: {
             name: clientName ? `Caution – ${clientName}` : `Caution séjour – ${property ? property.name : 'Logement'}`,
             description: reservation ? `Du ${reservation.start} au ${reservation.end}` : (clientName || 'Caution libre')
@@ -24560,10 +24753,13 @@ app.put('/api/deposits/:depositId',
     const amountCents = Math.round(amount * 100);
     const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
 
+    // INTL-DEPOSIT-STRIPE — rule B: modification uses the currency already on the record, never re-reads property
+    const depositCurr = normalizeCurrency(existing.currency) || 'EUR';
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
-      line_items: [{ price_data: { currency: 'eur', product_data: { name: `Caution séjour`, description: `Caution modifiée – ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
+      line_items: [{ price_data: { currency: depositCurr.toLowerCase(), product_data: { name: `Caution séjour`, description: `Caution modifiée – ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
       payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid } },
       metadata: { deposit_id: existing.id, reservation_uid: existing.reservation_uid, user_id: String(userId) },
       success_url: `${appUrl}/caution-success.html?depositId=${existing.id}`,
@@ -24663,11 +24859,14 @@ app.put('/api/payments/:paymentId',
     const platformFee = Math.round(amountCents * feeRatePayment); // ✅ Commission Boostinghost
     const appUrl = (process.env.APP_URL || 'https://boostinghost.com').replace(/\/$/, '');
 
+    // INTL-DEPOSIT-STRIPE — rule B: modification uses the currency already on the record
+    const paymentCurr = normalizeCurrency(existing.currency) || 'EUR';
+
     const putPaySessionOptions = user.stripeAccountId ? { stripeAccount: user.stripeAccountId } : {};
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
-      line_items: [{ price_data: { currency: 'eur', product_data: { name: description || 'Paiement location', description: `Modifié le ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
+      line_items: [{ price_data: { currency: paymentCurr.toLowerCase(), product_data: { name: description || 'Paiement location', description: `Modifié le ${new Date().toLocaleDateString('fr-FR')}` }, unit_amount: amountCents }, quantity: 1 }],
       payment_intent_data: { metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, payment_type: 'location' } }, // ⏸️ Commission BH en pause
       metadata: { payment_id: existing.id, reservation_uid: existing.reservation_uid, user_id: user.id, payment_type: 'location' },
       success_url: `${appUrl}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
@@ -24766,12 +24965,23 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
     }
 
     const amountCents = Math.round(amount * 100);
-    
+
     // 💰 Calcul de la commission (8% pour la plateforme) — ⏸️ EN PAUSE
     const platformFee = Math.round(amountCents * 0.08); // ⏸️ Garder pour réactiver plus tard
     const platformFeeActive = 0; // 🔴 PAUSE : remplacer par platformFee pour réactiver la commission
     const ownerReceives = amountCents - platformFeeActive;
-    
+
+    // INTL-DEPOSIT-STRIPE — rule A: new payment takes its currency from the property
+    let paymentPropertyCurrency = property?.currency || null;
+    if (!paymentPropertyCurrency && bodyPropertyId) {
+      const propCurrRes2 = await pool.query('SELECT currency FROM properties WHERE id = $1', [bodyPropertyId]);
+      paymentPropertyCurrency = propCurrRes2.rows[0]?.currency || null;
+    }
+    const paymentCurrencyNew = normalizeCurrency(paymentPropertyCurrency) || 'EUR';
+    if (paymentPropertyCurrency && !normalizeCurrency(paymentPropertyCurrency)) {
+      console.warn(`⚠️ [INTL] POST /api/payments: devise invalide « ${paymentPropertyCurrency} » — fallback EUR`);
+    }
+
     // Créer l'objet "payment"
     const paymentId = 'pay_' + Date.now().toString(36);
     const payment = {
@@ -24779,7 +24989,7 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
       reservationUid,
       amountCents,
       platformFeeCents: platformFee,
-      currency: 'eur',
+      currency: paymentCurrencyNew.toLowerCase(),
       status: 'pending',
       stripeSessionId: null,
       checkoutUrl: null,
@@ -24810,7 +25020,7 @@ app.post('/api/payments', authenticateAny, requirePermission(pool, 'can_manage_p
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
-          currency: 'eur',
+          currency: paymentCurrencyNew.toLowerCase(),
           product_data: {
             name: description || (clientName ? `Paiement – ${clientName}` : (property ? `Location – ${property.name}` : 'Paiement')),
             description: reservation ? `Du ${reservation.start} au ${reservation.end}` : (clientName || 'Paiement libre')
@@ -27345,6 +27555,7 @@ app.post('/api/invoice/resend',
     const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_resend.pdf`);
     
     // Reconstituer les variables pour generateInvoicePdfToFile
+    // INTL-P1-F4 — propagate historical invoice currency; never re-read property.currency
     const savedVars = {
       clientName: meta.clientName, clientEmail: meta.clientEmail,
       clientAddress: meta.clientAddress, clientPostalCode: meta.clientPostalCode,
@@ -27355,7 +27566,8 @@ app.post('/api/invoice/resend',
       touristTaxAmount: meta.touristTaxAmount, cleaningFee: meta.cleaningFee,
       vatRate: meta.vatRate, invoiceNumber,
       serviceFee: meta.serviceFee || 0, paid: !!meta.paid,
-      paidDate: meta.paidDate || null, platform: meta.platform || ''
+      paidDate: meta.paidDate || null, platform: meta.platform || '',
+      currency: normalizeCurrency(meta.currency) || 'EUR'
     };
 
     await generateInvoicePdf(pdfPath, savedVars, user, ownerInfo);
@@ -30895,7 +31107,7 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
     const comptes = await comptesAutorises(pool, userId);
     const convResult = await pool.query(
       `SELECT c.*, p.quick_replies, p.deposit_amount, p.name as property_name,
-              r.uid as reservation_uid
+              p.currency AS property_currency, r.uid as reservation_uid
        FROM conversations c
        LEFT JOIN properties p ON p.id = c.property_id
        LEFT JOIN reservations r ON (
@@ -30946,12 +31158,15 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
         const amountCents = Math.round(parseFloat(row.deposit_amount) * 100);
         const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
 
+        // INTL-DEPOSIT-STRIPE — rule A: new deposit uses property currency
+        const qcDepositCurrency = normalizeCurrency(row.property_currency) || 'EUR';
+
         const sessionParams = {
           payment_method_types: ['card'],
           mode: 'payment',
           line_items: [{
             price_data: {
-              currency: 'eur',
+              currency: qcDepositCurrency.toLowerCase(),
               unit_amount: amountCents,
               product_data: {
                 name: `Caution - ${row.property_name || ''}`,
@@ -30983,13 +31198,13 @@ app.get('/api/chat/conversations/:convId/quick-context', authenticateAny, async 
 
         await pool.query(
           `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, currency, status, stripe_session_id, checkout_url, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, 'eur', 'pending', $6, $7, NOW(), NOW())`,
-          [depositId, depOwnerId, row.reservation_uid, row.property_id, amountCents, session.id, session.url]
+           VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, NOW(), NOW())`,
+          [depositId, depOwnerId, row.reservation_uid, row.property_id, amountCents, qcDepositCurrency.toLowerCase(), session.id, session.url]
         );
 
         depositUrl = session.url;
         depositAmountCents = amountCents;
-        depositCurrency = 'EUR';
+        depositCurrency = qcDepositCurrency;
         console.log(`✅ [quick-context] Deposit créé : ${depositId}`);
       } catch(stripeErr) {
         console.warn(`⚠️ [quick-context] Erreur création deposit:`, stripeErr.message);
@@ -32853,13 +33068,16 @@ async function regenStripeSession(record, type, pool) {
   // ⏸️ Commission BH en pause sur cautions et paiements (hors Guest App)
   const feeRate = 0;
 
+  // INTL-DEPOSIT-STRIPE — rule B: regeneration uses the currency stored on the record
+  const recordCurrency = normalizeCurrency(record.currency) || 'EUR';
+
   let sessionParams;
 
   if (type === 'deposit') {
     sessionParams = {
       payment_method_types: ['card'],
       mode: 'payment',
-      line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: `Caution - ${prop.name || propertyId}` } }, quantity: 1 }],
+      line_items: [{ price_data: { currency: recordCurrency.toLowerCase(), unit_amount: amountCents, product_data: { name: `Caution - ${prop.name || propertyId}` } }, quantity: 1 }],
       payment_intent_data: {
         capture_method: 'manual',
         metadata: { deposit_id: record.id, reservation_uid: record.reservation_uid || '' },
@@ -32884,7 +33102,7 @@ async function regenStripeSession(record, type, pool) {
     sessionParams = {
       payment_method_types: ['card'],
       mode: 'payment',
-      line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: meta.description || `Paiement - ${prop.name || propertyId}` } }, quantity: 1 }],
+      line_items: [{ price_data: { currency: recordCurrency.toLowerCase(), unit_amount: amountCents, product_data: { name: meta.description || `Paiement - ${prop.name || propertyId}` } }, quantity: 1 }],
       payment_intent_data: {
         metadata: { payment_id: record.id, reservation_uid: record.reservation_uid || '', payment_type: 'location' },
         // ⏸️ Commission BH en pause
@@ -33675,12 +33893,14 @@ async function sendTemplateMessage(pool, io, { template, conv, property, skipLog
               const depositId = 'dep_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
               const amountCents = Math.round(depositAmount * 100);
               const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+              // INTL-DEPOSIT-STRIPE — rule A: new deposit uses property currency
+              const tplDepositCurrency = normalizeCurrency(propD.rows[0]?.currency) || 'EUR';
               const stripeTarget = await getStripeForProperty(pool, conv.property_id, conv.user_id);
               const sessionOptions = stripeTarget.stripeAccountId ? { stripeAccount: stripeTarget.stripeAccountId } : {};
               const sessionParams = {
                 payment_method_types: ['card'],
                 mode: 'payment',
-                line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: `Caution - ${propD.rows[0]?.name || conv.property_id}`, description: `Réservation du ${conv.reservation_start_date} au ${conv.reservation_end_date}` } }, quantity: 1 }],
+                line_items: [{ price_data: { currency: tplDepositCurrency.toLowerCase(), unit_amount: amountCents, product_data: { name: `Caution - ${propD.rows[0]?.name || conv.property_id}`, description: `Réservation du ${conv.reservation_start_date} au ${conv.reservation_end_date}` } }, quantity: 1 }],
                 payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId, reservation_uid: resUid } }, // ⏸️ Commission BH en pause
                 metadata: { deposit_id: depositId, reservation_uid: resUid },
                 success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
@@ -33688,9 +33908,9 @@ async function sendTemplateMessage(pool, io, { template, conv, property, skipLog
               };
               const session = await createCheckoutSession(sessionParams, sessionOptions);
               await pool.query(
-                `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
-                 VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW())`,
-                [depositId, conv.user_id, resUid, conv.property_id, amountCents, session.id, session.url]
+                `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, currency, status, stripe_session_id, checkout_url, created_at, updated_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,'pending',$7,$8,NOW(),NOW())`,
+                [depositId, conv.user_id, resUid, conv.property_id, amountCents, tplDepositCurrency.toLowerCase(), session.id, session.url]
               );
               cautionUrl = await makeShortLink(pool, session.url, conv.user_id, { depositId: depositId });
               await pool.query('UPDATE deposits SET stripe_session_expires_at = $1 WHERE id = $2', [new Date(session.expires_at * 1000).toISOString(), depositId]).catch(() => {});
@@ -34635,12 +34855,14 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
                 const depositId = 'dep_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
                 const amountCents = Math.round(depositAmount * 100);
                 const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+                // INTL-DEPOSIT-STRIPE — rule A: new deposit uses property currency
+                const cronDepositCurrency = normalizeCurrency(propD.rows[0]?.currency) || 'EUR';
                 const stripeTarget = await getStripeForProperty(pool, c.property_id, c.user_id);
                 const sessionOptions = stripeTarget.stripeAccountId ? { stripeAccount: stripeTarget.stripeAccountId } : {};
                 const sessionParams = {
                   payment_method_types: ['card'],
                   mode: 'payment',
-                  line_items: [{ price_data: { currency: 'eur', unit_amount: amountCents, product_data: { name: `Caution - ${propD.rows[0]?.name || c.property_id}`, description: `Réservation du ${c.reservation_start_date} au ${c.reservation_end_date}` } }, quantity: 1 }],
+                  line_items: [{ price_data: { currency: cronDepositCurrency.toLowerCase(), unit_amount: amountCents, product_data: { name: `Caution - ${propD.rows[0]?.name || c.property_id}`, description: `Réservation du ${c.reservation_start_date} au ${c.reservation_end_date}` } }, quantity: 1 }],
                   payment_intent_data: { capture_method: 'manual', metadata: { deposit_id: depositId, reservation_uid: resUidCron } }, // ⏸️ Commission BH en pause
                   metadata: { deposit_id: depositId, reservation_uid: resUidCron },
                   success_url: `${appUrl}/caution-success.html?depositId=${depositId}`,
@@ -34648,9 +34870,9 @@ app.post('/api/message-templates/:id/send', authenticateToken, async (req, res) 
                 };
                 const session = await createCheckoutSession(sessionParams, sessionOptions);
                 await pool.query(
-                  `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, status, stripe_session_id, checkout_url, created_at, updated_at)
-                   VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW())`,
-                  [depositId, c.user_id, resUidCron, c.property_id, amountCents, session.id, session.url]
+                  `INSERT INTO deposits (id, user_id, reservation_uid, property_id, amount_cents, currency, status, stripe_session_id, checkout_url, created_at, updated_at)
+                   VALUES ($1,$2,$3,$4,$5,$6,'pending',$7,$8,NOW(),NOW())`,
+                  [depositId, c.user_id, resUidCron, c.property_id, amountCents, cronDepositCurrency.toLowerCase(), session.id, session.url]
                 );
                 cautionUrl = await makeShortLink(pool, session.url, c.user_id, { depositId: depositId });
                 await pool.query('UPDATE deposits SET stripe_session_expires_at = $1 WHERE id = $2', [new Date(session.expires_at * 1000).toISOString(), depositId]).catch(() => {});
@@ -38034,12 +38256,15 @@ app.post('/api/contrat/sign/:token', async (req, res) => {
 
       if (isMandat) {
         // ── CORPS MANDAT ──
+        // INTL-MANDATE-RERENDER — devise snapshot stockée dans contract_data ; legacy → EUR
+        const mandatCurrency = normalizeCurrency(data.currency) || 'EUR';
+        const mandatSymbol = { EUR: '€', ILS: '₪', USD: '$', CHF: 'Fr.' }[mandatCurrency] || mandatCurrency;
         const propTypeLabels = { appartement: 'Appartement', maison: 'Maison', studio: 'Studio', villa: 'Villa', chambre: 'Chambre', gite: 'Gîte / Chalet', autre: 'Autre' };
         const remuLabels = {
           commission: `${data.commissionRate || '—'}% sur les revenus ${data.commissionBase === 'ttc' ? 'TTC' : 'HT'}`,
-          forfait_mensuel: `${data.forfaitMensuel || '—'} €/mois`,
-          forfait_resa: `${data.forfaitResa || '—'} €/réservation`,
-          mixte: `${data.mixteRate || '—'}% + ${data.mixteForfait || '—'} €/mois`,
+          forfait_mensuel: `${data.forfaitMensuel || '—'} ${mandatSymbol}/mois`,
+          forfait_resa: `${data.forfaitResa || '—'} ${mandatSymbol}/réservation`,
+          mixte: `${data.mixteRate || '—'}% + ${data.mixteForfait || '—'} ${mandatSymbol}/mois`,
           carte: 'Prestations à la carte'
         };
         const exclusiviteLabels = { non: 'Sans exclusivité', totale: 'Exclusivité totale', partielle: 'Exclusivité partielle' };
@@ -38074,7 +38299,7 @@ app.post('/api/contrat/sign/:token', async (req, res) => {
         if (data.missions && data.missions.length > 0) {
           sectionTitle('4. Missions confiées');
           data.missions.forEach(m => { doc.fillColor(dark).fontSize(9).font('Helvetica').text(`• ${m}`, 56, y, { width: pageW - 16 }); y += 13; });
-          if (data.urgenceLimit) { y += 4; para(`Plafond dépenses urgentes : ${data.urgenceLimit} € TTC`); }
+          if (data.urgenceLimit) { y += 4; para(`Plafond dépenses urgentes : ${data.urgenceLimit} ${mandatSymbol} TTC`); }
           y += 4; checkPage();
         }
 
@@ -38599,12 +38824,15 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
     // ── Rediriger vers PDF mandat si contractType === 'mandat' ──
     if (isMandat) {
       // Réutiliser la même logique de génération que /api/mandat/send
+      // INTL-MANDATE-RERENDER — devise snapshot stockée dans contract_data ; legacy → EUR
+      const mandatCurrency = normalizeCurrency(d.currency) || 'EUR';
+      const mandatSymbol = { EUR: '€', ILS: '₪', USD: '$', CHF: 'Fr.' }[mandatCurrency] || mandatCurrency;
       const propTypeLabels = { appartement: 'Appartement', maison: 'Maison', studio: 'Studio', villa: 'Villa', chambre: 'Chambre', gite: 'Gîte / Chalet', autre: 'Autre' };
       const remuLabels = {
         commission: `${d.commissionRate || '—'}% sur les revenus ${d.commissionBase === 'ttc' ? 'TTC' : 'HT'}`,
-        forfait_mensuel: `Forfait mensuel : ${d.forfaitMensuel || '—'} €`,
-        forfait_resa: `Forfait par réservation : ${d.forfaitResa || '—'} €`,
-        mixte: `${d.mixteRate || '—'}% + ${d.mixteForfait || '—'} €/mois`,
+        forfait_mensuel: `Forfait mensuel : ${d.forfaitMensuel || '—'} ${mandatSymbol}`,
+        forfait_resa: `Forfait par réservation : ${d.forfaitResa || '—'} ${mandatSymbol}`,
+        mixte: `${d.mixteRate || '—'}% + ${d.mixteForfait || '—'} ${mandatSymbol}/mois`,
         carte: 'Prestations à la carte'
       };
       const tvaLabels = { ht: 'HT — TVA en sus', ttc: 'TTC', franchise: 'Auto-entrepreneur (sans TVA)' };
@@ -38675,7 +38903,7 @@ app.get('/api/contrats/:id/pdf', authenticateAny, async (req, res) => {
         if (d.missions && d.missions.length > 0) {
           sT('Article 3 — Missions confiées');
           d.missions.forEach(m => bullet(m));
-          if (d.urgenceLimit) { y += 4; para(`Plafond dépenses urgentes : ${d.urgenceLimit} € TTC.`); }
+          if (d.urgenceLimit) { y += 4; para(`Plafond dépenses urgentes : ${d.urgenceLimit} ${mandatSymbol} TTC.`); }
           y += 6;
         }
 
@@ -42144,7 +42372,8 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
         user_id,
         property_id,
         channex_property_id: property.channex_property_id,
-        name: property.name
+        name: property.name,
+        currency: property.currency
       });
 
     // ── Rattachement à une property existante (multi-logements) ───────────
@@ -42161,7 +42390,8 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
         user_id,
         property_id,
         channex_property_id: existing_channex_property_id,
-        name: property.name
+        name: property.name,
+        currency: property.currency
       });
 
     // ── Création complète : nouvelle property ──────────────────────────────
@@ -42171,7 +42401,8 @@ app.post('/api/channex/connect-property', authenticateToken, async (req, res) =>
         property_id,
         name: property.name,
         address: property.address,
-        city: property.city
+        city: property.city,
+        currency: property.currency
       });
     }
 
@@ -46354,7 +46585,7 @@ app.get('/logement/:id', async (req, res) => {
   try {
     const r = await pool.query(`
       SELECT p.id, p.name, p.city, p.postal_code, p.address, p.photo_url,
-             p.base_price, p.description, p.highlights, p.good_to_know, p.property_type,
+             p.base_price, p.currency, p.description, p.highlights, p.good_to_know, p.property_type,
              p.max_guests, p.bedrooms, p.beds, p.bathrooms, p.amenities,
              u.first_name AS host_first_name,
              (SELECT ROUND(AVG(rating)::numeric,1) FROM bhguest_reviews b WHERE b.property_id = p.id AND b.submitted_at IS NOT NULL AND COALESCE(b.moderation_status,'published') <> 'removed') AS avg_rating,
@@ -46385,18 +46616,20 @@ app.get('/logement/:id', async (req, res) => {
 
     // Autres logements de la même ville
     const near = await pool.query(`
-      SELECT id, name, city, photo_url, base_price FROM properties
+      SELECT id, name, city, photo_url, base_price, currency FROM properties
       WHERE is_marketplace = true AND id <> $1 AND LOWER(city) = LOWER($2)
       LIMIT 4
     `, [p.id, p.city || '']);
 
     const price = p.base_price ? Math.round(parseFloat(p.base_price)) : null;
+    // INTL-P1-F1 — use each property's own currency; never assume EUR
+    const propertyCurrency = normalizeCurrency(p.currency) || 'EUR';
     const typeLbl = { appartement:'Appartement', maison:'Maison', studio:'Studio', villa:'Villa' }[String(p.property_type || '').toLowerCase()] || 'Logement';
     const title = `${p.name}${p.city ? ` — ${p.city}` : ''} | Location courte durée BHGuest`;
     const descParts = [`${typeLbl}${p.city ? ` à ${p.city}` : ''}`];
     if (p.max_guests) descParts.push(`${p.max_guests} voyageurs`);
     if (p.bedrooms) descParts.push(`${p.bedrooms} chambre${p.bedrooms > 1 ? 's' : ''}`);
-    if (price) descParts.push(`dès ${price}€/nuit`);
+    if (price) descParts.push(`dès ${bhFmtAmount(price, propertyCurrency)}/nuit`);
     descParts.push('Réservation directe avec l\'hôte, sans frais de service');
     const metaDesc = descParts.join(' · ').slice(0, 300);
 
@@ -46423,7 +46656,7 @@ app.get('/logement/:id', async (req, res) => {
       address: { '@type': 'PostalAddress', addressLocality: p.city || undefined, postalCode: p.postal_code || undefined, addressCountry: 'FR' },
       ...(p.max_guests ? { maximumAttendeeCapacity: p.max_guests } : {}),
       ...(p.bedrooms ? { numberOfRooms: p.bedrooms } : {}),
-      ...(price ? { priceRange: `€${price}` } : {}),
+      ...(price ? { priceRange: bhFmtAmount(price, propertyCurrency) } : {}),
       ...(p.avg_rating && p.reviews_count >= 1 ? {
         aggregateRating: { '@type': 'AggregateRating', ratingValue: String(p.avg_rating), reviewCount: String(p.reviews_count), bestRating: '5' }
       } : {}),
@@ -46452,7 +46685,7 @@ app.get('/logement/:id', async (req, res) => {
   ${photos[0] ? `<img class="hero-img" src="${SEO_ESC(photos[0])}" alt="${SEO_ESC(p.name)}${p.city ? ` — ${SEO_ESC(p.city)}` : ''}">` : ''}
   ${photos.length > 1 ? `<div class="gal">${photos.slice(1, 9).map((u, i) => `<img src="${SEO_ESC(u)}" alt="${SEO_ESC(p.name)} — photo ${i + 2}" loading="lazy">`).join('')}</div>` : ''}
   <div class="px">
-    <div>${price ? `<b>${price}€</b> <span>par nuit</span>` : '<b>Sur demande</b>'}</div>
+    <div>${price ? `<b>${bhFmtAmount(price, propertyCurrency)}</b> <span>par nuit</span>` : '<b>Sur demande</b>'}</div>
     <a class="cta" href="${SEO_ESC(appUrl)}">Voir les disponibilités</a>
   </div>
   ${facts.length ? `<ul class="fx">${facts.map(f => `<li>${SEO_ESC(f)}</li>`).join('')}</ul>` : ''}
@@ -46471,7 +46704,7 @@ app.get('/logement/:id', async (req, res) => {
     <div class="cards">${near.rows.map(n => `<a class="cd" href="${base}/logement/${n.id}">
       ${n.photo_url ? `<img src="${SEO_ESC(n.photo_url)}" alt="${SEO_ESC(n.name)}" loading="lazy">` : ''}
       <div class="cd-b"><div class="cd-n">${SEO_ESC(n.name)}</div><div class="cd-c">${SEO_ESC(n.city || '')}</div>
-      ${n.base_price ? `<div class="cd-p">dès ${Math.round(parseFloat(n.base_price))}€ / nuit</div>` : ''}</div></a>`).join('')}</div>` : ''}
+      ${n.base_price ? `<div class="cd-p">dès ${bhFmtAmount(Math.round(parseFloat(n.base_price)), normalizeCurrency(n.currency) || 'EUR')} / nuit</div>` : ''}</div></a>`).join('')}</div>` : ''}
 </main>`;
 
     res.set('Cache-Control', 'public, max-age=600');
@@ -46493,7 +46726,7 @@ app.get('/logements', async (req, res) => {
       GROUP BY city ORDER BY COUNT(*) DESC, city ASC LIMIT 200
     `);
     const recent = await pool.query(`
-      SELECT id, name, city, photo_url, base_price FROM properties
+      SELECT id, name, city, photo_url, base_price, currency FROM properties
       WHERE is_marketplace = true ORDER BY created_at DESC LIMIT 12
     `);
     const body = `<main class="wr">
@@ -46505,7 +46738,7 @@ app.get('/logements', async (req, res) => {
     <div class="cards">${recent.rows.map(n => `<a class="cd" href="${base}/logement/${n.id}">
       ${n.photo_url ? `<img src="${SEO_ESC(n.photo_url)}" alt="${SEO_ESC(n.name)} — ${SEO_ESC(n.city || '')}" loading="lazy">` : ''}
       <div class="cd-b"><div class="cd-n">${SEO_ESC(n.name)}</div><div class="cd-c">${SEO_ESC(n.city || '')}</div>
-      ${n.base_price ? `<div class="cd-p">dès ${Math.round(parseFloat(n.base_price))}€ / nuit</div>` : ''}</div></a>`).join('')}</div>`
+      ${n.base_price ? `<div class="cd-p">dès ${bhFmtAmount(Math.round(parseFloat(n.base_price)), normalizeCurrency(n.currency) || 'EUR')} / nuit</div>` : ''}</div></a>`).join('')}</div>`
     : '<p class="tx">Aucun logement disponible pour le moment.</p>'}
 </main>`;
     res.set('Cache-Control', 'public, max-age=900');
@@ -46525,32 +46758,38 @@ app.get('/logements/:citySlug', async (req, res) => {
   const base = seoBaseUrl();
   try {
     const all = await pool.query(`
-      SELECT id, name, city, postal_code, photo_url, base_price, max_guests, property_type
+      SELECT id, name, city, postal_code, photo_url, base_price, currency, max_guests, property_type
       FROM properties WHERE is_marketplace = true AND city IS NOT NULL AND city <> ''
     `);
     const rows = all.rows.filter(p => seoSlug(p.city) === req.params.citySlug);
     if (!rows.length) return res.redirect(302, `${base}/logements`);
 
     const city = rows[0].city;
-    const prices = rows.map(p => parseFloat(p.base_price)).filter(v => v > 0);
+    // INTL-P1-F1 — guard against cross-currency aggregation: compute min price only when all
+    // properties in the city share the same currency; otherwise suppress the numeric aggregate.
+    const cityCurrencies = [...new Set(rows.map(p => normalizeCurrency(p.currency) || 'EUR'))];
+    const citySingleCurrency = cityCurrencies.length === 1 ? cityCurrencies[0] : null;
+    const prices = citySingleCurrency
+      ? rows.map(p => parseFloat(p.base_price)).filter(v => v > 0)
+      : [];
     const minP = prices.length ? Math.round(Math.min(...prices)) : null;
 
     const body = `<main class="wr">
   <nav class="bc"><a href="${base}/logements">Logements</a> › ${SEO_ESC(city)}</nav>
   <h1>Location courte durée à ${SEO_ESC(city)}</h1>
-  <p class="sub">${rows.length} logement${rows.length > 1 ? 's' : ''} disponible${rows.length > 1 ? 's' : ''}${minP ? ` · à partir de ${minP}€ la nuit` : ''}</p>
+  <p class="sub">${rows.length} logement${rows.length > 1 ? 's' : ''} disponible${rows.length > 1 ? 's' : ''}${(minP && citySingleCurrency) ? ` · à partir de ${bhFmtAmount(minP, citySingleCurrency)} la nuit` : ''}</p>
   <p class="tx">Réservez votre séjour à ${SEO_ESC(city)} en direct avec l'hôte. Pas de frais de service ajoutés au moment de payer, une annulation gratuite jusqu'à deux jours avant l'arrivée, et un échange direct avec la personne qui vous accueille.</p>
   <div class="cards">${rows.map(n => `<a class="cd" href="${base}/logement/${n.id}">
     ${n.photo_url ? `<img src="${SEO_ESC(n.photo_url)}" alt="${SEO_ESC(n.name)} — location à ${SEO_ESC(city)}" loading="lazy">` : ''}
     <div class="cd-b"><div class="cd-n">${SEO_ESC(n.name)}</div>
     <div class="cd-c">${SEO_ESC(city)}${n.max_guests ? ` · ${n.max_guests} voyageurs` : ''}</div>
-    ${n.base_price ? `<div class="cd-p">dès ${Math.round(parseFloat(n.base_price))}€ / nuit</div>` : ''}</div></a>`).join('')}</div>
+    ${n.base_price ? `<div class="cd-p">dès ${bhFmtAmount(Math.round(parseFloat(n.base_price)), normalizeCurrency(n.currency) || 'EUR')} / nuit</div>` : ''}</div></a>`).join('')}</div>
 </main>`;
 
     res.set('Cache-Control', 'public, max-age=900');
     res.send(seoPage({
       title: `Location courte durée à ${city} — ${rows.length} logement${rows.length > 1 ? 's' : ''} | BHGuest`,
-      description: `Louez un logement à ${city} en réservation directe${minP ? `, à partir de ${minP}€ la nuit` : ''}. Sans frais de service, échange direct avec l'hôte.`,
+      description: `Louez un logement à ${city} en réservation directe${(minP && citySingleCurrency) ? `, à partir de ${bhFmtAmount(minP, citySingleCurrency)} la nuit` : ''}. Sans frais de service, échange direct avec l'hôte.`,
       canonical: `${base}/logements/${req.params.citySlug}`,
       ogImage: rows[0].photo_url || null,
       bodyHtml: body,
@@ -46618,11 +46857,12 @@ app.get('/api/guest/properties', async (req, res) => {
     //  - logements Boostinghost dont le proprio a un abonnement actif/trial, OU
     //  - logements d'hôtes externes publiés (is_marketplace = true), sans condition d'abonnement.
     const result = await pool.query(`
-      SELECT 
+      SELECT
         p.id, p.name, p.address, p.city, p.photo_url,
         p.base_price, p.weekend_price, p.max_guests,
         p.bedrooms, p.beds, p.bathrooms,
         p.property_type, p.description, p.postal_code,
+        p.currency,
         rv.avg_rating, rv.reviews_count,
         p.channex_property_id, p.channex_room_type_id, p.channex_enabled,
         p.is_marketplace, p.marketplace_fee_pct,
@@ -46691,6 +46931,7 @@ app.get('/api/guest/properties', async (req, res) => {
       photoUrl: p.photo_url,
       basePrice: displayPrices[idx] != null ? displayPrices[idx] : (parseFloat(p.base_price) || null),
       weekendPrice: parseFloat(p.weekend_price) || null,
+      currency: normalizeCurrency(p.currency) || 'EUR',
       maxGuests: p.max_guests,
       bedrooms: p.bedrooms,
       beds: p.beds,
@@ -46717,6 +46958,7 @@ app.get('/api/guest/properties/:id', async (req, res) => {
         p.cleaning_fee, p.tourist_tax_per_night,
         p.description, p.amenities, p.house_rules,
         p.property_type, p.stay_type, p.surface, p.highlights, p.good_to_know, p.postal_code,
+        p.currency,
         p.welcome_basket_enabled, p.welcome_basket_price, p.welcome_basket_description,
         p.deposit_amount, p.is_marketplace,
         p.channex_property_id, p.channex_room_type_id, p.channex_enabled,
@@ -46800,6 +47042,7 @@ app.get('/api/guest/properties/:id', async (req, res) => {
       photoUrl: p.photo_url,
       basePrice: parseFloat(p.base_price) || null,
       weekendPrice: parseFloat(p.weekend_price) || null,
+      currency: normalizeCurrency(p.currency) || 'EUR',
       calendarPrices,
       maxGuests: p.max_guests,
       bedrooms: p.bedrooms,
@@ -46939,20 +47182,33 @@ app.post('/api/guest/book', async (req, res) => {
 
     // 🔒 Valider fixed_price contre un hold actif en base
     let validatedFixedPrice = null;
+    let holdCurrencyForBook = null;
     if (fixed_price && parseFloat(fixed_price) > 0) {
       try {
         const holdVal = await pool.query(
-          `SELECT fixed_price FROM bhguest_holds
+          `SELECT fixed_price, currency, status, expires_at
+           FROM bhguest_holds
            WHERE property_id = $1 AND checkin = $2 AND checkout = $3
              AND LOWER(guest_email) = LOWER($4)
              AND fixed_price IS NOT NULL
+             AND status = 'active' AND expires_at > NOW()
            ORDER BY created_at DESC LIMIT 1`,
           [property_id, checkin, checkout, guest_email]
         );
         if (holdVal.rows.length > 0 && holdVal.rows[0].fixed_price != null) {
           validatedFixedPrice = parseFloat(holdVal.rows[0].fixed_price);
+          // INTL-F9 — fail-closed si currency non snapshotée sur ce hold
+          const snappedCurrency = normalizeCurrency(holdVal.rows[0].currency);
+          if (snappedCurrency) {
+            holdCurrencyForBook = snappedCurrency;
+          } else {
+            return res.status(409).json({
+              error: 'LEGACY_HOLD_CURRENCY_UNKNOWN',
+              message: 'La devise de ce lien de réservation ne peut pas être déterminée. Veuillez demander un nouveau lien à votre hôte.'
+            });
+          }
         } else {
-          console.warn(`⚠️ [GUEST] book: fixed_price ${fixed_price}€ rejeté — aucun hold correspondant`);
+          console.warn(`⚠️ [GUEST] book: fixed_price ${fixed_price} rejeté — aucun hold actif correspondant`);
         }
       } catch (fpErr) {
         console.warn('⚠️ [GUEST] book: validation fixed_price non bloquante:', fpErr.message);
@@ -46985,8 +47241,8 @@ app.post('/api/guest/book', async (req, res) => {
     const commission = Math.round(totalBase * feePct / 100 * 100) / 100; // pour reversement (Phase 4)
     const totalTTC = Math.round(totalBase * 100); // le voyageur paie totalBase, POINT — en centimes
 
-    // INTL-BHGUEST-CLOSURE — currency from property record (authoritative)
-    const bookingCurrency = normalizeCurrency(prop.currency) || 'EUR';
+    // INTL-F9 — hold snapshot authoritative for fixed-price holds; property.currency for standard pricing
+    const bookingCurrency = holdCurrencyForBook || normalizeCurrency(prop.currency) || 'EUR';
 
     // Créer le PaymentIntent Stripe
     let paymentIntent = null;
@@ -47165,14 +47421,14 @@ app.post('/api/guest/book', async (req, res) => {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="font-size:14px;color:#6B7280;font-family:Arial,sans-serif;padding-bottom:14px;">Séjour · ${nights} nuit${nights > 1 ? 's' : ''} <span style="color:#9CA3AF;">(tout compris)</span></td>
-                  <td align="right" style="font-size:14px;color:#374151;font-weight:600;font-family:Arial,sans-serif;padding-bottom:14px;">${totalBase}€</td>
+                  <td align="right" style="font-size:14px;color:#374151;font-weight:600;font-family:Arial,sans-serif;padding-bottom:14px;">${bhFmtAmount(totalBase, bookingCurrency)}</td>
                 </tr>
                 <tr>
                   <td colspan="2" style="border-top:1.5px solid #EDE9FF;padding-top:14px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="font-size:16px;font-weight:800;color:#1F1346;font-family:Arial,sans-serif;">Total payé</td>
-                        <td align="right" style="font-size:20px;font-weight:900;color:#7c3aed;font-family:Arial,sans-serif;">${realAmount}€</td>
+                        <td align="right" style="font-size:20px;font-weight:900;color:#7c3aed;font-family:Arial,sans-serif;">${bhFmtAmount(realAmount, bookingCurrency)}</td>
                       </tr>
                     </table>
                   </td>
@@ -47226,7 +47482,7 @@ app.post('/api/guest/book', async (req, res) => {
                 { label: '👤 Voyageur', value: `${escapeHtml(guest_name)}${guest_email ? ' · ' + escapeHtml(guest_email) : ''}${guest_phone ? ' · ' + escapeHtml(guest_phone) : ''}` },
                 { label: '🏠 Logement', value: escapeHtml(displayName(prop)) },
                 { label: '📅 Dates', value: `${fmtDate(checkin)} → ${fmtDate(checkout)} (${nights} nuit${nights > 1 ? 's' : ''})` },
-                { label: '💶 Reversé', value: `${(totalBase - commission).toFixed(2)}€ (après commission ${feePct}%)` },
+                { label: '💶 Reversé', value: `${bhFmtAmount(totalBase - commission, bookingCurrency)} (après commission ${feePct}%)` },
                 { label: 'Référence', value: escapeHtml(uid) }
               ])}
             `,
@@ -49571,6 +49827,7 @@ app.get('/api/guest/me', async (req, res) => {
              p.name as property_name, p.photo_url, p.address, p.city,
              p.arrival_time, p.departure_time, p.welcome_book_url,
              -- Caution
+             r.currency,
              (SELECT d.status FROM deposits d WHERE d.reservation_uid = r.uid
               ORDER BY d.created_at DESC LIMIT 1) as deposit_status,
              (SELECT d.amount_cents FROM deposits d WHERE d.reservation_uid = r.uid
@@ -49596,6 +49853,7 @@ app.get('/api/guest/me', async (req, res) => {
         checkin: r.start_date,
         checkout: r.end_date,
         total: parseFloat(r.amount_total) || 0,
+        currency: normalizeCurrency(r.currency) || 'EUR',
         status: r.status,
         guestName: r.guest_name,
         createdAt: r.created_at,
@@ -49680,8 +49938,10 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
 
     // Mode agence : la pré-réservation appartient au propriétaire du logement
     const agencyIds = await getAgencyUserIds(req, userId);
-    const ownerRow = await pool.query('SELECT user_id FROM properties WHERE id = $1', [property_id]);
+    const ownerRow = await pool.query('SELECT user_id, currency FROM properties WHERE id = $1', [property_id]);
     const ownerId = (ownerRow.rows[0] && agencyIds.includes(ownerRow.rows[0].user_id)) ? ownerRow.rows[0].user_id : userId;
+    // INTL-F9 — snapshot devise au moment de la création du hold ; immuable ensuite
+    const holdCurrency = normalizeCurrency(ownerRow.rows[0]?.currency) || 'EUR';
 
     // Vérifier qu'aucun hold actif n'existe déjà sur ces dates
     const conflictHold = await pool.query(
@@ -49702,10 +49962,10 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
     // Insérer le hold en DB
     await pool.query(
       `INSERT INTO bhguest_holds
-        (user_id, property_id, checkin, checkout, expires_at, link_token, guest_email, guest_phone, fixed_price)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        (user_id, property_id, checkin, checkout, expires_at, link_token, guest_email, guest_phone, fixed_price, currency)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
       [ownerId, property_id, checkin, checkout, expiresAt, linkToken,
-       guest_email || null, guest_phone || null, fixed_price || null]
+       guest_email || null, guest_phone || null, fixed_price || null, holdCurrency]
     );
 
     // 🔔 Notifier le propriétaire en temps réel pour rafraîchir le calendrier
@@ -49731,14 +49991,14 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
       const amountCents2 = fixed_price ? Math.round(parseFloat(fixed_price) * 100) : 0;
       await pool.query(
         `INSERT INTO payments
-           (id, user_id, property_id, reservation_uid, amount_cents, status, checkout_url, metadata, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,NOW(),NOW())
+           (id, user_id, property_id, reservation_uid, amount_cents, currency, status, checkout_url, metadata, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,'pending',$7,$8,NOW(),NOW())
          ON CONFLICT (id) DO NOTHING`,
         [
           'bhgpay_' + linkToken,
           ownerId, property_id, 'BHGUEST_HOLD_' + linkToken,
-          amountCents2, bookingUrl2,
-          JSON.stringify({ source: 'bhguest_hold', holdToken: linkToken, propertyName: propName2, checkin, checkout, guestEmail: guest_email || null, guestPhone: guest_phone || null })
+          amountCents2, holdCurrency.toLowerCase(), bookingUrl2,
+          JSON.stringify({ source: 'bhguest_hold', holdToken: linkToken, propertyName: propName2, checkin, checkout, guestEmail: guest_email || null, guestPhone: guest_phone || null, holdCurrency })
         ]
       );
       console.log(`💳 [HOLD] Paiement en attente créé (bhgpay_${linkToken})`);
@@ -49810,7 +50070,7 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
             tag: escapeHtml(propName),
             bodyHtml: `
               <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Voici votre lien de réservation pour <strong>${escapeHtml(propName)}</strong> du <strong>${escapeHtml(fmtDate(checkin))}</strong> au <strong>${escapeHtml(fmtDate(checkout))}</strong>.</p>
-              ${fixed_price ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Prix total : <strong>${escapeHtml(String(fixed_price))}€</strong></p>` : ''}
+              ${fixed_price ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Prix total : <strong>${escapeHtml(bhFmtAmount(parseFloat(fixed_price), holdCurrency))}</strong></p>` : ''}
               ${emailCTABlock(bookingUrl, 'Réserver maintenant', { title: 'Ce lien expire dans 4 heures.' })}
             `
           })
@@ -49838,7 +50098,7 @@ app.post('/api/guest/hold', authenticateAny, async (req, res) => {
         // makeShortLink retombe sur l'URL brute en cas d'échec, donc jamais bloquant.
         const smsUrl = await makeShortLink(pool, bookingUrl, ownerId);
         const fmtDate = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-        const smsMsg = `Boostinghost\nVotre lien de réservation pour ${propName} du ${fmtDate(checkin)} au ${fmtDate(checkout)}${fixed_price ? ` (${fixed_price}€)` : ''} :\n${smsUrl}\n(Valable 4h)`;
+        const smsMsg = `Boostinghost\nVotre lien de réservation pour ${propName} du ${fmtDate(checkin)} au ${fmtDate(checkout)}${fixed_price ? ` (${bhFmtAmount(parseFloat(fixed_price), holdCurrency)})` : ''} :\n${smsUrl}\n(Valable 4h)`;
         console.log(`🔗 [HOLD] Lien SMS raccourci : ${smsUrl} (message ${smsMsg.length} car.)`);
         smsSent = await sendSmsGateway(guest_phone, smsMsg, userId, { trigger_type: 'bhguest_hold', property_id }, true);
         if (smsSent) console.log(`📱 [HOLD] SMS envoyé à ${guest_phone}`);
@@ -49987,6 +50247,35 @@ app.get('/api/guest/hold-status', async (req, res) => {
   } catch (e) {
     console.error('❌ [GUEST] hold-status:', e.message);
     res.json({ active: false, expired: true }); // en cas d'erreur, bloquer par sécurité
+  }
+});
+
+// ── Read-only hold info: currency snapshot from server (F9 partial display) ──
+app.get('/api/guest/hold-info', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ error: 'token requis' });
+
+    const result = await pool.query(
+      `SELECT fixed_price, currency, status, expires_at FROM bhguest_holds WHERE link_token = $1 LIMIT 1`,
+      [token]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Hold introuvable' });
+
+    const hold = result.rows[0];
+    const isActive = hold.status === 'active' && new Date(hold.expires_at) > new Date();
+    // Return currency snapshot regardless of active state so frontend can display correctly;
+    // but flag expiry so UI does not present an expired price as bookable.
+    res.json({
+      fixedPrice: hold.fixed_price != null ? parseFloat(hold.fixed_price) : null,
+      currency:   normalizeCurrency(hold.currency) || null,
+      status:     hold.status,
+      expiresAt:  hold.expires_at,
+      active:     isActive,
+    });
+  } catch (e) {
+    console.error('❌ [GUEST] hold-info:', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -50197,8 +50486,21 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
     // application_fee = feePct % du total encaissé.
     const feeAmount = applyFee ? Math.round(totalTTC * feePct / 100) : 0;
 
-    // INTL-BHGUEST-CLOSURE — currency from property record (authoritative)
-    const bookingCurrency = normalizeCurrency(prop.currency) || 'EUR';
+    // INTL-F9 — hold snapshot is authoritative for fixed-price holds; property.currency for free pricing
+    let bookingCurrency;
+    if (holdRow && holdRow.fixed_price != null) {
+      const snappedCurrency = normalizeCurrency(holdRow.currency);
+      if (snappedCurrency) {
+        bookingCurrency = snappedCurrency;
+      } else {
+        return res.status(409).json({
+          error: 'LEGACY_HOLD_CURRENCY_UNKNOWN',
+          message: 'La devise de ce lien de réservation ne peut pas être déterminée. Veuillez demander un nouveau lien à votre hôte.'
+        });
+      }
+    } else {
+      bookingCurrency = normalizeCurrency(prop.currency) || 'EUR';
+    }
 
     const sessionParams = {
       payment_method_types: ['card'],
@@ -50280,6 +50582,7 @@ app.post('/api/guest/create-checkout-session', async (req, res) => {
       totalBase, discount, discountedBase, cleaningFee, touristTax, commission,
       totalTTC: totalTTC / 100, nights,
       propertyName: prop.name,
+      currency: bookingCurrency,
       deferred: useDeferred,
       captureAt: useDeferred
         ? new Date(new Date(String(checkin).slice(0,10) + 'T00:00:00').getTime() - DEFERRED_CAPTURE_DAYS * 86400000).toISOString().slice(0, 10)
@@ -50777,7 +51080,8 @@ N'hésitez pas à nous contacter via cette messagerie pour toute question. Bon s
       success: true, reservation_uid: uid,
       conversation_id: conversationId,
       total: discountedBase, cleaningFee, touristTax, commission,
-      total_ttc: totalTTC, nights
+      total_ttc: totalTTC, nights,
+      currency: reservationCurrency
     });
 
   } catch (e) {
@@ -50990,12 +51294,12 @@ app.post('/api/guest/recover-sessions', authenticateToken, async (req, res) => {
           session = await stripe.checkout.sessions.retrieve(sessionId);
         } catch(e) { /* pas sur ce compte */ }
 
-        // Si pas trouvé, essayer sur le compte Connect connu
-        if (!session || session.payment_status === undefined) {
+        // Si pas trouvé, essayer sur le compte Connect connu (BHGUEST_CONNECT_ACCOUNT_ID)
+        const _connectAccount = String(process.env.BHGUEST_CONNECT_ACCOUNT_ID || '').trim();
+        if ((!session || session.payment_status === undefined) && _connectAccount.startsWith('acct_')) {
           try {
-            const CONNECT_ACCOUNT = 'acct_1TE4RFFT0WaR8aHH';
-            session = await stripe.checkout.sessions.retrieve(sessionId, { stripeAccount: CONNECT_ACCOUNT });
-            stripeAccountId = CONNECT_ACCOUNT;
+            session = await stripe.checkout.sessions.retrieve(sessionId, { stripeAccount: _connectAccount });
+            stripeAccountId = _connectAccount;
           } catch(e2) { /* pas sur ce compte non plus */ }
         }
 
@@ -51345,7 +51649,7 @@ app.post('/api/upsell/manual', authenticateAny, async (req, res) => {
       if (!conversation) return res.status(404).json({ error: 'Conversation introuvable' });
       if (!candidateIds.includes(conversation.user_id)) return res.status(403).json({ error: 'Accès refusé à cette conversation' });
       if (conversation.property_id) {
-        const pRes = await pool.query('SELECT id, name FROM properties WHERE id = $1', [conversation.property_id]);
+        const pRes = await pool.query('SELECT id, name, currency FROM properties WHERE id = $1', [conversation.property_id]);
         property = pRes.rows[0] || null;
       }
       attached = true;
@@ -51353,17 +51657,28 @@ app.post('/api/upsell/manual', authenticateAny, async (req, res) => {
       // ── Mode volant : logement + email/téléphone, sans conversation → pas de confirmation auto ──
       if (!propertyId) return res.status(400).json({ error: 'Logement requis pour un lien volant' });
       if (!email && !phone) return res.status(400).json({ error: 'Email ou téléphone requis pour un lien volant' });
-      const pRes = await pool.query('SELECT id, name, user_id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])', [propertyId, candidateIds]);
+      const pRes = await pool.query('SELECT id, name, user_id, currency FROM properties WHERE id = $1 AND user_id = ANY($2::text[])', [propertyId, candidateIds]);
       property = pRes.rows[0];
       if (!property) return res.status(404).json({ error: 'Logement introuvable' });
       // Conversation synthétique (id null) : confirmUpsellPaid s'arrêtera proprement (voulu).
       conversation = { id: null, user_id: property.user_id || user.id, property_id: propertyId, reservation_uid: '', guest_name: '', channex_booking_id: null };
     }
 
+    // ── Devise upsell : réservation > logement > EUR (serveur autorité) ─────
+    let upsellCurrency = normalizeCurrency(property?.currency) || 'EUR';
+    if (conversation?.reservation_uid) {
+      try {
+        const resaCurrRow = await pool.query('SELECT currency FROM reservations WHERE uid = $1 LIMIT 1', [conversation.reservation_uid]);
+        const resaCurr = normalizeCurrency(resaCurrRow.rows[0]?.currency);
+        if (resaCurr) upsellCurrency = resaCurr;
+      } catch(e) {}
+    }
+
     const link = await createUpsellPaymentLink({
       pool, stripe, conversation, property, kind, label,
       description: description || (property && property.name ? property.name : ''),
       amountCents,
+      currency: upsellCurrency,
       extraMeta: { req_label: reqLabel || '', ref_label: refLabel || '', manual: '1' },
     });
     if (!link || !link.url) return res.status(500).json({ error: 'Création du lien de paiement échouée' });
@@ -51388,7 +51703,7 @@ app.post('/api/upsell/manual', authenticateAny, async (req, res) => {
             tag: property && property.name ? escapeHtml(property.name) : '',
             bodyHtml: `
               <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Voici votre lien pour <strong>${escapeHtml(KIND_LABELS[kind].toLowerCase())}${reqLabel ? ' (' + escapeHtml(reqLabel) + ')' : ''}</strong> :</p>
-              ${emailCTABlock(link.url, `Payer ${(amountCents/100).toFixed(2)} €`)}
+              ${emailCTABlock(link.url, `Payer ${bhFmtAmount(amountCents / 100, link.currency || upsellCurrency)}`)}
             `
           }),
         });

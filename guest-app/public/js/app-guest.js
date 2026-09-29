@@ -117,6 +117,13 @@ async function initStripe() {
   }
 }
 
+// ── INTL-F9 — formatage monétaire currency-aware ─────────────
+function fmtCurrency(amount, currency) {
+  if (amount == null || isNaN(Number(amount))) return '—';
+  const safeCur = /^[A-Z]{3}$/.test(String(currency)) ? currency : 'EUR';
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: safeCur }).format(Number(amount));
+}
+
 // ── State global ─────────────────────────────────────────────
 let state = {
   properties: [],
@@ -133,7 +140,8 @@ let state = {
   _lockedPropertyId: null, // logement verrouillé par un lien personnalisé (prix négocié / hold)
   _pendingFixedPrice: null,
   _fixedPriceActive: null,
-  _holdToken: null
+  _holdToken: null,
+  _bookingCurrency: null  // INTL-F9 — devise retournée par create-checkout-session
 };
 
 // ── Auth helpers ─────────────────────────────────────────────
@@ -843,7 +851,7 @@ async function handleStripeReturn(params) {
       window.registerGuestFCMForConv(data.conversation_id).catch(() => {});
     }
 
-    showConfirmation(data, pending.guest_name, pending.guest_email);
+    showConfirmation(data, pending.guest_name, pending.guest_email, pending);
   } catch (e) {
     showToast('Réservation confirmée mais erreur: ' + e.message);
   }
@@ -1547,7 +1555,7 @@ async function loadFeaturedProperties() {
           <div class="home-card-stars" id="stars-home-${p.id}"></div>
           <div class="home-card-name">${p.name}</div>
           <div class="home-card-loc">${icon('location')}${p.city || 'France'}</div>
-          <div class="home-card-price">${p.basePrice || '—'}€ <span>/ nuit</span></div>
+          <div class="home-card-price">${p.basePrice ? fmtCurrency(p.basePrice, p.currency) : '—'} <span>/ nuit</span></div>
         </div>
       </div>
     `).join('');
@@ -1756,7 +1764,7 @@ async function loadProperties() {
           </div>
           <div class="prop-card-footer">
             <div>
-              ${p.basePrice ? `<span class="prop-card-price-des">dès</span> <span class="prop-card-price-main">${p.basePrice}€</span><span class="prop-card-price-night">/ nuit</span>` : `<span class="prop-card-price-main">—</span>`}
+              ${p.basePrice ? `<span class="prop-card-price-des">dès</span> <span class="prop-card-price-main">${fmtCurrency(p.basePrice, p.currency)}</span><span class="prop-card-price-night">/ nuit</span>` : `<span class="prop-card-price-main">—</span>`}
             </div>
             <button class="prop-card-btn">Réserver</button>
           </div>
@@ -2360,16 +2368,16 @@ function updateBookingBar() {
   if (state.selectedCheckin && state.selectedCheckout) {
     const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
     const total = sumNights(p, state.selectedCheckin, state.selectedCheckout);
-    if (bar) bar.textContent = `${total}€`;
+    if (bar) bar.textContent = fmtCurrency(total, p.currency);
     if (night) night.textContent = `· ${nights} nuit${nights > 1 ? 's' : ''}`;
   } else {
-    if (bar) bar.textContent = `${p.basePrice}€`;
+    if (bar) bar.textContent = p.basePrice ? fmtCurrency(p.basePrice, p.currency) : '—';
     if (night) night.textContent = '/ nuit';
   }
 }
 
 // ── Checkout ─────────────────────────────────────────────────
-function goToCheckout() {
+async function goToCheckout() {
   if (!state.selectedCheckin || !state.selectedCheckout) return;
   // 👤 Réserver exige un compte connecté avec profil complet — SAUF en parcours
   // personnalisé (lien hold / prix négocié envoyé par l'hôte), qui doit rester
@@ -2378,6 +2386,26 @@ function goToCheckout() {
   if (!personalizedLink && (!isLoggedIn() || state.profile?.profileComplete !== true)) {
     requireProfile(() => goToCheckout(), 'Connectez-vous pour réserver');
     return;
+  }
+
+  // F9 partial display: fetch hold currency from server before rendering
+  // to ensure fixed-price is shown in the currency that was locked at hold creation,
+  // not the property's current currency which may have changed.
+  if (state._holdToken && state._pendingFixedPrice != null) {
+    try {
+      const holdInfoRes = await fetch(`${API_URL}/api/guest/hold-info?token=${encodeURIComponent(state._holdToken)}`);
+      if (holdInfoRes.ok) {
+        const holdInfo = await holdInfoRes.json();
+        if (holdInfo.currency) {
+          // Override property currency with the authoritative hold snapshot
+          if (state.currentProperty) state.currentProperty._holdCurrency = holdInfo.currency;
+        }
+        if (!holdInfo.active) {
+          showToast('Ce lien de réservation a expiré.');
+          return;
+        }
+      }
+    } catch(e) { /* non-blocking */ }
   }
   const p = state.currentProperty;
   const nights = Math.round((new Date(state.selectedCheckout) - new Date(state.selectedCheckin)) / 86400000);
@@ -2388,6 +2416,9 @@ function goToCheckout() {
     && (!state._lockedPropertyId || p.id === state._lockedPropertyId))
     ? state._pendingFixedPrice
     : null;
+  // F9: use hold currency snapshot (authoritative) rather than current property currency
+  // if this is a fixed-price hold link — prevents stale property.currency mismatch.
+  const effectiveCurrency = (fixedPriceOverride !== null && p._holdCurrency) ? p._holdCurrency : p.currency;
   const displayBase = fixedPriceOverride !== null ? fixedPriceOverride : total;
   // 💰 MODÈLE MARKETPLACE (Option 1) — le voyageur paie TOUJOURS le prix affiché, tout compris.
   // Aucun frais ajouté : ni ménage, ni taxe, ni frais de service. La commission plateforme
@@ -2409,10 +2440,10 @@ function goToCheckout() {
       <div class="checkout-summary-title">${p.name}</div>
       <div class="checkout-row"><span>Dates</span><span>${fmtDate(state.selectedCheckin)} → ${fmtDate(state.selectedCheckout)}</span></div>
       ${fixedPriceOverride !== null
-        ? `<div class="checkout-row" id="baseRow"><span>Prix convenu avec l'hôte</span><span>${displayBase}€</span></div>`
-        : `<div class="checkout-row" id="baseRow"><span>Séjour · ${nights} nuit${nights > 1 ? 's' : ''}</span><span>${displayBase}€</span></div>`
+        ? `<div class="checkout-row" id="baseRow"><span>Prix convenu avec l'hôte</span><span>${fmtCurrency(displayBase, effectiveCurrency)}</span></div>`
+        : `<div class="checkout-row" id="baseRow"><span>Séjour · ${nights} nuit${nights > 1 ? 's' : ''}</span><span>${fmtCurrency(displayBase, effectiveCurrency)}</span></div>`
       }
-      <div class="checkout-row total"><span>Total à payer</span><span id="totalAmount">${ttc}€</span></div>
+      <div class="checkout-row total"><span>Total à payer</span><span id="totalAmount">${fmtCurrency(ttc, effectiveCurrency)}</span></div>
       <div class="checkout-row" style="border:none;padding-top:4px;"><span style="font-size:12px;color:var(--stone-light);">Tout compris · aucun frais de service</span><span></span></div>
     </div>
     <div class="form-section">
@@ -2446,7 +2477,7 @@ function goToCheckout() {
       Paiement sécurisé. Votre réservation est confirmée immédiatement.
     </div>
     <button id="btnPay" onclick="submitBooking()" style="width:100%;padding:17px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;">
-      Payer ${ttc}€
+      Payer ${fmtCurrency(ttc, effectiveCurrency)}
     </button>
   `;
 
@@ -2467,10 +2498,11 @@ function _recalcTotal() {
   const discount = state.appliedPromo?.discount_amount || 0;
   const ttc = Math.max(0, Math.round((totalBase - discount) * 100) / 100);
 
+  const cur = (state._holdToken && p._holdCurrency) ? p._holdCurrency : (p.currency || 'EUR');
   const elTotal = document.getElementById('totalAmount');
-  if (elTotal) elTotal.textContent = `${ttc}€`;
+  if (elTotal) elTotal.textContent = fmtCurrency(ttc, cur);
   const btnPay = document.getElementById('btnPay');
-  if (btnPay) btnPay.textContent = `Payer ${ttc}€`;
+  if (btnPay) btnPay.textContent = `Payer ${fmtCurrency(ttc, cur)}`;
 }
 
 async function applyPromo() {
@@ -2501,12 +2533,13 @@ async function applyPromo() {
 
     const promoRow = document.getElementById('promoRow');
     if (promoRow) { promoRow.style.display = 'flex'; }
+    const cur = state.currentProperty?.currency || 'EUR';
     const promoAmt = document.getElementById('promoAmount');
-    if (promoAmt) promoAmt.textContent = `-${discount}€`;
+    if (promoAmt) promoAmt.textContent = `-${fmtCurrency(discount, cur)}`;
     const totalAmt = document.getElementById('totalAmount');
-    if (totalAmt) totalAmt.textContent = `${ttc}€`;
+    if (totalAmt) totalAmt.textContent = fmtCurrency(ttc, cur);
     const btnPay = document.getElementById('btnPay');
-    if (btnPay) btnPay.textContent = `Payer ${ttc}€`;
+    if (btnPay) btnPay.textContent = `Payer ${fmtCurrency(ttc, cur)}`;
 
     msg.style.display = 'block';
     msg.style.color = 'var(--primary)';
@@ -2565,7 +2598,10 @@ async function submitBooking() {
       })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    if (!res.ok) throw new Error(data.message || data.error);
+
+    // INTL-F9 — mémoriser la devise retournée par le backend (snapshot hold ou property)
+    if (data.currency) state._bookingCurrency = data.currency;
 
     // Sauvegarder les infos en attendant le retour de Stripe
     localStorage.setItem('guest_pending_booking', JSON.stringify({
@@ -2578,7 +2614,8 @@ async function submitBooking() {
       guest_phone: guestPhone,
       promo_code: promoCode,
       fixed_price_override: fixedPriceOverride,
-      session_id: data.sessionId
+      session_id: data.sessionId,
+      booking_currency: data.currency || null
     }));
     localStorage.setItem('guest_session_email', guestEmail);
     localStorage.setItem('guest_session_name', guestName);
@@ -2621,7 +2658,7 @@ function addBookingToCalendar() {
   } catch(e) { showToast('Impossible de générer le fichier calendrier'); }
 }
 
-function showConfirmation(data, guestName, guestEmail) {
+function showConfirmation(data, guestName, guestEmail, pending) {
   const p = state.currentProperty;
   const fmtDate = iso => new Date(String(iso).substring(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -2646,7 +2683,7 @@ function showConfirmation(data, guestName, guestEmail) {
       <div class="confirm-row"><span>Arrivée</span><span>${fmtDate(state.selectedCheckin)}${p.arrivalTime ? ' · dès ' + p.arrivalTime : ''}</span></div>
       <div class="confirm-row"><span>Départ</span><span>${fmtDate(state.selectedCheckout)}${p.departureTime ? ' · avant ' + p.departureTime : ''}</span></div>
       <div class="confirm-row"><span>Voyageur</span><span>${esc(guestName)}</span></div>
-      <div class="confirm-row"><span>Total payé</span><span><b>${data.total_ttc}€</b></span></div>
+      <div class="confirm-row"><span>Total payé</span><span><b>${fmtCurrency(data.total_ttc, data.currency || pending?.booking_currency || 'EUR')}</b></span></div>
     </div>
 
     <div class="confirm-actions">
@@ -2690,8 +2727,8 @@ async function openGuestCancel(uid) {
     : pol.refundable
     ? `<p style="font-size:14px;line-height:1.55;">Annulation <b>gratuite</b> (vous êtes à ${pol.daysUntil} jours de l'arrivée).</p>
        <div style="background:#DCFCE7;color:#166534;border-radius:11px;padding:12px 14px;font-size:13.5px;margin:12px 0;">
-         Remboursement : <b>${pol.refundAmount.toFixed(2)}€</b> sur ${pol.amountTotal.toFixed(2)}€
-         <br><span style="font-size:12px;">(${pol.feeAmount.toFixed(2)}€ de frais de traitement bancaire non remboursables)</span>
+         Remboursement : <b>${fmtCurrency(pol.refundAmount, pol.currency || 'EUR')}</b> sur ${fmtCurrency(pol.amountTotal, pol.currency || 'EUR')}
+         <br><span style="font-size:12px;">(${fmtCurrency(pol.feeAmount, pol.currency || 'EUR')} de frais de traitement bancaire non remboursables)</span>
        </div>`
     : `<p style="font-size:14px;line-height:1.55;">Votre arrivée est dans ${Math.max(pol.daysUntil,0)} jour${pol.daysUntil>1?'s':''} — la fenêtre d'annulation gratuite (jusqu'à ${pol.freeDays} jours avant) est dépassée.</p>
        <div style="background:#FEE2E2;color:#B91C1C;border-radius:11px;padding:12px 14px;font-size:13.5px;margin:12px 0;">
@@ -2728,7 +2765,7 @@ async function confirmGuestCancel(uid) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur');
     closeGuestCancel();
-    showToast(data.notCharged ? 'Séjour annulé — aucun débit' : (data.refundable ? `Annulé — ${data.refundAmount.toFixed(2)}€ remboursés` : 'Séjour annulé'));
+    showToast(data.notCharged ? 'Séjour annulé — aucun débit' : (data.refundable ? `Annulé — ${fmtCurrency(data.refundAmount, data.currency || 'EUR')} remboursés` : 'Séjour annulé'));
     loadMyBookings();
   } catch(e) {
     showToast(e.message);
@@ -2860,7 +2897,7 @@ async function loadMyBookings() {
         </div>` : ''}
 
         <!-- Montant -->
-        <div style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:10px;">${parseFloat(b.total).toFixed(0)}€</div>
+        <div style="font-size:18px;font-weight:800;color:#1e293b;margin-bottom:10px;">${fmtCurrency(b.total, b.currency || 'EUR')}</div>
 
         <!-- Badges statuts -->
         ${depositBadge || paymentBadge ? `
