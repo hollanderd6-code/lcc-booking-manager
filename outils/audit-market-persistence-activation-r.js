@@ -2,7 +2,13 @@
 /**
  * P1.2-B5-BK-R — Market Observation Persistence Activation Audit (READ ONLY)
  *
- * Pre-activation checklist for MARKET_OBSERVATION_PERSISTENCE_ENABLED.
+ * State-aware audit: reports the correct status for both PRE-ACTIVATION
+ * and POST-ACTIVATION states. Section F adapts to the current flag state.
+ *
+ * Possible states (reported in section F):
+ *   PRE_ACTIVATION            persistence=false, prerequisites pass → ready to activate
+ *   PERSISTENCE_ACTIVE_SHADOW persistence=true, shared=false → EXPECTED PRODUCTION STATE ✅
+ *   PERSISTENCE_AND_SHARED_ACTIVE persistence=true, shared=true → requires separate review
  *
  * Reports:
  *   A  Flag status (both persistence flags)
@@ -10,7 +16,7 @@
  *   C  Profile-incomplete properties (Ti Junot and similar — bridge will skip)
  *   D  Current shadow table state (market_profiles, market_observations counts)
  *   E  DataSource eligibility (which providers bridge will accept vs skip)
- *   F  Activation checklist (all items must be ✅ before enabling flag)
+ *   F  State-aware status (PRE_ACTIVATION / PERSISTENCE_ACTIVE_SHADOW / PERSISTENCE_AND_SHARED_ACTIVE)
  *
  * SAFETY:
  *   DB_WRITES              = 0  always
@@ -19,8 +25,6 @@
  *   MARKET_DATA_WRITES     = 0  always
  *   PRICING_WRITES         = 0  always
  *   CHANNEX_CALLS          = 0  always
- *
- * R15 CONSTRAINT: DO NOT enable Render flags from this tool.
  *
  * Usage:
  *   NODE_ENV=production node outils/audit-market-persistence-activation-r.js
@@ -31,7 +35,8 @@ const { hasValidCoordinates }      = require('../services/market-geo-validator')
 const { buildMarketProfileIdentity } = require('../services/market-search-identity');
 const { mapDataSourceToProvider }  = require('../services/market-observation-persistence-bridge');
 
-const pool = createPool();
+// Pool only created when running directly — not when required for exports
+let pool = null;
 
 const ACTIVE_PROPERTIES_SQL = `
   SELECT
@@ -63,6 +68,21 @@ const SHADOW_COUNTS_SQL = `
 
 function displayName(p) {
   return p.internal_name || p.name || `property_${p.id}`;
+}
+
+/**
+ * Determine the activation state from flag values.
+ * Pure function — exported for test inspection.
+ *
+ * @param {boolean} persistenceOn
+ * @param {boolean} sharedOn
+ * @returns {'PRE_ACTIVATION'|'PERSISTENCE_ACTIVE_SHADOW'|'PERSISTENCE_AND_SHARED_ACTIVE'|'SHARED_ONLY_NO_PERSISTENCE'}
+ */
+function determineActivationState(persistenceOn, sharedOn) {
+  if (!persistenceOn && !sharedOn) return 'PRE_ACTIVATION';
+  if (persistenceOn  && !sharedOn) return 'PERSISTENCE_ACTIVE_SHADOW';
+  if (persistenceOn  && sharedOn)  return 'PERSISTENCE_AND_SHARED_ACTIVE';
+  return 'SHARED_ONLY_NO_PERSISTENCE';
 }
 
 async function runAudit() {
@@ -187,53 +207,77 @@ async function runAudit() {
   }
   console.log();
 
-  // ── F: Activation checklist ───────────────────────────────────────────────────
+  // ── F: State-aware status ─────────────────────────────────────────────────────
   const hasBridgeReady   = bridgeReady.length > 0;
   const tablesAccessible = profileCount !== undefined;
-  const flagOff          = !persistenceOn;
 
-  console.log('── F: ACTIVATION CHECKLIST ──────────────────────────────────────');
+  const ACTIVATION_STATE = determineActivationState(persistenceOn, sharedOn);
 
-  const checks = [
-    { ok: tablesAccessible,   label: 'Shadow tables accessible (market_profiles, market_observations)' },
-    { ok: hasBridgeReady,     label: `At least 1 bridge-ready property (${bridgeReady.length} found)` },
-    { ok: flagOff,            label: 'MARKET_OBSERVATION_PERSISTENCE_ENABLED is currently OFF (safe to activate)' },
+  console.log('── F: CURRENT STATE ─────────────────────────────────────────────');
+  console.log(`  STATE = ${ACTIVATION_STATE}`);
+  console.log();
+
+  // Prerequisites (apply in all states)
+  const prereqs = [
+    { ok: tablesAccessible, label: 'Shadow tables accessible (market_profiles, market_observations)' },
+    { ok: hasBridgeReady,   label: `At least 1 bridge-ready property (${bridgeReady.length} found)` },
   ];
 
-  let allGreen = true;
-  for (const c of checks) {
+  let prereqsGreen = true;
+  for (const c of prereqs) {
     const icon = c.ok ? '✅' : '❌';
-    if (!c.ok) allGreen = false;
+    if (!c.ok) prereqsGreen = false;
     console.log(`  ${icon}  ${c.label}`);
   }
-
   console.log();
-  if (allGreen) {
-    console.log('  ✅ All checks passed — bridge is ready for activation.');
-    console.log('  To activate (Render env vars):');
-    console.log('    MARKET_OBSERVATION_PERSISTENCE_ENABLED=true');
-    console.log('  (MARKET_SHARED_COLLECTION_ENABLED is NOT required for the bridge)');
+
+  // State-specific conclusion
+  if (ACTIVATION_STATE === 'PRE_ACTIVATION') {
+    if (prereqsGreen) {
+      console.log('  ✅ Prerequisites pass — ready to activate.');
+      console.log('  To activate (Render env vars):');
+      console.log('    MARKET_OBSERVATION_PERSISTENCE_ENABLED=true');
+      console.log('  (MARKET_SHARED_COLLECTION_ENABLED is NOT required for the bridge)');
+    } else {
+      console.log('  ⚠️  Some prerequisites failed — resolve before activating.');
+    }
+  } else if (ACTIVATION_STATE === 'PERSISTENCE_ACTIVE_SHADOW') {
+    if (prereqsGreen) {
+      console.log('  ✅ PERSISTENCE_ACTIVE_SHADOW — bridge is live and healthy.');
+      console.log('  Observations will be written on the next pricing cron run.');
+      console.log('  MARKET_SHARED_COLLECTION_ENABLED is OFF — no extra BD calls.');
+    } else {
+      console.log('  ⚠️  Bridge is active but some prerequisites are not met — investigate.');
+    }
+  } else if (ACTIVATION_STATE === 'PERSISTENCE_AND_SHARED_ACTIVE') {
+    console.log('  ⚠️  PERSISTENCE_AND_SHARED_ACTIVE — both flags are ON.');
+    console.log('  Shadow collection will make additional Bright Data calls.');
+    console.log('  This requires separate approval — see R spec.');
   } else {
-    console.log('  ⚠️  Some checks failed — resolve before activating.');
+    console.log('  ⚠️  Unexpected flag combination — review env vars.');
   }
 
   console.log();
   console.log('── SUMMARY ──────────────────────────────────────────────────────');
+  console.log(`  ACTIVATION_STATE        = ${ACTIVATION_STATE}`);
   console.log(`  Total active properties = ${props.length}`);
   console.log(`  Bridge-ready            = ${bridgeReady.length}  (will produce observations)`);
   console.log(`  Profile-incomplete      = ${profileInvalid.length}  (will be skipped by bridge)`);
   console.log(`  Existing profiles       = ${profileCount ?? '?'}`);
   console.log(`  Existing observations   = ${observationCount ?? '?'}`);
   console.log();
-  console.log('  R15 CONSTRAINT: DO NOT enable Render flags from this tool.');
-  console.log('  Review this audit output, then enable via Render dashboard only.');
+  console.log('  R15 CONSTRAINT: DO NOT modify Render env vars from this tool (read-only).');
 }
 
-runAudit()
-  .catch(err => {
-    console.error('\nAudit error:', err.message);
-    process.exit(1);
-  })
-  .finally(() => pool.end());
+if (require.main === module) {
+  pool = createPool();
+  runAudit()
+    .catch(err => {
+      console.error('\nAudit error:', err.message);
+      process.exit(1);
+    })
+    .finally(() => pool.end());
+}
 
-module.exports = { ACTIVE_PROPERTIES_SQL };
+// Exported for test inspection
+module.exports = { ACTIVE_PROPERTIES_SQL, SHADOW_COUNTS_SQL, determineActivationState };
