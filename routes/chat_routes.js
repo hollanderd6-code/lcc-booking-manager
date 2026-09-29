@@ -888,6 +888,11 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
         return res.status(400).json({ error: 'Message ou photo requis' });
       }
 
+      // FIX-6-D : détection transport image legacy
+      if (/^\[IMAGE:https?:\/\//i.test((message || '').trim())) {
+        console.warn('[ATTACH-RUNTIME] LEGACY IMAGE MESSAGE DETECTED via /api/chat/send');
+      }
+
       // Vérifier que la conversation existe
       const convResult = await pool.query(
         `SELECT id, user_id, property_id, status FROM conversations WHERE id = $1`,
@@ -1629,6 +1634,8 @@ if (sender_type === 'owner' && (message && message.trim())) {
         if (!conversationId || isNaN(conversationId)) return res.status(400).json({ error: 'ID conversation invalide' });
         if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'Aucun fichier fourni (champ "files")' });
 
+        console.log(`[ATTACH-RUNTIME] upload endpoint hit conv=${conversationId} files=${req.files.length}`); // FIX-6-C
+
         // Ownership
         const userId = await getRealUserId(pool, req);
         const comptes = await comptesAutorises(pool, userId);
@@ -1723,6 +1730,8 @@ if (sender_type === 'owner' && (message && message.trim())) {
           );
           const newAtt = attRes.rows[0];
 
+          console.log(`[ATTACH-RUNTIME] attachment created id=${newAtt.id} message=${newMsg.id}`); // FIX-6-C
+
           await pool.query(
             `UPDATE conversations SET status='active', last_message_at=NOW() WHERE id=$1`,
             [conversationId]
@@ -1737,6 +1746,7 @@ if (sender_type === 'owner' && (message && message.trim())) {
           }
 
           // Envoi asynchrone vers Channex
+          console.log(`[ATTACH-RUNTIME] scheduling outbound attachment id=${newAtt.id}`); // FIX-6-C
           setImmediate(async () => {
             try {
               await sendOutboundAttachment(newAtt.id, pool, io);

@@ -53,8 +53,20 @@ function supportsOutboundImage(platform) {
   const p = platform.toLowerCase().trim();
   if (p.includes('airbnb') || p === 'abb') return true;
   if (p.includes('booking') || p === 'bdc') return true;
-  if (p.includes('expedia')) return true;
+  if (p.includes('expedia') || p === 'exp') return true;
   return false;
+}
+
+// ── Résolution OTA depuis les champs DB (PROD-FIX-7) ─────────────────────────
+// conversations.platform peut être 'channex' quand ota_name était null à la
+// création. Seul le transport générique 'channex' déclenche le fallback vers
+// ota_name (de reservations). Les canaux 'direct', 'ical', etc. restent
+// fail-closed — un ota_name parasite ne doit pas les élever en OTA supportée.
+function resolveOutboundOta(platform, otaName) {
+  const p   = String(platform || '').trim().toLowerCase();
+  const ota = String(otaName  || '').trim().toLowerCase();
+  if (p === 'channex') return ota;
+  return p || ota;
 }
 
 // ── Téléchargement Cloudinary authenticated (usage interne) ──────────────────
@@ -89,12 +101,22 @@ async function downloadFromCloudinary(cloudinaryPublicId, attachmentType) {
 // réussi mais envoi message échoué), l'upload est ignoré et on retente seulement
 // l'envoi du message.
 async function sendOutboundAttachment(attachmentId, pool, io) {
-  // 1. Charger attachment + conversation
+  // 1. Charger attachment + conversation + ota_name de la réservation liée
+  // ota_name est en reservations, pas en conversations → sous-requête corrélée.
+  // LIMIT 1 sur la sous-requête : conversation avec plusieurs révisions du même
+  // booking_id théoriquement impossible, mais on évite tout risque de doublon.
   const { rows } = await pool.query(
     `SELECT ma.id, ma.message_id, ma.conversation_id, ma.type, ma.mime_type,
             ma.filename, ma.size_bytes, ma.cloudinary_public_id,
             ma.provider_attachment_id, ma.processing_attempts, ma.direction, ma.status,
-            c.channex_booking_id, c.platform, c.user_id
+            c.channex_booking_id, c.platform, c.user_id,
+            (SELECT r.ota_name
+             FROM reservations r
+             WHERE (c.reservation_uid IS NOT NULL AND r.uid = c.reservation_uid)
+                OR (c.channex_booking_id IS NOT NULL
+                    AND r.channex_booking_id = c.channex_booking_id)
+             ORDER BY r.updated_at DESC NULLS LAST
+             LIMIT 1) AS ota_name
      FROM message_attachments ma
      JOIN conversations c ON c.id = ma.conversation_id
      WHERE ma.id = $1`,
@@ -103,6 +125,9 @@ async function sendOutboundAttachment(attachmentId, pool, io) {
 
   if (!rows.length) return { skipped: true, reason: 'not_found' };
   const att = rows[0];
+
+  const resolvedOta = resolveOutboundOta(att.platform, att.ota_name);
+  console.log(`[ATTACH-RUNTIME] sender start attachment=${attachmentId} platform="${att.platform || ''}" ota="${att.ota_name || ''}" resolved="${resolvedOta}"`); // FIX-6-C/7
 
   // 2. Guards préliminaires
   if (att.direction !== 'outbound') return { skipped: true, reason: 'not_outbound' };
@@ -141,7 +166,8 @@ async function sendOutboundAttachment(attachmentId, pool, io) {
     return { ok: false, error: 'NO_CHANNEX_BOOKING_ID' };
   }
 
-  if (!supportsOutboundImage(att.platform)) {
+  if (!supportsOutboundImage(resolvedOta)) {
+    console.warn(`[ATTACH-RUNTIME] CHANNEL_NOT_SUPPORTED attachment=${att.id} resolved="${resolvedOta}"`); // FIX-6-C/7
     await pool.query(
       `UPDATE message_attachments SET status='failed', last_error_code='CHANNEL_NOT_SUPPORTED', updated_at=NOW() WHERE id=$1`,
       [att.id]
@@ -212,6 +238,8 @@ async function sendOutboundAttachment(attachmentId, pool, io) {
       return { ok: false, error: errCode, retryable: !isFinal };
     }
 
+    console.log(`[ATTACH-RUNTIME] Channex attachment uploaded id=${att.id}`); // FIX-6-C
+
     // 4d. Sauvegarder provider_attachment_id AVANT l'envoi (idempotence)
     await pool.query(
       `UPDATE message_attachments SET provider_attachment_id=$2, updated_at=NOW() WHERE id=$1`,
@@ -241,6 +269,7 @@ async function sendOutboundAttachment(attachmentId, pool, io) {
     [att.id]
   );
 
+  console.log(`[ATTACH-RUNTIME] Channex attachment message accepted id=${att.id}`); // FIX-6-C
   console.log(`✅ [ATTACH-7B] #${att.id} envoyé → Channex booking ${att.channex_booking_id}`);
 
   // 7. Socket.io — public uniquement (jamais base64, cloudinary_public_id, provider_attachment_id)
@@ -290,4 +319,5 @@ module.exports = {
   processPendingOutboundAttachments,
   validateOutboundImageBuffer,
   supportsOutboundImage,
+  resolveOutboundOta,
 };

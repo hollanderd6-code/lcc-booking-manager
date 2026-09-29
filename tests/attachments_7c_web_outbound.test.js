@@ -1037,3 +1037,85 @@ describe('S. PROD-FIX-5B — Comportement réel _getConversationOta + _supportsO
     expect(supports({ platform: 'ical', ota_name: null })).toBe(false);
   });
 });
+
+// ── T. PROD-FIX-6 — Anti-régression producteurs [IMAGE:] + traces ATTACH-RUNTIME ──
+describe('T. PROD-FIX-6 — Producteurs [IMAGE:] et ATTACH-RUNTIME', () => {
+  const html        = require('fs').readFileSync(require('path').join(__dirname, '../public/messages.html'), 'utf8');
+  const chatSrc     = require('fs').readFileSync(require('path').join(__dirname, '../public/js/chat-owner.js'), 'utf8');
+  const routesSrc   = require('fs').readFileSync(require('path').join(__dirname, '../routes/chat_routes.js'), 'utf8');
+  const senderSrc   = require('fs').readFileSync(require('path').join(__dirname, '../services/channex-attachment-sender.js'), 'utf8');
+
+  // T-01 : messages.html ne contient aucun producteur [IMAGE:url]
+  test('T-01 : messages.html ne produit pas de tag [IMAGE:url]', () => {
+    // Production = construction dynamique '[IMAGE:' + url
+    expect(html).not.toMatch(/\[IMAGE:\s*['"]\s*\+/);           // '[IMAGE:' + variable
+    expect(html).not.toMatch(/`\[IMAGE:\$\{/);                   // template literal `[IMAGE:${url}`
+    expect(html).not.toMatch(/window\.openPhotoUpload[\s\S]{0,300}api\.cloudinary\.com/);
+  });
+
+  // T-02 : chat-owner.js ne contient aucun producteur [IMAGE:url]
+  test('T-02 : chat-owner.js ne produit pas de tag [IMAGE:url]', () => {
+    expect(chatSrc).not.toMatch(/\[IMAGE:\s*['"]\s*\+/);
+    expect(chatSrc).not.toMatch(/`\[IMAGE:\$\{/);
+    expect(chatSrc).not.toMatch(/api\.cloudinary\.com/);
+  });
+
+  // T-03 : _bhSendPhotos utilise uniquement le nouvel endpoint /attachments
+  test('T-03 : _bhSendPhotos délègue à _sendOutboundImages (→ /attachments, pas /send)', () => {
+    const block = chatSrc.match(/async\s+function\s+_bhSendPhotos[\s\S]*?^\}/m)?.[0] || '';
+    expect(block).toMatch(/_sendOutboundImages/);
+    expect(block).not.toMatch(/\/api\/chat\/send/);
+    expect(block).not.toMatch(/\[IMAGE:/);
+  });
+
+  // T-04 : _sendOutboundImages pointe vers /conversations/:id/attachments
+  test('T-04 : _sendOutboundImages utilise /api/chat/conversations/:id/attachments', () => {
+    const block = chatSrc.match(/async\s+function\s+_sendOutboundImages[\s\S]*?^\}/m)?.[0] || '';
+    expect(block).toMatch(/\/api\/chat\/conversations\b.*\/attachments/);
+    expect(block).not.toMatch(/\/api\/chat\/send/);
+  });
+
+  // T-05 : chat-owner.js lit les anciens [IMAGE:url] (lecteur legacy intact)
+  test('T-05 : chat-owner.js contient le lecteur legacy [IMAGE:url] (render)', () => {
+    // Le replace supprime les [IMAGE:] pour le texte brut — c'est le lecteur
+    expect(chatSrc).toMatch(/\[IMAGE:[^\]]+\]/);
+    // Mais AUCUNE production directe
+    expect(chatSrc).not.toMatch(/`\[IMAGE:\$\{/);
+  });
+
+  // T-06 : /api/chat/send contient le marqueur de détection legacy
+  test('T-06 : /api/chat/send contient la détection LEGACY IMAGE MESSAGE', () => {
+    expect(routesSrc).toMatch(/LEGACY IMAGE MESSAGE DETECTED via \/api\/chat\/send/);
+    // Vérifie que c'est un warn (pas un throw/block)
+    expect(routesSrc).toMatch(/console\.warn.*LEGACY IMAGE MESSAGE/);
+  });
+
+  // T-07 : POST /api/chat/conversations/:id/attachments contient les marqueurs ATTACH-RUNTIME
+  test('T-07 : endpoint /attachments contient les 3 marqueurs ATTACH-RUNTIME (FIX-6-C)', () => {
+    expect(routesSrc).toMatch(/\[ATTACH-RUNTIME\] upload endpoint hit/);
+    expect(routesSrc).toMatch(/\[ATTACH-RUNTIME\] attachment created/);
+    expect(routesSrc).toMatch(/\[ATTACH-RUNTIME\] scheduling outbound/);
+  });
+
+  // T-08 : sendOutboundAttachment contient les marqueurs ATTACH-RUNTIME
+  test('T-08 : sendOutboundAttachment contient les 4 marqueurs ATTACH-RUNTIME (FIX-6-C)', () => {
+    expect(senderSrc).toMatch(/\[ATTACH-RUNTIME\] sender start/);
+    expect(senderSrc).toMatch(/\[ATTACH-RUNTIME\] Channex attachment uploaded/);
+    expect(senderSrc).toMatch(/\[ATTACH-RUNTIME\] Channex attachment message accepted/);
+    expect(senderSrc).toMatch(/\[ATTACH-RUNTIME\] CHANNEL_NOT_SUPPORTED/);
+  });
+
+  // T-09 : le marqueur CHANNEL_NOT_SUPPORTED logue la valeur résolue (pour diagnostic)
+  // Note : depuis PROD-FIX-7 le log expose resolved= (valeur après resolveOutboundOta)
+  test('T-09 : CHANNEL_NOT_SUPPORTED log expose resolved= pour diagnostic', () => {
+    expect(senderSrc).toMatch(/CHANNEL_NOT_SUPPORTED.*resolved=/);
+  });
+
+  // T-10 : backend supportsOutboundImage détecte bien 'abb' et 'bdc' (codes courts Channex)
+  // (note: manque encore 'exp' et fallback ota_name — ces gaps sont répertoriés dans le rapport)
+  test('T-10 : backend supportsOutboundImage gère les codes courts abb et bdc', () => {
+    const block = senderSrc.match(/function supportsOutboundImage[\s\S]*?^}/m)?.[0] || '';
+    expect(block).toMatch(/=== ['"]abb['"]/);
+    expect(block).toMatch(/=== ['"]bdc['"]/);
+  });
+});
