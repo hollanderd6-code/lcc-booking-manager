@@ -30,6 +30,7 @@ const { resolveMarketData } = require('./market-data-resolver');
 const { computeMarketContextKey } = require('./market-context-key');
 const marketProvider = require('../services/market-provider');
 const { selectComparables, calcBrightDataMarketStats } = require('../services/brightdata-comparable-filter');
+const { hasValidCoordinates } = require('../services/market-geo-validator');
 
 // P15/P16: Shadow market observation collection — lazy require to avoid circular deps at startup
 // Both flags default to OFF. Import is deferred so the module is only loaded when flags are live.
@@ -439,7 +440,7 @@ async function _runShadowCollectionPhase(pool, configs) {
   // Group properties by market profile (shared geo bucket + currency + capacity)
   const profileGroups = new Map(); // profileId → { cfg, propertyLinks }[]
   for (const cfg of configs) {
-    if (!cfg.latitude || !cfg.longitude || !cfg.currency) continue;
+    if (!hasValidCoordinates(cfg.latitude, cfg.longitude) || !cfg.currency) continue;
     const identity = buildMarketProfileIdentity({
       latitude:          cfg.latitude,
       longitude:         cfg.longitude,

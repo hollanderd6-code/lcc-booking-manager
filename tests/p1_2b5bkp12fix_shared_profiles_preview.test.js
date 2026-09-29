@@ -98,26 +98,31 @@ try {
   ok('A-02: profileId is deterministic — same input always same output');
 } catch (e) { err('A-02', e.message); }
 
-// A-03: null latitude — audit's cron truthy check catches it before builder
-// (Number(null)=0 passes the builder's geo validation as equator coord, but the
-//  cron's truthy check `!cfg.latitude` is true for null → property skipped)
+// A-03: null latitude — caught by BOTH the cron gate AND the builder (Q2 fix)
+// After Q2: buildMarketProfileIdentity itself rejects null (no longer accepts null→0).
+// The cron gate (hasValidCoordinates) also rejects null — double protection.
 try {
   const cfg = { ...BASE, latitude: null };
-  // Cron truthy check (first gate in _runShadowCollectionPhase):
-  const skipsByCron = !cfg.latitude || !cfg.longitude || !cfg.currency;
-  assert.ok(skipsByCron, 'null latitude must be caught by cron truthy check');
-  // Builder would accept it (Number(null)=0), but cron skip happens first:
+  // Cron gate (hasValidCoordinates — Q3):
+  const { hasValidCoordinates } = require('../services/market-geo-validator');
+  const skipsByCron = !hasValidCoordinates(cfg.latitude, cfg.longitude) || !cfg.currency;
+  assert.ok(skipsByCron, 'null latitude must be caught by cron hasValidCoordinates check');
+  // Builder also rejects null (Q2 — fail closed):
   const id = profileFromCfg(cfg);
-  assert.ok(id.valid, 'builder accepts null→0, but cron skips it before calling builder');
-  ok('A-03: null latitude → caught by cron truthy check (skipped before canonical builder)');
+  assert.ok(!id.valid, 'builder must reject null latitude (Q2 fail-closed)');
+  assert.strictEqual(id.reason, 'invalid_geo');
+  ok('A-03: null latitude → caught by both cron gate and builder (Q2/Q3)');
 } catch (e) { err('A-03', e.message); }
 
-// A-04: null longitude — same cron truthy check
+// A-04: null longitude — same double protection
 try {
   const cfg = { ...BASE, longitude: null };
-  const skipsByCron = !cfg.latitude || !cfg.longitude || !cfg.currency;
-  assert.ok(skipsByCron, 'null longitude must be caught by cron truthy check');
-  ok('A-04: null longitude → caught by cron truthy check (skipped before canonical builder)');
+  const { hasValidCoordinates } = require('../services/market-geo-validator');
+  const skipsByCron = !hasValidCoordinates(cfg.latitude, cfg.longitude) || !cfg.currency;
+  assert.ok(skipsByCron, 'null longitude must be caught by cron hasValidCoordinates check');
+  const id = profileFromCfg(cfg);
+  assert.ok(!id.valid, 'builder must reject null longitude (Q2 fail-closed)');
+  ok('A-04: null longitude → caught by both cron gate and builder (Q2/Q3)');
 } catch (e) { err('A-04', e.message); }
 
 // A-05: missing currency → invalid
@@ -350,19 +355,22 @@ try {
   ok('D-01: all complete properties → complete list, no missing counts');
 } catch (e) { err('D-01', e.message); }
 
-// D-02: null latitude → incomplete (caught by cron truthy check), missing_latitude++
-// The audit applies the cron's truthy check BEFORE the canonical builder.
-// Number(null)=0 would pass the builder, but the truthy check skips it first.
+// D-02: null latitude → incomplete (caught by canonical hasValidCoordinates check — Q3)
+// After Q3: audit uses hasValidCoordinates, which correctly rejects null.
+// After Q2: builder also rejects null — both gates agree.
 try {
+  const { hasValidCoordinates } = require('../services/market-geo-validator');
   const cfgs = [BASE, { ...BASE, property_id: 'p_nolat', latitude: null }];
   const complete = [], incomplete = [];
   const missing = { latitude: 0, longitude: 0, currency: 0 };
   for (const cfg of cfgs) {
-    if (!cfg.latitude) missing.latitude++;
-    if (!cfg.longitude) missing.longitude++;
+    if (!hasValidCoordinates(cfg.latitude, cfg.longitude)) {
+      missing.latitude++;
+      missing.longitude++;
+    }
     if (!cfg.currency) missing.currency++;
-    // Audit logic: cron truthy check first, then canonical builder
-    if (!cfg.latitude || !cfg.longitude || !cfg.currency) {
+    // Audit logic: canonical coordinate check first, then builder
+    if (!hasValidCoordinates(cfg.latitude, cfg.longitude) || !cfg.currency) {
       incomplete.push({ id: cfg.property_id, reason: 'missing_lat_lon_or_currency' });
       continue;
     }
@@ -373,7 +381,7 @@ try {
   assert.equal(complete.length, 1);
   assert.equal(incomplete.length, 1);
   assert.equal(missing.latitude, 1, 'should count 1 missing latitude');
-  ok('D-02: null latitude → missing_latitude++ and property counted as incomplete (cron truthy check)');
+  ok('D-02: null latitude → missing_latitude++ and property counted as incomplete (hasValidCoordinates)');
 } catch (e) { err('D-02', e.message); }
 
 // D-03: missing currency → incomplete, missing_currency++

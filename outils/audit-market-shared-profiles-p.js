@@ -29,6 +29,7 @@ const {
   buildMarketSearchFingerprint,
 }                                  = require('../services/market-search-identity');
 const { getBrightDataMarketDates } = require('../services/market-provider');
+const { hasValidCoordinates }      = require('../services/market-geo-validator');
 
 const pool = createPool();
 
@@ -82,7 +83,7 @@ async function run() {
 
   // ── Property completeness analysis ────────────────────────────────────────────
   // Mirror the EXACT cron skip logic from _runShadowCollectionPhase():
-  //   Step A: simple truthy check (cron line 442: if (!cfg.latitude || !cfg.longitude || !cfg.currency) continue)
+  //   Step A: canonical coordinate check via hasValidCoordinates (Q3 — replaces truthy check)
   //   Step B: canonical profile builder validity check (buildMarketProfileIdentity)
 
   const missingCounts = {
@@ -93,19 +94,21 @@ async function run() {
     bedrooms:    0,  // optional but material — affects profile ID
   };
 
-  let shadowEligible   = 0;  // passes cron's truthy check
+  let shadowEligible   = 0;  // passes cron's coordinate check
   const completeProps  = [];  // passes canonical builder → valid profile
   const incompleteProps = []; // fails either check
 
   for (const cfg of configs) {
-    if (!cfg.latitude)  missingCounts.latitude++;
-    if (!cfg.longitude) missingCounts.longitude++;
+    if (!hasValidCoordinates(cfg.latitude, cfg.longitude)) {
+      missingCounts.latitude++;
+      missingCounts.longitude++;
+    }
     if (!cfg.currency)  missingCounts.currency++;
     if (cfg.max_guests == null) missingCounts.max_guests++;
     if (cfg.bedrooms   == null) missingCounts.bedrooms++;
 
-    // Step A — cron truthy check (same condition as production code)
-    if (!cfg.latitude || !cfg.longitude || !cfg.currency) {
+    // Step A — canonical coordinate check (same as production cron)
+    if (!hasValidCoordinates(cfg.latitude, cfg.longitude) || !cfg.currency) {
       incompleteProps.push({ cfg, reason: 'missing_lat_lon_or_currency' });
       continue;
     }
@@ -124,7 +127,7 @@ async function run() {
     if (identity.valid) {
       completeProps.push({ cfg, identity });
     } else {
-      shadowEligible--;  // truthy-passed but builder-failed
+      shadowEligible--;  // coord-check passed but builder-failed
       incompleteProps.push({ cfg, reason: identity.reason });
     }
   }
@@ -222,7 +225,7 @@ async function run() {
 
   console.log(`  TOTAL_PROPERTIES                = ${TOTAL_PROPERTIES}`);
   console.log(`  BOOSTPRICE_ACTIVE_PROPERTIES    = ${BOOSTPRICE_ACTIVE_PROPERTIES}`);
-  console.log(`  SHADOW_ELIGIBLE_PROPERTIES      = ${SHADOW_ELIGIBLE_PROPERTIES}   (pass cron truthy check)`);
+  console.log(`  SHADOW_ELIGIBLE_PROPERTIES      = ${SHADOW_ELIGIBLE_PROPERTIES}   (pass cron coordinate check)`);
   console.log(`  PROFILE_COMPLETE_PROPERTIES     = ${PROFILE_COMPLETE_PROPERTIES}   (valid canonical profile)`);
   console.log(`  PROFILE_INCOMPLETE_PROPERTIES   = ${PROFILE_INCOMPLETE_PROPERTIES}   (would be skipped by P)`);
 

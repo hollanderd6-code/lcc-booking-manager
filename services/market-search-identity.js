@@ -33,6 +33,7 @@
  */
 
 const crypto = require('crypto');
+const { isValidLatitude, isValidLongitude } = require('./market-geo-validator');
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -59,11 +60,9 @@ const HASH_LENGTH           = 32; // hex chars = 128-bit
 // ── Private helpers ───────────────────────────────────────────────────────────
 
 function _normalizeGeo(lat, lon) {
+  if (!isValidLatitude(lat) || !isValidLongitude(lon)) return null;
   const la = typeof lat === 'string' ? parseFloat(lat) : Number(lat);
   const lo = typeof lon === 'string' ? parseFloat(lon) : Number(lon);
-  if (!isFinite(la) || !isFinite(lo)) return null;
-  if (la < -90 || la > 90)   return null;
-  if (lo < -180 || lo > 180) return null;
   return {
     lat: la.toFixed(GEO_PRECISION),
     lon: lo.toFixed(GEO_PRECISION),
@@ -227,4 +226,8 @@ module.exports = {
   DEFAULT_PROPERTY_TYPE,
   PROFILE_PREFIX,
   FINGERPRINT_PREFIX,
+  // Re-exported for consumers that need geo validation alongside profile building
+  isValidLatitude,
+  isValidLongitude,
+  hasValidCoordinates: (lat, lon) => isValidLatitude(lat) && isValidLongitude(lon),
 };
