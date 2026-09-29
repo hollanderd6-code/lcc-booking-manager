@@ -64,7 +64,7 @@ const LISTING_ID       = `${PFX}_listing_001`;
 const OBS_BASE = {
   schema_version:    1,
   data_source:       'brightdata_live',
-  collected_at:      '2026-09-29T06:00:00.000Z',
+  collected_at:      new Date().toISOString(),  // dynamic — always fresh when smoke runs
   currency:          'EUR',
   collection_run_id: RUN_ID,
   provenance:        {},

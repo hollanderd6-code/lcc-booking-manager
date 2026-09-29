@@ -278,12 +278,19 @@ async function createObservationComplete(pool, {
 
 // ── findReusableObservation ───────────────────────────────────────────────────
 
+// Max allowable clock skew for collected_at. Observations with collected_at
+// more than this far in the future are rejected (fail-closed on bogus timestamps).
+const REUSE_CLOCK_SKEW_MS = 5 * 60 * 1000; // 5 min
+
 /**
  * Find the most recent observation for a search fingerprint within maxAgeMs.
  * Used for cache/reuse decisions — read-only.
  *
  * Different stay window, currency, or provider = different fingerprint → never
  * returned here (the fingerprint encodes all of those dimensions).
+ *
+ * TTL boundary: age == maxAgeMs is inclusive (collected_at == cutoff → reusable).
+ * Future timestamps: collected_at > now + REUSE_CLOCK_SKEW_MS → rejected (fail closed).
  *
  * @param {object}  pool
  * @param {string}  search_fingerprint
@@ -294,14 +301,16 @@ async function createObservationComplete(pool, {
 async function findReusableObservation(pool, search_fingerprint, opts = {}) {
   const maxAgeMs = opts.maxAgeMs ?? 24 * 60 * 60 * 1000;
   const cutoff   = new Date(Date.now() - maxAgeMs).toISOString();
+  const future   = new Date(Date.now() + REUSE_CLOCK_SKEW_MS).toISOString();
 
   const result = await pool.query(
     `SELECT * FROM market_observations
      WHERE search_fingerprint = $1
        AND collected_at >= $2
+       AND collected_at <= $3
      ORDER BY collected_at DESC
      LIMIT 1`,
-    [search_fingerprint, cutoff]
+    [search_fingerprint, cutoff, future]
   );
   return result.rows[0] ?? null;
 }

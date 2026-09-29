@@ -75,11 +75,14 @@ function makeMockPool() {
       return { rows: row ? [{ observation_id: row.observation_id }] : [] };
     }
 
-    // findReusableObservation — SELECT * FROM market_observations WHERE fingerprint + cutoff
+    // findReusableObservation — SELECT * FROM market_observations WHERE fingerprint + cutoff + future
     if (/SELECT \* FROM market_observations/.test(s)) {
       const fp = params[0], cutoff = new Date(params[1]);
+      const future = params[2] ? new Date(params[2]) : new Date(8640000000000000);
       const m = T.market_observations
-        .filter(r => r.search_fingerprint === fp && new Date(r.collected_at) >= cutoff)
+        .filter(r => r.search_fingerprint === fp
+                  && new Date(r.collected_at) >= cutoff
+                  && new Date(r.collected_at) <= future)
         .sort((a, b) => new Date(b.collected_at) - new Date(a.collected_at))[0];
       return { rows: m ? [m] : [] };
     }
