@@ -386,8 +386,10 @@ describe('K — PUT guard: mono-currency on propertyIds change', () => {
     expect(putBlock).toMatch(/client\.query\('ROLLBACK'\)/);
   });
 
-  test('K-04 PUT updates currency snapshot when propertyIds changes (draft re-evaluation)', () => {
-    expect(putBlock).toMatch(/UPDATE owner_invoices SET currency = \$1 WHERE id = \$2/);
+  test('K-04 PUT rejects currency change via propertyIds (INTL-4.4C immutability)', () => {
+    // Draft currency is immutable — swapping propertyIds to a different currency must fail.
+    expect(putBlock).toMatch(/OWNER_INVOICE_DRAFT_CURRENCY_CHANGE_REQUIRES_RECREATE/);
+    expect(putBlock).toMatch(/_putCtx\.currency\s*!==\s*_storedInvoiceCurrency/);
   });
 });
 
@@ -416,9 +418,9 @@ describe('L — Draft-only currency mutability: non-draft is forever immutable',
     expect(destructure).not.toMatch(/issuerSnapshot|issuer_snapshot/);
   });
 
-  test('L-05 currency mutation in PUT is inside propertyIds.length > 0 block', () => {
-    // The UPDATE SET currency = $1 is only reached when non-empty propertyIds is provided
-    const guardBlock = putBlock.match(/if \(propertyIds\.length > 0\)[\s\S]+?UPDATE owner_invoices SET currency/)?.[0] || '';
+  test('L-05 currency immutability guard is inside propertyIds.length > 0 block', () => {
+    // The mismatch guard is only reached when non-empty propertyIds is provided
+    const guardBlock = putBlock.match(/if \(propertyIds\.length > 0\)[\s\S]+?OWNER_INVOICE_DRAFT_CURRENCY_CHANGE_REQUIRES_RECREATE/)?.[0] || '';
     expect(guardBlock).toBeTruthy();
   });
 
@@ -436,12 +438,11 @@ describe('M — Empty propertyIds: invoice currency not changed', () => {
     expect(innerGuard).toBeTruthy();
   });
 
-  test('M-02 currency UPDATE only inside length > 0 block (not for empty array)', () => {
-    // UPDATE owner_invoices SET currency must be inside the propertyIds.length > 0 block
+  test('M-02 no silent currency UPDATE in PUT — immutability enforced instead', () => {
+    // INTL-4.4C: currency is immutable; there is no UPDATE SET currency in the propertyIds block.
+    // A mismatch returns 400 OWNER_INVOICE_DRAFT_CURRENCY_CHANGE_REQUIRES_RECREATE instead.
     const outerBlock = putBlock.match(/if \(Array\.isArray\(propertyIds\)\)[\s\S]+?DELETE FROM owner_invoice_properties/)?.[0] || '';
-    const currencyUpdateIdx = outerBlock.indexOf('UPDATE owner_invoices SET currency');
-    const innerBlockIdx     = outerBlock.indexOf('propertyIds.length > 0');
-    expect(currencyUpdateIdx).toBeGreaterThan(innerBlockIdx);
+    expect(outerBlock).not.toMatch(/UPDATE owner_invoices SET currency/);
   });
 
   test('M-03 no default_currency fallback in PUT (currency stays from snapshot)', () => {

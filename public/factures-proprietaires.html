@@ -3238,7 +3238,8 @@ function resolveSelectedPropertyCurrency() {
         quantity: p.quantity,
         unitPrice: p.unitPrice,
         total: calculateLineTotal(p),
-        isDebours: p.isDebours
+        isDebours: p.isDebours,
+        ...(p.currency ? { currency: p.currency } : {})
       })),
       vatApplicable: document.getElementById('invoiceVatApplicable').checked,
       vatRate: parseFloat(document.getElementById('invoiceVatRate').value),

@@ -10917,12 +10917,16 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
       return Math.max(0, Math.round((rent - otaCom - payFee) * 100) / 100);
     }
 
-    // Agréger par plateforme
+    // Agréger par (plateforme, devise) — un bucket par combinaison unique.
+    // Mélanger des montants de devises différentes dans le même bucket produirait
+    // des totaux sans denomination (ex: 100 EUR + 500 ILS = 600 ???). INTL-4.4A.
     const byPlatform = {};
     const reservationsList = [];
 
     for (const row of rows) {
       const platform = normPlatform(row);
+      const rowCurrency = normalizeCurrency(row.currency) || 'EUR';
+      const bucketKey = `${platform}::${rowCurrency}`;
       const netHote = calcNetHote(row);
       const startDate = row.start_date ? new Date(row.start_date).toISOString().split('T')[0] : '';
       const endDate   = row.end_date   ? new Date(row.end_date).toISOString().split('T')[0]   : '';
@@ -10931,9 +10935,10 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
         : (row.guest_name || 'Voyageur');
       const propLabel = row.property_internal_name || row.property_name || row.property_id;
 
-      if (!byPlatform[platform]) {
-        byPlatform[platform] = {
+      if (!byPlatform[bucketKey]) {
+        byPlatform[bucketKey] = {
           platform,
+          currency: rowCurrency,
           count: 0,
           totalNet: 0,
           totalBrut: 0,
@@ -10944,13 +10949,13 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
         };
       }
 
-      byPlatform[platform].count++;
-      byPlatform[platform].totalNet     += netHote;
-      byPlatform[platform].totalBrut    += parseFloat(row.amount_total)    || 0;
-      byPlatform[platform].totalCleaning+= parseFloat(row.amount_cleaning) || 0;
-      byPlatform[platform].totalTaxes   += parseFloat(row.amount_taxes)    || 0;
-      byPlatform[platform].totalOtaCom  += parseFloat(row.ota_commission)  || 0;
-      byPlatform[platform].reservations.push({
+      byPlatform[bucketKey].count++;
+      byPlatform[bucketKey].totalNet     += netHote;
+      byPlatform[bucketKey].totalBrut    += parseFloat(row.amount_total)    || 0;
+      byPlatform[bucketKey].totalCleaning+= parseFloat(row.amount_cleaning) || 0;
+      byPlatform[bucketKey].totalTaxes   += parseFloat(row.amount_taxes)    || 0;
+      byPlatform[bucketKey].totalOtaCom  += parseFloat(row.ota_commission)  || 0;
+      byPlatform[bucketKey].reservations.push({
         uid: row.uid,
         guestName,
         propertyName: propLabel,
@@ -10965,17 +10970,18 @@ app.get('/api/reservations/invoice-summary', authenticateAny, async (req, res) =
         netHote:       Math.round(netHote * 100) / 100,
         // Montant Booking de la résa (= net proprio + ménage), pour matcher le relevé à la ligne
         bookingPayout: Math.round((netHote + (parseFloat(row.amount_cleaning) || 0)) * 100) / 100,
-        currency:      row.currency || 'EUR'
+        currency:      rowCurrency
       });
 
       reservationsList.push({
         uid: row.uid, platform, guestName, propertyName: propLabel,
         startDate, endDate,
-        netHote: Math.round(netHote * 100) / 100
+        netHote: Math.round(netHote * 100) / 100,
+        currency: rowCurrency
       });
     }
 
-    // Arrondir les totaux
+    // Arrondir les totaux. currency est déjà dans ...p via le spread.
     const summary = Object.values(byPlatform).map(p => ({
       ...p,
       totalNet:      Math.round(p.totalNet      * 100) / 100,
@@ -26584,6 +26590,20 @@ app.post('/api/owner-invoices',
       }
     }
 
+    // INTL-4.4B — Validate non-debour item currencies against invoiceCurrency.
+    // Imported items carry their reservation currency; a mismatch must never reach the DB.
+    for (const item of items) {
+      if (item.currency && !item.isDebours) {
+        const itemCur = normalizeCurrency(item.currency);
+        if (itemCur && itemCur !== invoiceCurrency) {
+          return res.status(400).json({
+            error: `Un article est en ${itemCur} alors que la facture est en ${invoiceCurrency}.`,
+            code: 'OWNER_INVOICE_ITEM_CURRENCY_MISMATCH'
+          });
+        }
+      }
+    }
+
     await client.query('BEGIN');
 
     // Recalculer les totaux de la même façon que dans le PUT /api/owner-invoices/:id
@@ -28885,11 +28905,15 @@ app.put('/api/owner-invoices/:id',
           await client.query('ROLLBACK');
           return res.status(ctxErr.status || 400).json({ error: ctxErr.message });
         }
-        // Mettre à jour la devise snapshot du brouillon pour refléter le nouveau jeu de logements
-        await client.query(
-          'UPDATE owner_invoices SET currency = $1 WHERE id = $2',
-          [_putCtx.currency, req.params.id]
-        );
+        // INTL-4.4C — Draft currency is immutable after creation. The new property set
+        // resolving to a different currency is unrecoverable without recreating the invoice.
+        if (_putCtx.currency !== _storedInvoiceCurrency) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({
+            error: `La devise du brouillon (${_storedInvoiceCurrency}) ne correspond pas à celle des logements sélectionnés (${_putCtx.currency}). Supprimez ce brouillon et recréez la facture.`,
+            code: 'OWNER_INVOICE_DRAFT_CURRENCY_CHANGE_REQUIRES_RECREATE'
+          });
+        }
       }
       await client.query(
         'DELETE FROM owner_invoice_properties WHERE invoice_id = $1',

@@ -6472,7 +6472,7 @@ window.fetchInvoiceSummary = async function() {
     }
 
     window._importResaChecked = {};
-    data.summary.forEach(function(p){ window._importResaChecked[p.platform] = true; });
+    data.summary.forEach(function(p){ window._importResaChecked[p.platform + '|' + (p.currency || 'EUR')] = true; });
     renderImportResaSummary(data);
 
   } catch(e) {
@@ -6480,6 +6480,14 @@ window.fetchInvoiceSummary = async function() {
     console.error("fetchInvoiceSummary error:", e);
   }
 };
+
+// INTL-4.4D \u2014 Currency-aware formatter for import summary amounts.
+function fmtImportAmount(v, currency) {
+  var cur = (currency && /^[A-Z]{3}$/.test(currency.toUpperCase())) ? currency.toUpperCase() : 'EUR';
+  try {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: cur, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
+  } catch(e) { return v.toFixed(2) + '\u00a0' + cur; }
+}
 
 function renderImportResaSummary(data) {
   var platColors = {
@@ -6491,33 +6499,34 @@ function renderImportResaSummary(data) {
   };
 
   document.getElementById("importResaContent").innerHTML = data.summary.map(function(p) {
+    var bk = p.platform + '|' + (p.currency || 'EUR');
     var c = platColors[p.platform] || platColors["default"];
-    var isChecked = window._importResaChecked[p.platform] !== false;
+    var isChecked = window._importResaChecked[bk] !== false;
 
     var resaRows = p.reservations.map(function(r) {
       return "<tr style=\"border-top:1px solid #f3f4f6;\">"
         + "<td style=\"padding:6px 8px;font-size:12px;color:#374151;\">" + r.guestName + "</td>"
         + "<td style=\"padding:6px 8px;font-size:12px;color:#6b7280;\">" + r.propertyName + "</td>"
         + "<td style=\"padding:6px 8px;font-size:12px;color:#6b7280;\">" + (window.isoToFrDate ? window.isoToFrDate(r.startDate) : r.startDate) + " \u2192 " + (window.isoToFrDate ? window.isoToFrDate(r.endDate) : r.endDate) + "</td>"
-        + "<td style=\"padding:6px 8px;font-size:12px;font-weight:600;color:#0E3B2E;text-align:right;\">" + (r.bookingPayout != null ? r.bookingPayout : (r.netHote + (r.amountCleaning || 0))).toFixed(2) + " \u20ac</td>"
+        + "<td style=\"padding:6px 8px;font-size:12px;font-weight:600;color:#0E3B2E;text-align:right;\">" + fmtImportAmount(r.bookingPayout != null ? r.bookingPayout : (r.netHote + (r.amountCleaning || 0)), r.currency) + "</td>"
         + "</tr>";
     }).join("");
 
     return "<div style=\"border:1px solid " + c.border + ";border-radius:12px;margin-bottom:12px;overflow:hidden;background:white;\">"
       + "<label style=\"display:flex;align-items:center;gap:12px;padding:14px 16px;background:" + c.bg + ";cursor:pointer;\">"
-      + "<input type=\"checkbox\" " + (isChecked ? "checked" : "") + " data-platform=\"" + p.platform + "\" "
-      + "onchange=\"window._importResaChecked['" + p.platform + "']=this.checked;updateImportResaTotal();\" "
+      + "<input type=\"checkbox\" " + (isChecked ? "checked" : "") + " data-bucket=\"" + bk.replace(/"/g, '') + "\" "
+      + "onchange=\"window._importResaChecked['" + bk.replace(/'/g, '') + "']=this.checked;updateImportResaTotal();\" "
       + "style=\"width:16px;height:16px;accent-color:" + c.color + ";flex-shrink:0;\">"
       + "<div style=\"width:32px;height:32px;background:" + c.color + "20;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;\">"
       + "<i class=\"" + c.icon + "\" style=\"color:" + c.color + ";font-size:14px;\"></i></div>"
       + "<div style=\"flex:1;\">"
-      + "<div style=\"font-size:14px;font-weight:700;color:#111827;\">" + p.platform + "</div>"
-      + "<div style=\"font-size:12px;color:#6b7280;\">" + p.count + " r\u00e9servation" + (p.count > 1 ? "s" : "") + " \u00b7 Brut : " + p.totalBrut.toFixed(2) + " \u20ac</div>"
+      + "<div style=\"font-size:14px;font-weight:700;color:#111827;\">" + p.platform + (p.currency && p.currency !== 'EUR' ? ' <span style=\"font-size:11px;font-weight:500;color:#6b7280;\">' + p.currency + '</span>' : '') + "</div>"
+      + "<div style=\"font-size:12px;color:#6b7280;\">" + p.count + " r\u00e9servation" + (p.count > 1 ? "s" : "") + " \u00b7 Brut : " + fmtImportAmount(p.totalBrut, p.currency) + "</div>"
       + "</div>"
       + "<div style=\"text-align:right;\">"
-      + "<div style=\"font-size:16px;font-weight:800;color:" + c.color + ";\">" + (p.bookingPayout != null ? p.bookingPayout : (p.totalNet + (p.totalCleaning || 0))).toFixed(2) + " \u20ac</div>"
+      + "<div style=\"font-size:16px;font-weight:800;color:" + c.color + ";\">" + fmtImportAmount(p.bookingPayout != null ? p.bookingPayout : (p.totalNet + (p.totalCleaning || 0)), p.currency) + "</div>"
       + "<div style=\"font-size:10px;color:#9ca3af;font-weight:500;\">MONTANT BOOKING (m\u00e9nage inclus)</div>"
-      + "<div style=\"font-size:11px;color:#6b7280;margin-top:3px;\">dont loyer net : " + p.totalNet.toFixed(2) + " \u20ac \u00b7 m\u00e9nage : " + (p.totalCleaning || 0).toFixed(2) + " \u20ac</div>"
+      + "<div style=\"font-size:11px;color:#6b7280;margin-top:3px;\">dont loyer net : " + fmtImportAmount(p.totalNet, p.currency) + " \u00b7 m\u00e9nage : " + fmtImportAmount(p.totalCleaning || 0, p.currency) + "</div>"
       + "</div></label>"
       + "<div style=\"padding:0 4px 4px;\"><table style=\"width:100%;border-collapse:collapse;\">"
       + "<thead><tr style=\"background:#f9fafb;\">"
@@ -6534,21 +6543,29 @@ function renderImportResaSummary(data) {
 window.updateImportResaTotal = function() {
   if (!window._importResaSummary) return;
   var total = 0, payout = 0, count = 0;
+  var selectedCurrencies = [];
   window._importResaSummary.summary.forEach(function(p) {
-    if (window._importResaChecked[p.platform]) {
+    var bk = p.platform + '|' + (p.currency || 'EUR');
+    if (window._importResaChecked[bk]) {
       total += p.totalNet;
       payout += (p.bookingPayout != null ? p.bookingPayout : (p.totalNet + (p.totalCleaning || 0)));
       count++;
+      var cur = p.currency || 'EUR';
+      if (selectedCurrencies.indexOf(cur) === -1) selectedCurrencies.push(cur);
     }
   });
   var lbl = document.getElementById("importResaTotalLabel");
   var btn = document.getElementById("importResaConfirmBtn");
-  if (count > 0) {
-    lbl.textContent = count + " plateforme" + (count > 1 ? "s" : "") + " \u00b7 Montant Booking : " + payout.toFixed(2) + " \u20ac \u00b7 dont loyer net : " + total.toFixed(2) + " \u20ac";
-    btn.disabled = false;
-  } else {
+  if (count === 0) {
     lbl.textContent = "Aucune plateforme s\u00e9lectionn\u00e9e";
     btn.disabled = true;
+  } else if (selectedCurrencies.length > 1) {
+    lbl.textContent = "\u26a0 Devises mixtes s\u00e9lectionn\u00e9es (" + selectedCurrencies.join(', ') + ") \u2014 importez une devise \u00e0 la fois";
+    btn.disabled = true;
+  } else {
+    var cur = selectedCurrencies[0] || 'EUR';
+    lbl.textContent = count + " plateforme" + (count > 1 ? "s" : "") + " \u00b7 Montant Booking : " + fmtImportAmount(payout, cur) + " \u00b7 dont loyer net : " + fmtImportAmount(total, cur);
+    btn.disabled = false;
   }
 };
 
@@ -6557,13 +6574,28 @@ window.confirmImportReservations = function() {
   var dateFrom = document.getElementById("importResaFrom").value;
   var dateTo   = document.getElementById("importResaTo").value;
 
+  // INTL-4.4D \u2014 Block mixed-currency import at confirmation time (defence in depth).
+  var selectedCurrencies = [];
+  window._importResaSummary.summary.forEach(function(p) {
+    var bk = p.platform + '|' + (p.currency || 'EUR');
+    if (window._importResaChecked[bk]) {
+      var cur = p.currency || 'EUR';
+      if (selectedCurrencies.indexOf(cur) === -1) selectedCurrencies.push(cur);
+    }
+  });
+  if (selectedCurrencies.length > 1) {
+    alert('Les plateformes s\u00e9lectionn\u00e9es ont des devises diff\u00e9rentes (' + selectedCurrencies.join(', ') + ').\nImportez une devise \u00e0 la fois.');
+    return;
+  }
+
   var psEl = document.getElementById("invoicePeriodStart");
   var peEl = document.getElementById("invoicePeriodEnd");
   if (psEl && !psEl.value) psEl.value = dateFrom;
   if (peEl && !peEl.value) peEl.value = dateTo;
 
   window._importResaSummary.summary.forEach(function(p) {
-    if (!window._importResaChecked[p.platform]) return;
+    var bk = p.platform + '|' + (p.currency || 'EUR');
+    if (!window._importResaChecked[bk]) return;
     prestationCounter++;
     var pid = "p" + prestationCounter;
     var fromFr = new Date(dateFrom).toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit", year:"numeric"});
@@ -6574,7 +6606,8 @@ window.confirmImportReservations = function() {
       id: pid, type: "commission", description: desc,
       rentalAmount: Math.round(payoutAmount * 100) / 100,
       commissionRate: 100,
-      quantity: 1, unitPrice: 0, isDebours: false
+      quantity: 1, unitPrice: 0, isDebours: false,
+      currency: p.currency || 'EUR'
     });
   });
 
