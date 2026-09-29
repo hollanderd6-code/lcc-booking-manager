@@ -18893,6 +18893,8 @@ app.get('/api/properties/:propertyId',
       bookingCommissionPct: property.bookingCommissionPct ?? property.booking_commission_pct ?? 15,
       booking_commission_pct: property.bookingCommissionPct ?? property.booking_commission_pct ?? 15,
 
+      currency: property.currency || null,
+
       reservationCount: (reservationsStore.properties[property.id] || []).length,
       lastIcalSyncAt: property.last_ical_sync_at || null,
       icalSyncStatus: property.ical_sync_status || null
