@@ -28761,8 +28761,15 @@ app.put('/api/owner-invoices/:id',
       vatApplicable, vatRate,
       discountType, discountValue,
       notes, internalNotes,
-      clientId: newClientId
+      clientId: newClientId,
+      issueDate, dueDate, periodStart, periodEnd
     } = req.body;
+
+    // Validate period dates if both provided
+    if (periodStart && periodEnd && periodStart > periodEnd) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'La date de début de période ne peut pas être après la date de fin.' });
+    }
 
     // INTL-DEBOUR — Verify debour currencies match the stored invoice currency.
     const _storedInvoiceCurrency = normalizeCurrency(checkResult.rows[0].currency) || 'EUR';
@@ -28797,9 +28804,9 @@ app.put('/api/owner-invoices/:id',
       }
     });
 
-    // Calculer réduction
+    // Calculer réduction — normaliser 'percentage' (alias legacy) → 'percent'
     let discountAmount = 0;
-    if (discountType === 'percentage') {
+    if (discountType === 'percent' || discountType === 'percentage') {
       discountAmount = subtotalHt * (parseFloat(discountValue) / 100);
     } else if (discountType === 'fixed') {
       discountAmount = parseFloat(discountValue);
@@ -28809,21 +28816,30 @@ app.put('/api/owner-invoices/:id',
     const vatAmount = vatApplicable ? netHt * (parseFloat(vatRate) / 100) : 0;
     const totalTtc = netHt + subtotalDebours + vatAmount;
 
-    // Mettre à jour facture
+    // Normaliser discountType : 'percentage' est un alias legacy de 'percent'
+    const _normalizedDiscountType = (discountType === 'percentage') ? 'percent' : (discountType || 'none');
+
+    // Mettre à jour facture (status draft garanti par le guard ci-dessus)
+    // issue_date/due_date/period_start/period_end : COALESCE → mis à jour si envoyés, sinon inchangés
     await client.query(`
       UPDATE owner_invoices SET
         vat_applicable = $1, vat_rate = $2,
         discount_type = $3, discount_value = $4, discount_amount = $5,
         subtotal_ht = $6, subtotal_debours = $7, vat_amount = $8, total_ttc = $9,
         notes = $10, internal_notes = $11,
+        issue_date   = COALESCE($13, issue_date),
+        due_date     = COALESCE($14, due_date),
+        period_start = COALESCE($15, period_start),
+        period_end   = COALESCE($16, period_end),
         updated_at = NOW()
       WHERE id = $12
     `, [
       vatApplicable, vatRate,
-      discountType || 'none', discountValue || 0, discountAmount,
+      _normalizedDiscountType, discountValue || 0, discountAmount,
       subtotalHt, subtotalDebours, vatAmount, totalTtc,
       notes, internalNotes,
-      req.params.id
+      req.params.id,
+      issueDate || null, dueDate || null, periodStart || null, periodEnd || null
     ]);
 
     // INTL-4.7R — client change on draft: re-snapshot identity from new owner_clients
