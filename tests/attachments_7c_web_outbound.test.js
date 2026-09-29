@@ -860,3 +860,180 @@ describe('Q. PROD-FIX-4 — anti-régression messages.html vs chat-owner.js', ()
     expect(jsDefs).toBe(1);
   });
 });
+
+// ── R. PROD-FIX-5 — _getConversationOta : résolution OTA robuste ─────────────
+describe('R. PROD-FIX-5 — _getConversationOta résolution OTA (conv.platform || conv.ota_name)', () => {
+  const chatRoutesSrc = require('fs').readFileSync(
+    require('path').join(__dirname, '../routes/chat_routes.js'),
+    'utf8'
+  );
+
+  // R-01 : _getConversationOta est définie dans chat-owner.js
+  test('R-01 : _getConversationOta est définie', () => {
+    expect(src).toMatch(/function\s+_getConversationOta\s*\(/);
+  });
+
+  // R-02 : utilise conv.platform en première source
+  test('R-02 : _getConversationOta utilise conv.platform', () => {
+    const block = src.match(/function\s+_getConversationOta[\s\S]*?^}/m)?.[0] || '';
+    expect(block).toMatch(/conv\.platform/);
+  });
+
+  // R-03 : utilise conv.ota_name comme fallback
+  test('R-03 : _getConversationOta utilise conv.ota_name comme fallback', () => {
+    const block = src.match(/function\s+_getConversationOta[\s\S]*?^}/m)?.[0] || '';
+    expect(block).toMatch(/conv\.ota_name/);
+  });
+
+  // R-04 : retourne '' (pas d'exception) si conv est null/undefined
+  test('R-04 : _getConversationOta gère conv null/undefined sans exception', () => {
+    const block = src.match(/function\s+_getConversationOta[\s\S]*?^}/m)?.[0] || '';
+    // Guard sur !conv avant accès aux propriétés
+    expect(block).toMatch(/if\s*\(!conv\)/);
+  });
+
+  // R-05 : normalise en lowercase pour compatibilité avec _supportsOutboundImage
+  test('R-05 : _getConversationOta applique toLowerCase()', () => {
+    const block = src.match(/function\s+_getConversationOta[\s\S]*?^}/m)?.[0] || '';
+    expect(block).toMatch(/toLowerCase/);
+  });
+
+  // R-06 : openPhotoUpload utilise _getConversationOta au lieu de conv.platform direct
+  test('R-06 : openPhotoUpload passe _getConversationOta(conv) à _supportsOutboundImage', () => {
+    const block = src.match(/window\.openPhotoUpload\s*=[\s\S]*?^\};/m)?.[0] || '';
+    expect(block).toMatch(/_supportsOutboundImage\s*\(\s*_getConversationOta\s*\(/);
+    expect(block).not.toMatch(/_supportsOutboundImage\s*\(\s*conv\.platform/);
+  });
+
+  // R-07 : _checkChannexConversation utilise _getConversationOta
+  test('R-07 : _checkChannexConversation utilise _getConversationOta pour résoudre le platform', () => {
+    // Extrait depuis le début de _checkChannexConversation jusqu'à la fin du fichier,
+    // puis cherche _getConversationOta dans cette portion
+    const startIdx = src.indexOf('async function _checkChannexConversation(');
+    expect(startIdx).toBeGreaterThan(-1);
+    const tail = src.slice(startIdx, startIdx + 2000);
+    expect(tail).toMatch(/_getConversationOta\s*\(/);
+  });
+
+  // R-08 : conversations API retourne r.ota_name depuis le JOIN reservations
+  test('R-08 : GET /api/chat/conversations sélectionne r.ota_name', () => {
+    expect(chatRoutesSrc).toMatch(/r\.ota_name/);
+  });
+
+  // R-09 : _supportsOutboundImage reste fail-closed (ne change pas)
+  test('R-09 : _supportsOutboundImage retourne false pour valeur inconnue (fail-closed)', () => {
+    const block = src.match(/function\s+_supportsOutboundImage[\s\S]*?^}/m)?.[0] || '';
+    expect(block).toMatch(/return false/);
+    // Pas de return true par défaut
+    const lines = block.split('\n');
+    const defaultTrue = lines.find(l => !l.includes('airbnb') && !l.includes('abb') && !l.includes('booking') && !l.includes('bdc') && !l.includes('expedia') && l.includes('return true'));
+    expect(defaultTrue).toBeUndefined();
+  });
+
+  // R-10 : _checkChannexConversation n'utilise plus conv.platform directement pour la comparaison OTA
+  test('R-10 : _checkChannexConversation ne lit plus conv.platform directement pour la résolution OTA', () => {
+    const block = src.match(/async\s+function\s+_checkChannexConversation[\s\S]*?^\s*}/m)?.[0] || '';
+    // La ligne   const platform = (conv ? conv.platform || '' : '').toLowerCase()  a été supprimée
+    expect(block).not.toMatch(/conv\s*\?\s*conv\.platform/);
+  });
+
+  // R-11 : _getConversationOta est positionnée après _supportsOutboundImage (ordre de déclaration)
+  test('R-11 : _getConversationOta est déclarée après _supportsOutboundImage dans le source', () => {
+    const idxSupports = src.indexOf('function _supportsOutboundImage(');
+    const idxGetOta   = src.indexOf('function _getConversationOta(');
+    expect(idxSupports).toBeGreaterThan(-1);
+    expect(idxGetOta).toBeGreaterThan(idxSupports);
+  });
+
+  // R-12 : logique explicite channex → ota_name (pas de court-circuit || qui retournerait 'channex')
+  test('R-12 : _getConversationOta utilise une comparaison explicite platform === "channex"', () => {
+    const block = src.match(/function\s+_getConversationOta[\s\S]*?^}/m)?.[0] || '';
+    // La logique doit être : if (platform === 'channex') return otaName
+    // et PAS : conv.platform || conv.ota_name (qui court-circuiterait avec 'channex')
+    expect(block).toMatch(/platform\s*===\s*['"]channex['"]/);
+    expect(block).not.toMatch(/conv\.platform\s*\|\|\s*conv\.ota_name/);
+  });
+});
+
+// ── S. PROD-FIX-5B — Tests comportementaux (exécution réelle des fonctions) ──
+describe('S. PROD-FIX-5B — Comportement réel _getConversationOta + _supportsOutboundImage', () => {
+  let _getConversationOta;
+  let _supportsOutboundImage;
+  let supports; // shorthand : supports(conv) → bool
+
+  beforeAll(() => {
+    const getOtaSrc      = src.match(/function _getConversationOta\b[\s\S]*?^}/m)?.[0] || '';
+    const supportsImgSrc = src.match(/function _supportsOutboundImage\b[\s\S]*?^}/m)?.[0] || '';
+    expect(getOtaSrc).not.toBe('');
+    expect(supportsImgSrc).not.toBe('');
+    // eslint-disable-next-line no-new-func
+    const harness = new Function(`${supportsImgSrc}\n${getOtaSrc}\nreturn { _getConversationOta, _supportsOutboundImage };`)();
+    _getConversationOta  = harness._getConversationOta;
+    _supportsOutboundImage = harness._supportsOutboundImage;
+    supports = (conv) => _supportsOutboundImage(_getConversationOta(conv));
+  });
+
+  // S-01 : cas production principal — platform='channex', ota_name='Airbnb' → autorisé
+  test('S-01 : platform="channex" + ota_name="Airbnb" → autorisé', () => {
+    const conv = { platform: 'channex', ota_name: 'Airbnb' };
+    expect(_getConversationOta(conv)).toBe('airbnb');
+    expect(supports(conv)).toBe(true);
+  });
+
+  // S-02 : casse mixte — ota_name='AirBNB' → autorisé
+  test('S-02 : platform="channex" + ota_name="AirBNB" → autorisé', () => {
+    expect(supports({ platform: 'channex', ota_name: 'AirBNB' })).toBe(true);
+  });
+
+  // S-03 : Booking.com via code court — ota_name='Bdc' → autorisé
+  test('S-03 : platform="channex" + ota_name="Bdc" → autorisé', () => {
+    expect(supports({ platform: 'channex', ota_name: 'Bdc' })).toBe(true);
+  });
+
+  // S-04 : Booking.com via code long — ota_name='BookingCom' → autorisé
+  test('S-04 : platform="channex" + ota_name="BookingCom" → autorisé', () => {
+    expect(supports({ platform: 'channex', ota_name: 'BookingCom' })).toBe(true);
+  });
+
+  // S-05 : Expedia via code court — ota_name='Exp' → autorisé
+  test('S-05 : platform="channex" + ota_name="Exp" → autorisé', () => {
+    expect(supports({ platform: 'channex', ota_name: 'Exp' })).toBe(true);
+  });
+
+  // S-06 : Expedia via code court — ota_name='Expedia' → autorisé
+  test('S-06 : platform="channex" + ota_name="Expedia" → autorisé', () => {
+    expect(supports({ platform: 'channex', ota_name: 'Expedia' })).toBe(true);
+  });
+
+  // S-07 : platform='airbnb' direct (ota_name absent) → autorisé
+  test('S-07 : platform="airbnb" + ota_name=null → autorisé', () => {
+    expect(supports({ platform: 'airbnb', ota_name: null })).toBe(true);
+  });
+
+  // S-08 : platform='booking' direct (ota_name absent) → autorisé
+  test('S-08 : platform="booking" + ota_name=null → autorisé', () => {
+    expect(supports({ platform: 'booking', ota_name: null })).toBe(true);
+  });
+
+  // S-09 : platform='channex' + ota_name=null → refusé (fail-closed)
+  test('S-09 : platform="channex" + ota_name=null → refusé', () => {
+    expect(_getConversationOta({ platform: 'channex', ota_name: null })).toBe('');
+    expect(supports({ platform: 'channex', ota_name: null })).toBe(false);
+  });
+
+  // S-10 : platform='direct' + ota_name='Airbnb' → refusé (direct ne doit pas hériter OTA)
+  test('S-10 : platform="direct" + ota_name="Airbnb" → refusé', () => {
+    expect(_getConversationOta({ platform: 'direct', ota_name: 'Airbnb' })).toBe('direct');
+    expect(supports({ platform: 'direct', ota_name: 'Airbnb' })).toBe(false);
+  });
+
+  // S-11 : platform=null + ota_name='Airbnb' → autorisé (conv très ancienne sans platform)
+  test('S-11 : platform=null + ota_name="Airbnb" → autorisé', () => {
+    expect(supports({ platform: null, ota_name: 'Airbnb' })).toBe(true);
+  });
+
+  // S-12 : platform='ical' + ota_name=null → refusé
+  test('S-12 : platform="ical" + ota_name=null → refusé', () => {
+    expect(supports({ platform: 'ical', ota_name: null })).toBe(false);
+  });
+});

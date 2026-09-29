@@ -350,6 +350,7 @@ function setupChatRoutes(app, pool, io, authenticateAny, checkSubscription, deps
           r.currency,
           r.uid,
           r.notes,
+          r.ota_name,
           (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id AND is_read = FALSE AND sender_type = 'guest') as unread_count,
           (SELECT message FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
           (SELECT created_at FROM messages WHERE conversation_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message_time

@@ -1198,14 +1198,26 @@ function _supportsOutboundImage(platform) {
   const p = platform.toLowerCase().trim();
   if (p.includes('airbnb') || p === 'abb') return true;
   if (p.includes('booking') || p === 'bdc') return true;
-  if (p.includes('expedia')) return true;
+  if (p.includes('expedia') || p === 'exp') return true;
   return false;
+}
+
+// Résout le vrai nom OTA d'une conversation.
+// conv.platform est 'channex' quand ota_name était null à la création de la conversation ;
+// dans ce cas on se rabat sur conv.ota_name (r.ota_name du JOIN reservations).
+// Les valeurs génériques 'direct', 'ical' etc. restent fail-closed (pas de fallback OTA).
+function _getConversationOta(conv) {
+  if (!conv) return '';
+  const platform = String(conv.platform || '').trim().toLowerCase();
+  const otaName  = String(conv.ota_name  || '').trim().toLowerCase();
+  if (platform === 'channex') return otaName;
+  return platform || otaName;
 }
 
 window.openPhotoUpload = function openPhotoUpload() {
   if (_uploadInProgress) return;
   const conv = allConversations.find(c => c.id == currentConversationId);
-  if (!conv || !_supportsOutboundImage(conv.platform)) {
+  if (!conv || !_supportsOutboundImage(_getConversationOta(conv))) {
     showToast('Pièces jointes non disponibles sur cette plateforme', 'error');
     return;
   }
@@ -2394,7 +2406,7 @@ async function _checkChannexConversation(conversationId, conv) {
       window._currentChannexBookingId = currentChannexBookingId;
 
       // Adapter le sendBtn pour la plateforme
-      const platform = (conv ? conv.platform || '' : '').toLowerCase();
+      const platform = _getConversationOta(conv);
       const platformLabel = platform.includes('airbnb') ? 'Airbnb' : platform.includes('booking') ? 'Booking.com' : 'Plateforme';
       const platformColor = platform.includes('airbnb') ? '#C0433C' : platform.includes('booking') ? '#2E5288' : '#0E3B2E';
 
