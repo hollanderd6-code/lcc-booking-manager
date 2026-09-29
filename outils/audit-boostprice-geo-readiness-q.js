@@ -16,16 +16,23 @@
  *   then performs a CAS (compare-and-set) write:
  *     UPDATE properties SET lat/lon/cc/tz WHERE id=$1 AND address=$2
  *   If the address changed between read and write: skipped (no write).
- *   Does NOT trigger market refresh (no scheduleMarketRefresh call).
+ *   Does NOT trigger market refresh — calls geocodeAddress() directly,
+ *   bypasses the server.js wrapper that invokes scheduleMarketRefresh.
  *   BRIGHT_DATA_CALLS_FROM_Q = 0
  *
  * SAFETY:
  *   DB_WRITES              = 0 (read-only mode) / guarded CAS writes (--execute-geocode)
  *   NETWORK_CALLS          = 0 (read-only mode) / Geoapify API only (--execute-geocode)
  *   BRIGHT_DATA_CALLS      = 0 always
- *   MARKET_REFRESH_CALLS   = 0 always (no scheduleMarketRefresh)
+ *   MARKET_REFRESH_CALLS   = 0 always
  *   PRICING_WRITES         = 0 always
  *   CHANNEX_CALLS          = 0 always
+ *
+ * SCHEMA AUTHORITY (P1.2-B3/B4):
+ *   currency  → properties.currency   (NOT pricing_config — no such column)
+ *   max_guests→ properties.max_guests (NOT pricing_config — no such column)
+ *   bedrooms  → pricing_config.bedrooms
+ *   property_type → pricing_config.property_type
  *
  * Usage:
  *   NODE_ENV=production node outils/audit-boostprice-geo-readiness-q.js
@@ -43,14 +50,52 @@ const EXECUTE_GEOCODE = process.argv.includes('--execute-geocode');
 
 const pool = createPool();
 
+// ── Canonical query SQL — exported for test inspection ────────────────────────
+// Mirrors the production cron query in dynamic-pricing-cron.js runDynamicPricingJob():
+//   SELECT pc.*, p.currency, p.max_guests, ... FROM pricing_config pc JOIN properties p ...
+//
+// Column authority:
+//   p.currency   — properties.currency  (P1.2-B3/B4 — pricing_config has no currency column)
+//   p.max_guests — properties.max_guests (pricing_config has no max_guests column)
+//   pc.bedrooms, pc.property_type — pricing_config owns these capacity dimensions
+//   pc.is_active — active pricing config = active BoostPrice property
+const ACTIVE_PROPERTIES_SQL = `
+  SELECT
+    p.id,
+    p.internal_name,
+    p.name,
+    p.address IS NOT NULL AND p.address != '' AS has_address,
+    p.latitude,
+    p.longitude,
+    p.country_code,
+    p.timezone IS NOT NULL AS has_timezone,
+    p.currency,
+    p.max_guests,
+    pc.bedrooms,
+    pc.property_type
+  FROM pricing_config pc
+  JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
+  WHERE pc.is_active = TRUE
+  ORDER BY p.internal_name, p.name
+`;
+
+// Secondary query for --execute-geocode: raw address of geo-missing properties
+const GEO_MISSING_ADDRESSES_SQL = `
+  SELECT p.id, p.address
+  FROM pricing_config pc
+  JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
+  WHERE pc.is_active = TRUE
+    AND (p.latitude IS NULL OR p.longitude IS NULL)
+`;
+
 // Display name — mirrors server.js displayName() helper
 function displayName(p) {
   return p.internal_name || p.name || `property_${p.id}`;
 }
 
-// ── Q7: Verify no market refresh is triggered ─────────────────────────────────
-// This tool calls geocodeAddress() directly — bypasses the server.js wrapper
-// that also invokes scheduleMarketRefresh. BRIGHT_DATA_CALLS_FROM_Q = 0.
+// ── Q7: Market refresh suppressed ────────────────────────────────────────────
+// geocodeAddress() called directly — the server.js geocodePropertyAsync wrapper
+// that invokes scheduleMarketRefresh is NOT used. BRIGHT_DATA_CALLS_FROM_Q = 0.
 
 async function geocodeOneProperty(pool, prop) {
   const { id, address } = prop;
@@ -58,7 +103,6 @@ async function geocodeOneProperty(pool, prop) {
     return { status: 'skipped', reason: 'no_address' };
   }
 
-  // Step 1: call geocoder (NETWORK — Geoapify API)
   let geoResult;
   try {
     geoResult = await geocodeAddress(address);
@@ -70,8 +114,7 @@ async function geocodeOneProperty(pool, prop) {
     return { status: 'skipped', reason: `geocode_${geoResult?.status ?? 'null'}: ${geoResult?.reason ?? ''}` };
   }
 
-  // Step 2: CAS write — only update if property address still matches the one we read
-  // Q6: read current address to confirm it hasn't changed between our read and now
+  // CAS write — only update if address still matches what we read (Q6)
   let writeResult;
   try {
     writeResult = await pool.query(
@@ -110,44 +153,20 @@ async function runAudit() {
   console.log(SEP);
   console.log();
 
-  // ── Fetch active BoostPrice properties ────────────────────────────────────────
-  const result = await pool.query(`
-    SELECT
-      p.id,
-      p.internal_name,
-      p.name,
-      p.address IS NOT NULL AND p.address != '' AS has_address,
-      p.latitude,
-      p.longitude,
-      p.country_code,
-      p.timezone IS NOT NULL AS has_timezone,
-      pc.currency,
-      pc.max_guests,
-      pc.bedrooms,
-      pc.property_type
-    FROM properties p
-    JOIN pricing_config pc ON pc.property_id = p.id
-    WHERE pc.is_active = TRUE AND pc.boostprice_active = TRUE
-    ORDER BY p.internal_name, p.name
-  `);
+  // ── Fetch active pricing-config properties ────────────────────────────────────
+  const result = await pool.query(ACTIVE_PROPERTIES_SQL);
 
-  // For --execute-geocode we need the raw address
+  // For --execute-geocode: read raw addresses of geo-missing properties
   let rawAddressMap = new Map();
   if (EXECUTE_GEOCODE) {
-    const addrResult = await pool.query(`
-      SELECT p.id, p.address
-      FROM properties p
-      JOIN pricing_config pc ON pc.property_id = p.id
-      WHERE pc.is_active = TRUE AND pc.boostprice_active = TRUE
-        AND (p.latitude IS NULL OR p.longitude IS NULL)
-    `);
+    const addrResult = await pool.query(GEO_MISSING_ADDRESSES_SQL);
     for (const row of addrResult.rows) {
       rawAddressMap.set(row.id, row.address);
     }
   }
 
   const props = result.rows;
-  console.log(`Active BoostPrice properties: ${props.length}`);
+  console.log(`Active pricing-config properties: ${props.length}`);
   console.log();
 
   // ── Classify each property ────────────────────────────────────────────────────
@@ -160,7 +179,7 @@ async function runAudit() {
     const validGeo  = hasValidCoordinates(p.latitude, p.longitude);
     const hasCur    = !!(p.currency && /^[A-Z]{3}$/.test(p.currency));
 
-    let profileReady = false;
+    let profileReady  = false;
     let profileReason = null;
     if (validGeo && hasCur) {
       const id = buildMarketProfileIdentity({
@@ -176,13 +195,13 @@ async function runAudit() {
     }
 
     const entry = {
-      id:           p.id,
+      id:             p.id,
       name,
-      hasAddress:   p.has_address,
+      hasAddress:     p.has_address,
       validGeo,
-      hasCurrency:  hasCur,
-      currency:     p.currency,
-      hasTimezone:  p.has_timezone,
+      hasCurrency:    hasCur,
+      currency:       p.currency,
+      hasTimezone:    p.has_timezone,
       hasCountryCode: !!p.country_code,
       profileReady,
       profileReason,
@@ -211,7 +230,7 @@ async function runAudit() {
   }
   console.log();
 
-  // ── B: Geo-missing properties (candidates for geocoding) ─────────────────────
+  // ── B: Geo-missing properties ─────────────────────────────────────────────────
   console.log(`── B: GEO-MISSING (${geoMissing.length}) — candidates for --execute-geocode ──`);
   if (geoMissing.length === 0) {
     console.log('  (none)');
@@ -238,7 +257,7 @@ async function runAudit() {
   // ── Summary ───────────────────────────────────────────────────────────────────
   const profileReadyCount = geoReady.filter(p => p.profileReady).length;
   console.log('── SUMMARY ──────────────────────────────────────────────────────');
-  console.log(`  Total active BoostPrice    = ${props.length}`);
+  console.log(`  Total active               = ${props.length}`);
   console.log(`  Geo-ready                  = ${geoReady.length}`);
   console.log(`  Profile-ready              = ${profileReadyCount}`);
   console.log(`  Geo-missing                = ${geoMissing.length}`);
@@ -308,3 +327,6 @@ runAudit()
     process.exit(1);
   })
   .finally(() => pool.end());
+
+// Exported for test inspection only — not used at runtime
+module.exports = { ACTIVE_PROPERTIES_SQL, GEO_MISSING_ADDRESSES_SQL };
