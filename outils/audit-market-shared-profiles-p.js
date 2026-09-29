@@ -17,9 +17,9 @@
  *   node outils/audit-market-shared-profiles-p.js
  */
 
-const { Pool } = require('pg');
+const { createPool } = require('../services/db-pool');
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = createPool();
 
 async function run() {
   console.log('\n══════════════════════════════════════════════════════════════');
