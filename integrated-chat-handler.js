@@ -7,6 +7,7 @@ const { getGroqResponse, getOwnerDraftResponse, requiresHumanIntervention } = re
 const { getProximityContext } = require('./geo-proximity');
 const { createUpsellPaymentLink } = require('./upsell-service');
 const { normalizeCurrency } = require('./routes/market-data-resolver');
+const { isOtaSystemMessage, getOtaSystemMessageReason } = require('./utils/chat-utils');
 
 const Stripe = require('stripe');
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -457,24 +458,10 @@ async function handleIncomingMessage(message, conversation, pool, io) {
       } catch(e) {}
     }
 
-    // ─── Filtre messages système OTA ───────────────────────────────
+    // ─── Filet de sécurité IA — dernier gate avant LLM ────────────────────────
     const msgText = message.message || '';
-    const isOtaSystemMessage = (
-      msgText.includes('THIS RESERVATION HAS BEEN PRE-PAID') ||
-      msgText.includes('BOOKING NOTE :') ||
-      msgText.includes('BOOKING NOTE:') ||
-      msgText.includes('Imported Booking') ||
-      msgText.toLowerCase().startsWith('imported booking') ||
-      msgText.includes('Demande(s) du voyageur') ||
-      msgText.includes('Request(s) from guest') ||
-      msgText.includes('OTA Commission:') ||
-      msgText.includes('Payment Collect:') ||
-      msgText.includes('Meal Plan:') ||
-      msgText.includes('Smoking Preference:') ||
-      /^\*\*.*\*\*\s*\n/.test(msgText)
-    );
-    if (isOtaSystemMessage) {
-      console.log(`ℹ️ [HANDLER] Message système OTA ignoré`);
+    if (isOtaSystemMessage(msgText)) {
+      console.log(`[AI_SKIP_OTA_SYSTEM_MESSAGE] source=ai_safety_gate conv=${conversation.id} reason=${getOtaSystemMessageReason(msgText)}`);
       return false;
     }
 

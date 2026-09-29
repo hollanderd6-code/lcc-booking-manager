@@ -50,7 +50,7 @@ const { comptesAutorises } = require('./utils/agency');
 const { normalizeDateOnly, getOccupiedNights } = require('./utils/dates');
 const createSmartLocksRoutes = require('./routes/smart-locks-routes');
 const { triggerSync: _triggerSync } = require('./routes/trigger-sync');
-const { deescalateConversation } = require('./utils/chat-utils');
+const { deescalateConversation, isOtaSystemMessage, getOtaSystemMessageReason } = require('./utils/chat-utils');
 const { resolveOwnerClientId } = require('./utils/owner-utils');
 const { generateInvoicePdf } = require('./utils/invoice-pdf');
 const { geocodeAddress } = require('./services/property-geocoder');
@@ -43533,6 +43533,10 @@ app.post('/api/channex/webhook', async (req, res) => {
           const isAirbnb = (attrs.ota_name || '').toLowerCase().includes('airbnb');
           if ((specialRequest && !isAirbnb) || arrivalHourReq) {
             try {
+              // Gate OTA : notes système Booking (PRE-PAID, commission, plan repas…) ne
+              // doivent jamais être enregistrées comme message guest ni déclencher l'IA.
+              const _specialIsSystem = specialRequest && !isAirbnb && isOtaSystemMessage(specialRequest);
+
               let noteMsg = `📋 Demande(s) du voyageur :`;
               if (arrivalHourReq) noteMsg += `
 • Heure d'arrivée souhaitée : ${arrivalHourReq}`;
@@ -43541,10 +43545,14 @@ app.post('/api/channex/webhook', async (req, res) => {
               await sendAutoMessage(pool, io, convId, noteMsg.trim(), result.channex_booking_id || null);
               console.log(`📋 [CHANNEX] Demande spéciale injectée dans conv ${convId}`);
 
-              // Rejouer la demande comme message guest → déclenche Groq
+              if (_specialIsSystem) {
+                console.log(`[AI_SKIP_OTA_SYSTEM_MESSAGE] conv=${convId} source=booking_notes reason=${getOtaSystemMessageReason(specialRequest)}`);
+              }
+
+              // Notes système OTA exclues du chemin guest — l'arrivalHourReq reste traitée normalement
               const guestMsgParts = [];
               if (arrivalHourReq) guestMsgParts.push(`Je souhaite arriver à ${arrivalHourReq}.`);
-              if (specialRequest && !isAirbnb) guestMsgParts.push(specialRequest);
+              if (specialRequest && !isAirbnb && !_specialIsSystem) guestMsgParts.push(specialRequest);
               const guestMsgText = guestMsgParts.join(' ').trim();
 
               if (guestMsgText) {
@@ -43901,28 +43909,13 @@ app.post('/api/channex/webhook-message', async (req, res) => {
       }
     } catch(e) { /* non bloquant */ }
 
-    // FIX 5 — Filtrer les messages OTA système AVANT tout traitement
-    const OTA_SYSTEM_PATTERNS = [
-      'THIS RESERVATION HAS BEEN PRE-PAID',
-      'BOOKING NOTE :',
-      'BOOKING NOTE:',
-      'OTA Commission:',
-      'Payment Collect:',
-      'Meal Plan:',
-      'Smoking Preference:',
-      'Payment charge is',
-      'CHANNEL MANAGER:',
-      '[SYSTEM]',
-      'Automatic message',
-      'Message automatique',
-      'Imported Booking',
-      'imported booking',
-      'Demande(s) du voyageur',
-      'Request(s) from guest',
-    ];
-    const isOtaSystemMessage = OTA_SYSTEM_PATTERNS.some(p => messageText.includes(p));
-    if (isOtaSystemMessage) {
-      console.log(`⏭️ [CHANNEX MSG] Message système OTA filtré — booking ${channex_booking_id}`);
+    // Filtrer les messages OTA système AVANT tout traitement — case-insensitive via helper partagé
+    // Signal structurel supplémentaire : senders explicitement non-humains connus de Channex
+    const _OTA_STRUCTURAL_SENDERS = ['booking', 'ota', 'channel_manager'];
+    const _isStructuralSystem = _OTA_STRUCTURAL_SENDERS.includes(sender) && Boolean(messageText);
+    if (isOtaSystemMessage(messageText) || _isStructuralSystem) {
+      const _skipReason = getOtaSystemMessageReason(messageText) || `sender=${sender}`;
+      console.log(`[AI_SKIP_OTA_SYSTEM_MESSAGE] source=channex_message_webhook booking=${channex_booking_id} reason=${_skipReason}`);
       return res.status(200).json({ received: true, skipped: 'ota_system_message' });
     }
 
@@ -45435,6 +45428,12 @@ app.post('/api/channex/sync-messages/:reservation_uid', authenticateToken, async
       const sender = (attrs.sender || 'guest').toLowerCase();
       const messageText = attrs.message || attrs.body || '';
       if (!messageText) { skipped++; continue; }
+
+      // Exclure les notes système OTA — elles polluent le contexte IA si importées comme guest
+      if (isOtaSystemMessage(messageText)) {
+        console.log(`[AI_SKIP_OTA_SYSTEM_MESSAGE] source=channex_sync booking=${resa.channex_booking_id} reason=${getOtaSystemMessageReason(messageText)}`);
+        skipped++; continue;
+      }
 
       const isGuest = !['host', 'system', 'auto', 'property', 'manager'].includes(sender);
       const sender_type = isGuest ? 'guest' : 'host';

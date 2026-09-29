@@ -127,6 +127,58 @@ async function resolveSocketAccess(pool, { guestToken, hostToken, conversationId
   return { ok: false, reason: 'Authentification requise pour rejoindre cette room' };
 }
 
+// ─── OTA system message classifier ─────────────────────────────────────────────
+// Signatures fortes — chacune suffit seule à classer le message comme système OTA
+const _OTA_SYSTEM_STRONG = [
+  'THIS RESERVATION HAS BEEN PRE-PAID',
+  'BOOKING NOTE:',
+  'BOOKING NOTE :',
+  'OTA COMMISSION:',
+  'PAYMENT COLLECT:',
+  'IMPORTED BOOKING',
+  '[SYSTEM]',
+  'CHANNEL MANAGER:',
+  'AUTOMATIC MESSAGE',
+  'MESSAGE AUTOMATIQUE',
+  'DEMANDE(S) DU VOYAGEUR',
+  'REQUEST(S) FROM GUEST',
+];
+
+// Signatures faibles — 2+ requises pour classer (évite les faux positifs sur mots courants)
+const _OTA_SYSTEM_WEAK = [
+  'MEAL PLAN:',
+  'SMOKING PREFERENCE:',
+  'PAYMENT CHARGE IS',
+];
+
+/**
+ * Returns true if the text is an OTA/system-generated booking note that must
+ * never trigger the AI. Deterministic, case-insensitive, no external calls.
+ */
+function isOtaSystemMessage(text) {
+  if (!text || typeof text !== 'string') return false;
+  const upper = text.trim().toUpperCase();
+  if (!upper) return false;
+  if (_OTA_SYSTEM_STRONG.some(p => upper.includes(p))) return true;
+  const weakCount = _OTA_SYSTEM_WEAK.filter(p => upper.includes(p)).length;
+  return weakCount >= 2;
+}
+
+/**
+ * Returns the first matched pattern as a string (for logging only).
+ * Returns null if not a system message.
+ */
+function getOtaSystemMessageReason(text) {
+  if (!text || typeof text !== 'string') return null;
+  const upper = text.trim().toUpperCase();
+  for (const p of _OTA_SYSTEM_STRONG) {
+    if (upper.includes(p)) return p;
+  }
+  const weakMatched = _OTA_SYSTEM_WEAK.filter(p => upper.includes(p));
+  if (weakMatched.length >= 2) return weakMatched.join('+');
+  return null;
+}
+
 module.exports = {
   deescalateConversation,
   guestAuth,
@@ -135,4 +187,6 @@ module.exports = {
   resolveEffectiveSenderType,
   createPinRateLimiter,
   resolveSocketAccess,
+  isOtaSystemMessage,
+  getOtaSystemMessageReason,
 };
