@@ -359,6 +359,34 @@ async function getObservationHistory(pool, market_profile_id, opts = {}) {
   return result.rows;
 }
 
+// ── assignCurrentProfile ──────────────────────────────────────────────────────
+
+/**
+ * P1.2-B5-BK-P2 — Set the CURRENT market profile for a property.
+ *
+ * market_profile_properties stores the current (active) profile mapping.
+ * If the property already has a profile, it is replaced (profile dimensions changed).
+ * Historical attribution is preserved separately in market_observation_properties.
+ *
+ * Idempotent: re-assigning the same profileId to the same propertyId is a no-op.
+ *
+ * @param {object} pool
+ * @param {string} profileId    — from buildMarketProfileIdentity()
+ * @param {string} propertyId
+ * @param {string|null} [userId]
+ */
+async function assignCurrentProfile(pool, profileId, propertyId, userId = null) {
+  await pool.query(
+    `INSERT INTO market_profile_properties (profile_id, property_id, user_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (property_id) DO UPDATE SET
+       profile_id  = EXCLUDED.profile_id,
+       user_id     = COALESCE(EXCLUDED.user_id, market_profile_properties.user_id),
+       assigned_at = NOW()`,
+    [profileId, propertyId, userId]
+  );
+}
+
 // ── Exports ───────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -366,6 +394,7 @@ module.exports = {
   insertSourceLinks,
   attachObservationToProperties,
   upsertMarketProfile,
+  assignCurrentProfile,
   createObservationComplete,
   findReusableObservation,
   getObservationHistory,

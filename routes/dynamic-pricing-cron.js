@@ -31,6 +31,16 @@ const { computeMarketContextKey } = require('./market-context-key');
 const marketProvider = require('../services/market-provider');
 const { selectComparables, calcBrightDataMarketStats } = require('../services/brightdata-comparable-filter');
 
+// P15/P16: Shadow market observation collection — lazy require to avoid circular deps at startup
+// Both flags default to OFF. Import is deferred so the module is only loaded when flags are live.
+let _shadowCoordinator = null;
+function _getShadowCoordinator() {
+  if (!_shadowCoordinator) {
+    _shadowCoordinator = require('../services/market-shared-collection-coordinator');
+  }
+  return _shadowCoordinator;
+}
+
 // ── Constantes ───────────────────────────────────────────────
 const APIFY_ACTOR_ID  = 'tri_angle~airbnb-scraper';
 const APIFY_BASE_URL  = 'https://api.apify.com/v2';
@@ -415,6 +425,64 @@ function calcProviderMarketStats(listings, cfg, dataSource) {
   return calcMarketStats(f.length >= 5 ? f : listings);
 }
 
+// ── P15: Shadow collection phase ─────────────────────────────
+// Runs AFTER the production market_data loop completes.
+// Groups properties by market profile, calls the coordinator once per profile.
+// MARKET_DATA_WRITES = 0  PRICING_WRITES = 0  CHANNEX_CALLS = 0
+async function _runShadowCollectionPhase(pool, configs) {
+  const { coordinateCollection, generateCollectionRunId } = _getShadowCoordinator();
+  const { getBrightDataMarketDates } = marketProvider;
+  const { checkIn, checkOut } = getBrightDataMarketDates();
+  const collectionRunId = generateCollectionRunId();
+  const { buildMarketProfileIdentity } = require('../services/market-search-identity');
+
+  // Group properties by market profile (shared geo bucket + currency + capacity)
+  const profileGroups = new Map(); // profileId → { cfg, propertyLinks }[]
+  for (const cfg of configs) {
+    if (!cfg.latitude || !cfg.longitude || !cfg.currency) continue;
+    const identity = buildMarketProfileIdentity({
+      latitude:          cfg.latitude,
+      longitude:         cfg.longitude,
+      currency:          cfg.currency,
+      targetGuests:      cfg.max_guests    ?? null,
+      targetBedrooms:    cfg.bedrooms      ?? null,
+      targetPropertyType:cfg.property_type ?? null,
+    });
+    if (!identity.valid) continue;
+    const key = identity.profileId;
+    if (!profileGroups.has(key)) profileGroups.set(key, { cfg, propertyLinks: [] });
+    profileGroups.get(key).propertyLinks.push({
+      property_id: String(cfg.property_id),
+      user_id:     cfg.user_id ? String(cfg.user_id) : null,
+    });
+  }
+
+  console.log(`[P-SHADOW] ${profileGroups.size} profil(s) marché — shadow collection`);
+
+  for (const [, { cfg, propertyLinks }] of profileGroups) {
+    try {
+      const zones    = getFallbackZones(cfg.property_address, cfg.zone_label);
+      const location = zones[0] || 'France';
+
+      const result = await coordinateCollection(pool, {
+        cfg,
+        location,
+        checkIn,
+        checkOut,
+        collectionRunId,
+        maxListings: 100,
+        propertyLinks,
+      });
+
+      if (result.ok && !result.reused && !result.skipped) {
+        console.log(`[P-SHADOW] wrote profileId=${cfg.latitude?.toString().slice(0,6)}… status=${result.market_status}`);
+      }
+    } catch (err) {
+      console.error(`[P-SHADOW] erreur profil property=${cfg.property_id}:`, err.message);
+    }
+  }
+}
+
 // ── Job principal ────────────────────────────────────────────
 async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
   const weekStart = getCurrentWeekStart();
@@ -612,6 +680,18 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
         status: 'error',
         error:  err.message,
       });
+    }
+  }
+
+  // P15/P16: Shadow market observation collection (flags OFF by default — 0 BD credits)
+  // Runs fire-and-forget after the production market_data write loop.
+  // MARKET_DATA_WRITES = 0 — only writes to shadow observation tables.
+  // SAFE_TO_ACTIVATE_PRODUCTION = NO
+  {
+    const coord = _getShadowCoordinator();
+    if (coord.isShadowCollectionEnabled()) {
+      _runShadowCollectionPhase(pool, configs)
+        .catch(err => console.error('[P-SHADOW] erreur phase shadow:', err.message));
     }
   }
 
