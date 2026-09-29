@@ -11,8 +11,9 @@ console.log('🔌 [SOCKET] API_URL:', API_URL, '(Native:', IS_NATIVE + ')');
 
 let socket = null;
 let currentChannexBookingId = null; // null si pas de lien Channex
-let _selectedFiles = [];       // fichiers outbound en attente d'envoi (ATTACHMENTS-7C)
-let _uploadInProgress = false; // protection double-envoi
+let _selectedFiles = [];            // fichiers outbound en attente d'envoi (ATTACHMENTS-7C)
+let _selectedConversationId = null; // conv mémorisée à la sélection — protège contre changement (FIX-9-G)
+let _uploadInProgress = false;      // protection double-envoi
 window._chatSocket = null; // exposé pour messages.html
 let allConversations = [];
 let searchQuery = '';
@@ -806,6 +807,7 @@ async function openChat(conversationId) {
   
   // Nettoyer les fichiers outbound de la conversation précédente (ATTACHMENTS-7C)
   _selectedFiles = [];
+  _selectedConversationId = null;
   _uploadInProgress = false;
   _bhClearOutboundPreviews();
   const _pBtn = document.getElementById('photoUploadBtn');
@@ -886,6 +888,7 @@ function closeChat() {
 
   // Libérer les object URLs et réinitialiser l'état outbound (ATTACHMENTS-7C)
   _selectedFiles = [];
+  _selectedConversationId = null;
   _uploadInProgress = false;
   _bhClearOutboundPreviews();
 
@@ -1214,11 +1217,30 @@ function _getConversationOta(conv) {
   return platform || otaName;
 }
 
+// Source canonique de conversation active (FIX-9).
+// messages.html remplace window.openChat sans appeler l'original → currentConversationId
+// (variable de module) reste null. window.currentConversationId est la seule source fiable.
+// Toutes les fonctions photo doivent passer par ces helpers, jamais lire currentConversationId
+// directement.
+function _getActiveConversationId() {
+  const wid = window.currentConversationId;
+  if (wid && String(wid) !== String(currentConversationId)) {
+    currentConversationId = wid;
+  }
+  return currentConversationId || wid || null;
+}
+
+function _getActiveConversation() {
+  const id = _getActiveConversationId();
+  if (!id) return null;
+  return (allConversations || []).find(c => String(c.id) === String(id)) || null;
+}
+
 window.openPhotoUpload = function openPhotoUpload() {
   if (_uploadInProgress) return;
-  const conv = allConversations.find(c => c.id == currentConversationId);
+  const conv = _getActiveConversation();
   console.log('[ATTACH-FRONT] openPhotoUpload', {
-    conversationId: currentConversationId,
+    conversationId: _getActiveConversationId(),
     platform: conv?.platform,
     ota_name: conv?.ota_name,
     resolvedOta: _getConversationOta(conv),
@@ -1247,6 +1269,7 @@ function _bhHandleFileSelection(e) {
   const MAX_BYTES = 10 * 1024 * 1024;
   const ALLOWED   = new Set(['image/jpeg', 'image/png', 'image/webp']);
   const incoming  = Array.from(e.target.files || []);
+  _selectedConversationId = _getActiveConversationId(); // mémoriser la conv à la sélection (FIX-9-G)
   console.log('[ATTACH-FRONT] files selected', { count: incoming.length });
   for (const f of incoming) {
     if (_selectedFiles.length >= MAX_FILES) {
@@ -1330,23 +1353,30 @@ function _bhClearOutboundPreviews() {
 // Annuler la sélection — aucun réseau, révoque les object URLs (PROD-FIX-2)
 function _bhCancelOutbound() {
   _selectedFiles = [];
+  _selectedConversationId = null;
   _bhClearOutboundPreviews();
 }
 
 // Envoyer les images via le bouton dédié — découplé de sendMessageOwner (PROD-FIX-2)
 async function _bhSendPhotos() {
-  // Sync conversation id (messages.html peut maintenir un id différent)
-  if (window.currentConversationId
-      && String(window.currentConversationId) !== String(currentConversationId)) {
-    currentConversationId = window.currentConversationId;
-    currentChannexBookingId = window._currentChannexBookingId || null;
-  } else if (!currentConversationId && window.currentConversationId) {
-    currentConversationId = window.currentConversationId;
-  }
+  const activeId = _getActiveConversationId();
   if (_uploadInProgress) return;
   if (!_selectedFiles.length) return;
-  if (!currentConversationId) return;
-  console.log('[ATTACH-FRONT] send confirmed', { conversationId: currentConversationId, count: _selectedFiles.length });
+  if (!activeId) return;
+
+  // FIX-9-G : la conversation active doit être celle pour laquelle les fichiers ont été
+  // sélectionnés. Si l'utilisateur a changé de conversation entre la sélection et le clic
+  // Envoyer, annuler pour éviter l'envoi vers le mauvais destinataire.
+  if (_selectedConversationId && String(activeId) !== String(_selectedConversationId)) {
+    showToast('Conversation changée — veuillez re-sélectionner la photo', 'error');
+    _selectedFiles = [];
+    _selectedConversationId = null;
+    _bhClearOutboundPreviews();
+    return;
+  }
+  const sendConvId = _selectedConversationId || activeId;
+
+  console.log('[ATTACH-FRONT] send confirmed', { conversationId: sendConvId, count: _selectedFiles.length });
 
   _uploadInProgress = true;
   const zone = document.getElementById('_bhOutboundPreviewZone');
@@ -1357,7 +1387,7 @@ async function _bhSendPhotos() {
 
   let _clearFiles = false;
   try {
-    const dispatched = await _sendOutboundImages(currentConversationId);
+    const dispatched = await _sendOutboundImages(sendConvId);
     if (dispatched) _clearFiles = true;
     // dispatched=false → réseau coupé → fichiers conservés, boutons réactivés pour retry
   } finally {
@@ -1365,6 +1395,7 @@ async function _bhSendPhotos() {
     if (_clearFiles) {
       _bhClearOutboundPreviews();
       _selectedFiles = [];
+      _selectedConversationId = null;
     } else {
       const z = document.getElementById('_bhOutboundPreviewZone');
       const sb = z && z.querySelector('.bh-outbound-send-btn');
@@ -2445,6 +2476,7 @@ async function _checkChannexConversation(conversationId, conv) {
         } else {
           photoBtn.style.display = 'none';
           _selectedFiles = [];
+          _selectedConversationId = null;
           _bhClearOutboundPreviews();
         }
       }
@@ -2465,6 +2497,7 @@ async function _checkChannexConversation(conversationId, conv) {
       if (photoBtn) {
         photoBtn.style.display = 'none';
         _selectedFiles = [];
+        _selectedConversationId = null;
         _bhClearOutboundPreviews();
       }
     }

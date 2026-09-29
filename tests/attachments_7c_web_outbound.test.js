@@ -542,11 +542,12 @@ describe('N. ATTACHMENTS-7C-FIX — correctifs', () => {
   });
 
   // N-04 : _sendOutboundImages dans _bhSendPhotos, pas dans sendMessageOwner
+  // FIX-9 : l'argument est sendConvId (frozen at selection), pas currentConversationId direct
   test('N-04 : _sendOutboundImages appelé depuis _bhSendPhotos (pas sendMessageOwner)', () => {
     const sendFn = src.match(/async\s+function\s+sendMessageOwner[\s\S]*?^\}/m)?.[0] || '';
     const photosFn = src.match(/async\s+function\s+_bhSendPhotos[\s\S]*?^\}/m)?.[0] || '';
     expect(sendFn).not.toMatch(/_sendOutboundImages/);
-    expect(photosFn).toMatch(/_sendOutboundImages\s*\(\s*currentConversationId\s*\)/);
+    expect(photosFn).toMatch(/_sendOutboundImages\s*\(\s*sendConvId\s*\)/);
   });
 
   // N-05 : _clearFiles dans _bhSendPhotos (déplacé depuis sendMessageOwner)
