@@ -510,9 +510,14 @@ describe('L. Sécurité — pas de base64 dans les logs', () => {
     expect(block).not.toMatch(/console\.log.*file\b/i);
   });
 
-  test('L-02 : _bhHandleFileSelection ne logge pas le fichier', () => {
+  test('L-02 : _bhHandleFileSelection ne logge pas le contenu/nom du fichier (FIX-8 : count ok)', () => {
     const block = src.match(/function\s+_bhHandleFileSelection[\s\S]*?^}/m)?.[0] || '';
-    expect(block).not.toMatch(/console\.log/);
+    // Interdit : noms, taille, type, base64 — le count seul (ATTACH-FRONT) est autorisé
+    expect(block).not.toMatch(/console\.log.*f\.name/i);
+    expect(block).not.toMatch(/console\.log.*f\.size/i);
+    expect(block).not.toMatch(/console\.log.*f\.type/i);
+    expect(block).not.toMatch(/console\.log.*base64/i);
+    expect(block).not.toMatch(/console\.log.*file\b/i);
   });
 });
 

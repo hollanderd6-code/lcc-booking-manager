@@ -1217,6 +1217,12 @@ function _getConversationOta(conv) {
 window.openPhotoUpload = function openPhotoUpload() {
   if (_uploadInProgress) return;
   const conv = allConversations.find(c => c.id == currentConversationId);
+  console.log('[ATTACH-FRONT] openPhotoUpload', {
+    conversationId: currentConversationId,
+    platform: conv?.platform,
+    ota_name: conv?.ota_name,
+    resolvedOta: _getConversationOta(conv),
+  });
   if (!conv || !_supportsOutboundImage(_getConversationOta(conv))) {
     showToast('Pièces jointes non disponibles sur cette plateforme', 'error');
     return;
@@ -1241,6 +1247,7 @@ function _bhHandleFileSelection(e) {
   const MAX_BYTES = 10 * 1024 * 1024;
   const ALLOWED   = new Set(['image/jpeg', 'image/png', 'image/webp']);
   const incoming  = Array.from(e.target.files || []);
+  console.log('[ATTACH-FRONT] files selected', { count: incoming.length });
   for (const f of incoming) {
     if (_selectedFiles.length >= MAX_FILES) {
       showToast(`Maximum ${MAX_FILES} images à la fois`, 'error');
@@ -1339,6 +1346,7 @@ async function _bhSendPhotos() {
   if (_uploadInProgress) return;
   if (!_selectedFiles.length) return;
   if (!currentConversationId) return;
+  console.log('[ATTACH-FRONT] send confirmed', { conversationId: currentConversationId, count: _selectedFiles.length });
 
   _uploadInProgress = true;
   const zone = document.getElementById('_bhOutboundPreviewZone');
@@ -1393,6 +1401,7 @@ async function _sendOutboundImages(conversationId) {
   const token = localStorage.getItem('lcc_token');
   const fd = new FormData();
   _selectedFiles.forEach(f => fd.append('files', f));
+  console.log('[ATTACH-FRONT] POST attachments', { endpoint: `/api/chat/conversations/${conversationId}/attachments` });
   _bhUpdateUploadProgress(1);
   let _serverResponded = false;
   await new Promise(resolve => {
@@ -1405,8 +1414,17 @@ async function _sendOutboundImages(conversationId) {
     xhr.addEventListener('load', () => {
       _serverResponded = true;
       _bhUpdateUploadProgress(100);
-      if (xhr.status === 413) {
-        showToast('Fichier trop lourd (max 10 Mo)', 'error');
+      console.log('[ATTACH-FRONT] attachments response', { status: xhr.status });
+      if (xhr.status === 401) {
+        showToast('Session expirée, veuillez vous reconnecter', 'error');
+      } else if (xhr.status === 403) {
+        showToast('Accès refusé à cette conversation', 'error');
+      } else if (xhr.status === 413) {
+        showToast('Image trop volumineuse (max 10 Mo)', 'error');
+      } else if (xhr.status === 422) {
+        showToast('Format image non supporté (JPEG, PNG, WEBP uniquement)', 'error');
+      } else if (xhr.status >= 500) {
+        showToast('Erreur temporaire, veuillez réessayer', 'error');
       } else if (xhr.status >= 400) {
         let msg = 'Erreur envoi images';
         try { msg = JSON.parse(xhr.responseText).error || msg; } catch (_e) {}
@@ -1420,7 +1438,7 @@ async function _sendOutboundImages(conversationId) {
       }
       resolve();
     });
-    xhr.addEventListener('error', () => { showToast('Erreur réseau (images)', 'error'); resolve(); });
+    xhr.addEventListener('error', () => { showToast('Erreur réseau, vérifiez votre connexion', 'error'); resolve(); });
     xhr.send(fd);
   });
   return _serverResponded;
