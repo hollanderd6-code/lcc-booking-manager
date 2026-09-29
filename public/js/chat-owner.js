@@ -1465,6 +1465,14 @@ async function _sendOutboundImages(conversationId) {
           const d = JSON.parse(xhr.responseText);
           const nFailed = (d.results || []).filter(r => !r.ok).length;
           if (nFailed) showToast(`${nFailed} image(s) non envoyée(s)`, 'error');
+          // Injecter le message immédiatement (défense en profondeur si socket pas encore prêt)
+          // Le dédup data-msg-id dans appendMessage évite tout doublon si socket arrive aussi.
+          (d.results || []).forEach(r => {
+            if (r.ok && r.message) {
+              console.log('[ATTACH-LIVE-FRONT] message rendered from POST response', { id: r.message.id });
+              appendMessage(r.message);
+            }
+          });
         } catch (_e) {}
       }
       resolve();
@@ -2257,10 +2265,11 @@ function connectSocket() {
   });
   
   socket.on('new_message', (message) => {
-    console.log('📨 Nouveau message reçu:', message);
-    
+    console.log('[ATTACH-LIVE-FRONT] new_message received', { id: message.id, conversation_id: message.conversation_id, hasAttachments: !!(message.attachments && message.attachments.length) });
+
     // Si c'est dans la conversation actuelle, afficher le message
-    if (currentConversationId && message.conversation_id === currentConversationId) {
+    const _activeCidNM = _getActiveConversationId();
+    if (_activeCidNM && String(message.conversation_id) === String(_activeCidNM)) {
       appendMessage(message);
       scrollToBottom();
       _bhUpdateAiThinking(message); // affiche "l'IA réfléchit…" si voyageur + IA active, retire si réponse IA
@@ -2302,7 +2311,8 @@ function connectSocket() {
 
   // ── Mise à jour d'une pièce jointe (traitement async terminé) ──
   socket.on('attachment_updated', (data) => {
-    if (!currentConversationId || data.conversation_id !== currentConversationId) return;
+    const _activeCid = _getActiveConversationId();
+    if (!_activeCid || String(data.conversation_id) !== String(_activeCid)) return;
 
     const chat = document.getElementById('chatMessages');
     if (!chat) return;

@@ -1734,7 +1734,7 @@ function isMobileDevice() { return false; }
 window.isMobileDevice = function() { return false; };
 </script>
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/chat-owner.js?v=attachments-prod-fix-9"></script>
+<script src="/js/chat-owner.js?v=attachments-prod-fix-10"></script>
 <!-- Auth + User -->
 <script>
     (async function() {
@@ -2492,9 +2492,10 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
       }).catch(function(){});
 
-      // 4. Socket
+      // 4. Socket — hostToken requis pour rejoindre la room (FIX-10)
       var sock = window.socket || window._chatSocket;
-      if (sock) sock.emit('join_conversation', conversationId);
+      var _sockToken = localStorage.getItem('lcc_token');
+      if (sock) sock.emit('join_conversation', { conversationId: conversationId, hostToken: _sockToken || '' });
 
       // 5. Vérifier Channex en arrière-plan (non-bloquant)
       if (typeof window._checkChannexConversation === 'function') {

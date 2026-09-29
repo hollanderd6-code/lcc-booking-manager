@@ -353,10 +353,11 @@ describe('P. Socket attachment_updated', () => {
     expect(src).toMatch(/socket\.on\s*\(\s*['"]attachment_updated['"]/);
   });
 
-  test('P-02 : vérifie currentConversationId', () => {
+  test('P-02 : vérifie la source canonique de la conversation active', () => {
+    // FIX-10 : currentConversationId direct remplacé par _getActiveConversationId() (source canonique)
     const block = src.match(/socket\.on\s*\(\s*['"]attachment_updated['"][\s\S]*?\}\s*\)/);
     expect(block).toBeTruthy();
-    expect(block[0]).toMatch(/currentConversationId/);
+    expect(block[0]).toMatch(/currentConversationId|_getActiveConversationId/);
   });
 
   test('P-03 : filtre par conversation_id', () => {
@@ -402,7 +403,8 @@ describe('Q. attachment_updated — filtre conversation_id', () => {
   test('Q-01 : guard early return si conversation différente', () => {
     const block = src.match(/socket\.on\s*\(\s*['"]attachment_updated['"][\s\S]*?\}\s*\)/);
     expect(block[0]).toMatch(/return/);
-    expect(block[0]).toMatch(/!currentConversationId|conversation_id\s*!==\s*currentConversationId/);
+    // FIX-10 : guard utilise _getActiveConversationId() avec String() pour la comparaison
+    expect(block[0]).toMatch(/!currentConversationId|!_activeCid|_getActiveConversationId|conversation_id\s*!==\s*currentConversationId/);
   });
 });
 

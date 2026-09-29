@@ -1757,7 +1757,7 @@ if (sender_type === 'owner' && (message && message.trim())) {
             }
           });
 
-          results.push({ ok: true, filename: safeFilename, attachment: pubAtt, message_id: newMsg.id });
+          results.push({ ok: true, filename: safeFilename, attachment: pubAtt, message_id: newMsg.id, message: msgWithAtt });
         }
 
         const allFailed = results.length > 0 && results.every(r => !r.ok);

@@ -101,7 +101,9 @@ function validateFileBuffer(buffer) {
 // ── Signed URL Cloudinary (ATTACHMENTS-5) ────────────────────────────────────
 // Génère une URL temporaire (~1h) côté client. Ne jamais stocker en DB.
 function buildSignedAttachmentUrl(att) {
-  if (!att || att.status !== 'stored' || !att.cloudinary_public_id) return null;
+  // 'sent' : outbound confirmé par l'OTA — le fichier est toujours dans Cloudinary
+  if (!att || !att.cloudinary_public_id) return null;
+  if (att.status !== 'stored' && att.status !== 'sent') return null;
   const resourceType = att.type === 'video' ? 'video' : att.type === 'image' ? 'image' : 'raw';
   try {
     return cloudinary.url(att.cloudinary_public_id, {

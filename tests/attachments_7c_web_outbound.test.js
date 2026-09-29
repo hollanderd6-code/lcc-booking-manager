@@ -464,7 +464,8 @@ describe('J. socket.on attachment_updated — sent / failed', () => {
   });
 
   test('J-08 : filtre par conversation_id', () => {
-    expect(handler).toMatch(/data\.conversation_id\s*!==\s*currentConversationId/);
+    // FIX-10 : comparaison via _getActiveConversationId() + String() au lieu de currentConversationId direct
+    expect(handler).toMatch(/data\.conversation_id\s*!==\s*currentConversationId|String\(data\.conversation_id\)\s*!==\s*String\(_activeCid\)/);
   });
 });
 
@@ -622,9 +623,14 @@ describe('N. ATTACHMENTS-7C-FIX — correctifs', () => {
     const handlerIdx = src.indexOf("socket.on('attachment_updated'");
     const handlerEnd = src.indexOf('// Exposer le socket', handlerIdx);
     const handler = handlerIdx >= 0 && handlerEnd > handlerIdx ? src.slice(handlerIdx, handlerEnd) : src;
-    expect(handler).toMatch(/data\.conversation_id\s*!==\s*currentConversationId/);
-    const guardIdx = handler.indexOf('data.conversation_id !== currentConversationId');
-    const guardBlock = handler.slice(guardIdx, guardIdx + 80);
+    // FIX-10 : guard utilise _getActiveConversationId() + String() — l'invariant de filtrage est maintenu
+    expect(handler).toMatch(/data\.conversation_id\s*!==\s*currentConversationId|String\(data\.conversation_id\)\s*!==\s*String\(_activeCid\)/);
+    // La garde doit être suivie d'un return
+    const guardIdx = Math.max(
+      handler.indexOf('data.conversation_id !== currentConversationId'),
+      handler.indexOf('String(data.conversation_id) !== String(_activeCid)')
+    );
+    const guardBlock = guardIdx >= 0 ? handler.slice(guardIdx, guardIdx + 80) : '';
     expect(guardBlock).toMatch(/return/);
   });
 
