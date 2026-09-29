@@ -42,6 +42,15 @@ function _getShadowCoordinator() {
   return _shadowCoordinator;
 }
 
+// R: Persistence bridge — lazy require; flag defaults to OFF (0 BD credits until enabled)
+let _persistenceBridge = null;
+function _getBridge() {
+  if (!_persistenceBridge) {
+    _persistenceBridge = require('../services/market-observation-persistence-bridge');
+  }
+  return _persistenceBridge;
+}
+
 // ── Constantes ───────────────────────────────────────────────
 const APIFY_ACTOR_ID  = 'tri_angle~airbnb-scraper';
 const APIFY_BASE_URL  = 'https://api.apify.com/v2';
@@ -519,6 +528,20 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
 
   console.log(`📋 [DP-CRON] ${configs.length} logement(s) à traiter`);
 
+  // R: Persistence bridge — capture run ID and stay dates once for the whole job
+  // BRIGHT_DATA_CALLS = 0  MARKET_DATA_WRITES = 0  PRICING_WRITES = 0
+  const _br = _getBridge();
+  const bridgePersistenceEnabled = _br.isPersistenceEnabled();
+  let bridgeRunId   = null;
+  let bridgeCheckIn  = null;
+  let bridgeCheckOut = null;
+  if (bridgePersistenceEnabled) {
+    bridgeRunId   = _br.generateBridgeRunId();
+    const dates   = marketProvider.getBrightDataMarketDates();
+    bridgeCheckIn  = dates.checkIn;
+    bridgeCheckOut = dates.checkOut;
+  }
+
   // Cache zones déjà scrapées (évite de scraper 2× la même ville)
   const zoneCache = {};
   const results   = [];
@@ -638,6 +661,21 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       }
 
       console.log(`✅ [DP-CRON] market_data inséré: médiane=${marketStats.median}€ occ=${marketStats.occupancy}% tension=${marketStats.tensionLevel}`);
+
+      // R: Persistence bridge — persist production evidence without additional BD calls
+      // Fire-and-forget: failure never breaks pricing (R7). Both flags gate this path.
+      if (bridgePersistenceEnabled) {
+        _br.bridgePersistProductionEvidence(pool, {
+          cfg, listings, marketStats, dataSource,
+          collectionRunId: bridgeRunId,
+          checkIn:  bridgeCheckIn,
+          checkOut: bridgeCheckOut,
+          propertyLinks: [{
+            property_id: String(cfg.property_id),
+            user_id:     cfg.user_id ? String(cfg.user_id) : null,
+          }],
+        }).catch(err => console.error(`[OBS_PERSIST_FAILURE] unhandled: ${err.message}`));
+      }
 
       // Résolution trust+freshness : le résultat du scrape courant est déjà connu.
       // isMock vient directement du scraper → pas de requête DB supplémentaire.
@@ -927,6 +965,24 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   }
 
   console.log(`✅ [DP-ONE] market_data: médiane=${marketStats.median}€ occ=${marketStats.occupancy}% tension=${marketStats.tensionLevel}`);
+
+  // R: Persistence bridge — fire-and-forget single-property run (R7 failure isolation)
+  {
+    const _br = _getBridge();
+    if (_br.isPersistenceEnabled()) {
+      const dates = marketProvider.getBrightDataMarketDates();
+      _br.bridgePersistProductionEvidence(pool, {
+        cfg, listings, marketStats, dataSource,
+        collectionRunId: _br.generateBridgeRunId(),
+        checkIn:  dates.checkIn,
+        checkOut: dates.checkOut,
+        propertyLinks: [{
+          property_id: String(cfg.property_id),
+          user_id:     cfg.user_id ? String(cfg.user_id) : null,
+        }],
+      }).catch(err => console.error(`[OBS_PERSIST_FAILURE] unhandled: ${err.message}`));
+    }
+  }
 
   // Observability for one-property BD path (logged after confirmed write)
   if (dataSource === 'brightdata_live') {
