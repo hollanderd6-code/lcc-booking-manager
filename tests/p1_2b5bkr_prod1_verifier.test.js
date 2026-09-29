@@ -767,6 +767,86 @@ test('N-07: verifier imports from audit (determineActivationState)', () => {
   assert.ok(VERIFIER_SOURCE.includes('determineActivationState'));
 });
 
+// ═════════════════════════════════════════════════════════════════════════════
+// P — R-PROD-1-FIX: market_data schema pin (real column names)
+// ═════════════════════════════════════════════════════════════════════════════
+
+console.log('\nP — market_data schema pin');
+
+test('P-01: verifier SQL does NOT reference currency_code (wrong column)', () => {
+  assert.ok(
+    !VERIFIER_SOURCE.includes('currency_code'),
+    'market_data has no currency_code column — verifier must not reference it'
+  );
+});
+
+test('P-02: verifier SQL does NOT reference md.updated_at (column does not exist)', () => {
+  // market_data has scraped_at and created_at, no updated_at
+  assert.ok(
+    !VERIFIER_SOURCE.includes('md.updated_at') && !VERIFIER_SOURCE.includes('updated_at'),
+    'market_data has no updated_at column — verifier must use scraped_at instead'
+  );
+});
+
+test('P-03: verifier SQL references md.currency (correct column name from P1.2-B2 migration)', () => {
+  assert.ok(
+    VERIFIER_SOURCE.includes('md.currency'),
+    'Cross-check query must use md.currency (not md.currency_code)'
+  );
+});
+
+test('P-04: verifier SQL references scraped_at (correct timestamp column)', () => {
+  assert.ok(
+    VERIFIER_SOURCE.includes('scraped_at'),
+    'Cross-check query must use scraped_at (the market_data timestamp column)'
+  );
+});
+
+test('P-05: zero-observation cross-check reports NOT_AVAILABLE (not an error)', () => {
+  // When recentObs=[] the function returns early with NOT_AVAILABLE, never crashes
+  assert.ok(
+    VERIFIER_SOURCE.includes('NOT_AVAILABLE (no observations yet)'),
+    'Zero-obs state must produce NOT_AVAILABLE, not an exception'
+  );
+});
+
+test('P-06: cross-check reports MATCH when currency + data_source align', () => {
+  assert.ok(
+    VERIFIER_SOURCE.includes('MATCH ✅') && VERIFIER_SOURCE.includes('currency + data_source align'),
+    'MATCH result must be present in cross-check output'
+  );
+});
+
+test('P-07: cross-check reports MISMATCH when market_data present but columns differ', () => {
+  assert.ok(
+    VERIFIER_SOURCE.includes('MISMATCH ⚠️') && VERIFIER_SOURCE.includes('currency/source differ'),
+    'MISMATCH result must be reported when market_data exists but columns differ'
+  );
+});
+
+test('P-08: cross-check reports NOT_AVAILABLE when no market_data for property', () => {
+  assert.ok(
+    VERIFIER_SOURCE.includes('NOT_AVAILABLE (no market_data for property within 7 days)'),
+    'NOT_AVAILABLE must be reported when no market_data exists for a property'
+  );
+});
+
+test('P-09: cross-check overall summary line present', () => {
+  assert.ok(
+    VERIFIER_SOURCE.includes('EVIDENCE_COMPATIBLE ='),
+    'Cross-check must print EVIDENCE_COMPATIBLE overall result'
+  );
+});
+
+test('P-10: cross-check fetches property links from market_observation_properties', () => {
+  // MATCH requires joining observations → property links → market_data
+  assert.ok(
+    VERIFIER_SOURCE.includes('market_observation_properties') &&
+    VERIFIER_SOURCE.includes('linksByObsId'),
+    'Cross-check must fetch property links to join obs → market_data'
+  );
+});
+
 // ── Final report ──────────────────────────────────────────────────────────────
 
 console.log('\n');

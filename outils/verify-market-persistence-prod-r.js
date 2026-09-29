@@ -520,9 +520,18 @@ async function runTiJunotSection(pool) {
 }
 
 // ── Section 9: Market data cross-check ───────────────────────────────────────
-
+//
+// market_data schema: currency TEXT (P1.2-B2), scraped_at TIMESTAMPTZ
+//
 async function runMarketDataCrossCheck(pool, recentObs) {
   console.log('── 9: MARKET_DATA CROSS-CHECK ───────────────────────────────────');
+
+  if (recentObs.length === 0) {
+    console.log('  OBSERVATION_EVIDENCE_FOUND    = NO');
+    console.log('  EVIDENCE_COMPATIBLE           = NOT_AVAILABLE (no observations yet)');
+    console.log();
+    return;
+  }
 
   let mdRows = [];
   try {
@@ -531,12 +540,12 @@ async function runMarketDataCrossCheck(pool, recentObs) {
         md.property_id,
         md.week_start,
         md.data_source,
-        md.currency_code,
+        md.currency,
         md.median_price,
-        md.updated_at
+        md.scraped_at
       FROM market_data md
-      WHERE md.updated_at >= NOW() - INTERVAL '7 days'
-      ORDER BY md.updated_at DESC
+      WHERE md.scraped_at >= NOW() - INTERVAL '7 days'
+      ORDER BY md.scraped_at DESC
       LIMIT 20
     `);
     mdRows = r.rows;
@@ -546,37 +555,98 @@ async function runMarketDataCrossCheck(pool, recentObs) {
     return;
   }
 
-  const MARKET_DATA_EVIDENCE_FOUND  = mdRows.length > 0;
-  const OBSERVATION_EVIDENCE_FOUND  = recentObs.length > 0;
-
+  const MARKET_DATA_EVIDENCE_FOUND = mdRows.length > 0;
+  console.log(`  OBSERVATION_EVIDENCE_FOUND    = YES (${recentObs.length} PROVIDER observations)`);
   console.log(`  MARKET_DATA_EVIDENCE_FOUND    = ${MARKET_DATA_EVIDENCE_FOUND ? 'YES' : 'NO'} (${mdRows.length} rows in last 7 days)`);
-  console.log(`  OBSERVATION_EVIDENCE_FOUND    = ${OBSERVATION_EVIDENCE_FOUND ? 'YES' : 'NO'} (${recentObs.length} PROVIDER observations)`);
 
-  if (!MARKET_DATA_EVIDENCE_FOUND || !OBSERVATION_EVIDENCE_FOUND) {
-    const reason = !MARKET_DATA_EVIDENCE_FOUND
-      ? 'no recent market_data'
-      : 'no recent observations';
-    console.log(`  EVIDENCE_COMPATIBLE           = NOT_YET (${reason})`);
+  if (!MARKET_DATA_EVIDENCE_FOUND) {
+    console.log('  EVIDENCE_COMPATIBLE           = NOT_AVAILABLE (no recent market_data)');
     console.log();
     return;
   }
 
-  // Cross-check: for each observation, find market_data with matching currency and recent date
-  let compatibleCount = 0;
-  for (const obs of recentObs) {
-    // Find market_data rows for the observation's currency collected around the same time
-    const matchingMd = mdRows.filter(md =>
-      md.currency_code === obs.currency ||
-      // Some market_data rows may use currency via a different column
-      md.data_source === obs.data_source
-    );
-    if (matchingMd.length > 0) compatibleCount++;
+  // Fetch property links so we can join observations → property_id → market_data
+  const obsIds = recentObs.map(o => o.observation_id);
+  let linkRows = [];
+  try {
+    const r = await pool.query(`
+      SELECT observation_id, property_id
+      FROM market_observation_properties
+      WHERE observation_id = ANY($1)
+    `, [obsIds]);
+    linkRows = r.rows;
+  } catch (err) {
+    console.log(`  ⚠️  Could not fetch observation property links: ${err.message}`);
+    console.log();
+    return;
   }
 
-  const EVIDENCE_COMPATIBLE = compatibleCount > 0 ? 'PARTIAL' : 'NOT_PROVEN';
-  console.log(`  EVIDENCE_COMPATIBLE           = ${EVIDENCE_COMPATIBLE}`);
-  console.log(`  Note: exact property→observation→market_data chain requires matching`);
-  console.log(`        property_id + week_start + currency. Partial match on data_source/currency.`);
+  // Build index: property_id → market_data rows
+  const mdByProperty = new Map();
+  for (const md of mdRows) {
+    if (!mdByProperty.has(md.property_id)) mdByProperty.set(md.property_id, []);
+    mdByProperty.get(md.property_id).push(md);
+  }
+
+  // Build index: observation_id → property_id[]
+  const linksByObsId = {};
+  for (const link of linkRows) {
+    if (!linksByObsId[link.observation_id]) linksByObsId[link.observation_id] = [];
+    linksByObsId[link.observation_id].push(link.property_id);
+  }
+
+  // Per-observation: MATCH / MISMATCH / NOT_AVAILABLE
+  let matchCount        = 0;
+  let mismatchCount     = 0;
+  let notAvailableCount = 0;
+
+  for (const obs of recentObs) {
+    const propIds  = linksByObsId[obs.observation_id] ?? [];
+    const obsShort = obs.observation_id?.slice(0, 12) ?? '?';
+
+    if (propIds.length === 0) {
+      notAvailableCount++;
+      console.log(`  obs=${obsShort}… → NOT_AVAILABLE (no property links)`);
+      continue;
+    }
+
+    let matched = false;
+    let anyMd   = false;
+    for (const pid of propIds) {
+      const mdForProp = mdByProperty.get(pid) ?? [];
+      if (mdForProp.length > 0) anyMd = true;
+      // MATCH: same property, same currency, same data_source
+      if (mdForProp.find(md => md.currency === obs.currency && md.data_source === obs.data_source)) {
+        matched = true;
+        break;
+      }
+    }
+
+    if (matched) {
+      matchCount++;
+      console.log(`  obs=${obsShort}… → MATCH ✅  (currency + data_source align with market_data)`);
+    } else if (anyMd) {
+      mismatchCount++;
+      console.log(`  obs=${obsShort}… → MISMATCH ⚠️  (market_data present but currency/source differ)`);
+      console.log(`       obs.currency=${obs.currency}  obs.data_source=${obs.data_source}`);
+    } else {
+      notAvailableCount++;
+      console.log(`  obs=${obsShort}… → NOT_AVAILABLE (no market_data for property within 7 days)`);
+    }
+  }
+
+  console.log();
+  const overall = matchCount === recentObs.length
+    ? 'MATCH ✅'
+    : matchCount > 0
+      ? `PARTIAL (${matchCount}/${recentObs.length} MATCH)`
+      : notAvailableCount === recentObs.length
+        ? 'NOT_AVAILABLE'
+        : 'MISMATCH ⚠️';
+
+  console.log(`  Cross-check: MATCH=${matchCount}  MISMATCH=${mismatchCount}  NOT_AVAILABLE=${notAvailableCount}`);
+  console.log(`  EVIDENCE_COMPATIBLE = ${overall}`);
+  console.log(`  Note: MATCH = same property_id + currency + data_source in market_data (last 7 days)`);
   console.log();
 }
 
