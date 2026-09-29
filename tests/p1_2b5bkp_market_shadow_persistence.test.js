@@ -139,16 +139,19 @@ const cBase={fingerprintConsensus:'ms2_cons',...bBase};
  assert.equal(r.p25_price,null,'C-13');}
 console.log('✓ C: buildConsensusObservationData (13)');
 
-// F: generateCollectionRunId
-assert.ok(generateCollectionRunId(new Date('2026-09-29T06:00:00Z')).startsWith('crun_'),'F-01');
-assert.ok(generateCollectionRunId(new Date('2026-09-29T06:00:00Z')).includes('2026-09-29'),'F-02');
-assert.ok(generateCollectionRunId(new Date('2026-09-29T02:00:00Z')).endsWith('_s0'),'F-03');
-assert.ok(generateCollectionRunId(new Date('2026-09-29T06:00:00Z')).endsWith('_s1'),'F-04');
-assert.ok(generateCollectionRunId(new Date('2026-09-29T14:30:00Z')).endsWith('_s2'),'F-05');
-assert.ok(generateCollectionRunId(new Date('2026-09-29T22:00:00Z')).endsWith('_s3'),'F-06');
-assert.equal(generateCollectionRunId(new Date('2026-09-29T07:00:00Z')),generateCollectionRunId(new Date('2026-09-29T08:00:00Z')),'F-07');
-assert.notEqual(generateCollectionRunId(new Date('2026-09-29T06:00:00Z')),generateCollectionRunId(new Date('2026-09-30T06:00:00Z')),'F-08');
-assert.ok(generateCollectionRunId().startsWith('crun_'),'F-09');
+// F: generateCollectionRunId (UUID-based — P20-B fix)
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+assert.ok(generateCollectionRunId().startsWith('crun_'),'F-01: crun_ prefix');
+assert.match(generateCollectionRunId(), /^crun_[0-9a-f-]{36}$/,'F-02: crun_<uuid> format');
+assert.notEqual(generateCollectionRunId(),generateCollectionRunId(),'F-03: each call returns distinct ID');
+assert.match(generateCollectionRunId().slice('crun_'.length), UUID_V4,'F-04: UUID v4 portion is valid');
+assert.equal(new Set(Array.from({length:10},()=>generateCollectionRunId())).size,10,'F-05: 10 calls all unique');
+assert.notEqual(generateCollectionRunId(),generateCollectionRunId(),'F-06: no collision between consecutive calls');
+// F-07: propagation — coordinator uses same runId for all observations in batch
+// (validated structurally in I/L sections via collectionRunId parameter)
+assert.ok(typeof generateCollectionRunId()==='string','F-07: returns string');
+assert.notEqual(generateCollectionRunId(),generateCollectionRunId(),'F-08: distinct runs never share ID');
+assert.ok(generateCollectionRunId().startsWith('crun_'),'F-09: no-args call OK');
 console.log('✓ F: generateCollectionRunId (9)');
 
 // G: validatePropertyCompleteness

@@ -215,106 +215,100 @@ test('D-10: db-pool.js exports createPool via module.exports', () =>
   assert.ok(has(dbPoolSrc, 'module.exports'),
     'db-pool.js must export via module.exports'));
 
-// ── Section E: generateCollectionRunId — collision risk ──────────────────────
+// ── Section E: generateCollectionRunId — UUID uniqueness (P20-B fix) ─────────
 
 console.log('\n══════════════════════════════════════════════════════════════');
-console.log('  E — generateCollectionRunId collision risk analysis');
+console.log('  E — generateCollectionRunId UUID uniqueness (P20-B)');
 console.log('══════════════════════════════════════════════════════════════');
 
 test('E-01: coordinator file exists', () =>
   assert.ok(coordSrc !== null, 'market-shared-collection-coordinator.js not found'));
 
-test('E-02: generateCollectionRunId uses crun_ prefix', () =>
+test('E-02: generateCollectionRunId uses crun_ prefix in source', () =>
   assert.ok(has(coordSrc, "'crun_'") || has(coordSrc, '`crun_'),
     "generateCollectionRunId must produce IDs with 'crun_' prefix"));
 
-test('E-03: generateCollectionRunId uses 6-hour UTC slot', () =>
-  assert.ok(has(coordSrc, '/ 6') || has(coordSrc, '/6'),
-    'generateCollectionRunId must divide UTC hours by 6 for slot assignment'));
+test('E-03: generateCollectionRunId uses crypto.randomUUID()', () =>
+  assert.ok(has(coordSrc, 'randomUUID'),
+    'generateCollectionRunId must use randomUUID() for collision-free IDs'));
 
-test('E-04: generateCollectionRunId collision risk — same slot for same 6h window (logic test)', () => {
-  // Dynamically require and test the actual function
+test('E-04: generateCollectionRunId format — crun_<uuid-v4>', () => {
   let generateCollectionRunId;
   try {
     ({ generateCollectionRunId } = require('../services/market-shared-collection-coordinator'));
   } catch (_) {
     throw new Error('cannot require coordinator — check module exports');
   }
-  const d1 = new Date('2026-09-29T00:00:00Z'); // slot 0
-  const d2 = new Date('2026-09-29T05:59:59Z'); // still slot 0
-  assert.equal(generateCollectionRunId(d1), generateCollectionRunId(d2),
-    'Two calls in the same 6h slot must produce the same ID (expected behavior for retry idempotency)');
+  const id = generateCollectionRunId();
+  assert.match(id, /^crun_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    `ID "${id}" must match format crun_<uuid-v4>`);
 });
 
-test('E-05: generateCollectionRunId — different slots produce different IDs', () => {
+test('E-05: generateCollectionRunId — every call returns a distinct ID', () => {
   let generateCollectionRunId;
   try {
     ({ generateCollectionRunId } = require('../services/market-shared-collection-coordinator'));
   } catch (_) {
     throw new Error('cannot require coordinator');
   }
-  const d1 = new Date('2026-09-29T00:00:00Z'); // slot 0
-  const d2 = new Date('2026-09-29T06:00:00Z'); // slot 1
-  assert.notEqual(generateCollectionRunId(d1), generateCollectionRunId(d2),
-    'Different 6h slots must produce different IDs');
+  const id1 = generateCollectionRunId();
+  const id2 = generateCollectionRunId();
+  assert.notEqual(id1, id2, 'Two consecutive calls must produce different IDs');
 });
 
-test('E-06: collision risk acknowledged — distinct intentional runs in same slot collide', () => {
-  // This is a KNOWN limitation: two separate intentional runs in the same 6h slot
-  // will get the same collection_run_id, causing the second to reuse the first
-  // observation via findReusableObservation. This is documented (not fixed in P20-FIX).
+test('E-06: same-slot collision FIXED — two calls in same period produce different IDs', () => {
   let generateCollectionRunId;
   try {
     ({ generateCollectionRunId } = require('../services/market-shared-collection-coordinator'));
   } catch (_) {
     throw new Error('cannot require coordinator');
   }
-  const slotStart = new Date('2026-09-29T12:00:00Z');
-  const slotEnd   = new Date('2026-09-29T17:45:00Z');
-  // Confirm both fall in slot 2 (hours 12-17 → floor(12/6)=2, floor(17/6)=2)
-  assert.equal(
-    generateCollectionRunId(slotStart),
-    generateCollectionRunId(slotEnd),
-    'KNOWN: Two calls within the same slot collide — collision risk confirmed as expected'
+  // With UUID-based IDs, two calls in the same 6-hour window always produce
+  // distinct run IDs — the collision that existed with time-bucket IDs is gone.
+  assert.notEqual(
+    generateCollectionRunId(),
+    generateCollectionRunId(),
+    'FIXED: Two calls in same period must NOT produce the same ID'
   );
 });
 
-test('E-07: generateCollectionRunId — 4 distinct slots per day', () => {
+test('E-07: generateCollectionRunId — 10 consecutive calls all unique', () => {
   let generateCollectionRunId;
   try {
     ({ generateCollectionRunId } = require('../services/market-shared-collection-coordinator'));
   } catch (_) {
     throw new Error('cannot require coordinator');
   }
-  const day = '2026-09-29';
-  const slots = [0, 6, 12, 18].map(h =>
-    generateCollectionRunId(new Date(`${day}T${String(h).padStart(2, '0')}:00:00Z`))
-  );
-  const unique = new Set(slots);
-  assert.equal(unique.size, 4, `Expected 4 distinct run IDs for 4 slots, got ${unique.size}: ${slots.join(', ')}`);
+  const ids = Array.from({ length: 10 }, () => generateCollectionRunId());
+  const unique = new Set(ids);
+  assert.equal(unique.size, 10, `Expected 10 distinct IDs, got ${unique.size}`);
 });
 
-test('E-08: generateCollectionRunId format — crun_YYYY-MM-DD_s{0-3}', () => {
+test('E-08: generateCollectionRunId — UUID v4 portion passes format check', () => {
   let generateCollectionRunId;
   try {
     ({ generateCollectionRunId } = require('../services/market-shared-collection-coordinator'));
   } catch (_) {
     throw new Error('cannot require coordinator');
   }
-  const id = generateCollectionRunId(new Date('2026-09-29T09:00:00Z'));
-  assert.match(id, /^crun_\d{4}-\d{2}-\d{2}_s[0-3]$/,
-    `ID "${id}" must match format crun_YYYY-MM-DD_s{0-3}`);
+  const id   = generateCollectionRunId();
+  const uuid = id.slice('crun_'.length);
+  assert.match(uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    `UUID portion "${uuid}" must be valid UUID v4`);
 });
 
-test('E-09: generateCollectionRunId — 23:59:59 UTC falls in slot 3', () => {
+test('E-09: generateCollectionRunId — no date parameter dependency', () => {
   let generateCollectionRunId;
   try {
     ({ generateCollectionRunId } = require('../services/market-shared-collection-coordinator'));
   } catch (_) {
     throw new Error('cannot require coordinator');
   }
-  const id = generateCollectionRunId(new Date('2026-09-29T23:59:59Z'));
-  assert.ok(id.endsWith('_s3'), `23:59:59 UTC must be slot 3, got: ${id}`);
+  // Passing any date argument must not cause the function to fail (ignored)
+  // and must still return a unique UUID-based ID each call.
+  const id1 = generateCollectionRunId(new Date('2026-09-29T00:00:00Z'));
+  const id2 = generateCollectionRunId(new Date('2026-09-29T00:00:00Z'));
+  assert.notEqual(id1, id2, 'Same date argument must NOT produce same ID — not time-bucket based anymore');
 });
 
 // ── Section F: Audit tools — canonical SSL ────────────────────────────────────

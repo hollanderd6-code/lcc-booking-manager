@@ -1,4 +1,6 @@
 'use strict';
+const { randomUUID } = require('crypto');
+
 /**
  * P1.2-B5-BK-P3 — Market Shared Collection Coordinator
  *
@@ -51,20 +53,20 @@ const DEFAULT_REUSE_AGE_MS = 24 * 60 * 60 * 1000; // 24 h
 // ── P6: Collection run ID ─────────────────────────────────────────────────────
 
 /**
- * Generate a deterministic collection run ID from a date.
- * Slots: 0=00–05h UTC, 1=06–11h, 2=12–17h, 3=18–23h.
+ * Generate a unique collection run ID for a logical orchestration run.
  *
- * Same cron invocation always produces the same run ID within its 6-hour slot,
- * so retries within a slot are treated as the same collection run.
+ * Returns crun_<uuid-v4>. Each call produces a distinct ID — a new intentional
+ * collection invocation always gets a different run ID.
  *
- * @param {Date} [date]
- * @returns {string}  e.g. 'crun_2026-09-29_s1'
+ * Call ONCE at orchestration start; pass the result explicitly to every
+ * coordinateCollection call in that batch. Retries within the same logical run
+ * must reuse the existing collectionRunId (do NOT call generateCollectionRunId
+ * again on retry).
+ *
+ * @returns {string}  e.g. 'crun_61ffe1e3-6fc2-4e92-ba5d-c0e126a1803e'
  */
-function generateCollectionRunId(date = new Date()) {
-  const d    = date instanceof Date ? date : new Date(date);
-  const ds   = d.toISOString().slice(0, 10); // YYYY-MM-DD
-  const slot = Math.floor(d.getUTCHours() / 6);
-  return `crun_${ds}_s${slot}`;
+function generateCollectionRunId() {
+  return `crun_${randomUUID()}`;
 }
 
 // ── P13: Property completeness guard ─────────────────────────────────────────

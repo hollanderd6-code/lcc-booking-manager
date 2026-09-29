@@ -975,11 +975,11 @@ test('L-04: provenance.stayWindow.checkIn and checkOut preserved when provided',
 // Summary
 // ──────────────────────────────────────────────────────────────────────────────
 
-// Jest compatibility shim — custom test() shadows Jest's global, so expose via it()
-it('P1.2-B5-BK-N — all sub-tests pass', () => {
-  if (failed > 0) {
-    const detail = failures.map(f => `  ✗ ${f.label}: ${f.message}`).join('\n');
-    throw new Error(`${failed} sub-test(s) failed:\n${detail}`);
-  }
+// Summary (plain node — no Jest runner in this project)
+if (failed > 0) {
+  const detail = failures.map(f => `  ✗ ${f.label}: ${f.message}`).join('\n');
+  console.error(`\nP1.2-B5-BK-N — ${passed} passed, ${failed} failed:\n${detail}`);
+  process.exit(1);
+} else {
   console.log(`\nP1.2-B5-BK-N — ${passed} passed, ${failed} failed`);
-});
+}
