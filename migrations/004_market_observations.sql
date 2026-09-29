@@ -1,24 +1,29 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- P1.2-B5-BK-O — Market Observation Store
--- Migration 004 — ADDITIVE ONLY
+-- Migration 004 — ADDITIVE ONLY — rev 2 (O-FIX hardening)
 --
 -- !! DO NOT APPLY AUTOMATICALLY !!
 -- Review fully before executing against production.
 --
 -- Idempotent: all statements use IF NOT EXISTS / ON CONFLICT DO NOTHING.
 -- No DROP. No destructive ALTER. No backfill. No mutation of market_data.
+--
+-- RETENTION: INDEFINITE — observations are never deleted.
+--   STALE_FOR_PRICING != USELESS_FOR_HISTORY
 -- ════════════════════════════════════════════════════════════════════════════
 
 -- ── market_profiles ──────────────────────────────────────────────────────────
 -- Stores the canonical dimension set for each distinct market profile.
 -- A profile represents: "which properties share the same market search?"
 -- Profile ID = mp2_<sha256(v,lat4dp,lon4dp,currency,guests,bedrooms,propType)>
+-- Profiles are immutable identity records — never updated after creation.
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS market_profiles (
   profile_id            TEXT PRIMARY KEY,
   schema_version        SMALLINT NOT NULL DEFAULT 2,
 
   -- Geo bucket: lat/lon rounded to 4 decimal places ≈ 11 m at equator
+  -- Stored as TEXT because toFixed(4) is the canonical form; range-checked below.
   geo_lat               TEXT NOT NULL,   -- lat.toFixed(4)
   geo_lon               TEXT NOT NULL,   -- lon.toFixed(4)
 
@@ -30,19 +35,27 @@ CREATE TABLE IF NOT EXISTS market_profiles (
   target_bedrooms       SMALLINT,
   target_property_type  TEXT NOT NULL DEFAULT 'entire_place',
 
-  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  -- Geo range guards — defend against bad toFixed(4) caller output
+  CONSTRAINT chk_mp_geo_lat CHECK (CAST(geo_lat AS NUMERIC) BETWEEN -90 AND 90),
+  CONSTRAINT chk_mp_geo_lon CHECK (CAST(geo_lon AS NUMERIC) BETWEEN -180 AND 180)
 );
 
 -- ── market_profile_properties ─────────────────────────────────────────────────
--- Links properties to their market profile.
+-- Links properties to their CURRENT market profile.
+-- One property → exactly one active profile at any time (cardinality = 1:1).
 -- Rebuilt automatically when profile identity dimensions change.
+-- Historical attribution is preserved in market_observation_properties (below).
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS market_profile_properties (
   profile_id            TEXT NOT NULL REFERENCES market_profiles(profile_id),
   property_id           TEXT NOT NULL,
   user_id               TEXT REFERENCES users(id) ON DELETE CASCADE,
   assigned_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (profile_id, property_id)
+  PRIMARY KEY (profile_id, property_id),
+  -- One property → one active profile at a time (current assignment cardinality)
+  CONSTRAINT uq_mpp_property_id UNIQUE (property_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_mpp_property_id
@@ -52,6 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_mpp_property_id
 -- Core immutable observation store.
 -- Each row = one scrape result for one provider at one point in time.
 -- NEVER updated. New scrape = new row. History is preserved indefinitely.
+-- RETENTION: INDEFINITE — STALE_FOR_PRICING != USELESS_FOR_HISTORY
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS market_observations (
   id                    BIGSERIAL PRIMARY KEY,
@@ -72,7 +86,11 @@ CREATE TABLE IF NOT EXISTS market_observations (
 
   -- Search identity
   search_fingerprint    TEXT NOT NULL,
-  market_profile_id     TEXT,          -- soft ref (profiles may be created later)
+  -- FK to market_profiles with RESTRICT: prevents accidental deletion of a profile
+  -- while observations reference it. Profiles are immutable; this guard never fires
+  -- in normal operation but prevents accidental data loss.
+  market_profile_id     TEXT
+    REFERENCES market_profiles(profile_id) ON DELETE RESTRICT,
   currency              TEXT NOT NULL
     CONSTRAINT chk_mo_currency CHECK (currency ~ '^[A-Z]{3}$'),
 
@@ -108,8 +126,9 @@ CREATE TABLE IF NOT EXISTS market_observations (
   reliability_status    TEXT,
 
   -- Consensus provenance (only populated for DERIVED_CONSENSUS rows)
+  -- Source observation links live in market_observation_sources (proper FK table,
+  -- replaces the former unsafe source_observation_ids UUID[] column).
   algorithm_version     TEXT,
-  source_observation_ids UUID[],         -- references to the provider obs used to build this
 
   -- Idempotency: prevents duplicate on worker retry
   collection_run_id     TEXT,
@@ -118,26 +137,67 @@ CREATE TABLE IF NOT EXISTS market_observations (
   provenance            JSONB NOT NULL DEFAULT '{}'::jsonb,
 
   -- ── Constraints ──────────────────────────────────────────────────────────
+
+  -- provider/type must agree bidirectionally: 'consensus' ↔ 'DERIVED_CONSENSUS'
+  CONSTRAINT chk_mo_provider_type_consistency CHECK (
+    (provider = 'consensus') = (observation_type = 'DERIVED_CONSENSUS')
+  ),
+
   CONSTRAINT chk_mo_check_out_after_in CHECK (
     check_out IS NULL OR check_in IS NULL OR check_out > check_in
   ),
   CONSTRAINT chk_mo_nights_positive CHECK (
     nights IS NULL OR nights > 0
   ),
+
+  -- Count constraints (null-tolerant)
+  CONSTRAINT chk_mo_raw_count_nonneg CHECK (
+    raw_count IS NULL OR raw_count >= 0
+  ),
+  CONSTRAINT chk_mo_accepted_count_nonneg CHECK (
+    accepted_count IS NULL OR accepted_count >= 0
+  ),
+  CONSTRAINT chk_mo_comparable_nonneg CHECK (
+    comparable_count IS NULL OR comparable_count >= 0
+  ),
+  -- accepted cannot exceed raw (only fires when both are present)
+  CONSTRAINT chk_mo_accepted_le_raw CHECK (
+    accepted_count IS NULL OR raw_count IS NULL OR accepted_count <= raw_count
+  ),
+
+  -- Statistical ordering (null-tolerant — only fires when both sides present)
   CONSTRAINT chk_mo_median_positive CHECK (
     median_price IS NULL OR median_price > 0
   ),
   CONSTRAINT chk_mo_p25_positive CHECK (
     p25_price IS NULL OR p25_price > 0
   ),
-  CONSTRAINT chk_mo_comparable_nonneg CHECK (
-    comparable_count IS NULL OR comparable_count >= 0
+  CONSTRAINT chk_mo_p25_le_median CHECK (
+    p25_price IS NULL OR median_price IS NULL OR p25_price <= median_price
   ),
+  CONSTRAINT chk_mo_median_le_p75 CHECK (
+    median_price IS NULL OR p75_price IS NULL OR median_price <= p75_price
+  ),
+  CONSTRAINT chk_mo_min_le_max CHECK (
+    min_price IS NULL OR max_price IS NULL OR min_price <= max_price
+  ),
+  CONSTRAINT chk_mo_min_le_median CHECK (
+    min_price IS NULL OR median_price IS NULL OR min_price <= median_price
+  ),
+  CONSTRAINT chk_mo_max_ge_median CHECK (
+    max_price IS NULL OR median_price IS NULL OR max_price >= median_price
+  ),
+
+  -- Geo target range guards (search coordinate sanity)
+  CONSTRAINT chk_mo_target_lat CHECK (
+    target_lat IS NULL OR target_lat BETWEEN -90 AND 90
+  ),
+  CONSTRAINT chk_mo_target_lon CHECK (
+    target_lon IS NULL OR target_lon BETWEEN -180 AND 180
+  ),
+
   CONSTRAINT chk_mo_radius_positive CHECK (
     selected_radius_km IS NULL OR selected_radius_km > 0
-  ),
-  CONSTRAINT chk_mo_raw_count_nonneg CHECK (
-    raw_count IS NULL OR raw_count >= 0
   )
 );
 
@@ -166,10 +226,34 @@ CREATE INDEX IF NOT EXISTS idx_mo_provider_check_in
 CREATE INDEX IF NOT EXISTS idx_mo_collected_at
   ON market_observations(collected_at DESC);
 
+-- ── market_observation_sources ────────────────────────────────────────────────
+-- Provenance links for DERIVED_CONSENSUS observations.
+-- Replaces the former unsafe source_observation_ids UUID[] column with proper
+-- FK-enforced rows. Each row records: derived_observation_id was built from
+-- source_observation_id.
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS market_observation_sources (
+  derived_observation_id  UUID NOT NULL
+    REFERENCES market_observations(observation_id) ON DELETE CASCADE,
+  source_observation_id   UUID NOT NULL
+    REFERENCES market_observations(observation_id) ON DELETE RESTRICT,
+  PRIMARY KEY (derived_observation_id, source_observation_id),
+  -- A consensus observation cannot list itself as its own source
+  CONSTRAINT chk_mos_no_self_reference CHECK (
+    derived_observation_id != source_observation_id
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_mos_source
+  ON market_observation_sources(source_observation_id);
+
 -- ── market_observation_properties ─────────────────────────────────────────────
 -- Links observations to the properties that consumed them.
 -- One observation can serve N properties (shared search result).
 -- This is NOT a pricing decision — it is an attribution record.
+-- HISTORICAL: survives profile changes. market_profile_properties reflects current.
+-- (profile_id here has no FK — intentional, so old observations survive if a
+--  property is re-profiled. market_profile_properties = current; this = history.)
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS market_observation_properties (
   observation_id        UUID NOT NULL
@@ -194,6 +278,7 @@ CREATE INDEX IF NOT EXISTS idx_mop_profile
 -- Optional: raw listing-level data from which statistics were computed.
 -- Stores ANALYTICAL VARIABLES ONLY — no personal data, no marketing text,
 -- no images, no host names, no traveler data.
+-- RETENTION: INDEFINITE — same as the parent observation.
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS market_observation_comparables (
   id                    BIGSERIAL PRIMARY KEY,
@@ -231,14 +316,30 @@ CREATE TABLE IF NOT EXISTS market_observation_comparables (
   ),
   CONSTRAINT chk_moc_review_count_nonneg CHECK (
     review_count IS NULL OR review_count >= 0
+  ),
+  -- Geo range guards for comparable coordinates
+  CONSTRAINT chk_moc_lat CHECK (
+    latitude IS NULL OR latitude BETWEEN -90 AND 90
+  ),
+  CONSTRAINT chk_moc_lon CHECK (
+    longitude IS NULL OR longitude BETWEEN -180 AND 180
   )
 );
 
 CREATE INDEX IF NOT EXISTS idx_moc_observation
   ON market_observation_comparables(observation_id);
 
+-- Retry deduplication: same listing within same observation = same row (when known)
+-- Partial index: only enforced when provider_listing_id is not NULL
+CREATE UNIQUE INDEX IF NOT EXISTS idx_moc_obs_provider_listing
+  ON market_observation_comparables(observation_id, provider, provider_listing_id)
+  WHERE provider_listing_id IS NOT NULL;
+
 -- ════════════════════════════════════════════════════════════════════════════
 -- END OF MIGRATION 004
+--
+-- RETENTION: INDEFINITE — STALE_FOR_PRICING != USELESS_FOR_HISTORY
+-- Observations are immutable historical events. Never delete them.
 --
 -- To apply manually:
 --   psql "$DATABASE_URL" -f migrations/004_market_observations.sql
@@ -248,7 +349,7 @@ CREATE INDEX IF NOT EXISTS idx_moc_observation
 --   WHERE table_schema = 'public'
 --   AND table_name IN (
 --     'market_profiles', 'market_profile_properties',
---     'market_observations', 'market_observation_properties',
---     'market_observation_comparables'
+--     'market_observations', 'market_observation_sources',
+--     'market_observation_properties', 'market_observation_comparables'
 --   );
 -- ════════════════════════════════════════════════════════════════════════════

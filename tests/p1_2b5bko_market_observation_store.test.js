@@ -38,8 +38,10 @@ const { estimateObservationStorage } = require('../services/market-observation-s
 
 const {
   createObservation,
+  insertSourceLinks,
   attachObservationToProperties,
   upsertMarketProfile,
+  createObservationComplete,
   findReusableObservation,
   getObservationHistory,
 } = require('../services/market-observation-repository');
@@ -76,10 +78,11 @@ function createMockPool() {
   const tables = {
     market_observations:           [],
     market_observation_properties: [],
+    market_observation_sources:    [],
     market_profiles:               [],
   };
 
-  return {
+  const pool = {
     _tables: tables,
     query: async function(sql, params = []) {
       const s = sql.trim().replace(/\s+/g, ' ');
@@ -93,7 +96,7 @@ function createMockPool() {
         return { rows: found ? [{ observation_id: found.observation_id }] : [] };
       }
 
-      // Insert observation
+      // Insert observation — 33 params ($1-$33), source_observation_ids removed
       if (s.startsWith('INSERT INTO market_observations')) {
         const row = {
           observation_id:        'obs-' + crypto.randomUUID(),
@@ -128,13 +131,24 @@ function createMockPool() {
           confidence:            params[28],
           reliability_status:    params[29],
           algorithm_version:     params[30],
-          source_observation_ids:params[31],
-          collection_run_id:     params[32],
-          provenance:            params[33],
+          collection_run_id:     params[31],
+          provenance:            params[32],
           created_at:            new Date().toISOString(),
         };
         tables.market_observations.push(row);
         return { rows: [{ observation_id: row.observation_id }] };
+      }
+
+      // Insert source link
+      if (s.startsWith('INSERT INTO market_observation_sources')) {
+        const [derived_id, source_id] = params;
+        const key = `${derived_id}|${source_id}`;
+        if (!tables.market_observation_sources.find(r => r._key === key)) {
+          tables.market_observation_sources.push({
+            _key: key, derived_observation_id: derived_id, source_observation_id: source_id,
+          });
+        }
+        return { rows: [] };
       }
 
       // Attach properties
@@ -184,7 +198,19 @@ function createMockPool() {
 
       return { rows: [] };
     },
+    connect: async function() {
+      const self = this;
+      return {
+        query: async function(sql, params = []) {
+          const s = sql.trim().replace(/\s+/g, ' ');
+          if (s === 'BEGIN' || s === 'COMMIT' || s === 'ROLLBACK') return { rows: [] };
+          return self.query(sql, params);
+        },
+        release: () => {},
+      };
+    },
   };
+  return pool;
 }
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -572,8 +598,7 @@ test('G-05: DERIVED_CONSENSUS observation accepted by repository', async () => {
   const { created } = await createObservation(pool, {
     provider: 'consensus', observation_type: 'DERIVED_CONSENSUS',
     collected_at: '2026-09-29T08:00:00Z', search_fingerprint: 'ms2_g05', currency: 'EUR',
-    algorithm_version: 'v1', source_observation_ids: ['uuid-a', 'uuid-b'],
-    collection_run_id: 'run-g05',
+    algorithm_version: 'v1', collection_run_id: 'run-g05',
   });
   assert.ok(created === true);
 });
@@ -676,8 +701,7 @@ test('J-01: DERIVED_CONSENSUS row accepted by repository', async () => {
   const { created } = await createObservation(pool, {
     provider: 'consensus', observation_type: 'DERIVED_CONSENSUS',
     collected_at: '2026-09-29T08:00:00Z', search_fingerprint: 'ms2_j01', currency: 'EUR',
-    algorithm_version: 'cross-source-v1', source_observation_ids: ['abc', 'def'],
-    collection_run_id: 'run-j01',
+    algorithm_version: 'cross-source-v1', collection_run_id: 'run-j01',
   });
   assert.ok(created === true);
 });
@@ -692,15 +716,17 @@ test('J-02: algorithm_version preserved in consensus row', async () => {
   assert.strictEqual(pool._tables.market_observations[0].algorithm_version, 'cross-source-v2');
 });
 
-test('J-03: source_observation_ids preserved in consensus row', async () => {
+test('J-03: source links stored via insertSourceLinks in market_observation_sources', async () => {
   const pool = createMockPool();
-  const srcIds = ['uuid-obs-a', 'uuid-obs-b'];
-  await createObservation(pool, {
+  const { observation_id } = await createObservation(pool, {
     provider: 'consensus', observation_type: 'DERIVED_CONSENSUS',
     collected_at: '2026-09-29T08:00:00Z', search_fingerprint: 'ms2_j03', currency: 'EUR',
-    source_observation_ids: srcIds, collection_run_id: 'run-j03',
+    collection_run_id: 'run-j03',
   });
-  assert.deepStrictEqual(pool._tables.market_observations[0].source_observation_ids, srcIds);
+  const srcIds = ['uuid-obs-a', 'uuid-obs-b'];
+  await insertSourceLinks(pool, observation_id, srcIds);
+  assert.strictEqual(pool._tables.market_observation_sources.length, 2);
+  assert.ok(pool._tables.market_observation_sources.every(r => r.derived_observation_id === observation_id));
 });
 
 test('J-04: PROVIDER observation does not require algorithm_version', async () => {

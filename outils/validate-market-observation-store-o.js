@@ -77,9 +77,8 @@ function createMockPool() {
       confidence:            params[28],
       reliability_status:    params[29],
       algorithm_version:     params[30],
-      source_observation_ids:params[31],
-      collection_run_id:     params[32],
-      provenance:            params[33],
+      collection_run_id:     params[31],
+      provenance:            params[32],
       id:                    nextId++,
       created_at:            new Date().toISOString(),
     };
