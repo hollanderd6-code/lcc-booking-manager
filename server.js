@@ -28635,11 +28635,26 @@ app.post('/api/invoice/send-to-conversation',
         [conversationId, agencyIds]
       );
     } else {
+      // Dual lookup: exact reservation_uid match OR channex_booking_id bridge.
+      // Channex conversations (Booking.com, Airbnb, Expedia…) are created with
+      // reservation_uid = NULL but have channex_booking_id set. The reservations table
+      // links the two via channex_booking_id. Account isolation: r.user_id = ANY($2)
+      // ensures the bridge cannot cross account boundaries.
       convRow = await pool.query(
         `SELECT c.*, p.name AS property_name, p.address AS property_address
          FROM conversations c
          LEFT JOIN properties p ON p.id = c.property_id
-         WHERE c.reservation_uid = $1 AND c.user_id = ANY($2::text[])
+         LEFT JOIN reservations r ON r.uid = $1 AND r.user_id = ANY($2::text[])
+         WHERE (
+           c.reservation_uid = $1
+           OR (
+             r.channex_booking_id IS NOT NULL
+             AND c.channex_booking_id IS NOT NULL
+             AND c.channex_booking_id = r.channex_booking_id
+           )
+         )
+         AND c.user_id = ANY($2::text[])
+         ORDER BY (c.reservation_uid = $1) DESC, c.id DESC
          LIMIT 1`,
         [reservationUid, agencyIds]
       );
@@ -43434,6 +43449,13 @@ app.post('/api/channex/webhook', async (req, res) => {
                 [result.channex_booking_id, convId]
               );
             }
+            // Backfill reservation_uid on existing conversations that predate this field
+            if (result.uid) {
+              await pool.query(
+                `UPDATE conversations SET reservation_uid = $1 WHERE id = $2 AND reservation_uid IS NULL`,
+                [result.uid, convId]
+              );
+            }
             console.log(`🔗 [CHANNEX] Conversation existante réutilisée: ${convId}`);
           } else {
             // 2. Créer la conversation
@@ -43441,8 +43463,8 @@ app.post('/api/channex/webhook', async (req, res) => {
               `INSERT INTO conversations
                 (user_id, property_id, reservation_start_date, reservation_end_date,
                  platform, guest_name, guest_email, pin_code, unique_token, photos_token,
-                 is_verified, status, channex_booking_id)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, 'pending', $11)
+                 is_verified, status, channex_booking_id, reservation_uid)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE, 'pending', $11, $12)
                RETURNING id`,
               [
                 result.user_id,
@@ -43455,7 +43477,8 @@ app.post('/api/channex/webhook', async (req, res) => {
                 Math.floor(1000 + Math.random() * 9000).toString(),
                 crypto.randomBytes(32).toString('hex'),
                 crypto.randomBytes(32).toString('hex'),
-                result.channex_booking_id || null
+                result.channex_booking_id || null,
+                result.uid || null
               ]
             );
             convId = convResult.rows[0].id;
