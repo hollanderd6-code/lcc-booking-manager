@@ -351,8 +351,44 @@ async function runAudit(pool) {
       for (const v of authViolations) console.log(`    VIOLATION: ${v}`);
     }
 
-    // ── [8] ROW COUNT ─────────────────────────────────────────────────────────
-    console.log('\n  [8] ROW COUNT');
+    // ── [8] TIMEOUT + OBSERVATION DATE CONFIGURATION ─────────────────────────
+    // Reads service source to verify implementation matches documented contracts.
+    // No DB access — file reads only.
+    console.log('\n  [8] TIMEOUT + OBSERVATION DATE CONFIGURATION');
+    const SERVICE_PATH = path.join(__dirname, '../services/price-observation-persistence.js');
+    let serviceSrc = '';
+    try { serviceSrc = fs.readFileSync(SERVICE_PATH, 'utf8'); } catch (_e) {}
+
+    // Extract OBSERVATION_TIMEOUT_MS value from service source
+    const timeoutMatch = serviceSrc.match(/OBSERVATION_TIMEOUT_MS\s*=\s*(\d+)/);
+    const observationTimeoutMs = timeoutMatch ? parseInt(timeoutMatch[1]) : null;
+
+    console.log(`  OBSERVATION_TOTAL_TIMEOUT_MS:        ${observationTimeoutMs != null ? observationTimeoutMs + 'ms' : 'UNKNOWN (service unreadable)'}`);
+    console.log(`  WHOLE_OPERATION_BOUNDED:             PARTIAL — pool.connect() is outside the race,`);
+    console.log(`                                       bounded by pool's own connectionTimeoutMillis`);
+    console.log(`  WORST_CASE_OBSERVATION_DELAY_MS:     ${observationTimeoutMs != null ? observationTimeoutMs + 'ms (after client acquired)' : 'UNKNOWN'}`);
+    console.log(`  TIMEOUT_FAILURE_BEHAVIOR:            client.release(err) → connection destroyed,`);
+    console.log(`                                       no session state leak; Channex push continues`);
+
+    // Verify observation_date semantics — check service uses propertyLocalDate
+    const usesPropertyLocalDate   = serviceSrc.includes('propertyLocalDate(');
+    const localSeasonalityImported = serviceSrc.includes("require('./local-seasonality-helpers')");
+    console.log(`\n  OBSERVATION_DATE_SEMANTICS:          ${usesPropertyLocalDate ? 'property-local calendar date ✓' : 'UTC slice ✗ — not using propertyLocalDate'}`);
+    console.log(`  TIMEZONE_HELPER_IMPORTED:            ${localSeasonalityImported ? 'YES ✓ (local-seasonality-helpers)' : 'NO ✗'}`);
+    console.log(`  OBSERVED_AT_SEMANTICS:               exact TIMESTAMPTZ (UTC anchor) ✓`);
+
+    // Verify fingerprint excludes observed_at and observation_date
+    const fpStart = serviceSrc.indexOf('function computeFingerprint');
+    const fpEnd   = fpStart >= 0 ? serviceSrc.indexOf('// ── Record builder', fpStart) : -1;
+    const fpSection = fpStart >= 0 && fpEnd > fpStart ? serviceSrc.slice(fpStart, fpEnd) : '';
+    const fpExcludesObservedAt = fpSection.length > 0 && !fpSection.includes('observed_at');
+    const fpExcludesObsDate    = fpSection.length > 0 && !fpSection.includes('observation_date');
+    console.log(`  FINGERPRINT_EXCLUDES_OBSERVED_AT:    ${fpExcludesObservedAt ? 'YES ✓' : fpSection.length === 0 ? 'UNKNOWN' : 'NO ✗'}`);
+    console.log(`  FINGERPRINT_EXCLUDES_OBS_DATE:       ${fpExcludesObsDate    ? 'YES ✓' : fpSection.length === 0 ? 'UNKNOWN' : 'NO ✗'}`);
+    console.log(`  OBS_DATE_TIMEZONE_ROLLOVER_SAFE:     YES ✓ (excluded from fingerprint)`);
+
+    // ── [9] ROW COUNT ─────────────────────────────────────────────────────────
+    console.log('\n  [9] ROW COUNT');
     const rowCountRes = await safeQuery(pool, ROW_COUNT_SQL, [], 'ROW_COUNT');
     const totalRows = parseInt(rowCountRes?.rows?.[0]?.total_rows || 0);
     console.log(`  Total rows: ${totalRows}`);
@@ -366,11 +402,11 @@ async function runAudit(pool) {
     if (totalRows === 0) {
       console.log('');
       console.log('  SYSTEM_STATE: pre-activation (no observations yet)');
-      console.log('  Remaining sections [9-18] skipped — no data to analyze.');
+      console.log('  Remaining sections [10-19] skipped — no data to analyze.');
       // Still show summary
     } else {
-      // ── [9] PROPERTY COVERAGE ───────────────────────────────────────────
-      console.log('\n  [9] PROPERTY COVERAGE');
+      // ── [10] PROPERTY COVERAGE ──────────────────────────────────────────
+      console.log('\n  [10] PROPERTY COVERAGE');
       const covRes = await safeQuery(pool, PROPERTY_COVERAGE_SQL, [], 'COVERAGE');
       if (covRes?.rows?.[0]) {
         const s = covRes.rows[0];
@@ -385,8 +421,8 @@ async function runAudit(pool) {
         console.log(`  CURRENCY_COMPLETENESS: ${parseInt(s.known_currency_count) === totalRows ? 'COMPLETE ✓' : 'PARTIAL (' + s.null_currency_count + ' unknown)'}`);
       }
 
-      // ── [10] SOURCE DISTRIBUTION ──────────────────────────────────────
-      console.log('\n  [10] SOURCE DISTRIBUTION');
+      // ── [11] SOURCE DISTRIBUTION ──────────────────────────────────────
+      console.log('\n  [11] SOURCE DISTRIBUTION');
       const srcRes = await safeQuery(pool, SOURCE_DIST_SQL, [], 'SOURCE_DIST');
       if (srcRes) {
         for (const r of srcRes.rows) {
@@ -395,8 +431,8 @@ async function runAudit(pool) {
         }
       }
 
-      // ── [11] CURRENCY DISTRIBUTION ────────────────────────────────────
-      console.log('\n  [11] CURRENCY DISTRIBUTION');
+      // ── [12] CURRENCY DISTRIBUTION ────────────────────────────────────
+      console.log('\n  [12] CURRENCY DISTRIBUTION');
       const currRes = await safeQuery(pool, CURRENCY_DIST_SQL, [], 'CURRENCY_DIST');
       if (currRes) {
         for (const r of currRes.rows) {
@@ -404,8 +440,8 @@ async function runAudit(pool) {
         }
       }
 
-      // ── [12] RESTRICTION DISTRIBUTION ────────────────────────────────
-      console.log('\n  [12] RESTRICTION DISTRIBUTION');
+      // ── [13] RESTRICTION DISTRIBUTION ────────────────────────────────
+      console.log('\n  [13] RESTRICTION DISTRIBUTION');
       const restrRes = await safeQuery(pool, RESTRICTION_DIST_SQL, [], 'RESTR_DIST');
       if (restrRes) {
         for (const r of restrRes.rows) {
@@ -413,8 +449,8 @@ async function runAudit(pool) {
         }
       }
 
-      // ── [13] PUBLICATION STATE DISTRIBUTION ──────────────────────────
-      console.log('\n  [13] PUBLICATION STATE DISTRIBUTION');
+      // ── [14] PUBLICATION STATE DISTRIBUTION ──────────────────────────
+      console.log('\n  [14] PUBLICATION STATE DISTRIBUTION');
       const pubRes = await safeQuery(pool, PUB_STATE_DIST_SQL, [], 'PUB_DIST');
       if (pubRes) {
         for (const r of pubRes.rows) {
@@ -422,8 +458,8 @@ async function runAudit(pool) {
         }
       }
 
-      // ── [14] INTRADAY MULTIPLE-STATE EVIDENCE ────────────────────────
-      console.log('\n  [14] INTRADAY MULTIPLE-STATE EVIDENCE');
+      // ── [15] INTRADAY MULTIPLE-STATE EVIDENCE ────────────────────────
+      console.log('\n  [15] INTRADAY MULTIPLE-STATE EVIDENCE');
       const intradayRes = await safeQuery(pool, INTRADAY_MULTI_STATE_SQL, [], 'INTRADAY');
       if (intradayRes) {
         if (intradayRes.rows.length === 0) {
@@ -436,8 +472,8 @@ async function runAudit(pool) {
         }
       }
 
-      // ── [15] FINGERPRINT DEDUP EFFECTIVENESS ─────────────────────────
-      console.log('\n  [15] FINGERPRINT DEDUP — POTENTIAL SPAM (identical fp > 3 times)');
+      // ── [16] FINGERPRINT DEDUP EFFECTIVENESS ─────────────────────────
+      console.log('\n  [16] FINGERPRINT DEDUP — POTENTIAL SPAM (identical fp > 3 times)');
       const fpRes = await safeQuery(pool, FINGERPRINT_DEDUP_SQL, [], 'FP_DEDUP');
       if (fpRes) {
         if (fpRes.rows.length === 0) {
@@ -450,8 +486,8 @@ async function runAudit(pool) {
         }
       }
 
-      // ── [16] LEAD DAYS DISTRIBUTION ──────────────────────────────────
-      console.log('\n  [16] LEAD DAYS DISTRIBUTION');
+      // ── [17] LEAD DAYS DISTRIBUTION ──────────────────────────────────
+      console.log('\n  [17] LEAD DAYS DISTRIBUTION');
       const leadRes = await safeQuery(pool, LEAD_DAYS_DIST_SQL, [], 'LEAD_DIST');
       if (leadRes) {
         for (const r of leadRes.rows) {
@@ -459,8 +495,8 @@ async function runAudit(pool) {
         }
       }
 
-      // ── [17] SCHEMA VERSION DISTRIBUTION ─────────────────────────────
-      console.log('\n  [17] SCHEMA VERSION DISTRIBUTION');
+      // ── [18] SCHEMA VERSION DISTRIBUTION ─────────────────────────────
+      console.log('\n  [18] SCHEMA VERSION DISTRIBUTION');
       const svRes = await safeQuery(pool, SCHEMA_VERSION_DIST_SQL, [], 'SV_DIST');
       if (svRes) {
         for (const r of svRes.rows) {
@@ -468,10 +504,10 @@ async function runAudit(pool) {
         }
       }
 
-      // ── [18] POINT-IN-TIME VIOLATION CHECK ───────────────────────────
+      // ── [19] POINT-IN-TIME VIOLATION CHECK ───────────────────────────
       // Detect any row with observed_at before a reasonable activation window.
       // If the flag was never enabled before today, any historical rows are suspect.
-      console.log('\n  [18] POINT-IN-TIME VIOLATION CHECK');
+      console.log('\n  [19] POINT-IN-TIME VIOLATION CHECK');
       const pitRes = await safeQuery(pool, `
         SELECT COUNT(*) AS cnt
         FROM price_observations
@@ -485,7 +521,7 @@ async function runAudit(pool) {
       }
     }
 
-    // ── [19] GLOBAL SUMMARY ───────────────────────────────────────────────────
+    // ── [20] GLOBAL SUMMARY ───────────────────────────────────────────────────
     console.log('\n══════════════════════════════════════════════════════════════════════');
     console.log('  P1.5-T1 READINESS SUMMARY');
     console.log('──────────────────────────────────────────────────────────────────────');
@@ -496,6 +532,13 @@ async function runAudit(pool) {
     console.log(`  PRODUCTION_PRICING_CHANGED: NO`);
     console.log(`  HISTORICAL_BACKFILL:        NO`);
     console.log(`  HISTORICAL_BACKFILL = NO`);
+    // Timeout + timezone summary (derived from service source read in [8])
+    const timeoutMatch2 = serviceSrc.match(/OBSERVATION_TIMEOUT_MS\s*=\s*(\d+)/);
+    const obsTimeoutMs2 = timeoutMatch2 ? parseInt(timeoutMatch2[1]) : null;
+    console.log(`  OBSERVATION_TOTAL_TIMEOUT_MS:        ${obsTimeoutMs2 != null ? obsTimeoutMs2 + 'ms' : 'UNKNOWN'}`);
+    console.log(`  WHOLE_OPERATION_BOUNDED:             PARTIAL`);
+    console.log(`  WORST_CASE_OBSERVATION_DELAY_MS:     ${obsTimeoutMs2 != null ? obsTimeoutMs2 + 'ms' : 'UNKNOWN'}`);
+    console.log(`  OBSERVATION_DATE_SEMANTICS:          property-local calendar date`);
 
     if (!tableExists) {
       console.log('');

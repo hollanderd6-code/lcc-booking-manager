@@ -24,18 +24,38 @@
  *   PRICE_OBSERVATION_FAILURE_BLOCKS_PRICING = NO
  *   All errors are caught and logged. Never rethrown to caller.
  *
+ * TIMEOUT:
+ *   OBSERVATION_TOTAL_TIMEOUT_MS = 5000
+ *   A dedicated pool client is acquired for all observation queries.
+ *   SET statement_timeout = OBSERVATION_TOTAL_TIMEOUT_MS bounds each individual query.
+ *   Promise.race with a 5s deadline ensures the publisher never awaits more than
+ *   OBSERVATION_TOTAL_TIMEOUT_MS for this feature.
+ *   On timeout: dedicated client is destroyed (release(err)) — no session state leak
+ *   to pool; in-flight query is terminated at the TCP level.
+ *   Note: pool.connect() is outside the race, bounded by pool's connectionTimeoutMillis.
+ *   WHOLE_OPERATION_BOUNDED = PARTIAL (connect step outside race)
+ *   WORST_CASE_OBSERVATION_DELAY_MS = 5000ms (after client acquired)
+ *
+ * OBSERVATION_DATE_SEMANTICS:
+ *   observation_date = calendar date at observed_at in the property's IANA timezone
+ *   (properties.timezone). Falls back to UTC when timezone is null or invalid.
+ *   observed_at (TIMESTAMPTZ) remains the canonical UTC anchor — unchanged.
+ *
  * DEDUP:
  *   Within a 4-hour window per (property_id, stay_date), observations with
  *   identical state_fingerprint are skipped. State changes always produce a
- *   new row. Multiple legitimate intraday changes survive.
+ *   new row. Multiple legitimate intraday changes survive (A→B→A preserved).
  *
  * Usage (called from pricing-publisher _doPublish after resolve, before push):
  *   await observePricingState(pool, { propertyId, prop, nights, context });
  */
 
-const SCHEMA_VERSION  = '1';
-const FLAG_NAME       = 'PRICE_OBSERVATION_PERSISTENCE_ENABLED';
-const DEDUP_WINDOW_MS = 4 * 60 * 60 * 1000; // 4 hours
+const { propertyLocalDate } = require('./local-seasonality-helpers');
+
+const SCHEMA_VERSION         = '1';
+const FLAG_NAME              = 'PRICE_OBSERVATION_PERSISTENCE_ENABLED';
+const DEDUP_WINDOW_MS        = 4 * 60 * 60 * 1000; // 4 hours
+const OBSERVATION_TIMEOUT_MS = 5000;               // whole-op deadline (ms)
 
 // ── Feature flag ─────────────────────────────────────────────────────────────
 
@@ -48,6 +68,8 @@ function isFlagEnabled() {
 // Deterministic string over the effective pricing state fields.
 // MUST exclude observed_at and any volatile temporal identifier.
 // Stable: same state always produces same fingerprint.
+// observation_date intentionally excluded — timezone/date rollover must NOT
+// create a spurious pricing-state change.
 
 function computeFingerprint({
   canonical_price,
@@ -87,8 +109,11 @@ function buildObservationRecord(night, {
   publisherRunId,
   observedAt,   // Date object
 }) {
-  const observedAtIso   = observedAt instanceof Date ? observedAt.toISOString() : observedAt;
-  const observationDate = (observedAtIso || '').slice(0, 10);
+  const observedAtDate  = observedAt instanceof Date ? observedAt : new Date(observedAt);
+  const observedAtIso   = observedAtDate.toISOString();
+  // observation_date: property-local calendar date at observed_at.
+  // Uses IANA timezone from properties.timezone; falls back to UTC when null/invalid.
+  const observationDate = propertyLocalDate(observedAtDate, propertyTimezone);
 
   const source = night.source || 'none';
   const manualOverridePresent = (source === 'manual_override');
@@ -147,10 +172,11 @@ function buildObservationRecord(night, {
 }
 
 // ── DB helpers ────────────────────────────────────────────────────────────────
+// Accept a pool OR PoolClient as first arg — both expose .query().
 
-async function fetchPropertyEnrichment(pool, propertyId) {
+async function fetchPropertyEnrichment(poolOrClient, propertyId) {
   try {
-    const res = await pool.query(
+    const res = await poolOrClient.query(
       `SELECT currency, timezone FROM properties WHERE id = $1`,
       [propertyId]
     );
@@ -163,11 +189,11 @@ async function fetchPropertyEnrichment(pool, propertyId) {
 
 // Returns Map<stay_date_string, { fingerprint, observed_at }> for the most
 // recent observation per stay_date within the dedup window.
-async function fetchLastFingerprints(pool, propertyId, stayDates, windowMs) {
+async function fetchLastFingerprints(poolOrClient, propertyId, stayDates, windowMs) {
   if (!stayDates || !stayDates.length) return new Map();
   const cutoff = new Date(Date.now() - windowMs).toISOString();
   try {
-    const res = await pool.query(
+    const res = await poolOrClient.query(
       `SELECT DISTINCT ON (stay_date)
          TO_CHAR(stay_date, 'YYYY-MM-DD') AS stay_date,
          state_fingerprint,
@@ -199,7 +225,7 @@ async function fetchLastFingerprints(pool, propertyId, stayDates, windowMs) {
 
 // Batch insert into price_observations. Returns rowCount inserted.
 // Silently handles "relation does not exist" (migration not yet applied).
-async function insertObservations(pool, rows) {
+async function insertObservations(poolOrClient, rows) {
   if (!rows || !rows.length) return 0;
   const N_FIELDS = 22;
   const CHUNK    = 200;
@@ -240,7 +266,7 @@ async function insertObservations(pool, rows) {
     });
 
     try {
-      const res = await pool.query(
+      const res = await poolOrClient.query(
         `INSERT INTO price_observations (
            property_id, stay_date, observed_at, observation_date, property_timezone,
            schema_version, canonical_price, currency, currency_provenance, price_source,
@@ -260,6 +286,127 @@ async function insertObservations(pool, rows) {
   return inserted;
 }
 
+// ── Core observation logic ────────────────────────────────────────────────────
+//
+// Runs on a dedicated client (with statement_timeout pre-applied).
+// Called via _runWithTimeout — never invoked directly in production.
+// Exported for unit testing only (allows direct testing without the client lifecycle).
+
+async function _observeCore(client, { propertyId, prop, nights, context }) {
+  const observedAt = new Date();
+
+  const enrichment      = await fetchPropertyEnrichment(client, propertyId);
+  const currency        = enrichment.currency  || null;
+  const currencyProv    = enrichment.currency  ? 'property_record' : 'unknown';
+  const propertyTimezone = enrichment.timezone || null;
+  const externalPricing  = !!(prop && prop.external_pricing);
+
+  const publisherRunId = context.publisherRunId || null;
+
+  const candidates = nights.map(night =>
+    buildObservationRecord(night, {
+      propertyId,
+      currency,
+      currencyProvenance: currencyProv,
+      propertyTimezone,
+      externalPricing,
+      publisherRunId,
+      observedAt,
+    })
+  );
+
+  const stayDates = candidates.map(c => c.stay_date);
+  const recentFPs = await fetchLastFingerprints(client, propertyId, stayDates, DEDUP_WINDOW_MS);
+  const toInsert  = candidates.filter(c => {
+    const recent = recentFPs.get(c.stay_date);
+    return !recent || recent.fingerprint !== c.state_fingerprint;
+  });
+
+  const inserted = await insertObservations(client, toInsert);
+  const skipped  = candidates.length - toInsert.length;
+
+  if (inserted > 0 || skipped > 0) {
+    console.log(`[PRICE-OBS] ${propertyId} — inserted:${inserted} dedup_skipped:${skipped}`);
+  }
+
+  return { inserted, skipped };
+}
+
+// ── Timeout-bounded execution ─────────────────────────────────────────────────
+//
+// Acquires a dedicated pool client, applies per-query statement_timeout,
+// then races the work against a whole-operation deadline.
+//
+// On normal completion:
+//   - SET statement_timeout = DEFAULT to reset session state
+//   - client.release() returns client to pool cleanly
+// On timeout:
+//   - client.release(err) destroys the connection; pg server terminates
+//     the in-flight query when it sees the closed TCP connection.
+//   - No session state leaks to the next pool borrower.
+// On reset failure:
+//   - client.release(resetErr) destroys the connection.
+//
+// Note: pool.connect() is OUTSIDE the race. In production the pool has
+// connectionTimeoutMillis=5000, bounding it independently.
+//
+// WHOLE_OPERATION_BOUNDED = PARTIAL (pool.connect outside race)
+// WORST_CASE_OBSERVATION_DELAY_MS = 5000ms (after client acquired)
+//
+// Exported for unit testing with custom timeoutMs values.
+
+async function _runWithTimeout(pool, workFn, timeoutMs) {
+  // Acquire dedicated client (bounded by pool's connectionTimeoutMillis in production)
+  let client;
+  try {
+    client = await pool.connect();
+  } catch (e) {
+    return { inserted: 0, skipped: 0, error: `connect_failed: ${e.message}` };
+  }
+
+  // Set per-query statement_timeout on this client's session
+  try {
+    await client.query(`SET statement_timeout = ${timeoutMs}`);
+  } catch (e) {
+    client.release(e);
+    return { inserted: 0, skipped: 0, error: `set_timeout_failed: ${e.message}` };
+  }
+
+  let timedOut = false;
+  let timeoutHandle;
+
+  const timeoutPromise = new Promise(resolve => {
+    timeoutHandle = setTimeout(() => {
+      timedOut = true;
+      resolve({ inserted: 0, skipped: 0, error: 'PRICE_OBS_TIMEOUT' });
+    }, timeoutMs);
+  });
+
+  let result;
+  try {
+    result = await Promise.race([
+      workFn(client).catch(e => ({ inserted: 0, skipped: 0, error: e.message })),
+      timeoutPromise,
+    ]);
+  } finally {
+    clearTimeout(timeoutHandle);
+    if (timedOut) {
+      // Destroy connection — terminates in-flight query at TCP level, no session leak
+      client.release(new Error('[PRICE-OBS] timeout — destroy client'));
+    } else {
+      // Reset statement_timeout before returning client to pool
+      try {
+        await client.query('SET statement_timeout = DEFAULT');
+        client.release();
+      } catch (resetErr) {
+        client.release(resetErr); // destroy on reset failure
+      }
+    }
+  }
+
+  return result;
+}
+
 // ── Main entry point ──────────────────────────────────────────────────────────
 //
 // Called from pricing-publisher _doPublish after resolveEffectivePrices,
@@ -275,46 +422,18 @@ async function observePricingState(pool, { propertyId, prop, nights, context = {
   }
 
   try {
-    const observedAt = new Date();
-
-    // Enrich with currency and timezone (separate from publisher's prop query)
-    const enrichment      = await fetchPropertyEnrichment(pool, propertyId);
-    const currency        = enrichment.currency  || null;
-    const currencyProv    = enrichment.currency  ? 'property_record' : 'unknown';
-    const propertyTimezone = enrichment.timezone || null;
-    const externalPricing  = !!(prop && prop.external_pricing);
-
-    const publisherRunId = context.publisherRunId || null;
-
-    // Build candidate records
-    const candidates = nights.map(night =>
-      buildObservationRecord(night, {
-        propertyId,
-        currency,
-        currencyProvenance: currencyProv,
-        propertyTimezone,
-        externalPricing,
-        publisherRunId,
-        observedAt,
-      })
+    const result = await _runWithTimeout(
+      pool,
+      (client) => _observeCore(client, { propertyId, prop, nights, context }),
+      OBSERVATION_TIMEOUT_MS
     );
-
-    // Dedup: skip observations with same fingerprint seen within 4-hour window
-    const stayDates   = candidates.map(c => c.stay_date);
-    const recentFPs   = await fetchLastFingerprints(pool, propertyId, stayDates, DEDUP_WINDOW_MS);
-    const toInsert    = candidates.filter(c => {
-      const recent = recentFPs.get(c.stay_date);
-      return !recent || recent.fingerprint !== c.state_fingerprint;
-    });
-
-    const inserted = await insertObservations(pool, toInsert);
-    const skipped  = candidates.length - toInsert.length;
-
-    if (inserted > 0 || skipped > 0) {
-      console.log(`[PRICE-OBS] ${propertyId} — inserted:${inserted} dedup_skipped:${skipped}`);
+    if (result.error === 'PRICE_OBS_TIMEOUT') {
+      console.error(
+        `[PRICE-OBS] observation timeout (${propertyId}): exceeded ${OBSERVATION_TIMEOUT_MS}ms` +
+        ` — Channex publication continues`
+      );
     }
-
-    return { inserted, skipped };
+    return result;
   } catch (err) {
     console.error(`[PRICE-OBS] observePricingState unexpected error (${propertyId}):`, err.message);
     return { inserted: 0, skipped: nights.length, error: err.message };
@@ -331,4 +450,8 @@ module.exports = {
   SCHEMA_VERSION,
   FLAG_NAME,
   DEDUP_WINDOW_MS,
+  OBSERVATION_TIMEOUT_MS,
+  // Internal — exported for unit testing only
+  _runWithTimeout,
+  _observeCore,
 };
