@@ -1,6 +1,6 @@
 'use strict';
 /**
- * P1.3-T1 — Booking Pickup Shadow Persistence
+ * P1.3-T1/T2 — Booking Pickup Shadow Persistence
  *
  * Feature-flagged persistence for pickup observations.
  * Defaults to OFF (BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED must be 'true').
@@ -11,29 +11,34 @@
  *   Never touches: pricing_schedule, pricing_config, reservations, market_observations,
  *   or any table read by pricing-engine.js.
  *   No Channex calls, no network calls, no market provider calls.
+ *   PICKUP_HAS_PRICING_AUTHORITY=NO — never imported by pricing-engine.js.
  */
 
 const INSERT_OBSERVATION_SQL = `
   INSERT INTO booking_pickup_observations (
     property_id, target_date, calculated_at,
+    observation_date,
     lead_time_days, lead_time_band,
     lookback_months, target_window_days,
     historical_total, historical_band_count, comparable_sample_size,
     recent_window_days, recent_booking_count, expected_booking_count,
-    pickup_ratio, status, confidence, advisory_multiplier,
+    raw_pickup_ratio, pickup_ratio,
+    status, confidence, advisory_multiplier,
     occupancy_fraction, pacing_pickup_relation,
     model_version, anomalies_excluded, metadata
   ) VALUES (
     $1, $2, $3,
-    $4, $5,
-    $6, $7,
-    $8, $9, $9,
-    $10, $11, $12,
-    $13, $14, $15, $16,
-    $17, $18,
-    $19, $20, $21
+    $4,
+    $5, $6,
+    $7, $8,
+    $9, $10, $10,
+    $11, $12, $13,
+    $14, $15,
+    $16, $17, $18,
+    $19, $20,
+    $21, $22, $23
   )
-  ON CONFLICT (property_id, target_date, calculated_at) DO NOTHING
+  ON CONFLICT ON CONSTRAINT bpo_property_target_obs_model_unique DO NOTHING
   RETURNING id
 `;
 
@@ -42,6 +47,15 @@ const INSERT_OBSERVATION_SQL = `
  */
 function isPersistenceEnabled() {
   return process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED === 'true';
+}
+
+/**
+ * Derive the UTC observation date (YYYY-MM-DD) from a calculatedAt ISO timestamp.
+ * Used as the deduplication key: one row per (property, target_date, day, model).
+ */
+function observationDateFromCalcAt(calculatedAt) {
+  const ts = calculatedAt ? new Date(calculatedAt) : new Date();
+  return ts.toISOString().slice(0, 10);
 }
 
 /**
@@ -55,34 +69,39 @@ function isPersistenceEnabled() {
 async function persistPickupObservation(pool, observation) {
   if (!isPersistenceEnabled()) return null;
 
+  const calculatedAt    = observation.calculatedAt ?? new Date().toISOString();
+  const observationDate = observationDateFromCalcAt(calculatedAt);
+
   const meta = {
-    reasons:      observation.reasons ?? [],
-    baselineType: observation.baselineType,
+    reasons:        observation.reasons      ?? [],
+    baselineType:   observation.baselineType,
     pacingStrength: observation.pacingStrength ?? null,
   };
 
   const result = await pool.query(INSERT_OBSERVATION_SQL, [
-    observation.propertyId,                                  // $1
-    observation.targetDate,                                  // $2
-    observation.calculatedAt ?? new Date().toISOString(),    // $3
-    observation.leadTimeDays,                                // $4
-    observation.leadTimeBand,                                // $5
-    observation.lookbackMonths,                              // $6
-    observation.targetWindowDays ?? 14,                     // $7
-    observation.historicalSampleSize,                        // $8
-    observation.comparableSampleSize,                        // $9 (historical_band_count AND comparable_sample_size)
-    observation.recentWindowDays,                            // $10
-    observation.recentBookings,                              // $11
-    observation.expectedBookings,                            // $12
-    observation.pickupRatio,                                 // $13 — may be null
-    observation.status,                                      // $14
-    observation.confidence,                                  // $15
-    observation.advisoryMultiplier,                          // $16
-    observation.occupancyFraction,                           // $17
-    observation.pacingPickupRelation,                        // $18
-    observation.modelVersion,                                // $19
-    observation.anomaliesExcluded ?? 0,                      // $20
-    JSON.stringify(meta),                                    // $21
+    observation.propertyId,                    // $1  property_id
+    observation.targetDate,                    // $2  target_date
+    calculatedAt,                              // $3  calculated_at
+    observationDate,                           // $4  observation_date (UTC calendar date)
+    observation.leadTimeDays,                  // $5  lead_time_days
+    observation.leadTimeBand,                  // $6  lead_time_band
+    observation.lookbackMonths,                // $7  lookback_months
+    observation.targetWindowDays ?? 14,        // $8  target_window_days
+    observation.historicalSampleSize,          // $9  historical_total
+    observation.comparableSampleSize,          // $10 historical_band_count + comparable_sample_size
+    observation.recentWindowDays,              // $11 recent_window_days
+    observation.recentBookings,                // $12 recent_booking_count
+    observation.expectedBookings,              // $13 expected_booking_count
+    observation.rawPickupRatio ?? null,        // $14 raw_pickup_ratio (null when LOW_EVIDENCE)
+    observation.pickupRatio,                   // $15 pickup_ratio (stabilized)
+    observation.status,                        // $16 status
+    observation.confidence,                    // $17 confidence
+    observation.advisoryMultiplier,            // $18 advisory_multiplier
+    observation.occupancyFraction,             // $19 occupancy_fraction
+    observation.pacingPickupRelation,          // $20 pacing_pickup_relation
+    observation.modelVersion,                  // $21 model_version
+    observation.anomaliesExcluded ?? 0,        // $22 anomalies_excluded
+    JSON.stringify(meta),                      // $23 metadata
   ]);
 
   return result.rows[0]?.id ?? null;
@@ -90,6 +109,7 @@ async function persistPickupObservation(pool, observation) {
 
 module.exports = {
   isPersistenceEnabled,
+  observationDateFromCalcAt,
   persistPickupObservation,
   INSERT_OBSERVATION_SQL,
 };

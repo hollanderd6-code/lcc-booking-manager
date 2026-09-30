@@ -1,5 +1,7 @@
--- P1.3-T1 — Shadow table for booking pickup observations
+-- P1.3-T1/T2 — Shadow table for booking pickup observations
+-- P1.3-T2 update: added observation_date, raw_pickup_ratio, corrected UNIQUE constraint.
 -- Additive-only: CREATE TABLE IF NOT EXISTS, no ALTER on existing tables.
+-- For instances where 005 was applied before T2, use 006_booking_pickup_observations_v2.sql.
 -- Never imported by pricing-engine.js or any pricing path.
 -- BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED env var (default false) gates writes.
 
@@ -10,6 +12,9 @@ CREATE TABLE IF NOT EXISTS booking_pickup_observations (
   property_id             TEXT        NOT NULL,
   target_date             DATE        NOT NULL,
   calculated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  -- Deduplication key: one row per (property, target_date) per calendar day per model
+  observation_date        DATE        NOT NULL,   -- UTC date of the calculation run
 
   -- Lead-time context
   lead_time_days          INTEGER     NOT NULL,
@@ -29,9 +34,10 @@ CREATE TABLE IF NOT EXISTS booking_pickup_observations (
   recent_booking_count    INTEGER     NOT NULL,
   expected_booking_count  NUMERIC(8,4) NOT NULL,
 
-  -- Classification
-  pickup_ratio            NUMERIC(8,4),           -- NULL when expected ≈ 0
-  status                  TEXT        NOT NULL,   -- ACCELERATING | NORMAL | SLOW | INSUFFICIENT_DATA
+  -- Classification (v1.1: raw vs stabilized ratio; LOW_EVIDENCE status added)
+  raw_pickup_ratio        NUMERIC(8,4),           -- NULL when expected < MIN_EXPECTED_FOR_SIGNAL
+  pickup_ratio            NUMERIC(8,4),           -- stabilized (Laplace), always non-null when status set
+  status                  TEXT        NOT NULL,   -- ACCELERATING | NORMAL | SLOW | LOW_EVIDENCE | INSUFFICIENT_DATA
   confidence              TEXT        NOT NULL,   -- GOOD | MODERATE | LOW | INSUFFICIENT
 
   -- Advisory signal (shadow only — never applied to pricing)
@@ -48,8 +54,9 @@ CREATE TABLE IF NOT EXISTS booking_pickup_observations (
   -- Free-form diagnostic fields
   metadata                JSONB,
 
-  -- Prevent duplicate shadow rows for the same (property, target_date) in a single run
-  UNIQUE (property_id, target_date, calculated_at)
+  -- Dedup: one observation per (property, target_date) per day per model version
+  CONSTRAINT bpo_property_target_obs_model_unique
+    UNIQUE (property_id, target_date, observation_date, model_version)
 );
 
 CREATE INDEX IF NOT EXISTS idx_bpo_property_date
@@ -57,3 +64,6 @@ CREATE INDEX IF NOT EXISTS idx_bpo_property_date
 
 CREATE INDEX IF NOT EXISTS idx_bpo_calculated_at
   ON booking_pickup_observations (calculated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_bpo_observation_date
+  ON booking_pickup_observations (observation_date DESC);
