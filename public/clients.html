@@ -6449,6 +6449,14 @@ window.openImportReservations = function() {
         return "<label style=\"display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid #e5e7eb;border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;flex:0 0 auto;white-space:nowrap;background:" + bg + ";color:" + color + ";\"><input type=\"checkbox\" value=\"" + pid + "\" " + (isChecked ? "checked" : "") + " onchange=\"var c=this.checked;this.parentElement.style.background=c?'#F1F6F3':'white';this.parentElement.style.color=c?'#0E3B2E':'#374151';\" style=\"accent-color:#0E3B2E;width:16px;height:16px;margin:0;flex:0 0 16px;\">" + name + "</label>";
       }).join("");
 
+  // Canonical import scope \u2014 consumed by fetchInvoiceSummary().
+  // Derived here once from the authenticated client object; never re-discovered from property IDs.
+  window._importResaOwnerScope = {
+    isAgency: isAgencyClient2,
+    ownerUserId: (isAgencyClient2 && _diagClObj && _diagClObj.delegator_user_id)
+      ? _diagClObj.delegator_user_id
+      : null
+  };
   window._importResaSummary = null;
   window._importResaChecked = {};
   document.getElementById("importResaContent").innerHTML = "<div style=\"text-align:center;padding:40px;color:#9ca3af;font-size:13px;\"><i class=\"fas fa-calendar\" style=\"font-size:32px;display:block;margin-bottom:10px;opacity:0.3;\"></i>S\u00e9lectionnez une p\u00e9riode et cliquez sur Charger</div>";
@@ -6459,6 +6467,7 @@ window.openImportReservations = function() {
 
 window.closeImportResaModal = function() {
   document.getElementById("importResaModal").style.display = "none";
+  window._importResaOwnerScope = null;
 };
 
 // ── Helpers dates JJ/MM/AAAA ↔ ISO ──
@@ -6500,22 +6509,21 @@ window.fetchInvoiceSummary = async function() {
     var url = API_BASE + "/api/reservations/invoice-summary?date_from=" + dateFrom + "&date_to=" + dateTo;
     if (propIds.length > 0) url += "&property_ids=" + propIds.join(",");
 
-    // Détecter si les propriétés sélectionnées appartiennent à un compte géré
-    var managedUserId = null;
-    if (window.allProperties) {
-      propIds.forEach(function(pid) {
-        var prop = window.allProperties.find(function(p) { return String(p.id) === String(pid); });
-        if (prop && prop._isManaged && prop._managedAccount && prop._managedAccount.userId) {
-          managedUserId = prop._managedAccount.userId;
-        }
-      });
+    // Use canonical scope set by openImportReservations() — never re-derive from property objects.
+    var _ownerScope = window._importResaOwnerScope || { isAgency: false, ownerUserId: null };
+    if (_ownerScope.isAgency && !_ownerScope.ownerUserId) {
+      contentEl.innerHTML = "<div style=\"text-align:center;padding:20px;color:#dc2626;font-size:13px;\">❌ Impossible d’identifier le compte propriétaire pour cet import.</div>";
+      document.getElementById("importResaConfirmBtn").disabled = true;
+      return;
     }
+    var managedUserId = _ownerScope.ownerUserId || null;
     if (managedUserId) url += "&owner_user_id=" + managedUserId;
     console.log('[OwnerInvoiceWebImport] fetchInvoiceSummary propIds=' + JSON.stringify(propIds) + ' managedUserId=' + managedUserId + ' url=' + url);
     console.log('[OwnerInvoiceWebImport][DIAG] request', {
       dateFrom: dateFrom, dateTo: dateTo,
       propertyIds: propIds,
-      ownerUserId: managedUserId || null
+      ownerUserId: managedUserId || null,
+      scopeIsAgency: _ownerScope.isAgency
     });
 
     var res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
