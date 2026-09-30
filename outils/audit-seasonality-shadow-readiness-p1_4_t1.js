@@ -51,18 +51,21 @@ const COLUMN_LIST_SQL = `
   ORDER BY ordinal_position
 `;
 
+// pg_get_constraintdef returns the constraint definition as a plain TEXT string,
+// e.g. "UNIQUE (property_id, target_month, observation_date, model_version)".
+// This avoids the pg driver's inconsistent array-parsing of array_agg() results,
+// which returns a raw "{col1,col2,...}" string rather than a JS array.
 const UNIQUE_CONSTRAINT_SQL = `
   SELECT
-    kcu.constraint_name,
-    array_agg(kcu.column_name ORDER BY kcu.ordinal_position) AS columns
-  FROM information_schema.table_constraints tc
-  JOIN information_schema.key_column_usage kcu
-    ON kcu.constraint_name = tc.constraint_name
-    AND kcu.table_name     = tc.table_name
-  WHERE tc.table_schema   = 'public'
-    AND tc.table_name     = 'local_seasonality_observations'
-    AND tc.constraint_type = 'UNIQUE'
-  GROUP BY kcu.constraint_name
+    c.conname                    AS constraint_name,
+    pg_get_constraintdef(c.oid)  AS constraint_def
+  FROM pg_catalog.pg_constraint  c
+  JOIN pg_catalog.pg_class       t ON t.oid = c.conrelid
+  JOIN pg_catalog.pg_namespace   n ON n.oid = t.relnamespace
+  WHERE n.nspname = 'public'
+    AND t.relname = 'local_seasonality_observations'
+    AND c.contype = 'u'
+  ORDER BY c.conname
 `;
 
 const OBSERVATION_COUNTS_SQL = `
@@ -237,6 +240,8 @@ async function runAudit(pool) {
     console.log('\n  [4] TABLE SCHEMA CHECK');
 
     let tableExists = false;
+    let identityConstraintOk = false; // fail closed until proven
+
     try {
       const res = await pool.query(TABLE_EXISTS_SQL);
       tableExists = res.rows[0]?.table_exists === true;
@@ -280,22 +285,46 @@ async function runAudit(pool) {
         console.error(`  [COLUMN_CHECK_FAILURE] ${err.message}`);
       }
 
-      // Unique constraint
+      // Unique constraint — pg_get_constraintdef returns a plain TEXT string.
+      // constraint_def example: "UNIQUE (property_id, target_month, observation_date, model_version)"
+      const EXPECTED_CONSTRAINT_NAME = 'lso_identity_unique';
+      const EXPECTED_CONSTRAINT_DEF  = 'UNIQUE (property_id, target_month, observation_date, model_version)';
       try {
         const ucRes = await pool.query(UNIQUE_CONSTRAINT_SQL);
         console.log(`\n  Unique constraints (${ucRes.rows.length}):`);
+
+        let identityPresent = false;
+        let identityExact   = false;
+
         for (const uc of ucRes.rows) {
-          console.log(`    ${uc.constraint_name}: (${uc.columns.join(', ')})`);
+          console.log('');
+          console.log('  UNIQUE_CONSTRAINT:');
+          console.log(`    ${uc.constraint_name}`);
+          console.log(`    ${uc.constraint_def}`);
+          if (uc.constraint_name === EXPECTED_CONSTRAINT_NAME) {
+            identityPresent = true;
+            identityExact   = (uc.constraint_def === EXPECTED_CONSTRAINT_DEF);
+          }
         }
-        const hasIdentityConstraint = ucRes.rows.some(uc =>
-          uc.columns.includes('property_id') &&
-          uc.columns.includes('target_month') &&
-          uc.columns.includes('observation_date') &&
-          uc.columns.includes('model_version'),
-        );
-        console.log(`\n  UNIQUE_CONSTRAINT: ${hasIdentityConstraint ? 'CORRECT ✓' : 'MISSING OR WRONG ✗'}`);
+
+        console.log('');
+        console.log(`  IDENTITY_CONSTRAINT_PRESENT: ${identityPresent ? 'YES ✓' : 'NO ✗'}`);
+        console.log(`  IDENTITY_CONSTRAINT_EXACT:   ${identityExact   ? 'YES ✓' : 'NO ✗'}`);
+
+        if (!identityPresent) {
+          console.log(`  Expected constraint name: ${EXPECTED_CONSTRAINT_NAME}`);
+          console.log(`  Expected definition:      ${EXPECTED_CONSTRAINT_DEF}`);
+        } else if (!identityExact) {
+          console.log(`  Expected definition: ${EXPECTED_CONSTRAINT_DEF}`);
+        }
+
+        identityConstraintOk = identityPresent && identityExact;
       } catch (err) {
         console.error(`  [CONSTRAINT_CHECK_FAILURE] ${err.message}`);
+        console.log('  IDENTITY_CONSTRAINT_PRESENT: NO (inspection failed)');
+        console.log('  IDENTITY_CONSTRAINT_EXACT:   NO (inspection failed)');
+        console.log('  SAFE_TO_ENABLE_FLAG: NO (constraint check failed — fail closed)');
+        identityConstraintOk = false;
       }
 
       // Current row counts
@@ -453,11 +482,26 @@ async function runAudit(pool) {
     console.log('');
 
     const safeToApply  = !tableExists;
-    const safeToEnable = tableExists && !flagEnabled;
+    // SAFE_TO_ENABLE_FLAG requires ALL of:
+    //   1. table exists (migration applied)
+    //   2. identity constraint proven correct (lso_identity_unique, exact 4-column definition)
+    //   3. flag not already on (would be redundant / already active)
+    const safeToEnable = tableExists && identityConstraintOk && !flagEnabled;
+
+    let safeToEnableLabel;
+    if (flagEnabled) {
+      safeToEnableLabel = 'SKIP — flag already on';
+    } else if (!tableExists) {
+      safeToEnableLabel = 'NO — apply migration first';
+    } else if (!identityConstraintOk) {
+      safeToEnableLabel = 'NO — identity constraint not confirmed (see section [4])';
+    } else {
+      safeToEnableLabel = 'YES';
+    }
 
     console.log(`  SAFE_TO_DEPLOY_CODE:     YES (already committed, no side effects)`);
     console.log(`  SAFE_TO_APPLY_MIGRATION: ${safeToApply ? 'YES — table not yet created' : 'SKIP — table already exists'}`);
-    console.log(`  SAFE_TO_ENABLE_FLAG:     ${safeToEnable ? 'YES — after migration applied' : safeToApply ? 'NO — apply migration first' : 'SKIP — flag already on'}`);
+    console.log(`  SAFE_TO_ENABLE_FLAG:     ${safeToEnableLabel}`);
 
     if (!tableExists) {
       console.log('');

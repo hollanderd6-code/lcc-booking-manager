@@ -29,6 +29,7 @@
  *   O — Write safety: no pricing mutations, seasonByMonth unchanged
  *   P — Exposure semantics: UNKNOWN / PARTIAL / occupancy NULL policy
  *   Q — Helpers backward-compat: T0 exports still present
+ *   R — Constraint inspection: pg_catalog approach, fail-closed logic
  */
 
 const assert = require('assert');
@@ -59,6 +60,10 @@ const {
 
 const MIGRATION_SRC = fs.readFileSync(
   path.join(__dirname, '../migrations/007_local_seasonality_observations.sql'), 'utf8',
+);
+
+const AUDIT_SRC = fs.readFileSync(
+  path.join(__dirname, '../outils/audit-seasonality-shadow-readiness-p1_4_t1.js'), 'utf8',
 );
 
 const SHADOW_SRC = fs.readFileSync(
@@ -1046,6 +1051,159 @@ test('Q-04: computeSampleTier still exported', () => {
 
 test('Q-05: isReliableForStayOccurrence still exported', () => {
   assert.strictEqual(typeof isReliableForStayOccurrence, 'function');
+});
+
+// ── R — Constraint inspection: pg_catalog approach ───────────────────────────
+
+console.log('\n  [R] Constraint inspection: pg_catalog + pg_get_constraintdef');
+
+// Expected values (must match migration 007 and the EXPECTED_* constants in the audit)
+const EXPECTED_CONSTRAINT_NAME = 'lso_identity_unique';
+const EXPECTED_CONSTRAINT_DEF  = 'UNIQUE (property_id, target_month, observation_date, model_version)';
+
+// Simulate the match logic extracted from the audit (pure, no DB required)
+function simulateConstraintCheck(rows) {
+  let identityPresent = false;
+  let identityExact   = false;
+  let identityConstraintOk = false;
+  for (const uc of rows) {
+    if (uc.constraint_name === EXPECTED_CONSTRAINT_NAME) {
+      identityPresent = true;
+      identityExact   = (uc.constraint_def === EXPECTED_CONSTRAINT_DEF);
+    }
+  }
+  identityConstraintOk = identityPresent && identityExact;
+  return { identityPresent, identityExact, identityConstraintOk };
+}
+
+test('R-01: audit UNIQUE_CONSTRAINT_SQL uses pg_catalog.pg_constraint (not information_schema)', () => {
+  assert.ok(
+    AUDIT_SRC.includes('pg_catalog.pg_constraint'),
+    'Must use pg_catalog.pg_constraint — not information_schema',
+  );
+  assert.ok(
+    !AUDIT_SRC.includes('information_schema.table_constraints'),
+    'Old information_schema approach must be removed',
+  );
+});
+
+test('R-02: audit UNIQUE_CONSTRAINT_SQL uses pg_get_constraintdef (text string, no array_agg)', () => {
+  assert.ok(
+    AUDIT_SRC.includes('pg_get_constraintdef(c.oid)'),
+    'Must use pg_get_constraintdef to get constraint definition as plain text',
+  );
+  assert.ok(
+    !AUDIT_SRC.includes('array_agg(kcu.column_name'),
+    'array_agg approach must be removed (returns unreliable type from pg driver)',
+  );
+});
+
+test('R-03: audit UNIQUE_CONSTRAINT_SQL is SELECT-only (no DML or DDL)', () => {
+  // Extract the SQL constant
+  const sqlMatch = AUDIT_SRC.match(/UNIQUE_CONSTRAINT_SQL\s*=\s*`([\s\S]+?)`/);
+  assert.ok(sqlMatch, 'UNIQUE_CONSTRAINT_SQL constant not found in audit source');
+  const sql = sqlMatch[1];
+  assert.ok(!/\bINSERT\b/i.test(sql), 'SQL must not INSERT');
+  assert.ok(!/\bUPDATE\b/i.test(sql), 'SQL must not UPDATE');
+  assert.ok(!/\bDELETE\b/i.test(sql), 'SQL must not DELETE');
+  assert.ok(!/\bDROP\b/i.test(sql),   'SQL must not DROP');
+  assert.ok(!/\bALTER\b/i.test(sql),  'SQL must not ALTER');
+});
+
+test('R-04: constraint_def as string — exact expected definition is recognized', () => {
+  const rows = [{ constraint_name: EXPECTED_CONSTRAINT_NAME, constraint_def: EXPECTED_CONSTRAINT_DEF }];
+  const { identityPresent, identityExact, identityConstraintOk } = simulateConstraintCheck(rows);
+  assert.strictEqual(identityPresent, true,  'Expected constraint name must be found');
+  assert.strictEqual(identityExact,   true,  'Expected constraint definition must match exactly');
+  assert.strictEqual(identityConstraintOk, true, 'identityConstraintOk must be true for exact match');
+});
+
+test('R-05: wrong column order → IDENTITY_CONSTRAINT_EXACT false', () => {
+  const wrongDef = 'UNIQUE (target_month, property_id, observation_date, model_version)';
+  const rows = [{ constraint_name: EXPECTED_CONSTRAINT_NAME, constraint_def: wrongDef }];
+  const { identityPresent, identityExact, identityConstraintOk } = simulateConstraintCheck(rows);
+  assert.strictEqual(identityPresent, true,  'Name found');
+  assert.strictEqual(identityExact,   false, 'Wrong column order → not exact');
+  assert.strictEqual(identityConstraintOk, false, 'identityConstraintOk false when not exact');
+});
+
+test('R-06: missing column in definition → IDENTITY_CONSTRAINT_EXACT false', () => {
+  const incompleteDef = 'UNIQUE (property_id, target_month, observation_date)';
+  const rows = [{ constraint_name: EXPECTED_CONSTRAINT_NAME, constraint_def: incompleteDef }];
+  const { identityExact, identityConstraintOk } = simulateConstraintCheck(rows);
+  assert.strictEqual(identityExact, false, 'Missing column → not exact');
+  assert.strictEqual(identityConstraintOk, false);
+});
+
+test('R-07: different constraint name → IDENTITY_CONSTRAINT_PRESENT false', () => {
+  const rows = [{ constraint_name: 'wrong_constraint_name', constraint_def: EXPECTED_CONSTRAINT_DEF }];
+  const { identityPresent, identityConstraintOk } = simulateConstraintCheck(rows);
+  assert.strictEqual(identityPresent, false, 'Wrong name → not present');
+  assert.strictEqual(identityConstraintOk, false);
+});
+
+test('R-08: empty result (no UNIQUE constraints) → IDENTITY_CONSTRAINT_PRESENT false', () => {
+  const { identityPresent, identityConstraintOk } = simulateConstraintCheck([]);
+  assert.strictEqual(identityPresent, false);
+  assert.strictEqual(identityConstraintOk, false);
+});
+
+test('R-09: exception in constraint check → identityConstraintOk stays false (fail closed)', () => {
+  // Simulate: audit initializes identityConstraintOk = false before the try block.
+  // On exception, the catch does not set identityConstraintOk = true.
+  // Result: SAFE_TO_ENABLE_FLAG must be NO.
+  let identityConstraintOk = false; // audit's initial value
+  try {
+    throw new Error('simulated pg query failure');
+  } catch (_) {
+    // identityConstraintOk is NOT set true in the catch block
+  }
+  // safeToEnable requires identityConstraintOk — exception path leaves it false
+  const tableExists = true;
+  const flagEnabled = false;
+  const safeToEnable = tableExists && identityConstraintOk && !flagEnabled;
+  assert.strictEqual(safeToEnable, false, 'Exception path must result in SAFE_TO_ENABLE_FLAG=NO');
+});
+
+test('R-10: exact constraint + table present + flag off → SAFE_TO_ENABLE_FLAG YES', () => {
+  const rows = [{ constraint_name: EXPECTED_CONSTRAINT_NAME, constraint_def: EXPECTED_CONSTRAINT_DEF }];
+  const { identityConstraintOk } = simulateConstraintCheck(rows);
+  const tableExists = true;
+  const flagEnabled = false;
+  const safeToEnable = tableExists && identityConstraintOk && !flagEnabled;
+  assert.strictEqual(safeToEnable, true, 'All gates met → SAFE_TO_ENABLE_FLAG YES');
+});
+
+test('R-11: audit prints IDENTITY_CONSTRAINT_PRESENT and IDENTITY_CONSTRAINT_EXACT labels', () => {
+  assert.ok(AUDIT_SRC.includes('IDENTITY_CONSTRAINT_PRESENT:'), 'Must print IDENTITY_CONSTRAINT_PRESENT');
+  assert.ok(AUDIT_SRC.includes('IDENTITY_CONSTRAINT_EXACT:'),   'Must print IDENTITY_CONSTRAINT_EXACT');
+});
+
+test('R-12: audit prints UNIQUE_CONSTRAINT: label per-row', () => {
+  assert.ok(AUDIT_SRC.includes('UNIQUE_CONSTRAINT:'), 'Must print UNIQUE_CONSTRAINT: per row');
+});
+
+test('R-13: SAFE_TO_ENABLE_FLAG in audit requires identityConstraintOk', () => {
+  // The audit source must use identityConstraintOk in the safeToEnable expression
+  assert.ok(
+    AUDIT_SRC.includes('identityConstraintOk'),
+    'identityConstraintOk variable must gate SAFE_TO_ENABLE_FLAG',
+  );
+  assert.ok(
+    /safeToEnable\s*=.*identityConstraintOk/.test(AUDIT_SRC),
+    'safeToEnable must include identityConstraintOk in its expression',
+  );
+});
+
+test('R-14: CONSTRAINT_CHECK_FAILURE in catch prints SAFE_TO_ENABLE_FLAG: NO', () => {
+  assert.ok(
+    AUDIT_SRC.includes('CONSTRAINT_CHECK_FAILURE'),
+    'Catch block must emit [CONSTRAINT_CHECK_FAILURE]',
+  );
+  assert.ok(
+    AUDIT_SRC.includes('SAFE_TO_ENABLE_FLAG: NO (constraint check failed'),
+    'Catch block must print SAFE_TO_ENABLE_FLAG: NO when exception occurs',
+  );
 });
 
 // ── Summary ───────────────────────────────────────────────────────────────────
