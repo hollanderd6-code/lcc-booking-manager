@@ -37,6 +37,7 @@ const {
 
 const {
   computeCostEstimate,
+  determineLifecycleState,
 } = require('../outils/audit-market-shared-activation-s');
 
 let passed   = 0;
@@ -1285,6 +1286,119 @@ test('N-11: audit PROVIDER_TELEMETRY_PRESENT would be NO if FAILURE absent from 
     partialCron.includes('MARKET_PROVIDER_CALL_FAILURE'); // false since removed
   assert.strictEqual(cronTelemetry, false,
     'With FAILURE stripped from cron, _cronTelemetryPresent must be false → providerTelemetryPresent=false');
+});
+
+// ── O — S22 lifecycle states ─────────────────────────────────────────────────
+
+console.log('\nO — S22 lifecycle states');
+
+// O-A: persistence ON + shared OFF + all invariants green → READY_TO_ENABLE
+test('O-01: persistence ON, shared OFF, structural green → READY_TO_ENABLE', () => {
+  const state = determineLifecycleState({ persistenceOn: true, sharedOn: false, structuralGreen: true });
+  assert.strictEqual(state, 'READY_TO_ENABLE');
+});
+
+// O-B: persistence ON + shared ON + all invariants green → ACTIVE_HEALTHY
+test('O-02: persistence ON, shared ON, structural green → ACTIVE_HEALTHY', () => {
+  const state = determineLifecycleState({ persistenceOn: true, sharedOn: true, structuralGreen: true });
+  assert.strictEqual(state, 'ACTIVE_HEALTHY');
+});
+
+// O-C: shared ON + structural not green → BLOCKED
+test('O-03: persistence ON, shared ON, structural not green → BLOCKED', () => {
+  const state = determineLifecycleState({ persistenceOn: true, sharedOn: true, structuralGreen: false });
+  assert.strictEqual(state, 'BLOCKED');
+});
+
+// O-D: persistence OFF → BLOCKED regardless of shared flag
+test('O-04: persistence OFF, shared OFF → BLOCKED', () => {
+  const state = determineLifecycleState({ persistenceOn: false, sharedOn: false, structuralGreen: true });
+  assert.strictEqual(state, 'BLOCKED');
+});
+
+test('O-05: persistence OFF, shared ON → BLOCKED', () => {
+  const state = determineLifecycleState({ persistenceOn: false, sharedOn: true, structuralGreen: true });
+  assert.strictEqual(state, 'BLOCKED');
+});
+
+// O-E: shared OFF + structural not green → BLOCKED (not READY_TO_ENABLE)
+test('O-06: persistence ON, shared OFF, structural not green → BLOCKED', () => {
+  const state = determineLifecycleState({ persistenceOn: true, sharedOn: false, structuralGreen: false });
+  assert.strictEqual(state, 'BLOCKED');
+});
+
+// O-F: zero observations → does NOT affect state (runtime proof separate from structural health)
+test('O-07: ACTIVE_HEALTHY state does not require observations > 0', () => {
+  // Zero observations = WAITING_FOR_FIRST_COLLECTION, not a structural failure
+  const state = determineLifecycleState({ persistenceOn: true, sharedOn: true, structuralGreen: true });
+  assert.strictEqual(state, 'ACTIVE_HEALTHY', 'Zero observations must not affect structural state');
+});
+
+// Static source checks for new audit output fields
+test('O-08: audit reports SHARED_COLLECTION_STATE', () => {
+  assert.ok(AUDIT_S_SRC.includes('SHARED_COLLECTION_STATE'), 'Must report SHARED_COLLECTION_STATE');
+});
+
+test('O-09: audit reports ACTIVE_HEALTHY and READY_TO_ENABLE and BLOCKED', () => {
+  assert.ok(AUDIT_S_SRC.includes('ACTIVE_HEALTHY'),  'Must include ACTIVE_HEALTHY state');
+  assert.ok(AUDIT_S_SRC.includes('READY_TO_ENABLE'), 'Must include READY_TO_ENABLE state');
+  assert.ok(AUDIT_S_SRC.includes("'BLOCKED'"),       'Must include BLOCKED state');
+});
+
+test('O-10: audit reports SHARED_COLLECTION_HEALTHY in post-activation section', () => {
+  assert.ok(AUDIT_S_SRC.includes('SHARED_COLLECTION_HEALTHY'), 'Must report SHARED_COLLECTION_HEALTHY');
+});
+
+test('O-11: audit reports SHARED_COLLECTION_ACTIVE in post-activation section', () => {
+  assert.ok(AUDIT_S_SRC.includes('SHARED_COLLECTION_ACTIVE'), 'Must report SHARED_COLLECTION_ACTIVE');
+});
+
+test('O-12: audit reports N/A_ALREADY_ENABLED when shared is ON', () => {
+  assert.ok(AUDIT_S_SRC.includes('N/A_ALREADY_ENABLED'), 'Must report N/A_ALREADY_ENABLED post-activation');
+});
+
+test('O-13: audit no longer has !sharedOn as a structural pre-condition', () => {
+  // The old prereq "MARKET_SHARED_COLLECTION_ENABLED currently OFF" must be gone
+  assert.ok(!AUDIT_S_SRC.includes('MARKET_SHARED_COLLECTION_ENABLED currently OFF'),
+    'Obsolete pre-activation prereq must be removed from structural invariants');
+  assert.ok(!AUDIT_S_SRC.includes("ok: !sharedOn"),
+    '!sharedOn must not be a structural invariant (blocks post-activation health check)');
+});
+
+test('O-14: audit reports FIRST_SHARED_COLLECTION_VALIDATION', () => {
+  assert.ok(AUDIT_S_SRC.includes('FIRST_SHARED_COLLECTION_VALIDATION'), 'Must report FIRST_SHARED_COLLECTION_VALIDATION');
+  assert.ok(AUDIT_S_SRC.includes('WAITING_FOR_FIRST_COLLECTION'), 'Must include WAITING_FOR_FIRST_COLLECTION state');
+  assert.ok(AUDIT_S_SRC.includes("'VALIDATED'"), 'Must include VALIDATED state');
+});
+
+test('O-15: audit reports OBSERVATION_PERSISTENCE_RUNTIME_VALIDATION', () => {
+  assert.ok(AUDIT_S_SRC.includes('OBSERVATION_PERSISTENCE_RUNTIME_VALIDATION'), 'Must report obs persistence runtime validation');
+});
+
+test('O-16: audit reports SHARED_CALL_DEDUP_STRUCTURALLY_VALIDATED', () => {
+  assert.ok(AUDIT_S_SRC.includes('SHARED_CALL_DEDUP_STRUCTURALLY_VALIDATED'), 'Must report structural dedup validation');
+});
+
+test('O-17: audit reports SHARED_CALL_DEDUP_RUNTIME_VALIDATED', () => {
+  assert.ok(AUDIT_S_SRC.includes('SHARED_CALL_DEDUP_RUNTIME_VALIDATED'), 'Must report runtime dedup validation');
+});
+
+test('O-18: determineLifecycleState is exported from audit module', () => {
+  assert.ok(typeof determineLifecycleState === 'function', 'determineLifecycleState must be exported');
+});
+
+test('O-19: pre-activation mode reports SAFE_TO_ENABLE not N/A', () => {
+  assert.ok(AUDIT_S_SRC.includes('SAFE_TO_ENABLE_SHARED_COLLECTION = N/A_ALREADY_ENABLED'),
+    'N/A_ALREADY_ENABLED must appear for post-activation case');
+  // Pre-activation path reports YES or NO
+  assert.ok(AUDIT_S_SRC.includes("structuralGreen ? 'YES ✅' : 'NO — resolve issues above'"),
+    'Pre-activation must report YES/NO not N/A');
+});
+
+test('O-20: audit title updated to include S22 post-activation support', () => {
+  assert.ok(AUDIT_S_SRC.includes('S22'), 'Audit must reference S22 in header');
+  assert.ok(AUDIT_S_SRC.includes('ACTIVE_HEALTHY') && AUDIT_S_SRC.includes('READY_TO_ENABLE'),
+    'Both lifecycle states must be documented');
 });
 
 // ── Final report ──────────────────────────────────────────────────────────────

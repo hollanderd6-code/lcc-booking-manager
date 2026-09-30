@@ -1,8 +1,13 @@
 'use strict';
 /**
- * P1.2-B5-BK-S16/S17 — Market Shared Collection Activation Audit
+ * P1.2-B5-BK-S16/S17/S22 — Market Shared Collection Health Audit
  *
- * READ ONLY.
+ * READ ONLY. Supports both pre-activation and post-activation lifecycle states.
+ *
+ * SHARED_COLLECTION_STATE values:
+ *   READY_TO_ENABLE  — persistence ON, shared OFF, all structural invariants green
+ *   ACTIVE_HEALTHY   — persistence ON, shared ON,  all structural invariants green
+ *   BLOCKED          — any required invariant fails
  *
  * This tool NEVER:
  *   calls Bright Data, Booking provider, Geoapify
@@ -28,9 +33,12 @@
  *   Shared call count (one per fingerprint)
  *   Calls saved + reduction %
  *
- * Reports (S17):
- *   All safety flags, dedup presence, telemetry presence
- *   SAFE_TO_ENABLE_SHARED_COLLECTION
+ * Reports (S17/S22):
+ *   All safety flags, structural invariants, telemetry
+ *   SHARED_COLLECTION_STATE
+ *   Pre-activation: SAFE_TO_ENABLE_SHARED_COLLECTION
+ *   Post-activation: SHARED_COLLECTION_HEALTHY
+ *   First-collection and persistence runtime validation status
  *
  * Usage:
  *   NODE_ENV=production node outils/audit-market-shared-activation-s.js
@@ -118,9 +126,22 @@ function computeCostEstimate(configs, { checkIn, checkOut, resolveProvider, maxL
   return { naiveCalls, sharedCalls, saved, reductionPct, groups };
 }
 
+/**
+ * Pure function: determine SHARED_COLLECTION_STATE from flags + structural invariants.
+ *
+ * @param {{ persistenceOn: boolean, sharedOn: boolean, structuralGreen: boolean }} opts
+ * @returns {'READY_TO_ENABLE'|'ACTIVE_HEALTHY'|'BLOCKED'}
+ */
+function determineLifecycleState({ persistenceOn, sharedOn, structuralGreen }) {
+  if (!persistenceOn)  return 'BLOCKED';
+  if (sharedOn)        return structuralGreen ? 'ACTIVE_HEALTHY'  : 'BLOCKED';
+  return structuralGreen ? 'READY_TO_ENABLE' : 'BLOCKED';
+}
+
 module.exports = {
   ACTIVE_PROPERTIES_SQL,
   computeCostEstimate,
+  determineLifecycleState,
 };
 
 // ── Main audit ─────────────────────────────────────────────────────────────────
@@ -314,29 +335,71 @@ async function runAudit() {
   console.log(`  PROFILE_INCOMPLETE                  = ${incomplete.length}`);
   console.log();
 
-  // ── Final determination ──────────────────────────────────────────────────────
-  const prereqs = [
-    { ok: persistenceOn,          label: 'MARKET_OBSERVATION_PERSISTENCE_ENABLED=true' },
-    { ok: !sharedOn,              label: 'MARKET_SHARED_COLLECTION_ENABLED currently OFF (not yet activated)' },
-    { ok: sharedReplacesLegacy,   label: 'Shared coordinator replaces (not adds to) legacy calls' },
+  // ── Structural invariants — same requirements for both lifecycle states ──────
+  const structuralInvariants = [
+    { ok: persistenceOn,              label: 'MARKET_OBSERVATION_PERSISTENCE_ENABLED=true' },
+    { ok: sharedReplacesLegacy,       label: 'Shared coordinator replaces (not adds to) legacy calls' },
     { ok: !parallelDuplicatePossible, label: 'No parallel duplicate collection possible' },
-    { ok: groupBeforeNetwork,     label: 'Group before network (S3)' },
-    { ok: jobDedupPresent,        label: 'Job-level dedup present (S10)' },
-    { ok: providerTelemetryPresent, label: 'Provider call telemetry present (S15)' },
-    { ok: eligible.length > 0,   label: `At least 1 eligible property (${eligible.length} found)` },
+    { ok: groupBeforeNetwork,         label: 'Group before network (S3)' },
+    { ok: jobDedupPresent,            label: 'Job-level dedup present (S10)' },
+    { ok: providerTelemetryPresent,   label: 'Provider call telemetry present (S15)' },
+    { ok: eligible.length > 0,       label: `At least 1 eligible property (${eligible.length} found)` },
   ];
+  const structuralGreen = structuralInvariants.every(p => p.ok);
 
-  let prereqsGreen = true;
-  console.log('── SAFE_TO_ENABLE_SHARED_COLLECTION ─────────────────────────────');
-  for (const p of prereqs) {
-    const icon = p.ok ? '✅' : '❌';
-    if (!p.ok) prereqsGreen = false;
-    console.log(`  ${icon}  ${p.label}`);
+  // ── First-collection + persistence runtime status ────────────────────────────
+  // Zero observations before the first natural collection is expected and normal.
+  // It does NOT affect structural health — only runtime proof is deferred.
+  const firstCollectionValidation = (shadowCounts === null)
+    ? 'UNKNOWN'
+    : (shadowCounts.observation_count === 0 ? 'WAITING_FOR_FIRST_COLLECTION' : 'VALIDATED');
+  const obsPersistenceRuntimeValidation = firstCollectionValidation;
+
+  const sharedCallDedupStructurallyValidated = structuralGreen && groupBeforeNetwork && jobDedupPresent;
+  const sharedCallDedupRuntimeValidated = (shadowCounts !== null && shadowCounts.observation_count > 0)
+    ? 'VALIDATED'
+    : 'WAITING_FOR_FIRST_COLLECTION';
+
+  console.log('── COLLECTION & PERSISTENCE RUNTIME STATUS ─────────────────────');
+  console.log(`  OBSERVATION_PERSISTENCE_ACTIVE             = ${persistenceOn ? 'YES ✅' : 'NO ❌'}`);
+  console.log(`  OBSERVATION_PERSISTENCE_RUNTIME_VALIDATION = ${obsPersistenceRuntimeValidation}`);
+  console.log(`  FIRST_SHARED_COLLECTION_VALIDATION         = ${firstCollectionValidation}`);
+  console.log(`  SHARED_CALL_DEDUP_STRUCTURALLY_VALIDATED   = ${sharedCallDedupStructurallyValidated ? 'YES ✅' : 'NO ❌'}`);
+  console.log(`  SHARED_CALL_DEDUP_RUNTIME_VALIDATED        = ${sharedCallDedupRuntimeValidated}`);
+  console.log();
+
+  // ── Structural invariants display ────────────────────────────────────────────
+  console.log('── STRUCTURAL INVARIANTS ────────────────────────────────────────');
+  for (const p of structuralInvariants) {
+    console.log(`  ${p.ok ? '✅' : '❌'}  ${p.label}`);
+  }
+  console.log();
+
+  // ── Lifecycle determination ───────────────────────────────────────────────────
+  const sharedCollectionState = determineLifecycleState({ persistenceOn, sharedOn, structuralGreen });
+
+  if (!sharedOn) {
+    // Pre-activation: report readiness to enable
+    console.log('── SAFE_TO_ENABLE_SHARED_COLLECTION ─────────────────────────────');
+    console.log(`  ℹ️   Shared collection is currently OFF (pre-activation mode)`);
+    console.log(`  SAFE_TO_ENABLE_SHARED_COLLECTION = ${structuralGreen ? 'YES ✅' : 'NO — resolve issues above'}`);
+  } else {
+    // Post-activation: report active health (do not fail for flag being ON)
+    const sharedCollectionHealthy = structuralGreen;
+    console.log('── POST-ACTIVATION HEALTH ───────────────────────────────────────');
+    console.log(`  ℹ️   Shared collection is ACTIVE`);
+    console.log(`  SHARED_COLLECTION_ACTIVE  = YES ✅`);
+    console.log(`  SHARED_COLLECTION_HEALTHY = ${sharedCollectionHealthy ? 'YES ✅' : 'NO ❌ — structural invariant failed'}`);
+    console.log(`  SAFE_TO_ENABLE_SHARED_COLLECTION = N/A_ALREADY_ENABLED`);
+    if (!sharedCollectionHealthy) {
+      console.log(`  ⚠️   One or more structural invariants failed — investigate before next collection`);
+    }
   }
 
   console.log();
-  console.log(`  SAFE_TO_ENABLE_SHARED_COLLECTION = ${prereqsGreen ? 'YES ✅' : 'NO — resolve issues above'}`);
+  console.log(`  SHARED_COLLECTION_STATE = ${sharedCollectionState} ${sharedCollectionState !== 'BLOCKED' ? '✅' : '❌'}`);
   console.log();
+
   console.log('── SUMMARY ──────────────────────────────────────────────────────');
   console.log(`  BOOSTPRICE_ACTIVE_PROPERTIES    = ${props.length}`);
   console.log(`  PROFILE_READY                   = ${eligible.length}`);
@@ -347,8 +410,13 @@ async function runAudit() {
   console.log(`  REALISTIC_NAIVE_CALLS           = ${realisticEstimate.naiveCalls}`);
   console.log(`  REALISTIC_SHARED_CALLS          = ${realisticEstimate.sharedCalls}`);
   console.log(`  REALISTIC_CALLS_SAVED           = ${realisticEstimate.saved}  (${realisticEstimate.reductionPct}% reduction)`);
+  console.log(`  SHARED_COLLECTION_STATE                   = ${sharedCollectionState}`);
+  console.log(`  FIRST_SHARED_COLLECTION_VALIDATION        = ${firstCollectionValidation}`);
+  console.log(`  OBSERVATION_PERSISTENCE_RUNTIME_VALIDATION = ${obsPersistenceRuntimeValidation}`);
+  console.log(`  SHARED_CALL_DEDUP_STRUCTURALLY_VALIDATED  = ${sharedCallDedupStructurallyValidated ? 'YES' : 'NO'}`);
+  console.log(`  SHARED_CALL_DEDUP_RUNTIME_VALIDATED       = ${sharedCallDedupRuntimeValidated}`);
   console.log();
-  console.log('  R20 CONSTRAINT: DO NOT enable MARKET_SHARED_COLLECTION_ENABLED from this tool (read-only).');
+  console.log('  This audit is READ-ONLY. Do not modify Render env vars from here.');
   console.log(`  EXACT_RENDER_AUDIT_COMMAND: NODE_ENV=production node outils/audit-market-shared-activation-s.js`);
 }
 
