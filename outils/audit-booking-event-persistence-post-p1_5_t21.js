@@ -11,6 +11,12 @@
  *   AUDIT_WITH_DB=true node outils/audit-booking-event-persistence-post-p1_5_t21.js
  *
  * READ-ONLY: Performs only SELECT queries. Never writes to any table.
+ *
+ * P1.5-T2.1-PREACT-FIX:
+ *   Table detection uses pg_catalog (not information_schema) — bypasses privilege
+ *   visibility constraints. Pool mirrors server.js SSL config for production.
+ *   Temporal ordering uses event_observed_at (the canonical BH observation time),
+ *   not created_at (DB row insertion time).
  */
 
 require('dotenv').config();
@@ -18,9 +24,15 @@ const fs   = require('fs');
 const path = require('path');
 
 // ── SQL queries (SELECT-only) ──────────────────────────────────────────────────
-const SQL_TABLE_EXISTS = `
-  SELECT 1 FROM information_schema.tables
-  WHERE table_schema = 'public' AND table_name = 'booking_events'
+// pg_catalog bypasses information_schema privilege visibility constraints —
+// the root cause of prior false-negative table detection in production.
+const SQL_TABLE_EXISTS_PG = `
+  SELECT COUNT(*)::int AS cnt
+  FROM pg_catalog.pg_class c
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  WHERE c.relname = 'booking_events'
+    AND n.nspname = 'public'
+    AND c.relkind = 'r'
 `;
 const SQL_TOTAL_EVENTS = `
   SELECT COUNT(*)::int AS total FROM booking_events
@@ -43,9 +55,12 @@ const SQL_CREATED_DUPES = `
   HAVING COUNT(*) > 1
   LIMIT 20
 `;
+// Temporal ordering uses event_observed_at — the canonical BH observation time.
+// event_observed_at: when BH observed/knew the event. Distinct from created_at
+// (DB insertion time). For analysis correctness, always order by event_observed_at.
 const SQL_DOUBLE_CANCEL = `
   SELECT source, external_booking_id,
-         ARRAY_AGG(event_type ORDER BY created_at) AS event_sequence
+         ARRAY_AGG(event_type ORDER BY event_observed_at) AS event_sequence
   FROM booking_events
   WHERE event_type = 'BOOKING_CANCELLED'
   GROUP BY source, external_booking_id
@@ -73,20 +88,59 @@ const SQL_ORPHAN_CANCELLATIONS = `
   FROM booking_events
   WHERE event_type = 'BOOKING_CANCELLED' AND reservation_id IS NULL
 `;
-const SQL_FK_SAFETY = `
+// FK check via pg_catalog — does not depend on information_schema visibility.
+const SQL_FK_SAFETY_PG = `
   SELECT COUNT(*)::int AS tc
-  FROM information_schema.table_constraints tc
-  JOIN information_schema.key_column_usage kcu
-    ON tc.constraint_name = kcu.constraint_name
-  WHERE tc.table_name = 'booking_events'
-    AND tc.constraint_type = 'FOREIGN KEY'
-    AND kcu.column_name = 'reservation_id'
+  FROM pg_catalog.pg_constraint con
+  JOIN pg_catalog.pg_class c ON c.oid = con.conrelid
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  WHERE con.contype = 'f'
+    AND c.relname = 'booking_events'
+    AND n.nspname = 'public'
+    AND EXISTS (
+      SELECT 1 FROM pg_catalog.pg_attribute a
+      WHERE a.attrelid = c.oid
+        AND a.attname = 'reservation_id'
+        AND a.attnum = ANY(con.conkey)
+    )
 `;
-const SQL_RECENT_EVENTS = `
-  SELECT id, created_at, event_type, source, external_booking_id, property_id,
-         reservation_id, currency, currency_provenance, schema_version
+// Schema contract check: new columns from migration 010.
+const SQL_NEW_COLS_CHECK = `
+  SELECT a.attname AS column_name,
+         pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
+         a.attnotnull AS not_null
+  FROM pg_catalog.pg_attribute a
+  JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  WHERE c.relname = 'booking_events'
+    AND n.nspname = 'public'
+    AND a.attname IN ('event_observed_at', 'provider_event_at')
+    AND NOT a.attisdropped
+`;
+// Check that all rows have event_observed_at populated (should never be null
+// given NOT NULL DEFAULT NOW(), but verify post-activation).
+const SQL_OBSERVED_AT_NULL_COUNT = `
+  SELECT COUNT(*) FILTER (WHERE event_observed_at IS NULL)::int AS null_observed_at
   FROM booking_events
-  ORDER BY created_at DESC
+`;
+// Temporal skew: verify event_observed_at and created_at are near-equal (< 60s).
+// Large skew would indicate event_observed_at is being set from an unexpected source.
+const SQL_TEMPORAL_SKEW = `
+  SELECT
+    COUNT(*)::int AS total,
+    COUNT(*) FILTER (
+      WHERE ABS(EXTRACT(EPOCH FROM (event_observed_at - created_at))) > 60
+    )::int AS large_skew_count,
+    MAX(ABS(EXTRACT(EPOCH FROM (event_observed_at - created_at))))::int AS max_skew_seconds
+  FROM booking_events
+`;
+// Recent events ordered by event_observed_at (canonical temporal field).
+// Includes both event_observed_at and created_at for skew visibility.
+const SQL_RECENT_EVENTS = `
+  SELECT id, event_observed_at, created_at, event_type, source, external_booking_id,
+         property_id, reservation_id, currency, currency_provenance, schema_version
+  FROM booking_events
+  ORDER BY event_observed_at DESC
   LIMIT 10
 `;
 // ── safeQuery ─────────────────────────────────────────────────────────────────
@@ -103,8 +157,8 @@ async function safeQuery(pool, sql, params = []) {
 // ── Audit sections ────────────────────────────────────────────────────────────
 
 async function checkTableExists(pool) {
-  const res = await safeQuery(pool, SQL_TABLE_EXISTS);
-  return res.ok && res.rows.length > 0;
+  const res = await safeQuery(pool, SQL_TABLE_EXISTS_PG);
+  return res.ok && (res.rows[0]?.cnt ?? 0) > 0;
 }
 
 async function auditEventCounts(pool) {
@@ -171,7 +225,7 @@ async function auditOrphanCancellations(pool) {
 }
 
 async function auditFkSafety(pool) {
-  const res = await safeQuery(pool, SQL_FK_SAFETY);
+  const res = await safeQuery(pool, SQL_FK_SAFETY_PG);
   const cnt = res.ok ? (res.rows[0]?.tc ?? 0) : null;
   return {
     section: 'FK_SAFETY',
@@ -180,6 +234,45 @@ async function auditFkSafety(pool) {
     note: cnt === 0
       ? '✅ No FK on reservation_id — cascade deletes cannot write booking_events'
       : '❌ FK found on reservation_id — violates append-only safety contract',
+  };
+}
+
+async function auditSchemaContract(pool) {
+  const colRes = await safeQuery(pool, SQL_NEW_COLS_CHECK);
+  const cols   = colRes.ok ? colRes.rows : [];
+  const colMap = Object.fromEntries(cols.map(r => [r.column_name, r]));
+
+  const obsAtPresent   = 'event_observed_at' in colMap;
+  const provAtPresent  = 'provider_event_at' in colMap;
+  const obsAtNotNull   = obsAtPresent && colMap['event_observed_at'].not_null === true;
+  const provAtNullable = provAtPresent && colMap['provider_event_at'].not_null === false;
+
+  const nullCountRes   = await safeQuery(pool, SQL_OBSERVED_AT_NULL_COUNT);
+  const nullObsAt      = nullCountRes.ok ? (nullCountRes.rows[0]?.null_observed_at ?? null) : null;
+
+  const skewRes        = await safeQuery(pool, SQL_TEMPORAL_SKEW);
+  const skew           = skewRes.ok ? skewRes.rows[0] : null;
+
+  const ok = obsAtPresent && provAtPresent && obsAtNotNull && provAtNullable
+    && nullObsAt === 0;
+
+  return {
+    section: 'SCHEMA_CONTRACT',
+    ok,
+    event_observed_at_present: obsAtPresent,
+    event_observed_at_not_null: obsAtNotNull,
+    provider_event_at_present: provAtPresent,
+    provider_event_at_nullable: provAtNullable,
+    booking_created_at_absent: !colMap['booking_created_at'],
+    null_event_observed_at_rows: nullObsAt,
+    temporal_skew: skew,
+    note: !obsAtPresent
+      ? '❌ event_observed_at column missing — apply migration 010 before enabling flag'
+      : !provAtPresent
+      ? '❌ provider_event_at column missing — apply migration 010 before enabling flag'
+      : nullObsAt > 0
+      ? `❌ ${nullObsAt} rows have NULL event_observed_at`
+      : '✅ Schema contract satisfied — migration 010 applied and columns populated',
   };
 }
 
@@ -201,7 +294,16 @@ async function runPostAudit() {
   }
 
   const { Pool } = require('pg');
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  // Mirror server.js pool configuration exactly — including SSL.
+  // Prior false-negative root cause: pool without SSL → silent connection failure
+  // in production → safeQuery returned ok:false → table_exists false.
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: false }
+      : false,
+    connectionTimeoutMillis: 5000,
+  });
 
   const report = {
     audit: 'booking-event-persistence-post-p1_5_t21',
@@ -223,6 +325,7 @@ async function runPostAudit() {
       process.exit(1);
     }
 
+    report.sections.push(await auditSchemaContract(pool));
     report.sections.push(await auditEventCounts(pool));
     report.sections.push(await auditDedup(pool));
     report.sections.push(await auditCurrencyPolicy(pool));
@@ -251,4 +354,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { runPostAudit };
+module.exports = { runPostAudit, auditSchemaContract };

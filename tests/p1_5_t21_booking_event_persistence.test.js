@@ -701,7 +701,8 @@ test('[K-05] runAudit returns expected section names', async () => {
   const report = await audit.runAudit();
   const names = report.sections.map(s => s.section);
   ok(names.includes('SELF_READ_ONLY'));
-  ok(names.includes('MIGRATION_FILE'));
+  ok(names.includes('MIGRATION_009'));
+  ok(names.includes('MIGRATION_010'));
   ok(names.includes('SERVICE_FILE'));
   ok(names.includes('CHANNEX_INSTRUMENTATION'));
   ok(names.includes('SERVER_INSTRUMENTATION'));
@@ -831,6 +832,205 @@ test('[N-04] _recordCore stores null for null currency — not EUR', async () =>
   const insertQ = client._log.find(q => q.sql.toUpperCase().includes('INSERT INTO BOOKING_EVENTS'));
   ok(insertQ, 'INSERT was called');
   ok(!insertQ.params.includes('EUR'), 'EUR never stored when currency absent');
+});
+
+// ── [P] event_observed_at and provider_event_at — service contract ─────────
+
+const MIG10_PATH = path.join(__dirname, '../migrations/010_booking_events_pre_activation_fix.sql');
+const POST_AUD_PATH = path.join(__dirname, '../outils/audit-booking-event-persistence-post-p1_5_t21.js');
+
+test('[P-01] service INSERT includes event_observed_at param', async () => {
+  const client = makeMockClient({ hasCreated: false, insertId: 200 });
+  const before = Date.now();
+  await SVC._recordCore(client, {
+    eventType: 'BOOKING_CREATED',
+    source: 'channex',
+    externalBookingId: 'BK_P01',
+    reservationRow: { property_id: 1, status: 'confirmed' },
+    context: 'test P-01',
+  });
+  const after = Date.now();
+  const insertQ = client._log.find(q => q.sql.toUpperCase().includes('INSERT INTO BOOKING_EVENTS'));
+  ok(insertQ, 'INSERT was called');
+  // event_observed_at is an ISO string in params
+  const obsAt = insertQ.params.find(p => typeof p === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(p));
+  ok(obsAt, 'event_observed_at ISO string present in INSERT params');
+  const ts = new Date(obsAt).getTime();
+  ok(ts >= before && ts <= after + 100, 'event_observed_at is close to call time');
+});
+
+test('[P-02] event_observed_at is excluded from state fingerprint', async () => {
+  const rowA = { property_id: 1, status: 'confirmed', event_observed_at: '2026-01-01T00:00:00Z' };
+  const rowB = { property_id: 1, status: 'confirmed', event_observed_at: '2026-09-01T12:00:00Z' };
+  eq(SVC.computeStateFingerprint(rowA), SVC.computeStateFingerprint(rowB),
+    'different event_observed_at values → same fingerprint');
+});
+
+test('[P-03] provider_event_at is null in INSERT params', async () => {
+  const client = makeMockClient({ hasCreated: false, insertId: 201 });
+  await SVC._recordCore(client, {
+    eventType: 'BOOKING_CREATED',
+    source: 'channex',
+    externalBookingId: 'BK_P03',
+    reservationRow: { property_id: 1, status: 'confirmed' },
+    context: 'test P-03',
+  });
+  const insertQ = client._log.find(q => q.sql.toUpperCase().includes('INSERT INTO BOOKING_EVENTS'));
+  ok(insertQ, 'INSERT was called');
+  const nullParams = insertQ.params.filter(p => p === null);
+  ok(nullParams.length >= 1, 'at least one null param (provider_event_at)');
+  // provider_event_at is $19 — last param
+  const lastParam = insertQ.params[insertQ.params.length - 1];
+  eq(lastParam, null, 'last INSERT param (provider_event_at) is null');
+});
+
+test('[P-04] service INSERT SQL includes event_observed_at and provider_event_at column names', async () => {
+  ok(SVC_SRC.includes('event_observed_at'), 'service source includes event_observed_at');
+  ok(SVC_SRC.includes('provider_event_at'), 'service source includes provider_event_at');
+});
+
+test('[P-05] service INSERT has 19 params ($19)', async () => {
+  ok(SVC_SRC.includes('$19'), 'INSERT has $19 param position');
+});
+
+test('[P-06] booking_created_at is NOT referenced in service source', async () => {
+  ok(!SVC_SRC.includes('booking_created_at'), 'booking_created_at is deferred — not in service');
+});
+
+test('[P-07] event_observed_at is generated at _recordCore call time (new Date)', async () => {
+  ok(SVC_SRC.includes('new Date().toISOString()'), 'event_observed_at uses new Date().toISOString()');
+  ok(!SVC_SRC.includes('row.created_at'), 'event_observed_at NOT derived from row.created_at');
+});
+
+// ── [Q] Migration 010 ─────────────────────────────────────────────────────────
+
+const mig10Src = fs.existsSync(MIG10_PATH) ? fs.readFileSync(MIG10_PATH, 'utf8') : '';
+// Strip SQL line comments before checking absence of destructive keywords.
+// Comments like "-- No DROP, no TRUNCATE" would otherwise produce false positives.
+const mig10NoComments = mig10Src.replace(/--[^\n]*/g, '');
+
+test('[Q-01] migration 010 file exists', async () => {
+  ok(fs.existsSync(MIG10_PATH), 'migrations/010_booking_events_pre_activation_fix.sql exists');
+});
+
+test('[Q-02] migration 010 adds event_observed_at TIMESTAMPTZ NOT NULL', async () => {
+  ok(/event_observed_at TIMESTAMPTZ NOT NULL/i.test(mig10Src), 'event_observed_at TIMESTAMPTZ NOT NULL');
+});
+
+test('[Q-03] migration 010 adds provider_event_at TIMESTAMPTZ NULL', async () => {
+  ok(/provider_event_at TIMESTAMPTZ NULL/i.test(mig10Src), 'provider_event_at TIMESTAMPTZ NULL');
+});
+
+test('[Q-04] migration 010 has no DROP statement (excluding comments)', async () => {
+  ok(!/\bDROP\b/i.test(mig10NoComments), 'no DROP in migration 010 SQL (comments excluded)');
+});
+
+test('[Q-05] migration 010 has no TRUNCATE (excluding comments)', async () => {
+  ok(!/\bTRUNCATE\b/i.test(mig10NoComments), 'no TRUNCATE in migration 010 SQL (comments excluded)');
+});
+
+test('[Q-06] migration 010 has no INSERT', async () => {
+  ok(!/\bINSERT\b/i.test(mig10NoComments), 'no INSERT in migration 010 — no backfill');
+});
+
+test('[Q-07] migration 010 uses ALTER TABLE ADD COLUMN IF NOT EXISTS (additive only)', async () => {
+  ok(/ALTER TABLE/i.test(mig10Src), 'has ALTER TABLE');
+  ok(/ADD COLUMN IF NOT EXISTS/i.test(mig10Src), 'uses ADD COLUMN IF NOT EXISTS');
+  ok(!/DROP COLUMN/i.test(mig10NoComments), 'no DROP COLUMN');
+});
+
+test('[Q-08] migration 010 has idx_booking_events_observed_at index', async () => {
+  ok(mig10Src.includes('idx_booking_events_observed_at'), 'temporal index present');
+});
+
+test('[Q-09] migration 010 does NOT add booking_created_at column (deferred, excluding comments)', async () => {
+  ok(!/booking_created_at\s/i.test(mig10NoComments), 'booking_created_at not in migration 010 SQL');
+});
+
+test('[Q-10] migration 010 event_observed_at has DEFAULT NOW()', async () => {
+  ok(/event_observed_at TIMESTAMPTZ NOT NULL DEFAULT NOW\(\)/i.test(mig10Src),
+    'event_observed_at has DEFAULT NOW()');
+});
+
+// ── [R] Readiness audit — PREACT-FIX checks ───────────────────────────────────
+
+const audSrc = fs.existsSync(AUD_PATH) ? fs.readFileSync(AUD_PATH, 'utf8') : '';
+
+test('[R-01] readiness audit uses pg_catalog for table detection (not information_schema)', async () => {
+  ok(audSrc.includes('pg_catalog.pg_class'), 'uses pg_catalog.pg_class');
+  ok(!audSrc.includes("information_schema.tables\n  WHERE table_schema = 'public' AND table_name = 'booking_events'"),
+    'does NOT use information_schema.tables for booking_events detection');
+});
+
+test('[R-02] readiness audit pool config includes SSL for production', async () => {
+  ok(audSrc.includes('rejectUnauthorized'), 'SSL rejectUnauthorized in pool config');
+  ok(audSrc.includes('NODE_ENV'), 'NODE_ENV check for SSL in pool config');
+});
+
+test('[R-03] readiness audit exports auditMigration009', async () => {
+  const audit = require(AUD_PATH);
+  eq(typeof audit.auditMigration009, 'function');
+});
+
+test('[R-04] readiness audit exports auditMigration010', async () => {
+  const audit = require(AUD_PATH);
+  eq(typeof audit.auditMigration010, 'function');
+});
+
+test('[R-05] auditMigration010 detects event_observed_at and provider_event_at in file', async () => {
+  const audit = require(AUD_PATH);
+  const result = audit.auditMigration010();
+  ok(result.ok === true, `auditMigration010 should pass: ${JSON.stringify(result.results)}`);
+  ok(result.results.has_event_observed_at, 'migration 010 has event_observed_at');
+  ok(result.results.has_provider_event_at, 'migration 010 has provider_event_at');
+});
+
+test('[R-06] runAudit includes MIGRATION_010 section', async () => {
+  const audit = require(AUD_PATH);
+  const report = await audit.runAudit();
+  const names = report.sections.map(s => s.section);
+  ok(names.includes('MIGRATION_010'), 'MIGRATION_010 section present');
+  ok(names.includes('MIGRATION_009'), 'MIGRATION_009 section present');
+});
+
+test('[R-07] readiness audit SAFE_TO_ENABLE_FLAG logic references migration_010_applied', async () => {
+  ok(audSrc.includes('migration_010_applied'), 'SAFE_TO_ENABLE_FLAG requires migration 010');
+  ok(audSrc.includes('safe_to_enable_flag'), 'safe_to_enable_flag field present');
+});
+
+test('[R-08] readiness audit checks event_observed_at and provider_event_at columns in DB section', async () => {
+  ok(audSrc.includes('event_observed_at_present'), 'DB section checks event_observed_at presence');
+  ok(audSrc.includes('provider_event_at_present'), 'DB section checks provider_event_at presence');
+});
+
+test('[R-09] readiness audit SERVICE_FILE checks has_event_observed_at in service', async () => {
+  ok(audSrc.includes('has_event_observed_at'), 'SERVICE_FILE checks event_observed_at in service');
+});
+
+test('[R-10] readiness audit service check verifies event_observed_at not in fingerprint', async () => {
+  ok(audSrc.includes('event_observed_at_not_in_fingerprint'),
+    'service check verifies event_observed_at excluded from fingerprint');
+});
+
+test('[R-11] post-activation audit uses pg_catalog for table detection', async () => {
+  const postSrc = fs.existsSync(POST_AUD_PATH) ? fs.readFileSync(POST_AUD_PATH, 'utf8') : '';
+  ok(postSrc.includes('pg_catalog'), 'post-activation audit uses pg_catalog');
+});
+
+test('[R-12] post-activation audit pool config includes SSL for production', async () => {
+  const postSrc = fs.existsSync(POST_AUD_PATH) ? fs.readFileSync(POST_AUD_PATH, 'utf8') : '';
+  ok(postSrc.includes('rejectUnauthorized'), 'post-activation audit SSL rejectUnauthorized');
+  ok(postSrc.includes('NODE_ENV'), 'post-activation audit NODE_ENV check');
+});
+
+test('[R-13] post-activation audit SQL_RECENT_EVENTS includes event_observed_at', async () => {
+  const postSrc = fs.existsSync(POST_AUD_PATH) ? fs.readFileSync(POST_AUD_PATH, 'utf8') : '';
+  ok(postSrc.includes('event_observed_at'), 'event_observed_at referenced in post-audit');
+});
+
+test('[R-14] post-activation audit orders recent events by event_observed_at (not created_at)', async () => {
+  const postSrc = fs.existsSync(POST_AUD_PATH) ? fs.readFileSync(POST_AUD_PATH, 'utf8') : '';
+  ok(/ORDER BY event_observed_at DESC/i.test(postSrc), 'recent events ordered by event_observed_at');
 });
 
 // ── [O] Audit tool self-read-only ──────────────────────────────────────────

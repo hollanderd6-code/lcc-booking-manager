@@ -162,6 +162,11 @@ async function _recordCore(client, {
   providerEventId,
   context,
 }) {
+  // event_observed_at: Boostinghost observation time — when we know this event happened.
+  // Generated here, after the reservation write succeeds. NOT from reservation.created_at.
+  // NOT included in state fingerprint. Distinct from created_at (DB insertion time).
+  const eventObservedAt = new Date().toISOString();
+
   const normSource = normalizeSource(source);
   const row        = reservationRow || {};
   const afterFp    = computeStateFingerprint(row);
@@ -212,7 +217,8 @@ async function _recordCore(client, {
        start_date, end_date, status, guest_count,
        amount_total, amount_rooms,
        currency, currency_provenance,
-       provider_event_id, schema_version
+       provider_event_id, schema_version,
+       event_observed_at, provider_event_at
      ) VALUES (
        $1, 'DEMAND', $2, $3,
        $4, $5,
@@ -220,7 +226,8 @@ async function _recordCore(client, {
        $8, $9, $10, $11,
        $12, $13,
        $14, $15,
-       $16, $17
+       $16, $17,
+       $18, $19
      ) RETURNING id`,
     [
       eventType,
@@ -240,6 +247,8 @@ async function _recordCore(client, {
       currProv,
       providerEventId   || null,
       SCHEMA_VERSION,
+      eventObservedAt,  // $18 — Boostinghost observation time (when we knew this event)
+      null,             // $19 — provider_event_at (no reliable provider timestamps in T2.1)
     ]
   );
 
