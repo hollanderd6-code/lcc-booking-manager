@@ -48,15 +48,21 @@
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const MODEL_VERSION        = 'pickup-v1';
+const MODEL_VERSION        = 'pickup-v1.1';
 const LOOKBACK_MONTHS      = 12;
 const LOOKBACK_DAYS        = 365;   // ≈ 12 months
 const TARGET_WINDOW_DAYS   = 14;    // stay nights considered for recent pickup
 const RECENT_WINDOW_DAYS   = 7;     // booking creation window for recent count
 const ADVISORY_MIN         = 0.94;
 const ADVISORY_MAX         = 1.06;
-const MIN_BAND_SAMPLES     = 3;     // min band observations for non-INSUFFICIENT confidence
-const MIN_TOTAL_SAMPLES    = 10;    // mirrors T0 threshold
+const MIN_BAND_SAMPLES     = 3;     // minimum comparable samples for non-INSUFFICIENT confidence
+const MIN_TOTAL_SAMPLES    = 10;    // global history gate (mirrors T0 threshold)
+
+// v1.1 calibration constants
+const MIN_COMPARABLE_LOW      = 8;    // comparable < 8  → LOW confidence
+const MIN_COMPARABLE_MODERATE = 15;   // comparable < 15 → MODERATE confidence
+const MIN_EXPECTED_FOR_SIGNAL = 0.5;  // expected < 0.5 bookings → LOW_EVIDENCE (no direction)
+const PSEUDO_COUNT            = 1.0;  // Laplace smoothing for ratio stabilization
 
 // Trusted sources: created_at is a reliable booking-time proxy for these
 const TRUSTED_SOURCES = Object.freeze(['channex', 'guest_app']);
@@ -233,62 +239,99 @@ function computePickupRatio(recentCount, expected) {
 }
 
 /**
- * Classify confidence based on total historical sample size and
- * band-specific sample size.
+ * Classify confidence based on total history AND comparable sample size.
  *
- * Confidence reflects both overall history depth AND the density of
- * observations in the specific lead-time band being evaluated.
+ * v1.1 redesign: comparable sample drives confidence level.
+ * Total history only gates at INSUFFICIENT (cannot compensate for tiny comparable).
  *
- * @param {number} totalSamples   — total trusted confirmed bookings in lookback
- * @param {number} bandSamples    — bookings in the relevant lead-time band
+ * Rationale:
+ *   A property with 200 total bookings but only 3 in the target lead-time band
+ *   has very little evidence for the current target-date decision.
+ *   Total history can set a floor but not a ceiling on confidence.
+ *
+ * @param {number} totalSamples       — total trusted confirmed bookings in lookback
+ * @param {number} comparableSamples  — bookings in the relevant lead-time band
  * @returns {'INSUFFICIENT'|'LOW'|'MODERATE'|'GOOD'}
  */
-function classifyConfidence(totalSamples, bandSamples) {
-  if (!Number.isFinite(totalSamples) || !Number.isFinite(bandSamples)) return 'INSUFFICIENT';
-  if (totalSamples < MIN_TOTAL_SAMPLES || bandSamples < MIN_BAND_SAMPLES) return 'INSUFFICIENT';
-  if (totalSamples < 20) return 'LOW';
-  if (totalSamples < 40) return 'MODERATE';
-  return 'GOOD';
+function classifyConfidence(totalSamples, comparableSamples) {
+  if (!Number.isFinite(totalSamples) || !Number.isFinite(comparableSamples)) return 'INSUFFICIENT';
+  if (totalSamples    < MIN_TOTAL_SAMPLES) return 'INSUFFICIENT';  // global history gate
+  if (comparableSamples < MIN_BAND_SAMPLES)      return 'INSUFFICIENT';  // < 3 comparable
+  if (comparableSamples < MIN_COMPARABLE_LOW)    return 'LOW';           // 3–7
+  if (comparableSamples < MIN_COMPARABLE_MODERATE) return 'MODERATE';   // 8–14
+  return 'GOOD';                                                         // 15+
 }
 
 /**
- * Classify pickup status from ratio and confidence.
+ * Stabilize the pickup ratio using additive (Laplace) smoothing.
+ * Prevents ratio explosion when rawExpected → 0 (Ti Junot: 1/0.019 = 52).
  *
- * Thresholds are wider than a typical model because:
- * - Low booking volumes (42-52/year) → high per-week variance
- * - T1 is shadow only — conservative to avoid false signals
+ * stabilized = (recentCount + PSEUDO_COUNT) / (rawExpected + PSEUDO_COUNT)
  *
- * @param {number|null} ratio
- * @param {'INSUFFICIENT'|'LOW'|'MODERATE'|'GOOD'} confidence
- * @returns {'ACCELERATING'|'NORMAL'|'SLOW'|'INSUFFICIENT_DATA'}
+ * With PSEUDO_COUNT=1.0: result is always a finite positive number.
+ * Near-zero expected pulls stabilized toward 1.0 (neutral), not ∞.
+ *
+ * @param {number} recentCount
+ * @param {number} rawExpected
+ * @returns {number}
  */
-function classifyPickupStatus(ratio, confidence) {
-  if (confidence === 'INSUFFICIENT' || ratio === null) return 'INSUFFICIENT_DATA';
-  if (ratio >= 2.0)  return 'ACCELERATING';
-  if (ratio >= 0.4)  return 'NORMAL';
+function computeStabilizedRatio(recentCount, rawExpected) {
+  return (recentCount + PSEUDO_COUNT) / (rawExpected + PSEUDO_COUNT);
+}
+
+/**
+ * Classify pickup status from stabilized ratio, raw expected, and confidence.
+ *
+ * v1.1 changes:
+ *   - Accepts stabilized ratio (not raw) as the decision signal
+ *   - Evidence floor: if rawExpected < MIN_EXPECTED_FOR_SIGNAL → LOW_EVIDENCE
+ *   - LOW_EVIDENCE: enough total history but insufficient volume to make directional call
+ *   - Thresholds recalibrated for stabilized ratio (with PSEUDO_COUNT=1.0)
+ *
+ * @param {number|null} stabilizedRatio — from computeStabilizedRatio
+ * @param {number}      rawExpected     — raw expected count (for evidence floor check)
+ * @param {'INSUFFICIENT'|'LOW'|'MODERATE'|'GOOD'} confidence
+ * @returns {'ACCELERATING'|'NORMAL'|'SLOW'|'LOW_EVIDENCE'|'INSUFFICIENT_DATA'}
+ */
+function classifyPickupStatus(stabilizedRatio, rawExpected, confidence) {
+  if (confidence === 'INSUFFICIENT' || stabilizedRatio === null) return 'INSUFFICIENT_DATA';
+  if (rawExpected < MIN_EXPECTED_FOR_SIGNAL) return 'LOW_EVIDENCE';
+  if (stabilizedRatio >= 1.8) return 'ACCELERATING';
+  if (stabilizedRatio >= 0.5) return 'NORMAL';
   return 'SLOW';
 }
 
 /**
  * Map pickup status + confidence to an advisory multiplier.
- * Conservative range [0.94, 1.06] for T1 shadow.
+ * Conservative range [0.94, 1.06] for T1.1 shadow.
  * ADVISORY ONLY — not fed to any pricing formula.
  *
- * @param {'ACCELERATING'|'NORMAL'|'SLOW'|'INSUFFICIENT_DATA'} status
+ * v1.1 graduated mapping:
+ *   LOW_EVIDENCE             → 1.00 (no direction)
+ *   ACCELERATING+GOOD        → 1.06  (maximum ±6% requires strong evidence)
+ *   ACCELERATING+MODERATE    → 1.04
+ *   ACCELERATING+LOW         → 1.02
+ *   SLOW+GOOD                → 0.94
+ *   SLOW+MODERATE            → 0.96
+ *   SLOW+LOW                 → 0.98
+ *   NORMAL                   → 1.00
+ *
+ * @param {'ACCELERATING'|'NORMAL'|'SLOW'|'LOW_EVIDENCE'|'INSUFFICIENT_DATA'} status
  * @param {'INSUFFICIENT'|'LOW'|'MODERATE'|'GOOD'} confidence
  * @returns {number}  multiplier in [ADVISORY_MIN, ADVISORY_MAX]
  */
 function computeAdvisoryMultiplier(status, confidence) {
-  if (status === 'INSUFFICIENT_DATA' || confidence === 'INSUFFICIENT') return 1.00;
+  if (status === 'INSUFFICIENT_DATA' || status === 'LOW_EVIDENCE' ||
+      confidence === 'INSUFFICIENT') return 1.00;
   if (status === 'ACCELERATING') {
-    if (confidence === 'GOOD')     return ADVISORY_MAX;            // 1.06
-    if (confidence === 'MODERATE') return 1.05;
-    return 1.03;                                                    // LOW
+    if (confidence === 'GOOD')     return ADVISORY_MAX;  // 1.06
+    if (confidence === 'MODERATE') return 1.04;
+    return 1.02;                                          // LOW
   }
   if (status === 'SLOW') {
-    if (confidence === 'GOOD')     return ADVISORY_MIN;            // 0.94
-    if (confidence === 'MODERATE') return 0.95;
-    return 0.97;                                                    // LOW
+    if (confidence === 'GOOD')     return ADVISORY_MIN;  // 0.94
+    if (confidence === 'MODERATE') return 0.96;
+    return 0.98;                                          // LOW
   }
   return 1.00;  // NORMAL
 }
@@ -423,11 +466,12 @@ async function calculatePickupShadow(pool, propertyId, targetDate, options = {})
   const confirmedStays   = Number(occupancyResult.rows[0]?.confirmed_stays ?? 0);
 
   // Core pickup metrics
-  const expected    = computeExpectedRecent(bandHistorical, recentWindowDays, lookbackDays);
-  const ratio       = computePickupRatio(recentCount, expected);
-  const confidence  = classifyConfidence(totalHistorical, bandHistorical);
-  const status      = classifyPickupStatus(ratio, confidence);
-  const advisory    = computeAdvisoryMultiplier(status, confidence);
+  const expected         = computeExpectedRecent(bandHistorical, recentWindowDays, lookbackDays);
+  const rawRatio         = computePickupRatio(recentCount, expected);       // null when expected≈0
+  const stabilizedRatio  = computeStabilizedRatio(recentCount, expected);   // always finite
+  const confidence       = classifyConfidence(totalHistorical, bandHistorical);
+  const status           = classifyPickupStatus(stabilizedRatio, expected, confidence);
+  const advisory         = computeAdvisoryMultiplier(status, confidence);
 
   // Pacing proxy (occupancy-based, not the actual pricing-engine pacing)
   const occupancyFraction = confirmedStays / Math.max(targetWindowDays, 1);
@@ -437,10 +481,16 @@ async function calculatePickupShadow(pool, propertyId, targetDate, options = {})
   // Reasons array for explainability
   const reasons = [];
   if (band === 'anomaly') reasons.push(`target_date_is_in_the_past`);
-  if (confidence === 'INSUFFICIENT') reasons.push(`insufficient_history:total=${totalHistorical},band=${bandHistorical}`);
+  if (confidence === 'INSUFFICIENT') {
+    reasons.push(`insufficient_history:total=${totalHistorical},comparable=${bandHistorical}`);
+  }
+  if (status === 'LOW_EVIDENCE') {
+    reasons.push(`low_evidence:expected=${Number(expected.toFixed(4))}<${MIN_EXPECTED_FOR_SIGNAL}`);
+  }
   if (anomalyCount > 0) reasons.push(`anomalies_excluded:${anomalyCount}`);
-  if (ratio !== null) reasons.push(`ratio=${Number(ratio.toFixed(3))}`);
-  reasons.push(`band=${band},band_count=${bandHistorical}`);
+  if (rawRatio !== null) reasons.push(`raw_ratio=${Number(rawRatio.toFixed(3))}`);
+  reasons.push(`stabilized_ratio=${Number(stabilizedRatio.toFixed(3))}`);
+  reasons.push(`band=${band},comparable=${bandHistorical},total=${totalHistorical}`);
   reasons.push(`pacing_strength=${pacingStrength},occ=${occupancyFraction.toFixed(3)}`);
 
   return {
@@ -459,7 +509,8 @@ async function calculatePickupShadow(pool, propertyId, targetDate, options = {})
     recentBookings:       recentCount,
     expectedBookings:     Number(expected.toFixed(4)),
 
-    pickupRatio:          ratio !== null ? Number(ratio.toFixed(4)) : null,
+    rawPickupRatio:       rawRatio !== null ? Number(rawRatio.toFixed(4)) : null,
+    pickupRatio:          Number(stabilizedRatio.toFixed(4)),   // stabilized (decision signal)
     status,
     confidence,
     advisoryMultiplier:   advisory,
@@ -492,6 +543,10 @@ module.exports = {
   ADVISORY_MAX,
   MIN_BAND_SAMPLES,
   MIN_TOTAL_SAMPLES,
+  MIN_COMPARABLE_LOW,
+  MIN_COMPARABLE_MODERATE,
+  MIN_EXPECTED_FOR_SIGNAL,
+  PSEUDO_COUNT,
   LEAD_TIME_BAND_DEFS,
   IDEAL_PICKUP_CURVE,
 
@@ -507,6 +562,7 @@ module.exports = {
   interpolateIdealPickup,
   computeExpectedRecent,
   computePickupRatio,
+  computeStabilizedRatio,
   classifyConfidence,
   classifyPickupStatus,
   computeAdvisoryMultiplier,

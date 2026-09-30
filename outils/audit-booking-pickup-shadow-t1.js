@@ -33,6 +33,7 @@ const {
   TARGET_WINDOW_DAYS,
   ADVISORY_MIN,
   ADVISORY_MAX,
+  MIN_EXPECTED_FOR_SIGNAL,
 } = require('../services/booking-pickup-shadow');
 
 // ── Configuration ─────────────────────────────────────────────────────────────
@@ -70,6 +71,7 @@ function statusIcon(status) {
     case 'ACCELERATING':     return '▲';
     case 'NORMAL':           return '●';
     case 'SLOW':             return '▼';
+    case 'LOW_EVIDENCE':     return '~';
     case 'INSUFFICIENT_DATA': return '?';
     default:                 return '·';
   }
@@ -107,6 +109,7 @@ async function main() {
     console.log(`  Trusted sources: ${TRUSTED_SOURCES.join(', ')}`);
     console.log(`  Recent window:   ${RECENT_WINDOW_DAYS} days`);
     console.log(`  Advisory range:  [${ADVISORY_MIN}, ${ADVISORY_MAX}]`);
+    console.log(`  Evidence floor:  expected >= ${MIN_EXPECTED_FOR_SIGNAL} for directional signal`);
     console.log(`  Persistence:     ${process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED === 'true' ? 'ON (disabled in audit)' : 'OFF'}`);
     console.log(`  DB_WRITES=0  CHANNEX_CALLS=0  MARKET_PROVIDER_CALLS=0`);
     console.log('──────────────────────────────────────────────────────────────');
@@ -146,9 +149,10 @@ async function main() {
         console.log(`  ${icon}  ${label}`);
         console.log(`     property_id:          ${obs.propertyId}`);
         console.log(`     target_date:          ${obs.targetDate}  (lead_time: ${obs.leadTimeDays}d, band: ${obs.leadTimeBand})`);
-        console.log(`     history:              ${obs.historicalSampleSize} total, ${obs.comparableSampleSize} in band`);
+        console.log(`     history:              ${obs.historicalSampleSize} total, ${obs.comparableSampleSize} comparable (band)`);
         console.log(`     recent_bookings:      ${obs.recentBookings}  expected: ${obs.expectedBookings}`);
-        console.log(`     pickup_ratio:         ${obs.pickupRatio !== null ? obs.pickupRatio : 'n/a'}`);
+        console.log(`     raw_pickup_ratio:     ${obs.rawPickupRatio !== null ? obs.rawPickupRatio : 'n/a (expected too low)'}`);
+        console.log(`     stabilized_ratio:     ${obs.pickupRatio}  (decision signal)`);
         console.log(`     status:               ${obs.status}`);
         console.log(`     confidence:           ${cIcon}  ${obs.confidence}`);
         console.log(`     advisory_multiplier:  ${advisoryLabel(obs.advisoryMultiplier)}`);
