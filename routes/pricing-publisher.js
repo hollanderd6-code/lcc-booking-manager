@@ -11,7 +11,8 @@
  *   • external_pricing=true → skip BEFORE the resolver is called.
  *     force=true NEVER bypasses this guard.
  *   • channex_enabled=false or missing Channex IDs → skip.
- *   • No DB writes. No side effects beyond the two Channex API calls.
+ *   • No DB writes beyond price_observations (P1.5-T1, flag-gated, never blocks).
+ *   • Side effects: two Channex API calls + optional price observation write.
  *
  * Concurrency model (P0-C4.9-C — DESIGN C):
  *   1. Per-property local queue (Map<propertyId, Promise>) ensures at most one
@@ -73,6 +74,13 @@ function createPublisher(deps = {}) {
   function _acquireLock()      { return deps.acquireLock || require('./pricing-publish-lock').acquirePropertyLock; }
   function _releaseLock()      { return deps.releaseLock || require('./pricing-publish-lock').releasePropertyLock; }
   function _connectClient()    { return deps.connectClient || ((pool) => pool.connect()); }
+  // P1.5-T1: price observation hook — 'onObserve' in deps allows injection (null = disabled).
+  // When not injected, lazily loads the persistence service. Failure never blocks pricing.
+  function _onObserve() {
+    if ('onObserve' in deps) return deps.onObserve; // null → disabled in test/caller
+    try { return require('../services/price-observation-persistence').observePricingState; }
+    catch(e) { return null; }
+  }
 
   // ── Per-property local queue ─────────────────────────────────────────────────
   // Map<propertyId, Promise> — each entry is the settled tail of the queue chain.
@@ -173,6 +181,24 @@ function createPublisher(deps = {}) {
       // ── 4. JIT resolve — ONLY under the distributed lock ─────────────────
       // Uses the same dedicated client throughout to avoid pool pressure.
       const nights = await _resolve()(client, { propertyId, userId: ownerId, startDate, endDate });
+
+      // ── 4b. Price observations (P1.5-T1 — fault-isolated, never blocks pricing) ─
+      // Captures the canonical effective state AFTER resolution, BEFORE Channex push.
+      // PRICE_OBSERVATION_FAILURE_BLOCKS_PRICING = NO
+      const _observeFn = _onObserve();
+      if (typeof _observeFn === 'function') {
+        try {
+          await _observeFn(pool, {
+            propertyId,
+            prop,
+            nights,
+            context: { reason, publisherRunId: `${propertyId}_${Date.now()}` },
+          });
+        } catch (obsErr) {
+          console.error(`[PUBLISHER] price-observation error (${propertyId}):`, obsErr.message);
+          // Never rethrows — PRICE_OBSERVATION_FAILURE_BLOCKS_PRICING = NO
+        }
+      }
 
       // ── 5. Build payloads ─────────────────────────────────────────────────
       // Resolve stopSellMode: explicit wins; else legacy includeStopSell:false → 'none';
