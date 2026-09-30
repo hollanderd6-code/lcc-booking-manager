@@ -405,6 +405,140 @@ test('G-10 no PII in SQL queries (no guest_email, guest_name, guest_phone)', () 
   assert.ok(!allSql.includes('guest_phone'), 'SQL should not select guest_phone');
 });
 
+// ── Section H — Real schema / type-contract tests (T0-PROD-FIX) ──────────────
+//
+// Root cause of production crash:
+//   EXTRACT(EPOCH FROM (DATE - DATE)) fails in PostgreSQL because
+//   DATE - DATE = INTEGER, and EXTRACT does not accept an integer source.
+//   Error: "function pg_catalog.extract(unknown, integer) does not exist"
+//
+// Canonical fix: use (start_date::date - created_at::date) directly — already
+// an integer number of days, matching server.js:20076 production pattern.
+
+console.log('\nH — Real schema / type-contract (T0-PROD-FIX)');
+
+test('H-01 RELIABLE_BOOKINGS_SQL does not use EXTRACT(EPOCH FROM date_diff)', () => {
+  // EXTRACT(EPOCH FROM (date - date)) fails: date - date = integer, not interval
+  assert.ok(
+    !RELIABLE_BOOKINGS_SQL.toUpperCase().includes('EXTRACT(EPOCH FROM'),
+    'EXTRACT(EPOCH FROM ...) is invalid for integer date differences'
+  );
+});
+
+test('H-02 LEAD_TIME_HISTOGRAM_SQL does not use EXTRACT', () => {
+  assert.ok(
+    !LEAD_TIME_HISTOGRAM_SQL.toUpperCase().includes('EXTRACT'),
+    'No EXTRACT in histogram SQL — use direct date subtraction'
+  );
+});
+
+test('H-03 LEAD_TIME_HISTOGRAM_SQL outer query uses sub.property_id not r.property_id', () => {
+  // r is only in scope inside the subquery; outer query must reference sub
+  const outer = LEAD_TIME_HISTOGRAM_SQL.slice(
+    LEAD_TIME_HISTOGRAM_SQL.indexOf(') sub')
+  );
+  assert.ok(!outer.includes('r.property_id'), 'outer query must not reference r.property_id');
+  assert.ok(outer.includes('sub.property_id'), 'outer query must reference sub.property_id');
+});
+
+test('H-04 canonical lead time uses direct date subtraction (integer days)', () => {
+  // Production pattern from server.js:20076: (end_date::date - start_date::date) as nights
+  // T0 mirrors: (start_date::date - created_at::date)
+  assert.ok(
+    RELIABLE_BOOKINGS_SQL.includes('start_date::date - r.created_at::date'),
+    'lead time should use direct date subtraction'
+  );
+});
+
+test('H-05 PERCENTILE_CONT orders by direct date subtraction', () => {
+  const countMatches = (RELIABLE_BOOKINGS_SQL.match(/PERCENTILE_CONT/g) || []).length;
+  assert.strictEqual(countMatches, 4, 'should have 4 PERCENTILE_CONT calls (p25/p50/p75/p90)');
+  // Verify none wrap the expression in EXTRACT
+  assert.ok(!RELIABLE_BOOKINGS_SQL.includes('EXTRACT'), 'PERCENTILE_CONT must not use EXTRACT');
+});
+
+test('H-06 INTERVAL lookback uses integer-multiply form ($n::int * INTERVAL)', () => {
+  // ($2::int * INTERVAL '1 month') is type-safe; avoids text concatenation coercion
+  assert.ok(
+    RELIABLE_BOOKINGS_SQL.includes("* INTERVAL '1 month'"),
+    "RELIABLE_BOOKINGS_SQL should use integer-multiply interval form"
+  );
+  assert.ok(
+    UNRELIABLE_BOOKINGS_SQL.includes("* INTERVAL '1 month'"),
+    "UNRELIABLE_BOOKINGS_SQL should use integer-multiply interval form"
+  );
+  assert.ok(
+    LEAD_TIME_HISTOGRAM_SQL.includes("* INTERVAL '1 month'"),
+    "LEAD_TIME_HISTOGRAM_SQL should use integer-multiply interval form"
+  );
+});
+
+test('H-07 no EXTRACT in any T0 SQL constant', () => {
+  const sqls = [RELIABLE_BOOKINGS_SQL, UNRELIABLE_BOOKINGS_SQL, ACTIVE_PROPERTIES_SQL, LEAD_TIME_HISTOGRAM_SQL];
+  for (const sql of sqls) {
+    assert.ok(!sql.toUpperCase().includes('EXTRACT'), 'no EXTRACT in T0 SQL');
+  }
+});
+
+test('H-08 UNRELIABLE_BOOKINGS_SQL has no date arithmetic (COUNT only)', () => {
+  // Unreliable sources: counts only, no lead time calculation
+  assert.ok(!UNRELIABLE_BOOKINGS_SQL.includes('start_date'), 'no start_date in unreliable SQL');
+  assert.ok(!UNRELIABLE_BOOKINGS_SQL.includes('PERCENTILE'), 'no percentile in unreliable SQL');
+  assert.ok(UNRELIABLE_BOOKINGS_SQL.includes('COUNT(*)'), 'should COUNT confirmed');
+});
+
+test('H-09 negative lead time preserved as anomaly (not clamped)', () => {
+  // Negative lead times (booking created after check-in) are counted, not dropped
+  assert.ok(
+    RELIABLE_BOOKINGS_SQL.includes('negative_lead_count'),
+    'negative lead times should be counted as data quality anomalies'
+  );
+  // Percentile filter excludes negatives but the count column preserves them
+  assert.ok(
+    RELIABLE_BOOKINGS_SQL.includes('start_date::date < r.created_at::date'),
+    'should identify negative lead times explicitly'
+  );
+});
+
+test('H-10 12-month lookback uses integer parameter not string concat', () => {
+  // Old (broken): ($2 || \' months\')::INTERVAL — text concat may coerce unexpectedly
+  // New (correct): ($2::int * INTERVAL \'1 month\')
+  assert.ok(
+    !RELIABLE_BOOKINGS_SQL.includes("|| ' months'"),
+    "should not use string concatenation for interval"
+  );
+  assert.ok(
+    !LEAD_TIME_HISTOGRAM_SQL.includes("|| ' months'"),
+    "histogram should not use string concatenation for interval"
+  );
+});
+
+test('H-11 start_date column referenced as DATE in lead-time expressions', () => {
+  // All references in PERCENTILE_CONT use ::date cast to normalize TIMESTAMP → DATE
+  const count = (RELIABLE_BOOKINGS_SQL.match(/start_date::date/g) || []).length;
+  assert.ok(count >= 4, 'start_date should be cast ::date in all lead-time expressions');
+});
+
+test('H-12 created_at column cast to ::date for date-level comparison', () => {
+  // created_at is TIMESTAMPTZ; cast to ::date truncates to day boundary
+  const count = (RELIABLE_BOOKINGS_SQL.match(/created_at::date/g) || []).length;
+  assert.ok(count >= 4, 'created_at should be cast ::date in all lead-time expressions');
+});
+
+test('H-13 error classification: production crash pattern is QUERY_TYPE_MISMATCH', () => {
+  // Verify the audit source contains the new error classification labels
+  assert.ok(SRC.includes('QUERY_TYPE_MISMATCH'), 'should classify type errors distinctly');
+  assert.ok(SRC.includes('SCHEMA_CONTRACT_FAILURE'), 'should classify schema errors distinctly');
+  assert.ok(SRC.includes('DATABASE_CONNECTION_FAILURE'), 'should classify conn errors distinctly');
+  assert.ok(SRC.includes('QUERY_EXECUTION_FAILURE'), 'should have generic fallback');
+});
+
+test('H-14 ACTIVE_PROPERTIES_SQL has no date arithmetic or type-sensitive operations', () => {
+  assert.ok(!ACTIVE_PROPERTIES_SQL.includes('EXTRACT'), 'no EXTRACT in properties query');
+  assert.ok(!ACTIVE_PROPERTIES_SQL.includes('::date'), 'no date cast in properties query');
+  assert.ok(!ACTIVE_PROPERTIES_SQL.includes('INTERVAL'), 'no interval in properties query');
+});
+
 // ── Results ───────────────────────────────────────────────────────────────────
 
 console.log('');

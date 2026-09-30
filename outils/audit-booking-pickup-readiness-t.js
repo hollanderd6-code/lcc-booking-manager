@@ -28,6 +28,21 @@
  *   MARKET_PROVIDER_CALLS  = 0  always
  *   NETWORK_CALLS          = 0  always
  *
+ * SCHEMA CONTRACT (reservations table):
+ *   start_date   DATE        — check-in date (confirmed by EXTRACT(YEAR FROM start_date) in server.js)
+ *   end_date     DATE        — checkout date
+ *   created_at   TIMESTAMPTZ — DB insertion time (NOW() default in all INSERT paths)
+ *   updated_at   TIMESTAMPTZ — same
+ *   source       TEXT        — ingestion path
+ *   status       TEXT        — confirmed / cancelled
+ *   property_id  TEXT        — joins with properties.id (TEXT)
+ *
+ * DATE ARITHMETIC:
+ *   (DATE - DATE) → INTEGER (days) in PostgreSQL.
+ *   EXTRACT(EPOCH FROM integer) is INVALID — do not wrap date subtraction in EXTRACT.
+ *   Canonical form: (start_date::date - created_at::date)  [integer days]
+ *   Production precedent: (end_date::date - start_date::date) AS nights  (server.js:20076)
+ *
  * `created_at` SEMANTICS BY SOURCE:
  *   channex   → DB NOW() at webhook arrival (≈ OTA booking time, within seconds)
  *               RELIABLE for pickup velocity — proxy for actual booking instant
@@ -88,10 +103,21 @@ const EXCLUDED_SOURCES = ['BLOCK'];
  * SAFETY: SELECT only — no writes, no network.
  *
  * Column authority:
- *   created_at → reservations.created_at (DB insertion time — semantic varies by source)
- *   start_date → reservations.start_date (check-in date)
- *   source     → reservations.source     (ingestion path)
- *   status     → reservations.status     (confirmed / cancelled)
+ *   created_at → reservations.created_at  TIMESTAMPTZ — DB insertion time
+ *   start_date → reservations.start_date  DATE        — check-in date
+ *   source     → reservations.source      TEXT        — ingestion path
+ *   status     → reservations.status      TEXT        — confirmed / cancelled
+ *   property_id→ reservations.property_id TEXT
+ *
+ * DATE ARITHMETIC CONTRACT (T0-PROD-FIX):
+ *   In PostgreSQL, (DATE - DATE) → INTEGER (number of days).
+ *   EXTRACT(EPOCH FROM integer) is NOT valid — do not wrap date-diff in EXTRACT.
+ *   Canonical lead time = (start_date::date - created_at::date)  [integer days]
+ *   This is the same pattern used for `nights` throughout server.js:
+ *     (end_date::date - start_date::date) AS nights
+ *
+ * INTERVAL FILTER:
+ *   ($2::int * INTERVAL '1 month') — avoids text concat; works with integer parameter.
  */
 const RELIABLE_BOOKINGS_SQL = `
   SELECT
@@ -101,25 +127,25 @@ const RELIABLE_BOOKINGS_SQL = `
     COUNT(*) FILTER (WHERE r.status = 'confirmed')                AS confirmed_count,
     COUNT(*) FILTER (WHERE r.status = 'cancelled')                AS cancelled_count,
     PERCENTILE_CONT(0.25) WITHIN GROUP (
-      ORDER BY EXTRACT(EPOCH FROM (r.start_date::date - r.created_at::date)) / 86400
+      ORDER BY (r.start_date::date - r.created_at::date)
     ) FILTER (
       WHERE r.status = 'confirmed'
         AND r.start_date::date >= r.created_at::date
     )                                                              AS lead_time_p25,
     PERCENTILE_CONT(0.5)  WITHIN GROUP (
-      ORDER BY EXTRACT(EPOCH FROM (r.start_date::date - r.created_at::date)) / 86400
+      ORDER BY (r.start_date::date - r.created_at::date)
     ) FILTER (
       WHERE r.status = 'confirmed'
         AND r.start_date::date >= r.created_at::date
     )                                                              AS lead_time_p50,
     PERCENTILE_CONT(0.75) WITHIN GROUP (
-      ORDER BY EXTRACT(EPOCH FROM (r.start_date::date - r.created_at::date)) / 86400
+      ORDER BY (r.start_date::date - r.created_at::date)
     ) FILTER (
       WHERE r.status = 'confirmed'
         AND r.start_date::date >= r.created_at::date
     )                                                              AS lead_time_p75,
     PERCENTILE_CONT(0.9)  WITHIN GROUP (
-      ORDER BY EXTRACT(EPOCH FROM (r.start_date::date - r.created_at::date)) / 86400
+      ORDER BY (r.start_date::date - r.created_at::date)
     ) FILTER (
       WHERE r.status = 'confirmed'
         AND r.start_date::date >= r.created_at::date
@@ -130,7 +156,7 @@ const RELIABLE_BOOKINGS_SQL = `
     )                                                              AS negative_lead_count
   FROM reservations r
   WHERE r.source = ANY($1)
-    AND r.created_at >= NOW() - ($2 || ' months')::INTERVAL
+    AND r.created_at >= NOW() - ($2::int * INTERVAL '1 month')
   GROUP BY r.property_id, r.source
   ORDER BY r.property_id, r.source
 `;
@@ -138,6 +164,8 @@ const RELIABLE_BOOKINGS_SQL = `
 /**
  * Per-property unreliable source summary (ical, manual, DIRECT).
  * Counts only — no lead time (created_at is import time, not booking time).
+ *
+ * No date arithmetic — COUNT only. INTERVAL uses integer-multiply form (see RELIABLE_BOOKINGS_SQL).
  */
 const UNRELIABLE_BOOKINGS_SQL = `
   SELECT
@@ -147,7 +175,7 @@ const UNRELIABLE_BOOKINGS_SQL = `
     COUNT(*) FILTER (WHERE r.status = 'confirmed')      AS confirmed_count
   FROM reservations r
   WHERE r.source NOT IN ('channex', 'guest_app', 'BLOCK')
-    AND r.created_at >= NOW() - ($1 || ' months')::INTERVAL
+    AND r.created_at >= NOW() - ($1::int * INTERVAL '1 month')
   GROUP BY r.property_id, r.source
   ORDER BY r.property_id, r.source
 `;
@@ -170,31 +198,39 @@ const ACTIVE_PROPERTIES_SQL = `
 /**
  * Lead-time bucket distribution for reliable confirmed bookings.
  * Used for the shadow pickup signal design histogram.
+ *
+ * DATE ARITHMETIC (T0-PROD-FIX):
+ *   (start_date::date - created_at::date) → INTEGER days directly.
+ *   No EXTRACT needed; no division by 86400.
+ *
+ * ALIAS FIX (T0-PROD-FIX):
+ *   Outer query must reference sub.property_id — `r` is only in scope inside
+ *   the subquery and would cause "missing FROM-clause entry for table r".
  */
 const LEAD_TIME_HISTOGRAM_SQL = `
   SELECT
-    r.property_id,
+    sub.property_id,
     CASE
-      WHEN ld < 0   THEN 'negative'
-      WHEN ld < 7   THEN '0_6'
-      WHEN ld < 14  THEN '7_13'
-      WHEN ld < 30  THEN '14_29'
-      WHEN ld < 60  THEN '30_59'
-      WHEN ld < 90  THEN '60_89'
-      ELSE               '90plus'
-    END                  AS bucket,
-    COUNT(*)             AS cnt
+      WHEN sub.ld < 0   THEN 'negative'
+      WHEN sub.ld < 7   THEN '0_6'
+      WHEN sub.ld < 14  THEN '7_13'
+      WHEN sub.ld < 30  THEN '14_29'
+      WHEN sub.ld < 60  THEN '30_59'
+      WHEN sub.ld < 90  THEN '60_89'
+      ELSE                   '90plus'
+    END                       AS bucket,
+    COUNT(*)                  AS cnt
   FROM (
     SELECT
       r.property_id,
-      ROUND(EXTRACT(EPOCH FROM (r.start_date::date - r.created_at::date)) / 86400)::int AS ld
+      (r.start_date::date - r.created_at::date) AS ld
     FROM reservations r
     WHERE r.source = ANY($1)
       AND r.status = 'confirmed'
-      AND r.created_at >= NOW() - ($2 || ' months')::INTERVAL
+      AND r.created_at >= NOW() - ($2::int * INTERVAL '1 month')
   ) sub
-  GROUP BY r.property_id, bucket
-  ORDER BY r.property_id, bucket
+  GROUP BY sub.property_id, bucket
+  ORDER BY sub.property_id, bucket
 `;
 
 // ── Pure helpers — no DB, no I/O ──────────────────────────────────────────────
@@ -303,17 +339,36 @@ async function main() {
   try {
     const [r1, r2, r3, r4] = await Promise.all([
       pool.query(ACTIVE_PROPERTIES_SQL),
-      pool.query(RELIABLE_BOOKINGS_SQL, [RELIABLE_SOURCES, String(LOOKBACK_MONTHS)]),
-      pool.query(UNRELIABLE_BOOKINGS_SQL, [String(LOOKBACK_MONTHS)]),
-      pool.query(LEAD_TIME_HISTOGRAM_SQL, [RELIABLE_SOURCES, String(LOOKBACK_MONTHS)]),
+      pool.query(RELIABLE_BOOKINGS_SQL, [RELIABLE_SOURCES, LOOKBACK_MONTHS]),
+      pool.query(UNRELIABLE_BOOKINGS_SQL, [LOOKBACK_MONTHS]),
+      pool.query(LEAD_TIME_HISTOGRAM_SQL, [RELIABLE_SOURCES, LOOKBACK_MONTHS]),
     ]);
     activeProps    = r1.rows;
     reliableRows   = r2.rows;
     unreliableRows = r3.rows;
     histogramRows  = r4.rows;
   } catch (err) {
-    console.error(`[T0_AUDIT_FAILURE] DB query error: ${err.message}`);
-    console.error('  → Check DATABASE_URL and that tables exist');
+    // Classify the error to produce an actionable message
+    const msg = err.message || '';
+    const isConnError = /ECONNREFUSED|ETIMEDOUT|ENOTFOUND|password|auth|connect|ssl/i.test(msg);
+    const isSchemaError = /column.*does not exist|table.*does not exist|relation.*does not exist/i.test(msg);
+    const isTypeError = /function.*does not exist|operator.*does not exist|invalid input syntax|cannot cast|type.*does not exist/i.test(msg);
+
+    if (isConnError) {
+      console.error('[T0_AUDIT_FAILURE] DATABASE_CONNECTION_FAILURE');
+      console.error('  → Check DATABASE_URL and network/SSL settings');
+    } else if (isSchemaError) {
+      console.error('[T0_AUDIT_FAILURE] SCHEMA_CONTRACT_FAILURE');
+      console.error('  → A column or table referenced by T0 SQL does not exist in production');
+      console.error(`  → Detail: ${msg.replace(/password=[^\s]*/gi, 'password=***')}`);
+    } else if (isTypeError) {
+      console.error('[T0_AUDIT_FAILURE] QUERY_TYPE_MISMATCH');
+      console.error('  → A SQL function or operator does not match the actual column type');
+      console.error(`  → Detail: ${msg}`);
+    } else {
+      console.error('[T0_AUDIT_FAILURE] QUERY_EXECUTION_FAILURE');
+      console.error(`  → Detail: ${msg}`);
+    }
     await pool.end().catch(() => {});
     process.exit(1);
   }
