@@ -964,6 +964,24 @@ function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
       .catch(err => console.error('[PICKUP_SHADOW_FAILURE]', err.message));
   }, { timezone: 'Europe/Paris' });
 
+  // P1.4-T1: Local seasonality shadow — weekly Monday 03:15 Europe/Paris.
+  // Reads reservation DB only. Writes to local_seasonality_readiness (when flag ON).
+  // SEASONALITY_HAS_PRICING_AUTHORITY=NO — results never flow into pricing calculations.
+  // FLAG_OFF: when LOCAL_SEASONALITY_SHADOW_ENABLED != 'true', returns immediately with zero reads/writes.
+  cron.schedule('15 3 * * 1', () => {
+    const { isShadowEnabled } = require('../services/local-seasonality-shadow');
+    if (!isShadowEnabled()) return;  // FLAG_OFF_CALCULATIONS=0  FLAG_OFF_WRITES=0
+    require('../services/local-seasonality-shadow-job')
+      .runLocalSeasonalityJob(pool)
+      .then(s => {
+        console.log(
+          `[SEASONALITY_SHADOW] done — props=${s.propertiesProcessed}/${s.propertiesEligible}` +
+          ` persisted=${s.snapshotsPersisted} errors=${s.errors.length}`,
+        );
+      })
+      .catch(err => console.error('[SEASONALITY_SHADOW_FAILURE]', err.message));
+  }, { timezone: 'Europe/Paris' });
+
   if (MOCK_MODE) {
     console.log('⚠️  [DP-CRON] Mode MOCK actif — APIFY_TOKEN non défini');
     console.log('   → Données simulées utilisées lors du scraping');
