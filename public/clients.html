@@ -2065,6 +2065,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     const data = await res.json();
     clients = data.clients || [];
     window.clients = clients; // ✅ Exposer globalement pour la modal attestation
+
+    // Enrichir les clients locaux UUID avec delegator_user_id si leurs logements sont
+    // tous gérés depuis un compte délégué unique. Cela permet à la détection
+    // isAgencyClient de fonctionner même pour les clients non préfixés agency_client_.
+    // Enrichir les clients locaux UUID dont tous les logements gérés pointent vers
+    // un seul compte délégué. Permet à openImportReservations d'envoyer owner_user_id.
+    //
+    // DISTINCTION CRITIQUE :
+    //   owner_id           = owner_clients.id  — identifie le client de facturation
+    //   delegator_user_id  = users.id          — identifie le compte Boostinghost propriétaire
+    //                                            des RÉSERVATIONS. Ces deux ID ne sont PAS
+    //                                            interchangeables.
+    //
+    // On ne stamp PAS is_agency_client=true (modifierait l'UI global non lié à la facturation).
+    // On stamp uniquement delegator_user_id, champ dédié au périmètre import-facture.
+    (window.clients || []).forEach(function(c) {
+      if (c.delegator_user_id || String(c.id).startsWith('agency_client_')) return;
+      var cId = String(c.id);
+      var linked = (window.allProperties || []).filter(function(p) {
+        return p._isManaged && p._managedAccount && p._managedAccount.userId
+          && p.owner_id && String(p.owner_id) === cId;
+      });
+      if (!linked.length) return;
+      var dIds = linked.map(function(p) { return p._managedAccount.userId; });
+      var uniq = dIds.filter(function(v, i, a) { return a.indexOf(v) === i; });
+      if (uniq.length === 1) {
+        c.delegator_user_id = uniq[0];
+      } else if (uniq.length > 1) {
+        // Ambiguïté : ce client est lié à plusieurs comptes délégués.
+        // Fail closed — aucun owner_user_id ne sera envoyé pour ce client.
+        console.log('[OwnerInvoiceWebImport][IDENTITY] ambiguousOwnerScope', {
+          ownerClientId: cId,
+          accountCount: uniq.length
+        });
+      }
+    });
+
     document.getElementById('statsClients').textContent = clients.length;
 
     // Repeupler le filtre client des factures maintenant qu'on a les noms
@@ -2369,15 +2406,26 @@ async function loadPropertiesForInvoice() {
       }
     } catch(e) {}
 
-    // Fusionner sans doublons
-    var allIds = new Set(myProps.map(function(p) { return String(p.id); }));
+    // Fusionner : si un ID apparaît dans les deux collections, conserver l'entrée
+    // complète de /api/properties (elle contient plus de champs) mais y appliquer
+    // les métadonnées gérées (_isManaged, _managedAccount) qui font autorité.
+    var ownByIdMap = new Map(myProps.map(function(p) { return [String(p.id), p]; }));
     managedProps.forEach(function(p) {
-      if (!allIds.has(String(p.id))) {
-        allIds.add(String(p.id));
-        myProps.push(p);
+      var existing = ownByIdMap.get(String(p.id));
+      if (existing) {
+        existing._isManaged = true;
+        existing._managedAccount = p._managedAccount;
+      } else {
+        ownByIdMap.set(String(p.id), p);
       }
     });
-    window.allProperties = myProps;
+    window.allProperties = Array.from(ownByIdMap.values());
+    // [DIAG] snapshot after merge — confirms managed metadata survived the dedup
+    var _diagMgd = window.allProperties.filter(function(p) { return p._isManaged; });
+    console.log('[OwnerInvoiceWebImport][IDENTITY] properties', {
+      total: window.allProperties.length,
+      managed: _diagMgd.length
+    });
   } catch(e) {
     console.error('Erreur chargement propriétés:', e);
   }
@@ -2388,7 +2436,10 @@ function loadClientDefaults() {
   const clientId = document.getElementById('invoiceClientId').value;
   // Si l'utilisateur choisit un VRAI client (pas un client agence), on abandonne
   // tout snapshot précédent. Pour un client agence (id préfixé), on garde le snapshot.
-  if (clientId && !String(clientId).startsWith('agency_client_')) {
+  const _snapClObj = (window.clients || []).find(c => String(c.id) === String(clientId));
+  const _isSnapAgency = String(clientId).startsWith('agency_client_')
+    || !!(_snapClObj && _snapClObj.delegator_user_id);
+  if (clientId && !_isSnapAgency) {
     window._invoiceClientSnapshot = null;
   }
   
@@ -2402,18 +2453,19 @@ function loadClientDefaults() {
   const section = document.getElementById('propertySelectSection');
   let clientProperties = [];
 
-  if (String(clientId).startsWith('agency_client_')) {
-    // Agency client: resolve via managed account metadata (same logic as import modal)
-    const _agClObj = (window.clients || []).find(c => String(c.id) === String(clientId));
-    if (_agClObj && _agClObj.delegator_user_id) {
+  const _lcdClObj = (window.clients || []).find(c => String(c.id) === String(clientId));
+  const _isLcdAgency = String(clientId).startsWith('agency_client_')
+    || !!(_lcdClObj && _lcdClObj.delegator_user_id);
+  if (_isLcdAgency) {
+    // Agency or UUID-local client enriched with delegator_user_id: resolve via managed metadata
+    if (_lcdClObj && _lcdClObj.delegator_user_id) {
       clientProperties = (window.allProperties || []).filter(p =>
-        p._isManaged && p._managedAccount && p._managedAccount.userId === _agClObj.delegator_user_id
+        p._isManaged && p._managedAccount && p._managedAccount.userId === _lcdClObj.delegator_user_id
       );
     }
   } else {
-    // Own client: filter by owner_id (numeric, same namespace as owner_clients.id)
-    const realCid = String(clientId).replace('agency_client_', '');
-    clientProperties = (window.allProperties || []).filter(p => String(p.owner_id) === realCid);
+    // Own client: filter by owner_id
+    clientProperties = (window.allProperties || []).filter(p => String(p.owner_id) === String(clientId));
   }
 
   if (clientProperties.length === 0) {
@@ -6385,11 +6437,15 @@ window.openImportReservations = function() {
 
   // ── Property resolution ───────────────────────────────────────────────────
   var clientId2 = document.getElementById("invoiceClientId") ? document.getElementById("invoiceClientId").value : "";
-  var isAgencyClient2 = String(clientId2).startsWith('agency_client_');
   var allProps = [];
 
   // DIAG — runtime state snapshot (no PII)
+  // _diagClObj resolved first: broadened agency detection reads delegator_user_id from enriched client.
   var _diagClObj = (window.clients || []).find(function(c){ return String(c.id) === String(clientId2); });
+  // Agency client = prefixed agency_client_N OR a local UUID client enriched with delegator_user_id
+  // (populated by loadClients() from managed-property metadata after the dedup fix).
+  var isAgencyClient2 = String(clientId2).startsWith('agency_client_')
+    || !!(_diagClObj && _diagClObj.delegator_user_id);
   console.log('[OwnerInvoiceWebImport][DIAG] client', {
     selectedClientId: clientId2,
     isAgencyClient: isAgencyClient2,
@@ -6450,7 +6506,9 @@ window.openImportReservations = function() {
       }).join("");
 
   // Canonical import scope \u2014 consumed by fetchInvoiceSummary().
-  // Derived here once from the authenticated client object; never re-discovered from property IDs.
+  // Pour les clients agency_client_N : delegator_user_id issu de l'objet client (FIX-03).
+  // Pour les clients UUID locaux enrichis par loadClients() : delegator_user_id \u00e9galement pr\u00e9sent.
+  // Les deux chemins convergent vers le m\u00eame test \u2014 aucun cas particulier n\u00e9cessaire.
   window._importResaOwnerScope = {
     isAgency: isAgencyClient2,
     ownerUserId: (isAgencyClient2 && _diagClObj && _diagClObj.delegator_user_id)

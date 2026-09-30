@@ -88,7 +88,7 @@ console.log('\n── B. loadClientDefaults: agency path ───────�
   ok(lcdFn.includes("String(clientId).startsWith('agency_client_')"),
      'B-02 loadClientDefaults detects agency client');
 
-  ok(lcdFn.includes('_agClObj.delegator_user_id'),
+  ok(lcdFn.includes('.delegator_user_id'),
      'B-03 loadClientDefaults uses delegator_user_id for agency clients');
 
   ok(lcdFn.includes('p._isManaged && p._managedAccount'),
