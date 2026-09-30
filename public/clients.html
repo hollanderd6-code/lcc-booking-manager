@@ -2398,13 +2398,24 @@ function loadClientDefaults() {
     return;
   }
   
-  // Afficher les logements de ce client
-  const realCid = String(clientId).replace('agency_client_', '');
-  const clientProperties = (window.allProperties || []).filter(p => String(p.owner_id) === realCid);
-  
   const container = document.getElementById('propertyCheckboxList');
   const section = document.getElementById('propertySelectSection');
-  
+  let clientProperties = [];
+
+  if (String(clientId).startsWith('agency_client_')) {
+    // Agency client: resolve via managed account metadata (same logic as import modal)
+    const _agClObj = (window.clients || []).find(c => String(c.id) === String(clientId));
+    if (_agClObj && _agClObj.delegator_user_id) {
+      clientProperties = (window.allProperties || []).filter(p =>
+        p._isManaged && p._managedAccount && p._managedAccount.userId === _agClObj.delegator_user_id
+      );
+    }
+  } else {
+    // Own client: filter by owner_id (numeric, same namespace as owner_clients.id)
+    const realCid = String(clientId).replace('agency_client_', '');
+    clientProperties = (window.allProperties || []).filter(p => String(p.owner_id) === realCid);
+  }
+
   if (clientProperties.length === 0) {
     section.style.display = 'none';
     updatePreview();
@@ -6372,37 +6383,62 @@ window.openImportReservations = function() {
   var checkedProps = [];
   document.querySelectorAll("#propertyCheckboxList input[type=checkbox]:checked").forEach(function(cb){ checkedProps.push(cb.value); });
 
-  // Source des logements : priorité aux logements du client (allProperties filtré par owner_id)
+  // ── Property resolution ───────────────────────────────────────────────────
   var clientId2 = document.getElementById("invoiceClientId") ? document.getElementById("invoiceClientId").value : "";
+  var isAgencyClient2 = String(clientId2).startsWith('agency_client_');
   var allProps = [];
-  if (window.allProperties && window.allProperties.length > 0 && clientId2) {
-    var realClientId = String(clientId2).replace('agency_client_', '');
-    allProps = window.allProperties.filter(function(p) { return String(p.owner_id) === realClientId; });
-  }
-  if (allProps.length === 0) {
-    // owner_id filter found nothing — resolve properties from allProperties metadata
-    var _clObj = (window.clients || []).find(function(c){ return String(c.id) === String(clientId2); });
+
+  // DIAG — runtime state snapshot (no PII)
+  var _diagClObj = (window.clients || []).find(function(c){ return String(c.id) === String(clientId2); });
+  console.log('[OwnerInvoiceWebImport][DIAG] client', {
+    selectedClientId: clientId2,
+    isAgencyClient: isAgencyClient2,
+    delegatorUserId: _diagClObj ? _diagClObj.delegator_user_id : undefined,
+    clientFound: !!_diagClObj
+  });
+  console.log('[OwnerInvoiceWebImport][DIAG] collections', {
+    clientsCount: (window.clients || []).length,
+    allPropertiesCount: (window.allProperties || []).length,
+    managedPropertiesCount: (window.allProperties || []).filter(function(p){ return p._isManaged; }).length
+  });
+
+  if (isAgencyClient2) {
+    // Agency client: managed account metadata is authoritative.
+    // owner_id is not reliable here — it lives in the delegator's namespace,
+    // but coincidental matches with own-account owner_ids could select wrong properties.
+    var _clObj = _diagClObj;
     if (_clObj && _clObj.delegator_user_id) {
-      // Agency client: use managed properties from this specific delegator
       allProps = (window.allProperties || []).filter(function(p) {
         return p._isManaged && p._managedAccount && p._managedAccount.userId === _clObj.delegator_user_id;
       });
-      console.log('[OwnerInvoiceWebImport] openImportReservations agency delegator=' + _clObj.delegator_user_id + ' managed=' + allProps.length);
+      console.log('[OwnerInvoiceWebImport][DIAG] primaryOwnerMatch=n/a (agency: skip owner_id)');
+      console.log('[OwnerInvoiceWebImport][DIAG] delegatorUserId=' + _clObj.delegator_user_id);
+      console.log('[OwnerInvoiceWebImport][DIAG] managedMatch=' + allProps.length);
+    } else {
+      console.log('[OwnerInvoiceWebImport][DIAG] clientNotFound clientId2=' + clientId2
+        + ' clientsLoaded=' + (window.clients || []).length);
     }
-    if (allProps.length === 0) {
-      // Own client: fall back to own (non-managed) properties
-      allProps = (window.allProperties || []).filter(function(p){ return !p._isManaged; });
-      console.log('[OwnerInvoiceWebImport] openImportReservations own-props fallback count=' + allProps.length);
-    }
-    if (allProps.length === 0) {
-      allProps = window.allProperties || [];
-    }
+    // Fail closed: never fall back to own/global properties for agency clients
+  } else if (window.allProperties && window.allProperties.length > 0 && clientId2) {
+    // Own client: filter by owner_id (same namespace as own owner_clients.id)
+    var realClientId = String(clientId2).replace('agency_client_', '');
+    allProps = window.allProperties.filter(function(p) { return String(p.owner_id) === realClientId; });
+    console.log('[OwnerInvoiceWebImport][DIAG] primaryOwnerMatch=' + allProps.length);
   }
+
+  // DIAG — resolved property list (no PII: id + metadata only)
+  var _diagProps = allProps.map(function(p) {
+    return { id: p.id, owner_id: p.owner_id, isManaged: !!p._isManaged,
+             managedUserId: (p._managedAccount ? p._managedAccount.userId : null) };
+  });
+  console.log('[OwnerInvoiceWebImport][DIAG] selectedProperties', _diagProps);
   console.log('[OwnerInvoiceWebImport] openImportReservations client=' + clientId2 + ' propCount=' + allProps.length);
 
   var propListEl = document.getElementById("importResaPropList");
   propListEl.innerHTML = allProps.length === 0
-    ? "<span style=\"font-size:12px;color:#9ca3af;\">Aucun logement trouv\u00e9</span>"
+    ? (isAgencyClient2
+        ? "<span style=\"font-size:12px;color:#dc2626;\">Impossible d&#39;identifier les logements de ce propri\u00e9taire. V\u00e9rifiez la d\u00e9l\u00e9gation de compte dans les logs console.</span>"
+        : "<span style=\"font-size:12px;color:#9ca3af;\">Aucun logement trouv\u00e9</span>")
     : allProps.map(function(p) {
         var pid  = p.id || p.propertyId;
         var name = p.internal_name || p.internalName || p.name || pid;
@@ -6476,9 +6512,21 @@ window.fetchInvoiceSummary = async function() {
     }
     if (managedUserId) url += "&owner_user_id=" + managedUserId;
     console.log('[OwnerInvoiceWebImport] fetchInvoiceSummary propIds=' + JSON.stringify(propIds) + ' managedUserId=' + managedUserId + ' url=' + url);
+    console.log('[OwnerInvoiceWebImport][DIAG] request', {
+      dateFrom: dateFrom, dateTo: dateTo,
+      propertyIds: propIds,
+      ownerUserId: managedUserId || null
+    });
 
     var res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
     var data = await res.json();
+    console.log('[OwnerInvoiceWebImport][DIAG] response', {
+      status: res.status,
+      success: data.success,
+      totalReservations: data.totalReservations,
+      summaryCount: data.summary ? data.summary.length : 0,
+      reservationCount: data.reservations ? data.reservations.length : 0
+    });
     if (!data.success) throw new Error(data.error || "Erreur serveur");
 
     window._importResaSummary = data;
