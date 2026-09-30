@@ -265,9 +265,194 @@ function computePropertyReadinessSnapshot(reservations, _today) {
   };
 }
 
+// ── Generic seasonality curve (IDF reference — informational only) ────────────
+
+// Mirror of pricing-engine.js DEFAULTS.seasonByMonth.
+// Stored here as a reference so target-month observations can record
+// what the generic curve says about that month.
+// AUTHORITY: NONE — never read by pricing-engine as an alternative source.
+const SEASON_BY_MONTH = [
+  0.88, // Jan
+  0.90, // Fév
+  0.94, // Mar
+  1.00, // Avr
+  1.06, // Mai
+  1.10, // Juin
+  1.12, // Juil
+  1.08, // Août
+  1.10, // Sep
+  1.02, // Oct
+  0.90, // Nov
+  0.96, // Déc
+];
+
+/**
+ * Return the generic IDF seasonality reference factor for a calendar month.
+ * Informational only — NOT a pricing authority.
+ *
+ * @param {string} targetMonthStr — 'YYYY-MM-01'
+ * @returns {number|null}
+ */
+function computeGenericSeasonalityFactor(targetMonthStr) {
+  const month0 = Number(String(targetMonthStr).slice(5, 7)) - 1; // 0-indexed
+  return Number.isInteger(month0) && month0 >= 0 && month0 <= 11
+    ? SEASON_BY_MONTH[month0]
+    : null;
+}
+
+// ── Horizon constant ──────────────────────────────────────────────────────────
+
+// Rationale: current month + 8 forward = 9 target months per collection.
+//   Month+6 is first observed ≈180 days before its start → captures D180.
+//   Month+8 is first observed ≈240 days before its start → good buffer for D180+.
+//   12 months would add D360 at marginal storage cost, but 9 is the principled
+//   minimum to guarantee the full D7/D14/D30/D60/D90/D120/D180 ladder.
+const HORIZON_MONTHS = 9;
+
+// ── Property-local date ───────────────────────────────────────────────────────
+
+/**
+ * Convert a UTC wall-clock timestamp to the property's local calendar date.
+ * Uses the Intl API (no external deps).  Falls back to UTC when timezone is
+ * null, empty, or unrecognised.
+ *
+ * @param {string|Date} isoTimestampOrDate
+ * @param {string|null|undefined} timezone — IANA tz string e.g. 'Europe/Paris'
+ * @returns {string} — YYYY-MM-DD in the property's local timezone
+ */
+function propertyLocalDate(isoTimestampOrDate, timezone) {
+  const dt = isoTimestampOrDate instanceof Date
+    ? isoTimestampOrDate
+    : new Date(isoTimestampOrDate);
+  if (!timezone) return dt.toISOString().slice(0, 10);
+  try {
+    // sv-SE locale produces YYYY-MM-DD output reliably
+    return new Intl.DateTimeFormat('sv-SE', { timeZone: timezone }).format(dt);
+  } catch (_) {
+    return dt.toISOString().slice(0, 10); // UTC fallback for invalid tz
+  }
+}
+
+// ── Target month generation ───────────────────────────────────────────────────
+
+/**
+ * Generate a list of target-month start dates (YYYY-MM-01) beginning with
+ * the calendar month containing localTodayStr and extending horizonMonths forward.
+ *
+ * Safe across December → January boundaries; uses UTC calendar arithmetic.
+ *
+ * @param {string} localTodayStr — YYYY-MM-DD property-local today
+ * @param {number} horizonMonths — total months to generate (default HORIZON_MONTHS)
+ * @returns {string[]} — array of 'YYYY-MM-01' strings, length = horizonMonths
+ */
+function generateTargetMonths(localTodayStr, horizonMonths) {
+  const [yr, mon] = String(localTodayStr).split('-').map(Number);
+  const months = [];
+  for (let i = 0; i < horizonMonths; i++) {
+    // Date.UTC handles month overflow: month 12 becomes month 0 of next year
+    const d = new Date(Date.UTC(yr, mon - 1 + i, 1));
+    months.push(d.toISOString().slice(0, 10)); // 'YYYY-MM-01'
+  }
+  return months;
+}
+
+// ── Month calendar info ───────────────────────────────────────────────────────
+
+/**
+ * Compute calendar metadata for a target month relative to an observation date.
+ *
+ * @param {string} targetMonthStr   — 'YYYY-MM-01'
+ * @param {string} observationDateStr — 'YYYY-MM-DD'
+ * @returns {{
+ *   calendarNights: number,
+ *   elapsedCalendarNights: number,
+ *   remainingCalendarNights: number,
+ *   daysUntilMonthStart: number,   — positive=future, 0=today, negative=started
+ *   monthComplete: boolean,
+ * }}
+ */
+function computeMonthCalendarInfo(targetMonthStr, observationDateStr) {
+  const MS_DAY   = 86400000;
+  const mStart   = new Date(String(targetMonthStr).slice(0, 10)     + 'T00:00:00Z');
+  const yr       = mStart.getUTCFullYear();
+  const mon      = mStart.getUTCMonth(); // 0-indexed
+  const mEnd     = new Date(Date.UTC(yr, mon + 1, 1));
+  const calNights = Math.round((mEnd - mStart) / MS_DAY);
+
+  const obsDate  = new Date(String(observationDateStr).slice(0, 10) + 'T00:00:00Z');
+  const daysUntilMonthStart = Math.round((mStart - obsDate) / MS_DAY);
+
+  let elapsed;
+  if (obsDate <= mStart)     elapsed = 0;
+  else if (obsDate >= mEnd)  elapsed = calNights;
+  else                       elapsed = Math.round((obsDate - mStart) / MS_DAY);
+
+  return {
+    calendarNights:           calNights,
+    elapsedCalendarNights:    elapsed,
+    remainingCalendarNights:  calNights - elapsed,
+    daysUntilMonthStart,
+    monthComplete:            obsDate >= mEnd,
+  };
+}
+
+// ── Target-month booking evidence ────────────────────────────────────────────
+
+/**
+ * Compute booking evidence for a single target month from the property's
+ * full reservation history.
+ *
+ * Rules:
+ *   - Checkout date is exclusive (not a booked night).
+ *   - BLOCK rows contribute to knownBlockedNights, not bookedNights.
+ *   - Cancelled reservations are excluded entirely.
+ *   - UNKNOWN source is treated as a bookable stay (not a block).
+ *
+ * @param {Array<object>} reservations — all rows from the reservations table
+ * @param {string} targetMonthStr — 'YYYY-MM-01'
+ * @returns {{
+ *   bookedNights: number,
+ *   knownBlockedNights: number,
+ *   reliableReservationCount: number,
+ *   sourceDistribution: Object.<string, number>,
+ * }}
+ */
+function computeTargetMonthBookings(reservations, targetMonthStr) {
+  const targetYM = String(targetMonthStr).slice(0, 7); // 'YYYY-MM'
+  let bookedNights = 0;
+  let knownBlockedNights = 0;
+  let reliableReservationCount = 0;
+  const sourceDistribution = {};
+
+  for (const r of reservations) {
+    const status = String(r.status || '').toLowerCase();
+    if (status === 'cancelled' || status === 'canceled') continue;
+    if (!r.start_date || !r.end_date) continue;
+
+    const split = splitNightsByMonth(
+      String(r.start_date).slice(0, 10),
+      String(r.end_date).slice(0, 10),
+    );
+    const nightsInMonth = split[targetYM] || 0;
+    if (!nightsInMonth) continue;
+
+    const cls = classifyReservationSource(r);
+    if (cls === 'BLOCK') {
+      knownBlockedNights += nightsInMonth;
+    } else {
+      bookedNights += nightsInMonth;
+      reliableReservationCount++;
+      sourceDistribution[cls] = (sourceDistribution[cls] || 0) + 1;
+    }
+  }
+
+  return { bookedNights, knownBlockedNights, reliableReservationCount, sourceDistribution };
+}
+
 // ── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
+  // ── Existing helpers (used by T0 audit + T1 shadow) ──────────────────────
   classifyReservationSource,
   isReliableForStayOccurrence,
   isReliableForBookingTiming,
@@ -277,4 +462,12 @@ module.exports = {
   computeSampleTier,
   hasNoFutureLeakage,
   computePropertyReadinessSnapshot,
+  // ── T1-FIX helpers ───────────────────────────────────────────────────────
+  SEASON_BY_MONTH,
+  HORIZON_MONTHS,
+  computeGenericSeasonalityFactor,
+  propertyLocalDate,
+  generateTargetMonths,
+  computeMonthCalendarInfo,
+  computeTargetMonthBookings,
 };

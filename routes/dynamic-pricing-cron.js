@@ -964,9 +964,12 @@ function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
       .catch(err => console.error('[PICKUP_SHADOW_FAILURE]', err.message));
   }, { timezone: 'Europe/Paris' });
 
-  // P1.4-T1: Local seasonality shadow — weekly Monday 03:15 Europe/Paris.
-  // Reads reservation DB only. Writes to local_seasonality_readiness (when flag ON).
+  // P1.4-T1-FIX: Local seasonality shadow — weekly Monday 03:15 Europe/Paris.
+  // Produces HORIZON_MONTHS (9) target-month rows per property per run.
+  // Writes to local_seasonality_observations (when flag ON).  DO NOTHING on duplicate.
   // SEASONALITY_HAS_PRICING_AUTHORITY=NO — results never flow into pricing calculations.
+  // SCHEDULER_TZ_DEBT: job fires at Europe/Paris time; each property uses its own timezone
+  // for observation_date, so stored dates are property-local-correct regardless.
   // FLAG_OFF: when LOCAL_SEASONALITY_SHADOW_ENABLED != 'true', returns immediately with zero reads/writes.
   cron.schedule('15 3 * * 1', () => {
     const { isShadowEnabled } = require('../services/local-seasonality-shadow');
@@ -976,7 +979,8 @@ function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
       .then(s => {
         console.log(
           `[SEASONALITY_SHADOW] done — props=${s.propertiesProcessed}/${s.propertiesEligible}` +
-          ` persisted=${s.snapshotsPersisted} errors=${s.errors.length}`,
+          ` attempted=${s.observationsAttempted} inserted=${s.observationsInserted}` +
+          ` dupes=${s.observationsDuplicate} errors=${s.errors.length}`,
         );
       })
       .catch(err => console.error('[SEASONALITY_SHADOW_FAILURE]', err.message));
