@@ -1054,6 +1054,108 @@ test('L-13: cron still calls bridgePersistProductionEvidence after writeScrapeRe
   assert.ok(CRON_SRC.includes('bridgePersistenceEnabled'));
 });
 
+// ── M — S audit schema-contract tests ──────────────────────────────────────
+
+console.log('\nM — S audit SQL schema contract');
+
+const AUDIT_S_SQL = AUDIT_S_SRC.match(/const ACTIVE_PROPERTIES_SQL = `([\s\S]*?)`;/)?.[1] ?? '';
+
+test('M-01: ACTIVE_PROPERTIES_SQL does NOT reference pc.zone_label', () => {
+  assert.ok(!AUDIT_S_SQL.includes('zone_label'),
+    'pc.zone_label does not exist in pricing_config — it lives on market_data');
+});
+
+test('M-02: ACTIVE_PROPERTIES_SQL is a SELECT (no writes)', () => {
+  assert.ok(AUDIT_S_SQL.trim().startsWith('SELECT'), 'Must be a SELECT statement');
+  assert.ok(!/\bINSERT\b|\bUPDATE\b|\bDELETE\b/i.test(AUDIT_S_SQL), 'Must not modify data');
+});
+
+test('M-03: ACTIVE_PROPERTIES_SQL references only valid pricing_config columns', () => {
+  const validPcCols = ['pc.bedrooms', 'pc.property_type', 'pc.is_active', 'pc.price_min', 'pc.price_max'];
+  for (const col of validPcCols) {
+    assert.ok(AUDIT_S_SQL.includes(col), `Must reference ${col}`);
+  }
+  assert.ok(!AUDIT_S_SQL.includes('pc.zone_label'), 'Must not reference pc.zone_label');
+  assert.ok(!AUDIT_S_SQL.includes('pc.zone_lat'),   'Must not reference pc.zone_lat (select via p)');
+  assert.ok(!AUDIT_S_SQL.includes('pc.zone_lng'),   'Must not reference pc.zone_lng (select via p)');
+});
+
+test('M-04: ACTIVE_PROPERTIES_SQL references valid properties columns', () => {
+  const validPCols = ['p.id', 'p.internal_name', 'p.name', 'p.latitude', 'p.longitude',
+                      'p.currency', 'p.max_guests', 'p.address', 'p.user_id'];
+  for (const col of validPCols) {
+    assert.ok(AUDIT_S_SQL.includes(col), `Must reference ${col}`);
+  }
+});
+
+test('M-05: computeCostEstimate with M6+M7 returns naiveCalls=2, sharedCalls=1, saved=1', () => {
+  const est = computeCostEstimate([M6_CFG, M7_CFG], {
+    checkIn:  '2025-08-01',
+    checkOut: '2025-08-08',
+    resolveProvider: () => 'apify',
+  });
+  assert.strictEqual(est.naiveCalls,  2, 'Naive = one per eligible property');
+  assert.strictEqual(est.sharedCalls, 1, 'Shared = one per fingerprint');
+  assert.strictEqual(est.saved,       1, 'Saves exactly 1 call');
+  assert.strictEqual(est.reductionPct, 50, '50% reduction');
+});
+
+test('M-06: computeCostEstimate with only Ti Junot returns naiveCalls=0, sharedCalls=0', () => {
+  const est = computeCostEstimate([TI_JUNOT_CFG], {
+    checkIn:  '2025-08-01',
+    checkOut: '2025-08-08',
+    resolveProvider: () => 'apify',
+  });
+  assert.strictEqual(est.naiveCalls,  0, 'Ti Junot is excluded — no eligible');
+  assert.strictEqual(est.sharedCalls, 0, 'No groups for excluded property');
+});
+
+test('M-07: computeCostEstimate groups Map carries profileId per group', () => {
+  const est = computeCostEstimate([M6_CFG, M7_CFG], {
+    checkIn:  '2025-08-01',
+    checkOut: '2025-08-08',
+    resolveProvider: () => 'apify',
+  });
+  assert.strictEqual(est.groups.size, 1);
+  const [[, group]] = [...est.groups];
+  assert.ok(typeof group.profileId === 'string' && group.profileId.length > 0, 'profileId must be set');
+  assert.strictEqual(group.propertyLinks.length, 2, 'Both M6 and M7 must be in the group');
+});
+
+test('M-08: audit SQL schema comment documents zone_label location', () => {
+  assert.ok(AUDIT_S_SRC.includes('zone_label lives on market_data'),
+    'Schema comment must document that zone_label is on market_data, not pricing_config');
+});
+
+test('M-09: audit reports UNIQUE_MARKET_PROFILES in output', () => {
+  assert.ok(AUDIT_S_SRC.includes('UNIQUE_MARKET_PROFILES'), 'Must report UNIQUE_MARKET_PROFILES');
+});
+
+test('M-10: audit reports SHARED_PROFILES in output', () => {
+  assert.ok(AUDIT_S_SRC.includes('SHARED_PROFILES'), 'Must report SHARED_PROFILES');
+});
+
+test('M-11: audit reports PROPERTIES_IN_SHARED_PROFILES in output', () => {
+  assert.ok(AUDIT_S_SRC.includes('PROPERTIES_IN_SHARED_PROFILES'), 'Must report PROPERTIES_IN_SHARED_PROFILES');
+});
+
+test('M-12: audit reports BOOSTPRICE_ACTIVE_PROPERTIES in output', () => {
+  assert.ok(AUDIT_S_SRC.includes('BOOSTPRICE_ACTIVE_PROPERTIES'), 'Must report BOOSTPRICE_ACTIVE_PROPERTIES');
+});
+
+test('M-13: audit reports CURRENT_WEEKLY_COLLECTION_UNIT', () => {
+  assert.ok(AUDIT_S_SRC.includes('CURRENT_WEEKLY_COLLECTION_UNIT'), 'Must report CURRENT_WEEKLY_COLLECTION_UNIT');
+});
+
+test('M-14: audit reports CURRENT_SINGLE_PROPERTY_COLLECTION_UNIT', () => {
+  assert.ok(AUDIT_S_SRC.includes('CURRENT_SINGLE_PROPERTY_COLLECTION_UNIT'), 'Must report CURRENT_SINGLE_PROPERTY_COLLECTION_UNIT');
+});
+
+test('M-15: audit fail-closed block outputs SCHEMA_COMPATIBLE = NO on SQL error', () => {
+  assert.ok(AUDIT_S_SRC.includes('SCHEMA_COMPATIBLE               = NO'), 'Must output SCHEMA_COMPATIBLE = NO on SQL error');
+  assert.ok(AUDIT_S_SRC.includes("SAFE_TO_ENABLE_SHARED_COLLECTION = NO"), 'Must output SAFE_TO_ENABLE_SHARED_COLLECTION = NO on error');
+});
+
 // ── Final report ──────────────────────────────────────────────────────────────
 
 console.log('\n');

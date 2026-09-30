@@ -54,6 +54,13 @@ const marketProvider               = require('../services/market-provider');
 // Pool created only when running directly
 let pool = null;
 
+// Schema contract (verified against server.js CREATE TABLE / ALTER TABLE):
+//   pricing_config: id, user_id, property_id, price_min, price_max, mode, is_active,
+//                   notify_push, notify_email, notify_alert, zone_lat, zone_lng,
+//                   zone_radius_km, property_type, bedrooms, created_at, updated_at
+//   properties (relevant): id, user_id, name, address, internal_name*, latitude*,
+//                           longitude*, currency*, max_guests*   (* added via ALTER TABLE)
+//   zone_label lives on market_data.zone_label — NOT on pricing_config.
 const ACTIVE_PROPERTIES_SQL = `
   SELECT
     p.id,
@@ -66,7 +73,6 @@ const ACTIVE_PROPERTIES_SQL = `
     pc.bedrooms,
     pc.property_type,
     p.address AS property_address,
-    pc.zone_label,
     pc.is_active,
     pc.price_min,
     pc.price_max,
@@ -155,10 +161,20 @@ async function runAudit() {
   }
 
   // ── Load properties ─────────────────────────────────────────────────────────
-  const result = await pool.query(ACTIVE_PROPERTIES_SQL);
-  const props  = result.rows;
+  let props;
+  try {
+    const result = await pool.query(ACTIVE_PROPERTIES_SQL);
+    props = result.rows;
+  } catch (err) {
+    console.log('── SCHEMA ERROR ─────────────────────────────────────────────────');
+    console.log(`  SCHEMA_COMPATIBLE               = NO`);
+    console.log(`  SCHEMA_ERROR                    = ${err.message}`);
+    console.log(`  SAFE_TO_ENABLE_SHARED_COLLECTION = NO`);
+    console.log();
+    return;
+  }
 
-  console.log(`Active pricing-config properties: ${props.length}`);
+  console.log(`  BOOSTPRICE_ACTIVE_PROPERTIES    = ${props.length}`);
   console.log();
 
   // ── Classify eligible vs incomplete ─────────────────────────────────────────
@@ -230,10 +246,28 @@ async function runAudit() {
   });
 
   console.log(`  Configured provider: ${configuredProvider.toUpperCase()}`);
-  console.log(`  REALISTIC_NAIVE_CALLS  = ${realisticEstimate.naiveCalls}`);
-  console.log(`  REALISTIC_SHARED_CALLS = ${realisticEstimate.sharedCalls}`);
-  console.log(`  REALISTIC_CALLS_SAVED  = ${realisticEstimate.saved}`);
-  console.log(`  REALISTIC_REDUCTION_PCT = ${realisticEstimate.reductionPct}%`);
+  console.log(`  REALISTIC_NAIVE_CALLS    = ${realisticEstimate.naiveCalls}`);
+  console.log(`  REALISTIC_SHARED_CALLS   = ${realisticEstimate.sharedCalls}`);
+  console.log(`  REALISTIC_CALLS_SAVED    = ${realisticEstimate.saved}`);
+  console.log(`  REALISTIC_REDUCTION_PCT  = ${realisticEstimate.reductionPct}%`);
+  console.log();
+
+  // ── Profile sharing stats (provider-agnostic canonical profile view) ─────────
+  const _profileMap = new Map(); // profileId → property_id[]
+  for (const [, group] of realisticEstimate.groups) {
+    const pid = group.profileId;
+    if (!_profileMap.has(pid)) _profileMap.set(pid, []);
+    for (const link of group.propertyLinks) _profileMap.get(pid).push(link.property_id);
+  }
+  const _sharedProfileList = [..._profileMap.values()].filter(ids => ids.length > 1);
+  const uniqueMarketProfiles      = _profileMap.size;
+  const sharedProfilesCount       = _sharedProfileList.length;
+  const propertiesInSharedProfiles = _sharedProfileList.reduce((s, ids) => s + ids.length, 0);
+
+  console.log(`── PROFILE SHARING (configured provider: ${configuredProvider.toUpperCase()}) ───────`);
+  console.log(`  UNIQUE_MARKET_PROFILES         = ${uniqueMarketProfiles}`);
+  console.log(`  SHARED_PROFILES                = ${sharedProfilesCount}  (canonical profiles shared by >1 property)`);
+  console.log(`  PROPERTIES_IN_SHARED_PROFILES  = ${propertiesInSharedProfiles}`);
   console.log();
 
   // ── S17 safety checks ────────────────────────────────────────────────────────
@@ -256,7 +290,8 @@ async function runAudit() {
   console.log('── S17 SAFETY INVARIANTS ────────────────────────────────────────');
   console.log(`  PERSISTENCE_FLAG                    = ${persistenceOn ? 'ON' : 'OFF'}`);
   console.log(`  SHARED_FLAG                         = ${sharedOn ? 'ON' : 'OFF'}`);
-  console.log(`  CURRENT_COLLECTION_UNIT             = ${sharedOn ? 'FINGERPRINT (shared)' : 'PROPERTY (legacy zone cache)'}`);
+  console.log(`  CURRENT_WEEKLY_COLLECTION_UNIT      = ${sharedOn ? 'FINGERPRINT (shared)' : 'PROPERTY (legacy zone cache)'}`);
+  console.log(`  CURRENT_SINGLE_PROPERTY_COLLECTION_UNIT = PROPERTY (runDynamicPricingForOneProperty unchanged)`);
   console.log(`  SHARED_REPLACES_LEGACY              = ${sharedReplacesLegacy ? 'YES ✅' : 'NO ❌'}`);
   console.log(`  PARALLEL_DUPLICATE_COLLECTION_POSSIBLE = ${!parallelDuplicatePossible ? 'NO ✅' : 'YES ❌'}`);
   console.log(`  GROUP_BEFORE_NETWORK                = ${groupBeforeNetwork ? 'YES ✅' : 'NO ❌'}`);
@@ -295,12 +330,15 @@ async function runAudit() {
   console.log(`  SAFE_TO_ENABLE_SHARED_COLLECTION = ${prereqsGreen ? 'YES ✅' : 'NO — resolve issues above'}`);
   console.log();
   console.log('── SUMMARY ──────────────────────────────────────────────────────');
-  console.log(`  Total active properties = ${props.length}`);
-  console.log(`  Profile-ready           = ${eligible.length}`);
-  console.log(`  Profile-incomplete      = ${incomplete.length}`);
-  console.log(`  Realistic naive calls   = ${realisticEstimate.naiveCalls}`);
-  console.log(`  Realistic shared calls  = ${realisticEstimate.sharedCalls}`);
-  console.log(`  Realistic calls saved   = ${realisticEstimate.saved}  (${realisticEstimate.reductionPct}% reduction)`);
+  console.log(`  BOOSTPRICE_ACTIVE_PROPERTIES    = ${props.length}`);
+  console.log(`  PROFILE_READY                   = ${eligible.length}`);
+  console.log(`  PROFILE_INCOMPLETE              = ${incomplete.length}`);
+  console.log(`  UNIQUE_MARKET_PROFILES          = ${uniqueMarketProfiles}`);
+  console.log(`  SHARED_PROFILES                 = ${sharedProfilesCount}`);
+  console.log(`  PROPERTIES_IN_SHARED_PROFILES   = ${propertiesInSharedProfiles}`);
+  console.log(`  REALISTIC_NAIVE_CALLS           = ${realisticEstimate.naiveCalls}`);
+  console.log(`  REALISTIC_SHARED_CALLS          = ${realisticEstimate.sharedCalls}`);
+  console.log(`  REALISTIC_CALLS_SAVED           = ${realisticEstimate.saved}  (${realisticEstimate.reductionPct}% reduction)`);
   console.log();
   console.log('  R20 CONSTRAINT: DO NOT enable MARKET_SHARED_COLLECTION_ENABLED from this tool (read-only).');
   console.log(`  EXACT_RENDER_AUDIT_COMMAND: NODE_ENV=production node outils/audit-market-shared-activation-s.js`);
