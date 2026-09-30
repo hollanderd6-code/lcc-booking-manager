@@ -19685,16 +19685,17 @@ app.get('/api/pricing/calendar', authenticateAny, async (req, res) => {
 
     const propertyIds = properties.map(p => p.id);
 
-    // 1 — Prix de base
+    // 1 — Prix de base + external_pricing flag
     const basePricesRes = await pool.query(
-      `SELECT id, base_price, weekend_price FROM properties WHERE id = ANY($1)`,
+      `SELECT id, base_price, weekend_price, external_pricing FROM properties WHERE id = ANY($1)`,
       [propertyIds]
     );
     const basePricesMap = {};
     basePricesRes.rows.forEach(r => {
       basePricesMap[r.id] = {
-        base:    r.base_price    != null ? parseFloat(r.base_price)    : null,
-        weekend: r.weekend_price != null ? parseFloat(r.weekend_price) : null
+        base:     r.base_price    != null ? parseFloat(r.base_price)    : null,
+        weekend:  r.weekend_price != null ? parseFloat(r.weekend_price) : null,
+        external: !!r.external_pricing,
       };
     });
 
@@ -19755,46 +19756,97 @@ app.get('/api/pricing/calendar', authenticateAny, async (req, res) => {
       }
     });
 
-    // Calcul des prix par date — même priorité que getCalendarPricesForRange :
-    // override manuel > règle période > règle jour de semaine > base/weekend
+    // 5 — BoostPrice config (is_active) — scoped to visible properties + agency accounts
+    const bpConfigMap = {};
+    const bpCfgRes = await pool.query(
+      `SELECT property_id, is_active
+       FROM pricing_config
+       WHERE property_id = ANY($1) AND user_id = ANY($2)`,
+      [propertyIds, agencyIds]
+    );
+    bpCfgRes.rows.forEach(r => { bpConfigMap[r.property_id] = r.is_active === true; });
+
+    // 6 — BoostPrice schedule entries in range (applied + pending)
+    // pricing_schedule is created lazily — tolerate the table not existing yet.
+    const bpScheduleMap = {};
+    try {
+      const bpSchedRes = await pool.query(
+        `SELECT property_id, TO_CHAR(date,'YYYY-MM-DD') AS date, price, status
+         FROM pricing_schedule
+         WHERE property_id = ANY($1) AND user_id = ANY($2)
+           AND date >= $3::date AND date <= $4::date
+           AND status IN ('applied','pending')`,
+        [propertyIds, agencyIds, from, to]
+      );
+      bpSchedRes.rows.forEach(r => {
+        if (!bpScheduleMap[r.property_id]) bpScheduleMap[r.property_id] = {};
+        bpScheduleMap[r.property_id][r.date] = { status: r.status, price: parseFloat(r.price) };
+      });
+    } catch (_) { /* pricing_schedule not yet created — treat as empty */ }
+
+    // Calcul des prix par date — priorité canonique (mirrors effective-pricing-resolver.js):
+    // manual_override > boostprice(applied) > period_rule > weekday_rule > weekend_price > base_price
+    //
+    // NOTE: Prior to IOS-BP-02, this endpoint used a shorter hierarchy that omitted
+    // boostprice, diverging from the canonical resolver. That inconsistency is corrected here.
     const result = {};
     for (const prop of properties) {
       const pid = prop.id;
-      const { base: basePrice, weekend: weekendPrice } = basePricesMap[pid] || { base: null, weekend: null };
-      const propOverrides = overridesMap[pid] || {};
-      const periodRules   = (rulesMap[pid] || {}).period  || [];
-      const weekdayRules  = (rulesMap[pid] || {}).weekday || [];
+      const { base: basePrice, weekend: weekendPrice, external: propIsExternal } = basePricesMap[pid] || { base: null, weekend: null, external: false };
+      const propOverrides     = overridesMap[pid] || {};
+      const periodRules       = (rulesMap[pid] || {}).period  || [];
+      const weekdayRules      = (rulesMap[pid] || {}).weekday || [];
+      const boostpriceEnabled = !propIsExternal && (bpConfigMap[pid] === true);
+      const propBpEntries     = boostpriceEnabled ? (bpScheduleMap[pid] || {}) : {};
 
-      const prices = {};
-      for (let d = new Date(from + 'T00:00:00Z'); d <= new Date(to + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1)) {
+      // bpSchedule: all schedule entries for this property (applied + pending) — metadata for iOS.
+      // IMPORTANT: status='applied' means the BoostPrice recommendation is business-active.
+      // It does NOT mean OTA delivery success. Never expose as "published to Airbnb".
+      const bpSchedule = {};
+      for (const [d, e] of Object.entries(propBpEntries)) bpSchedule[d] = e;
+
+      const prices  = {};
+      const sources = {};
+
+      const toDate = new Date(to + 'T00:00:00Z');
+      for (let d = new Date(from + 'T00:00:00Z'); d <= toDate; d.setUTCDate(d.getUTCDate() + 1)) {
         const dateStr = d.toISOString().split('T')[0];
-        const dow = d.getUTCDay();
-        let price = null;
+        const dow     = d.getUTCDay();
+        let price  = null;
+        let source = 'none';
 
         if (propOverrides[dateStr] != null) {
-          price = propOverrides[dateStr];
+          price  = propOverrides[dateStr];
+          source = 'manual_override';
         } else {
-          for (const rule of periodRules) {
-            if (rule.start_date && rule.end_date && rule.price != null) {
-              if (dateStr >= rule.start_date && dateStr <= rule.end_date) {
-                price = parseFloat(rule.price); break;
+          const bpEntry = propBpEntries[dateStr];
+          if (bpEntry && bpEntry.status === 'applied') {
+            price  = bpEntry.price;
+            source = 'boostprice';
+          } else {
+            for (const rule of periodRules) {
+              if (rule.start_date && rule.end_date && rule.price != null) {
+                if (dateStr >= rule.start_date && dateStr <= rule.end_date) {
+                  price = parseFloat(rule.price); source = 'period_rule'; break;
+                }
               }
             }
-          }
-          if (price === null) {
-            for (const rule of weekdayRules) {
-              if (rule.days_of_week && rule.price != null && rule.days_of_week.includes(dow)) {
-                price = parseFloat(rule.price); break;
+            if (price === null) {
+              for (const rule of weekdayRules) {
+                if (rule.days_of_week && rule.price != null && rule.days_of_week.includes(dow)) {
+                  price = parseFloat(rule.price); source = 'weekday_rule'; break;
+                }
               }
             }
-          }
-          if (price === null) {
-            const isPremium = (dow === 5 || dow === 6);
-            price = isPremium && weekendPrice != null ? weekendPrice : basePrice;
+            if (price === null) {
+              const isPremium = (dow === 5 || dow === 6);
+              if (isPremium && weekendPrice != null) { price = weekendPrice; source = 'weekend_price'; }
+              else if (basePrice != null)            { price = basePrice;    source = 'base_price'; }
+            }
           }
         }
 
-        if (price != null) prices[dateStr] = price;
+        if (price != null) { prices[dateStr] = price; sources[dateStr] = source; }
       }
 
       result[pid] = {
@@ -19803,7 +19855,11 @@ app.get('/api/pricing/calendar', authenticateAny, async (req, res) => {
         weekendPrice,
         prices,
         booked:  bookedMap[pid]  || [],
-        blocked: blockedMap[pid] || []
+        blocked: blockedMap[pid] || [],
+        // IOS-BP-02 additive fields — existing consumers unaffected
+        boostpriceEnabled,
+        sources,
+        bpSchedule,
       };
     }
 
