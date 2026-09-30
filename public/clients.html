@@ -4282,7 +4282,8 @@ function getSelectedProperties() {
         unitPrice: p.unitPrice,
         total: calculateLineTotal(p),
         isDebours: p.isDebours,
-        deboursId: p.deboursId || null
+        deboursId: p.deboursId || null,
+        ...(p.currency ? { currency: p.currency } : {})
       })),
       vatApplicable: document.getElementById('invoiceVatApplicable').checked,
       vatRate: parseFloat(document.getElementById('invoiceVatRate').value),
@@ -6372,7 +6373,6 @@ window.openImportReservations = function() {
   document.querySelectorAll("#propertyCheckboxList input[type=checkbox]:checked").forEach(function(cb){ checkedProps.push(cb.value); });
 
   // Source des logements : priorité aux logements du client (allProperties filtré par owner_id)
-  // Fallback sur LCC_PROPERTIES si allProperties n'est pas disponible
   var clientId2 = document.getElementById("invoiceClientId") ? document.getElementById("invoiceClientId").value : "";
   var allProps = [];
   if (window.allProperties && window.allProperties.length > 0 && clientId2) {
@@ -6380,8 +6380,25 @@ window.openImportReservations = function() {
     allProps = window.allProperties.filter(function(p) { return String(p.owner_id) === realClientId; });
   }
   if (allProps.length === 0) {
-    allProps = window.LCC_PROPERTIES || window.userProperties || [];
+    // owner_id filter found nothing — resolve properties from allProperties metadata
+    var _clObj = (window.clients || []).find(function(c){ return String(c.id) === String(clientId2); });
+    if (_clObj && _clObj.delegator_user_id) {
+      // Agency client: use managed properties from this specific delegator
+      allProps = (window.allProperties || []).filter(function(p) {
+        return p._isManaged && p._managedAccount && p._managedAccount.userId === _clObj.delegator_user_id;
+      });
+      console.log('[OwnerInvoiceWebImport] openImportReservations agency delegator=' + _clObj.delegator_user_id + ' managed=' + allProps.length);
+    }
+    if (allProps.length === 0) {
+      // Own client: fall back to own (non-managed) properties
+      allProps = (window.allProperties || []).filter(function(p){ return !p._isManaged; });
+      console.log('[OwnerInvoiceWebImport] openImportReservations own-props fallback count=' + allProps.length);
+    }
+    if (allProps.length === 0) {
+      allProps = window.allProperties || [];
+    }
   }
+  console.log('[OwnerInvoiceWebImport] openImportReservations client=' + clientId2 + ' propCount=' + allProps.length);
 
   var propListEl = document.getElementById("importResaPropList");
   propListEl.innerHTML = allProps.length === 0
@@ -6458,6 +6475,7 @@ window.fetchInvoiceSummary = async function() {
       });
     }
     if (managedUserId) url += "&owner_user_id=" + managedUserId;
+    console.log('[OwnerInvoiceWebImport] fetchInvoiceSummary propIds=' + JSON.stringify(propIds) + ' managedUserId=' + managedUserId + ' url=' + url);
 
     var res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
     var data = await res.json();
@@ -6587,6 +6605,7 @@ window.confirmImportReservations = function() {
     alert('Les plateformes s\u00e9lectionn\u00e9es ont des devises diff\u00e9rentes (' + selectedCurrencies.join(', ') + ').\nImportez une devise \u00e0 la fois.');
     return;
   }
+  console.log('[OwnerInvoiceWebImport] confirmImportReservations currencies=' + JSON.stringify(selectedCurrencies));
 
   var psEl = document.getElementById("invoicePeriodStart");
   var peEl = document.getElementById("invoicePeriodEnd");

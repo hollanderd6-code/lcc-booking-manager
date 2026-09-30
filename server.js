@@ -28054,6 +28054,7 @@ app.post('/api/invoice/create',
     let billingUserId = userId;
     let ownerInfo = null;
     let _resolvedPropertyId = null;
+    let propResult = { rows: [] };
     try {
       const delg = await pool.query(
         `SELECT delegator_user_id FROM account_delegations WHERE delegate_user_id = $1 AND status = 'accepted'`,
@@ -28061,7 +28062,6 @@ app.post('/api/invoice/create',
       ).catch(() => ({ rows: [] }));
       const candidateIds = [userId, ...delg.rows.map(d => d.delegator_user_id)];
       // 1) Par la réservation (fiable) ; 2) par nom OU nom interne (repli)
-      let propResult = { rows: [] };
       if (reservationUid) {
         propResult = await pool.query(
           `SELECT p.id, p.user_id, p.owner_id, p.name, p.internal_name, p.address AS _resaProp,
