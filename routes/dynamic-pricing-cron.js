@@ -542,7 +542,30 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
     bridgeCheckOut = dates.checkOut;
   }
 
-  // Cache zones déjà scrapées (évite de scraper 2× la même ville)
+  // S: Shared production collection flag (MARKET_SHARED_COLLECTION_ENABLED)
+  const sharedEnabled = _getShadowCoordinator().isSharedProductionEnabled();
+
+  // S3/S10: Pre-collect grouped evidence before property loop (one call per fingerprint)
+  let sharedEvidence    = null; // Map<fingerprint, scrapeResult | { error }>
+  let propToFingerprint = null; // Map<property_id, fingerprint>
+
+  if (sharedEnabled) {
+    const sharedDates = marketProvider.getBrightDataMarketDates();
+    const preResult = await _getShadowCoordinator().runSharedPreCollection(configs, {
+      checkIn:            sharedDates.checkIn,
+      checkOut:           sharedDates.checkOut,
+      resolveProvider:    marketProvider.resolveProviderForProperty,
+      scrapeFn:           scrapeBestZone,
+      getFallbackZonesFn: getFallbackZones,
+      priceFallbackFn:    cfg => (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
+      maxListings:        MAX_LISTINGS,
+    });
+    sharedEvidence    = preResult.sharedEvidence;
+    propToFingerprint = preResult.propToFingerprint;
+    console.log(`[MARKET_SHARED_COLLECTION] pre-collection done groups=${preResult.groupCount} calls=${preResult.callCount}`);
+  }
+
+  // Cache zones déjà scrapées — used only in legacy path (sharedEnabled=false)
   const zoneCache = {};
   const results   = [];
 
@@ -585,25 +608,62 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
         continue;
       }
 
-      // Same zone + same currency + same provider → cache may be reused.
-      // Provider is included in the key so BD and Apify results for the same zone/currency
-      // never share a cache entry (prevents M6 BD result from being reused for Apify properties).
-      const providerForCache = marketProvider.resolveProviderForProperty(cfg.property_id);
-      const cacheKey = zones.join('|') + ':' + capturedPropertyCurrency + ':' + providerForCache;
+      // 3. Provider evidence: shared production (S active) or per-property zone cache (legacy)
+      let listings, isMock, zoneUsed, dataSource, diagnostics;
 
-      // 3. Scraping avec élargissement progressif (cache par jeu de zones + devise + provider)
-      if (!zoneCache[cacheKey]) {
-        zoneCache[cacheKey] = await scrapeBestZone(
-          zones,
-          (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
-          MAX_LISTINGS,
-          cfg.bedrooms,
-          capturedPropertyCurrency,
-          cfg.property_id
-        );
+      if (sharedEnabled) {
+        // S3/S10: reuse pre-collected group evidence — no per-property provider call
+        const pid = String(cfg.property_id);
+        const fp  = propToFingerprint?.get(pid);
+        if (!fp) {
+          // S11: profile incomplete (Ti Junot) — excluded from shared collection
+          console.log(`[MARKET_PROVIDER_CALL_SKIP] prop=${pid} reason=profile_incomplete shared=true`);
+          const apply = await applyDynamicPricingForProperty(pool, {
+            cfg, marketStats: null, isMock: false, marketOverride: null, sendPushNotification,
+          });
+          results.push({
+            userId: cfg.user_id, userEmail: cfg.user_email, firstName: cfg.user_first_name,
+            propertyId: cfg.property_id, propertyName: cfg.property_name,
+            status: apply.status, priceBefore: apply.priceBefore, priceApplied: apply.priceApplied,
+            priceCalculated: apply.priceCalculated, tensionLevel: null, nights: apply.nights, isMock: false,
+          });
+          continue;
+        }
+        const ev = sharedEvidence?.get(fp);
+        if (!ev || ev.error) {
+          // S12: provider failure — no per-property fallback call
+          console.log(`[MARKET_PROVIDER_CALL_SKIP] prop=${pid} reason=${ev?.error ?? 'no_shared_evidence'} shared=true`);
+          const apply = await applyDynamicPricingForProperty(pool, {
+            cfg, marketStats: null, isMock: false, marketOverride: null, sendPushNotification,
+          });
+          results.push({
+            userId: cfg.user_id, userEmail: cfg.user_email, firstName: cfg.user_first_name,
+            propertyId: cfg.property_id, propertyName: cfg.property_name,
+            status: apply.status, priceBefore: apply.priceBefore, priceApplied: apply.priceApplied,
+            priceCalculated: apply.priceCalculated, tensionLevel: null, nights: apply.nights, isMock: false,
+          });
+          continue;
+        }
+        ({ listings, isMock, zoneUsed, dataSource, diagnostics } = ev);
+      } else {
+        // Legacy path: per-property zone cache (unchanged behavior when flag off)
+        // Provider is part of the key so BD and Apify results for the same zone/currency
+        // never share a cache entry.
+        const providerForCache = marketProvider.resolveProviderForProperty(cfg.property_id);
+        const cacheKey = zones.join('|') + ':' + capturedPropertyCurrency + ':' + providerForCache;
+        if (!zoneCache[cacheKey]) {
+          zoneCache[cacheKey] = await scrapeBestZone(
+            zones,
+            (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
+            MAX_LISTINGS,
+            cfg.bedrooms,
+            capturedPropertyCurrency,
+            cfg.property_id
+          );
+        }
+        ({ listings, isMock, zoneUsed, dataSource, diagnostics } = zoneCache[cacheKey]);
       }
 
-      const { listings, isMock, zoneUsed, dataSource, diagnostics } = zoneCache[cacheKey];
       const zoneLabel = zoneUsed;
 
       const marketStats = calcProviderMarketStats(listings, cfg, dataSource);
@@ -722,13 +782,13 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
     }
   }
 
-  // P15/P16: Shadow market observation collection (flags OFF by default — 0 BD credits)
-  // Runs fire-and-forget after the production market_data write loop.
+  // P15/P16: Shadow K-engine phase — suppressed when S shared production is active.
+  // When sharedEnabled=true, the production loop already handles dedup + bridge persistence.
+  // Running the shadow phase in addition would make duplicate provider calls.
   // MARKET_DATA_WRITES = 0 — only writes to shadow observation tables.
-  // SAFE_TO_ACTIVATE_PRODUCTION = NO
   {
     const coord = _getShadowCoordinator();
-    if (coord.isShadowCollectionEnabled()) {
+    if (!sharedEnabled && coord.isShadowCollectionEnabled()) {
       _runShadowCollectionPhase(pool, configs)
         .catch(err => console.error('[P-SHADOW] erreur phase shadow:', err.message));
     }
@@ -933,6 +993,9 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
     return { ok: true, isMock: false, marketStats: null, apply };
   }
 
+  // S15: Provider call telemetry (single-property path — always per-property, no sharing)
+  const _providerTel = marketProvider.resolveProviderForProperty(propertyId);
+  console.log(`[MARKET_PROVIDER_CALL_ATTEMPT] provider=${_providerTel} collection_run_id=single_${propertyId} shared_group_size=1 reason=single_property`);
   const { listings, isMock, zoneUsed, dataSource, diagnostics } = await scrapeBestZone(
     zones,
     (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
@@ -941,6 +1004,7 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
     capturedPropertyCurrency,
     propertyId
   );
+  console.log(`[MARKET_PROVIDER_CALL_SUCCESS] provider=${_providerTel} dataSource=${dataSource} collection_run_id=single_${propertyId}`);
   const zoneLabel = zoneUsed;
 
   const marketStats = calcProviderMarketStats(listings, cfg, dataSource);

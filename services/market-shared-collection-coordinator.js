@@ -351,6 +351,181 @@ function isShadowCollectionEnabled() {
   );
 }
 
+// ── S: Shared production collection functions ─────────────────────────────────
+
+/**
+ * S: Returns true when the shared production collection flag is enabled.
+ * Requires only MARKET_SHARED_COLLECTION_ENABLED (not both flags).
+ * When true, the weekly job uses fingerprint-grouped provider calls instead
+ * of per-property zone-cache calls.
+ */
+function isSharedProductionEnabled() {
+  return process.env.MARKET_SHARED_COLLECTION_ENABLED === 'true';
+}
+
+/**
+ * S3/S4: Group active properties by canonical (provider, fingerprint) before any network calls.
+ *
+ * Returns Map<fingerprint, { fingerprint, profileId, dimensions, provider, cfg, propertyLinks }>.
+ * One entry per unique fingerprint — first eligible property becomes the representative cfg.
+ * Properties failing the completeness guard are silently excluded (S11: Ti Junot).
+ *
+ * @param {object[]} configs
+ * @param {object}   opts
+ * @param {string}   [opts.checkIn]
+ * @param {string}   [opts.checkOut]
+ * @param {Function} [opts.resolveProvider]  — (propertyId) => 'apify'|'brightdata'
+ * @param {number}   [opts.maxListings=100]
+ * @returns {Map}
+ */
+function groupPropertiesByFingerprint(configs, { checkIn, checkOut, resolveProvider, maxListings = 100 } = {}) {
+  const groups = new Map();
+
+  for (const cfg of configs) {
+    const check = validatePropertyCompleteness(cfg);
+    if (!check.ok) continue;
+
+    const currency = cfg.currency.trim().toUpperCase();
+    const identity = buildMarketProfileIdentity({
+      latitude:           cfg.latitude,
+      longitude:          cfg.longitude,
+      currency,
+      targetGuests:       cfg.max_guests    ?? null,
+      targetBedrooms:     cfg.bedrooms      ?? null,
+      targetPropertyType: cfg.property_type ?? null,
+    });
+    if (!identity.valid) continue;
+
+    const { profileId, dimensions } = identity;
+
+    // S5: provider is part of the fingerprint — never mix provider evidence
+    const provider = resolveProvider ? resolveProvider(cfg.property_id) : 'apify';
+
+    const fp = buildMarketSearchFingerprint({
+      latitude:           cfg.latitude,
+      longitude:          cfg.longitude,
+      currency,
+      targetGuests:       dimensions.guests,
+      targetBedrooms:     dimensions.bedrooms,
+      targetPropertyType: dimensions.propType,
+      checkIn,
+      checkOut,
+      maxListings,
+      provider,
+    });
+    if (!fp.valid) continue;
+
+    const fingerprint = fp.fingerprint;
+
+    if (!groups.has(fingerprint)) {
+      groups.set(fingerprint, {
+        fingerprint,
+        profileId,
+        dimensions,
+        provider,
+        cfg,            // representative config (first eligible property in group)
+        propertyLinks: [],
+      });
+    }
+
+    groups.get(fingerprint).propertyLinks.push({
+      property_id: String(cfg.property_id),
+      user_id:     cfg.user_id ? String(cfg.user_id) : null,
+    });
+  }
+
+  return groups;
+}
+
+/**
+ * S10: Run shared production pre-collection.
+ *
+ * Groups properties by fingerprint and makes ONE provider call per group.
+ * Returns shared evidence map + property-to-fingerprint index for the main job loop.
+ *
+ * S12: provider failures set an error entry — no per-property fallback.
+ *
+ * @param {object[]} configs
+ * @param {object}   opts
+ * @param {string}   [opts.checkIn]
+ * @param {string}   [opts.checkOut]
+ * @param {Function} [opts.resolveProvider]
+ * @param {Function} opts.scrapeFn           — (zones, priceFallback, maxListings, bedrooms, currency, propertyId) => Promise
+ * @param {Function} [opts.getFallbackZonesFn]  — (address, zoneLabel) => string[]
+ * @param {Function} [opts.priceFallbackFn]     — (cfg) => number; defaults to 80
+ * @param {number}   [opts.maxListings=100]
+ *
+ * @returns {Promise<{
+ *   sharedEvidence:    Map<string, object | { error: string }>,
+ *   propToFingerprint: Map<string, string>,
+ *   groupCount:        number,
+ *   callCount:         number,
+ * }>}
+ */
+async function runSharedPreCollection(configs, {
+  checkIn,
+  checkOut,
+  resolveProvider,
+  scrapeFn,
+  getFallbackZonesFn,
+  priceFallbackFn  = () => 80,
+  maxListings      = 100,
+} = {}) {
+  const groups = groupPropertiesByFingerprint(configs, { checkIn, checkOut, resolveProvider, maxListings });
+
+  const sharedEvidence    = new Map();
+  const propToFingerprint = new Map();
+
+  // Build propToFingerprint index
+  for (const [fingerprint, group] of groups) {
+    for (const link of group.propertyLinks) {
+      propToFingerprint.set(link.property_id, fingerprint);
+    }
+  }
+
+  let callCount = 0;
+
+  for (const [fingerprint, group] of groups) {
+    const capturedCurrency = group.cfg.currency ? group.cfg.currency.trim().toUpperCase() : null;
+    if (!capturedCurrency || !/^[A-Z]{3}$/.test(capturedCurrency)) {
+      sharedEvidence.set(fingerprint, { error: 'invalid_currency' });
+      continue;
+    }
+
+    const zones = getFallbackZonesFn
+      ? getFallbackZonesFn(group.cfg.property_address, group.cfg.zone_label)
+      : ['France'];
+    const priceFallback = priceFallbackFn(group.cfg);
+    const groupSize     = group.propertyLinks.length;
+
+    console.log(
+      `[MARKET_PROVIDER_CALL_ATTEMPT] provider=${group.provider} fp=${fingerprint.slice(0, 12)}… ` +
+      `shared_group_size=${groupSize} reason=shared_production`
+    );
+
+    try {
+      const result = await scrapeFn(
+        zones, priceFallback, maxListings, group.cfg.bedrooms, capturedCurrency, group.cfg.property_id
+      );
+      sharedEvidence.set(fingerprint, result);
+      callCount++;
+      console.log(
+        `[MARKET_PROVIDER_CALL_SUCCESS] provider=${group.provider} fp=${fingerprint.slice(0, 12)}… ` +
+        `shared_group_size=${groupSize} dataSource=${result.dataSource}`
+      );
+    } catch (err) {
+      console.error(
+        `[MARKET_PROVIDER_CALL_FAILURE] provider=${group.provider} fp=${fingerprint.slice(0, 12)}… ` +
+        `shared_group_size=${groupSize} reason=${err.message}`
+      );
+      // S12: record failure; callers must NOT fall back to per-property provider calls
+      sharedEvidence.set(fingerprint, { error: err.message });
+    }
+  }
+
+  return { sharedEvidence, propToFingerprint, groupCount: groups.size, callCount };
+}
+
 // ── Exports ───────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -358,4 +533,7 @@ module.exports = {
   validatePropertyCompleteness,
   coordinateCollection,
   isShadowCollectionEnabled,
+  isSharedProductionEnabled,
+  groupPropertiesByFingerprint,
+  runSharedPreCollection,
 };

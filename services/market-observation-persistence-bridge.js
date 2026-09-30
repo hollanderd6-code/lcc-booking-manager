@@ -71,7 +71,7 @@ function isPersistenceEnabled() {
 /**
  * Generate a bridge run ID for a logical pricing cron invocation.
  *
- * Use 'brun_' prefix to distinguish from 'crun_' shadow collection runs.
+ * Use 'brun_' prefix to distinguish from crun_ shadow collection runs.
  * Generate ONCE per job run; pass explicitly to every bridge call.
  */
 function generateBridgeRunId() {
