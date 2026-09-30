@@ -652,14 +652,23 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
         const providerForCache = marketProvider.resolveProviderForProperty(cfg.property_id);
         const cacheKey = zones.join('|') + ':' + capturedPropertyCurrency + ':' + providerForCache;
         if (!zoneCache[cacheKey]) {
-          zoneCache[cacheKey] = await scrapeBestZone(
-            zones,
-            (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
-            MAX_LISTINGS,
-            cfg.bedrooms,
-            capturedPropertyCurrency,
-            cfg.property_id
-          );
+          // S15: telemetry on cache miss (actual provider call) — not emitted on cache hit (reuse)
+          const _legacyRunId = `legacy_${cfg.property_id}`;
+          console.log(`[MARKET_PROVIDER_CALL_ATTEMPT] provider=${providerForCache} collection_run_id=${_legacyRunId} shared_group_size=1 reason=legacy_zone_cache`);
+          try {
+            zoneCache[cacheKey] = await scrapeBestZone(
+              zones,
+              (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
+              MAX_LISTINGS,
+              cfg.bedrooms,
+              capturedPropertyCurrency,
+              cfg.property_id
+            );
+            console.log(`[MARKET_PROVIDER_CALL_SUCCESS] provider=${providerForCache} dataSource=${zoneCache[cacheKey].dataSource} collection_run_id=${_legacyRunId}`);
+          } catch (err) {
+            console.log(`[MARKET_PROVIDER_CALL_FAILURE] provider=${providerForCache} collection_run_id=${_legacyRunId} reason=${err.message}`);
+            throw err;
+          }
         }
         ({ listings, isMock, zoneUsed, dataSource, diagnostics } = zoneCache[cacheKey]);
       }
@@ -995,16 +1004,24 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
 
   // S15: Provider call telemetry (single-property path — always per-property, no sharing)
   const _providerTel = marketProvider.resolveProviderForProperty(propertyId);
-  console.log(`[MARKET_PROVIDER_CALL_ATTEMPT] provider=${_providerTel} collection_run_id=single_${propertyId} shared_group_size=1 reason=single_property`);
-  const { listings, isMock, zoneUsed, dataSource, diagnostics } = await scrapeBestZone(
-    zones,
-    (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
-    MAX_LISTINGS,
-    cfg.bedrooms,
-    capturedPropertyCurrency,
-    propertyId
-  );
-  console.log(`[MARKET_PROVIDER_CALL_SUCCESS] provider=${_providerTel} dataSource=${dataSource} collection_run_id=single_${propertyId}`);
+  const _singleRunId = `single_${propertyId}`;
+  console.log(`[MARKET_PROVIDER_CALL_ATTEMPT] provider=${_providerTel} collection_run_id=${_singleRunId} shared_group_size=1 reason=single_property`);
+  let _singleScrape;
+  try {
+    _singleScrape = await scrapeBestZone(
+      zones,
+      (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
+      MAX_LISTINGS,
+      cfg.bedrooms,
+      capturedPropertyCurrency,
+      propertyId
+    );
+  } catch (err) {
+    console.log(`[MARKET_PROVIDER_CALL_FAILURE] provider=${_providerTel} collection_run_id=${_singleRunId} reason=${err.message}`);
+    throw err;
+  }
+  const { listings, isMock, zoneUsed, dataSource, diagnostics } = _singleScrape;
+  console.log(`[MARKET_PROVIDER_CALL_SUCCESS] provider=${_providerTel} dataSource=${dataSource} collection_run_id=${_singleRunId}`);
   const zoneLabel = zoneUsed;
 
   const marketStats = calcProviderMarketStats(listings, cfg, dataSource);

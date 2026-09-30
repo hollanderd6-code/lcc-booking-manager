@@ -281,9 +281,17 @@ async function runAudit() {
   const canonicalFingerprintReused      = COORD_SRC.includes('buildMarketSearchFingerprint');
   const singleFlightPresent             = COORD_SRC.includes('_inflight');
   const jobDedupPresent                 = CRON_SRC.includes('propToFingerprint') && CRON_SRC.includes('sharedEvidence');
-  const providerTelemetryPresent        = CRON_SRC.includes('MARKET_PROVIDER_CALL_ATTEMPT') &&
-                                          CRON_SRC.includes('MARKET_PROVIDER_CALL_SUCCESS') &&
-                                          CRON_SRC.includes('MARKET_PROVIDER_CALL_FAILURE');
+  // Shared path telemetry (FLAG ON) lives in coordinator (runSharedPreCollection)
+  const _coordTelemetryPresent =
+    COORD_SRC.includes('MARKET_PROVIDER_CALL_ATTEMPT') &&
+    COORD_SRC.includes('MARKET_PROVIDER_CALL_SUCCESS') &&
+    COORD_SRC.includes('MARKET_PROVIDER_CALL_FAILURE');
+  // Single-property + legacy weekly path telemetry must be in the cron
+  const _cronTelemetryPresent =
+    CRON_SRC.includes('MARKET_PROVIDER_CALL_ATTEMPT') &&
+    CRON_SRC.includes('MARKET_PROVIDER_CALL_SUCCESS') &&
+    CRON_SRC.includes('MARKET_PROVIDER_CALL_FAILURE');
+  const providerTelemetryPresent = _coordTelemetryPresent && _cronTelemetryPresent;
   const marketDataAuthority             = !CRON_SRC.includes("FROM market_observations") || true; // market_data is authoritative
   const observationAuthority            = 'SHADOW_ONLY';
 

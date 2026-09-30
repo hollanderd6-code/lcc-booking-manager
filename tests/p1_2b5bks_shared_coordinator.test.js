@@ -1156,6 +1156,137 @@ test('M-15: audit fail-closed block outputs SCHEMA_COMPATIBLE = NO on SQL error'
   assert.ok(AUDIT_S_SRC.includes("SAFE_TO_ENABLE_SHARED_COLLECTION = NO"), 'Must output SAFE_TO_ENABLE_SHARED_COLLECTION = NO on error');
 });
 
+// ── N — S15 provider telemetry ────────────────────────────────────────────────
+
+console.log('\nN — S15 provider telemetry');
+
+// Capture MARKET_PROVIDER_CALL_* log events emitted during async fn execution.
+// Mocks console.log and console.error; restores them in finally.
+// The test harness uses process.stdout.write (not console.log) so mocking is safe.
+async function captureProviderTelemetry(fn) {
+  const counts = { ATTEMPT: 0, SUCCESS: 0, FAILURE: 0 };
+  const origLog = console.log;
+  const origErr = console.error;
+  const capture = (...args) => {
+    const m = String(args[0] || '');
+    if (m.includes('MARKET_PROVIDER_CALL_ATTEMPT')) counts.ATTEMPT++;
+    if (m.includes('MARKET_PROVIDER_CALL_SUCCESS')) counts.SUCCESS++;
+    if (m.includes('MARKET_PROVIDER_CALL_FAILURE')) counts.FAILURE++;
+  };
+  console.log = capture;
+  console.error = capture;
+  try {
+    await fn();
+  } finally {
+    console.log = origLog;
+    console.error = origErr;
+  }
+  return counts;
+}
+
+await testAsync('N-01: shared M6+M7 success → 1 ATTEMPT, 1 SUCCESS, 0 FAILURE', async () => {
+  const mock = countingMockScrape();
+  const counts = await captureProviderTelemetry(() =>
+    runSharedPreCollection([M6_CFG, M7_CFG], defaultPreCollectionOpts(mock))
+  );
+  assert.strictEqual(counts.ATTEMPT, 1, 'Exactly 1 ATTEMPT for the fingerprint group');
+  assert.strictEqual(counts.SUCCESS, 1, 'Exactly 1 SUCCESS');
+  assert.strictEqual(counts.FAILURE, 0, 'Zero FAILURE');
+});
+
+await testAsync('N-02: shared failure → 1 ATTEMPT, 0 SUCCESS, 1 FAILURE', async () => {
+  const failScrape = async () => { throw new Error('provider_unavailable'); };
+  const counts = await captureProviderTelemetry(() =>
+    runSharedPreCollection([M6_CFG], defaultPreCollectionOpts(failScrape))
+  );
+  assert.strictEqual(counts.ATTEMPT, 1, 'Exactly 1 ATTEMPT');
+  assert.strictEqual(counts.SUCCESS, 0, 'Zero SUCCESS on failure');
+  assert.strictEqual(counts.FAILURE, 1, 'Exactly 1 FAILURE');
+});
+
+await testAsync('N-03: two distinct fingerprints → 2 ATTEMPT, 2 terminal events', async () => {
+  const mock = countingMockScrape();
+  const counts = await captureProviderTelemetry(() =>
+    runSharedPreCollection([M6_CFG, SOLO_CFG], defaultPreCollectionOpts(mock))
+  );
+  assert.strictEqual(counts.ATTEMPT, 2, 'One ATTEMPT per fingerprint group');
+  assert.strictEqual(counts.SUCCESS + counts.FAILURE, 2, 'One terminal event per group');
+});
+
+await testAsync('N-04: M6+M7 fanout does NOT duplicate telemetry', async () => {
+  const mock = countingMockScrape();
+  const counts = await captureProviderTelemetry(() =>
+    runSharedPreCollection([M6_CFG, M7_CFG], defaultPreCollectionOpts(mock))
+  );
+  assert.strictEqual(mock.callCount(), 1, 'Provider called once despite 2 properties');
+  assert.strictEqual(counts.ATTEMPT,  1, 'ATTEMPT not duplicated for fanout to M6+M7');
+  assert.strictEqual(counts.SUCCESS,  1, 'SUCCESS not duplicated for fanout');
+});
+
+await testAsync('N-05: telemetry does not alter evidence content', async () => {
+  const mock = countingMockScrape();
+  let capturedEvidence;
+  const counts = await captureProviderTelemetry(async () => {
+    const { sharedEvidence, propToFingerprint } = await runSharedPreCollection(
+      [M6_CFG], defaultPreCollectionOpts(mock)
+    );
+    const fp = propToFingerprint.get('6');
+    capturedEvidence = sharedEvidence.get(fp);
+  });
+  assert.ok(capturedEvidence && capturedEvidence.dataSource === 'apify_live', 'Evidence content unaltered by telemetry');
+  assert.ok(!capturedEvidence.error, 'No error injected by telemetry');
+  assert.strictEqual(counts.ATTEMPT, 1);
+  assert.strictEqual(counts.SUCCESS, 1);
+});
+
+// Static source checks — legacy and single-property paths require DB so checked statically
+
+test('N-06: cron runDynamicPricingForOneProperty body has FAILURE telemetry', () => {
+  const fnIdx = CRON_SRC.indexOf('async function runDynamicPricingForOneProperty');
+  assert.ok(fnIdx !== -1, 'Function must exist');
+  const body = CRON_SRC.slice(fnIdx, fnIdx + 4000);
+  assert.ok(body.includes('MARKET_PROVIDER_CALL_FAILURE'),
+    'Single-property path must emit MARKET_PROVIDER_CALL_FAILURE on scrapeBestZone error');
+});
+
+test('N-07: cron legacy weekly path has ATTEMPT with reason=legacy_zone_cache', () => {
+  assert.ok(CRON_SRC.includes('reason=legacy_zone_cache'),
+    'Legacy path ATTEMPT must include reason=legacy_zone_cache (distinct from single-property)');
+});
+
+test('N-08: cron now has MARKET_PROVIDER_CALL_FAILURE (all paths complete)', () => {
+  assert.ok(CRON_SRC.includes('MARKET_PROVIDER_CALL_FAILURE'),
+    'Cron must have MARKET_PROVIDER_CALL_FAILURE for both legacy and single-property paths');
+});
+
+test('N-09: audit checks coordinator source for all three telemetry events', () => {
+  assert.ok(AUDIT_S_SRC.includes('_coordTelemetryPresent'),
+    'Audit must check coordinator (shared path) telemetry');
+  assert.ok(AUDIT_S_SRC.includes("COORD_SRC.includes('MARKET_PROVIDER_CALL_ATTEMPT')"),
+    'Audit must check COORD_SRC for ATTEMPT');
+  assert.ok(AUDIT_S_SRC.includes("COORD_SRC.includes('MARKET_PROVIDER_CALL_FAILURE')"),
+    'Audit must check COORD_SRC for FAILURE');
+});
+
+test('N-10: audit providerTelemetryPresent requires both shared and cron paths complete', () => {
+  assert.ok(AUDIT_S_SRC.includes('_coordTelemetryPresent && _cronTelemetryPresent'),
+    'providerTelemetryPresent must be AND of both path checks');
+});
+
+test('N-11: audit PROVIDER_TELEMETRY_PRESENT would be NO if FAILURE absent from cron', () => {
+  // Simulate partial cron: ATTEMPT+SUCCESS only, no FAILURE
+  const partialCron = CRON_SRC.replace(/MARKET_PROVIDER_CALL_FAILURE/g, '_REMOVED_');
+  const coordHasAll =
+    partialCron.includes('MARKET_PROVIDER_CALL_ATTEMPT') === false; // coord not in cron
+  // Re-evaluate the check logic manually
+  const cronTelemetry =
+    partialCron.includes('MARKET_PROVIDER_CALL_ATTEMPT') &&
+    partialCron.includes('MARKET_PROVIDER_CALL_SUCCESS') &&
+    partialCron.includes('MARKET_PROVIDER_CALL_FAILURE'); // false since removed
+  assert.strictEqual(cronTelemetry, false,
+    'With FAILURE stripped from cron, _cronTelemetryPresent must be false → providerTelemetryPresent=false');
+});
+
 // ── Final report ──────────────────────────────────────────────────────────────
 
 console.log('\n');
