@@ -395,7 +395,7 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
       const weekStart = monday.toISOString().slice(0, 10);
 
       const histories = await pool.query(
-        `SELECT ph.property_id, ph.price_before, ph.price_calculated, ph.price_applied,
+        `SELECT ph.id, ph.property_id, ph.price_before, ph.price_calculated, ph.price_applied,
                 ph.status, ph.mode_used, ph.reason, ph.factor_market, ph.factor_self, ph.factor_season,
                 ph.market_median, ph.market_occupancy, ph.tension_level, ph.applied_at
          FROM pricing_history ph
@@ -457,6 +457,7 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
             refreshRequired:    classification.refreshRequired ?? false,
           } : null,
           history: history ? {
+            historyId:       history.id ?? null,
             status:          history.status,
             priceBefore:     parseFloat(history.price_before || 0),
             priceCalculated: parseFloat(history.price_calculated || 0),
