@@ -25,7 +25,7 @@
  */
 
 require('dotenv').config();
-const { Pool } = require('pg');
+const { createPool } = require('../services/db-pool');
 const {
   calculatePickupShadow,
   TRUSTED_SOURCES,
@@ -94,84 +94,88 @@ function advisoryLabel(mult) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = createPool();
 
-  const targetDate = TARGET_DATE_ARG || defaultTargetDate();
-
-  console.log('');
-  console.log('══════════════════════════════════════════════════════════════');
-  console.log('  P1.3-T1 — BOOKING PICKUP SHADOW AUDIT');
-  console.log('══════════════════════════════════════════════════════════════');
-  console.log(`  Target date:     ${targetDate}`);
-  console.log(`  Trusted sources: ${TRUSTED_SOURCES.join(', ')}`);
-  console.log(`  Recent window:   ${RECENT_WINDOW_DAYS} days`);
-  console.log(`  Advisory range:  [${ADVISORY_MIN}, ${ADVISORY_MAX}]`);
-  console.log(`  Persistence:     ${process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED === 'true' ? 'ON (disabled in audit)' : 'OFF'}`);
-  console.log(`  DB_WRITES=0  CHANNEX_CALLS=0  MARKET_PROVIDER_CALLS=0`);
-  console.log('──────────────────────────────────────────────────────────────');
-
-  let props;
   try {
-    const res = await pool.query(ACTIVE_PROPERTIES_SQL);
-    props = res.rows;
-    console.log(`  Active BoostPrice properties: ${props.length}`);
-  } catch (err) {
-    console.error(`  [ERROR] Failed to load properties: ${err.message}`);
-    await pool.end();
-    process.exit(1);
-  }
+    const targetDate = TARGET_DATE_ARG || defaultTargetDate();
 
-  if (props.length === 0) {
-    console.log('  No active BoostPrice properties found. Nothing to report.');
-    await pool.end();
-    return;
-  }
+    console.log('');
+    console.log('══════════════════════════════════════════════════════════════');
+    console.log('  P1.3-T1 — BOOKING PICKUP SHADOW AUDIT');
+    console.log('══════════════════════════════════════════════════════════════');
+    console.log(`  Target date:     ${targetDate}`);
+    console.log(`  Trusted sources: ${TRUSTED_SOURCES.join(', ')}`);
+    console.log(`  Recent window:   ${RECENT_WINDOW_DAYS} days`);
+    console.log(`  Advisory range:  [${ADVISORY_MIN}, ${ADVISORY_MAX}]`);
+    console.log(`  Persistence:     ${process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED === 'true' ? 'ON (disabled in audit)' : 'OFF'}`);
+    console.log(`  DB_WRITES=0  CHANNEX_CALLS=0  MARKET_PROVIDER_CALLS=0`);
+    console.log('──────────────────────────────────────────────────────────────');
 
-  console.log('');
-
-  let successCount = 0;
-  let errorCount   = 0;
-
-  for (const prop of props) {
-    const label = displayName(prop);
+    let props;
     try {
-      const obs = await calculatePickupShadow(pool, prop.property_id, targetDate);
-      successCount++;
-
-      const icon  = statusIcon(obs.status);
-      const cIcon = confidenceIcon(obs.confidence);
-
-      console.log(`  ${icon}  ${label}`);
-      console.log(`     property_id:          ${obs.propertyId}`);
-      console.log(`     target_date:          ${obs.targetDate}  (lead_time: ${obs.leadTimeDays}d, band: ${obs.leadTimeBand})`);
-      console.log(`     history:              ${obs.historicalSampleSize} total, ${obs.comparableSampleSize} in band`);
-      console.log(`     recent_bookings:      ${obs.recentBookings}  expected: ${obs.expectedBookings}`);
-      console.log(`     pickup_ratio:         ${obs.pickupRatio !== null ? obs.pickupRatio : 'n/a'}`);
-      console.log(`     status:               ${obs.status}`);
-      console.log(`     confidence:           ${cIcon}  ${obs.confidence}`);
-      console.log(`     advisory_multiplier:  ${advisoryLabel(obs.advisoryMultiplier)}`);
-      console.log(`     pacing_proxy:         occ=${obs.occupancyFraction}  strength=${obs.pacingStrength}`);
-      console.log(`     pacing_pickup_rel:    ${obs.pacingPickupRelation}`);
-      console.log(`     anomalies_excluded:   ${obs.anomaliesExcluded}`);
-      console.log(`     model_version:        ${obs.modelVersion}`);
-      console.log(`     reasons:              ${obs.reasons.join(' | ')}`);
-      console.log('');
+      const res = await pool.query(ACTIVE_PROPERTIES_SQL);
+      props = res.rows;
+      console.log(`  Active BoostPrice properties: ${props.length}`);
     } catch (err) {
-      errorCount++;
-      console.log(`  ✗  ${label}`);
-      console.log(`     [ERROR] ${err.message}`);
-      console.log('');
+      const isConnErr = /connect|certificate|ssl|tls|auth|econnrefused|timeout/i.test(err.message);
+      const errClass  = isConnErr ? 'DATABASE_CONNECTION_FAILURE' : 'QUERY_EXECUTION_FAILURE';
+      console.error(`  [${errClass}] ${err.message}`);
+      process.exitCode = 1;
+      return;
     }
+
+    if (props.length === 0) {
+      console.log('  No active BoostPrice properties found. Nothing to report.');
+      return;
+    }
+
+    console.log('');
+
+    let successCount = 0;
+    let errorCount   = 0;
+
+    for (const prop of props) {
+      const label = displayName(prop);
+      try {
+        const obs = await calculatePickupShadow(pool, prop.property_id, targetDate);
+        successCount++;
+
+        const icon  = statusIcon(obs.status);
+        const cIcon = confidenceIcon(obs.confidence);
+
+        console.log(`  ${icon}  ${label}`);
+        console.log(`     property_id:          ${obs.propertyId}`);
+        console.log(`     target_date:          ${obs.targetDate}  (lead_time: ${obs.leadTimeDays}d, band: ${obs.leadTimeBand})`);
+        console.log(`     history:              ${obs.historicalSampleSize} total, ${obs.comparableSampleSize} in band`);
+        console.log(`     recent_bookings:      ${obs.recentBookings}  expected: ${obs.expectedBookings}`);
+        console.log(`     pickup_ratio:         ${obs.pickupRatio !== null ? obs.pickupRatio : 'n/a'}`);
+        console.log(`     status:               ${obs.status}`);
+        console.log(`     confidence:           ${cIcon}  ${obs.confidence}`);
+        console.log(`     advisory_multiplier:  ${advisoryLabel(obs.advisoryMultiplier)}`);
+        console.log(`     pacing_proxy:         occ=${obs.occupancyFraction}  strength=${obs.pacingStrength}`);
+        console.log(`     pacing_pickup_rel:    ${obs.pacingPickupRelation}`);
+        console.log(`     anomalies_excluded:   ${obs.anomaliesExcluded}`);
+        console.log(`     model_version:        ${obs.modelVersion}`);
+        console.log(`     reasons:              ${obs.reasons.join(' | ')}`);
+        console.log('');
+      } catch (err) {
+        errorCount++;
+        console.log(`  ✗  ${label}`);
+        console.log(`     [PICKUP_CALCULATION_FAILURE] ${err.message}`);
+        console.log('');
+      }
+    }
+
+    console.log('──────────────────────────────────────────────────────────────');
+    console.log(`  Summary: ${successCount} OK, ${errorCount} errors`);
+    console.log(`  ADVISORY ONLY — no pricing changes applied`);
+    console.log('══════════════════════════════════════════════════════════════');
+    console.log('');
+
+    if (errorCount > 0) process.exitCode = 1;
+  } finally {
+    await pool.end();
   }
-
-  console.log('──────────────────────────────────────────────────────────────');
-  console.log(`  Summary: ${successCount} OK, ${errorCount} errors`);
-  console.log(`  ADVISORY ONLY — no pricing changes applied`);
-  console.log('══════════════════════════════════════════════════════════════');
-  console.log('');
-
-  await pool.end();
-  if (errorCount > 0) process.exit(1);
 }
 
 main().catch(err => {

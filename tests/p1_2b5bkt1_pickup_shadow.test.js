@@ -576,6 +576,62 @@ test('O-04: migration 005 exists and is additive-only', () => {
   assert.ok(!sql.includes('DROP TABLE'));
 });
 
+// ── Section P — PROD-FIX: canonical db-pool (P1.3-T1-PROD-FIX) ───────────────
+
+console.log('\n  [P] PROD-FIX: canonical db-pool');
+
+test('P-01: audit imports createPool from services/db-pool', () => {
+  assert.ok(ASRC.includes("require('../services/db-pool')"), 'db-pool not imported');
+  assert.ok(ASRC.includes('createPool'), 'createPool not used');
+});
+test('P-02: audit does NOT create its own new Pool(...)', () => {
+  assert.ok(!ASRC.match(/new Pool\s*\(/), 'new Pool() found in audit');
+});
+test('P-03: audit does NOT import pg directly', () => {
+  assert.ok(!ASRC.includes("require('pg')"), 'direct pg import found in audit');
+});
+test('P-04: audit has no ssl: or rejectUnauthorized in its own code', () => {
+  assert.ok(!ASRC.includes('rejectUnauthorized'), 'rejectUnauthorized found in audit');
+  assert.ok(!ASRC.match(/\bssl\s*:/), 'ssl: config found in audit');
+});
+test('P-05: audit has no DATABASE_URL construction', () => {
+  // DATABASE_URL may appear in comments — check for actual new Pool or pg.Pool construction
+  assert.ok(!ASRC.match(/new Pool\s*\(\s*\{[^}]*DATABASE_URL/), 'DATABASE_URL passed to new Pool');
+});
+test('P-06: pool is closed in finally block (pool.end in finally)', () => {
+  // The audit wraps the body in try { ... } finally { await pool.end() }
+  assert.ok(ASRC.includes('finally'), 'no finally block in audit');
+  assert.ok(ASRC.includes('pool.end()'), 'pool.end() not found in audit');
+});
+test('P-07: booking-pickup-shadow.js does NOT create its own Pool', () => {
+  assert.ok(!SRC.match(/new Pool\s*\(/), 'new Pool() found in shadow engine');
+  assert.ok(!SRC.includes("require('pg')"), 'direct pg import in shadow engine');
+});
+test('P-08: calculatePickupShadow receives pool as first argument (injected)', () => {
+  // The function signature is calculatePickupShadow(pool, propertyId, targetDate, ...)
+  assert.ok(SRC.includes('async function calculatePickupShadow(pool,'));
+});
+test('P-09: error classification uses DATABASE_CONNECTION_FAILURE for connection errors', () => {
+  assert.ok(ASRC.includes('DATABASE_CONNECTION_FAILURE'), 'connection error class missing');
+});
+test('P-10: error classification uses QUERY_EXECUTION_FAILURE for query errors', () => {
+  assert.ok(ASRC.includes('QUERY_EXECUTION_FAILURE'), 'query error class missing');
+});
+test('P-11: error classification uses PICKUP_CALCULATION_FAILURE for per-property errors', () => {
+  assert.ok(ASRC.includes('PICKUP_CALCULATION_FAILURE'), 'pickup error class missing');
+});
+test('P-12: no NODE_TLS_REJECT_UNAUTHORIZED in audit', () => {
+  assert.ok(!ASRC.includes('NODE_TLS_REJECT_UNAUTHORIZED'), 'global TLS bypass found');
+});
+test('P-13: db-pool.js still has canonical createPool (not modified by this fix)', () => {
+  const dbPoolSrc = fs.readFileSync(path.join(__dirname, '../services/db-pool.js'), 'utf8');
+  assert.ok(dbPoolSrc.includes('createPool'), 'createPool missing from db-pool.js');
+  // The canonical factory sets ssl based on NODE_ENV — this line must still be present
+  assert.ok(dbPoolSrc.includes("process.env.NODE_ENV === 'production'"), 'production env guard missing');
+  // db-pool.js exports only createPool — no new exports added
+  assert.ok(dbPoolSrc.includes('module.exports = { createPool }'), 'module.exports changed');
+});
+
 // ── Section L — calculatePickupShadow (mock pool) — async ────────────────────
 
 async function runAsyncTests() {
