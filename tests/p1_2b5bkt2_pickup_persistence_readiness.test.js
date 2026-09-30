@@ -32,10 +32,18 @@ const path   = require('path');
 
 const {
   isPersistenceEnabled,
+  isValidTimezone,
   observationDateFromCalcAt,
   persistPickupObservation,
   INSERT_OBSERVATION_SQL,
 } = require('../services/booking-pickup-persistence');
+
+const {
+  PICKUP_HORIZON_DAYS,
+  generateTargetDates,
+  runPickupShadowJob,
+  ELIGIBLE_PROPERTIES_SQL,
+} = require('../services/booking-pickup-shadow-job');
 
 const SRC  = fs.readFileSync(path.join(__dirname, '../services/booking-pickup-persistence.js'), 'utf8');
 const M006 = fs.readFileSync(path.join(__dirname, '../migrations/006_booking_pickup_observations_v2.sql'), 'utf8');
@@ -565,10 +573,14 @@ PRICING_CHAIN.forEach((pricingFile, i) => {
   });
 });
 
-test('G-05: dynamic-pricing-cron.js does not import pickup persistence', () => {
-  const requirePattern = /require\(['"][^'"]*booking-pickup-persistence/;
-  assert.ok(!requirePattern.test(CRON),
-    'dynamic-pricing-cron.js must not import booking-pickup-persistence (not yet wired)');
+test('G-05: dynamic-pricing-cron.js imports pickup persistence lazily (not at top-level)', () => {
+  // T2-FIX: cron IS wired — but via lazy require() inside the cron callback.
+  // Top-level require would give pricing modules startup access to the shadow job.
+  // Lazy require (inside the cron callback) is the safe pattern.
+  const topLevelRequires = CRON.slice(0, CRON.indexOf('function initDynamicPricingCron'));
+  const requirePickup = /require\(['"][^'"]*booking-pickup-persistence/;
+  assert.ok(!requirePickup.test(topLevelRequires),
+    'booking-pickup-persistence must not be imported at top level of dynamic-pricing-cron.js');
 });
 
 test('G-06: booking-pickup-persistence.js comment explicitly states PICKUP_HAS_PRICING_AUTHORITY=NO', () => {
@@ -641,9 +653,9 @@ test('I-03: cron file defines schedules for daily runs (6h)', () => {
     'cron file must have at least one 06:00 schedule');
 });
 
-test('I-04: pickup persistence integration not yet wired (T2 readiness only)', () => {
-  assert.ok(!CRON.includes('booking-pickup-persistence') && !CRON.includes('persistPickupObservation'),
-    'pickup persistence must NOT be wired into the cron yet — T2 proves readiness only');
+test('I-04: pickup shadow job is wired in cron (T2-FIX: scheduler integration complete)', () => {
+  assert.ok(CRON.includes('booking-pickup-shadow-job'),
+    'T2-FIX must wire booking-pickup-shadow-job into the cron scheduler');
 });
 
 // ── Section J: Safety contract ───────────────────────────────
@@ -693,6 +705,739 @@ test('J-08: isPersistenceEnabled only reads an env var — no side effects', () 
   const r1 = isPersistenceEnabled();
   const r2 = isPersistenceEnabled();
   assert.strictEqual(r1, r2, 'pure function must be idempotent');
+});
+
+// ── Section K: Timezone-aware observationDateFromCalcAt ──────
+console.log('\nSection K — Timezone-aware observationDateFromCalcAt (property-local semantics)');
+
+test('K-01: isValidTimezone accepts Europe/Paris', () => {
+  assert.strictEqual(isValidTimezone('Europe/Paris'), true);
+});
+
+test('K-02: isValidTimezone accepts America/Los_Angeles', () => {
+  assert.strictEqual(isValidTimezone('America/Los_Angeles'), true);
+});
+
+test('K-03: isValidTimezone rejects garbage string', () => {
+  assert.strictEqual(isValidTimezone('Not/A/Timezone'), false);
+});
+
+test('K-04: isValidTimezone rejects null', () => {
+  assert.strictEqual(isValidTimezone(null), false);
+});
+
+test('K-05: isValidTimezone rejects undefined', () => {
+  assert.strictEqual(isValidTimezone(undefined), false);
+});
+
+test('K-06: isValidTimezone rejects empty string', () => {
+  assert.strictEqual(isValidTimezone(''), false);
+});
+
+test('K-07: Europe/Paris (UTC+2 CEST, Oct) — spec example', () => {
+  // 2026-10-01T00:30Z + UTC+2 = 2026-10-01 02:30 Paris → still Oct 1
+  assert.strictEqual(
+    observationDateFromCalcAt('2026-10-01T00:30:00Z', 'Europe/Paris'),
+    '2026-10-01',
+  );
+});
+
+test('K-08: America/Los_Angeles (UTC-7 PDT, Oct) — previous local day', () => {
+  // 2026-10-01T00:30Z + UTC-7 = 2026-09-30 17:30 LA → previous day
+  assert.strictEqual(
+    observationDateFromCalcAt('2026-10-01T00:30:00Z', 'America/Los_Angeles'),
+    '2026-09-30',
+  );
+});
+
+test('K-09: Asia/Tokyo (UTC+9) — next local day', () => {
+  // 2026-09-30T23:30Z + UTC+9 = 2026-10-01 08:30 Tokyo → next day
+  assert.strictEqual(
+    observationDateFromCalcAt('2026-09-30T23:30:00Z', 'Asia/Tokyo'),
+    '2026-10-01',
+  );
+});
+
+test('K-10: invalid timezone → UTC fallback', () => {
+  assert.strictEqual(
+    observationDateFromCalcAt('2026-09-30T06:00:00Z', 'Bad/Timezone'),
+    '2026-09-30',
+  );
+});
+
+test('K-11: null timezone → UTC fallback', () => {
+  assert.strictEqual(
+    observationDateFromCalcAt('2026-09-30T06:00:00Z', null),
+    '2026-09-30',
+  );
+});
+
+test('K-12: undefined timezone → UTC fallback (backward compat)', () => {
+  assert.strictEqual(
+    observationDateFromCalcAt('2026-09-30T06:00:00Z', undefined),
+    '2026-09-30',
+  );
+});
+
+test('K-13: DST Europe/Paris — summer (UTC+2) transition boundary', () => {
+  // 2026-03-29 at 02:00 Paris → clocks spring forward to 03:00; UTC+2 from here
+  // Before transition: 2026-03-29T00:59Z = 01:59 Paris (UTC+1) → 2026-03-29
+  // After transition:  2026-03-29T01:01Z = 03:01 Paris (UTC+2) → 2026-03-29
+  const before = observationDateFromCalcAt('2026-03-29T00:59:00Z', 'Europe/Paris');
+  const after  = observationDateFromCalcAt('2026-03-29T01:01:00Z', 'Europe/Paris');
+  assert.strictEqual(before, '2026-03-29');
+  assert.strictEqual(after,  '2026-03-29');
+});
+
+test('K-14: DST Europe/Paris — winter (UTC+1): 04:00Z = 05:00 Paris → same day', () => {
+  assert.strictEqual(
+    observationDateFromCalcAt('2026-01-15T04:00:00Z', 'Europe/Paris'),
+    '2026-01-15',
+  );
+});
+
+test('K-15: DST America/New_York — summer (UTC-4, EDT)', () => {
+  // 2026-06-15T04:00Z = 2026-06-15 00:00 EDT (UTC-4) → same local day
+  assert.strictEqual(
+    observationDateFromCalcAt('2026-06-15T04:00:00Z', 'America/New_York'),
+    '2026-06-15',
+  );
+});
+
+test('K-16: DST America/New_York — winter (UTC-5, EST): midnight boundary', () => {
+  // 2026-01-15T04:59Z = 2026-01-14 23:59 EST → previous local day
+  const result = observationDateFromCalcAt('2026-01-15T04:59:00Z', 'America/New_York');
+  assert.strictEqual(result, '2026-01-14');
+});
+
+test('K-17: same UTC timestamp → different local dates across timezones', () => {
+  // At 2026-10-01T00:30Z: Tokyo = Oct 1, Paris = Oct 1, LA = Sep 30
+  const ts = '2026-10-01T00:30:00Z';
+  const tokyo  = observationDateFromCalcAt(ts, 'Asia/Tokyo');
+  const paris  = observationDateFromCalcAt(ts, 'Europe/Paris');
+  const la     = observationDateFromCalcAt(ts, 'America/Los_Angeles');
+  assert.strictEqual(tokyo, '2026-10-01');
+  assert.strictEqual(paris, '2026-10-01');
+  assert.strictEqual(la,    '2026-09-30');
+  assert.notStrictEqual(tokyo, la, 'Tokyo and LA must differ at this timestamp');
+});
+
+test('K-18: isValidTimezone exported from booking-pickup-persistence', () => {
+  const mod = require('../services/booking-pickup-persistence');
+  assert.strictEqual(typeof mod.isValidTimezone, 'function');
+});
+
+// ── Section L: generateTargetDates ───────────────────────────
+console.log('\nSection L — generateTargetDates horizon semantics');
+
+test('L-01: returns exactly 30 dates for default horizon', () => {
+  const dates = generateTargetDates('2026-09-30', 30);
+  assert.strictEqual(dates.length, 30, `expected 30 dates, got ${dates.length}`);
+});
+
+test('L-02: PICKUP_HORIZON_DAYS constant is 30', () => {
+  assert.strictEqual(PICKUP_HORIZON_DAYS, 30);
+});
+
+test('L-03: first target date is local today+1', () => {
+  const dates = generateTargetDates('2026-09-30', 30);
+  assert.strictEqual(dates[0], '2026-10-01');
+});
+
+test('L-04: last target date is local today+30 (not today+31)', () => {
+  const dates = generateTargetDates('2026-09-30', 30);
+  assert.strictEqual(dates[29], '2026-10-30');
+});
+
+test('L-05: today is NOT included', () => {
+  const dates = generateTargetDates('2026-09-30', 30);
+  assert.ok(!dates.includes('2026-09-30'), 'local today must not appear in target dates');
+});
+
+test('L-06: all dates are in the future relative to localTodayStr', () => {
+  const localToday = '2026-09-30';
+  const dates = generateTargetDates(localToday, 30);
+  for (const d of dates) {
+    assert.ok(d > localToday, `date ${d} must be after local today ${localToday}`);
+  }
+});
+
+test('L-07: dates are in ascending order', () => {
+  const dates = generateTargetDates('2026-09-30', 30);
+  for (let i = 1; i < dates.length; i++) {
+    assert.ok(dates[i] > dates[i - 1], `dates must be ascending: ${dates[i - 1]} → ${dates[i]}`);
+  }
+});
+
+test('L-08: all dates are YYYY-MM-DD format', () => {
+  const dates = generateTargetDates('2026-09-30', 30);
+  for (const d of dates) {
+    assert.match(d, /^\d{4}-\d{2}-\d{2}$/, `invalid date format: ${d}`);
+  }
+});
+
+test('L-09: handles month boundary correctly', () => {
+  const dates = generateTargetDates('2026-09-30', 5);
+  assert.deepStrictEqual(dates, [
+    '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05',
+  ]);
+});
+
+test('L-10: handles year boundary correctly', () => {
+  const dates = generateTargetDates('2026-12-30', 4);
+  assert.deepStrictEqual(dates, [
+    '2026-12-31', '2027-01-01', '2027-01-02', '2027-01-03',
+  ]);
+});
+
+test('L-11: returns exactly horizonDays dates (not horizonDays+1)', () => {
+  for (const h of [1, 7, 30, 60, 90]) {
+    const dates = generateTargetDates('2026-09-30', h);
+    assert.strictEqual(dates.length, h, `expected ${h} dates, got ${dates.length}`);
+  }
+});
+
+test('L-12: ELIGIBLE_PROPERTIES_SQL selects from pricing_config and properties', () => {
+  assert.ok(ELIGIBLE_PROPERTIES_SQL.includes('pricing_config'));
+  assert.ok(ELIGIBLE_PROPERTIES_SQL.includes('properties'));
+  assert.ok(ELIGIBLE_PROPERTIES_SQL.toLowerCase().includes('is_active'));
+  assert.ok(ELIGIBLE_PROPERTIES_SQL.toLowerCase().includes('timezone'));
+});
+
+// ── Section M: runPickupShadowJob — flag OFF ─────────────────
+console.log('\nSection M — runPickupShadowJob: FLAG_OFF behavior');
+
+// Section M tests are async — defined here for documentation,
+// executed in runAsyncTests() below.
+const SECTION_M_ASYNC = [
+
+  ['M-01: flag OFF → returns with skippedReason=PERSISTENCE_FLAG_OFF', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    let calcCalled = false;
+    const mockCalc = () => { calcCalled = true; return Promise.resolve({}); };
+    const mockPool = { query: () => Promise.resolve({ rows: [] }) };
+
+    const stats = await runPickupShadowJob(mockPool, { _calculateFn: mockCalc });
+
+    assert.strictEqual(stats.skippedReason, 'PERSISTENCE_FLAG_OFF');
+    assert.strictEqual(calcCalled, false, 'calculatePickupShadow must not be called when flag is OFF');
+    if (saved !== undefined) process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved;
+    else delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['M-02: flag OFF → zero observationsCalculated', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    const stats = await runPickupShadowJob({ query: () => Promise.resolve({ rows: [] }) });
+    assert.strictEqual(stats.observationsCalculated, 0);
+    if (saved !== undefined) process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved;
+    else delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['M-03: flag OFF → zero observationsPersisted', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    const stats = await runPickupShadowJob({ query: () => Promise.resolve({ rows: [] }) });
+    assert.strictEqual(stats.observationsPersisted, 0);
+    if (saved !== undefined) process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved;
+    else delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['M-04: flag OFF → zero targetDatesAttempted', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    const stats = await runPickupShadowJob({ query: () => Promise.resolve({ rows: [] }) });
+    assert.strictEqual(stats.targetDatesAttempted, 0);
+    if (saved !== undefined) process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved;
+    else delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['M-05: flag OFF → zero propertiesProcessed', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    const stats = await runPickupShadowJob({ query: () => Promise.resolve({ rows: [] }) });
+    assert.strictEqual(stats.propertiesProcessed, 0);
+    if (saved !== undefined) process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved;
+    else delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['M-06: flag OFF → pool.query never called (zero DB activity)', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    let queryCalled = false;
+    const mockPool = { query: () => { queryCalled = true; return Promise.resolve({ rows: [] }); } };
+    await runPickupShadowJob(mockPool);
+    assert.strictEqual(queryCalled, false, 'no DB queries when flag is OFF');
+    if (saved !== undefined) process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved;
+    else delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+]; // SECTION_M_ASYNC
+
+// ── Section N: runPickupShadowJob — flag ON scenarios ────────
+console.log('\nSection N — runPickupShadowJob: flag ON scenarios');
+
+const SECTION_N_ASYNC = [
+
+  ['N-01: empty properties → zero stats', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = 'true';
+    const mockPool = { query: () => Promise.resolve({ rows: [] }) };
+    const stats = await runPickupShadowJob(mockPool,
+      { _calculateFn: () => Promise.resolve({}), _persistFn: () => Promise.resolve(null) });
+    assert.strictEqual(stats.propertiesEligible, 0);
+    assert.strictEqual(stats.observationsCalculated, 0);
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved ?? '';
+    if (!saved) delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['N-02: one property, exactly 30 target dates attempted', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = 'true';
+
+    const mockPool = {
+      query: (sql) => {
+        if (sql.includes('pricing_config')) {
+          return Promise.resolve({ rows: [{ property_id: 'p1', timezone: 'Europe/Paris' }] });
+        }
+        return Promise.resolve({ rows: [] });
+      },
+    };
+
+    const mockObs = {
+      propertyId: 'p1', targetDate: '2026-10-01', calculatedAt: new Date().toISOString(),
+      leadTimeDays: 1, leadTimeBand: '0_7', lookbackMonths: 12,
+      historicalSampleSize: 5, comparableSampleSize: 2, recentWindowDays: 7,
+      recentBookings: 0, expectedBookings: 0.038, rawPickupRatio: null, pickupRatio: 0.962,
+      status: 'LOW_EVIDENCE', confidence: 'INSUFFICIENT', advisoryMultiplier: 1.00,
+      occupancyFraction: 0.0, pacingPickupRelation: 'INSUFFICIENT_DATA',
+      modelVersion: 'pickup-v1.1', anomaliesExcluded: 0, reasons: [],
+    };
+
+    let calcCalls = 0;
+    const mockCalc = () => { calcCalls++; return Promise.resolve(mockObs); };
+    const mockPersist = () => Promise.resolve(calcCalls % 2 === 0 ? 1 : null);
+
+    const stats = await runPickupShadowJob(mockPool,
+      { horizonDays: 30, _calculateFn: mockCalc, _persistFn: mockPersist });
+
+    assert.strictEqual(stats.targetDatesAttempted, 30, `expected 30 dates, got ${stats.targetDatesAttempted}`);
+    assert.strictEqual(stats.observationsCalculated, 30);
+    assert.strictEqual(stats.propertiesProcessed, 1);
+    assert.strictEqual(stats.propertiesEligible, 1);
+
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved ?? '';
+    if (!saved) delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['N-03: observation_date uses property timezone, not UTC', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = 'true';
+
+    // Property is in America/Los_Angeles; at certain UTC times, local date ≠ UTC date
+    const mockPool = {
+      query: (sql) => {
+        if (sql.includes('pricing_config')) {
+          return Promise.resolve({ rows: [{ property_id: 'p1', timezone: 'America/Los_Angeles' }] });
+        }
+        return Promise.resolve({ rows: [] });
+      },
+    };
+
+    let capturedTimezone = null;
+    const mockObs = {
+      propertyId: 'p1', targetDate: '2026-10-15',
+      calculatedAt: '2026-10-01T00:30:00Z',  // LA = Sep 30 (previous day)
+      leadTimeDays: 14, leadTimeBand: '14_30', lookbackMonths: 12,
+      historicalSampleSize: 5, comparableSampleSize: 2, recentWindowDays: 7,
+      recentBookings: 0, expectedBookings: 0.038, rawPickupRatio: null, pickupRatio: 0.962,
+      status: 'LOW_EVIDENCE', confidence: 'INSUFFICIENT', advisoryMultiplier: 1.00,
+      occupancyFraction: 0.0, pacingPickupRelation: 'INSUFFICIENT_DATA',
+      modelVersion: 'pickup-v1.1', anomaliesExcluded: 0, reasons: [],
+    };
+
+    const mockCalc = () => Promise.resolve(mockObs);
+    const mockPersist = (_pool, _obs, tz) => {
+      capturedTimezone = tz;
+      return Promise.resolve(1);
+    };
+
+    await runPickupShadowJob(mockPool,
+      { horizonDays: 1, _calculateFn: mockCalc, _persistFn: mockPersist });
+
+    assert.strictEqual(capturedTimezone, 'America/Los_Angeles',
+      'persistPickupObservation must receive the property timezone');
+
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved ?? '';
+    if (!saved) delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['N-04: inserted vs duplicate telemetry', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = 'true';
+
+    const mockPool = {
+      query: (sql) => {
+        if (sql.includes('pricing_config')) {
+          return Promise.resolve({ rows: [{ property_id: 'p1', timezone: 'Europe/Paris' }] });
+        }
+        return Promise.resolve({ rows: [] });
+      },
+    };
+
+    const mockObs = {
+      propertyId: 'p1', targetDate: '', calculatedAt: new Date().toISOString(),
+      leadTimeDays: 1, leadTimeBand: '0_7', lookbackMonths: 12,
+      historicalSampleSize: 5, comparableSampleSize: 2, recentWindowDays: 7,
+      recentBookings: 0, expectedBookings: 0.1, rawPickupRatio: null, pickupRatio: 0.917,
+      status: 'LOW_EVIDENCE', confidence: 'INSUFFICIENT', advisoryMultiplier: 1.00,
+      occupancyFraction: 0.0, pacingPickupRelation: 'INSUFFICIENT_DATA',
+      modelVersion: 'pickup-v1.1', anomaliesExcluded: 0, reasons: [],
+    };
+
+    let callCount = 0;
+    const mockCalc = () => Promise.resolve(mockObs);
+    // First call → inserted (id=1), subsequent calls → duplicate (null / DO NOTHING)
+    const mockPersist = () => Promise.resolve(callCount++ === 0 ? 1 : null);
+
+    const stats = await runPickupShadowJob(mockPool,
+      { horizonDays: 3, _calculateFn: mockCalc, _persistFn: mockPersist });
+
+    assert.strictEqual(stats.observationsCalculated, 3);
+    assert.strictEqual(stats.observationsPersisted, 1, 'first call inserts');
+    assert.strictEqual(stats.duplicatesSkipped, 2, 'subsequent calls are duplicates');
+
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved ?? '';
+    if (!saved) delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['N-05: propertiesEligible reflects all active properties', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = 'true';
+
+    const mockPool = {
+      query: (sql) => {
+        if (sql.includes('pricing_config')) {
+          return Promise.resolve({ rows: [
+            { property_id: 'p1', timezone: 'Europe/Paris' },
+            { property_id: 'p2', timezone: 'Europe/Paris' },
+            { property_id: 'p3', timezone: null },
+          ]});
+        }
+        return Promise.resolve({ rows: [] });
+      },
+    };
+
+    const stats = await runPickupShadowJob(mockPool, {
+      horizonDays: 1,
+      _calculateFn: () => Promise.resolve({ propertyId: '', targetDate: '', calculatedAt: new Date().toISOString(),
+        leadTimeDays: 1, leadTimeBand: '0_7', lookbackMonths: 12, historicalSampleSize: 5,
+        comparableSampleSize: 2, recentWindowDays: 7, recentBookings: 0, expectedBookings: 0.1,
+        rawPickupRatio: null, pickupRatio: 0.917, status: 'LOW_EVIDENCE', confidence: 'INSUFFICIENT',
+        advisoryMultiplier: 1.00, occupancyFraction: 0.0, pacingPickupRelation: 'INSUFFICIENT_DATA',
+        modelVersion: 'pickup-v1.1', anomaliesExcluded: 0, reasons: [] }),
+      _persistFn: () => Promise.resolve(1),
+    });
+
+    assert.strictEqual(stats.propertiesEligible, 3);
+
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved ?? '';
+    if (!saved) delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['N-06: invalid timezone falls back to UTC for observation_date', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = 'true';
+
+    const mockPool = {
+      query: (sql) => {
+        if (sql.includes('pricing_config')) {
+          return Promise.resolve({ rows: [{ property_id: 'p1', timezone: null }] });
+        }
+        return Promise.resolve({ rows: [] });
+      },
+    };
+
+    let capturedTimezone = 'NOT_CALLED';
+    const mockPersist = (_pool, _obs, tz) => { capturedTimezone = tz; return Promise.resolve(1); };
+    const mockCalc = () => Promise.resolve({
+      propertyId: 'p1', targetDate: '', calculatedAt: new Date().toISOString(),
+      leadTimeDays: 1, leadTimeBand: '0_7', lookbackMonths: 12, historicalSampleSize: 5,
+      comparableSampleSize: 2, recentWindowDays: 7, recentBookings: 0, expectedBookings: 0.1,
+      rawPickupRatio: null, pickupRatio: 0.917, status: 'LOW_EVIDENCE', confidence: 'INSUFFICIENT',
+      advisoryMultiplier: 1.00, occupancyFraction: 0.0, pacingPickupRelation: 'INSUFFICIENT_DATA',
+      modelVersion: 'pickup-v1.1', anomaliesExcluded: 0, reasons: [],
+    });
+
+    await runPickupShadowJob(mockPool,
+      { horizonDays: 1, _calculateFn: mockCalc, _persistFn: mockPersist });
+
+    // When timezone is null/invalid, job passes UTC (isValidTimezone(null)=false → 'UTC')
+    // Actually the job passes the raw timezone from the property; persistPickupObservation
+    // handles the fallback internally. So capturedTimezone = null (job passes it as-is).
+    // The important check: persist received undefined/null and used UTC fallback.
+    assert.ok(capturedTimezone === null || capturedTimezone === undefined || capturedTimezone === 'UTC',
+      `timezone passed to persist should be null/undefined/UTC when property.timezone is null, got: ${capturedTimezone}`);
+
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved ?? '';
+    if (!saved) delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+]; // SECTION_N_ASYNC
+
+// ── Section O: Failure isolation ─────────────────────────────
+console.log('\nSection O — Failure isolation');
+
+const SECTION_O_ASYNC = [
+
+  ['O-01: calculation failure for one target date → continues other dates', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = 'true';
+
+    const mockPool = {
+      query: (sql) => {
+        if (sql.includes('pricing_config')) {
+          return Promise.resolve({ rows: [{ property_id: 'p1', timezone: 'Europe/Paris' }] });
+        }
+        return Promise.resolve({ rows: [] });
+      },
+    };
+
+    const mockObs = {
+      propertyId: 'p1', targetDate: '', calculatedAt: new Date().toISOString(),
+      leadTimeDays: 1, leadTimeBand: '0_7', lookbackMonths: 12, historicalSampleSize: 5,
+      comparableSampleSize: 2, recentWindowDays: 7, recentBookings: 0, expectedBookings: 0.1,
+      rawPickupRatio: null, pickupRatio: 0.917, status: 'LOW_EVIDENCE', confidence: 'INSUFFICIENT',
+      advisoryMultiplier: 1.00, occupancyFraction: 0.0, pacingPickupRelation: 'INSUFFICIENT_DATA',
+      modelVersion: 'pickup-v1.1', anomaliesExcluded: 0, reasons: [],
+    };
+
+    let calcCallCount = 0;
+    const mockCalc = () => {
+      calcCallCount++;
+      if (calcCallCount === 2) throw new Error('simulated calculation failure');
+      return Promise.resolve(mockObs);
+    };
+
+    const stats = await runPickupShadowJob(mockPool,
+      { horizonDays: 4, _calculateFn: mockCalc, _persistFn: () => Promise.resolve(1) });
+
+    assert.strictEqual(stats.targetDatesAttempted, 4, 'all 4 dates must be attempted');
+    assert.strictEqual(stats.observationsCalculated, 3, 'only 3 succeed (1 failed)');
+    assert.strictEqual(stats.errors.length, 1, 'exactly one error recorded');
+    assert.ok(stats.errors[0].property_id, 'error must include property_id');
+    assert.ok(stats.errors[0].targetDate, 'error must include targetDate');
+
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved ?? '';
+    if (!saved) delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['O-02: property-level failure → continues other properties', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = 'true';
+
+    let queryCount = 0;
+    const mockPool = {
+      query: (sql) => {
+        if (sql.includes('pricing_config')) {
+          return Promise.resolve({ rows: [
+            { property_id: 'p1', timezone: 'Europe/Paris' },
+            { property_id: 'p2', timezone: 'Europe/Paris' },
+          ]});
+        }
+        return Promise.resolve({ rows: [] });
+      },
+    };
+
+    const mockObs = {
+      propertyId: '', targetDate: '', calculatedAt: new Date().toISOString(),
+      leadTimeDays: 1, leadTimeBand: '0_7', lookbackMonths: 12, historicalSampleSize: 5,
+      comparableSampleSize: 2, recentWindowDays: 7, recentBookings: 0, expectedBookings: 0.1,
+      rawPickupRatio: null, pickupRatio: 0.917, status: 'LOW_EVIDENCE', confidence: 'INSUFFICIENT',
+      advisoryMultiplier: 1.00, occupancyFraction: 0.0, pacingPickupRelation: 'INSUFFICIENT_DATA',
+      modelVersion: 'pickup-v1.1', anomaliesExcluded: 0, reasons: [],
+    };
+
+    let calcCallCount = 0;
+    const mockCalc = (_pool, propertyId) => {
+      calcCallCount++;
+      // p1 always fails on every date
+      if (propertyId === 'p1') throw new Error(`simulated failure for ${propertyId}`);
+      return Promise.resolve({ ...mockObs, propertyId });
+    };
+
+    const stats = await runPickupShadowJob(mockPool,
+      { horizonDays: 2, _calculateFn: mockCalc, _persistFn: () => Promise.resolve(1) });
+
+    // p1: 2 dates attempted, all fail → propertiesProcessed still increments
+    // p2: 2 dates attempted, all succeed
+    assert.strictEqual(stats.propertiesEligible, 2);
+    assert.ok(stats.errors.length >= 2, 'p1 errors recorded');
+    assert.strictEqual(stats.observationsCalculated, 2, 'p2 contributes 2 successes');
+
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved ?? '';
+    if (!saved) delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['O-03: job returns stats object even when all properties fail', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = 'true';
+
+    const mockPool = {
+      query: (sql) => {
+        if (sql.includes('pricing_config')) {
+          return Promise.resolve({ rows: [{ property_id: 'p1', timezone: 'Europe/Paris' }] });
+        }
+        return Promise.resolve({ rows: [] });
+      },
+    };
+
+    const mockCalc = () => { throw new Error('total failure'); };
+
+    const stats = await runPickupShadowJob(mockPool,
+      { horizonDays: 2, _calculateFn: mockCalc, _persistFn: () => Promise.resolve(null) });
+
+    // Should return stats, not throw
+    assert.ok(stats && typeof stats === 'object', 'job must return stats, not throw');
+    assert.ok(Array.isArray(stats.errors), 'errors array must exist');
+    assert.ok(stats.errors.length > 0, 'errors must be recorded');
+
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved ?? '';
+    if (!saved) delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+  ['O-04: errors contain property_id but no guest PII', async () => {
+    const saved = process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = 'true';
+
+    const mockPool = {
+      query: (sql) => {
+        if (sql.includes('pricing_config')) {
+          return Promise.resolve({ rows: [{ property_id: 'p1', timezone: 'Europe/Paris' }] });
+        }
+        return Promise.resolve({ rows: [] });
+      },
+    };
+
+    const mockCalc = () => { throw new Error('test error message'); };
+
+    const stats = await runPickupShadowJob(mockPool,
+      { horizonDays: 1, _calculateFn: mockCalc, _persistFn: () => Promise.resolve(null) });
+
+    assert.ok(stats.errors.length > 0);
+    const err = stats.errors[0];
+    assert.ok('property_id' in err, 'error must have property_id');
+    assert.ok(!('guest_name' in err), 'error must not contain guest PII');
+    assert.ok(!('email' in err), 'error must not contain email');
+    assert.ok(!('reservation_id' in err), 'error must not contain reservation_id');
+
+    process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED = saved ?? '';
+    if (!saved) delete process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED;
+  }],
+
+]; // SECTION_O_ASYNC
+
+// ── Section P: Independence ───────────────────────────────────
+console.log('\nSection P — Independence from market provider / pricing');
+
+const JOB_SRC = fs.readFileSync(path.join(__dirname, '../services/booking-pickup-shadow-job.js'), 'utf8');
+
+test('P-01: shadow job does not import channex', () => {
+  assert.ok(!/require\(['"][^'"]*channex/i.test(JOB_SRC), 'must not import channex');
+});
+
+test('P-02: shadow job does not import apify or brightdata', () => {
+  assert.ok(!/require\(['"][^'"]*apify/i.test(JOB_SRC),      'must not import apify');
+  assert.ok(!/require\(['"][^'"]*bright.?data/i.test(JOB_SRC), 'must not import brightdata');
+});
+
+test('P-03: shadow job does not import pricing-engine', () => {
+  assert.ok(!/require\(['"][^'"]*pricing-engine/.test(JOB_SRC), 'must not import pricing-engine');
+});
+
+test('P-04: shadow job does not import pricing-publisher', () => {
+  assert.ok(!/require\(['"][^'"]*pricing-publisher/.test(JOB_SRC), 'must not import pricing-publisher');
+});
+
+test('P-05: shadow job does not import effective-pricing-resolver', () => {
+  assert.ok(!/require\(['"][^'"]*effective-pricing-resolver/.test(JOB_SRC));
+});
+
+test('P-06: shadow job has no SQL statements targeting pricing_schedule', () => {
+  // The safety comment lists pricing_schedule as something we never touch.
+  // Verify no actual SQL INSERT/UPDATE/SELECT targets it (comments are excluded).
+  const noSqlRef = !/\b(INSERT INTO|UPDATE|SELECT\s+.*\bFROM)\s+pricing_schedule/i.test(JOB_SRC);
+  assert.ok(noSqlRef, 'job must not have SQL statements targeting pricing_schedule');
+});
+
+test('P-07: shadow job exports declare PICKUP_HAS_PRICING_AUTHORITY is not asserted but data flow is shadow-only', () => {
+  // Structural proof: job only calls calculatePickupShadow and persistPickupObservation
+  // Neither function takes a price as output or writes to pricing_schedule
+  assert.ok(JOB_SRC.includes('calculatePickupShadow'), 'job calls pickup calculation');
+  assert.ok(JOB_SRC.includes('persistPickupObservation'), 'job calls persistence');
+  assert.ok(!JOB_SRC.includes('priceProperty'), 'job must not call priceProperty');
+  assert.ok(!JOB_SRC.includes('publishEffectivePricing'), 'job must not call publisher');
+});
+
+test('P-08: shadow job does not import market-provider', () => {
+  assert.ok(!/require\(['"][^'"]*market-provider/.test(JOB_SRC));
+});
+
+// ── Section Q: Scheduler integration ─────────────────────────
+console.log('\nSection Q — Scheduler integration');
+
+const CRON_SRC = fs.readFileSync(path.join(__dirname, '../routes/dynamic-pricing-cron.js'), 'utf8');
+
+test('Q-01: dynamic-pricing-cron.js references booking-pickup-shadow-job', () => {
+  assert.ok(CRON_SRC.includes('booking-pickup-shadow-job'),
+    'cron file must reference the shadow job');
+});
+
+test('Q-02: pickup cron has its own dedicated daily schedule', () => {
+  assert.ok(CRON_SRC.includes("'5 6 * * *'") || CRON_SRC.includes('"5 6 * * *"'),
+    'pickup must have a dedicated daily cron expression');
+});
+
+test('Q-03: pickup flag is checked before job execution in cron', () => {
+  // The cron callback checks isPersistenceEnabled / _pu before calling the job
+  const cronsSection = CRON_SRC.slice(CRON_SRC.indexOf('5 6 * * *'));
+  const hasFlag = cronsSection.includes('isPersistenceEnabled') ||
+                  cronsSection.includes('_pu') ||
+                  cronsSection.includes('BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED');
+  assert.ok(hasFlag, 'flag must be checked in cron callback before executing job');
+});
+
+test('Q-04: pickup shadow job is called as fire-and-forget (no await)', () => {
+  // Fire-and-forget: failure cannot block the cron loop
+  // The job call uses .then().catch() or .catch() — not await
+  const pickupCronBlock = CRON_SRC.slice(CRON_SRC.indexOf('5 6 * * *'));
+  const hasFireForget = pickupCronBlock.includes('.catch(') && !pickupCronBlock.slice(0, 200).includes('await ');
+  assert.ok(hasFireForget, 'pickup job must be fire-and-forget (.catch) not awaited');
+});
+
+test('Q-05: pickup cron callback NOT inside market provider success branch', () => {
+  // Narrow to just the pickup cron callback body (not the rest of the file)
+  const startIdx = CRON_SRC.indexOf("'5 6 * * *'");
+  // The callback ends before the next cron.schedule or 'if (MOCK_MODE)' block
+  const endIdx   = CRON_SRC.indexOf('if (MOCK_MODE)', startIdx);
+  const pickupBlock = endIdx > startIdx
+    ? CRON_SRC.slice(startIdx, endIdx)
+    : CRON_SRC.slice(startIdx, startIdx + 800);
+  assert.ok(!pickupBlock.includes('scrapeBestZone'),
+    'pickup cron callback must not depend on scrape success');
+  assert.ok(!pickupBlock.includes('market_data'),
+    'pickup cron callback must not depend on market_data freshness');
+});
+
+test('Q-06: pickup import does NOT make cron import pricing modules', () => {
+  // Adding pickup to cron must not introduce pricing authority
+  // The shadow job is imported lazily — only when flag is on
+  const pickupCronBlock = CRON_SRC.slice(CRON_SRC.indexOf('5 6 * * *'), CRON_SRC.indexOf('5 6 * * *') + 600);
+  assert.ok(!pickupCronBlock.includes('pricing-engine'),
+    'pickup cron block must not reference pricing-engine');
+  assert.ok(!pickupCronBlock.includes('pricing_schedule'),
+    'pickup cron block must not reference pricing_schedule');
 });
 
 // ── Summary ───────────────────────────────────────────────────
@@ -805,11 +1550,20 @@ async function runAsyncTests() {
   for (const [name, fn] of asyncTests) {
     await testAsync(name, fn);
   }
+
+  console.log('\nSection M (async) — runPickupShadowJob: FLAG_OFF');
+  for (const [name, fn] of SECTION_M_ASYNC) await testAsync(name, fn);
+
+  console.log('\nSection N (async) — runPickupShadowJob: flag ON scenarios');
+  for (const [name, fn] of SECTION_N_ASYNC) await testAsync(name, fn);
+
+  console.log('\nSection O (async) — Failure isolation');
+  for (const [name, fn] of SECTION_O_ASYNC) await testAsync(name, fn);
 }
 
 runAsyncTests().then(() => {
   console.log(`\n  ─────────────────────────────────────────`);
-  console.log(`  P1.3-T2 results: ${passed} passed, ${failed} failed`);
+  console.log(`  P1.3-T2-FIX results: ${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);
 }).catch(err => {
   console.error('[FATAL]', err);

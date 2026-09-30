@@ -940,6 +940,30 @@ function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
     timezone: 'Europe/Paris',
   });
 
+  // P1.3-T2-FIX: Pickup shadow — daily 06:05 Europe/Paris, independent of market provider.
+  // Reads reservation DB only (no APIFY/BrightData calls). Runs every day including Monday.
+  // PICKUP_HAS_PRICING_AUTHORITY=NO — results never flow into priceProperty or pricing_schedule.
+  // SCHEDULER_TZ_DEBT: cron fires in Europe/Paris time. For FR properties the observation_date
+  // is correct. Properties in distant timezones (e.g. US West) will still get a correct
+  // property-local observation_date because the job uses properties.timezone per property.
+  // FLAG_OFF: when BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED != 'true', job returns immediately
+  // with zero calculations and zero writes.
+  cron.schedule('5 6 * * *', () => {
+    const { isPersistenceEnabled: _pu } = require('../services/booking-pickup-persistence');
+    if (!_pu()) return;  // FLAG_OFF_CALCULATIONS=0  FLAG_OFF_WRITES=0
+    require('../services/booking-pickup-shadow-job')
+      .runPickupShadowJob(pool)
+      .then(s => {
+        console.log(
+          `[PICKUP_SHADOW] done — props=${s.propertiesProcessed}/${s.propertiesEligible}` +
+          ` dates=${s.targetDatesAttempted} calc=${s.observationsCalculated}` +
+          ` persisted=${s.observationsPersisted} dupes=${s.duplicatesSkipped}` +
+          ` errors=${s.errors.length}`
+        );
+      })
+      .catch(err => console.error('[PICKUP_SHADOW_FAILURE]', err.message));
+  }, { timezone: 'Europe/Paris' });
+
   if (MOCK_MODE) {
     console.log('⚠️  [DP-CRON] Mode MOCK actif — APIFY_TOKEN non défini');
     console.log('   → Données simulées utilisées lors du scraping');
