@@ -189,7 +189,7 @@ async function main() {
     console.log(`  Run at:         ${now}`);
     console.log(`  Model version:  ${MODEL_VERSION}`);
     console.log(`  Horizon:        ${PICKUP_HORIZON_DAYS} days`);
-    console.log(`  Persistence:    ${isPersistenceEnabled() ? 'ENABLED ← UNEXPECTED' : 'OFF (correct — not yet activated)'}`);
+    console.log(`  Persistence:    ${isPersistenceEnabled() ? 'ENABLED (see section [6])' : 'OFF (correct — not yet activated)'}`);
     console.log(`  DB_WRITES=0  CHANNEX_CALLS=0  MARKET_PROVIDER_CALLS=0`);
     console.log('──────────────────────────────────────────────────────────────');
 
@@ -356,8 +356,23 @@ async function main() {
     const flagState = isPersistenceEnabled();
     console.log(`  BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED: ${process.env.BOOKING_PICKUP_SHADOW_PERSISTENCE_ENABLED ?? '(unset)'}`);
     console.log(`  isPersistenceEnabled():  ${flagState}`);
-    console.log(`  Correct state (should be false): ${!flagState ? '✓' : '✗ — DO NOT enable yet'}`);
-    checks.push(makeCheck('Persistence flag is OFF (safe default)', !flagState));
+
+    if (flagState) {
+      // Post-activation: flag=ON is valid only if schema is ready
+      const dedupCheckPassed = checks.some(c => c.name === 'bpo dedup constraint' && c.pass === true);
+      const schemaReady      = tableExists && dedupCheckPassed;
+      if (schemaReady) {
+        console.log('  Post-activation state: flag=ON, schema=READY ✓');
+        console.log('  Run audit-booking-pickup-persistence-post-t2.js for live data health.');
+        checks.push(makeCheck('Persistence flag ON with schema ready (post-activation)', true));
+      } else {
+        console.log('  ✗ Flag is ON but schema is not ready — observations may fail to insert');
+        checks.push(makeCheck('Persistence flag ON with schema ready (post-activation)', false));
+      }
+    } else {
+      console.log('  Flag OFF: correct pre-activation default ✓');
+      checks.push(makeCheck('Persistence flag coherent with schema state', true));
+    }
 
     // ── 7. Pricing authority proof ────────────────────────────
     console.log('\n  [7] PRICING AUTHORITY PROOF  (PICKUP_HAS_PRICING_AUTHORITY=NO)');
