@@ -4,6 +4,7 @@
 
 const axios = require('axios');
 const { normalizeCurrency } = require('./routes/market-data-resolver');
+const { recordBookingEvent, computeStateFingerprint } = require('./services/booking-event-persistence');
 
 const CHANNEX_API_URL = process.env.CHANNEX_ENV === 'production'
   ? 'https://app.channex.io/api/v1'
@@ -1040,6 +1041,15 @@ async function processChannexBooking(pool, bookingData) {
           'SELECT * FROM reservations WHERE channex_booking_id = $1',
           [booking_id]
         );
+        await recordBookingEvent(pool, {
+          eventType: 'BOOKING_CANCELLED',
+          source: 'channex',
+          externalBookingId: booking_id,
+          reservationRow: cancelledRow.rows[0] || null,
+          currencyProvenance: 'reservation_record',
+          providerEventId: revision_id || null,
+          context: 'channex W-03',
+        });
         return cancelledRow.rows[0] || null;
       }
 
@@ -1048,6 +1058,19 @@ async function processChannexBooking(pool, bookingData) {
       // On retourne un objet minimal cancelled pour que le webhook handler nettoie le store.
       // Sans ce retour, result = null → le store garde la résa fantôme indéfiniment.
       console.warn(`⚠️ [CHANNEX] Annulation reçue pour booking_id=${booking_id} absent de la DB (ota_code=${ota_reservation_code ?? 'null'}, dates=${reservationStart ?? 'null'}→${reservationEnd ?? 'null'}) → nettoyage du store uniquement`);
+      if (property_id && booking_id) {
+        await recordBookingEvent(pool, {
+          eventType: 'BOOKING_CANCELLED',
+          source: 'channex',
+          externalBookingId: booking_id,
+          reservationRow: { property_id, start_date: reservationStart, end_date: reservationEnd, status: 'cancelled', currency: null },
+          currencyProvenance: 'unknown',
+          providerEventId: revision_id || null,
+          context: 'channex W-03 orphan',
+        });
+      } else {
+        console.warn(`⚠️ [BOOKING_EVENT] W-03 orphan: property_id or booking_id null, skipping event for booking_id=${booking_id}`);
+      }
       return {
         uid: `CHX_${booking_id}`,
         channex_booking_id: booking_id,
@@ -1063,6 +1086,7 @@ async function processChannexBooking(pool, bookingData) {
 
     if (existing.rows.length > 0) {
       // Mettre à jour dates + données enrichies (modification)
+      const _w02BeforeFp = computeStateFingerprint(existing.rows[0]);
       await pool.query(
         `UPDATE reservations SET
           start_date = $1, end_date = $2,
@@ -1116,7 +1140,18 @@ async function processChannexBooking(pool, bookingData) {
           amount_total
         }
       }).catch(() => {});
-      return fullRow.rows[0] || existing.rows[0];
+      const _w02AfterRow = fullRow.rows[0] || existing.rows[0];
+      await recordBookingEvent(pool, {
+        eventType: 'BOOKING_MODIFIED',
+        source: 'channex',
+        externalBookingId: booking_id,
+        reservationRow: _w02AfterRow,
+        beforeFingerprint: _w02BeforeFp,
+        currencyProvenance: 'provider',
+        providerEventId: revision_id || null,
+        context: 'channex W-02',
+      });
+      return _w02AfterRow;
     }
 
     // Créer la réservation avec toutes les données
@@ -1176,6 +1211,15 @@ async function processChannexBooking(pool, bookingData) {
     });
 
     console.log(`✅ [CHANNEX] Réservation créée: ${uid} | ${guest_name} | ${guest_country} | ${amount_total}${currency}`);
+    await recordBookingEvent(pool, {
+      eventType: 'BOOKING_CREATED',
+      source: 'channex',
+      externalBookingId: booking_id,
+      reservationRow: result.rows[0],
+      currencyProvenance: 'provider',
+      providerEventId: revision_id || null,
+      context: 'channex W-01',
+    });
     return { ...result.rows[0], _isNew: true };
 
   } catch (e) {

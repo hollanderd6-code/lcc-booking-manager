@@ -58,6 +58,7 @@ const { computeMarketContextKey } = require('./routes/market-context-key');
 const { scheduleMarketRefresh } = require('./routes/market-refresh-trigger');
 const { normalizeCurrency } = require('./routes/market-data-resolver');
 const { resolvePropertyCurrency } = require('./services/property-currency-resolver');
+const { recordBookingEvent } = require('./services/booking-event-persistence');
 
 // ============================================
 // 📨 IMPORT SYSTÈME DE MESSAGES D'ARRIVÉE AUTOMATIQUES
@@ -4925,7 +4926,27 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                   m.guest_email, m.guest_phone || null, m.checkin, m.checkout,
                   (parseInt(m.amount_cents, 10) || 0) / 100,
                   deferredCurrency]);
-              if (ins.rows[0]) { try { maybeAutoCreateHzMission(ins.rows[0].id, m.property_user_id); } catch(e) {} }
+              if (ins.rows[0]) {
+                try { maybeAutoCreateHzMission(ins.rows[0].id, m.property_user_id); } catch(e) {}
+                await recordBookingEvent(pool, {
+                  eventType: 'BOOKING_CREATED',
+                  source: 'guest_app',
+                  externalBookingId: uid,
+                  reservationRow: {
+                    id: ins.rows[0].id,
+                    property_id: m.property_id,
+                    start_date: m.checkin,
+                    end_date: m.checkout,
+                    status: 'confirmed',
+                    amount_total: (parseInt(m.amount_cents, 10) || 0) / 100,
+                    amount_rooms: null,
+                    currency: m.booking_currency || null,
+                    occupancy_adults: null,
+                  },
+                  currencyProvenance: m.booking_currency ? 'reservation_record' : 'unknown',
+                  context: 'server W-08 deferred',
+                });
+              }
             }
 
             await pool.query(`
@@ -5153,7 +5174,27 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
                     amountTotal,
                     webhookCurrency
                   ]);
-                  if (insResa2.rows[0]) { try { maybeAutoCreateHzMission(insResa2.rows[0].id, ownerId); } catch (e) {} }
+                  if (insResa2.rows[0]) {
+                    try { maybeAutoCreateHzMission(insResa2.rows[0].id, ownerId); } catch (e) {}
+                    await recordBookingEvent(pool, {
+                      eventType: 'BOOKING_CREATED',
+                      source: 'guest_app',
+                      externalBookingId: `BHGUEST_${paymentId || session.id}`,
+                      reservationRow: {
+                        id: insResa2.rows[0].id,
+                        property_id: propId,
+                        start_date: startDate,
+                        end_date: endDate,
+                        status: 'confirmed',
+                        amount_total: amountTotal,
+                        amount_rooms: null,
+                        currency: webhookCurrency || null,
+                        occupancy_adults: null,
+                      },
+                      currencyProvenance: 'provider',
+                      context: 'server W-09',
+                    });
+                  }
                   // Lier le paiement à la nouvelle résa
                   await pool.query(
                     `UPDATE payments SET reservation_uid = $1 WHERE id = $2 OR stripe_session_id = $3`,
@@ -22894,6 +22935,18 @@ cron.schedule('0 8 * * *', async () => {
           );
           console.warn(`🚫 [DEFERRED] ${d.reservation_uid} annulée — paiement impossible`);
           try {
+            const _w12Row = await pool.query('SELECT * FROM reservations WHERE uid = $1', [d.reservation_uid]);
+            if (_w12Row.rows[0]) {
+              await recordBookingEvent(pool, {
+                eventType: 'BOOKING_CANCELLED',
+                source: 'guest_app',
+                externalBookingId: d.reservation_uid,
+                reservationRow: _w12Row.rows[0],
+                context: 'server W-12 system-cancel',
+              });
+            }
+          } catch (e) { console.warn('⚠️ [BOOKING_EVENT] W-12 persist failed:', e.message); }
+          try {
             await sendEmailViaBrevo({
               to: d.guest_email,
               subject: `Réservation annulée — paiement impossible`,
@@ -23013,6 +23066,13 @@ app.post('/api/guest/reservations/:uid/cancel', async (req, res) => {
         "UPDATE reservations SET status = 'cancelled', cancelled_by = 'guest', updated_at = NOW() WHERE uid = $1",
         [resa.uid]
       );
+      await recordBookingEvent(pool, {
+        eventType: 'BOOKING_CANCELLED',
+        source: 'guest_app',
+        externalBookingId: resa.uid,
+        reservationRow: { ...resa, status: 'cancelled' },
+        context: 'server W-10 deferred',
+      });
       const fmtD0 = iso => new Date(String(iso).slice(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
       try {
         await sendEmailViaBrevo({
@@ -23095,6 +23155,13 @@ app.post('/api/guest/reservations/:uid/cancel', async (req, res) => {
       `UPDATE reservations SET status = 'cancelled', cancelled_by = 'guest', updated_at = NOW() WHERE uid = $1`,
       [resa.uid]
     );
+    await recordBookingEvent(pool, {
+      eventType: 'BOOKING_CANCELLED',
+      source: 'guest_app',
+      externalBookingId: resa.uid,
+      reservationRow: { ...resa, status: 'cancelled' },
+      context: 'server W-10',
+    });
 
     // ── Emails ──
     const fmtD = iso => new Date(String(iso).slice(0,10) + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
@@ -23242,6 +23309,13 @@ app.post('/api/host/reservations/:uid/cancel', authenticateToken, async (req, re
       `UPDATE reservations SET status = 'cancelled', cancelled_by = $1, cancellation_reason = $2, updated_at = NOW() WHERE uid = $3`,
       [isGraceRefusal ? 'host_refusal' : 'host', reasonTxt, resa.uid]
     );
+    await recordBookingEvent(pool, {
+      eventType: 'BOOKING_CANCELLED',
+      source: 'guest_app',
+      externalBookingId: resa.uid,
+      reservationRow: { ...resa, status: 'cancelled' },
+      context: 'server W-11 host-cancel',
+    });
     // Le blocage des dates ne s'applique PAS au refus sous 48h : l'hôte n'a pas
     // « annulé pour relouer plus cher », il a simplement décliné un voyageur.
     if (!isGraceRefusal) {
@@ -43008,6 +43082,18 @@ app.post('/api/channex/webhook', async (req, res) => {
         [bookingId]
       ).catch(() => {});
       console.log(`✅ [CHANNEX WEBHOOK] Réservation ${bookingId} refusée`);
+      try {
+        const _w04Row = await pool.query('SELECT * FROM reservations WHERE channex_booking_id = $1', [bookingId]);
+        if (_w04Row.rows[0]) {
+          await recordBookingEvent(pool, {
+            eventType: 'BOOKING_CANCELLED',
+            source: 'channex',
+            externalBookingId: bookingId,
+            reservationRow: _w04Row.rows[0],
+            context: 'server W-04 declined',
+          });
+        }
+      } catch (e) { console.warn('⚠️ [BOOKING_EVENT] W-04 persist failed:', e.message); }
     }
 
     const bookings = [fullBooking];
@@ -50794,6 +50880,14 @@ app.post('/api/guest/confirm-after-payment', async (req, res) => {
 
     const reservation = insertResult.rows[0];
     try { maybeAutoCreateHzMission(reservation.id, prop.owner_user_id); } catch (e) {}
+    await recordBookingEvent(pool, {
+      eventType: 'BOOKING_CREATED',
+      source: 'guest_app',
+      externalBookingId: uid,
+      reservationRow: reservation,
+      currencyProvenance: stripeSessionCurrency ? 'provider' : 'reservation_record',
+      context: 'server W-07',
+    });
 
     // Libérer le hold associé + rafraîchir calendrier BH
     try {
