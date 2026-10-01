@@ -13,12 +13,41 @@
    as a direct <link> in app.html for zero FOUC on the main page.
    ============================================================================ */
 
+/* ── 0. Global resets: remove the 40px body/sidebar offsets from bh-theme-v3.css
+        that compensated for the now-removed demo-nav bar.
+        Applied at ALL widths so mobile/tablet don't show a blank 40px strip. ── */
+
+html[data-theme-v3="1"] body {
+  padding-top: 0 !important;
+}
+
+html[data-theme-v3="1"] .bh-demo-nav,
+html[data-theme-v3="1"] #bhTopBar {
+  display: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+html[data-theme-v3="1"] .sidebar:not(.bh-nav-rail) {
+  top: 0 !important;
+  height: 100vh !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+
 @media (min-width: 1025px) {
 
-  /* ── 1. Hide legacy black bar ─────────────────────────────────────── */
+  /* ── 1. Suppress legacy black bar — belt-and-suspenders ──────────── */
 
-  html[data-theme-v3="1"] .bh-demo-nav {
+  html[data-theme-v3="1"] .bh-demo-nav,
+  html[data-theme-v3="1"] #bhTopBar {
     display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
   }
 
   /* ── 2. Rail: full height — no gap above it ───────────────────────── */

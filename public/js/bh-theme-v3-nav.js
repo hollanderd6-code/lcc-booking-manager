@@ -27,10 +27,10 @@
     return document.body.getAttribute('data-page') || '';
   }
 
-  // ─── Barre noire demo-nav ─────────────────────────────────────
+  // ─── Barre noire demo-nav — DÉSACTIVÉE (SHELL-FIX-08) ────────
   function buildNav() {
-    // Ne pas injecter la barre noire sur les appareils tactiles (iPad, iPhone)
-    if (window.matchMedia('(pointer: coarse)').matches) return;
+    // Legacy demo nav removed: replaced by bh-nav-rail on desktop
+    return;
     var currentPage = getCurrentPage();
     var currentPath = window.location.pathname.toLowerCase();
 

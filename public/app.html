@@ -692,9 +692,9 @@ setTimeout(function() {
 /* ── LAYOUT V3 ── */
 html[data-theme-v3="1"] body { padding-top: 0 !important; }
 html[data-theme-v3="1"] .sidebar {
-  position: fixed !important; top: 40px !important;
+  position: fixed !important; top: 0 !important;
   left: 0 !important; bottom: 0 !important;
-  height: auto !important;
+  height: 100vh !important;
 }
 /* Mobile : sticky sous la barre dark (pas de barre dark sur mobile en pratique) */
 @media (max-width: 1366px) {
@@ -719,102 +719,13 @@ html[data-theme-v3="1"] main.main-content > header.main-header {
   padding-top: 0 !important;
 }
 
-/* ── BARRE DARK EN HAUT ── */
-html[data-theme-v3="1"] .bh-demo-nav {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 9999;
-  background: #0D1117;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 16px;
-  height: 40px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  /* Pour le centrage absolu des badges */
-  position: fixed;
-}
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-label {
-  color: rgba(255,255,255,.4);
-  font-weight: 500;
-  margin-right: 6px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  font-size: 11px;
-  white-space: nowrap;
-}
-html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn,
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn {
-  padding: 4px 13px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.15);
-  background: transparent;
-  color: rgba(255,255,255,.6);
-  cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11.5px;
-  font-weight: 500;
-  transition: all .2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  text-decoration: none;
-  white-space: nowrap;
-}
-html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn:hover,
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn:hover {
-  background: rgba(255,255,255,.1);
-  color: white;
-}
-html[data-theme-v3="1"] .bh-demo-nav a.bh-demo-btn.active,
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-btn.active {
-  background: var(--bh-vert);
-  color: white;
-  border-color: var(--bh-vert);
-}
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-html[data-theme-v3="1"] .bh-demo-nav .bh-demo-mode-label {
-  color: rgba(255,255,255,.4);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-}
-html[data-theme-v3="1"] .bh-theme-toggle {
-  width: 44px;
-  height: 24px;
-  background: rgba(255,255,255,.15);
-  border-radius: 999px;
-  border: none;
-  cursor: pointer;
-  position: relative;
-  transition: background .2s;
-  flex-shrink: 0;
-}
-html[data-theme-v3="1"] .bh-theme-toggle::after {
-  content: '';
-  position: absolute;
-  top: 3px; left: 3px;
-  width: 18px; height: 18px;
-  background: white;
-  border-radius: 50%;
-  transition: transform .2s;
-}
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle { background: var(--bh-vert); }
-html[data-theme-v3="1"][data-theme="dark"] .bh-theme-toggle::after { transform: translateX(20px); }
-
-/* Masquer la barre dark sur mobile */
-@media (max-width: 1366px) {
-  html[data-theme-v3="1"] .bh-demo-nav { display: none !important; }
-  html[data-theme-v3="1"] body { padding-top: 0 !important; }
-  html[data-theme-v3="1"] .sidebar { top: 0 !important; }
+/* BARRE DARK — supprimée (SHELL-FIX-08). Tout élément .bh-demo-nav est caché. */
+html[data-theme-v3="1"] .bh-demo-nav,
+html[data-theme-v3="1"] #bhTopBar {
+  display: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
 }
 /* ── Boutons header ── */
 html[data-theme-v3="1"] #syncBtn,
@@ -13121,11 +13032,8 @@ if (document.readyState === 'loading') {
       if (subtitle) subtitle.style.display = 'none';
     }
 
-    /* Sidebar — ne pas écraser le rail BH-SHELL-07 */
+    /* Sidebar — rail bh-nav-rail gère sa propre position via CSS (SHELL-FIX-08) */
     var sidebar = document.querySelector('aside.sidebar');
-    if (sidebar && !isMobile && !sidebar.classList.contains('bh-nav-rail')) {
-      sidebar.style.cssText += ';position:fixed !important;top:40px !important;bottom:0 !important;height:auto !important;';
-    }
 
     /* Kicker : date courante sur la page Aujourd'hui */
     if (curPage === 'app') {

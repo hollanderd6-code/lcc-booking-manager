@@ -742,8 +742,8 @@ function getSidebarHTML() {
 
   function init() {
     console.log("🚀 bh-layout.js - Initialisation avec filtrage permissions...");
-    
-    injectTopBar();
+
+    // injectTopBar() removed: legacy demo nav replaced by bh-nav-rail (SHELL-FIX-08)
     injectSidebar();
     injectHeader();
     normalizeBranding();

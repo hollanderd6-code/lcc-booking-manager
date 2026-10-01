@@ -42,7 +42,7 @@
      bh-theme-v3.css style deja .page-title em. Sans ce code, tous les titres
      restaient d'un seul poids. */
   var TITRES = {
-    app:      'Tableau de <em>bord</em>',
+    // app: omis — "Aujourd'hui" est géré par app.html (SHELL-FIX-07/08)
     messages: 'Mes <em>messages</em>',
     settings: 'Mes <em>logements</em>',
     deposits: 'Gestion des <em>cautions</em>',
