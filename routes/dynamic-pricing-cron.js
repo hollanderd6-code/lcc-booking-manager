@@ -164,7 +164,8 @@ function getFallbackZones(address, zoneLabel) {
 // Retourne le meilleur résultat (zone la plus dense si aucune n'atteint le seuil).
 // B5-G: propertyId enables allowlist routing and limits BD to first zone only
 //        (BD's selectComparables radius expansion already handles wider areas).
-async function scrapeBestZone(zones, medianFallback, maxListings, bedrooms, requestedCurrency, propertyId) {
+// budgetOpts: { canAttemptProvider, consumeProviderAttempt } — forwarded to marketProvider.scrape()
+async function scrapeBestZone(zones, medianFallback, maxListings, bedrooms, requestedCurrency, propertyId, budgetOpts = {}) {
   const provider = (propertyId != null)
     ? marketProvider.resolveProviderForProperty(propertyId)
     : marketProvider.resolveProvider();
@@ -173,11 +174,11 @@ async function scrapeBestZone(zones, medianFallback, maxListings, bedrooms, requ
   // Iterating fallback zones for BD would trigger up to N separate paid API calls.
   const zonesToTry = (provider === 'brightdata') ? zones.slice(0, 1) : zones;
 
-  let best = { listings: [], isMock: true, dataSource: 'mock', zoneUsed: zonesToTry[zonesToTry.length - 1] || 'France', diagnostics: null };
+  let best = { listings: [], isMock: true, dataSource: 'mock', zoneUsed: zonesToTry[zonesToTry.length - 1] || 'France', diagnostics: null, providerAttempts: 0 };
   for (const zone of zonesToTry) {
     let res;
     try {
-      res = await scrapeZone(zone, medianFallback, maxListings, requestedCurrency, propertyId);
+      res = await scrapeZone(zone, medianFallback, maxListings, requestedCurrency, propertyId, budgetOpts);
     } catch (e) {
       console.warn(`⚠️ [DP] Scrape "${zone}" échoué: ${e.message}`);
       continue;
@@ -191,10 +192,10 @@ async function scrapeBestZone(zones, medianFallback, maxListings, bedrooms, requ
     console.log(`🔎 [DP] Zone "${zone}": ${listings.length} listings (${usable} exploitables, seuil ${MIN_COMPARABLES}, source: ${res.dataSource})`);
 
     if (listings.length > best.listings.length) {
-      best = { listings, isMock: res.isMock, dataSource: res.dataSource, zoneUsed: zone, diagnostics: res.diagnostics };
+      best = { listings, isMock: res.isMock, dataSource: res.dataSource, zoneUsed: zone, diagnostics: res.diagnostics, providerAttempts: res.providerAttempts ?? 1 };
     }
     if (usable >= MIN_COMPARABLES) {
-      return { listings, isMock: res.isMock, dataSource: res.dataSource, zoneUsed: zone, diagnostics: res.diagnostics };
+      return { listings, isMock: res.isMock, dataSource: res.dataSource, zoneUsed: zone, diagnostics: res.diagnostics, providerAttempts: res.providerAttempts ?? 1 };
     }
   }
   if (best.zoneUsed) console.log(`ℹ️ [DP] Aucune zone ≥ seuil — on garde la plus dense: "${best.zoneUsed}" (${best.listings.length})`);
@@ -365,14 +366,20 @@ async function scrapeWithApify(location, maxListings, requestedCurrency) {
 // Provider selection, Bright Data ↔ Apify fallback, and mock fallback are
 // all handled inside marketProvider.scrape(). scrapeWithApify remains
 // available as a legacy reference (source-analysis tests require it).
-async function scrapeZone(location, medianFallback, maxListings, requestedCurrency, propertyId) {
-  const result = await marketProvider.scrape(location, maxListings, requestedCurrency, { medianFallback, propertyId });
+async function scrapeZone(location, medianFallback, maxListings, requestedCurrency, propertyId, budgetOpts = {}) {
+  const result = await marketProvider.scrape(location, maxListings, requestedCurrency, {
+    medianFallback,
+    propertyId,
+    canAttemptProvider:     budgetOpts.canAttemptProvider,
+    consumeProviderAttempt: budgetOpts.consumeProviderAttempt,
+  });
   return {
-    listings:    result.listings,
-    isMock:      result.isMock,
-    dataSource:  result.dataSource,
-    provider:    result.provider,
-    diagnostics: result.diagnostics,
+    listings:         result.listings,
+    isMock:           result.isMock,
+    dataSource:       result.dataSource,
+    provider:         result.provider,
+    diagnostics:      result.diagnostics,
+    providerAttempts: result.providerAttempts ?? 1,
   };
 }
 
@@ -509,14 +516,17 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts 
   const todayParis = getCurrentParisDayISO();
   console.log(`\n🚀 [DP-CRON] === Démarrage job pricing dynamique — semaine du ${weekStart} ===`);
 
-  // Advisory lock: prevents concurrent invocations within the same DB session
-  const _lockRes = await pool.query('SELECT pg_try_advisory_lock($1) AS acquired', [DP_DAILY_JOB_ADVISORY_LOCK_KEY]);
-  if (!_lockRes.rows[0].acquired) {
-    console.log('[DP-CRON] BOOSTPRICE_DAILY_JOB_ALREADY_RUNNING — advisory lock held, skip');
-    return;
-  }
-
+  // Advisory lock: dedicated connection — pg session-scoped lock and unlock must use the same conn.
+  // pool.query() may borrow any connection; pool.connect() holds one for the duration.
+  const lockClient = await pool.connect();
+  let lockAcquired = false;
   try {
+    const _lockRes = await lockClient.query('SELECT pg_try_advisory_lock($1) AS acquired', [DP_DAILY_JOB_ADVISORY_LOCK_KEY]);
+    lockAcquired = _lockRes.rows[0].acquired;
+    if (!lockAcquired) {
+      console.log('[DP-CRON] BOOSTPRICE_DAILY_JOB_ALREADY_RUNNING — advisory lock held, skip');
+      return;
+    }
     // Persisted daily deduplication: one full collection per Europe/Paris calendar day (survives restart)
     const _dedupe = await pool.query(
       `INSERT INTO dp_daily_collection_run (run_date, job_status) VALUES ($1::date, 'running')
@@ -611,17 +621,20 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts 
   if (sharedEnabled) {
     const sharedDates = marketProvider.getBrightDataMarketDates();
     const preResult = await _getShadowCoordinator().runSharedPreCollection(configs, {
-      checkIn:            sharedDates.checkIn,
-      checkOut:           sharedDates.checkOut,
-      resolveProvider:    marketProvider.resolveProviderForProperty,
-      scrapeFn:           scrapeBestZone,
-      getFallbackZonesFn: getFallbackZones,
-      priceFallbackFn:    cfg => (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
-      maxListings:        MAX_LISTINGS,
+      checkIn:                sharedDates.checkIn,
+      checkOut:               sharedDates.checkOut,
+      resolveProvider:        marketProvider.resolveProviderForProperty,
+      scrapeFn:               scrapeBestZone,
+      getFallbackZonesFn:     getFallbackZones,
+      priceFallbackFn:        cfg => (parseFloat(cfg.price_min) + parseFloat(cfg.price_max)) / 2,
+      maxListings:            MAX_LISTINGS,
+      // FIX 4: same hard budget covers shared + legacy paths; callbacks update providerCallsThisRun
+      canAttemptProvider:     () => providerCallsThisRun < maxProviderCalls,
+      consumeProviderAttempt: () => { providerCallsThisRun++; },
     });
     sharedEvidence    = preResult.sharedEvidence;
     propToFingerprint = preResult.propToFingerprint;
-    providerCallsThisRun += (preResult.callCount || 0);
+    // providerCallsThisRun already updated via consumeProviderAttempt callbacks
     console.log(`[MARKET_SHARED_COLLECTION] pre-collection done groups=${preResult.groupCount} calls=${preResult.callCount}`);
   }
 
@@ -743,9 +756,14 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts 
             });
             continue;
           }
-          providerCallsThisRun++;
-          // S15: telemetry on cache miss (actual provider call) — not emitted on cache hit (reuse)
+          // Budget increments via consumeProviderAttempt callback inside marketProvider.scrape()
+          // (each external call — BD trigger or Apify run — debits one slot independently)
           const _legacyRunId = `legacy_${cfg.property_id}`;
+          const _budgetOpts = {
+            canAttemptProvider:     () => providerCallsThisRun < maxProviderCalls,
+            consumeProviderAttempt: (name) => { providerCallsThisRun++; },
+          };
+          // S15: telemetry on cache miss (actual provider call) — not emitted on cache hit (reuse)
           console.log(`[MARKET_PROVIDER_CALL_ATTEMPT] provider=${providerForCache} collection_run_id=${_legacyRunId} shared_group_size=1 reason=legacy_zone_cache`);
           try {
             zoneCache[cacheKey] = await scrapeBestZone(
@@ -754,7 +772,8 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts 
               MAX_LISTINGS,
               cfg.bedrooms,
               capturedPropertyCurrency,
-              cfg.property_id
+              cfg.property_id,
+              _budgetOpts
             );
             console.log(`[MARKET_PROVIDER_CALL_SUCCESS] provider=${providerForCache} dataSource=${zoneCache[cacheKey].dataSource} collection_run_id=${_legacyRunId}`);
           } catch (err) {
@@ -987,9 +1006,17 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts 
     [todayParis]
   );
 
+  // FIX 6: prune rows older than 90 days — fire-and-forget, failure must not fail the job
+  pool.query(
+    `DELETE FROM dp_daily_collection_run WHERE run_date < CURRENT_DATE - INTERVAL '90 days'`
+  ).catch(err => console.warn('[DP-CRON] dp_daily_collection_run cleanup error (non-fatal):', err.message));
+
   return results;
   } finally {
-    await pool.query('SELECT pg_advisory_unlock($1)', [DP_DAILY_JOB_ADVISORY_LOCK_KEY]).catch(() => {});
+    if (lockAcquired) {
+      await lockClient.query('SELECT pg_advisory_unlock($1)', [DP_DAILY_JOB_ADVISORY_LOCK_KEY]).catch(() => {});
+    }
+    lockClient.release();
   }
 }
 
@@ -1071,11 +1098,11 @@ async function runDailyPricingRefresh(pool, sendPushNotification = null) {
 }
 
 // ── Init (appelée depuis server.js) ─────────────────────────
-function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
+async function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
   const cron = require('node-cron');
 
-  // Daily collection run table — must exist before 06:00 fires (fire-and-forget at startup)
-  pool.query(`
+  // Await table creation before registering crons — prevents INSERT failure if 06:00 fires immediately
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS dp_daily_collection_run (
       run_date     DATE        PRIMARY KEY,
       started_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),

@@ -30397,7 +30397,8 @@ app.post('/api/dynamic-pricing/run-now', express.json(), async (req, res) => {
 });
 
 // ── Init du cron pricing dynamique ──
-initDynamicPricingCron(pool, sendEmail, sendPushForDynamicPricing);
+initDynamicPricingCron(pool, sendEmail, sendPushForDynamicPricing)
+  .catch(err => console.error('[DP-CRON] init error:', err.message));
 // ============================================
 // ============================================
 // NOTES D'INSTALLATION

@@ -160,8 +160,10 @@ async function scrape(location, maxListings, requestedCurrency, opts = {}) {
     timezone = 'Europe/Paris',
     now,
     propertyId,
-    maxWaitMs,      // forwarded to BD adapter (useful for tests)
-    pollIntervalMs, // forwarded to BD adapter (useful for tests)
+    maxWaitMs,           // forwarded to BD adapter (useful for tests)
+    pollIntervalMs,      // forwarded to BD adapter (useful for tests)
+    canAttemptProvider,  // () => boolean — budget gate (optional; no gate when absent)
+    consumeProviderAttempt, // (providerName) => void — budget debit (optional)
   } = opts;
 
   // When propertyId is provided use allowlist-aware routing; legacy callers (no propertyId) use resolveProvider().
@@ -170,6 +172,13 @@ async function scrape(location, maxListings, requestedCurrency, opts = {}) {
     : resolveProvider();
 
   if (provider === 'brightdata') {
+    // Budget guard: consume one slot before triggering BD (each external API call = 1 slot)
+    if (canAttemptProvider && !canAttemptProvider()) {
+      console.warn(`[MARKET_BUDGET_EXHAUSTED] provider=brightdata location="${location}" — budget exhausted before BD trigger`);
+      return { listings: [], isMock: true, provider: 'brightdata', dataSource: 'mock', providerAttempts: 0 };
+    }
+    if (consumeProviderAttempt) consumeProviderAttempt('brightdata');
+
     const { checkIn, checkOut } = getBrightDataMarketDates({ timezone, now });
     try {
       const bdResult = await brightdataProvider.scrapeWithBrightData(
@@ -178,7 +187,7 @@ async function scrape(location, maxListings, requestedCurrency, opts = {}) {
       );
       if (bdResult.listings.length > 0) {
         console.log(`[MARKET_PROVIDER_FALLBACK_PATH] event=BRIGHTDATA_SUCCESS location="${location}" listings=${bdResult.listings.length}`);
-        return bdResult;
+        return { ...bdResult, providerAttempts: 1 };
       }
       console.warn(`⚠️ [market-provider] Bright Data: 0 listings utilisables pour "${location}" — fallback Apify`);
       console.log(`[MARKET_PROVIDER_FALLBACK_PATH] event=BRIGHTDATA_FAILED_FALLBACK_APIFY location="${location}" reason=zero_listings`);
@@ -186,18 +195,28 @@ async function scrape(location, maxListings, requestedCurrency, opts = {}) {
       console.error(`❌ [market-provider] Bright Data erreur pour "${location}": ${err.message} — fallback Apify`);
       console.log(`[MARKET_PROVIDER_FALLBACK_PATH] event=BRIGHTDATA_FAILED_FALLBACK_APIFY location="${location}" reason=${JSON.stringify(err.message)}`);
     }
-    // Apify fallback after Bright Data
+    // Apify fallback after Bright Data — BD slot already consumed, check budget for a second call
+    if (canAttemptProvider && !canAttemptProvider()) {
+      console.warn(`[MARKET_BUDGET_EXHAUSTED] provider=apify_after_brightdata location="${location}" — budget exhausted, returning mock`);
+      return { listings: [], isMock: true, provider: 'apify', dataSource: 'mock', providerAttempts: 1 };
+    }
+    if (consumeProviderAttempt) consumeProviderAttempt('apify');
     const apifyAfterBd = await apifyProvider.scrapeZoneApify(location, maxListings, requestedCurrency, medianFallback, fetchFn);
     const afterBdEvent = apifyAfterBd.isMock ? 'ALL_PROVIDERS_FAILED_MOCK' : 'APIFY_SUCCESS_AFTER_BRIGHTDATA';
     console.log(`[MARKET_PROVIDER_FALLBACK_PATH] event=${afterBdEvent} location="${location}" listings=${apifyAfterBd.listings.length}`);
-    return apifyAfterBd;
+    return { ...apifyAfterBd, providerAttempts: 2 };
   }
 
-  // Apify direct path
+  // Apify direct path — budget guard
+  if (canAttemptProvider && !canAttemptProvider()) {
+    console.warn(`[MARKET_BUDGET_EXHAUSTED] provider=apify location="${location}" — budget exhausted before Apify call`);
+    return { listings: [], isMock: true, provider: 'apify', dataSource: 'mock', providerAttempts: 0 };
+  }
+  if (consumeProviderAttempt) consumeProviderAttempt('apify');
   const apifyDirect = await apifyProvider.scrapeZoneApify(location, maxListings, requestedCurrency, medianFallback, fetchFn);
   const directEvent = apifyDirect.isMock ? 'DIRECT_APIFY_FAILED_MOCK' : 'DIRECT_APIFY_SUCCESS';
   console.log(`[MARKET_PROVIDER_FALLBACK_PATH] event=${directEvent} location="${location}" listings=${apifyDirect.listings.length}`);
-  return apifyDirect;
+  return { ...apifyDirect, providerAttempts: 1 };
 }
 
 module.exports = { scrape, getBrightDataMarketDates, resolveProvider, resolveProviderForProperty };

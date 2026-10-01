@@ -468,8 +468,10 @@ async function runSharedPreCollection(configs, {
   resolveProvider,
   scrapeFn,
   getFallbackZonesFn,
-  priceFallbackFn  = () => 80,
-  maxListings      = 100,
+  priceFallbackFn        = () => 80,
+  maxListings            = 100,
+  canAttemptProvider,    // () => boolean — shared budget gate (optional)
+  consumeProviderAttempt, // (name) => void — shared budget debit (optional)
 } = {}) {
   const groups = groupPropertiesByFingerprint(configs, { checkIn, checkOut, resolveProvider, maxListings });
 
@@ -498,6 +500,20 @@ async function runSharedPreCollection(configs, {
     const priceFallback = priceFallbackFn(group.cfg);
     const groupSize     = group.propertyLinks.length;
 
+    // FIX 4: Hard budget gate before each group call — same budget shared with legacy path
+    if (canAttemptProvider && !canAttemptProvider()) {
+      console.warn(
+        `[MARKET_BUDGET_EXHAUSTED] fp=${fingerprint.slice(0, 12)}… ` +
+        `shared_group_size=${groupSize} — budget exhausted, skip group`
+      );
+      sharedEvidence.set(fingerprint, { error: 'budget_exhausted' });
+      continue;
+    }
+
+    const budgetOpts = (canAttemptProvider && consumeProviderAttempt)
+      ? { canAttemptProvider, consumeProviderAttempt }
+      : {};
+
     console.log(
       `[MARKET_PROVIDER_CALL_ATTEMPT] provider=${group.provider} fp=${fingerprint.slice(0, 12)}… ` +
       `shared_group_size=${groupSize} reason=shared_production`
@@ -505,7 +521,8 @@ async function runSharedPreCollection(configs, {
 
     try {
       const result = await scrapeFn(
-        zones, priceFallback, maxListings, group.cfg.bedrooms, capturedCurrency, group.cfg.property_id
+        zones, priceFallback, maxListings, group.cfg.bedrooms, capturedCurrency, group.cfg.property_id,
+        budgetOpts
       );
       sharedEvidence.set(fingerprint, result);
       callCount++;

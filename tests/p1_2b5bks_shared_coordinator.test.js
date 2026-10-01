@@ -928,7 +928,7 @@ test('K-01: coordinator runSharedPreCollection uses injectable scrapeFn (not dir
   // (the file-level import exists for the legacy K-engine coordinateCollection)
   const runSharedIdx = COORD_SRC.indexOf('async function runSharedPreCollection');
   assert.ok(runSharedIdx !== -1, 'runSharedPreCollection must be defined');
-  const bodySlice = COORD_SRC.slice(runSharedIdx, runSharedIdx + 2000);
+  const bodySlice = COORD_SRC.slice(runSharedIdx, runSharedIdx + 2500);
   assert.ok(bodySlice.includes('scrapeFn('), 'runSharedPreCollection must call injectable scrapeFn');
   assert.ok(!bodySlice.includes('scrapeWithBrightData('),
     'runSharedPreCollection must not call scrapeWithBrightData directly');

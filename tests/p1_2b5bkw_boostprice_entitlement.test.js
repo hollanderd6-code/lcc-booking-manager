@@ -361,10 +361,19 @@ await test('O — Not entitled property: runDynamicPricingJob excludes from SQL 
   let marketProviderCalls = 0;
 
   // The cron SQL itself excludes the property via EXISTS; simulate empty result
+  const _lockClient = {
+    query: async (sql) => {
+      if (sql.includes('pg_try_advisory_lock')) return { rows: [{ acquired: true }] };
+      return { rows: [] };
+    },
+    release: () => {},
+  };
   const pool = {
+    connect: async () => _lockClient,
     async query(sql) {
       const s = (sql || '').toLowerCase();
       if (s.startsWith('create') || s.startsWith('alter')) return { rows: [] };
+      if (s.includes('dp_daily_collection_run')) return { rowCount: 1, rows: [{ run_date: '2026-10-01' }] };
       if (s.includes('from pricing_config')) return { rows: [] }; // SQL gate excludes it
       return { rows: [] };
     }
