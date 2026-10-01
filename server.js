@@ -2170,6 +2170,16 @@ ON invoice_download_tokens(token);
       console.log('✅ boostprice_property_entitlements table OK');
     } catch(e) { console.warn('⚠️ boostprice_property_entitlements:', e.message); }
 
+    // ── Add provenance column (idempotent; existing rows default to 'stripe') ─
+    try {
+      await pool.query(`
+        ALTER TABLE boostprice_property_entitlements
+          ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'stripe'
+          CHECK (source IN ('stripe', 'admin'))
+      `);
+      console.log('✅ boostprice_property_entitlements.source colonne OK');
+    } catch(e) { console.warn('⚠️ boostprice_property_entitlements.source:', e.message); }
+
     // ── Migration plans : solo→starter, standard→pro, pro(ancien)→agence ──
     try {
       await pool.query(`UPDATE subscriptions SET plan_type = 'starter_monthly' WHERE plan_type = 'solo_monthly'`);
@@ -5748,13 +5758,13 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
               `UPDATE subscriptions SET boostprice_stripe_subscription_id = $1 WHERE user_id = $2`,
               [subscriptionId, userId]
             );
-            // Créer/réactiver les entitlements (idempotent via upsert)
+            // Créer/réactiver les entitlements (idempotent via upsert; source=stripe)
             for (const pid of propertyIds) {
               await pool.query(
-                `INSERT INTO boostprice_property_entitlements (user_id, property_id, status, updated_at)
-                 VALUES ($1, $2, 'active', NOW())
+                `INSERT INTO boostprice_property_entitlements (user_id, property_id, status, source, updated_at)
+                 VALUES ($1, $2, 'active', 'stripe', NOW())
                  ON CONFLICT (property_id) DO UPDATE
-                   SET status = 'active', updated_at = NOW()
+                   SET status = 'active', source = 'stripe', updated_at = NOW()
                  WHERE boostprice_property_entitlements.user_id = $1`,
                 [userId, pid]
               );
@@ -12110,34 +12120,75 @@ app.post('/api/billing/boostprice/subscribe', authenticateAny, async (req, res) 
 
     // If user has existing BP Stripe subscription → update quantity directly
     if (sub.boostprice_stripe_subscription_id) {
+      // Step 1: Retrieve current Stripe state (need prevQty for rollback)
+      let itemId, prevQty;
       try {
         const existingSub = await stripe.subscriptions.retrieve(sub.boostprice_stripe_subscription_id);
-        const itemId = existingSub.items?.data[0]?.id;
+        itemId = existingSub.items?.data[0]?.id;
         if (!itemId) throw new Error('subscription item introuvable');
+        prevQty = existingSub.items.data[0].quantity;
+      } catch(retrieveErr) {
+        console.error('❌ [BOOSTPRICE] Stripe retrieve failed:', retrieveErr.message);
+        return res.status(502).json({ error: 'stripe_retrieve_failed', message: retrieveErr.message });
+      }
 
+      // Step 2: Update Stripe quantity — must succeed before any DB write
+      try {
         await stripe.subscriptionItems.update(itemId, { quantity: newQty });
+      } catch(stripeErr) {
+        console.error('❌ [BOOSTPRICE] Stripe quantity update failed:', stripeErr.message);
+        return res.status(502).json({ error: 'stripe_update_failed', message: stripeErr.message });
+      }
 
-        // Stripe update succeeded → create entitlement rows
+      // Step 3: Write DB entitlements atomically (Stripe is already at newQty)
+      const dbClient = await pool.connect();
+      try {
+        await dbClient.query('BEGIN');
         for (const pid of newIds) {
-          await pool.query(
-            `INSERT INTO boostprice_property_entitlements (user_id, property_id, status, updated_at)
-             VALUES ($1, $2, 'active', NOW())
+          await dbClient.query(
+            `INSERT INTO boostprice_property_entitlements (user_id, property_id, status, source, updated_at)
+             VALUES ($1, $2, 'active', 'stripe', NOW())
              ON CONFLICT (property_id) DO UPDATE
-               SET status = 'active', updated_at = NOW()
+               SET status = 'active', source = 'stripe', updated_at = NOW()
              WHERE boostprice_property_entitlements.user_id = $1`,
             [user.id, pid]
           );
         }
-        console.log(`💰 [BOOSTPRICE] Direct activate: user=${user.id} newIds=${newIds.join(',')} qty=${newQty}`);
-        return res.json({ type: 'direct', activated: newIds, totalActive: newQty });
-
-      } catch(stripeErr) {
-        console.error('❌ [BOOSTPRICE] Stripe update failed:', stripeErr.message);
+        await dbClient.query('COMMIT');
+      } catch(dbErr) {
+        try { await dbClient.query('ROLLBACK'); } catch(_) {}
+        // DB failed after Stripe already moved to newQty — attempt compensation
+        let rollbackOk = false;
+        try {
+          await stripe.subscriptionItems.update(itemId, { quantity: prevQty });
+          rollbackOk = true;
+          console.log(`↩️ [BOOSTPRICE] Stripe rolled back to qty=${prevQty} for user ${user.id}`);
+        } catch(rollbackErr) {
+          // Stripe rollback failed — billing/entitlement are now diverged
+          console.error(JSON.stringify({
+            level: 'ERROR',
+            code: 'BOOSTPRICE_BILLING_RECONCILIATION_REQUIRED',
+            userId: user.id,
+            stripeSubId: sub.boostprice_stripe_subscription_id,
+            itemId,
+            prevQty,
+            attemptedQty: newQty,
+            newPropertyIds: newIds,
+            stripeRollbackError: rollbackErr.message,
+            dbError: dbErr.message,
+            ts: new Date().toISOString(),
+          }));
+        }
         return res.status(502).json({
-          error: 'stripe_update_failed',
-          message: stripeErr.message,
+          error: rollbackOk ? 'db_write_failed_stripe_rolled_back' : 'db_write_failed_stripe_not_rolled_back',
+          message: 'Activation échouée — veuillez réessayer.',
         });
+      } finally {
+        dbClient.release();
       }
+
+      console.log(`💰 [BOOSTPRICE] Direct activate: user=${user.id} newIds=${newIds.join(',')} qty=${newQty}`);
+      return res.json({ type: 'direct', activated: newIds, totalActive: newQty });
     }
 
     // No existing BP subscription → create Stripe Checkout session
@@ -12242,31 +12293,50 @@ app.delete('/api/billing/boostprice/unsubscribe', authenticateAny, async (req, r
     )).rows[0];
 
     if (sub?.boostprice_stripe_subscription_id) {
+      // Stripe update/cancel MUST succeed before any DB write
       try {
         if (newQty === 0) {
           await stripe.subscriptions.cancel(sub.boostprice_stripe_subscription_id);
-          await pool.query(
-            `UPDATE subscriptions SET boostprice_stripe_subscription_id = NULL, updated_at = NOW()
-             WHERE user_id = $1`,
-            [user.id]
-          );
         } else {
           const existingSub = await stripe.subscriptions.retrieve(sub.boostprice_stripe_subscription_id);
           const itemId = existingSub.items?.data[0]?.id;
-          if (itemId) await stripe.subscriptionItems.update(itemId, { quantity: newQty });
+          if (!itemId) throw new Error('subscription item introuvable');
+          await stripe.subscriptionItems.update(itemId, { quantity: newQty });
         }
       } catch(stripeErr) {
-        console.warn(`⚠️ [BOOSTPRICE] Stripe cancel/update failed (non-blocking):`, stripeErr.message);
+        console.error(`❌ [BOOSTPRICE] Stripe deactivation failed for user ${user.id}:`, stripeErr.message);
+        return res.status(502).json({
+          error: 'stripe_deactivation_failed',
+          message: stripeErr.message,
+        });
       }
     }
 
-    // Update entitlement rows regardless of Stripe result (Stripe webhook is the authority for final state)
-    await pool.query(
-      `UPDATE boostprice_property_entitlements
-       SET status = 'canceled', updated_at = NOW()
-       WHERE user_id = $1 AND property_id = ANY($2::text[])`,
-      [user.id, toDeactivate]
-    );
+    // Stripe confirmed (or no Stripe sub for admin entitlements) — write DB atomically
+    const dbClient = await pool.connect();
+    try {
+      await dbClient.query('BEGIN');
+      if (sub?.boostprice_stripe_subscription_id && newQty === 0) {
+        await dbClient.query(
+          `UPDATE subscriptions SET boostprice_stripe_subscription_id = NULL, updated_at = NOW()
+           WHERE user_id = $1`,
+          [user.id]
+        );
+      }
+      await dbClient.query(
+        `UPDATE boostprice_property_entitlements
+         SET status = 'canceled', updated_at = NOW()
+         WHERE user_id = $1 AND property_id = ANY($2::text[])`,
+        [user.id, toDeactivate]
+      );
+      await dbClient.query('COMMIT');
+    } catch(dbErr) {
+      try { await dbClient.query('ROLLBACK'); } catch(_) {}
+      console.error(`❌ [BOOSTPRICE] DB deactivation write failed for user ${user.id}:`, dbErr.message);
+      return res.status(500).json({ error: 'db_write_failed', message: 'Erreur DB — vérification requise' });
+    } finally {
+      dbClient.release();
+    }
 
     console.log(`💰 [BOOSTPRICE] Deactivated: user=${user.id} ids=${toDeactivate.join(',')} remaining=${newQty}`);
     res.json({ deactivated: toDeactivate, totalActive: newQty });
