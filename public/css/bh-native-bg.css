@@ -80,8 +80,14 @@ html[data-theme-v3="1"] body[data-page="app"] {
   background-attachment: fixed !important;
 }
 
-/* ── Conteneurs intermédiaires : transparents pour laisser passer le dégradé */
+/* ── Conteneurs intermédiaires : transparents pour laisser passer le dégradé
+   .app-container est le wrapper flex principal entre body et main-content.
+   Il portait background:var(--cream) !important (bh-theme-v3.css, spécificité
+   0,1,1) et cachait tout le dégradé.  La bande visible en bas de page était
+   l'endroit où .app-container se terminait et le dégradé du body redevenait
+   visible.  Règle ici : spécificité 0,2,2 > 0,1,1 → écrase le cream.       */
 
+html[data-theme-v3="1"] body[data-page="app"] .app-container,
 html[data-theme-v3="1"] body[data-page="app"] .main-content,
 html[data-theme-v3="1"] body[data-page="app"] .page-content {
   background: transparent !important;
