@@ -2142,6 +2142,34 @@ ON invoice_download_tokens(token);
       console.log('✅ droits_enabled + droits_stripe_subscription_id colonnes OK');
     } catch(e) { console.warn('⚠️ droits colonnes:', e.message); }
 
+    // ── BoostPrice paid add-on — subscription ID tracking ──────────────────
+    try {
+      await pool.query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS boostprice_stripe_subscription_id TEXT`);
+      console.log('✅ boostprice_stripe_subscription_id colonne OK');
+    } catch(e) { console.warn('⚠️ boostprice_stripe_subscription_id:', e.message); }
+
+    // ── BoostPrice property-level commercial entitlements ───────────────────
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS boostprice_property_entitlements (
+          id              SERIAL PRIMARY KEY,
+          user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          property_id     TEXT NOT NULL,
+          status          TEXT NOT NULL DEFAULT 'active'
+                            CHECK (status IN ('active', 'pending', 'cancel_at_period_end', 'canceled')),
+          created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          UNIQUE(property_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_bpe_user_id
+          ON boostprice_property_entitlements(user_id);
+        CREATE INDEX IF NOT EXISTS idx_bpe_user_active
+          ON boostprice_property_entitlements(user_id, status)
+          WHERE status = 'active';
+      `);
+      console.log('✅ boostprice_property_entitlements table OK');
+    } catch(e) { console.warn('⚠️ boostprice_property_entitlements:', e.message); }
+
     // ── Migration plans : solo→starter, standard→pro, pro(ancien)→agence ──
     try {
       await pool.query(`UPDATE subscriptions SET plan_type = 'starter_monthly' WHERE plan_type = 'solo_monthly'`);
@@ -5701,6 +5729,43 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
           break;
         }
 
+        // Détecter si c'est l'option BoostPrice (add-on par logement)
+        const isBoostpriceOption = session.metadata?.boostpriceOption === 'true'
+          || stripeSubscription.metadata?.boostpriceOption === 'true';
+        if (isBoostpriceOption) {
+          // Récupérer les property IDs depuis les métadonnées
+          let propertyIds = [];
+          try {
+            const raw = session.metadata?.boostpricePropertyIds
+              || stripeSubscription.metadata?.boostpricePropertyIds;
+            if (raw) propertyIds = JSON.parse(raw);
+          } catch(parseErr) {
+            console.warn(`⚠️ [BOOSTPRICE BILLING] Impossible de parser boostpricePropertyIds pour user ${userId}:`, parseErr.message);
+          }
+          if (propertyIds.length > 0) {
+            // Stocker l'ID de la subscription Stripe BoostPrice
+            await pool.query(
+              `UPDATE subscriptions SET boostprice_stripe_subscription_id = $1 WHERE user_id = $2`,
+              [subscriptionId, userId]
+            );
+            // Créer/réactiver les entitlements (idempotent via upsert)
+            for (const pid of propertyIds) {
+              await pool.query(
+                `INSERT INTO boostprice_property_entitlements (user_id, property_id, status, updated_at)
+                 VALUES ($1, $2, 'active', NOW())
+                 ON CONFLICT (property_id) DO UPDATE
+                   SET status = 'active', updated_at = NOW()
+                 WHERE boostprice_property_entitlements.user_id = $1`,
+                [userId, pid]
+              );
+            }
+            console.log(`💰 [BOOSTPRICE BILLING] ${propertyIds.length} entitlement(s) activé(s) via webhook pour user ${userId}`);
+          } else {
+            console.warn(`⚠️ [BOOSTPRICE BILLING] boostpriceOption=true mais aucun propertyId dans metadata pour user ${userId}`);
+          }
+          break;
+        }
+
         if (isTrialing) {
           // Avec période d'essai
           await pool.query(
@@ -5987,12 +6052,37 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
         const subscription = event.data.object;
         const subscriptionId = subscription.id;
 
+        // Main subscription cancellation
         await pool.query(
-          `UPDATE subscriptions 
+          `UPDATE subscriptions
            SET status = 'canceled', updated_at = NOW()
            WHERE stripe_subscription_id = $1`,
           [subscriptionId]
         );
+
+        // BoostPrice add-on cancellation — clear all entitlements for this Stripe sub
+        // (covers direct Stripe cancellation, avoiding the stale-entitlement gap)
+        const bpUserResult = await pool.query(
+          `SELECT user_id FROM subscriptions
+           WHERE boostprice_stripe_subscription_id = $1 LIMIT 1`,
+          [subscriptionId]
+        );
+        if (bpUserResult.rows.length > 0) {
+          const bpUserId = bpUserResult.rows[0].user_id;
+          await pool.query(
+            `UPDATE boostprice_property_entitlements
+             SET status = 'canceled', updated_at = NOW()
+             WHERE user_id = $1 AND status != 'canceled'`,
+            [bpUserId]
+          );
+          await pool.query(
+            `UPDATE subscriptions
+             SET boostprice_stripe_subscription_id = NULL, updated_at = NOW()
+             WHERE user_id = $1`,
+            [bpUserId]
+          );
+          console.log(`💰 [BOOSTPRICE BILLING] Entitlements annulés pour user ${bpUserId} (sub Stripe supprimé: ${subscriptionId})`);
+        }
 
         console.log(`✅ Abonnement ${subscriptionId} annulé`);
         break;
@@ -11874,6 +11964,316 @@ app.get('/api/billing/droits/status', authenticateAny, async (req, res) => {
     });
   } catch(err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// 💰 ROUTES BOOSTPRICE ADD-ON BILLING
+// ============================================================
+// €4.90 / month / property (quantity billing via one Stripe subscription)
+//
+// GET  /api/billing/boostprice/status     → state + pricing page contract
+// POST /api/billing/boostprice/subscribe  → activate selected/all properties
+// DELETE /api/billing/boostprice/unsubscribe → deactivate selected/all
+// ============================================================
+
+const BOOSTPRICE_PRICE_PER_PROPERTY = 4.90;
+
+// GET /api/billing/boostprice/status
+app.get('/api/billing/boostprice/status', authenticateAny, async (req, res) => {
+  try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    // Load properties + entitlement state + pricing config activation
+    const propertiesResult = await pool.query(
+      `SELECT
+         p.id         AS property_id,
+         p.name       AS property_name,
+         bpe.status   AS entitlement_status,
+         pc.is_active AS technical_active
+       FROM properties p
+       LEFT JOIN boostprice_property_entitlements bpe
+         ON bpe.property_id = p.id AND bpe.user_id = p.user_id
+       LEFT JOIN pricing_config pc
+         ON pc.property_id = p.id AND pc.user_id = p.user_id
+       WHERE p.user_id = $1
+       ORDER BY p.name`,
+      [user.id]
+    );
+
+    const sub = (await pool.query(
+      `SELECT status, plan_type, boostprice_stripe_subscription_id
+       FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    )).rows[0];
+
+    const properties = propertiesResult.rows.map(r => ({
+      propertyId:    r.property_id,
+      propertyName:  r.property_name,
+      entitled:      r.entitlement_status === 'active',
+      entitlementStatus: r.entitlement_status || null,
+      technicalActive: r.technical_active === true,
+    }));
+
+    const entitledCount = properties.filter(p => p.entitled).length;
+
+    res.json({
+      boostpriceEnabled:       entitledCount > 0,
+      entitledPropertyIds:     properties.filter(p => p.entitled).map(p => p.propertyId),
+      properties,
+      totalProperties:         properties.length,
+      boostPriceEntitledCount: entitledCount,
+      monthlyAmount:           parseFloat((entitledCount * BOOSTPRICE_PRICE_PER_PROPERTY).toFixed(2)),
+      pricePerProperty:        BOOSTPRICE_PRICE_PER_PROPERTY,
+      currency:                'EUR',
+      subscriptionStatus:      sub?.status || null,
+      hasBoostpriceStripeSubscription: !!sub?.boostprice_stripe_subscription_id,
+    });
+  } catch(err) {
+    console.error('GET /api/billing/boostprice/status:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/billing/boostprice/subscribe
+// Body: { propertyIds?: string[], allProperties?: boolean }
+app.post('/api/billing/boostprice/subscribe', authenticateAny, async (req, res) => {
+  try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+
+    if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
+
+    const priceId = process.env.STRIPE_PRICE_BOOSTPRICE_MONTHLY;
+    if (!priceId) return res.status(500).json({
+      error: 'boostprice_price_not_configured',
+      message: 'STRIPE_PRICE_BOOSTPRICE_MONTHLY non défini — contactez le support.',
+    });
+
+    // Validate main subscription
+    const subResult = await pool.query(
+      `SELECT status, trial_end_date, stripe_customer_id, boostprice_stripe_subscription_id
+       FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    );
+    const sub = subResult.rows[0];
+    if (!sub) return res.status(403).json({ error: 'Aucun abonnement actif' });
+    const subValid = sub.status === 'active' || sub.status === 'trialing'
+      || (sub.status === 'trial' && sub.trial_end_date && new Date() < new Date(sub.trial_end_date));
+    if (!subValid) return res.status(403).json({ error: 'Abonnement principal expiré ou annulé' });
+
+    // Resolve target property IDs
+    const { propertyIds: rawIds, allProperties } = req.body || {};
+    let targetIds;
+    if (allProperties === true) {
+      const propsResult = await pool.query(
+        `SELECT id FROM properties WHERE user_id = $1`, [user.id]
+      );
+      targetIds = propsResult.rows.map(r => r.id);
+    } else if (Array.isArray(rawIds) && rawIds.length > 0) {
+      // Deduplicate + validate ownership
+      const dedupIds = [...new Set(rawIds.map(String))];
+      const owned = await pool.query(
+        `SELECT id FROM properties WHERE id = ANY($1::text[]) AND user_id = $2`,
+        [dedupIds, user.id]
+      );
+      const ownedSet = new Set(owned.rows.map(r => r.id));
+      const foreign = dedupIds.filter(id => !ownedSet.has(id));
+      if (foreign.length > 0) {
+        return res.status(403).json({ error: 'foreign_property', propertyIds: foreign });
+      }
+      targetIds = dedupIds;
+    } else {
+      return res.status(400).json({ error: 'propertyIds ou allProperties requis' });
+    }
+
+    if (targetIds.length === 0) {
+      return res.status(400).json({ error: 'Aucun logement éligible trouvé' });
+    }
+
+    // Find already active entitlements to avoid re-activating
+    const existingResult = await pool.query(
+      `SELECT property_id FROM boostprice_property_entitlements
+       WHERE user_id = $1 AND status = 'active'`,
+      [user.id]
+    );
+    const alreadyActive = new Set(existingResult.rows.map(r => r.property_id));
+    const newIds = targetIds.filter(id => !alreadyActive.has(id));
+    const newQty = alreadyActive.size + newIds.length;
+
+    if (newIds.length === 0) {
+      return res.json({ type: 'already_active', activated: [], totalActive: alreadyActive.size });
+    }
+
+    // If user has existing BP Stripe subscription → update quantity directly
+    if (sub.boostprice_stripe_subscription_id) {
+      try {
+        const existingSub = await stripe.subscriptions.retrieve(sub.boostprice_stripe_subscription_id);
+        const itemId = existingSub.items?.data[0]?.id;
+        if (!itemId) throw new Error('subscription item introuvable');
+
+        await stripe.subscriptionItems.update(itemId, { quantity: newQty });
+
+        // Stripe update succeeded → create entitlement rows
+        for (const pid of newIds) {
+          await pool.query(
+            `INSERT INTO boostprice_property_entitlements (user_id, property_id, status, updated_at)
+             VALUES ($1, $2, 'active', NOW())
+             ON CONFLICT (property_id) DO UPDATE
+               SET status = 'active', updated_at = NOW()
+             WHERE boostprice_property_entitlements.user_id = $1`,
+            [user.id, pid]
+          );
+        }
+        console.log(`💰 [BOOSTPRICE] Direct activate: user=${user.id} newIds=${newIds.join(',')} qty=${newQty}`);
+        return res.json({ type: 'direct', activated: newIds, totalActive: newQty });
+
+      } catch(stripeErr) {
+        console.error('❌ [BOOSTPRICE] Stripe update failed:', stripeErr.message);
+        return res.status(502).json({
+          error: 'stripe_update_failed',
+          message: stripeErr.message,
+        });
+      }
+    }
+
+    // No existing BP subscription → create Stripe Checkout session
+    const appUrl = process.env.APP_URL || 'https://boostinghost.fr';
+    const taxRateId = process.env.STRIPE_TAX_RATE_FR_20;
+
+    // Store property IDs in metadata (500-char limit per value)
+    const propertyIdsJson = JSON.stringify(newIds);
+    if (propertyIdsJson.length > 480) {
+      return res.status(400).json({
+        error: 'too_many_properties',
+        message: 'Activez maximum 15-20 logements à la fois pour la première souscription, puis ajoutez les autres.',
+      });
+    }
+
+    const sessionParams = {
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: newQty }],
+      subscription_data: {
+        metadata: {
+          userId:                   user.id.toString(),
+          boostpriceOption:         'true',
+          boostpricePropertyIds:    propertyIdsJson,
+          boostpriceQty:            String(newQty),
+        },
+        ...(taxRateId ? { default_tax_rates: [taxRateId] } : {})
+      },
+      client_reference_id: user.id.toString(),
+      billing_address_collection: 'required',
+      tax_id_collection: { enabled: true },
+      success_url: `${appUrl}/settings-account.html?tab=boostprice&bp_success=true`,
+      cancel_url:  `${appUrl}/settings-account.html?tab=boostprice&bp_cancelled=true`,
+      locale: 'fr',
+      metadata: { userId: user.id.toString(), boostpriceOption: 'true', boostpricePropertyIds: propertyIdsJson },
+    };
+
+    if (sub.stripe_customer_id) sessionParams.customer = sub.stripe_customer_id;
+    else sessionParams.customer_email = user.email;
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+    console.log(`💰 [BOOSTPRICE] Checkout créé user=${user.id} qty=${newQty} ids=${newIds.join(',')}`);
+    res.json({ type: 'checkout', url: session.url, sessionId: session.id });
+
+  } catch(err) {
+    console.error('❌ POST /api/billing/boostprice/subscribe:', err);
+    res.status(500).json({ error: 'Erreur serveur', details: err.message });
+  }
+});
+
+// DELETE /api/billing/boostprice/unsubscribe
+// Body: { propertyIds?: string[], allProperties?: boolean }
+app.delete('/api/billing/boostprice/unsubscribe', authenticateAny, async (req, res) => {
+  try {
+    if (req.user?.isSubAccount) return res.status(403).json({ error: 'Action réservée au compte principal' });
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    if (!stripe) return res.status(500).json({ error: 'Stripe non configuré' });
+
+    const { propertyIds: rawIds, allProperties } = req.body || {};
+    let targetIds;
+    if (allProperties === true) {
+      const activeResult = await pool.query(
+        `SELECT property_id FROM boostprice_property_entitlements
+         WHERE user_id = $1 AND status = 'active'`,
+        [user.id]
+      );
+      targetIds = activeResult.rows.map(r => r.property_id);
+    } else if (Array.isArray(rawIds) && rawIds.length > 0) {
+      targetIds = [...new Set(rawIds.map(String))];
+    } else {
+      return res.status(400).json({ error: 'propertyIds ou allProperties requis' });
+    }
+
+    if (targetIds.length === 0) {
+      return res.json({ deactivated: [], totalActive: 0 });
+    }
+
+    // Find currently active entitlements among targets
+    const activeResult = await pool.query(
+      `SELECT property_id FROM boostprice_property_entitlements
+       WHERE user_id = $1 AND property_id = ANY($2::text[]) AND status = 'active'`,
+      [user.id, targetIds]
+    );
+    const toDeactivate = activeResult.rows.map(r => r.property_id);
+    if (toDeactivate.length === 0) {
+      return res.json({ deactivated: [], totalActive: 0 });
+    }
+
+    const totalActiveNow = (await pool.query(
+      `SELECT COUNT(*) AS cnt FROM boostprice_property_entitlements
+       WHERE user_id = $1 AND status = 'active'`,
+      [user.id]
+    )).rows[0].cnt;
+    const newQty = Math.max(0, parseInt(totalActiveNow) - toDeactivate.length);
+
+    // Get Stripe subscription
+    const sub = (await pool.query(
+      `SELECT boostprice_stripe_subscription_id FROM subscriptions
+       WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [user.id]
+    )).rows[0];
+
+    if (sub?.boostprice_stripe_subscription_id) {
+      try {
+        if (newQty === 0) {
+          await stripe.subscriptions.cancel(sub.boostprice_stripe_subscription_id);
+          await pool.query(
+            `UPDATE subscriptions SET boostprice_stripe_subscription_id = NULL, updated_at = NOW()
+             WHERE user_id = $1`,
+            [user.id]
+          );
+        } else {
+          const existingSub = await stripe.subscriptions.retrieve(sub.boostprice_stripe_subscription_id);
+          const itemId = existingSub.items?.data[0]?.id;
+          if (itemId) await stripe.subscriptionItems.update(itemId, { quantity: newQty });
+        }
+      } catch(stripeErr) {
+        console.warn(`⚠️ [BOOSTPRICE] Stripe cancel/update failed (non-blocking):`, stripeErr.message);
+      }
+    }
+
+    // Update entitlement rows regardless of Stripe result (Stripe webhook is the authority for final state)
+    await pool.query(
+      `UPDATE boostprice_property_entitlements
+       SET status = 'canceled', updated_at = NOW()
+       WHERE user_id = $1 AND property_id = ANY($2::text[])`,
+      [user.id, toDeactivate]
+    );
+
+    console.log(`💰 [BOOSTPRICE] Deactivated: user=${user.id} ids=${toDeactivate.join(',')} remaining=${newQty}`);
+    res.json({ deactivated: toDeactivate, totalActive: newQty });
+
+  } catch(err) {
+    console.error('❌ DELETE /api/billing/boostprice/unsubscribe:', err);
+    res.status(500).json({ error: 'Erreur serveur', details: err.message });
   }
 });
 
@@ -29878,6 +30278,16 @@ app.post('/api/pricing/analyze-now/:propertyId', authenticateAny, async (req, re
     );
     if (propResult.rows.length === 0) return res.status(404).json({ error: 'Logement introuvable' });
     const ownerId = propResult.rows[0].user_id;
+
+    // Commercial entitlement gate
+    const { hasBoostPriceEntitlement: _bpCheck } = require('./services/boostprice-entitlement');
+    const analyzeEntitled = await _bpCheck(pool, ownerId, propertyId);
+    if (!analyzeEntitled) {
+      return res.status(403).json({
+        error: 'no_boostprice_entitlement',
+        message: 'Ce logement n\'a pas d\'entitlement BoostPrice actif.',
+      });
+    }
 
     // Réponse immédiate : le scrape tourne en arrière-plan (Apify peut prendre 1-2 min)
     res.status(202).json({ success: true, message: 'Analyse marché lancée en arrière-plan' });

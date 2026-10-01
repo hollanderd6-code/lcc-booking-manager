@@ -31,6 +31,7 @@ const { computeMarketContextKey } = require('./market-context-key');
 const marketProvider = require('../services/market-provider');
 const { selectComparables, calcBrightDataMarketStats } = require('../services/brightdata-comparable-filter');
 const { hasValidCoordinates } = require('../services/market-geo-validator');
+const { hasBoostPriceEntitlement } = require('../services/boostprice-entitlement');
 
 // P15/P16: Shadow market observation collection — lazy require to avoid circular deps at startup
 // Both flags default to OFF. Import is deferred so the module is only loaded when flags are live.
@@ -513,6 +514,20 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts 
        JOIN properties  p ON p.id = pc.property_id AND p.user_id = pc.user_id
        JOIN users       u ON u.id = pc.user_id
        WHERE pc.is_active = TRUE
+         AND EXISTS (
+           SELECT 1 FROM boostprice_property_entitlements bpe
+           WHERE bpe.property_id = pc.property_id
+             AND bpe.user_id     = pc.user_id
+             AND bpe.status      = 'active'
+         )
+         AND EXISTS (
+           SELECT 1 FROM subscriptions s
+           WHERE s.user_id = pc.user_id
+             AND (
+               s.status IN ('active', 'trialing')
+               OR (s.status = 'trial' AND s.trial_end_date > NOW())
+             )
+         )
        ORDER BY pc.created_at`
     );
     configs = result.rows;
@@ -893,6 +908,20 @@ async function runDailyPricingRefresh(pool, sendPushNotification = null) {
          FROM pricing_config pc
          JOIN properties p ON p.id = pc.property_id AND p.user_id = pc.user_id
         WHERE pc.is_active = TRUE
+          AND EXISTS (
+            SELECT 1 FROM boostprice_property_entitlements bpe
+            WHERE bpe.property_id = pc.property_id
+              AND bpe.user_id     = pc.user_id
+              AND bpe.status      = 'active'
+          )
+          AND EXISTS (
+            SELECT 1 FROM subscriptions s
+            WHERE s.user_id = pc.user_id
+              AND (
+                s.status IN ('active', 'trialing')
+                OR (s.status = 'trial' AND s.trial_end_date > NOW())
+              )
+          )
         ORDER BY pc.created_at`
     )).rows;
   } catch (err) {
@@ -1042,6 +1071,13 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
   )).rows[0];
 
   if (!cfg) return { ok: false, error: 'Config pricing introuvable pour ce logement' };
+
+  // Commercial entitlement gate — fail closed if not entitled
+  const entitled = await hasBoostPriceEntitlement(pool, cfg.user_id, propertyId);
+  if (!entitled) {
+    console.warn(`[DP-ONE] no_boostprice_entitlement for property ${propertyId} (user ${cfg.user_id}) — skip`);
+    return { ok: false, error: 'no_boostprice_entitlement', propertyId };
+  }
 
   // Évite de re-scraper si l'analyse de la semaine existe déjà (sauf force)
   if (!force) {

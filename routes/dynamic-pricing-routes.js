@@ -22,6 +22,7 @@ const { requirePermission } = require('../sub-accounts-middleware');
 const { scheduleMarketRefresh }  = require('./market-refresh-trigger');
 const { computeMarketContextKey } = require('./market-context-key');
 const { classifyMarketData }     = require('./market-data-resolver');
+const { hasBoostPriceEntitlement } = require('../services/boostprice-entitlement');
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -621,6 +622,17 @@ function setupDynamicPricingRoutes(app, pool, authenticateAny, sendEmail) {
       }
 
       const pricingOwnerId = propRes.rows[0].pricing_owner_id;
+
+      // Commercial entitlement gate: enabling BoostPrice requires paid entitlement
+      if (isActive === true || isActive === 'true') {
+        const entitled = await hasBoostPriceEntitlement(pool, pricingOwnerId, propertyId);
+        if (!entitled) {
+          return res.status(403).json({
+            error: 'no_boostprice_entitlement',
+            message: 'Ce logement n\'a pas d\'entitlement BoostPrice actif. Souscrivez l\'option BoostPrice pour ce logement.',
+          });
+        }
+      }
 
       // C3D — read old activation state before UPSERT
       const oldCfg = await pool.query(

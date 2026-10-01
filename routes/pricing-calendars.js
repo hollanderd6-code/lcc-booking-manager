@@ -25,6 +25,7 @@
 const express = require('express');
 const { resolveMarketData } = require('./market-data-resolver');
 const { computeMarketContextKey } = require('./market-context-key');
+const { hasBoostPriceEntitlement } = require('../services/boostprice-entitlement');
 
 // ── Dates officielles (Journal Officiel) — multiplicateurs = demande estimée ──
 // 'ALL' = commun aux 3 zones (Toussaint, Noël, Été).
@@ -195,6 +196,10 @@ async function _runRecompute(pool, userId, propertyId, {
     [userId, propertyId]
   )).rows[0];
   if (!cfg) return null;
+
+  // Commercial entitlement gate — fail closed if not entitled
+  const entitled = await hasBoostPriceEntitlement(pool, userId, propertyId);
+  if (!entitled) return { ok: false, error: 'no_boostprice_entitlement', propertyId };
 
   const propertyContextKey = ctxFn({
     countryCode: cfg.country_code,
