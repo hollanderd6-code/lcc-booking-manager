@@ -1467,6 +1467,7 @@ function showToast(msg, type = 'success') {
 // CLIENTS
 // ══════════════════════════════════════
 let allClients = [];
+let currentDrawerClientId = null;
 
 async function loadClients() {
   try {
@@ -1603,6 +1604,7 @@ function renderClientsTable(clients) {
 }
 
 function openDrawer(userId) {
+  currentDrawerClientId = userId;
   const c = allClients.find(x => x.id === userId);
   if (!c) return;
   const initials = ((c.first_name || '').charAt(0) + (c.last_name || '').charAt(0)).toUpperCase() || 'U';
@@ -1702,6 +1704,34 @@ function openDrawer(userId) {
       <button class="action-btn" style="width:100%;justify-content:center;background:var(--accent,#0E3B2E);color:white;" onclick="changePlan('${c.id}')"><i class="fas fa-check"></i> Appliquer les changements</button>
     </div>
 
+    <div class="drawer-section" id="paidOptionsSection">
+      <div class="drawer-section-title"><i class="fas fa-star" style="margin-right:5px;"></i>Options payantes</div>
+      ${(c.subscription_status !== 'active' && c.subscription_status !== 'trial') ? `<div style="font-size:11px;color:var(--amber);margin-bottom:8px;padding:6px 8px;background:rgba(234,179,8,.08);border-radius:6px;"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i>Abonnement principal inactif — les options peuvent ne pas fonctionner.</div>` : ''}
+
+      <div class="drawer-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
+        <span class="drawer-row-label" style="font-weight:700;">SMS</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          ${c.sms_paid && c.sms_admin_granted
+            ? `<span class="pill pill-green" style="font-size:11px;">Payant + Offert</span>`
+            : c.sms_paid
+              ? `<span class="pill pill-blue" style="font-size:11px;">Payant</span>`
+              : c.sms_admin_granted
+                ? `<span class="pill pill-amber" style="font-size:11px;">Offert</span>`
+                : `<span class="pill pill-grey" style="font-size:11px;">Inactif</span>`
+          }
+          ${!c.sms_admin_granted
+            ? `<button class="action-btn" style="padding:4px 10px;font-size:11px;" onclick="adminGrantSms('${c.id}')"><i class="fas fa-gift"></i> Offrir les SMS</button>`
+            : `<button class="action-btn danger" style="padding:4px 10px;font-size:11px;" onclick="adminRevokeSms('${c.id}')"><i class="fas fa-times"></i> Retirer l'accès offert</button>`
+          }
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="drawer-row-label" style="font-weight:700;margin-bottom:6px;">BoostPrice par logement</div>
+        <div id="boostPriceList" style="font-size:12px;color:var(--muted);">Chargement…</div>
+      </div>
+    </div>
+
     <div class="drawer-section">
       <div class="drawer-section-title"><i class="fas fa-user-secret" style="margin-right:5px;"></i>Connexion client</div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Envoie une demande d'autorisation au client (comme AnyDesk). La connexion ne s'ouvre que s'il accepte. Action journalisée.</div>
@@ -1724,6 +1754,7 @@ function openDrawer(userId) {
   document.getElementById('drawerOverlay').classList.add('open');
   document.getElementById('clientDrawer').classList.add('open');
   loadClientActionsLog(userId);
+  loadAdminPaidOptions(userId);
 }
 
 async function loadClientActionsLog(userId) {
@@ -1745,7 +1776,11 @@ async function loadClientActionsLog(userId) {
       unblock: '✅ Compte débloqué',
       extend_trial: '<i class="fas fa-gift" style="color:#C2410C;"></i> Jours offerts',
       change_plan: '<i class="fas fa-sync-alt" style="color:#1D4ED8;"></i> Abonnement modifié',
-      impersonate: '<i class="fas fa-user-secret" style="color:#6D28D9;"></i> Connexion en tant que client'
+      impersonate: '<i class="fas fa-user-secret" style="color:#6D28D9;"></i> Connexion en tant que client',
+      grant_sms: '<i class="fas fa-gift" style="color:#059669;"></i> SMS offert',
+      revoke_sms: '<i class="fas fa-times" style="color:#DC2626;"></i> SMS offert retiré',
+      grant_boostprice: '<i class="fas fa-gift" style="color:#059669;"></i> BoostPrice offert',
+      revoke_boostprice: '<i class="fas fa-times" style="color:#DC2626;"></i> BoostPrice offert retiré'
     };
     el.innerHTML = actions.map(a => {
       const date = new Date(a.created_at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
@@ -1770,6 +1805,122 @@ async function loadClientActionsLog(userId) {
     }).join('');
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);">Erreur de chargement de l'historique.</div>`;
+  }
+}
+
+// ══════════════════════════════════════
+// ADMIN PAID OPTIONS
+// ══════════════════════════════════════
+
+async function loadAdminPaidOptions(userId) {
+  const el = document.getElementById('boostPriceList');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/api/admin/clients/${userId}/properties`, {
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const props = data.properties || [];
+
+    if (currentDrawerClientId !== userId) return; // stale
+
+    if (!props.length) {
+      el.innerHTML = `<div style="color:var(--muted);font-size:12px;">Aucun logement.</div>`;
+      return;
+    }
+
+    el.innerHTML = props.map(p => {
+      const name = p.internalName || p.name || p.id;
+      let pill, btn;
+      if (p.boostPriceStatus === 'paid') {
+        pill = `<span class="pill pill-blue" style="font-size:11px;">Payant</span>`;
+        btn  = `<span style="font-size:11px;color:var(--muted);">Protégé</span>`;
+      } else if (p.boostPriceStatus === 'admin') {
+        pill = `<span class="pill pill-amber" style="font-size:11px;">Offert</span>`;
+        btn  = `<button class="action-btn danger" style="padding:3px 8px;font-size:11px;" onclick="adminRevokeBoostprice('${userId}','${p.id}')"><i class="fas fa-times"></i> Retirer</button>`;
+      } else {
+        pill = `<span class="pill pill-grey" style="font-size:11px;">Inactif</span>`;
+        btn  = `<button class="action-btn" style="padding:3px 8px;font-size:11px;" onclick="adminGrantBoostprice('${userId}','${p.id}')"><i class="fas fa-gift"></i> Offrir</button>`;
+      }
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);gap:6px;">
+        <span style="font-size:12px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${name}">${name}</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${pill}${btn}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    if (currentDrawerClientId !== userId) return;
+    const el2 = document.getElementById('boostPriceList');
+    if (el2) el2.innerHTML = `<div style="color:var(--danger);font-size:12px;">Erreur de chargement.</div>`;
+  }
+}
+
+async function adminGrantSms(userId) {
+  try {
+    const res = await fetch(`${API}/api/admin/clients/${userId}/sms/grant`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Erreur', 'error'); return; }
+    const c = allClients.find(x => x.id === userId);
+    if (c) { c.sms_admin_granted = true; c.sms_enabled = true; }
+    showToast('SMS offert avec succès', 'success');
+    if (currentDrawerClientId === userId) openDrawer(userId);
+  } catch(e) {
+    showToast('Erreur réseau', 'error');
+  }
+}
+
+async function adminRevokeSms(userId) {
+  try {
+    const res = await fetch(`${API}/api/admin/clients/${userId}/sms/revoke`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + adminToken }
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Erreur', 'error'); return; }
+    const c = allClients.find(x => x.id === userId);
+    if (c) {
+      c.sms_admin_granted = false;
+      c.sms_enabled = data.smsEnabled;
+    }
+    showToast('Accès SMS offert retiré', 'success');
+    if (currentDrawerClientId === userId) openDrawer(userId);
+  } catch(e) {
+    showToast('Erreur réseau', 'error');
+  }
+}
+
+async function adminGrantBoostprice(userId, propertyId) {
+  try {
+    const res = await fetch(`${API}/api/admin/clients/${userId}/boostprice/grant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ propertyIds: [propertyId] })
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Erreur', 'error'); return; }
+    showToast('BoostPrice offert', 'success');
+    if (currentDrawerClientId === userId) loadAdminPaidOptions(userId);
+  } catch(e) {
+    showToast('Erreur réseau', 'error');
+  }
+}
+
+async function adminRevokeBoostprice(userId, propertyId) {
+  try {
+    const res = await fetch(`${API}/api/admin/clients/${userId}/boostprice/revoke`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ propertyIds: [propertyId] })
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Erreur', 'error'); return; }
+    showToast('BoostPrice offert retiré', 'success');
+    if (currentDrawerClientId === userId) loadAdminPaidOptions(userId);
+  } catch(e) {
+    showToast('Erreur réseau', 'error');
   }
 }
 
@@ -2042,6 +2193,7 @@ async function resolveErrorLog(id, resolved) {
 }
 
 function closeDrawer() {
+  currentDrawerClientId = null;
   document.getElementById('drawerOverlay').classList.remove('open');
   document.getElementById('clientDrawer').classList.remove('open');
 }

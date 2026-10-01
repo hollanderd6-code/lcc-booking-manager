@@ -11851,7 +11851,7 @@ app.delete('/api/billing/sms/unsubscribe', authenticateAny, async (req, res) => 
 
     // Désactiver en DB
     await pool.query(
-      `UPDATE subscriptions SET sms_enabled = FALSE, sms_stripe_subscription_id = NULL WHERE user_id = $1`,
+      `UPDATE subscriptions SET sms_enabled = sms_admin_granted, sms_stripe_subscription_id = NULL WHERE user_id = $1`,
       [user.id]
     );
 
