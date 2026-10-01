@@ -321,6 +321,7 @@ function computeNightPrice(date, ctx) {
     booked: ctx.bookedSet.has(fmt(date)),
     reason,
     breakdown: {
+      version: 1,
       base,
       season:  round3(fSeason),
       dow:     round3(fDow),

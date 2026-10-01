@@ -295,7 +295,7 @@ async function _applyDecision(pool, { historyRow, callerUserId, priceApplied }, 
            pushed_at  = EXCLUDED.pushed_at,
            updated_at = NOW()`,
         [userId, historyRow.property_id, date, priceApplied, 1,
-         'manual_accept', JSON.stringify({ manual_accept: true, priceApplied })]
+         'manual_accept', JSON.stringify({ version: 1, manual_accept: true, priceApplied })]
       );
     }
 

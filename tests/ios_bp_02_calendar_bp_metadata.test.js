@@ -569,21 +569,16 @@ test('[L-03] no req.user.id assumption in calendar property scoping', async () =
 
 // ── [M] Schedule endpoint agency gap (spec §13) ───────────────────────────────
 
-test('[M-01] SCHEDULE_ENDPOINT_AGENCY_GAP_CONFIRMED: schedule endpoint uses req.user.id directly', async () => {
-  // Find the /api/pricing/schedule/:propertyId endpoint
-  const schedIdx = srvSrc.indexOf("'/api/pricing/schedule/:propertyId'") >= 0
-    ? srvSrc.indexOf("'/api/pricing/schedule/:propertyId'")
-    : srvSrc.indexOf('`/api/pricing/schedule/:propertyId`');
-
-  // Fall back to pricing-calendars.js which is where it's actually defined
+test('[M-01] SCHEDULE_ENDPOINT_AGENCY_GAP_FIXED: schedule endpoint now uses resolvePricingOwner', async () => {
+  // IOS-BP-05B: gap was confirmed in IOS-BP-02 and is now fixed.
   const calSrc = fs.readFileSync(path.join(__dirname, '../routes/pricing-calendars.js'), 'utf8');
   const idx = calSrc.indexOf('/api/pricing/schedule/:propertyId');
   ok(idx >= 0, 'schedule endpoint exists in pricing-calendars.js');
 
-  // Confirm it queries pricing_schedule using req.user.id directly
-  const block = calSrc.slice(idx, idx + 500);
-  ok(block.includes('req.user.id'), 'schedule endpoint uses req.user.id — gap confirmed');
-  ok(!block.includes('resolvePricingOwner'), 'schedule endpoint does NOT use resolvePricingOwner — gap confirmed');
+  // Confirm agency-safe fix: resolvePricingOwner is now used
+  const block = calSrc.slice(idx, idx + 4000);
+  ok(block.includes('resolvePricingOwner'), 'schedule endpoint uses resolvePricingOwner — gap fixed');
+  ok(!block.match(/WHERE user_id = \$1.*req\.user\.id/s), 'schedule endpoint no longer uses req.user.id directly as SQL param');
 });
 
 // ── [N] No price omitted when null base ────────────────────────────────────────

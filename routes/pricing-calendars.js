@@ -332,21 +332,72 @@ function setupPricingCalendarRoutes(app, pool, authenticateAny) {
   });
 
   // Planning par nuit (lecture) — pour l'onglet Calendrier de l'UI
+  // Agency/delegation safe. Supports optional date range filter:
+  //   ?from=YYYY-MM-DD&to=YYYY-MM-DD   (ISO dates, inclusive)
+  // Falls back to legacy ?days=N (default 60, max 120) when absent.
   app.get('/api/pricing/schedule/:propertyId', authenticateAny, async (req, res) => {
     try {
-      const days = Math.min(120, Math.max(7, parseInt(req.query.days) || 60));
-      const rows = (await pool.query(
-        `SELECT TO_CHAR(date,'YYYY-MM-DD') AS date, price, min_stay, reason, breakdown, status
-           FROM pricing_schedule
-          WHERE user_id = $1 AND property_id = $2 AND date >= CURRENT_DATE
-          ORDER BY date LIMIT $3`,
-        [req.user.id, req.params.propertyId, days]
-      )).rows;
+      const propertyId = req.params.propertyId;
+
+      // Resolve canonical pricing owner — handles main account, sub-account, agency delegation
+      const ownerId = await resolvePricingOwner(pool, req, propertyId);
+      if (!ownerId) return res.status(403).json({ error: 'Accès refusé à ce logement' });
+
+      const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+      let rows;
+
+      if (req.query.from != null || req.query.to != null) {
+        const from = req.query.from;
+        const to   = req.query.to;
+        if (from != null && !DATE_RE.test(from))
+          return res.status(400).json({ error: 'Paramètre from invalide (format YYYY-MM-DD requis)' });
+        if (to != null && !DATE_RE.test(to))
+          return res.status(400).json({ error: 'Paramètre to invalide (format YYYY-MM-DD requis)' });
+        const resolvedFrom = from || new Date().toISOString().slice(0, 10);
+        const resolvedTo   = to || (() => {
+          const d = new Date(resolvedFrom + 'T00:00:00Z');
+          d.setUTCFullYear(d.getUTCFullYear() + 1);
+          return d.toISOString().slice(0, 10);
+        })();
+        if (resolvedTo < resolvedFrom)
+          return res.status(400).json({ error: 'Paramètre to doit être >= from' });
+        rows = (await pool.query(
+          `SELECT TO_CHAR(date,'YYYY-MM-DD') AS date, price, min_stay, reason, breakdown, status
+             FROM pricing_schedule
+            WHERE user_id = $1 AND property_id = $2
+              AND date >= $3::date AND date <= $4::date
+            ORDER BY date`,
+          [ownerId, propertyId, resolvedFrom, resolvedTo]
+        )).rows;
+      } else {
+        // Legacy: ?days=N
+        const days = Math.min(120, Math.max(7, parseInt(req.query.days) || 60));
+        rows = (await pool.query(
+          `SELECT TO_CHAR(date,'YYYY-MM-DD') AS date, price, min_stay, reason, breakdown, status
+             FROM pricing_schedule
+            WHERE user_id = $1 AND property_id = $2 AND date >= CURRENT_DATE
+            ORDER BY date LIMIT $3`,
+          [ownerId, propertyId, days]
+        )).rows;
+      }
+
       const cfg = (await pool.query(
         `SELECT mode, is_active FROM pricing_config WHERE user_id = $1 AND property_id = $2`,
-        [req.user.id, req.params.propertyId]
+        [ownerId, propertyId]
       )).rows[0] || {};
-      res.json({ nights: rows, mode: cfg.mode || 'manual', isActive: cfg.is_active !== false, configured: !!cfg.mode });
+
+      const nights = rows.map(r => ({
+        ...r,                              // date, price, min_stay, reason, status, breakdown
+        minStay:        r.min_stay,        // camelCase alias for iOS
+        explainability: r.breakdown || null, // iOS explainability contract (= breakdown column)
+      }));
+
+      res.json({
+        nights,
+        mode:       cfg.mode || 'manual',
+        isActive:   cfg.is_active !== false,
+        configured: !!cfg.mode,
+      });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
