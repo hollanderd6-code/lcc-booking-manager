@@ -441,9 +441,9 @@ await test('S — STRIPE_PRICE_BOOSTPRICE_MONTHLY env var used (not hardcoded pr
   );
 });
 
-await test('T — Price per property is €4.90 (not hardcoded elsewhere)', async () => {
+await test('T — Price per property is €4.99 (not hardcoded elsewhere)', async () => {
   const src = fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8');
-  assert.ok(src.includes('4.90'), 'BOOSTPRICE_PRICE_PER_PROPERTY must be 4.90');
+  assert.ok(src.includes('4.99'), 'BOOSTPRICE_PRICE_PER_PROPERTY must be 4.99');
 });
 
 await test('U — Foreign property ID rejected in subscribe', async () => {

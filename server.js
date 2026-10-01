@@ -11980,14 +11980,14 @@ app.get('/api/billing/droits/status', authenticateAny, async (req, res) => {
 // ============================================================
 // 💰 ROUTES BOOSTPRICE ADD-ON BILLING
 // ============================================================
-// €4.90 / month / property (quantity billing via one Stripe subscription)
+// €4.99 / month / property (quantity billing via one Stripe subscription)
 //
 // GET  /api/billing/boostprice/status     → state + pricing page contract
 // POST /api/billing/boostprice/subscribe  → activate selected/all properties
 // DELETE /api/billing/boostprice/unsubscribe → deactivate selected/all
 // ============================================================
 
-const BOOSTPRICE_PRICE_PER_PROPERTY = 4.90;
+const BOOSTPRICE_PRICE_PER_PROPERTY = 4.99;
 
 // GET /api/billing/boostprice/status
 app.get('/api/billing/boostprice/status', authenticateAny, async (req, res) => {
