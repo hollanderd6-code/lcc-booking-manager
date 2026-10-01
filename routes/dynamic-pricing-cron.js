@@ -60,6 +60,8 @@ const ZONE_RADIUS_KM  = 1.5;   // rayon de recherche autour du logement
 const MOCK_MODE       = !process.env.APIFY_TOKEN; // mode mock si pas de token
 // MARKET_REQUEST_CURRENCY supprimé en B4-C — chaque propriété utilise sa propre devise
 
+const DP_DAILY_JOB_ADVISORY_LOCK_KEY = 7684392; // unique pg advisory lock for BoostPrice daily cron job
+
 // Normalise une valeur en code devise ISO 4217 à 3 lettres majuscules, ou null.
 function normalizeMarketCurrency(value) {
   if (value == null) return null;
@@ -207,6 +209,13 @@ function getCurrentWeekStart() {
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d.toISOString().slice(0, 10);
+}
+
+// ── Today's date in Europe/Paris timezone (YYYY-MM-DD) ───────
+function getCurrentParisDayISO(now = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(now);
 }
 
 // ── Données mockées réalistes (utilisées si APIFY_TOKEN absent) ──
@@ -497,7 +506,30 @@ async function _runShadowCollectionPhase(pool, configs) {
 // ── Job principal ────────────────────────────────────────────
 async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts = {}) {
   const weekStart = getCurrentWeekStart();
+  const todayParis = getCurrentParisDayISO();
   console.log(`\n🚀 [DP-CRON] === Démarrage job pricing dynamique — semaine du ${weekStart} ===`);
+
+  // Advisory lock: prevents concurrent invocations within the same DB session
+  const _lockRes = await pool.query('SELECT pg_try_advisory_lock($1) AS acquired', [DP_DAILY_JOB_ADVISORY_LOCK_KEY]);
+  if (!_lockRes.rows[0].acquired) {
+    console.log('[DP-CRON] BOOSTPRICE_DAILY_JOB_ALREADY_RUNNING — advisory lock held, skip');
+    return;
+  }
+
+  try {
+    // Persisted daily deduplication: one full collection per Europe/Paris calendar day (survives restart)
+    const _dedupe = await pool.query(
+      `INSERT INTO dp_daily_collection_run (run_date, job_status) VALUES ($1::date, 'running')
+       ON CONFLICT (run_date) DO UPDATE
+         SET started_at = NOW(), job_status = 'running'
+         WHERE dp_daily_collection_run.job_status != 'completed'
+       RETURNING run_date`,
+      [todayParis]
+    );
+    if (_dedupe.rowCount === 0) {
+      console.log(`[DP-CRON] Daily job already completed for ${todayParis} (Europe/Paris) — skip`);
+      return;
+    }
 
   // 1. Toutes les configs actives
   let configs;
@@ -573,6 +605,8 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts 
   // S3/S10: Pre-collect grouped evidence before property loop (one call per fingerprint)
   let sharedEvidence    = null; // Map<fingerprint, scrapeResult | { error }>
   let propToFingerprint = null; // Map<property_id, fingerprint>
+  const maxProviderCalls = parseInt(process.env.MARKET_MAX_DAILY_PROVIDER_CALLS || '10', 10);
+  let providerCallsThisRun = 0;
 
   if (sharedEnabled) {
     const sharedDates = marketProvider.getBrightDataMarketDates();
@@ -587,6 +621,7 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts 
     });
     sharedEvidence    = preResult.sharedEvidence;
     propToFingerprint = preResult.propToFingerprint;
+    providerCallsThisRun += (preResult.callCount || 0);
     console.log(`[MARKET_SHARED_COLLECTION] pre-collection done groups=${preResult.groupCount} calls=${preResult.callCount}`);
   }
 
@@ -683,6 +718,32 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts 
         const providerForCache = marketProvider.resolveProviderForProperty(cfg.property_id);
         const cacheKey = zones.join('|') + ':' + capturedPropertyCurrency + ':' + providerForCache;
         if (!zoneCache[cacheKey]) {
+          if (providerCallsThisRun >= maxProviderCalls) {
+            console.warn(`[MARKET_BUDGET_EXHAUSTED] prop=${cfg.property_id} provider=${providerForCache} budget=${maxProviderCalls} — skip provider call, recalculate from existing DB data`);
+            const _budgetResolution = await resolveMarketData(pool, {
+              propertyId: cfg.property_id, propertyContextKey: marketContextKey, propertyCurrency: cfg.currency,
+            });
+            const _budgetStats = (_budgetResolution.trusted && _budgetResolution.row) ? {
+              median: _budgetResolution.row.median_price,
+              occupancy: _budgetResolution.row.occupancy_rate,
+              tensionLevel: _budgetResolution.row.tension_level,
+            } : null;
+            const _budgetApply = await applyDynamicPricingForProperty(pool, {
+              cfg, marketStats: _budgetStats, isMock: false,
+              marketOverride: _budgetResolution.market ?? null,
+              sendPushNotification: opts.suppressNotifications ? null : sendPushNotification,
+              suppressExternalPush: opts.suppressExternalPush === true,
+            });
+            results.push({
+              userId: cfg.user_id, userEmail: cfg.user_email, firstName: cfg.user_first_name,
+              propertyId: cfg.property_id, propertyName: cfg.property_name,
+              status: _budgetApply.status, priceBefore: _budgetApply.priceBefore,
+              priceApplied: _budgetApply.priceApplied, priceCalculated: _budgetApply.priceCalculated,
+              tensionLevel: _budgetStats?.tensionLevel ?? null, nights: _budgetApply.nights, isMock: false,
+            });
+            continue;
+          }
+          providerCallsThisRun++;
           // S15: telemetry on cache miss (actual provider call) — not emitted on cache hit (reuse)
           const _legacyRunId = `legacy_${cfg.property_id}`;
           console.log(`[MARKET_PROVIDER_CALL_ATTEMPT] provider=${providerForCache} collection_run_id=${_legacyRunId} shared_group_size=1 reason=legacy_zone_cache`);
@@ -705,6 +766,33 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts 
       }
 
       const zoneLabel = zoneUsed;
+
+      // B15: Never persist mock as fresh market authority — reuse last valid live data
+      if (isMock) {
+        console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: provider returned mock — skip market write, reuse last live data`);
+        const _mockResolution = await resolveMarketData(pool, {
+          propertyId: cfg.property_id, propertyContextKey: marketContextKey, propertyCurrency: cfg.currency,
+        });
+        const _prevMarketStats = (_mockResolution.trusted && _mockResolution.row) ? {
+          median: _mockResolution.row.median_price,
+          occupancy: _mockResolution.row.occupancy_rate,
+          tensionLevel: _mockResolution.row.tension_level,
+        } : null;
+        const _mockApply = await applyDynamicPricingForProperty(pool, {
+          cfg, marketStats: _prevMarketStats, isMock: false,
+          marketOverride: _mockResolution.market ?? null,
+          sendPushNotification: opts.suppressNotifications ? null : sendPushNotification,
+          suppressExternalPush: opts.suppressExternalPush === true,
+        });
+        results.push({
+          userId: cfg.user_id, userEmail: cfg.user_email, firstName: cfg.user_first_name,
+          propertyId: cfg.property_id, propertyName: cfg.property_name,
+          status: _mockApply.status, priceBefore: _mockApply.priceBefore,
+          priceApplied: _mockApply.priceApplied, priceCalculated: _mockApply.priceCalculated,
+          tensionLevel: _prevMarketStats?.tensionLevel ?? null, nights: _mockApply.nights, isMock: false,
+        });
+        continue;
+      }
 
       const marketStats = calcProviderMarketStats(listings, cfg, dataSource);
       if (!marketStats) {
@@ -894,7 +982,15 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts 
   if (mocks > 0) console.log(`   ⚠️  ${mocks} logement(s) en mode MOCK (données simulées)`);
   console.log(`   Semaine : ${weekStart}\n`);
 
+  await pool.query(
+    `UPDATE dp_daily_collection_run SET completed_at = NOW(), job_status = 'completed' WHERE run_date = $1::date`,
+    [todayParis]
+  );
+
   return results;
+  } finally {
+    await pool.query('SELECT pg_advisory_unlock($1)', [DP_DAILY_JOB_ADVISORY_LOCK_KEY]).catch(() => {});
+  }
 }
 
 // ── Refresh QUOTIDIEN : recalcul + push SANS scrape (réutilise le dernier market_data) ──
@@ -978,21 +1074,21 @@ async function runDailyPricingRefresh(pool, sendPushNotification = null) {
 function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
   const cron = require('node-cron');
 
-  // Cron principal : chaque lundi à 6h00
-  cron.schedule('0 6 * * 1', async () => {
-    console.log('\n⏰ [DP-CRON] Déclenchement automatique (lundi 6h00)');
-    await runDynamicPricingJob(pool, sendEmail, sendPushNotification);
-  }, {
-    timezone: 'Europe/Paris',
-  });
+  // Daily collection run table — must exist before 06:00 fires (fire-and-forget at startup)
+  pool.query(`
+    CREATE TABLE IF NOT EXISTS dp_daily_collection_run (
+      run_date     DATE        PRIMARY KEY,
+      started_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      completed_at TIMESTAMPTZ,
+      job_status   TEXT        NOT NULL DEFAULT 'running'
+    )
+  `).catch(err => console.error('[DP-CRON] dp_daily_collection_run table init error:', err.message));
 
-  // Refresh quotidien (mardi → dimanche, 6h00) : recalcul + push, sans scrape, silencieux
-  cron.schedule('0 6 * * 2,3,4,5,6,0', async () => {
-    console.log('\n⏰ [DP-CRON] Refresh quotidien (6h00)');
-    await runDailyPricingRefresh(pool);
-  }, {
-    timezone: 'Europe/Paris',
-  });
+  // Daily 06:00 Europe/Paris — full market cycle (scrape + recalculation + publication) every day
+  cron.schedule('0 6 * * *', async () => {
+    console.log('\n⏰ [DP-CRON] Déclenchement automatique quotidien (6h00)');
+    await runDynamicPricingJob(pool, sendEmail, sendPushNotification);
+  }, { timezone: 'Europe/Paris' });
 
   // P1.3-T2-FIX: Pickup shadow — daily 06:05 Europe/Paris, independent of market provider.
   // Reads reservation DB only (no APIFY/BrightData calls). Runs every day including Monday.
@@ -1048,7 +1144,7 @@ function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
     console.log('✅ [DP-CRON] Mode LIVE actif — Apify activé');
   }
 
-  console.log('✅ [DP-CRON] Crons initialisés — Hebdo lundi 6h (scrape+recalcul) + Quotidien mar→dim 6h (recalcul+push) — Europe/Paris');
+  console.log('✅ [DP-CRON] Crons initialisés — Quotidien 6h00 (scrape+recalcul+push, cycle complet) — Europe/Paris');
 }
 
 // ============================================================
@@ -1079,14 +1175,19 @@ async function runDynamicPricingForOneProperty(pool, { userId, propertyId, sendP
     return { ok: false, error: 'no_boostprice_entitlement', propertyId };
   }
 
-  // Évite de re-scraper si l'analyse de la semaine existe déjà (sauf force)
+  // Évite de re-scraper si des données live existent déjà aujourd'hui (sauf force)
   if (!force) {
+    const todayParis = getCurrentParisDayISO();
     const existing = await pool.query(
-      `SELECT 1 FROM market_data WHERE property_id = $1 AND week_start = $2 LIMIT 1`,
-      [propertyId, weekStart]
+      `SELECT 1 FROM market_data
+       WHERE property_id = $1
+         AND data_source != 'mock'
+         AND scraped_at >= ($2::date AT TIME ZONE 'Europe/Paris')
+       LIMIT 1`,
+      [propertyId, todayParis]
     );
     if (existing.rows.length > 0) {
-      return { ok: true, skipped: true, reason: 'Analyse marché déjà présente cette semaine' };
+      return { ok: true, skipped: true, reason: "Données marché live déjà présentes aujourd'hui" };
     }
   }
 
@@ -1314,4 +1415,4 @@ async function writeScrapeResult(pool, {
   }
 }
 
-module.exports = { initDynamicPricingCron, runDynamicPricingJob, runDailyPricingRefresh, runDynamicPricingForOneProperty, writeScrapeResult, scrapeBestZone, getFallbackZones, getCurrentWeekStart, calcMarketStats, validateBDStats, calcProviderMarketStats };
+module.exports = { initDynamicPricingCron, runDynamicPricingJob, runDailyPricingRefresh, runDynamicPricingForOneProperty, writeScrapeResult, scrapeBestZone, getFallbackZones, getCurrentWeekStart, getCurrentParisDayISO, calcMarketStats, validateBDStats, calcProviderMarketStats };

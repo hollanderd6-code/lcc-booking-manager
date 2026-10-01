@@ -211,7 +211,10 @@ async function scrapeWithBrightData(location, maxListings, requestedCurrency, op
     if (progress?.status === 'failed') throw new Error('BrightData snapshot terminé en erreur');
   }
 
-  if (!ready) throw new Error('BrightData timeout: snapshot non prêt dans les délais');
+  if (!ready) {
+    console.error(`[BD_TIMEOUT] snapshot_id=${snapshotId} — snapshot may still be active server-side (orphaned snapshot risk)`);
+    throw new Error(`BrightData timeout: snapshot non prêt dans les délais (snapshot_id=${snapshotId})`);
+  }
 
   // ── 3. Download snapshot ──────────────────────────────────────────────────
   const snapshotRes = await _fetch(

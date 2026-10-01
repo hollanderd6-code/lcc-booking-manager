@@ -177,18 +177,27 @@ async function scrape(location, maxListings, requestedCurrency, opts = {}) {
         { checkIn, checkOut, fetchImpl: bdFetchImpl, apiKey: bdApiKey, maxWaitMs, pollIntervalMs }
       );
       if (bdResult.listings.length > 0) {
-        // Bright Data succeeded with usable listings — do NOT call Apify.
+        console.log(`[MARKET_PROVIDER_FALLBACK_PATH] event=BRIGHTDATA_SUCCESS location="${location}" listings=${bdResult.listings.length}`);
         return bdResult;
       }
       console.warn(`⚠️ [market-provider] Bright Data: 0 listings utilisables pour "${location}" — fallback Apify`);
+      console.log(`[MARKET_PROVIDER_FALLBACK_PATH] event=BRIGHTDATA_FAILED_FALLBACK_APIFY location="${location}" reason=zero_listings`);
     } catch (err) {
       console.error(`❌ [market-provider] Bright Data erreur pour "${location}": ${err.message} — fallback Apify`);
+      console.log(`[MARKET_PROVIDER_FALLBACK_PATH] event=BRIGHTDATA_FAILED_FALLBACK_APIFY location="${location}" reason=${JSON.stringify(err.message)}`);
     }
-    // Fall through to Apify
+    // Apify fallback after Bright Data
+    const apifyAfterBd = await apifyProvider.scrapeZoneApify(location, maxListings, requestedCurrency, medianFallback, fetchFn);
+    const afterBdEvent = apifyAfterBd.isMock ? 'ALL_PROVIDERS_FAILED_MOCK' : 'APIFY_SUCCESS_AFTER_BRIGHTDATA';
+    console.log(`[MARKET_PROVIDER_FALLBACK_PATH] event=${afterBdEvent} location="${location}" listings=${apifyAfterBd.listings.length}`);
+    return apifyAfterBd;
   }
 
-  // Apify (default path or fallback from Bright Data)
-  return apifyProvider.scrapeZoneApify(location, maxListings, requestedCurrency, medianFallback, fetchFn);
+  // Apify direct path
+  const apifyDirect = await apifyProvider.scrapeZoneApify(location, maxListings, requestedCurrency, medianFallback, fetchFn);
+  const directEvent = apifyDirect.isMock ? 'DIRECT_APIFY_FAILED_MOCK' : 'DIRECT_APIFY_SUCCESS';
+  console.log(`[MARKET_PROVIDER_FALLBACK_PATH] event=${directEvent} location="${location}" listings=${apifyDirect.listings.length}`);
+  return apifyDirect;
 }
 
 module.exports = { scrape, getBrightDataMarketDates, resolveProvider, resolveProviderForProperty };
