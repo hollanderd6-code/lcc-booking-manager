@@ -1,0 +1,150 @@
+/* ============================================================================
+   BH-SHELL-07 — Native iOS shell translation for desktop
+   ============================================================================
+   Fixes the visual fragmentation caused by:
+     1. Full-width black utility bar (.bh-demo-nav) on desktop
+     2. Legacy "Instrument Serif / Tableau de bord" page title
+     3. Fixed header anchored at left:248px top:40px (wrong dimensions)
+     4. Body padding-top:40px bleeding into content layout
+     5. Green border on active nav pill (should be white specular glass)
+
+   Scoped to ≥1025px — mobile/tablet is unaffected.
+   Loaded via JS injection (bh-layout.js injectNavRailCSS) AND
+   as a direct <link> in app.html for zero FOUC on the main page.
+   ============================================================================ */
+
+@media (min-width: 1025px) {
+
+  /* ── 1. Hide legacy black bar ─────────────────────────────────────── */
+
+  html[data-theme-v3="1"] .bh-demo-nav {
+    display: none !important;
+  }
+
+  /* ── 2. Rail: full height — no gap above it ───────────────────────── */
+
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail {
+    top: 0 !important;
+    height: 100vh !important;
+  }
+
+  /* ── 3. Page header: glass, sticky, native typography ─────────────── */
+
+  html[data-theme-v3="1"] header.main-header,
+  html[data-theme-v3="1"] #bhMainHeader {
+    position: sticky !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    width: auto !important;
+    /* Warm glass matching native iOS GlassNavBar */
+    background: rgba(245, 242, 234, 0.88) !important;
+    backdrop-filter: blur(20px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.60) !important;
+    box-shadow: 0 1px 0 rgba(20, 32, 27, 0.06) !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-radius: 0 !important;
+    padding: 14px 24px !important;
+    margin: 0 !important;
+    z-index: 89 !important;
+  }
+
+  /* Sticky header: content doesn't need padding-top offset */
+  html[data-theme-v3="1"] .page-content {
+    padding-top: 0 !important;
+  }
+
+  /* ── 4. Page title: DM Sans bold, native hierarchy ────────────────── */
+
+  html[data-theme-v3="1"] header.main-header h1.page-title,
+  html[data-theme-v3="1"] #bhMainHeader h1.page-title,
+  html[data-theme-v3="1"] .main-header h1.page-title {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 30px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.032em !important;
+    color: #14201B !important;
+    line-height: 1.1 !important;
+    margin: 0 !important;
+  }
+
+  /* ── 5. Kicker: native supertitle (date / context) ────────────────── */
+
+  html[data-theme-v3="1"] header.main-header .page-kicker,
+  html[data-theme-v3="1"] #bhMainHeader .page-kicker {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    color: #5E6B63 !important;
+    margin-bottom: 2px !important;
+  }
+
+  /* ── 6. Header action buttons: GlassCircleButton translation ──────── */
+
+  html[data-theme-v3="1"] header.main-header .btn-icon,
+  html[data-theme-v3="1"] #bhMainHeader .btn-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.62) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.70) !important;
+    box-shadow: 0 2px 8px rgba(20, 32, 27, 0.08) !important;
+    color: #14201B !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    transition: background 0.18s ease, transform 0.15s ease !important;
+  }
+
+  html[data-theme-v3="1"] header.main-header .btn-icon:hover,
+  html[data-theme-v3="1"] #bhMainHeader .btn-icon:hover {
+    background: rgba(255, 255, 255, 0.82) !important;
+  }
+
+  html[data-theme-v3="1"] header.main-header .btn-icon:active,
+  html[data-theme-v3="1"] #bhMainHeader .btn-icon:active {
+    transform: scale(0.92) !important;
+  }
+
+  /* ── 7. "Nouvelle réservation" button: native primary style ────────── */
+
+  html[data-theme-v3="1"] header.main-header #newReservationBtn,
+  html[data-theme-v3="1"] #bhMainHeader #newReservationBtn {
+    height: 38px !important;
+    border-radius: 12px !important;
+    padding: 0 16px !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    background: #0E3B2E !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(14, 59, 46, 0.20) !important;
+    transition: background 0.18s ease, transform 0.15s ease !important;
+  }
+
+  html[data-theme-v3="1"] header.main-header #newReservationBtn:hover,
+  html[data-theme-v3="1"] #bhMainHeader #newReservationBtn:hover {
+    background: #0A2C22 !important;
+  }
+
+  html[data-theme-v3="1"] header.main-header #newReservationBtn:active,
+  html[data-theme-v3="1"] #bhMainHeader #newReservationBtn:active {
+    transform: scale(0.97) !important;
+  }
+
+  /* ── 8. Subscription alert: anchors to top:0 (no black bar) ───────── */
+
+  html[data-theme-v3="1"] #subscriptionAlert {
+    top: 0 !important;
+  }
+}

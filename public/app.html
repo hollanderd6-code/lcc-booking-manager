@@ -684,6 +684,7 @@ setTimeout(function() {
   <link rel="stylesheet" href="/css/bh-lux.css?v=d686b5ab">
   <link rel="stylesheet" href="/css/bh-lux-app.css?v=9af52e1b">
   <link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
+  <link rel="stylesheet" href="/css/bh-shell-07.css">
   <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
 
   <!-- CSS propre a cette page. -->
@@ -3658,7 +3659,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 </style>
 </head>
 <body data-page="app">
-<div id="subscriptionAlert" style="display: none; position: sticky; top: 40px; z-index: 9998; width: 100%;">
+<div id="subscriptionAlert" style="display: none; position: sticky; top: 0; z-index: 9998; width: 100%;">
 <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 12px 24px; text-align: center; font-size: 14px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
 <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
 <span id="alertMessage"></span>
@@ -3721,8 +3722,8 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 <!-- Header -->
 <header class="main-header" id="bhMainHeader">
 <div class="header-left">
-<div class="page-kicker">Vue d’ensemble</div>
-<h1 class="page-title">Dashboard</h1>
+<div class="page-kicker" id="appPageKicker"></div>
+<h1 class="page-title">Aujourd’hui</h1>
 <p class="page-subtitle">
             Suivez en temps réel vos réservations, séjours en cours et disponibilité de vos logements.
           </p>
@@ -11656,34 +11657,35 @@ html[data-theme-v3="1"] main.main-content {
 }
 
 /* ══════════════════════════════════════
-   HEADER FIXE — reste visible en scroll
-   top: 40px  = juste sous la barre dark
-   left: 248px = juste à droite de la sidebar
+   HEADER STICKY — glass native (BH-SHELL-07)
+   top: 0 — flush with viewport, no black bar offset
+   left: auto — sticky flows with content column
 ══════════════════════════════════════ */
-@media (min-width: 1024px) {
+@media (min-width: 1025px) {
   html[data-theme-v3="1"] header.main-header,
   html[data-theme-v3="1"] #bhMainHeader {
-    position: fixed !important;
-    top: 40px !important;
-    left: 248px !important;
-    right: 0 !important;
+    position: sticky !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
     z-index: 89 !important;
     margin: 0 !important;
-    padding-top: 0 !important;
+    padding: 14px 24px !important;
     border-radius: 0 !important;
-    /* Annuler le style "carte" de bh-shared.css */
-    background: var(--cream, #FAF8F5) !important;
+    background: rgba(245, 242, 234, 0.88) !important;
+    backdrop-filter: blur(20px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
     border-top: none !important;
     border-left: none !important;
     border-right: none !important;
-    border-bottom: 1px solid rgba(32,34,31,.09) !important;
-    box-shadow: 0 1px 0 rgba(32,34,31,.04) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.60) !important;
+    box-shadow: 0 1px 0 rgba(20, 32, 27, 0.06) !important;
     margin-bottom: 0 !important;
   }
 
-  /* Compenser la hauteur du header fixe */
+  /* Sticky header: no padding-top offset needed */
   html[data-theme-v3="1"] .page-content {
-    padding-top: 130px !important;
+    padding-top: 0 !important;
   }
 }
 
@@ -11692,10 +11694,10 @@ html[data-theme-v3="1"] main.main-content {
 ══════════════════════════════════════ */
 html[data-theme-v3="1"] .sidebar {
   position: fixed !important;
-  top: 40px !important;
+  top: 0 !important;
   left: 0 !important;
   bottom: 0 !important;
-  height: calc(100vh - 40px) !important;
+  height: 100vh !important;
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;
@@ -13119,15 +13121,25 @@ if (document.readyState === 'loading') {
       if (subtitle) subtitle.style.display = 'none';
     }
 
-    /* Sidebar top:40px — desktop seulement */
+    /* Sidebar — ne pas écraser le rail BH-SHELL-07 */
     var sidebar = document.querySelector('aside.sidebar');
-    if (sidebar && !isMobile) {
+    if (sidebar && !isMobile && !sidebar.classList.contains('bh-nav-rail')) {
       sidebar.style.cssText += ';position:fixed !important;top:40px !important;bottom:0 !important;height:auto !important;';
     }
 
-    /* Titre page en Instrument Serif */
+    /* Kicker : date courante sur la page Aujourd'hui */
+    if (curPage === 'app') {
+      var kickerEl = document.getElementById('appPageKicker') || document.querySelector('.page-kicker');
+      if (kickerEl) {
+        var _now = new Date();
+        var _jours = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+        var _mois = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+        kickerEl.textContent = (_jours[_now.getDay()] + ' ' + _now.getDate() + ' ' + _mois[_now.getMonth()]).toUpperCase();
+      }
+    }
+
+    /* Titre page en Instrument Serif — app page uses DM Sans, skipped here */
     var titles = {
-      app:      "Tableau de <em style='font-style:italic;color:#0E3B2E;font-family:&quot;Instrument Serif&quot;,serif;'>bord</em>",
       messages: "Mes <em style='font-style:italic;color:#0E3B2E;font-family:&quot;Instrument Serif&quot;,serif;'>messages</em>",
       settings: "Mes <em style='font-style:italic;color:#0E3B2E;font-family:&quot;Instrument Serif&quot;,serif;'>logements</em>",
       deposits: "Gestion des <em style='font-style:italic;color:#0E3B2E;font-family:&quot;Instrument Serif&quot;,serif;'>cautions</em>",

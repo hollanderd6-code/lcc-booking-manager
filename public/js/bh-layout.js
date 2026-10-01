@@ -192,7 +192,6 @@ function getSidebarHTML() {
           <div style="font-size:11px;color:var(--bh-t2,#5A5A54);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Collaborateur</div>
         ` : `
           <div class="bh-mot" style="font-size:14px;font-weight:600;color:var(--bh-encre,#20221F);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Boostinghost</div>
-          <div class="bh-baseline" style="font-size:10px;color:var(--bh-t2,#5A5A54);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Smart Property Manager</div>
         `}
       </div>
     </a>
@@ -1830,12 +1829,20 @@ var _bhNativeConfirm = window.confirm;
     document.head.appendChild(s);
   }
   function injectNavRailCSS() {
-    if (document.getElementById('bh-nav-rail-css')) return;
-    var link = document.createElement('link');
-    link.id = 'bh-nav-rail-css';
-    link.rel = 'stylesheet';
-    link.href = '/css/bh-nav-rail.css';
-    document.head.appendChild(link);
+    if (!document.getElementById('bh-nav-rail-css')) {
+      var link = document.createElement('link');
+      link.id = 'bh-nav-rail-css';
+      link.rel = 'stylesheet';
+      link.href = '/css/bh-nav-rail.css';
+      document.head.appendChild(link);
+    }
+    if (!document.getElementById('bh-shell-07-css')) {
+      var link2 = document.createElement('link');
+      link2.id = 'bh-shell-07-css';
+      link2.rel = 'stylesheet';
+      link2.href = '/css/bh-shell-07.css';
+      document.head.appendChild(link2);
+    }
   }
 
   function injectCSS() {

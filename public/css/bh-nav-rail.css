@@ -89,12 +89,12 @@
   }
 
   html[data-theme-v3="1"] .sidebar.bh-nav-rail .nav-item.active {
-    background: rgba(14, 59, 46, 0.10);
+    background: rgba(255, 255, 255, 0.55);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    border-color: rgba(14, 59, 46, 0.18);
-    box-shadow: 0 2px 8px rgba(14, 59, 46, 0.10),
-                inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    border-color: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 2px 8px rgba(20, 32, 27, 0.06),
+                inset 0 1px 0 rgba(255, 255, 255, 0.85);
     color: var(--bh-vert);
     font-weight: 600;
   }
