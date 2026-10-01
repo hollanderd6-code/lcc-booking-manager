@@ -114,7 +114,7 @@ function configToOverride(cfg) {
 // ============================================================
 // applyDynamicPricingForProperty
 // ============================================================
-async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, marketOverride, sendPushNotification }) {
+async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, marketOverride, sendPushNotification, suppressExternalPush = false }) {
   await ensureScheduleTable(pool);
   const weekStart = getCurrentWeekStart();
 
@@ -158,7 +158,7 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
   if (mode === 'auto' && canPush && isMock) {
     console.warn(`⚠️ [DP-APPLY] ${prop.name}: auto push bloqué — données marché non live (data_source non 'apify_live')`);
   }
-  const willPush = mode === 'auto' && canPush && !isMock;
+  const willPush = (suppressExternalPush !== true) && mode === 'auto' && canPush && !isMock;
   const status = willPush ? 'applied' : 'pending';
 
   // 4. Stockage du planning par nuit (+ breakdown)
@@ -302,6 +302,7 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
     nights: nights.length,
     pushed: pubResult.rates.pushed,
     publishStatus: pubResult.status,
+    ...(suppressExternalPush ? { externalPushSuppressed: true } : {}),
   };
 }
 

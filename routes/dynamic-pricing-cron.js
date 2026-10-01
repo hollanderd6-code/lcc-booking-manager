@@ -494,7 +494,7 @@ async function _runShadowCollectionPhase(pool, configs) {
 }
 
 // ── Job principal ────────────────────────────────────────────
-async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
+async function runDynamicPricingJob(pool, sendEmail, sendPushNotification, opts = {}) {
   const weekStart = getCurrentWeekStart();
   console.log(`\n🚀 [DP-CRON] === Démarrage job pricing dynamique — semaine du ${weekStart} ===`);
 
@@ -519,6 +519,16 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
   } catch (err) {
     console.error('❌ [DP-CRON] Impossible de charger les configs:', err.message);
     return;
+  }
+
+  const requestedPropertyIds = Array.isArray(opts.propertyIds)
+    ? opts.propertyIds.map(String)
+    : [];
+  if (requestedPropertyIds.length > 0) {
+    const before  = configs.length;
+    const allowed = new Set(requestedPropertyIds);
+    configs = configs.filter(cfg => allowed.has(String(cfg.property_id)));
+    console.log(`[DP-CRON] propertyIds filter: ${requestedPropertyIds.length} requested, ${configs.length}/${before} retained`);
   }
 
   if (configs.length === 0) {
@@ -589,7 +599,9 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
       if (!capturedPropertyCurrency) {
         console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: devise inconnue — scrape marché ignoré, BoostPrice sans signal marché`);
         const apply = await applyDynamicPricingForProperty(pool, {
-          cfg, marketStats: null, isMock: false, marketOverride: null, sendPushNotification,
+          cfg, marketStats: null, isMock: false, marketOverride: null,
+          sendPushNotification: opts.suppressNotifications ? null : sendPushNotification,
+          suppressExternalPush: opts.suppressExternalPush === true,
         });
         results.push({
           userId:          cfg.user_id,
@@ -619,7 +631,9 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
           // S11: profile incomplete (Ti Junot) — excluded from shared collection
           console.log(`[MARKET_PROVIDER_CALL_SKIP] prop=${pid} reason=profile_incomplete shared=true`);
           const apply = await applyDynamicPricingForProperty(pool, {
-            cfg, marketStats: null, isMock: false, marketOverride: null, sendPushNotification,
+            cfg, marketStats: null, isMock: false, marketOverride: null,
+            sendPushNotification: opts.suppressNotifications ? null : sendPushNotification,
+            suppressExternalPush: opts.suppressExternalPush === true,
           });
           results.push({
             userId: cfg.user_id, userEmail: cfg.user_email, firstName: cfg.user_first_name,
@@ -634,7 +648,9 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
           // S12: provider failure — no per-property fallback call
           console.log(`[MARKET_PROVIDER_CALL_SKIP] prop=${pid} reason=${ev?.error ?? 'no_shared_evidence'} shared=true`);
           const apply = await applyDynamicPricingForProperty(pool, {
-            cfg, marketStats: null, isMock: false, marketOverride: null, sendPushNotification,
+            cfg, marketStats: null, isMock: false, marketOverride: null,
+            sendPushNotification: opts.suppressNotifications ? null : sendPushNotification,
+            suppressExternalPush: opts.suppressExternalPush === true,
           });
           results.push({
             userId: cfg.user_id, userEmail: cfg.user_email, firstName: cfg.user_first_name,
@@ -707,7 +723,9 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
         if (writeResult.reason === 'currency_stale') {
           console.log(`ℹ️ [DP-CRON] ${cfg.property_name}: devise changée pendant scrape — snapshot ignoré (captured:${writeResult.capturedCurrency} current:${writeResult.currentCurrency}), BoostPrice sans signal marché`);
           const apply = await applyDynamicPricingForProperty(pool, {
-            cfg, marketStats: null, isMock: false, marketOverride: null, sendPushNotification,
+            cfg, marketStats: null, isMock: false, marketOverride: null,
+            sendPushNotification: opts.suppressNotifications ? null : sendPushNotification,
+            suppressExternalPush: opts.suppressExternalPush === true,
           });
           results.push({
             userId:          cfg.user_id,
@@ -762,7 +780,9 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
 
       // 5-8. Moteur per-night : calcul, stockage planning, push Channex, notif
       const apply = await applyDynamicPricingForProperty(pool, {
-        cfg, marketStats, isMock, marketOverride, sendPushNotification,
+        cfg, marketStats, isMock, marketOverride,
+        sendPushNotification: opts.suppressNotifications ? null : sendPushNotification,
+        suppressExternalPush: opts.suppressExternalPush === true,
       });
 
       results.push({
@@ -803,8 +823,13 @@ async function runDynamicPricingJob(pool, sendEmail, sendPushNotification) {
     }
   }
 
-  // 9. Email récap par user
-  const userIds = [...new Set(results.map(r => r.userId).filter(Boolean))];
+  // 9. Email récap par user (skipped when suppressNotifications=true)
+  if (opts.suppressNotifications) {
+    console.log('[DP-CRON] suppressNotifications=true — email récap ignoré');
+  }
+  const userIds = opts.suppressNotifications
+    ? []
+    : [...new Set(results.map(r => r.userId).filter(Boolean))];
   for (const userId of userIds) {
     const userResults = results.filter(r => r.userId === userId && r.status !== 'error');
     if (!userResults.length) continue;
