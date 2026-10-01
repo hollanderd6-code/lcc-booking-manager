@@ -106,28 +106,25 @@ const LOGO_MONO_SRC = '/img/brand/web/mono-rond.svg?v=5e754f20';
 const LOGO_MONO    = `<img src="${LOGO_MONO_SRC}" alt="Boostinghost" width="34" height="34" style="display:block;flex-shrink:0;">`;
 
 function getSidebarHTML() {
-  // ── Détecter le type de compte (nouveau système + ancien système) ──
+  // ── Détecter le type de compte ──
   const isSubAccountNew = localStorage.getItem('lcc_is_sub_account') === 'true';
   const isSubAccountOld = localStorage.getItem('lcc_account_type') === 'sub';
   const isSubAccount = isSubAccountNew || isSubAccountOld;
 
-  // ── Récupérer le rôle et les permissions ──
   let role = 'custom';
   let permissions = {};
 
   if (isSubAccount) {
     try {
-      // Nouveau système : lcc_sub_account
       const subData = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
       if (subData.role) role = subData.role;
       if (subData.permissions) permissions = subData.permissions;
     } catch(e) {}
     try {
-      // Ancien système : lcc_permissions
       const permData = localStorage.getItem('lcc_permissions');
       if (permData) {
         const old = JSON.parse(permData);
-        permissions = Object.assign(old, permissions); // nouveau système prioritaire
+        permissions = Object.assign(old, permissions);
       }
     } catch(e) {}
     try {
@@ -136,28 +133,19 @@ function getSidebarHTML() {
     } catch(e) {}
   }
 
-  // ── Règles d'accès par rôle ──────────────────────────────────────
-  // Ménage : calendrier + ménage seulement + 3 KPI
-  // Propriétaire : tout sauf Contrats, Pricing, Paramètres
-  // Manager/Assistant : tout sauf Revenus
-  // Comptable : Factures séjours + Clients + Revenus seulement
-  // custom : selon permissions DB
-
   const ROLE_PAGES = {
     cleaner: ['calendar', 'cleaning'],
     proprietaire: ['dashboard', 'calendar', 'messages', 'settings', 'welcome', 'cleaning', 'deposits', 'factures', 'clients', 'reporting'],
     manager: ['dashboard', 'calendar', 'messages', 'settings', 'welcome', 'contrat', 'cleaning', 'deposits', 'factures', 'clients'],
     comptable: ['factures', 'clients', 'reporting'],
-    custom: null // utilise les permissions DB
+    custom: null
   };
 
   const allowedPages = ROLE_PAGES[role] || null;
   const canSeePage = (page) => {
     if (!isSubAccount) return true;
-    // Le dashboard est toujours accessible (page d'accueil)
     if (page === 'dashboard') return true;
     if (allowedPages) return allowedPages.includes(page);
-    // fallback permissions DB
     const permMap = {
       dashboard: 'can_view_reservations',
       calendar: 'can_view_reservations',
@@ -177,137 +165,69 @@ function getSidebarHTML() {
     return perm ? permissions[perm] === true : false;
   };
 
-  const hasPermission = (perm) => {
-    if (!isSubAccount) return true;
-    return permissions[perm] === true;
+  // Gestion tab is visible if user can access any sub-section
+  const canSeeManage = !isSubAccount ||
+    canSeePage('cleaning') || canSeePage('settings') || canSeePage('factures') ||
+    canSeePage('clients') || canSeePage('deposits') || canSeePage('welcome') ||
+    canSeePage('contrat') || canSeePage('reporting');
+
+  // SVG icons (Lucide-compatible, matching native iOS tab icons)
+  const IC = {
+    today:    '<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+    calendar: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+    messages: '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+    manage:   '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>',
+    logout:   '<svg width="14" height="14" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
   };
 
   return `
-<aside class="sidebar">
-  <div class="sidebar-header">
-    <a class="sidebar-logo" href="/app.html" style="display:flex;align-items:center;gap:11px;padding:22px 18px 18px;text-decoration:none;">
+<aside class="sidebar bh-nav-rail">
+  <div class="bh-rail__logo">
+    <a class="sidebar-logo" href="/app.html" style="display:flex;align-items:center;gap:10px;padding:18px 14px 14px;text-decoration:none;">
       <img src="/img/brand/web/mono-sidebar.svg?v=43278ecb" alt="Boostinghost"
-           style="width:38px;height:38px;min-width:38px;border-radius:9px;flex-shrink:0;object-fit:contain;">
-      <div style="display:flex;flex-direction:column;justify-content:center;min-width:0;">
+           style="width:34px;height:34px;min-width:34px;border-radius:9px;flex-shrink:0;object-fit:contain;">
+      <div style="min-width:0;">
         ${isSubAccount ? `
-          <span class="bh-mot" style="font-size:15px;line-height:1.15;color:#20221F;font-weight:600;">Espace</span>
-          <span class="bh-baseline">Collaborateur</span>
+          <div style="font-size:14px;font-weight:600;color:var(--bh-encre,#20221F);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Espace</div>
+          <div style="font-size:11px;color:var(--bh-t2,#5A5A54);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Collaborateur</div>
         ` : `
-          <span class="bh-mot">Boostinghost</span>
-          <span class="bh-baseline">Smart Property Manager</span>
+          <div class="bh-mot" style="font-size:14px;font-weight:600;color:var(--bh-encre,#20221F);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Boostinghost</div>
+          <div class="bh-baseline" style="font-size:10px;color:var(--bh-t2,#5A5A54);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Smart Property Manager</div>
         `}
       </div>
     </a>
   </div>
 
-  <nav class="sidebar-nav">
-    <!-- PRINCIPAL -->
-    <div class="nav-section">
-      <div class="nav-section-title">Principal</div>
-      ${canSeePage('dashboard') ? `
-      <a class="nav-item active" data-page="app" href="/app.html">
-        <i class="fas fa-th-large"></i><span>Dashboard</span>
-      </a>
-      ` : ''}
-      ${canSeePage('calendar') ? `
-      ${canSeePage('reservations') && role !== 'cleaner' ? `
-      <a class="nav-item" data-page="reservations" href="/reservations.html" id="navCalendarLink">
-        <i class="fas fa-calendar-check"></i><span>Réservations</span>
-      </a>` : ''}
-      ` : ''}
-      ${canSeePage('messages') ? `
-      <a class="nav-item" data-page="messages" href="/messages.html">
-        <i class="fas fa-comment-dots"></i><span>Messages</span>
-      </a>
-      ` : ''}
-    </div>
-
-    <!-- EXPLOITATION : le quotidien -->
-    ${(canSeePage('settings') || canSeePage('cleaning') || canSeePage('contrat')) ? `
-    <div class="nav-section">
-      <div class="nav-section-title">Exploitation</div>
-      ${canSeePage('cleaning') ? `
-      <a class="nav-item" data-page="cleaning" href="/cleaning.html">
-        <i class="fas fa-broom"></i><span>Gestion du ménage</span>
-      </a>
-      ` : ''}
-      ${canSeePage('settings') ? `
-      <a class="nav-item" data-page="settings" href="/settings.html">
-        <i class="fas fa-home"></i><span>Mes logements</span>
-      </a>
-      <a class="nav-item" data-page="welcome" href="/welcome.html">
-        <i class="fas fa-book"></i><span>Livrets d'accueil</span>
-      </a>
-      ` : ''}
-      ${canSeePage('contrat') ? `
-      <a class="nav-item" data-page="contrat" href="/contrat.html">
-        <i class="fas fa-file-contract"></i><span>Contrats</span>
-      </a>
-      ` : ''}
-      ${canSeePage('smart-locks') ? `
-      <a class="nav-item" data-page="smart-locks" href="/smart-locks.html">
-        <i class="fas fa-lock"></i><span>Serrures connectées</span>
-      </a>
-      ` : ''}
-    </div>
-    ` : ''}
-
-    <!-- FINANCES : cautions, factures, clients, revenus, tarification -->
-    ${(canSeePage('factures') || canSeePage('reporting') || canSeePage('deposits')) ? `
-    <div class="nav-section">
-      <div class="nav-section-title">Finances</div>
-      ${canSeePage('reporting') ? `
-      <a class="nav-item" data-page="reporting" href="/reporting.html">
-        <i class="fas fa-chart-line"></i><span>Revenus</span>
-      </a>
-      ` : ''}
-      ${canSeePage('factures') ? `
-      <a class="nav-item" data-page="factures" href="/factures.html">
-        <i class="fas fa-file-invoice"></i><span>Factures séjours</span>
-      </a>
-      <a class="nav-item" data-page="clients" href="/clients.html">
-        <i class="fas fa-users"></i><span>Mes Clients</span>
-      </a>
-      ` : ''}
-      ${canSeePage('deposits') ? `
-      <a class="nav-item" data-page="deposits" href="/deposits.html">
-        <i class="fas fa-wallet"></i><span>Cautions</span>
-      </a>
-      ` : ''}
-      ${!isSubAccount ? `
-      <a class="nav-item" data-page="pricing" href="/dynamic-pricing.html">
-        <i class="fas fa-bolt"></i>
-        <span>BoostPrice</span>
-        <span class="nav-badge-beta">Bêta</span>
-      </a>
-      ` : ''}
-    </div>
-    ` : ''}
-
-    <!-- PIED DE MENU : pas de titre de section, ces deux entrées se suffisent -->
-    ${!isSubAccount ? `
-    <div class="nav-section nav-section--footer">
-      <a class="nav-item" data-page="settings-account" href="/settings-account.html">
-        <i class="fas fa-cog"></i><span>Paramètres</span>
-      </a>
-      <a class="nav-item" data-page="help" href="/help.html">
-        <i class="fas fa-headset"></i><span>Support</span>
-      </a>
-    </div>
-    ` : ''}
+  <nav class="bh-rail__nav">
+    ${canSeePage('dashboard') ? `
+    <a class="nav-item" data-page="app" href="/app.html">
+      ${IC.today}<span>Aujourd'hui</span>
+    </a>` : ''}
+    ${canSeePage('calendar') && role !== 'cleaner' ? `
+    <a class="nav-item" data-page="reservations" href="/reservations.html" id="navCalendarLink">
+      ${IC.calendar}<span>Calendrier</span>
+    </a>` : ''}
+    ${canSeePage('messages') ? `
+    <a class="nav-item" data-page="messages" href="/messages.html">
+      ${IC.messages}<span>Messages</span>
+    </a>` : ''}
+    ${canSeeManage ? `
+    <a class="nav-item" data-page="manage" href="/manage.html">
+      ${IC.manage}<span>Gestion</span>
+    </a>` : ''}
   </nav>
 
-  <div class="sidebar-footer" style="flex-shrink:0;border-top:1px solid #EAE9E5;padding:12px;background:#F7F7F5;">
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;${isSubAccount ? '' : 'cursor:pointer;'}" ${isSubAccount ? '' : "onclick=\"window.location.href='/settings-account.html'\""} title="${isSubAccount ? '' : 'Paramètres du compte'}">
-      <div id="sidebarUserAvatar" style="width:34px;height:34px;min-width:34px;background:linear-gradient(135deg,#0E3B2E,#1E6E52);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;font-family:DM Sans,sans-serif;flex-shrink:0;"></div>
-      <div style="flex:1;min-width:0;">
-        <div id="sidebarUserName" style="font-size:13px;font-weight:600;color:#0D1117 !important;font-family:DM Sans,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">Utilisateur</div>
-        <div id="sidebarUserCompany" style="font-size:11px;color:#5A6A7A;font-family:DM Sans,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">${isSubAccount ? 'Sous-compte' : 'Mon espace'}</div>
+  <div class="bh-rail__footer">
+    <button class="bh-rail__account" id="railAccountBtn" onclick="window.openAgencySwitcherModal && window.openAgencySwitcherModal()" title="Changer de compte">
+      <div id="sidebarUserAvatar" style="width:32px;height:32px;min-width:32px;border-radius:50%;background:linear-gradient(135deg,#0E3B2E,#1E6E52);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;font-family:DM Sans,sans-serif;flex-shrink:0;"></div>
+      <div class="bh-rail__account-text" style="flex:1;min-width:0;">
+        <div id="sidebarUserName" style="font-size:13px;font-weight:600;color:var(--bh-encre,#20221F);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:DM Sans,sans-serif;line-height:1.3;">Utilisateur</div>
+        <div id="sidebarUserCompany" style="font-size:11px;color:var(--bh-t2,#5A5A54);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:DM Sans,sans-serif;line-height:1.3;">${isSubAccount ? 'Sous-compte' : 'Mon espace'}</div>
       </div>
-      <button id="logoutBtn" style="background:#FFFFFF;border:1px solid #EAE9E5;color:#5A5A54;border-radius:8px;width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
-        <i class="fas fa-sign-out-alt" style="font-size:11px;"></i>
-      </button>
-    </div>
+    </button>
+    <button id="logoutBtn" title="Se déconnecter" style="background:rgba(14,59,46,.07);border:1px solid rgba(14,59,46,.12);color:var(--bh-t2,#5A5A54);border-radius:8px;width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+      ${IC.logout}
+    </button>
   </div>
 </aside>
 `;
@@ -330,9 +250,15 @@ function getSidebarHTML() {
 
     const page = document.body?.dataset?.page;
 
+    const GESTION_PAGES = ['cleaning', 'settings', 'factures', 'clients', 'deposits', 'cautions',
+      'welcome', 'livrets', 'contrat', 'contrats', 'reporting', 'revenus', 'pricing',
+      'notifications', 'avis', 'logements', 'properties', 'smart-locks', 'manage',
+      'settings-account', 'help', 'support', 'finances', 'biens', 'smart_locks', 'serrures'];
+
     if (page) {
       document.querySelectorAll(".nav-item.active").forEach(a => a.classList.remove("active"));
-      const match = document.querySelector(`.nav-item[data-page="${page}"]`);
+      const activePage = GESTION_PAGES.indexOf(page) !== -1 ? 'manage' : page;
+      const match = document.querySelector(`.nav-item[data-page="${activePage}"]`);
       if (match) match.classList.add("active");
     }
 
@@ -1537,20 +1463,26 @@ var _bhNativeConfirm = window.confirm;
   function tabsOf(bar) { return Array.prototype.slice.call(bar.querySelectorAll('.tab-btn')).filter(function (t) { return t.offsetWidth > 0; }); }
   function labelOf(t) { var sp = t.querySelector('span'); return deburr(sp ? sp.textContent : t.textContent); }
 
-  // Menage a son propre onglet dans la barre : il sort de MORE.
-  // Mes logements (settings) prend sa place dans le menu Plus.
-  var MORE = { 'settings-account': 1, help: 1, support: 1, factures: 1, clients: 1, deposits: 1, cautions: 1,
-    welcome: 1, livrets: 1, contrat: 1, contrats: 1, reporting: 1, revenus: 1,
-    pricing: 1, finances: 1, notifications: 1, avis: 1,
-    settings: 1, logements: 1, properties: 1, biens: 1,
-    'smart-locks': 1, smart_locks: 1, serrures: 1 };
-  var TOLABEL = { app: 'accueil', dashboard: 'accueil', accueil: 'accueil', index: 'accueil',
-    reservations: 'reservations', messages: 'messages',
-    cleaning: 'menage', menage: 'menage', menages: 'menage' };
+  // 4-tab nav: Aujourd'hui / Calendrier / Messages / Gestion.
+  // No more "Plus" bottom sheet — all sub-pages route to Gestion.
+  var MORE = {};
+  var TOLABEL = {
+    app: 'aujourd', dashboard: 'aujourd', accueil: 'aujourd', index: 'aujourd', today: 'aujourd',
+    reservations: 'calendrier', calendar: 'calendrier',
+    messages: 'messages',
+    cleaning: 'gestion', menage: 'gestion', menages: 'gestion', manage: 'gestion',
+    'settings-account': 'gestion', help: 'gestion', support: 'gestion',
+    factures: 'gestion', clients: 'gestion', deposits: 'gestion', cautions: 'gestion',
+    welcome: 'gestion', livrets: 'gestion', contrat: 'gestion', contrats: 'gestion',
+    reporting: 'gestion', revenus: 'gestion', pricing: 'gestion', finances: 'gestion',
+    notifications: 'gestion', avis: 'gestion',
+    settings: 'gestion', logements: 'gestion', properties: 'gestion', biens: 'gestion',
+    'smart-locks': 'gestion', smart_locks: 'gestion', serrures: 'gestion'
+  };
 
-  function keyForPage(page) { page = deburr(page); if (TOLABEL[page]) return TOLABEL[page]; if (MORE[page]) return 'plus'; return ''; }
+  function keyForPage(page) { page = deburr(page); if (TOLABEL[page]) return TOLABEL[page]; return ''; }
   function findByLabel(tabs, key) { if (!key) return -1; for (var i = 0; i < tabs.length; i++) if (labelOf(tabs[i]).indexOf(key) !== -1) return i; return -1; }
-  function plusIndex(tabs) { return findByLabel(tabs, 'plus'); }
+  function plusIndex(tabs) { return -1; } // no Plus tab in 4-tab nav
 
   // Diagnostic : bhDiagOnglets() en console indique quel onglet la barre
   // considere actif et pourquoi. Utile quand un cache sert une vieille version.
@@ -1897,9 +1829,19 @@ var _bhNativeConfirm = window.confirm;
       '.mobile-header .mobile-logo-subtitle,.mobile-logo-subtitle{font-size:6.5px!important;letter-spacing:0!important;margin-top:1px!important;display:block!important;width:100%!important;white-space:nowrap!important;overflow:hidden!important;text-align:justify!important;text-align-last:justify!important;-moz-text-align-last:justify!important;}';
     document.head.appendChild(s);
   }
+  function injectNavRailCSS() {
+    if (document.getElementById('bh-nav-rail-css')) return;
+    var link = document.createElement('link');
+    link.id = 'bh-nav-rail-css';
+    link.rel = 'stylesheet';
+    link.href = '/css/bh-nav-rail.css';
+    document.head.appendChild(link);
+  }
+
   function injectCSS() {
     injectLogoCSS();
     injectStyleV4();
+    injectNavRailCSS();
     if (document.getElementById('bh-header-v4-css')) return;
     var s = document.createElement('style');
     s.id = 'bh-header-v4-css';

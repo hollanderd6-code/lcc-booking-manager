@@ -1,0 +1,206 @@
+/* ============================================================================
+   BH-NAV-RAIL — Desktop navigation rail (4 primary destinations)
+   ============================================================================
+   Replaces the old 15-item sidebar with a 4-item glass rail matching
+   the native iOS GlassTabBar architecture (Aujourd'hui / Calendrier /
+   Messages / Gestion).
+
+   Injected by bh-layout.js via getSidebarHTML() — scoped to
+   .sidebar.bh-nav-rail so legacy sidebar CSS on non-piloted pages is
+   untouched.
+
+   Mobile (≤1366px): hidden by bh-v3-mobile.css (.sidebar display:none).
+   Desktop (≥1367px): fixed left rail, 220px, glass treatment.
+
+   TOKENS: consumes --bh-vert, --bh-encre, --bh-t2 from bh-tokens.css.
+   STACKING: z-index 100 (below sidebar-overlay 200, modals 9000+).
+   ============================================================================ */
+
+@media (min-width: 1367px) {
+
+  /* ── Rail container ─────────────────────────────────────────── */
+
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail {
+    width: 220px;
+    min-width: 220px;
+    flex-shrink: 0;
+    display: flex !important;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.68);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border-right: 1px solid rgba(255, 255, 255, 0.72);
+    box-shadow: 2px 0 16px rgba(20, 32, 27, 0.07);
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    z-index: 100;
+    overflow: hidden;
+    padding: 0 !important;
+  }
+
+  /* ── Logo zone ──────────────────────────────────────────────── */
+
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__logo {
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(20, 32, 27, 0.06);
+  }
+
+  /* ── Primary navigation ─────────────────────────────────────── */
+
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__nav {
+    flex: 1;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+  }
+
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Nav items */
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .nav-item {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 13px;
+    border-radius: 14px;
+    text-decoration: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--bh-t2);
+    transition: background 0.18s ease, color 0.18s ease;
+    position: relative;
+    border: 1px solid transparent;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .nav-item:hover {
+    background: rgba(14, 59, 46, 0.06);
+    color: var(--bh-encre);
+  }
+
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .nav-item.active {
+    background: rgba(14, 59, 46, 0.10);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-color: rgba(14, 59, 46, 0.18);
+    box-shadow: 0 2px 8px rgba(14, 59, 46, 0.10),
+                inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    color: var(--bh-vert);
+    font-weight: 600;
+  }
+
+  /* Icons (Lucide SVG inline) */
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .nav-item svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Badge (messages unread — set by messages-badge-desktop-mobile.js) */
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .nav-item .badge-count {
+    margin-left: auto;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    border-radius: 9px !important;
+  }
+
+  /* ── Footer: account + logout ───────────────────────────────── */
+
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__footer {
+    flex-shrink: 0;
+    padding: 10px;
+    border-top: 1px solid rgba(20, 32, 27, 0.06);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__account {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex: 1;
+    min-width: 0;
+    padding: 7px 9px;
+    border-radius: 12px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__account:hover {
+    background: rgba(14, 59, 46, 0.06);
+  }
+
+  /* InitialsButton — matches the native iOS concept */
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail #sidebarUserAvatar {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    border-radius: 50% !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+  }
+
+  /* Account name text */
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__account-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Logout button */
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail #logoutBtn {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 8px !important;
+    background: rgba(14, 59, 46, 0.07) !important;
+    border: 1px solid rgba(14, 59, 46, 0.12) !important;
+    color: var(--bh-t2) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+    padding: 0 !important;
+    transition: background 0.18s ease, color 0.18s ease !important;
+  }
+
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail #logoutBtn:hover {
+    background: rgba(220, 38, 38, 0.08) !important;
+    color: #DC2626 !important;
+    border-color: rgba(220, 38, 38, 0.2) !important;
+  }
+
+  /* ── Main content offset for 220px rail ─────────────────────── */
+
+  html[data-theme-v3="1"] .app-container {
+    margin-left: 220px;
+  }
+
+  /* When native bg is active (bh-native-bg.css), the app-container is
+     already transparent — the rail sits on top of the gradient. */
+  html[data-theme-v3="1"] body[data-page="app"] .app-container {
+    margin-left: 220px;
+  }
+}

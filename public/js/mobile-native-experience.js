@@ -35,7 +35,7 @@
 
   class MobileNativeExperience {
     constructor() {
-      this.currentTab = 'dashboard';
+      this.currentTab = 'today';
       this.isDarkMode = false;
       this.isScrolling = false;
       this.pullRefreshThreshold = 80;
@@ -159,10 +159,10 @@
       // Rôles prédéfinis : liste de pages autorisées (identique à bh-layout.js
       // et mobile-tabs-handler.js). null = on retombe sur les permissions DB.
       const _ROLE_PAGES = {
-        cleaner:      ['calendar', 'cleaning'],
-        proprietaire: ['dashboard', 'calendar', 'messages', 'cleaning'],
-        manager:      ['dashboard', 'calendar', 'messages', 'cleaning'],
-        comptable:    [],
+        cleaner:      ['calendar'],
+        proprietaire: ['today', 'calendar', 'messages', 'manage'],
+        manager:      ['today', 'calendar', 'messages', 'manage'],
+        comptable:    ['manage'],
         custom:       null
       };
       const _allowedPages = _isSubAccount ? (_ROLE_PAGES[_role] || null) : null;
@@ -170,18 +170,17 @@
       const _hasPerm = (perm) => !_isSubAccount || _permissions[perm] === true;
       const _canSeeTab = (tabId, perm) => {
         if (!_isSubAccount) return true;
-        if (tabId === 'dashboard') return true;
+        if (tabId === 'today') return true;
         if (_allowedPages) return _allowedPages.includes(tabId);
         return _hasPerm(perm);
       };
 
       // Onglets de base — toujours visibles si permission
       const allTabs = [
-        { id: 'dashboard',   icon: 'fa-home',       label: 'Accueil',    perm: 'can_view_reservations' },
-        { id: 'calendar',    icon: 'fa-calendar-check', label: 'Réservations', perm: 'can_view_reservations' },
-        { id: 'messages',    icon: 'fa-comment',    label: 'Messages',   perm: 'can_view_messages', badge: 0 },
-        { id: 'cleaning',    icon: 'fa-broom',      label: 'Ménage',     perm: 'can_view_cleaning' },
-        { id: 'more',        icon: 'fa-ellipsis-h', label: 'Plus',       perm: null }
+        { id: 'today',    icon: 'fa-house',    label: "Aujourd'hui", perm: 'can_view_reservations' },
+        { id: 'calendar', icon: 'fa-calendar', label: 'Calendrier',  perm: 'can_view_reservations' },
+        { id: 'messages', icon: 'fa-comment',  label: 'Messages',    perm: 'can_view_messages', badge: 0 },
+        { id: 'manage',   icon: 'fa-th-large', label: 'Gestion',     perm: null }
       ];
 
       // Filtrer selon rôle + permissions
@@ -197,11 +196,15 @@
       if (!_activeTabId) {
         const _p = window.location.pathname;
         const _dp = document.body.getAttribute('data-page');
-        if (_p.includes('cleaning')) _activeTabId = 'cleaning';
-        else if (_p.includes('messages')) _activeTabId = 'messages';
+        const _MANAGE = ['cleaning','settings','factures','clients','deposits','cautions',
+          'welcome','contrat','contrats','reporting','pricing','dynamic-pricing',
+          'notifications','smart-locks','manage','settings-account','help','support'];
+        if (_p.includes('messages')) _activeTabId = 'messages';
         else if (_p.includes('reservations')) _activeTabId = 'calendar';
-        else if (_p.includes('app')) _activeTabId = 'dashboard';
-        else _activeTabId = 'more';
+        else if (_dp && _MANAGE.includes(_dp)) _activeTabId = 'manage';
+        else if (_p.includes('manage') || _p.includes('cleaning') || _p.includes('settings')) _activeTabId = 'manage';
+        else if (_p.includes('app')) _activeTabId = 'today';
+        else _activeTabId = 'today';
       }
 
       const tabsContainer = document.createElement('div');
@@ -221,8 +224,7 @@
       // Raccourcis par appui long (500ms) sur certains onglets
       var RACCOURCIS = {
         calendar: [{ label: 'Nouvelle réservation', icon: 'fa-plus', go: function(){ location.href='/reservations.html?nouvelle=1'; } }],
-        messages: [{ label: 'Message à tous', icon: 'fa-bullhorn', go: function(){ location.href='/messages.html?broadcast=1'; } }],
-        cleaning: [{ label: 'Voir les checklists', icon: 'fa-clipboard-check', go: function(){ location.href='/cleaning.html?tab=checklists'; } }]
+        messages: [{ label: 'Message à tous', icon: 'fa-bullhorn', go: function(){ location.href='/messages.html?broadcast=1'; } }]
       };
       document.querySelectorAll('.tab-btn').forEach(btn => {
         var tabId = btn.dataset.tab;

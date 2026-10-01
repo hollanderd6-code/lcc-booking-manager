@@ -13,13 +13,10 @@
   const _isSubForRoutes = (localStorage.getItem('lcc_account_type') === 'sub');
 
   const ROUTES = {
-    dashboard: '/app.html',
+    today:    '/app.html',
     calendar: '/reservations.html',
     messages: '/messages.html',
-    'smart-locks': '/smart-locks.html',
-    properties: '/settings.html',
-    cleaning: '/cleaning.html',
-    more: 'bottomsheet'
+    manage:   '/manage.html'
   };
 
   // ============================================
@@ -185,40 +182,27 @@
   
   const currentPath = window.location.pathname;
   const dataPage = document.body.getAttribute('data-page'); // ✅ Lire data-page du body
-  let activeTab = 'dashboard';
+  let activeTab = 'today';
 
-  // ✅ Pages du menu "Plus" (détection prioritaire)
-  const PLUS_PAGES = [
-    'settings',          // Mes logements : passe dans le menu Plus
-    'smart-locks',
-    'settings-account', 
-    'deposits',
-    'factures',
-    'clients',
-    'reporting',
-    'welcome',
-    'contrat',
-    'help',
-    'pricing',           // Dynamic Pricing
-    'dynamic-pricing',   // fallback
+  // Pages that belong to the Gestion tab
+  const MANAGE_PAGES = [
+    'cleaning', 'settings', 'factures', 'clients', 'deposits', 'cautions',
+    'welcome', 'livrets', 'contrat', 'contrats', 'reporting', 'revenus',
+    'pricing', 'dynamic-pricing', 'notifications', 'avis', 'logements',
+    'properties', 'smart-locks', 'manage', 'settings-account', 'help', 'support',
+    'finances', 'smart_locks', 'serrures'
   ];
 
-  // ✅ Vérifier data-page="settings" en priorité
-  if (dataPage === 'cleaning' || currentPath.includes('cleaning')) {
-    // cleaning.html → onglet Ménage (promu dans la barre)
-    activeTab = 'cleaning';
-  } else if (dataPage && PLUS_PAGES.includes(dataPage)) {
-    // Pages du menu Plus → Onglet Plus
-    activeTab = 'more';
-  } else if (currentPath.includes('messages')) {
+  if (currentPath.includes('messages')) {
     activeTab = 'messages';
   } else if (currentPath.includes('reservations')) {
     activeTab = 'calendar';
-  } else if (currentPath.includes('settings')) {
-    // Fallback pour /settings.html sans data-page
-    activeTab = 'properties';
+  } else if (dataPage && MANAGE_PAGES.includes(dataPage)) {
+    activeTab = 'manage';
+  } else if (currentPath.includes('manage')) {
+    activeTab = 'manage';
   } else if (currentPath.includes('app')) {
-    activeTab = 'dashboard';
+    activeTab = 'today';
   }
 
   // Exposé pour que la barre d'onglets démarre DIRECTEMENT sur le bon onglet.
@@ -234,9 +218,7 @@
     const tab = e.detail.tab;
     console.log('Navigation vers:', tab);
     
-    if (ROUTES[tab] === 'bottomsheet') {
-      showMoreMenu();
-    } else if (ROUTES[tab]) {
+    if (ROUTES[tab]) {
       window.location.href = ROUTES[tab];
     }
   });
@@ -443,14 +425,10 @@
       const tabs = document.querySelectorAll('.tab-btn[data-tab]');
       tabs.forEach(tab => {
         const t = tab.dataset.tab;
-        if (t === 'dashboard' && !canSeePage('dashboard')) tab.style.display = 'none';
-        if (t === 'messages'  && !canSeePage('messages'))  tab.style.display = 'none';
-        if (t === 'cleaning'  && !canSeePage('cleaning'))  tab.style.display = 'none';
-        if (t === 'calendar'  && !canSeePage('calendar'))  tab.style.display = 'none';
-        // Le personnel de menage lit deja le detail des sejours dans le
-        // calendrier du dashboard : un onglet Reservations en plus n'apporte
-        // rien et ouvre une page qui ne le concerne pas.
-        if (t === 'calendar'  && role === 'cleaner')       tab.style.display = 'none';
+        if (t === 'today'    && !canSeePage('dashboard')) tab.style.display = 'none';
+        if (t === 'messages' && !canSeePage('messages'))  tab.style.display = 'none';
+        if (t === 'calendar' && !canSeePage('calendar'))  tab.style.display = 'none';
+        if (t === 'calendar' && role === 'cleaner')       tab.style.display = 'none';
       });
     }, 150);
   }
@@ -566,11 +544,10 @@
   var TAB_ACTIVE   = '#0E3B2E';
   var TAB_INACTIVE = '#7A8695';
   var LUCIDE_TABS = {
-    dashboard: { svg: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
-    calendar:  { svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
-    messages:  { svg: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>' },
-    properties:{ svg: '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>' },
-    more:      { svg: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>' }
+    today:    { svg: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
+    calendar: { svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
+    messages: { svg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
+    manage:   { svg: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>' }
   };
 
   function applyLucideIcons() {

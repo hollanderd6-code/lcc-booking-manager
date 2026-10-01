@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html data-theme="light" data-theme-v3="1" class="bh-lux" lang="fr">
+<head>
+  <script>document.documentElement.classList.add('bh-lux');</script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Gestion — Boostinghost</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+
+  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
+  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
+  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
+  <meta name="theme-color" content="#0E3B2E">
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css?v=17204d03" rel="stylesheet"/>
+  <link href="/css/bh-theme-v3.css?v=cb75551e" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/bh-tokens.css?v=9b734869">
+  <link rel="stylesheet" href="/css/bh-native-bg.css">
+  <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
+  <link rel="stylesheet" href="/css/bh-lux.css?v=d686b5ab">
+  <link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
+  <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
+  <link rel="stylesheet" href="/css/bh-v3-mobile.css?v=2b3a5fdd">
+  <link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
+  <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+
+  <style>
+    /* ── Page desktop header ── */
+    .manage-page-header {
+      display: none;
+      padding: 28px 24px 4px;
+    }
+    @media (min-width: 1367px) {
+      .manage-page-header { display: block; }
+    }
+    .manage-page-header__kicker {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--bh-t3, #6A6A64);
+      margin-bottom: 4px;
+    }
+    .manage-page-header__title {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--bh-encre, #20221F);
+      line-height: 1.1;
+    }
+
+    /* ── Section labels ── */
+    .manage-section-label {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--bh-t3, #6A6A64);
+      padding: 16px 20px 6px;
+    }
+
+    /* ── ManageEntry grid ── */
+    .manage-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      padding: 0 16px 4px;
+    }
+    @media (min-width: 768px) and (max-width: 1366px) {
+      .manage-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 1367px) {
+      .manage-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        padding: 0 24px 4px;
+      }
+      .manage-section-label { padding: 16px 24px 6px; }
+    }
+
+    /* ── ManageEntry card ── */
+    .manage-entry {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      box-shadow: 0 2px 12px rgba(20, 32, 27, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      text-decoration: none;
+      color: var(--bh-encre, #20221F);
+      cursor: pointer;
+      transition: background 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .manage-entry:hover {
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: 0 4px 20px rgba(20, 32, 27, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    }
+    .manage-entry:active { transform: scale(0.98); }
+
+    /* ── Entry icon container ── */
+    .me-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .me-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ── Entry text ── */
+    .me-body { flex: 1; min-width: 0; }
+    .me-title {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--bh-encre, #20221F);
+      line-height: 1.2;
+    }
+    .me-desc {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      color: var(--bh-t2, #5A5A54);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
+    /* ── Chevron ── */
+    .me-chevron { flex-shrink: 0; color: var(--bh-t4, #878782); }
+    .me-chevron svg {
+      width: 16px; height: 16px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    /* ── Bottom padding for mobile tab bar ── */
+    .manage-bottom-pad {
+      height: calc(80px + env(safe-area-inset-bottom, 0px));
+    }
+    @media (min-width: 1367px) { .manage-bottom-pad { display: none; } }
+  </style>
+</head>
+
+<body data-page="manage" data-kicker="Boostinghost" data-title="Gestion">
+
+  <script src="/js/auth-fetch.js?v=cd78753d"></script>
+  <script src="/js/sub-account-guard.js?v=3558a1b3"></script>
+
+  <div id="bhSidebar"></div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="app-container">
+    <main class="main-content">
+      <div id="bhHeaderActions" style="display:none"></div>
+      <div id="bhHeader"></div>
+
+      <div class="page-content">
+
+        <div class="manage-page-header">
+          <div class="manage-page-header__kicker">Boostinghost</div>
+          <div class="manage-page-header__title">Gestion</div>
+        </div>
+
+        <p class="manage-section-label">Propriétés &amp; équipe</p>
+        <div class="manage-grid" id="manageGridPrimary">
+
+          <a class="manage-entry" href="/settings.html" data-perm="can_view_properties">
+            <div class="me-icon" style="background:rgba(14,59,46,0.10);color:#0E3B2E;">
+              <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+            </div>
+            <div class="me-body">
+              <div class="me-title">Logements</div>
+              <div class="me-desc">Propriétés, tarifs, disponibilités</div>
+            </div>
+            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </a>
+
+          <a class="manage-entry" href="/cleaning.html" data-perm="can_view_cleaning">
+            <div class="me-icon" style="background:rgba(6,182,212,0.10);color:#0891B2;">
+              <svg viewBox="0 0 24 24"><path d="m14 12-8.5 8.5a2.12 2.12 0 1 1-3-3L11 9"/><path d="M15 13 9 7l4-4 6 6h3a8 8 0 0 1-7 7z"/></svg>
+            </div>
+            <div class="me-body">
+              <div class="me-title">Ménage</div>
+              <div class="me-desc">Planning, checklists, équipe</div>
+            </div>
+            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </a>
+
+          <a class="manage-entry" href="/clients.html" data-perm="can_view_invoices">
+            <div class="me-icon" style="background:rgba(124,58,237,0.10);color:#7C3AED;">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="me-body">
+              <div class="me-title">Propriétaires</div>
+              <div class="me-desc">Comptes, rapports, revenus</div>
+            </div>
+            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </a>
+
+          <a class="manage-entry" href="/factures.html" data-perm="can_view_invoices">
+            <div class="me-icon" style="background:rgba(145,96,24,0.10);color:#916018;">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            </div>
+            <div class="me-body">
+              <div class="me-title">Séjours</div>
+              <div class="me-desc">Factures, dépôts, cautions</div>
+            </div>
+            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </a>
+
+          <a class="manage-entry" href="/dynamic-pricing.html" data-perm="pricing">
+            <div class="me-icon" style="background:rgba(16,185,129,0.10);color:#059669;">
+              <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            </div>
+            <div class="me-body">
+              <div class="me-title">BoostPrice</div>
+              <div class="me-desc">Tarification dynamique, règles</div>
+            </div>
+            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </a>
+
+        </div>
+
+        <p class="manage-section-label">Outils</p>
+        <div class="manage-grid">
+
+          <a class="manage-entry" href="/welcome.html" data-perm="can_view_properties">
+            <div class="me-icon" style="background:rgba(14,59,46,0.08);color:#1E6E52;">
+              <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            </div>
+            <div class="me-body">
+              <div class="me-title">Livrets d'accueil</div>
+              <div class="me-desc">Welcome books, instructions séjour</div>
+            </div>
+            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </a>
+
+          <a class="manage-entry" href="/contrat.html" data-perm="can_view_contracts">
+            <div class="me-icon" style="background:rgba(14,59,46,0.08);color:#1E6E52;">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
+            </div>
+            <div class="me-body">
+              <div class="me-title">Contrats</div>
+              <div class="me-desc">Modèles, signatures électroniques</div>
+            </div>
+            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </a>
+
+          <a class="manage-entry" href="/smart-locks.html" data-perm="can_view_smart_locks">
+            <div class="me-icon" style="background:rgba(14,59,46,0.08);color:#1E6E52;">
+              <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="me-body">
+              <div class="me-title">Smart Locks</div>
+              <div class="me-desc">Serrures connectées, codes d'accès</div>
+            </div>
+            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </a>
+
+          <a class="manage-entry" href="/reporting.html" data-perm="can_view_reporting">
+            <div class="me-icon" style="background:rgba(14,59,46,0.08);color:#1E6E52;">
+              <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <div class="me-body">
+              <div class="me-title">Reporting</div>
+              <div class="me-desc">Statistiques, performance</div>
+            </div>
+            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </a>
+
+        </div>
+
+        <div class="manage-bottom-pad"></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+  (function() {
+    var isSubAccount = localStorage.getItem('lcc_is_sub_account') === 'true'
+                    || localStorage.getItem('lcc_account_type') === 'sub';
+    if (!isSubAccount) return;
+
+    var permissions = {};
+    try {
+      var sd = JSON.parse(localStorage.getItem('lcc_sub_account') || '{}');
+      if (sd.permissions) permissions = sd.permissions;
+    } catch(e) {}
+    try {
+      var pd = localStorage.getItem('lcc_permissions');
+      if (pd) permissions = Object.assign(JSON.parse(pd), permissions);
+    } catch(e) {}
+
+    var permMap = {
+      'can_view_properties':  'can_view_properties',
+      'can_view_cleaning':    'can_view_cleaning',
+      'can_view_invoices':    'can_view_invoices',
+      'can_view_contracts':   'can_view_contracts',
+      'can_view_smart_locks': 'can_view_smart_locks',
+      'can_view_reporting':   'can_view_reporting',
+      'pricing':              'can_view_reservations'
+    };
+
+    document.querySelectorAll('.manage-entry[data-perm]').forEach(function(el) {
+      var perm = el.getAttribute('data-perm');
+      var permKey = permMap[perm] || perm;
+      if (permissions[permKey] !== true) el.style.display = 'none';
+    });
+  })();
+  </script>
+
+  <script src="/js/bh-layout.js?v=04c6d2e8"></script>
+  <script src="/js/bh-v3-finitions.js"></script>
+  <script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
+  <script src="/js/mobile-tabs-handler.js?v=03a5b1c7"></script>
+  <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
+  <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
+  <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
+
+</body>
+</html>
