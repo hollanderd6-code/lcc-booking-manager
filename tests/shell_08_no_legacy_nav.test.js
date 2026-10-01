@@ -139,4 +139,70 @@ assert.ok(
 );
 console.log('✅ P-S09-05 — app.html charge bh-layout.js avec un version string à jour');
 
-console.log('\n✅  11 test(s) shell-08/09 passé(s) — aucune régression détectée.');
+console.log('\n✅  11 test(s) shell-08/09 passé(s).');
+
+// ── P-S11-01: app.html must not contain bhDemoNav DOM creation ───────────────
+
+assert.ok(
+  !appHtml.includes("nav.id  = 'bhDemoNav'") && !appHtml.includes("nav.id = 'bhDemoNav'"),
+  'P-S11-01 FAIL: app.html still assigns nav.id = bhDemoNav — legacy bar source not removed'
+);
+console.log('✅ P-S11-01 — app.html ne crée plus d\'élément #bhDemoNav');
+
+// ── P-S11-02: app.html must not contain the insertBefore for the legacy bar ──
+
+// The only insertBefore in the removed nav block targeted document.body.firstChild
+assert.ok(
+  !appHtml.includes("document.body.insertBefore(nav, document.body.firstChild)"),
+  'P-S11-02 FAIL: app.html still has document.body.insertBefore(nav, document.body.firstChild) — legacy bar insertion not removed'
+);
+console.log('✅ P-S11-02 — app.html ne contient plus insertBefore pour la barre de navigation');
+
+// ── P-S11-03: no active top-nav builder combining all 5 legacy labels ─────────
+
+const TOP_NAV_LABELS = ['Dashboard', 'Logements', 'Cautions', 'Factures', 'Livret'];
+// A nav builder has all 5 labels AND creates an element with insertBefore on body
+const hasAllLabels = TOP_NAV_LABELS.every(l => appHtml.includes(l));
+const hasInsertBefore = appHtml.includes("document.body.insertBefore(nav, document.body.firstChild)");
+assert.ok(
+  !hasInsertBefore,
+  'P-S11-03 FAIL: app.html still inserts an element at body.firstChild — nav builder still active'
+);
+// Also verify none of the labels appear together adjacent to a DOM creation
+const navBuilderPattern = /var\s+PAGES\s*=\s*\[[\s\S]*?Dashboard[\s\S]*?Logements[\s\S]*?Cautions/;
+assert.ok(
+  !navBuilderPattern.test(appHtml),
+  'P-S11-03 FAIL: app.html still contains a PAGES array with legacy nav labels Dashboard+Logements+Cautions'
+);
+console.log('✅ P-S11-03 — aucun constructeur de barre de navigation legacy actif dans app.html');
+
+// ── P-S11-04: bh-shell-07.css must have defensive #bhDemoNav rule ────────────
+
+const bhShell07CssFresh = read('public/css/bh-shell-07.css');
+assert.ok(
+  /#bhDemoNav[^}]*display\s*:\s*none\s*!important/.test(bhShell07CssFresh),
+  'P-S11-04 FAIL: bh-shell-07.css must have #bhDemoNav { display: none !important } backstop'
+);
+console.log('✅ P-S11-04 — bh-shell-07.css contient le backstop défensif #bhDemoNav');
+
+// ── P-S11-05: iOS-parity primary nav contains exactly the 4 expected items ───
+
+const bhLayoutJsFresh = read('public/js/bh-layout.js');
+const IOS_NAV = ["Aujourd'hui", 'Calendrier', 'Messages', 'Gestion'];
+IOS_NAV.forEach(function(label) {
+  assert.ok(
+    bhLayoutJsFresh.includes(label),
+    'P-S11-05 FAIL: bh-layout.js sidebar missing iOS-parity nav item: ' + label
+  );
+});
+const legacyInNav = ['Dashboard', 'Logements', 'Cautions', 'Factures', 'Livret'];
+legacyInNav.forEach(function(label) {
+  // Label must not appear as a nav link label in getSidebarHTML
+  const inSidebar = bhLayoutJsFresh.match(/function getSidebarHTML[\s\S]*?^}/m);
+  if (inSidebar && inSidebar[0].includes('<span>' + label + '</span>')) {
+    assert.fail('P-S11-05 FAIL: getSidebarHTML() in bh-layout.js contains legacy label: ' + label);
+  }
+});
+console.log('✅ P-S11-05 — bh-layout.js sidebar contient exactement Aujourd\'hui/Calendrier/Messages/Gestion');
+
+console.log('\n✅  16 test(s) shell-08/09/11 passé(s) — aucune régression détectée.');

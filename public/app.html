@@ -12954,71 +12954,8 @@ if (document.readyState === 'loading') {
     if (saved) document.documentElement.setAttribute('data-theme', saved);
   } catch(e) {}
 
-  /* ── Demo nav ── */
-  var PAGES = [
-    {l:'Dashboard', i:'fa-chart-line', h:'/app.html', p:'app'},
-    {l:'Messages',  i:'fa-comment-dots', h:'/messages.html', p:'messages'},
-    {l:'Logements', i:'fa-building', h:'/settings.html', p:'settings'},
-    {l:'Cautions',  i:'fa-shield-halved', h:'/deposits.html', p:'deposits'},
-    {l:'Factures',  i:'fa-file-invoice', h:'/factures.html', p:'factures'},
-    {l:'Livret',    i:'fa-book-open', h:'/welcome.html', p:'welcome'}
-  ];
+  // SHELL-FIX-11: #bhDemoNav legacy demo navigation permanently removed at source.
   var curPage = document.body.getAttribute('data-page') || '';
-  var curPath  = location.pathname.toLowerCase();
-
-  var nav = document.createElement('div');
-  nav.id  = 'bhDemoNav';
-  nav.style.cssText = [
-    'position:fixed','top:0','left:0','right:0','z-index:9999',
-    'background:#0D1117','display:flex','align-items:center',
-    'gap:6px','padding:0 16px','height:40px','box-sizing:border-box'
-  ].join(';');
-
-  /* Masquer sur mobile */
-  var mobileStyle = document.createElement('style');
-  mobileStyle.textContent = '@media (max-width: 1366px) { #bhDemoNav { display: none !important; } body { padding-top: 0 !important; } }';
-  document.head.appendChild(mobileStyle);
-
-  var html = '<span style="color:rgba(255,255,255,.4);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-right:4px;flex-shrink:0;">Vue</span>';
-  PAGES.forEach(function(p){
-    var active = p.p === curPage || curPath === p.h.toLowerCase();
-    var isProtected = p.h === '/support.html' || p.h === '/settings-account.html';
-    var onclickAttr = isProtected
-      ? ' onclick="if(localStorage.getItem(\'lcc_managed_user\')){event.preventDefault();exitAgencyMode(\'' + p.h + '?v3=1\');return false;}"'
-      : '';
-    html += '<a href="' + p.h + '?v3=1"' + onclickAttr + ' style="'
-      + 'padding:4px 12px;border-radius:999px;text-decoration:none;'
-      + 'font-family:DM Sans,sans-serif;font-size:11.5px;font-weight:500;'
-      + 'display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;'
-      + 'border:1px solid ' + (active ? 'transparent' : 'rgba(255,255,255,.15)') + ';'
-      + 'background:' + (active ? '#0E3B2E' : 'transparent') + ';'
-      + 'color:' + (active ? '#fff' : 'rgba(255,255,255,.6)') + ';'
-      + '"><i class="fas ' + p.i + '" style="font-size:10px;"></i> ' + p.l + '</a>';
-  });
-
-  /* Toggle dark/light */
-  html += '<div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">';
-  html += '<span style="color:rgba(255,255,255,.4);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;">Mode</span>';
-  html += '<button id="bhModeToggle" style="width:40px;height:22px;border-radius:999px;border:none;cursor:pointer;position:relative;padding:0;background:#0E3B2E;">';
-  html += '<span id="bhModeDot" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block;"></span>';
-  html += '</button></div>';
-  nav.innerHTML = html;
-  document.body.insertBefore(nav, document.body.firstChild);
-
-  function applyTheme() {
-    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
-    var dot = document.getElementById('bhModeDot');
-    var btn = document.getElementById('bhModeToggle');
-    if (dot) dot.style.transform = dark ? 'translateX(18px)' : 'translateX(0)';
-    if (btn) btn.style.background = dark ? '#0E3B2E' : 'rgba(255,255,255,.2)';
-  }
-  applyTheme();
-  document.getElementById('bhModeToggle').addEventListener('click', function(){
-    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    try { localStorage.setItem('bh_theme', next); } catch(e) {}
-    applyTheme();
-  });
 
   /* ── Appliquer les styles V3 une fois le DOM prêt ── */
   function applyV3Styles() {

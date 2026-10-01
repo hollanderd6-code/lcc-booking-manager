@@ -30,6 +30,17 @@ html[data-theme-v3="1"] #bhTopBar {
   visibility: hidden !important;
 }
 
+/* SHELL-FIX-11: #bhDemoNav is the removed legacy V3 demo navigation bar.
+   It must never appear on the iOS-parity shell. Backstop only — DOM creation
+   was removed at source in public/app.html. */
+#bhDemoNav {
+  display: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
 html[data-theme-v3="1"] .sidebar:not(.bh-nav-rail) {
   top: 0 !important;
   height: 100vh !important;
