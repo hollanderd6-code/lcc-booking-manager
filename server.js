@@ -2135,6 +2135,12 @@ ON invoice_download_tokens(token);
       console.log('✅ sms_stripe_subscription_id colonne OK');
     } catch(e) { console.warn('⚠️ sms_stripe_subscription_id:', e.message); }
 
+    // ── Colonne sms_admin_granted ─────────────────────────────────────────────
+    try {
+      await pool.query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS sms_admin_granted BOOLEAN NOT NULL DEFAULT FALSE`);
+      console.log('✅ sms_admin_granted colonne OK');
+    } catch(e) { console.warn('⚠️ sms_admin_granted:', e.message); }
+
     // ── Colonnes droits par profil ──────────────────────────────────────────
     try {
       await pool.query(`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS droits_enabled BOOLEAN DEFAULT FALSE`);
@@ -6093,6 +6099,10 @@ app.post('/api/webhooks/stripe', (req, res, next) => {
           );
           console.log(`💰 [BOOSTPRICE BILLING] Entitlements annulés pour user ${bpUserId} (sub Stripe supprimé: ${subscriptionId})`);
         }
+
+        // SMS add-on cancellation — preserve admin grant if present
+        // sms_enabled = sms_admin_granted so admin-granted users keep SMS access
+        await require('./services/admin-paid-options-service').handleStripeSmsCancellation(pool, subscriptionId);
 
         console.log(`✅ Abonnement ${subscriptionId} annulé`);
         break;
@@ -40513,13 +40523,16 @@ app.get('/api/admin/clients', authenticateToken, async (req, res) => {
     if (!user || !ADMIN_EMAILS.includes(user.email)) return res.status(403).json({ error: 'Accès refusé' });
 
     const result = await pool.query(`
-      SELECT 
+      SELECT
         u.id, u.first_name, u.last_name, u.email, u.company, u.created_at,
         s.status AS subscription_status,
         s.plan_type,
         s.plan_amount,
         s.trial_end_date,
         s.current_period_end,
+        s.sms_enabled,
+        s.sms_admin_granted,
+        (s.sms_stripe_subscription_id IS NOT NULL) AS sms_paid,
         (SELECT COUNT(*)::int FROM sub_accounts sa WHERE sa.parent_user_id = u.id) AS sub_accounts_count
       FROM users u
       LEFT JOIN subscriptions s ON s.user_id = u.id
@@ -40882,6 +40895,142 @@ app.get('/api/admin/impersonation-requests/:id/status', authenticateToken, async
     res.json({ status: reqRow.status });
   } catch(e) {
     console.error('GET /api/admin/impersonation-requests/:id/status:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ── Admin : options payantes (BoostPrice, SMS) ──────────────────────────────
+
+const _adminPaidSvc = require('./services/admin-paid-options-service');
+
+// GET /api/admin/clients/:id/properties — logements du client + état BoostPrice
+app.get('/api/admin/clients/:id/properties', authenticateToken, async (req, res) => {
+  try {
+    const admin = await requireBhAdmin(req, res);
+    if (!admin) return;
+    const { id: targetUserId } = req.params;
+    const userCheck = await pool.query(`SELECT id FROM users WHERE id = $1`, [targetUserId]);
+    if (userCheck.rows.length === 0) return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    const properties = await _adminPaidSvc.getAdminClientProperties(pool, targetUserId);
+    res.json({ properties });
+  } catch(e) {
+    console.error('GET /api/admin/clients/:id/properties:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/admin/clients/:id/sms/grant
+app.post('/api/admin/clients/:id/sms/grant', authenticateToken, async (req, res) => {
+  try {
+    const admin = await requireBhAdmin(req, res);
+    if (!admin) return;
+    const { id: targetUserId } = req.params;
+    const userCheck = await pool.query(`SELECT id, email FROM users WHERE id = $1`, [targetUserId]);
+    if (userCheck.rows.length === 0) return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    const result = await _adminPaidSvc.grantSmsAdmin(pool, targetUserId);
+    await logAdminAction(admin, targetUserId, 'grant_sms', { target_email: userCheck.rows[0].email });
+    res.json({ success: true, ...result });
+  } catch(e) {
+    console.error('POST /api/admin/clients/:id/sms/grant:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/admin/clients/:id/sms/revoke
+app.post('/api/admin/clients/:id/sms/revoke', authenticateToken, async (req, res) => {
+  try {
+    const admin = await requireBhAdmin(req, res);
+    if (!admin) return;
+    const { id: targetUserId } = req.params;
+    const userCheck = await pool.query(`SELECT id, email FROM users WHERE id = $1`, [targetUserId]);
+    if (userCheck.rows.length === 0) return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    const result = await _adminPaidSvc.revokeSmsAdmin(pool, targetUserId);
+    await logAdminAction(admin, targetUserId, 'revoke_sms', {
+      target_email: userCheck.rows[0].email,
+      smsEnabledAfter: result.smsEnabled,
+      hadPaidSms: result.hadPaidSms,
+    });
+    res.json({ success: true, ...result });
+  } catch(e) {
+    console.error('POST /api/admin/clients/:id/sms/revoke:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/admin/clients/:id/boostprice/grant
+app.post('/api/admin/clients/:id/boostprice/grant', authenticateToken, async (req, res) => {
+  try {
+    const admin = await requireBhAdmin(req, res);
+    if (!admin) return;
+    const { id: targetUserId } = req.params;
+    const { propertyIds: rawIds } = req.body || {};
+    if (!Array.isArray(rawIds) || rawIds.length === 0) {
+      return res.status(400).json({ error: 'propertyIds requis' });
+    }
+    const propertyIds = [...new Set(rawIds.map(String))];
+    const userCheck = await pool.query(`SELECT id, email FROM users WHERE id = $1`, [targetUserId]);
+    if (userCheck.rows.length === 0) return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    // Validate ownership — all IDs must belong directly to target user, not via delegation
+    const ownedResult = await pool.query(
+      `SELECT id FROM properties WHERE id = ANY($1::text[]) AND user_id = $2`,
+      [propertyIds, targetUserId]
+    );
+    const ownedIds = new Set(ownedResult.rows.map(r => r.id));
+    const foreignIds = propertyIds.filter(id => !ownedIds.has(id));
+    if (foreignIds.length > 0) {
+      return res.status(403).json({ error: 'foreign_property', propertyIds: foreignIds });
+    }
+    const { grantedIds, alreadyAdminIds, alreadyPaidIds } =
+      await _adminPaidSvc.grantBoostpriceAdmin(pool, targetUserId, propertyIds);
+    await logAdminAction(admin, targetUserId, 'grant_boostprice', {
+      target_email: userCheck.rows[0].email,
+      propertyIds: grantedIds,
+      propertyCount: propertyIds.length,
+      grantedCount: grantedIds.length,
+      alreadyAdminCount: alreadyAdminIds.length,
+      alreadyPaidCount: alreadyPaidIds.length,
+    });
+    res.json({ success: true, granted: grantedIds, alreadyAdmin: alreadyAdminIds, alreadyPaid: alreadyPaidIds });
+  } catch(e) {
+    console.error('POST /api/admin/clients/:id/boostprice/grant:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// DELETE /api/admin/clients/:id/boostprice/revoke
+app.delete('/api/admin/clients/:id/boostprice/revoke', authenticateToken, async (req, res) => {
+  try {
+    const admin = await requireBhAdmin(req, res);
+    if (!admin) return;
+    const { id: targetUserId } = req.params;
+    const { propertyIds: rawIds } = req.body || {};
+    if (!Array.isArray(rawIds) || rawIds.length === 0) {
+      return res.status(400).json({ error: 'propertyIds requis' });
+    }
+    const propertyIds = [...new Set(rawIds.map(String))];
+    const userCheck = await pool.query(`SELECT id, email FROM users WHERE id = $1`, [targetUserId]);
+    if (userCheck.rows.length === 0) return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    const ownedResult = await pool.query(
+      `SELECT id FROM properties WHERE id = ANY($1::text[]) AND user_id = $2`,
+      [propertyIds, targetUserId]
+    );
+    const ownedIds = new Set(ownedResult.rows.map(r => r.id));
+    const foreignIds = propertyIds.filter(id => !ownedIds.has(id));
+    if (foreignIds.length > 0) {
+      return res.status(403).json({ error: 'foreign_property', propertyIds: foreignIds });
+    }
+    const { revokedIds, paidProtectedIds } =
+      await _adminPaidSvc.revokeBoostpriceAdmin(pool, targetUserId, propertyIds);
+    await logAdminAction(admin, targetUserId, 'revoke_boostprice', {
+      target_email: userCheck.rows[0].email,
+      propertyIds: revokedIds,
+      propertyCount: propertyIds.length,
+      revokedCount: revokedIds.length,
+      paidProtectedCount: paidProtectedIds.length,
+    });
+    res.json({ success: true, revoked: revokedIds, paidProtected: paidProtectedIds });
+  } catch(e) {
+    console.error('DELETE /api/admin/clients/:id/boostprice/revoke:', e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
