@@ -17,20 +17,20 @@ const bhTodayV3Css = read('public/css/bh-today-v3.css');
 const bhLayoutJs   = read('public/js/bh-layout.js');
 const appHtml      = read('public/app.html');
 
-// ── P-T14-01: bh-today-v3.css restores header padding-top for Today ──────
+// ── P-T14-01: bh-today-v3.css removes 72px height cap on Today header ───────
 
 assert.ok(
-  bhTodayV3Css.includes('padding-top: 16px !important'),
-  'P-T14-01 FAIL: bh-today-v3.css must override padding-top:0 with 16px !important for Today header'
+  bhTodayV3Css.includes('height: auto !important'),
+  'P-T14-01 FAIL: bh-today-v3.css must set height:auto !important to remove 72px cap from bh-theme-v3 on Today header'
 );
-console.log('✅ P-T14-01 — bh-today-v3.css restaure padding-top:16px sur le header Today');
+console.log('✅ P-T14-01 — bh-today-v3.css supprime height:72px (→ auto) sur le header Today');
 
 // ── P-T14-02: header fix is scoped to body[data-page="app"] ──────────────
 
 assert.ok(
   bhTodayV3Css.includes('body[data-page="app"]') &&
-  bhTodayV3Css.includes('padding-top: 16px !important'),
-  'P-T14-02 FAIL: header padding-top fix must be scoped to body[data-page="app"] to avoid affecting other pages'
+  bhTodayV3Css.includes('height: auto !important'),
+  'P-T14-02 FAIL: header height:auto fix must be scoped to body[data-page="app"] to avoid affecting other pages'
 );
 console.log('✅ P-T14-02 — Fix header scoped à body[data-page="app"]');
 
@@ -81,14 +81,17 @@ assert.ok(
 );
 console.log('✅ P-T14-07 — bh-layout.js pointe vers mono-bh.svg (img src mis à jour)');
 
-// ── P-T14-08: bh-today-v3.css applies glass to .bh-tv3-stats-row .bh2-stat
+// ── P-T14-08: app.html bh-lux rule provides uniform transparent treatment ───
+// Glass via bh-today-v3.css was replaced by bh-lux transparent rules in app.html
+// (specificity 1,2,1) applied uniformly to all 4 KPI cells — no CSS override needed.
 
 assert.ok(
-  bhTodayV3Css.includes('.bh-tv3-stats-row .bh2-stat') &&
-  bhTodayV3Css.includes('backdrop-filter: blur(20px) saturate(160%)'),
-  'P-T14-08 FAIL: bh-today-v3.css must apply glass backdrop-filter to .bh-tv3-stats-row .bh2-stat'
+  appHtml.includes('html.bh-lux') &&
+  appHtml.includes('#kpiPropertiesCard.bh2-stat') &&
+  appHtml.includes('background:transparent !important'),
+  'P-T14-08 FAIL: app.html must provide bh-lux transparent background for KPI cells (no glass override from bh-today-v3.css needed)'
 );
-console.log('✅ P-T14-08 — bh-today-v3.css applique le glass aux cellules KPI du stats-row');
+console.log('✅ P-T14-08 — app.html bh-lux assure le fond transparent uniforme sur les 4 cellules KPI');
 
 // ── P-T14-09: JS hack fixPropCard removed from app.html ──────────────────
 
@@ -98,4 +101,4 @@ assert.ok(
 );
 console.log('✅ P-T14-09 — JS hack fixPropCard supprimé de app.html');
 
-console.log('\n✅  9 test(s) today-polish-14 passé(s) — header, logo BH, et KPI glass corrigés.');
+console.log('\n✅  9 test(s) today-polish-14 passé(s) — header auto, logo BH, et KPI transparent (bh-lux).');
