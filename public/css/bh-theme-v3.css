@@ -82,17 +82,12 @@ html[data-theme-v3="1"] body {
    DEMO NAV BAR (barre noire en haut — injectée via JS)
 ───────────────────────────────────────────────────────────── */
 html[data-theme-v3="1"] .bh-demo-nav {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 9999;
-  background: var(--obsidian);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 16px;
-  height: 40px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
+  /* SHELL-FIX-09: legacy top bar permanently removed at source — kept hidden for safety */
+  display: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
 }
 
 html[data-theme-v3="1"] .bh-demo-nav .bh-demo-label {

@@ -1,6 +1,6 @@
 'use strict';
 
-// Regression guard for BOOSTINGHOST-WEB-IOS-PARITY-SHELL-FIX-08.
+// Regression guard for BOOSTINGHOST-WEB-IOS-PARITY-SHELL-FIX-08/09.
 // Verifies the legacy desktop demo-nav (black bar) cannot appear on the
 // authenticated app shell — neither through CSS presentation nor JS injection.
 
@@ -79,4 +79,64 @@ assert.ok(
 );
 console.log('✅ P-S08-06 — bh-v3-finitions.js ne redéfinit plus le titre de la page app');
 
-console.log('\n✅  6 test(s) shell-08 passé(s) — aucune régression détectée.');
+console.log('\n✅  6 test(s) shell-08 passé(s).');
+
+// ── P-S09-01: bh-layout.js injectTopBar() must be a no-op stub ───────────────
+
+const injectTopBarFn = bhLayoutJs.match(/function injectTopBar\(\)\s*\{([\s\S]*?)\}/);
+assert.ok(injectTopBarFn, 'P-S09-01 FAIL: injectTopBar() not found in bh-layout.js');
+const injectTopBarBody = injectTopBarFn[1].trim();
+assert.ok(
+  injectTopBarBody === '',
+  'P-S09-01 FAIL: injectTopBar() must be an empty no-op stub — found: ' + injectTopBarBody.slice(0, 80)
+);
+console.log('✅ P-S09-01 — bh-layout.js injectTopBar() est un stub vide');
+
+// ── P-S09-02: bh-layout.js must not create any .bh-demo-nav element ──────────
+
+assert.ok(
+  !bhLayoutJs.includes("className = 'bh-demo-nav'") &&
+  !bhLayoutJs.includes('className = "bh-demo-nav"'),
+  'P-S09-02 FAIL: bh-layout.js must not assign className = bh-demo-nav to any element'
+);
+console.log('✅ P-S09-02 — bh-layout.js ne crée plus aucun élément .bh-demo-nav');
+
+// ── P-S09-03: bh-theme-v3.css global rule must not show .bh-demo-nav ─────────
+
+const bhThemeV3Css = read('public/css/bh-theme-v3.css');
+const demoNavGlobalRule = bhThemeV3Css.match(/\.bh-demo-nav\s*\{([^}]*)\}/);
+assert.ok(demoNavGlobalRule, 'P-S09-03 FAIL: .bh-demo-nav rule not found in bh-theme-v3.css');
+assert.ok(
+  !/display\s*:\s*flex/.test(demoNavGlobalRule[1]) && !/display\s*:\s*block/.test(demoNavGlobalRule[1]),
+  'P-S09-03 FAIL: bh-theme-v3.css must not set .bh-demo-nav to display:flex/block'
+);
+console.log('✅ P-S09-03 — bh-theme-v3.css ne rend plus .bh-demo-nav visible');
+
+// ── P-S09-04: HTML files must not contain visible nav labels in JS nav builders
+
+const NAV_LABELS = ['Dashboard', 'Logements', 'Cautions', 'Factures', 'Livret'];
+const bhV3NavFn = bhV3NavJs.match(/function buildNav\(\)\s*\{([\s\S]*?)^\s*\}/m);
+assert.ok(bhV3NavFn, 'P-S09-04 FAIL: buildNav() function not found in bh-theme-v3-nav.js');
+const firstNonComment09 = bhV3NavFn[1].trim().split('\n').find(l => l.trim() && !l.trim().startsWith('//'));
+assert.ok(
+  firstNonComment09 && firstNonComment09.trim() === 'return;',
+  'P-S09-04 FAIL: buildNav() first non-comment statement must be "return;"'
+);
+NAV_LABELS.forEach(function(label) {
+  const reachable = bhV3NavJs.indexOf('return;') < bhV3NavJs.indexOf(JSON.stringify(label));
+  assert.ok(
+    !reachable || bhV3NavJs.indexOf(JSON.stringify(label)) === -1,
+    'P-S09-04 FAIL: buildNav() nav label "' + label + '" is reachable (before return;)'
+  );
+});
+console.log('✅ P-S09-04 — buildNav() retourne avant les libellés de navigation');
+
+// ── P-S09-05: app.html version string for bh-layout.js must not be 04c6d2e8 ──
+
+assert.ok(
+  !appHtml.includes('bh-layout.js?v=04c6d2e8'),
+  'P-S09-05 FAIL: app.html still uses stale version string ?v=04c6d2e8 — browsers will serve cached old code'
+);
+console.log('✅ P-S09-05 — app.html charge bh-layout.js avec un version string à jour');
+
+console.log('\n✅  11 test(s) shell-08/09 passé(s) — aucune régression détectée.');
