@@ -3796,18 +3796,6 @@ window.closeChecklistsKpiModal = function() {
 /* Neutralise tout style hérité (ancien highlight "Logements actifs" dans les CSS externes) */
 html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{background:#fff !important}
 </style>
-<script>
-// Fix définitif fond beige "Logements actifs" : style inline !important, prioritaire sur toute CSS externe
-(function(){
-  function fixPropCard(){
-    var c = document.getElementById('kpiPropertiesCard');
-    if (c) c.style.setProperty('background', '#fff', 'important');
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fixPropCard);
-  else fixPropCard();
-  setTimeout(fixPropCard, 1500); // au cas où une CSS/JS tardive repasse derrière
-})();
-</script>
 <style>
 .bh2-stat-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:rgba(14,59,46,.10);color:var(--bh-vert)}
 .bh2-stat-ic.n{background:rgba(107,114,128,.10);color:#6B7280}

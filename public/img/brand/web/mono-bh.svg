@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" rx="160" ry="160" fill="#01382F"/>
+  <!-- BH glyph: matrix = scale(1.0158) with translate(-18.75,-69.55) → (x,y)→(1.0158x-18.75, 1.0158y-69.55) -->
+  <!-- Centers the 625×735 glyph (bounds x:210-835, y:205-940) at 62% coverage on 1024×1024 canvas. -->
+  <g transform="matrix(1.0158,0,0,1.0158,-18.75,-69.55)" fill="#FAF8F2">
+    <!-- B — evenodd: outer body minus top/bottom counter cutouts -->
+    <path fill-rule="evenodd" d="M210 205L405 205C535 205 610 270 610 385C610 475 565 535 486 558C575 578 625 646 625 745C625 875 540 940 405 940L210 940Z M300 275L300 525L395 525C475 525 520 480 520 400C520 320 475 275 395 275Z M300 595L300 870L400 870C485 870 535 820 535 735C535 645 485 595 400 595Z"/>
+    <!-- H — vertical stem + crossbar -->
+    <path d="M745 205L835 205L835 940L745 940Z M486 548L790 548L790 606L486 606Z"/>
+  </g>
+</svg>

@@ -184,7 +184,7 @@ function getSidebarHTML() {
 <aside class="sidebar bh-nav-rail">
   <div class="bh-rail__logo">
     <a class="sidebar-logo" href="/app.html" style="display:flex;align-items:center;gap:10px;padding:18px 14px 14px;text-decoration:none;">
-      <img src="/img/brand/web/mono-sidebar.svg?v=43278ecb" alt="Boostinghost"
+      <img src="/img/brand/web/mono-bh.svg?v=today14" alt="Boostinghost"
            style="width:34px;height:34px;min-width:34px;border-radius:9px;flex-shrink:0;object-fit:contain;">
       <div style="min-width:0;">
         ${isSubAccount ? `

@@ -46,6 +46,30 @@ body[data-page="app"] .page-subtitle {
   gap: 12px;
 }
 
+/* ── P-T14-01: Restore header top padding on Today page ─────────────────────
+   app.html global rule (specificity 0,3,3) forces padding-top:0 !important
+   on all v3 headers to kill spacing above the old dark bar.  That bar is now
+   gone, so the Today page needs its breathing room back.
+   This rule has specificity (0,4,4) and is later in source order → wins. ── */
+html[data-theme-v3="1"] body[data-page="app"] main.main-content > header.main-header {
+  padding-top: 16px !important;
+}
+
+/* ── P-T14-03/04: Glass treatment for secondary KPI stat cells ───────────────
+   app.html forces background:#fff !important on all .bh2-stat (0,2,1)
+   and on #kpiPropertiesCard.bh2-stat (1,1,0).  We need to beat both with
+   !important and higher specificity to apply the glass look on Today. ── */
+html[data-theme-v3="1"] .bh-tv3-stats-row .bh2-stat {
+  background: rgba(255, 255, 255, 0.62) !important;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-color: rgba(255, 255, 255, 0.60) !important;
+}
+
+html[data-theme-v3="1"] .bh-tv3-stats-row #kpiPropertiesCard.bh2-stat {
+  background: rgba(255, 255, 255, 0.62) !important;
+}
+
 /* ── Ensure secondary KPI widgets keep their existing styles ── */
 .bh-tv3-secondary .bh2-ca,
 .bh-tv3-secondary .bh2-occ,
