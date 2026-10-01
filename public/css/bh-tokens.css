@@ -98,6 +98,31 @@
   --bh-serif: 'Instrument Serif', Georgia, serif;
   --bh-sans:  'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
+  /* ── Fond natif (charte iOS — Materials.swift / Palette.swift) ───────
+     Ces jetons alimentent bh-native-bg.css.  Ne pas utiliser ailleurs
+     sans validation design : ils representent la charte iOS native, pas
+     la charte web existante.                                            */
+  --bh-native-grad-top:      #F5F2EA;
+  --bh-native-grad-mid:      #EBE7DC;
+  --bh-native-grad-bottom:   #E2DDD0;
+
+  --bh-native-halo-green:    rgba(46, 139, 98, 0.42);
+  --bh-native-halo-green-b:  rgba(46, 139, 98, 0.34);
+  --bh-native-halo-terra:    rgba(168, 69, 42, 0.30);
+  --bh-native-halo-gold:     rgba(201, 161, 91, 0.30);
+
+  --bh-native-text-primary:  #14201B;
+  --bh-native-text-strong:   #2C3A33;
+  --bh-native-text-body:     #3E4A44;
+  --bh-native-text-muted:    #5E6B63;
+
+  --bh-native-glass-fill:      rgba(255, 255, 255, 0.62);
+  --bh-native-glass-fill-hero: rgba(255, 255, 255, 0.70);
+  --bh-native-glass-border:    rgba(255, 255, 255, 0.70);
+  --bh-native-glass-shadow:    0 8px 22px rgba(20, 32, 27, 0.08);
+
+  --bh-native-radius-card: 22px;
+
   /* ── Ponts vers les nommages historiques ────────────────────────────
      style.css et bh-theme-v3.css continuent d'utiliser ces noms. Les
      redefinir ici evite d'avoir a reecrire 81 Ko de feuille : les deux

@@ -1,0 +1,156 @@
+/* ============================================================================
+   BH-NATIVE-BG — fond ambiant dérivé de la charte iOS native
+   ============================================================================
+   Pilote limité à public/app.html (body[data-page="app"]).
+   Ce fichier ne touche que les fonds de conteneurs (body, main-content,
+   page-content).  Aucun composant, aucune carte, aucun modal n'est modifié.
+
+   VALEURS SOURCES : Boostinghost-ios / Design / Materials.swift (AppBackground)
+     Dégradé 168° : #F5F2EA → #EBE7DC (stop 0.46) → #E2DDD0
+     Halos :
+       vert   haut-droite  rgba(46,139,98,.42)  ø320pt  blur 18
+       terra  bas-gauche   rgba(168,69,42,.30)  ø330pt  blur 20
+       vert   bas-centre   rgba(46,139,98,.34)  ø280pt  blur 20
+       or     milieu-droit rgba(201,161,91,.30) ø240pt  blur 22
+
+   En CSS les halos sont approximés par des radial-gradients circle dont
+   la taille intègre la diffusion du blur natif.  Les positions sont
+   exprimées en coordonnées viewport (background-attachment: fixed) pour
+   reproduire le comportement .ignoresSafeArea() de SwiftUI.
+
+   ACCESSIBILITÉ : éléments purement décoratifs → aucun marquage ARIA
+   nécessaire sur le body.  prefers-reduced-motion inerte ici car le
+   dégradé est statique (pas d'animation, pas de canvas, pas de JS).
+
+   Z-INDEX : le dégradé est sur le body ; les éléments positionnés de la
+   page restent au-dessus grâce à leur propre z-index (sidebar: 100,
+   modaux: 9000+).
+   ============================================================================ */
+
+/* ── Dégradé + halos sur le body ────────────────────────────────────────── */
+
+html[data-theme-v3="1"] body[data-page="app"] {
+  /*
+   * background-image : 4 halos radiaux + dégradé linéaire de base.
+   * Les halos sont en avant-plan (premier listé = plus haut).
+   * clamp(min, préféré, max) assure la mise à l'échelle de 375 px à 1920 px.
+   *
+   * Positions (background-attachment: fixed → relatives au viewport) :
+   *   halo vert haut-droite  : calc(100% - 20px) 60px
+   *   halo terra bas-gauche  : 30px calc(100% - 60px)
+   *   halo vert bas-centre   : 50% calc(100% + 30px)  [centre hors écran]
+   *   halo or milieu-droite  : calc(100% + 30px) 52%  [centre hors écran]
+   */
+  background-image:
+    radial-gradient(
+      circle clamp(160px, 48vw, 350px)
+      at calc(100% - 20px) 60px,
+      rgba(46, 139, 98, 0.42) 0%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle clamp(165px, 50vw, 360px)
+      at 30px calc(100% - 60px),
+      rgba(168, 69, 42, 0.30) 0%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle clamp(140px, 42vw, 300px)
+      at 50% calc(100% + 30px),
+      rgba(46, 139, 98, 0.34) 0%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle clamp(120px, 36vw, 260px)
+      at calc(100% + 30px) 52%,
+      rgba(201, 161, 91, 0.30) 0%,
+      transparent 100%
+    ),
+    linear-gradient(
+      168deg,
+      #F5F2EA 0%,
+      #EBE7DC 46%,
+      #E2DDD0 100%
+    ) !important;
+
+  /* Couleur de fond de repli (navigateurs qui n'interprètent pas les gradients) */
+  background-color: #F5F2EA !important;
+
+  /* fixed : halos ancrés au viewport, indépendants du scroll interne */
+  background-attachment: fixed !important;
+}
+
+/* ── Conteneurs intermédiaires : transparents pour laisser passer le dégradé */
+
+html[data-theme-v3="1"] body[data-page="app"] .main-content,
+html[data-theme-v3="1"] body[data-page="app"] .page-content {
+  background: transparent !important;
+}
+
+/* ── Responsive : breakpoints 375 / 430 / 768 / 1024 / 1280 / 1440 / 1920 ─
+   Les clamp() assurent l'essentiel ; ces overrides ajustent les positions
+   des halos pour compenser les différences de mise en page.             */
+
+/* Tablette paysage et petit desktop : repositionner légèrement */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  html[data-theme-v3="1"] body[data-page="app"] {
+    background-image:
+      radial-gradient(
+        circle 300px
+        at calc(100% - 30px) 70px,
+        rgba(46, 139, 98, 0.42) 0%,
+        transparent 100%
+      ),
+      radial-gradient(
+        circle 310px
+        at 40px calc(100% - 70px),
+        rgba(168, 69, 42, 0.30) 0%,
+        transparent 100%
+      ),
+      radial-gradient(
+        circle 260px
+        at 50% calc(100% + 40px),
+        rgba(46, 139, 98, 0.34) 0%,
+        transparent 100%
+      ),
+      radial-gradient(
+        circle 230px
+        at calc(100% + 40px) 52%,
+        rgba(201, 161, 91, 0.30) 0%,
+        transparent 100%
+      ),
+      linear-gradient(168deg, #F5F2EA 0%, #EBE7DC 46%, #E2DDD0 100%) !important;
+  }
+}
+
+/* Grand desktop : halos plus amples pour couvrir les grands écrans */
+@media (min-width: 1280px) {
+  html[data-theme-v3="1"] body[data-page="app"] {
+    background-image:
+      radial-gradient(
+        circle 350px
+        at calc(100% - 40px) 80px,
+        rgba(46, 139, 98, 0.38) 0%,
+        transparent 100%
+      ),
+      radial-gradient(
+        circle 360px
+        at 50px calc(100% - 80px),
+        rgba(168, 69, 42, 0.26) 0%,
+        transparent 100%
+      ),
+      radial-gradient(
+        circle 300px
+        at 50% calc(100% + 50px),
+        rgba(46, 139, 98, 0.30) 0%,
+        transparent 100%
+      ),
+      radial-gradient(
+        circle 260px
+        at calc(100% + 50px) 52%,
+        rgba(201, 161, 91, 0.26) 0%,
+        transparent 100%
+      ),
+      linear-gradient(168deg, #F5F2EA 0%, #EBE7DC 46%, #E2DDD0 100%) !important;
+  }
+}
