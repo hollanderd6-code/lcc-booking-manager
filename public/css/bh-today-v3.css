@@ -26,13 +26,13 @@ body[data-page="app"] .page-subtitle {
    primary (Today iOS content) + secondary (desktop KPI panel)             ── */
 
 .bh-tv3-layout {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+  align-items: start;
 }
 
 .bh-tv3-primary {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -40,8 +40,7 @@ body[data-page="app"] .page-subtitle {
 }
 
 .bh-tv3-secondary {
-  flex: 0 0 280px;
-  width: 280px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -606,27 +605,32 @@ body[data-page="app"] .page-subtitle {
 
 /* ── ≥1280: wider secondary panel ── */
 @media (min-width: 1280px) {
-  .bh-tv3-secondary {
-    flex: 0 0 300px;
-    width: 300px;
+  .bh-tv3-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
   }
 }
 
+/* ── ≥1440: wider secondary panel ── */
 @media (min-width: 1440px) {
-  .bh-tv3-secondary {
-    flex: 0 0 320px;
-    width: 320px;
+  .bh-tv3-layout {
+    grid-template-columns: minmax(0, 1fr) 340px;
   }
 }
 
-/* ── <1024: stack primary + secondary vertically ── */
+/* ── ≥1720: max secondary panel ── */
+@media (min-width: 1720px) {
+  .bh-tv3-layout {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+}
+
+/* ── <1024: single column ── */
 @media (max-width: 1023px) {
   .bh-tv3-layout {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
   .bh-tv3-secondary {
     width: 100%;
-    flex: 0 0 auto;
   }
   .bh-tv3-secondary .bh2-ca,
   .bh-tv3-secondary .bh2-occ {

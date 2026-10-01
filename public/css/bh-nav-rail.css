@@ -203,4 +203,13 @@
   html[data-theme-v3="1"] body[data-page="app"] .app-container {
     margin-left: 220px;
   }
+
+  /* Cancel the legacy 248px offset on .main-content.
+     The old sidebar system applied margin-left: var(--sidebar-w-v3) = 248px
+     to .main-content because .app-container had no offset of its own.
+     The new rail system puts the full 220px offset on .app-container instead —
+     stacking both creates ~280px of dead space between rail and content. */
+  html[data-theme-v3="1"] .main-content {
+    margin-left: 0 !important;
+  }
 }
