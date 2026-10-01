@@ -1,0 +1,676 @@
+/* ============================================================================
+   BH-TODAY-V3 — iOS-parity Today page
+   Reproduit TodayView.swift pour desktop / tablette / mobile web.
+   Tokens : Boostinghost iOS Design/Palette.swift + Typography.swift
+   ============================================================================ */
+
+/* ── Hide the full monthly calendar grid from Today ──────────────────────────
+   The calendar functionality lives at /reservations.html (nav "Calendrier").
+   The section stays in DOM so calendar JS initialises; it's just not shown. ── */
+#calendarSection {
+  display: none !important;
+}
+
+/* ── Suppress legacy "Votre journée" subtitle ─────────────────────────────── */
+body[data-page="app"] .page-subtitle {
+  display: none !important;
+}
+
+/* ══ Root ══════════════════════════════════════════════════════════════════ */
+
+.bh-tv3-root {
+  width: 100%;
+}
+
+/* ══ Two-column layout ═══════════════════════════════════════════════════════
+   primary (Today iOS content) + secondary (desktop KPI panel)             ── */
+
+.bh-tv3-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.bh-tv3-primary {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bh-tv3-secondary {
+  flex: 0 0 280px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Ensure secondary KPI widgets keep their existing styles ── */
+.bh-tv3-secondary .bh2-ca,
+.bh-tv3-secondary .bh2-occ,
+.bh-tv3-secondary .bh2-auto {
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+.bh-tv3-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ══ Three-counter strip ═════════════════════════════════════════════════════
+   CounterCard.swift — rgba(255,255,255,.30) + white stroke + radius 20     ── */
+
+.bh-tv3-counters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.bh-tv3-counter-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 16px 8px;
+  background: rgba(255, 255, 255, 0.30);
+  border: 1px solid rgba(255, 255, 255, 0.50);
+  border-radius: 20px;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.bh-tv3-counter-card.urgent {
+  background: rgba(253, 240, 236, 0.72);
+  border-color: rgba(255, 222, 210, 0.90);
+}
+
+.bh-tv3-counter-icon {
+  font-size: 13px;
+  color: #5E6B63;
+  height: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.bh-tv3-counter-card.urgent .bh-tv3-counter-icon {
+  color: #A8452A;
+}
+
+.bh-tv3-counter-num {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  color: #14201B;
+  letter-spacing: -0.02em;
+}
+
+.bh-tv3-counter-card.urgent .bh-tv3-counter-num {
+  color: #A8452A;
+}
+
+.bh-tv3-counter-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: #5E6B63;
+}
+
+.bh-tv3-counter-card.urgent .bh-tv3-counter-label {
+  color: #A8452A;
+}
+
+/* ══ Week strip card ═════════════════════════════════════════════════════════
+   calendarStrip inside ListCard(cornerRadius:24)                          ── */
+
+.bh-tv3-week-card {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.50);
+  border-radius: 24px;
+  box-shadow: 0 2px 12px rgba(20, 32, 27, 0.06);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  overflow: hidden;
+}
+
+.bh-tv3-week-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 0;
+}
+
+.bh-tv3-week-month {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #5E6B63;
+}
+
+.bh-tv3-week-nav {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #5E6B63;
+  font-size: 12px;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+
+.bh-tv3-week-nav:hover { color: #0E3B2E; }
+
+.bh-tv3-week-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  padding: 10px 6px;
+}
+
+.bh-tv3-day-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 2px;
+  border-radius: 14px;
+}
+
+.bh-tv3-day-cell.today {
+  background: #0E3B2E;
+}
+
+.bh-tv3-day-abbr {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: #5E6B63;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bh-tv3-day-cell.today .bh-tv3-day-abbr {
+  color: #9CCBB8;
+}
+
+.bh-tv3-day-num {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: #14201B;
+  line-height: 1;
+}
+
+.bh-tv3-day-cell.today .bh-tv3-day-num {
+  color: #ffffff;
+}
+
+.bh-tv3-day-dots {
+  display: flex;
+  gap: 3px;
+  height: 6px;
+  align-items: center;
+}
+
+.bh-tv3-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.bh-tv3-dot-occupe { background: #2E8B62; }
+.bh-tv3-dot-depart { background: #E8B48A; }
+.bh-tv3-dot-menage { background: #C9A15B; }
+
+.bh-tv3-week-legend {
+  display: flex;
+  gap: 14px;
+  padding: 0 14px 12px;
+}
+
+.bh-tv3-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #3E4A44;
+}
+
+.bh-tv3-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ══ Section labels ══════════════════════════════════════════════════════════
+   SectionLabel.swift — 11.5pt bold uppercase tracking +1.5pt             ── */
+
+.bh-tv3-section-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #5E6B63;
+  padding: 6px 2px 6px;
+}
+
+/* ══ Urgent card ═════════════════════════════════════════════════════════════
+   UrgentCard.swift — glass + terracotta border + 4px left gradient bar    ── */
+
+.bh-tv3-urgent-card {
+  display: flex;
+  border-radius: 22px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 222, 210, 0.90);
+  box-shadow: 0 2px 12px rgba(20, 32, 27, 0.06);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+.bh-tv3-urgent-bar {
+  width: 4px;
+  flex-shrink: 0;
+  background: linear-gradient(to bottom, #C4552F, #A8452A);
+}
+
+.bh-tv3-urgent-content {
+  flex: 1;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bh-tv3-urgent-row1 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.bh-tv3-guest-name {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: #14201B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.bh-tv3-urgent-row2 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #5E6B63;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bh-tv3-meta-sep {
+  color: #5E6B63;
+  opacity: 0.5;
+}
+
+.bh-tv3-urgent-row3 {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 2px;
+}
+
+/* ══ Arrival / Departure cards ═══════════════════════════════════════════════
+   ArrivalCard.swift / DepartCard.swift — ListCard glass                   ── */
+
+.bh-tv3-arrival-card,
+.bh-tv3-departure-card {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.50);
+  border-radius: 22px;
+  box-shadow: 0 2px 12px rgba(20, 32, 27, 0.06);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: box-shadow 0.18s, transform 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.bh-tv3-arrival-card:hover,
+.bh-tv3-departure-card:hover {
+  box-shadow: 0 4px 20px rgba(20, 32, 27, 0.10);
+  transform: translateY(-1px);
+}
+
+.bh-tv3-arrival-card:active,
+.bh-tv3-departure-card:active {
+  transform: scale(0.99);
+}
+
+.bh-tv3-card-row1 {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.bh-tv3-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bh-tv3-card-name {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: #14201B;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bh-tv3-card-meta {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #5E6B63;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ══ Status pills ════════════════════════════════════════════════════════════
+   StatusPill.swift                                                         ── */
+
+.bh-tv3-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 4px 9px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.bh-tv3-pill-terracotta {
+  background: rgba(253, 240, 236, 0.90);
+  color: #A8452A;
+}
+
+.bh-tv3-pill-vert {
+  background: rgba(46, 139, 98, 0.13);
+  color: #1F6B4C;
+}
+
+.bh-tv3-pill-neutre {
+  background: rgba(255, 255, 255, 0.55);
+  color: #5E6B63;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.bh-tv3-pill-or {
+  background: rgba(251, 243, 226, 0.90);
+  color: #8A5B14;
+}
+
+/* ══ Platform badge ══════════════════════════════════════════════════════════
+   PlatformBadge.swift                                                      ── */
+
+.bh-tv3-platform {
+  display: inline-block;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ══ Primary button ══════════════════════════════════════════════════════════
+   PrimaryButton.swift — #0E3B2E, radius 15, white                         ── */
+
+.bh-tv3-btn-primary {
+  flex: 1;
+  height: 40px;
+  border: none;
+  border-radius: 15px;
+  background: #0E3B2E;
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s, transform 0.12s;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.bh-tv3-btn-primary:hover { background: #0A2C22; }
+.bh-tv3-btn-primary:active { transform: scale(0.97); }
+
+/* ══ Glass button ════════════════════════════════════════════════════════════
+   GlassButton.swift — white glass, radius 15                              ── */
+
+.bh-tv3-btn-glass {
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.60);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #2C3A33;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px;
+  transition: background 0.15s, transform 0.12s;
+  white-space: nowrap;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.bh-tv3-btn-glass:hover { background: rgba(255, 255, 255, 0.75); }
+.bh-tv3-btn-glass:active { transform: scale(0.96); }
+
+/* ══ Cleaning row ════════════════════════════════════════════════════════════
+   CleaningRow.swift — GlassCardBackground radius 16                       ── */
+
+.bh-tv3-cleaning-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 16px;
+  padding: 12px 16px;
+}
+
+.bh-tv3-cleaning-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bh-tv3-cleaning-name {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #14201B;
+}
+
+.bh-tv3-cleaning-cleaner {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #5E6B63;
+  margin-top: 2px;
+}
+
+.bh-tv3-cleaning-time {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #5E6B63;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ══ Empty state ═════════════════════════════════════════════════════════════*/
+
+.bh-tv3-empty {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  color: #5E6B63;
+  text-align: center;
+  padding: 40px 0 20px;
+}
+
+/* ══ Error state ═════════════════════════════════════════════════════════════*/
+
+.bh-tv3-error {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.50);
+  border-radius: 22px;
+  padding: 32px 20px;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(20, 32, 27, 0.06);
+}
+
+.bh-tv3-error-icon {
+  font-size: 32px;
+  color: #5E6B63;
+  margin-bottom: 12px;
+}
+
+.bh-tv3-error-msg {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  color: #5E6B63;
+  margin-bottom: 14px;
+}
+
+.bh-tv3-error-retry {
+  background: none;
+  border: none;
+  color: #0E3B2E;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ══ Skeleton placeholders ════════════════════════════════════════════════════*/
+
+.bh-tv3-skel {
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 16px;
+  animation: bh-tv3-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes bh-tv3-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 0.85; }
+}
+
+/* ══ RESPONSIVE ══════════════════════════════════════════════════════════════ */
+
+/* ── ≥1280: wider secondary panel ── */
+@media (min-width: 1280px) {
+  .bh-tv3-secondary {
+    flex: 0 0 300px;
+    width: 300px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .bh-tv3-secondary {
+    flex: 0 0 320px;
+    width: 320px;
+  }
+}
+
+/* ── <1024: stack primary + secondary vertically ── */
+@media (max-width: 1023px) {
+  .bh-tv3-layout {
+    flex-direction: column;
+  }
+  .bh-tv3-secondary {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+  .bh-tv3-secondary .bh2-ca,
+  .bh-tv3-secondary .bh2-occ {
+    max-width: 100%;
+  }
+  .bh-tv3-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── <768: mobile/tablet ── */
+@media (max-width: 767px) {
+  .bh-tv3-counters {
+    gap: 8px;
+  }
+  .bh-tv3-counter-card {
+    padding: 12px 6px;
+    border-radius: 16px;
+  }
+  .bh-tv3-counter-num {
+    font-size: 22px;
+  }
+  .bh-tv3-counter-label {
+    font-size: 11px;
+  }
+  .bh-tv3-urgent-card,
+  .bh-tv3-arrival-card,
+  .bh-tv3-departure-card {
+    border-radius: 18px;
+  }
+  .bh-tv3-week-card {
+    border-radius: 18px;
+  }
+  .bh-tv3-btn-primary,
+  .bh-tv3-btn-glass {
+    height: 38px;
+    font-size: 13px;
+  }
+}
+
+/* ── <480: small mobile — hide heavy secondary widgets ── */
+@media (max-width: 479px) {
+  .bh-tv3-secondary .bh2-ca,
+  .bh-tv3-secondary .bh2-occ {
+    display: none;
+  }
+}

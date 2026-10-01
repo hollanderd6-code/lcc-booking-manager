@@ -686,6 +686,7 @@ setTimeout(function() {
   <link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
   <link rel="stylesheet" href="/css/bh-shell-07.css">
   <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
+  <link rel="stylesheet" href="/css/bh-today-v3.css?v=today12">
 
   <!-- CSS propre a cette page. -->
   <style id="v3-critical">
@@ -3852,86 +3853,135 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
   .bh2-ca-spark svg{height:56px}
 }
 </style>
-<div class="bh2-hero">
-<section class="bh2-today">
-<div class="bh2-today-head">
-<h2>Votre <em>journée</em></h2>
-<span class="bh2-today-date" id="bh2TodayDate"></span>
+<!-- ══ TODAY V3 — iOS-parity layout ══════════════════════════════════════
+     Hidden legacy IDs preserved for backward compat with existing KPI JS.
+     Visible counters are rendered by bh-today-v3.js from /api/aujourdhui/etats.
+     ════════════════════════════════════════════════════════════════════════ -->
+<span id="kpiArrivalsValue"   style="display:none;"></span>
+<span id="kpiDeparturesValue" style="display:none;"></span>
+<div  id="kpiTodayMovesCard"  style="display:none;">
+  <span id="kpiTodayMovesValue"></span>
+  <span id="kpiTodayMovesSub"></span>
 </div>
-<div class="bh2-ops">
-<div id="kpiTodayMovesCard" style="display:contents">
-<span id="kpiTodayMovesValue" style="display:none"></span>
-<span id="kpiTodayMovesSub" style="display:none"></span>
-<div class="bh2-op">
-<div class="bh2-op-top"><span class="bh2-op-lbl">Arrivées</span><span class="bh2-op-ic"><i class="fas fa-arrow-right-to-bracket"></i></span></div>
-<div class="bh2-op-num" id="kpiArrivalsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
-<div class="bh2-op-sub">voyageurs attendus</div>
+<div  id="kpiCleaning48hCard" style="display:none;">
+  <span id="kpiCleaning48hValue"></span>
+  <span id="kpiCleaning48hSub"></span>
 </div>
-<div class="bh2-op">
-<div class="bh2-op-top"><span class="bh2-op-lbl">Départs</span><span class="bh2-op-ic"><i class="fas fa-arrow-right-from-bracket"></i></span></div>
-<div class="bh2-op-num" id="kpiDeparturesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
-<div class="bh2-op-sub">check-outs ce jour</div>
-</div>
-</div>
-<div class="bh2-op" id="kpiCleaning48hCard">
-<div class="bh2-op-top"><span class="bh2-op-lbl">Ménages 48h</span><span class="bh2-op-ic"><i class="fas fa-broom"></i></span></div>
-<div class="bh2-op-num" id="kpiCleaning48hValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
-<div class="bh2-op-sub" id="kpiCleaning48hSub">départs à nettoyer</div>
-</div>
-</div>
-<section class="bh2-stats bh2-stats-inside">
-<div class="bh2-stat" id="kpiPropertiesCard">
-<span class="bh2-lbl">Logements actifs</span>
-<span class="bh2-num" id="kpiPropertiesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-</div>
-<div class="bh2-stat" id="kpiDepositsCard">
-<span class="bh2-lbl" id="kpiDepositsSub">Cautions</span>
-<span class="bh2-num" id="kpiDepositsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-</div>
-<div class="bh2-stat" id="kpiChecklistsCard" onclick="if(window.openChecklistsKpiModal){window.openChecklistsKpiModal();}">
-<span class="bh2-lbl" id="kpiChecklistsSub">Checklists ménage</span>
-<span class="bh2-num" id="kpiChecklistsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-</div>
-<div class="bh2-stat" id="kpiTopRisksCard">
-<span class="bh2-lbl" id="kpiTopRisksSub">Réservations avec note</span>
-<span class="bh2-num" id="kpiTopRisksValue">0</span>
-</div>
-</section>
-</section>
-<div class="bh2-feat">
-<section class="bh2-ca" id="kpiCaCard" onclick="window.openCaKpiModal && window.openCaKpiModal()">
-<div class="bh2-ca-lbl">CA mensuel <i class="fas fa-chart-line"></i></div>
-<span class="kpi-value" id="kpiCaValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
-<div class="bh2-ca-subrow"><span id="kpiCaSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span><span class="bh2-ca-delta" id="kpiCaDelta"></span></div>
-<div class="bh2-ca-spark"><svg id="kpiCaSpark" viewBox="0 0 300 46" preserveAspectRatio="none"></svg></div>
-</section>
-<section class="bh2-occ" id="kpiOccupancyCard">
-<div class="bh2-occ-lbl">Occupation du mois <i class="fas fa-calendar"></i></div>
-<div class="bh2-occ-ring">
-  <svg viewBox="0 0 88 88"><circle class="occ-rbg" cx="44" cy="44" r="37"/><circle class="occ-rfg" id="kpiOccRing" cx="44" cy="44" r="37"/></svg>
-  <div class="bh2-occ-num" id="kpiOccupancyValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
-</div>
-<div class="bh2-occ-legend" id="kpiOccLegend"></div>
-</section>
-</div>
-</div>
-<section class="bh2-auto" id="kpiAutoCard">
-  <div class="bh2-auto-ico"><i class="fas fa-wand-magic-sparkles"></i></div>
-  <div>
-    <div class="bh2-auto-lbl" id="kpiAutoLabel">Automatisation</div>
-    <div class="bh2-auto-txt" id="kpiAutoText"></div>
-  </div>
-</section>
-<script>
-(function(){
-  var d=new Date();
-  var el=document.getElementById('bh2TodayDate');
-  if(el){var s=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});el.textContent=s.charAt(0).toUpperCase()+s.slice(1);}
-})();
-</script>
 
-<!-- Calendar Card -->
-<section class="card" id="calendarSection" style="display:block !important;">
+<div id="bh-today-v3" class="bh-tv3-root">
+  <div class="bh-tv3-layout" id="bhTv3Content">
+
+    <!-- ═══ Primary column — iOS Today hierarchy ═══ -->
+    <div class="bh-tv3-primary">
+
+      <!-- 1. Three counters strip (CounterCard.swift) -->
+      <div class="bh-tv3-counters" id="bhTv3Counters">
+        <!-- Skeleton placeholder while bh-today-v3.js loads -->
+        <div class="bh-tv3-counter-card"><div class="bh-tv3-skel" style="width:40px;height:26px;border-radius:8px;margin:8px auto;"></div></div>
+        <div class="bh-tv3-counter-card"><div class="bh-tv3-skel" style="width:40px;height:26px;border-radius:8px;margin:8px auto;"></div></div>
+        <div class="bh-tv3-counter-card"><div class="bh-tv3-skel" style="width:40px;height:26px;border-radius:8px;margin:8px auto;"></div></div>
+      </div>
+
+      <!-- 2. Week strip (calendarStrip in TodayView.swift) -->
+      <div class="bh-tv3-week-card" id="bhTv3WeekCard">
+        <div style="padding:14px 14px 12px;"><div class="bh-tv3-skel" style="height:88px;border-radius:14px;"></div></div>
+      </div>
+
+      <!-- 3. À traiter maintenant (urgentArrivees) -->
+      <div id="bhTv3UrgentSection" style="display:none;">
+        <div class="bh-tv3-section-label">À traiter maintenant</div>
+        <div id="bhTv3UrgentList"></div>
+      </div>
+
+      <!-- 4. Arrivées (normalArrivees) -->
+      <div id="bhTv3ArrivalsSection" style="display:none;">
+        <div class="bh-tv3-section-label">Arrivées</div>
+        <div id="bhTv3ArrivalsList"></div>
+      </div>
+
+      <!-- 5. Départs -->
+      <div id="bhTv3DeparturesSection" style="display:none;">
+        <div class="bh-tv3-section-label">Départs</div>
+        <div id="bhTv3DeparturesList"></div>
+      </div>
+
+      <!-- 6. Ménages du jour (CleaningRow.swift) -->
+      <div id="bhTv3CleaningSection" style="display:none;">
+        <div class="bh-tv3-section-label">Ménages du jour</div>
+        <div id="bhTv3CleaningList"></div>
+      </div>
+
+      <!-- 7. Empty state -->
+      <div id="bhTv3EmptyState" class="bh-tv3-empty" style="display:none;">
+        Rien à signaler pour aujourd'hui.
+      </div>
+
+    </div><!-- /bh-tv3-primary -->
+
+    <!-- ═══ Secondary column — desktop KPI panel ═══ -->
+    <div class="bh-tv3-secondary">
+
+      <!-- CA mensuel -->
+      <section class="bh2-ca bh-tv3-widget" id="kpiCaCard" onclick="window.openCaKpiModal && window.openCaKpiModal()" style="cursor:pointer;">
+        <div class="bh2-ca-lbl">CA mensuel <i class="fas fa-chart-line"></i></div>
+        <span class="kpi-value" id="kpiCaValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
+        <div class="bh2-ca-subrow">
+          <span id="kpiCaSub"><span class="kpi-skeleton kpi-skeleton-sub"></span></span>
+          <span class="bh2-ca-delta" id="kpiCaDelta"></span>
+        </div>
+        <div class="bh2-ca-spark"><svg id="kpiCaSpark" viewBox="0 0 300 46" preserveAspectRatio="none"></svg></div>
+      </section>
+
+      <!-- Occupation du mois -->
+      <section class="bh2-occ bh-tv3-widget" id="kpiOccupancyCard">
+        <div class="bh2-occ-lbl">Occupation du mois <i class="fas fa-calendar"></i></div>
+        <div class="bh2-occ-ring">
+          <svg viewBox="0 0 88 88">
+            <circle class="occ-rbg" cx="44" cy="44" r="37"/>
+            <circle class="occ-rfg" id="kpiOccRing" cx="44" cy="44" r="37"/>
+          </svg>
+          <div class="bh2-occ-num" id="kpiOccupancyValue"><span class="kpi-skeleton kpi-skeleton-value"></span></div>
+        </div>
+        <div class="bh2-occ-legend" id="kpiOccLegend"></div>
+      </section>
+
+      <!-- Secondary stats: Logements / Cautions / Checklists / Notes -->
+      <div class="bh-tv3-stats-row">
+        <div class="bh2-stat" id="kpiPropertiesCard">
+          <span class="bh2-lbl">Logements actifs</span>
+          <span class="bh2-num" id="kpiPropertiesValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
+        </div>
+        <div class="bh2-stat" id="kpiDepositsCard">
+          <span class="bh2-lbl" id="kpiDepositsSub">Cautions</span>
+          <span class="bh2-num" id="kpiDepositsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
+        </div>
+        <div class="bh2-stat" id="kpiChecklistsCard" onclick="if(window.openChecklistsKpiModal){window.openChecklistsKpiModal();}">
+          <span class="bh2-lbl" id="kpiChecklistsSub">Checklists ménage</span>
+          <span class="bh2-num" id="kpiChecklistsValue"><span class="kpi-skeleton kpi-skeleton-value"></span></span>
+        </div>
+        <div class="bh2-stat" id="kpiTopRisksCard">
+          <span class="bh2-lbl" id="kpiTopRisksSub">Réservations avec note</span>
+          <span class="bh2-num" id="kpiTopRisksValue">0</span>
+        </div>
+      </div>
+
+      <!-- Automatisation -->
+      <section class="bh2-auto bh-tv3-widget" id="kpiAutoCard">
+        <div class="bh2-auto-ico"><i class="fas fa-wand-magic-sparkles"></i></div>
+        <div>
+          <div class="bh2-auto-lbl" id="kpiAutoLabel">Automatisation</div>
+          <div class="bh2-auto-txt" id="kpiAutoText"></div>
+        </div>
+      </section>
+
+    </div><!-- /bh-tv3-secondary -->
+
+  </div><!-- /bh-tv3-layout -->
+</div><!-- /bh-today-v3 -->
+
+<!-- Calendar Card — hidden from Today; accessible at /reservations.html (nav "Calendrier").
+     DOM stays so calendar JS initialises cleanly. CSS overrides display:block !important. -->
+<section class="card" id="calendarSection" style="display:none !important;">
 <div class="section-header">
 <h2 class="section-title">
 </h2>
@@ -14640,6 +14690,7 @@ function bhConfirm(message) {
 <script src="/js/bh-polish.js?v=1"></script>
 <script src="/js/bh-pull-refresh.js?v=07bdb653"></script>
 <script src="/js/bh-today.js?v=5bfbc1a1"></script>
+<script src="/js/bh-today-v3.js?v=today12"></script>
 
 
 
