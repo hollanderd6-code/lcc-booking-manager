@@ -1101,15 +1101,21 @@ async function runDailyPricingRefresh(pool, sendPushNotification = null) {
 async function initDynamicPricingCron(pool, sendEmail, sendPushNotification) {
   const cron = require('node-cron');
 
-  // Await table creation before registering crons — prevents INSERT failure if 06:00 fires immediately
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS dp_daily_collection_run (
-      run_date     DATE        PRIMARY KEY,
-      started_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      completed_at TIMESTAMPTZ,
-      job_status   TEXT        NOT NULL DEFAULT 'running'
-    )
-  `).catch(err => console.error('[DP-CRON] dp_daily_collection_run table init error:', err.message));
+  // Await table creation before registering crons — prevents INSERT failure if 06:00 fires immediately.
+  // throw ensures cron.schedule() is never reached on schema failure (fail-safe partial-init guard).
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS dp_daily_collection_run (
+        run_date     DATE        PRIMARY KEY,
+        started_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        completed_at TIMESTAMPTZ,
+        job_status   TEXT        NOT NULL DEFAULT 'running'
+      )
+    `);
+  } catch (err) {
+    console.error('[DP-CRON] dp_daily_collection_run table init error:', err.message);
+    throw err;
+  }
 
   // Daily 06:00 Europe/Paris — full market cycle (scrape + recalculation + publication) every day
   cron.schedule('0 6 * * *', async () => {

@@ -643,3 +643,81 @@ test('AV: dp_daily_collection_run 90-day cleanup runs after completion UPDATE (n
   const cleanupSlice = cronSrc.slice(cleanupIdx - 50, cleanupIdx + 200);
   expect(cleanupSlice).toContain('.catch(');
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BOOSTPRICE-DAILY-CRON-STARTUP-FIX-18B — Startup initialization behavioral tests
+// DB_WRITES=0  NETWORK_CALLS=0  BRIGHT_DATA_CALLS=0  CHANNEX_CALLS=0
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── AW: CREATE TABLE succeeds → authoritative cron is registered ─────────────
+test('AW: CREATE TABLE success → initDynamicPricingCron resolves and daily cron is registered', async () => {
+  jest.resetModules();
+  const scheduledExpressions = [];
+  jest.doMock('node-cron', () => ({
+    schedule: (expr) => { scheduledExpressions.push(expr); },
+  }));
+  const { initDynamicPricingCron } = require('../routes/dynamic-pricing-cron');
+  const pool = {
+    connect: jest.fn(),
+    query: jest.fn().mockResolvedValue({ rows: [] }),
+  };
+  await expect(initDynamicPricingCron(pool, jest.fn(), jest.fn())).resolves.toBeUndefined();
+  expect(scheduledExpressions).toContain('0 6 * * *');
+  jest.dontMock('node-cron');
+});
+
+// ─── AX: CREATE TABLE rejects → initDynamicPricingCron rejects, no cron registered
+test('AX: CREATE TABLE failure → initDynamicPricingCron rejects and daily cron is NOT registered', async () => {
+  jest.resetModules();
+  const scheduledExpressions = [];
+  jest.doMock('node-cron', () => ({
+    schedule: (expr) => { scheduledExpressions.push(expr); },
+  }));
+  const { initDynamicPricingCron } = require('../routes/dynamic-pricing-cron');
+  const pool = {
+    connect: jest.fn(),
+    query: jest.fn().mockRejectedValue(new Error('DB connection refused')),
+  };
+  await expect(initDynamicPricingCron(pool, jest.fn(), jest.fn()))
+    .rejects.toThrow('DB connection refused');
+  expect(scheduledExpressions).toHaveLength(0);
+  jest.dontMock('node-cron');
+});
+
+// ─── AY: server.js outer .catch() absorbs the rejection — no process.exit() ──
+test('AY: server.js outer .catch() absorbs initDynamicPricingCron failure without crashing', async () => {
+  jest.resetModules();
+  jest.doMock('node-cron', () => ({ schedule: () => {} }));
+  const { initDynamicPricingCron } = require('../routes/dynamic-pricing-cron');
+  const pool = {
+    connect: jest.fn(),
+    query: jest.fn().mockRejectedValue(new Error('schema failure')),
+  };
+  const errors = [];
+  await initDynamicPricingCron(pool, jest.fn(), jest.fn())
+    .catch(err => errors.push(err.message));
+  expect(errors).toHaveLength(1);
+  expect(errors[0]).toBe('schema failure');
+  // No unhandled rejection, no process.exit — test surviving is the proof
+  jest.dontMock('node-cron');
+});
+
+// ─── AZ: successful startup behavior unchanged — 3 cron expressions registered ─
+test('AZ: successful startup registers exactly the expected set of cron expressions', async () => {
+  jest.resetModules();
+  const scheduledExpressions = [];
+  jest.doMock('node-cron', () => ({
+    schedule: (expr) => { scheduledExpressions.push(expr); },
+  }));
+  const { initDynamicPricingCron } = require('../routes/dynamic-pricing-cron');
+  const pool = {
+    connect: jest.fn(),
+    query: jest.fn().mockResolvedValue({ rows: [] }),
+  };
+  await initDynamicPricingCron(pool, jest.fn(), jest.fn());
+  expect(scheduledExpressions).toContain('0 6 * * *');   // authoritative daily
+  expect(scheduledExpressions).toContain('5 6 * * *');   // pickup shadow
+  expect(scheduledExpressions).toContain('15 3 * * 1');  // seasonality shadow
+  expect(scheduledExpressions).toHaveLength(3);
+  jest.dontMock('node-cron');
+});
