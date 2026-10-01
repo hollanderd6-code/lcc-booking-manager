@@ -27,21 +27,21 @@ assert.ok(
 );
 console.log('✅ P-T15-01 — bh-today-v3.css: height:auto !important sur le header Today');
 
-// ── P-T15-02: Today header has padding-top:18px ───────────────────────────
+// ── P-T15-02: Today header has padding-top:20px (updated in SHELL-16) ────
 
 assert.ok(
-  bhTodayV3Css.includes('padding-top: 18px !important'),
-  'P-T15-02 FAIL: bh-today-v3.css must set padding-top:18px !important on Today header'
+  bhTodayV3Css.includes('padding-top: 20px !important'),
+  'P-T15-02 FAIL: bh-today-v3.css must set padding-top:20px !important on Today header (raised from 18→20 in SHELL-16)'
 );
-console.log('✅ P-T15-02 — bh-today-v3.css: padding-top:18px !important sur le header Today');
+console.log('✅ P-T15-02 — bh-today-v3.css: padding-top:20px !important sur le header Today');
 
-// ── P-T15-03: Today header has padding-bottom:18px ───────────────────────
+// ── P-T15-03: Today header has padding-bottom:20px ───────────────────────
 
 assert.ok(
-  bhTodayV3Css.includes('padding-bottom: 18px !important'),
-  'P-T15-03 FAIL: bh-today-v3.css must set padding-bottom:18px !important on Today header'
+  bhTodayV3Css.includes('padding-bottom: 20px !important'),
+  'P-T15-03 FAIL: bh-today-v3.css must set padding-bottom:20px !important on Today header'
 );
-console.log('✅ P-T15-03 — bh-today-v3.css: padding-bottom:18px !important sur le header Today');
+console.log('✅ P-T15-03 — bh-today-v3.css: padding-bottom:20px !important sur le header Today');
 
 // ── P-T15-04: bh-today-v3.css does NOT override kpiPropertiesCard background
 

@@ -46,19 +46,19 @@ body[data-page="app"] .page-subtitle {
   gap: 12px;
 }
 
-/* ── P-T15-01/02: Today header — remove 72px height constraint, restore padding ─
+/* ── P-T15-01/02: Today header — remove 72px height constraint ────────────
    bh-theme-v3 sets height:72px + align-items:center (0,2,2) at ≥1367px.
-   With padding-top:14px from shell-07, content box = 72-14-14 = 44px.
-   kicker(15) + gap(2) + title(33) = 50px > 44px → overflows 3px above the
-   sticky box → clipped by the viewport boundary.
-   Fix: height:auto removes the 72px cap; padding-top/bottom give proper
-   breathing room.  Specificity (0,4,4) beats bh-theme-v3 (0,2,2) and
-   the app.html global reset (0,3,3).                                       ── */
+   With height:72px and padding:20px, content box = 72-20-20 = 32px.
+   kicker(15) + gap(2) + title(33) = 50px > 32px → content overflows.
+   Fix: height:auto removes the 72px cap so the header expands to fit.
+   Specificity (0,4,4) beats bh-theme-v3 (0,2,2) and the class-selector
+   reset (0,3,3).  The 20px padding is set by the #bhMainHeader rule at
+   (1,1,1) in app.html (line ~11622) — fixed there at the source.         ── */
 html[data-theme-v3="1"] body[data-page="app"] main.main-content > header.main-header {
   height: auto !important;
   min-height: 72px !important;
-  padding-top: 18px !important;
-  padding-bottom: 18px !important;
+  padding-top: 20px !important;
+  padding-bottom: 20px !important;
 }
 
 /* ── P-T15-03: KPI cells in stats-row — let bh-lux transparent rule dominate ───

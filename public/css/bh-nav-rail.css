@@ -1,24 +1,27 @@
 /* ============================================================================
    BH-NAV-RAIL — Desktop navigation rail (4 primary destinations)
    ============================================================================
-   Replaces the old 15-item sidebar with a 4-item glass rail matching
-   the native iOS GlassTabBar architecture (Aujourd'hui / Calendrier /
-   Messages / Gestion).
+   SHELL-16: Liquid Glass floating rail — iOS visual parity.
 
-   Injected by bh-layout.js via getSidebarHTML() — scoped to
-   .sidebar.bh-nav-rail so legacy sidebar CSS on non-piloted pages is
-   untouched.
+   The rail floats 14px from the viewport edges with 24px radius, a warm
+   translucent glass surface, and a layered shadow — matching the component
+   language of the native iOS app.  The gradient canvas remains perceptible
+   above, below, and beside the rail.
 
-   Mobile (≤1366px): hidden by bh-v3-mobile.css (.sidebar display:none).
-   Desktop (≥1367px): fixed left rail, 220px, glass treatment.
+   Mobile (≤1366px): hidden by app.html mobile-master rule (not overridden here).
+   Desktop (≥1367px): floating glass card, 220px wide, 14px inset from edges.
 
-   TOKENS: consumes --bh-vert, --bh-encre, --bh-t2 from bh-tokens.css.
+   TOKENS: --bh-vert, --bh-encre, --bh-t2 from bh-tokens.css.
    STACKING: z-index 100 (below sidebar-overlay 200, modals 9000+).
+
+   OFFSET: rail occupies 14 + 220 + 14 = 248px from the left viewport edge.
+           A single rule — .app-container { margin-left: 248px } — is the sole
+           source of truth for the horizontal content offset.
    ============================================================================ */
 
 @media (min-width: 1367px) {
 
-  /* ── Rail container ─────────────────────────────────────────── */
+  /* ── Rail container: floating Liquid Glass card ──────────────────────── */
 
   html[data-theme-v3="1"] .sidebar.bh-nav-rail {
     width: 220px;
@@ -26,36 +29,72 @@
     flex-shrink: 0;
     display: flex !important;
     flex-direction: column;
-    background: rgba(255, 255, 255, 0.68);
-    backdrop-filter: blur(24px) saturate(160%);
-    -webkit-backdrop-filter: blur(24px) saturate(160%);
-    border-right: 1px solid rgba(255, 255, 255, 0.72);
-    box-shadow: 2px 0 16px rgba(20, 32, 27, 0.07);
+    /* Floating geometry — inset from all 4 viewport edges */
     position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    bottom: 0 !important;
-    height: 100vh !important;
+    top: 14px !important;
+    left: 14px !important;
+    bottom: 14px !important;
+    height: auto !important;
+    /* Liquid Glass surface — warm translucent, not opaque white */
+    background: rgba(250, 248, 244, 0.86);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    /* All-around glass border */
+    border: 1px solid rgba(255, 255, 255, 0.80);
+    /* Floating card — rounded, not a sidebar strip */
+    border-radius: 24px;
+    /* Soft layered shadow — depth without weight */
+    box-shadow:
+      0 8px 32px rgba(20, 32, 27, 0.10),
+      0 2px 8px rgba(20, 32, 27, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95);
     z-index: 100;
     overflow: hidden;
     padding: 0 !important;
   }
 
-  /* ── Logo zone ──────────────────────────────────────────────── */
+  /* ── Logo zone ───────────────────────────────────────────────────────── */
 
   html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__logo {
     flex-shrink: 0;
-    border-bottom: 1px solid rgba(20, 32, 27, 0.06);
+    /* No heavy separator — the floating card geometry separates visually */
+    border-bottom: none;
   }
 
-  /* ── Primary navigation ─────────────────────────────────────── */
+  /* Override the inline padding on the logo anchor */
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .sidebar-logo {
+    padding: 22px 16px 16px !important;
+    gap: 12px !important;
+    align-items: center !important;
+  }
+
+  /* BH monogram — 40px for comfortable visual weight */
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .sidebar-logo img {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    border-radius: 10px !important;
+    flex-shrink: 0 !important;
+    object-fit: contain !important;
+  }
+
+  /* Wordmark "Boostinghost" */
+  html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-mot {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+    color: var(--bh-encre, #20221F) !important;
+    white-space: nowrap !important;
+  }
+
+  /* ── Primary navigation ──────────────────────────────────────────────── */
 
   html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__nav {
     flex: 1;
-    padding: 12px 10px;
+    padding: 8px 10px 10px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: none;
@@ -65,36 +104,40 @@
     display: none;
   }
 
-  /* Nav items */
+  /* Nav destinations — iOS-like proportions */
   html[data-theme-v3="1"] .sidebar.bh-nav-rail .nav-item {
     display: flex !important;
     align-items: center;
     gap: 12px;
-    padding: 11px 13px;
-    border-radius: 14px;
+    padding: 14px 13px;
+    border-radius: 16px;
+    min-height: 52px;
     text-decoration: none;
     font-family: 'DM Sans', sans-serif;
     font-size: 14px;
     font-weight: 500;
     color: var(--bh-t2);
-    transition: background 0.18s ease, color 0.18s ease;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
     position: relative;
     border: 1px solid transparent;
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Hover: subtle green tint */
   html[data-theme-v3="1"] .sidebar.bh-nav-rail .nav-item:hover {
     background: rgba(14, 59, 46, 0.06);
     color: var(--bh-encre);
   }
 
+  /* Active: iOS glass selection capsule */
   html[data-theme-v3="1"] .sidebar.bh-nav-rail .nav-item.active {
-    background: rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.72);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    border-color: rgba(255, 255, 255, 0.72);
-    box-shadow: 0 2px 8px rgba(20, 32, 27, 0.06),
-                inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.82);
+    box-shadow:
+      0 2px 12px rgba(20, 32, 27, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.96);
     color: var(--bh-vert);
     font-weight: 600;
   }
@@ -111,7 +154,7 @@
     stroke-linejoin: round;
   }
 
-  /* Badge (messages unread — set by messages-badge-desktop-mobile.js) */
+  /* Badge — messages unread count, right-aligned */
   html[data-theme-v3="1"] .sidebar.bh-nav-rail .nav-item .badge-count {
     margin-left: auto;
     min-width: 18px;
@@ -122,38 +165,46 @@
     border-radius: 9px !important;
   }
 
-  /* ── Footer: account + logout ───────────────────────────────── */
+  /* ── Footer: account glass card + logout ─────────────────────────────── */
 
   html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__footer {
     flex-shrink: 0;
-    padding: 10px;
-    border-top: 1px solid rgba(20, 32, 27, 0.06);
+    padding: 12px;
+    /* No hard border — floating card geometry provides visual separation */
+    border-top: none;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
 
+  /* Account card — glass surface, clearly interactive */
   html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__account {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    flex: 1;
-    min-width: 0;
-    padding: 7px 9px;
-    border-radius: 12px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.18s ease;
-    -webkit-tap-highlight-color: transparent;
+    display: flex !important;
+    align-items: center !important;
+    gap: 9px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    padding: 10px 12px !important;
+    border-radius: 16px !important;
+    background: rgba(255, 255, 255, 0.48) !important;
+    border: 1px solid rgba(255, 255, 255, 0.75) !important;
+    box-shadow:
+      0 2px 8px rgba(20, 32, 27, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+    cursor: pointer !important;
+    text-align: left !important;
+    transition: background 0.18s ease, box-shadow 0.18s ease !important;
+    -webkit-tap-highlight-color: transparent !important;
   }
 
   html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__account:hover {
-    background: rgba(14, 59, 46, 0.06);
+    background: rgba(255, 255, 255, 0.68) !important;
+    box-shadow:
+      0 4px 12px rgba(20, 32, 27, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
   }
 
-  /* InitialsButton — matches the native iOS concept */
+  /* InitialsButton */
   html[data-theme-v3="1"] .sidebar.bh-nav-rail #sidebarUserAvatar {
     width: 32px !important;
     height: 32px !important;
@@ -163,7 +214,6 @@
     font-weight: 700 !important;
   }
 
-  /* Account name text */
   html[data-theme-v3="1"] .sidebar.bh-nav-rail .bh-rail__account-text {
     flex: 1;
     min-width: 0;
@@ -192,23 +242,19 @@
     border-color: rgba(220, 38, 38, 0.2) !important;
   }
 
-  /* ── Main content offset for 220px rail ─────────────────────── */
+  /* ── Content offset: single source of truth ──────────────────────────── */
+  /* 14px (left gap) + 220px (rail) + 14px (right gap) = 248px             */
 
   html[data-theme-v3="1"] .app-container {
-    margin-left: 220px;
+    margin-left: 248px;
   }
 
-  /* When native bg is active (bh-native-bg.css), the app-container is
-     already transparent — the rail sits on top of the gradient. */
   html[data-theme-v3="1"] body[data-page="app"] .app-container {
-    margin-left: 220px;
+    margin-left: 248px;
   }
 
-  /* Cancel the legacy 248px offset on .main-content.
-     The old sidebar system applied margin-left: var(--sidebar-w-v3) = 248px
-     to .main-content because .app-container had no offset of its own.
-     The new rail system puts the full 220px offset on .app-container instead —
-     stacking both creates ~280px of dead space between rail and content. */
+  /* Cancel the legacy 248px offset on .main-content from bh-theme-v3.css.
+     The new rail system puts the full offset on .app-container only. */
   html[data-theme-v3="1"] .main-content {
     margin-left: 0 !important;
   }

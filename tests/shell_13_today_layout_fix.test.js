@@ -24,13 +24,13 @@ assert.ok(
 );
 console.log('✅ P-T13-01 — bh-nav-rail.css annule margin-left de .main-content à ≥1367px');
 
-// ── P-T13-02: 220px app-container offset still present ────────────────────
+// ── P-T13-02: app-container offset present (248px = 14+220+14 for floating rail)
 
 assert.ok(
-  navRailCss.includes('margin-left: 220px'),
-  'P-T13-02 FAIL: bh-nav-rail.css must preserve .app-container margin-left:220px rail offset'
+  navRailCss.includes('margin-left: 248px'),
+  'P-T13-02 FAIL: bh-nav-rail.css must set .app-container margin-left:248px (14px gap + 220px rail + 14px gap, SHELL-16)'
 );
-console.log('✅ P-T13-02 — Décalage 220px de .app-container préservé dans bh-nav-rail.css');
+console.log('✅ P-T13-02 — Décalage 248px de .app-container (rail flottant SHELL-16: 14+220+14)');
 
 // ── P-T13-03: Today layout uses CSS Grid (not legacy flex) ────────────────
 
