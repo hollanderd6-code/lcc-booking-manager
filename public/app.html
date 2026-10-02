@@ -1226,10 +1226,10 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo::before { display: none !importan
       --cell-hover-bg: rgba(14, 59, 46, 0.15);
     }
 
-    /* Section Calendrier */
+    /* Section Calendrier — margin-top géré par bh-cal-mode en mode exclusif */
     #calendarSection {
       margin-top: 32px;
-      scroll-margin-top: 20px;
+      scroll-margin-top: 0;
     }
 
     .calendar-wrapper {
@@ -3299,17 +3299,28 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
     padding: 0 !important;
     border-radius: 16px !important;
     overflow: hidden !important;
+    margin-top: 0 !important;
   }
   body.bh-cal-mode #calendarSection {
     display: block !important;
+    margin: 0 !important;
   }
-  /* En mode calendrier, masquer le contenu Today */
-  body.bh-cal-mode .bh-today-v3,
+  /* CALENDAR-17D — En mode calendrier, masquer TOUT le contenu Today
+     via .page-content (wrapper commun) + header Today.
+     FIX: l'ancien sélecteur .bh-today-v3 (classe) ne ciblait pas
+     #bh-today-v3 (id, classe bh-tv3-root) — Today restait visible. */
+  body.bh-cal-mode .page-content { display: none !important; }
   body.bh-cal-mode #bhMainHeader { display: none !important; }
   body.bh-cal-mode .bh-desktop-header { display: none !important; }
-  /* Sur mobile, conserver le calendrier accessible */
+  /* Désactiver scroll-behavior smooth en mode calendrier pour éviter
+     le scroll animé natif du navigateur vers l'ancre #calendarSection */
+  body.bh-cal-mode { scroll-behavior: auto !important; }
+  /* Sur mobile : padding-top pour compenser le header mobile fixe */
   @media (max-width: 1366px) {
-    body.bh-cal-mode #calendarSection { display: block !important; }
+    body.bh-cal-mode #calendarSection {
+      display: block !important;
+      padding-top: calc(56px + env(safe-area-inset-top, 0px)) !important;
+    }
   }
   #calendarSection .section-header { display: none !important; }
   .view-selector {
@@ -3978,9 +3989,10 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 
   </div><!-- /bh-tv3-layout -->
 </div><!-- /bh-today-v3 -->
+</div><!-- /page-content — CALENDAR-17D: calendarSection moved out of .page-content for exclusive view mode -->
 
-<!-- Calendar Card — hidden from Today; accessible at /reservations.html (nav "Calendrier").
-     DOM stays so calendar JS initialises cleanly. CSS overrides display:block !important. -->
+<!-- Calendar Card — full-page exclusive view (CALENDAR-17D).
+     Direct child of <main>, sibling to .page-content. Shown via body.bh-cal-mode. -->
 <section class="card" id="calendarSection">
 <div class="section-header">
 <h2 class="section-title">
@@ -4088,7 +4100,6 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 </div>
 </div>
 </section>
-</div>
 <!-- Notifications Panel – MASQUÉ TEMPORAIREMENT - À réactiver -->
 <div id="notifPanelOverlay" style="display:none;"></div>
 <!-- panel notifications monté dynamiquement par openNotifPanel() -->
@@ -5692,7 +5703,6 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
         navCalendarLink.addEventListener('click', function (e) {
           e.preventDefault();
           if (typeof window.showCalendarMode === 'function') window.showCalendarMode();
-          else window.location.href = '/app.html#calendarSection';
         });
       }
     });
@@ -13757,6 +13767,8 @@ if (window.Capacitor) {
     document.body.classList.add('bh-cal-mode');
     var sec = document.getElementById('calendarSection');
     if (sec) sec.style.removeProperty('display');
+    // Repositionner en haut immédiatement — évite scroll natif vers l'ancre
+    window.scrollTo({ top: 0, behavior: 'instant' });
     // Mettre à jour l'état d'historique pour le bouton back
     if (history.state && history.state.calMode) return;
     history.pushState({ calMode: true }, '', '/app.html#calendarSection');
@@ -13779,6 +13791,8 @@ if (window.Capacitor) {
 
   function showTodayMode() {
     document.body.classList.remove('bh-cal-mode');
+    // Retour en haut pour la vue Today
+    window.scrollTo({ top: 0, behavior: 'instant' });
     if (history.state && !history.state.calMode) return;
     history.pushState({ calMode: false }, '', '/app.html');
     try {
@@ -13930,11 +13944,7 @@ if (window.Capacitor) {
 <script>
 (function() {
   function doScroll() {
-    if (typeof window.showCalendarMode === 'function') {
-      window.showCalendarMode();
-    } else {
-      window.location.href = '/app.html#calendarSection';
-    }
+    if (typeof window.showCalendarMode === 'function') window.showCalendarMode();
   }
 
   function bindCalendarLink() {
