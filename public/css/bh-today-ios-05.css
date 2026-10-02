@@ -1,0 +1,229 @@
+/* ============================================================================
+   BH-TODAY-IOS-05 — iOS TodayView.swift parity for web Today page
+   ============================================================================
+   Cascade position: after bh-today-v3.css.
+   Applies to: body[data-page="app"] with html[data-theme-v3="1"].
+
+   Changes vs bh-today-v3.css / bh-theme-v3.css:
+   1. Header title: DM Sans 30px/700/−0.96px (NOT Instrument Serif)
+   2. Header kicker (super-title): 12.5px/600/#5E6B63
+   3. Desktop layout: percentage-based 3fr/1fr ≈ 75%/25%
+   4. SetupCard (iOS SetupCard.swift) — onboarding progress card
+   5. TrialBanner (iOS TrialBanner.swift) — trial period countdown
+   6. Mobile: 18px horizontal padding on primary column
+   ============================================================================ */
+
+
+/* ── 1. Header title — DM Sans / 30px / 700 / −0.96px ───────────────────── */
+/* bh-theme-v3.css rule (0,3,2): html[data-theme-v3="1"] .main-header h1.page-title
+   sets 'Instrument Serif', 24px, 400.
+   iOS TodayView.swift: Font.custom("DMSans", size:30).weight(.bold), tracking:−0.96 */
+
+html[data-theme-v3="1"] body[data-page="app"] .main-header h1.page-title {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 30px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.96px !important;
+  color: #14201B !important;
+  line-height: 1.1 !important;
+}
+
+/* Suppress italic em inside Today title (used by messages/settings, not Today) */
+html[data-theme-v3="1"] body[data-page="app"] .main-header .page-title em {
+  font-style: normal !important;
+  font-family: 'DM Sans', sans-serif !important;
+  color: #14201B !important;
+}
+
+/* ── 2. Header super-title (kicker) — 12.5px / 600 / #5E6B63 ────────────── */
+/* bh-theme-v3.css sets 11px/600 on .page-kicker; iOS uses 12.5pt/semibold */
+
+html[data-theme-v3="1"] body[data-page="app"] .main-header .page-kicker {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #5E6B63 !important;
+  letter-spacing: 0.1em !important;
+}
+
+
+/* ── 3. Desktop layout — percentage-based 75% / 25% ──────────────────────── */
+/* bh-today-v3.css uses fixed-px columns (300–360px).
+   iOS parity: primary 72–76%, secondary 24–28%.
+   3fr/1fr = exactly 75%/25%, inside the allowed range. */
+
+html[data-theme-v3="1"] body[data-page="app"] .bh-tv3-layout {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) !important;
+}
+
+/* ── 4. Setup card (iOS SetupCard.swift) ─────────────────────────────────── */
+/* Appears first in primary column when user has incomplete setup steps. */
+
+.bh-tv3-setup-card {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.50);
+  border-radius: 22px;
+  box-shadow: 0 2px 12px rgba(20, 32, 27, 0.06);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bh-tv3-setup-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #14201B;
+  line-height: 1.3;
+}
+
+.bh-tv3-setup-subtitle {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #5E6B63;
+  line-height: 1.45;
+}
+
+.bh-tv3-setup-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(14, 59, 46, 0.12);
+  overflow: hidden;
+}
+
+.bh-tv3-setup-progress-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: #0E3B2E;
+  transition: width 0.4s ease;
+}
+
+.bh-tv3-setup-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bh-tv3-setup-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: #14201B;
+}
+
+.bh-tv3-setup-step.done {
+  color: #5E6B63;
+  text-decoration: line-through;
+}
+
+.bh-tv3-setup-step-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  background: rgba(14, 59, 46, 0.10);
+  color: #0E3B2E;
+}
+
+.bh-tv3-setup-step.done .bh-tv3-setup-step-icon {
+  background: rgba(14, 59, 46, 0.18);
+  color: #0E3B2E;
+}
+
+
+/* ── 5. Trial banner (iOS TrialBanner.swift) ─────────────────────────────── */
+/* Appears after calendarStrip when subscription is in trial period. */
+
+.bh-tv3-trial-banner {
+  background: rgba(253, 240, 236, 0.90);
+  border: 1px solid rgba(255, 222, 210, 0.90);
+  border-radius: 20px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bh-tv3-trial-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.bh-tv3-trial-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.bh-tv3-trial-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #A8452A;
+  line-height: 1.3;
+}
+
+.bh-tv3-trial-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #A8452A;
+  opacity: 0.80;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.bh-tv3-trial-cta {
+  height: 36px;
+  border: none;
+  border-radius: 12px;
+  background: #C4552F;
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.12s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.bh-tv3-trial-cta:hover  { background: #A8452A; }
+.bh-tv3-trial-cta:active { transform: scale(0.97); }
+
+
+/* ── 6. Mobile: 18px horizontal padding on primary column ───────────────── */
+/* iOS TodayView.swift: .padding(.horizontal, 18) on the VStack */
+
+@media (max-width: 1023px) {
+
+  html[data-theme-v3="1"] body[data-page="app"] .bh-tv3-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  html[data-theme-v3="1"] body[data-page="app"] .bh-tv3-primary {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+}
+
+@media (max-width: 767px) {
+
+  html[data-theme-v3="1"] body[data-page="app"] .bh-tv3-primary {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+}

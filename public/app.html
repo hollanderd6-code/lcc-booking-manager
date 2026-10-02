@@ -690,6 +690,7 @@ setTimeout(function() {
   <link rel="stylesheet" href="/css/bh-shell-07.css">
   <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
   <link rel="stylesheet" href="/css/bh-today-v3.css?v=today15">
+  <link rel="stylesheet" href="/css/bh-today-ios-05.css?v=today05">
   <link rel="stylesheet" href="/css/bh-calendar-v3.css?v=cal17c">
 
   <!-- CSS propre a cette page. -->
@@ -3893,6 +3894,16 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
     <!-- ═══ Primary column — iOS Today hierarchy ═══ -->
     <div class="bh-tv3-primary">
 
+      <!-- 0. Setup card (SetupCard.swift) — shown when onboarding steps remain -->
+      <div id="bhTv3SetupCard" class="bh-tv3-setup-card" style="display:none;">
+        <div class="bh-tv3-setup-title">Configurez votre espace</div>
+        <div class="bh-tv3-setup-subtitle" id="bhTv3SetupSubtitle"></div>
+        <div class="bh-tv3-setup-progress">
+          <div class="bh-tv3-setup-progress-bar" id="bhTv3SetupProgressBar" style="width:0%"></div>
+        </div>
+        <div class="bh-tv3-setup-steps" id="bhTv3SetupSteps"></div>
+      </div>
+
       <!-- 1. Three counters strip (CounterCard.swift) -->
       <div class="bh-tv3-counters" id="bhTv3Counters">
         <!-- Skeleton placeholder while bh-today-v3.js loads -->
@@ -3904,6 +3915,16 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
       <!-- 2. Week strip (calendarStrip in TodayView.swift) -->
       <div class="bh-tv3-week-card" id="bhTv3WeekCard">
         <div style="padding:14px 14px 12px;"><div class="bh-tv3-skel" style="height:88px;border-radius:14px;"></div></div>
+      </div>
+
+      <!-- 2b. Trial banner (TrialBanner.swift) — shown during trial period -->
+      <div id="bhTv3TrialBanner" class="bh-tv3-trial-banner" style="display:none;">
+        <span class="bh-tv3-trial-icon">⏰</span>
+        <div class="bh-tv3-trial-text">
+          <div class="bh-tv3-trial-title" id="bhTv3TrialTitle"></div>
+          <div class="bh-tv3-trial-sub" id="bhTv3TrialSub">Choisissez votre abonnement pour continuer.</div>
+        </div>
+        <button class="bh-tv3-trial-cta" onclick="window.location.href='/subscription-expired.html'">S'abonner</button>
       </div>
 
       <!-- 3. À traiter maintenant (urgentArrivees) -->
