@@ -395,8 +395,8 @@ describe('09A-15: Navigation preserved', () => {
     expect(html).toMatch(/href="\/settings\.html"/);
   });
 
-  test('09A-15-03: property click navigates to /settings.html', () => {
-    expect(html).toMatch(/window\.location\.href\s*=\s*'\/settings\.html'/);
+  test('09A-15-03: property click navigates to /property.html', () => {
+    expect(html).toMatch(/window\.location\.href\s*=\s*'\/property\.html\?id=/);
   });
 
   test('09A-15-04: data-page="properties" preserved', () => {

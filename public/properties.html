@@ -274,7 +274,7 @@
 
         itemsEl.querySelectorAll('[data-prop-id]').forEach(function(el) {
           el.addEventListener('click', function() {
-            window.location.href = '/settings.html';
+            window.location.href = '/property.html?id=' + el.getAttribute('data-prop-id');
           });
         });
       }

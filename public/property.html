@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html data-theme="light" data-theme-v3="1" class="bh-lux" lang="fr">
+<head>
+  <script>document.documentElement.classList.add('bh-lux');</script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Logement — Boostinghost</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+
+  <link rel="icon" href="/img/brand/web/favicon.svg?v=bfeb7fce" type="image/svg+xml">
+  <link rel="icon" href="/img/brand/web/favicon-32.png?v=d4e0f5fe" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/img/brand/web/apple-touch-icon.png?v=07d26903">
+  <link rel="manifest" href="/img/brand/web/manifest.webmanifest">
+  <meta name="theme-color" content="#0E3B2E">
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+  <link href="/css/style.css?v=17204d03" rel="stylesheet"/>
+  <link href="/css/bh-theme-v3.css?v=cb75551e" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/bh-tokens.css?v=9b734869">
+  <link rel="stylesheet" href="/css/bh-ios-parity.css">
+  <link rel="stylesheet" href="/css/bh-shell-ios.css">
+  <link rel="stylesheet" href="/css/bh-shell-04.css">
+  <link rel="stylesheet" href="/css/bh-native-bg.css">
+  <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
+  <link rel="stylesheet" href="/css/bh-lux.css?v=d686b5ab">
+  <link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
+  <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
+  <link rel="stylesheet" href="/css/bh-v3-mobile.css?v=2b3a5fdd">
+  <link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
+  <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+  <link rel="stylesheet" href="/css/bh-property-detail-ios-10.css">
+
+  <style>
+    .prop-detail-header {
+      display: none;
+      padding: 28px 24px 4px;
+    }
+    @media (min-width: 1367px) {
+      .prop-detail-header { display: flex; align-items: flex-start; justify-content: space-between; }
+    }
+    .prop-bottom-pad {
+      height: calc(80px + env(safe-area-inset-bottom, 0px));
+    }
+    @media (min-width: 1367px) { .prop-bottom-pad { display: none; } }
+  </style>
+</head>
+
+<body data-page="property" data-kicker="Logement" data-title="Logement" data-back-href="/properties.html" data-back-label="Logements">
+
+  <script src="/js/auth-fetch.js?v=cd78753d"></script>
+  <script src="/js/sub-account-guard.js?v=3558a1b3"></script>
+
+  <div id="bhSidebar"></div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="app-container">
+    <main class="main-content">
+
+      <div id="bhHeader"></div>
+
+      <div class="page-content">
+
+        <!-- Desktop header (≥1367px) -->
+        <div class="prop-detail-header">
+          <div>
+            <div class="prop-detail-header__kicker"><span id="propDetKicker">&#160;</span></div>
+            <div class="prop-detail-header__title" id="propDetTitle">Logement</div>
+          </div>
+          <div class="bh-header-actions">
+            <button class="bh-ios-initials-button bh-ios-initials-button--own bh-header-initials-btn" id="propDetInitialsBtn" aria-label="Mon compte" onclick="window.openAgencySwitcherModal && window.openAgencySwitcherModal()">?</button>
+          </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="prop-detail-content">
+
+          <div id="propDetLoading" class="prop-det-loading">Chargement...</div>
+          <div id="propDetError" class="prop-det-error" style="display:none"></div>
+          <div id="propDetBody" style="display:none"></div>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/bh-layout.js?v=fix09"></script>
+  <script src="/js/bh-v3-finitions.js"></script>
+  <script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
+  <script src="/js/mobile-tabs-handler.js?v=03a5b1c7"></script>
+  <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
+  <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
+  <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
+  <script src="/js/bh-property-detail-ios-10.js"></script>
+
+</body>
+</html>
