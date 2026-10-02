@@ -1,0 +1,294 @@
+/* ============================================================
+   BH-PROPERTY-DETAIL-SECTIONS-11A — Section editors: Identity, Stay, Money
+   Scope: body[data-page="property"] only.
+   Loaded after bh-property-detail-ios-10.css.
+   Introduced by PROPERTIES_11A.
+   ============================================================ */
+
+/* ─────────────────────────────────────────────────────────────
+   1. SECTION VIEW WRAPPER — desktop max-width
+   ───────────────────────────────────────────────────────────── */
+
+@media (min-width: 1100px) {
+  body[data-page="property"] .prop-section-view {
+    max-width: 900px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   2. SECTION HEADER — mobile back button + title row
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-top: 4px;
+}
+
+@media (min-width: 1367px) {
+  body[data-page="property"] .prop-section-header {
+    display: none;
+  }
+}
+
+body[data-page="property"] .prop-section-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 6px 8px 6px 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #0E3B2E;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  text-decoration: none;
+}
+
+body[data-page="property"] .prop-section-back-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+body[data-page="property"] .prop-section-title-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #14201B;
+  flex: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   3. FORM CARD — glass, matches prop-detail-card aesthetic
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-form-card {
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.70);
+  border-radius: 22px;
+  box-shadow: 0 8px 22px rgba(20, 32, 27, 0.08);
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+body[data-page="property"] .prop-form-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 1px;
+  right: 1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.90), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   4. FORM FIELD — label + input
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-form-field {
+  margin-bottom: 14px;
+}
+
+body[data-page="property"] .prop-form-field:last-child {
+  margin-bottom: 0;
+}
+
+body[data-page="property"] .prop-form-label {
+  display: block;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5E6B63;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   5. FORM INPUTS — text, textarea, select
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-form-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 44px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(20, 32, 27, 0.12);
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14.5px;
+  color: #14201B;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+body[data-page="property"] .prop-form-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 100px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(20, 32, 27, 0.12);
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14.5px;
+  color: #14201B;
+  outline: none;
+  resize: vertical;
+  line-height: 1.5;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+body[data-page="property"] .prop-form-select {
+  width: 100%;
+  box-sizing: border-box;
+  height: 44px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(20, 32, 27, 0.12);
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14.5px;
+  color: #14201B;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+body[data-page="property"] .prop-form-input:focus,
+body[data-page="property"] .prop-form-textarea:focus,
+body[data-page="property"] .prop-form-select:focus {
+  border-color: #0E3B2E;
+  box-shadow: 0 0 0 3px rgba(14, 59, 46, 0.10);
+}
+
+body[data-page="property"] .prop-form-input--locked {
+  background: rgba(94, 107, 99, 0.08);
+  color: #5E6B63;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   6. GRIDS — 2-column and 3-column for short fields
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+body[data-page="property"] .prop-form-grid-2:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 400px) {
+  body[data-page="property"] .prop-form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+body[data-page="property"] .prop-form-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  body[data-page="property"] .prop-form-grid-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   7. CURRENCY LOCKED NOTICE
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-currency-locked-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(201, 161, 91, 0.12);
+  border: 1px solid rgba(201, 161, 91, 0.30);
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  color: #8A5B14;
+  margin-top: 8px;
+}
+
+body[data-page="property"] .prop-currency-locked-notice svg {
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   8. SAVE BUTTON
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-section-save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 50px;
+  background: #0E3B2E;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  margin-top: 4px;
+  transition: opacity 0.15s;
+}
+
+body[data-page="property"] .prop-section-save-btn:active {
+  opacity: 0.78;
+}
+
+body[data-page="property"] .prop-section-save-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   9. COLOR PICKER FIELD
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-color-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+body[data-page="property"] .prop-color-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 2px solid rgba(20, 32, 27, 0.12);
+  flex-shrink: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+body[data-page="property"] .prop-form-input--color {
+  flex: 1;
+}

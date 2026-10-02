@@ -136,9 +136,10 @@
 
   /* ── Render single block row ──────────────────────────── */
   function renderBlock(iconKey, label, status, hasLivretBadge, sub) {
-    /* Bridge: full section editors come in PROPERTIES_11+;
-       all blocks link to settings.html for now. */
-    var href = '/settings.html';
+    var sectionRoutes = { identity: 'identity', stay: 'stay', pricing: 'money' };
+    var href = sectionRoutes[iconKey]
+      ? '/property.html?id=' + propertyId + '&section=' + sectionRoutes[iconKey]
+      : '/settings.html'; /* Bridge: PROPERTIES_11B+ for remaining blocks */
 
     var badgesHtml = '';
     if (status !== 'inactive') {
@@ -492,16 +493,47 @@
     });
   }
 
+  /* ── Section load — delegates to BhPropSections ──────── */
+  function loadSection(section) {
+    var loadEl = document.getElementById('propDetLoading');
+    var errEl  = document.getElementById('propDetError');
+    var bodyEl = document.getElementById('propDetBody');
+    if (loadEl) loadEl.style.display = '';
+    if (errEl)  errEl.style.display  = 'none';
+    if (bodyEl) bodyEl.style.display = 'none';
+
+    fetch('/api/properties/' + propertyId).then(function (r) {
+      if (!r.ok) throw new Error('not-found');
+      return r.json();
+    }).then(function (p) {
+      if (!p || !p.id) { showError('Logement introuvable.'); return; }
+      propData = p;
+      if (window.BhPropSections && window.BhPropSections.mount) {
+        window.BhPropSections.mount(propertyId, section, p);
+      } else {
+        showError('Erreur de chargement du module de section.');
+      }
+    }).catch(function () {
+      showError('Erreur de chargement. Vérifiez votre connexion.');
+    });
+  }
+
   /* ── Init ─────────────────────────────────────────────── */
   function init() {
     var params = new URLSearchParams(window.location.search);
     propertyId = params.get('id');
+    var section = params.get('section');
     if (!propertyId) {
       showError('Identifiant de logement manquant.');
       return;
     }
-    window._propDetRetry = loadAll;
-    loadAll();
+    if (section === 'identity' || section === 'stay' || section === 'money') {
+      window._propDetRetry = function () { loadSection(section); };
+      loadSection(section);
+    } else {
+      window._propDetRetry = loadAll;
+      loadAll();
+    }
   }
 
   if (document.readyState === 'loading') {
