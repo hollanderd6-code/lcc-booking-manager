@@ -1,0 +1,505 @@
+/* ============================================================
+   BH-IOS-PARITY — Shared iOS visual parity components
+   Foundation 02.
+
+   Tokens source: bh-tokens.css (must load first).
+   Load order: after bh-tokens.css, before per-screen layers.
+
+   SAFE: this file contains only ADDITIVE class definitions.
+   No element or legacy selector is overridden here.
+   Existing screens are not affected until they explicitly
+   adopt these classes.
+   ============================================================ */
+
+/* ── 0. Font stack ─────────────────────────────────────────── */
+.bh-ios-text {
+  font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+}
+
+/* ── 1. App background — iOS canonical warm gradient + halos ─ */
+.bh-ios-app-bg {
+  position: relative;
+  /* Warm gradient: 168° angle, 3 stops */
+  background:
+    linear-gradient(
+      168deg,
+      var(--bh-ios-bg-top,    #F5F2EA) 0%,
+      var(--bh-ios-bg-mid,    #EBE7DC) 50%,
+      var(--bh-ios-bg-bottom, #E2DDD0) 100%
+    );
+}
+
+/* Ambient halos via layered radial gradients on ::before */
+.bh-ios-app-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* 4 halos: green top-right, terra bottom-left, green bottom-center, gold mid-right */
+  background:
+    radial-gradient(ellipse 320px 320px at 90% 8%,
+      rgba(46, 139, 98, 0.13) 0%, transparent 70%),
+    radial-gradient(ellipse 330px 330px at 8% 92%,
+      rgba(168, 69, 42, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 280px 280px at 50% 95%,
+      rgba(46, 139, 98, 0.13) 0%, transparent 70%),
+    radial-gradient(ellipse 240px 240px at 88% 52%,
+      rgba(251, 243, 226, 0.90) 0%, transparent 70%);
+  z-index: 0;
+}
+
+/* Children must stack above the halo layer */
+.bh-ios-app-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── 2. Content glass card (.bh-ios-card) ──────────────────── */
+/*
+   iOS: ultraThinMaterial + white 0.62 fill + white 0.70 border
+   + specular edge + card shadow
+*/
+.bh-ios-card {
+  position: relative;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.70);
+  border-radius: var(--bh-radius-card, 22px);
+  box-shadow: var(--bh-shadow-card, 0 8px 22px rgba(20, 32, 27, 0.08));
+  overflow: hidden;
+}
+
+/* Specular edge: non-interactive top-left gradient streak */
+.bh-ios-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95)  0%,
+    rgba(255, 255, 255, 0.50)  8%,
+    transparent                45%,
+    rgba(255, 255, 255, 0.40) 92%,
+    rgba(255, 255, 255, 0.45) 100%
+  );
+  z-index: 1;
+}
+
+/* Card content sits above specular layer */
+.bh-ios-card > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Size variants */
+.bh-ios-card--large  { border-radius: var(--bh-radius-card-large,  24px); }
+.bh-ios-card--small  { border-radius: var(--bh-radius-card-small,  16px); }
+
+/* ── 3. Chrome glass (.bh-ios-chrome) ──────────────────────── */
+/*
+   iOS: .glassEffect(in:.rect)
+   Heavier blur, white fill 0.72, chrome shadow.
+   Used for: header bars, toolbars, navigation chrome.
+*/
+.bh-ios-chrome {
+  position: relative;
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.80);
+  box-shadow: var(--bh-shadow-chrome, 0 14px 38px rgba(20, 32, 27, 0.20));
+  overflow: hidden;
+}
+
+/* Specular edge on chrome (same spec, heavier) */
+.bh-ios-chrome::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.95)  0%,
+    rgba(255, 255, 255, 0.50)  8%,
+    transparent                45%,
+    rgba(255, 255, 255, 0.40) 92%,
+    rgba(255, 255, 255, 0.45) 100%
+  );
+  z-index: 1;
+}
+
+.bh-ios-chrome > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ── 4. Circle button (.bh-ios-circle-button) ──────────────── */
+/*
+   38×38px, circular glass, centered icon, attenue foreground.
+*/
+.bh-ios-circle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.70);
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--bh-shadow-chip, 0 2px 4px rgba(20, 32, 27, 0.10));
+  color: var(--bh-ios-attenue, #5E6B63);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.bh-ios-circle-button:hover {
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.bh-ios-circle-button:active {
+  transform: scale(0.93);
+}
+
+.bh-ios-circle-button:focus-visible {
+  outline: 2px solid var(--bh-ios-vert, #0E3B2E);
+  outline-offset: 2px;
+}
+
+/* ── 5. Initials button (.bh-ios-initials-button) ──────────── */
+/*
+   38×38 circle. Own account: green bg. Delegated: terracotta.
+*/
+.bh-ios-initials-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 50%;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.12s ease;
+}
+
+.bh-ios-initials-button:active { transform: scale(0.93); }
+
+/* Own account */
+.bh-ios-initials-button,
+.bh-ios-initials-button--own {
+  background: #DCE8E1;
+  color: #0E3B2E;
+  border: none;
+}
+
+/* All-accounts view: 2.5px green ring */
+.bh-ios-initials-button--all {
+  background: #DCE8E1;
+  color: #0E3B2E;
+  border: 2.5px solid #0E3B2E;
+}
+
+/* Delegated / sub-account */
+.bh-ios-initials-button--delegated {
+  background: #A8452A;
+  color: #FFFFFF;
+  border: none;
+}
+
+/* ── 6. Global iOS-like header (.bh-ios-navbar) ─────────────── */
+.bh-ios-navbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 8px 18px 16px;
+  font-family: "DM Sans", system-ui, sans-serif;
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.bh-ios-navbar--footer {
+  padding-bottom: 12px;
+}
+
+.bh-ios-navbar__lead {
+  flex: 1;
+  min-width: 0;
+}
+
+.bh-ios-navbar__super {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--bh-ios-attenue, #5E6B63);
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.bh-ios-navbar__title {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.96px;
+  color: var(--bh-ios-encre, #14201B);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bh-ios-navbar__trail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* ── 7. Section label (.bh-ios-section-label) ──────────────── */
+.bh-ios-section-label {
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--bh-ios-attenue, #5E6B63);
+  line-height: 1.2;
+}
+
+/* ── 8. Filter pills ────────────────────────────────────────── */
+.bh-ios-filter-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--bh-filter-gap, 6px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.bh-ios-filter-strip::-webkit-scrollbar { display: none; }
+
+.bh-ios-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: 13px;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 180ms ease-in-out, border-color 180ms ease-in-out,
+              color 180ms ease-in-out, font-weight 180ms ease-in-out;
+  border: 1px solid transparent;
+  line-height: 1;
+  min-height: 32px;
+}
+
+.bh-ios-filter-pill:focus-visible {
+  outline: 2px solid var(--bh-ios-vert, #0E3B2E);
+  outline-offset: 2px;
+}
+
+/* Standard unselected */
+.bh-ios-filter-pill {
+  background: rgba(255, 255, 255, 0.25);
+  color: var(--bh-ios-corps, #3E4A44);
+}
+
+/* Standard selected */
+.bh-ios-filter-pill.active,
+.bh-ios-filter-pill[aria-selected="true"] {
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--bh-ios-encre, #14201B);
+  font-weight: 600;
+}
+
+/* Gold unselected */
+.bh-ios-filter-pill--gold {
+  background: rgba(251, 243, 226, 0.72);
+  border-color: #C9A15B;
+  color: var(--bh-ios-or, #8A5B14);
+}
+
+/* Gold selected */
+.bh-ios-filter-pill--gold.active,
+.bh-ios-filter-pill--gold[aria-selected="true"] {
+  background: rgba(251, 243, 226, 0.92);
+  border-color: #C9A15B;
+  color: var(--bh-ios-or, #8A5B14);
+  font-weight: 600;
+}
+
+/* ── 9. Platform badge (.bh-ios-platform-badge) ─────────────── */
+.bh-ios-platform-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #FFFFFF;
+  padding: 4px 8px;
+  border-radius: var(--bh-radius-platform, 8px);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.bh-ios-platform-badge--airbnb  { background: #FF5A5F; }
+.bh-ios-platform-badge--booking { background: #003580; }
+.bh-ios-platform-badge--expedia { background: #FFC72C; color: #14201B; }
+.bh-ios-platform-badge--vrbo    { background: #1A5276; }
+.bh-ios-platform-badge--direct  { background: #0E3B2E; }
+.bh-ios-platform-badge--bhguest { background: #0E3B2E; }
+.bh-ios-platform-badge--bloque  { background: #9CA3AF; }
+
+/* ── 10. Message bubbles ────────────────────────────────────── */
+/*
+   iOS canonical geometry:
+   Owner (outgoing): fill rgba(255,255,255,0.80), stroke rgba(255,255,255,0.60)
+     radius: 18 18 4 18 (top-left top-right bottom-right bottom-left)
+   Guest (incoming): fill #DCE8E1
+     radius: 4 18 18 18
+*/
+.bh-ios-message-owner {
+  background: rgba(255, 255, 255, 0.80);
+  border: 1px solid rgba(255, 255, 255, 0.60);
+  border-radius: 18px 18px 4px 18px;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--bh-ios-encre, #14201B);
+  padding: 10px 14px;
+  max-width: 78%;
+  word-wrap: break-word;
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+}
+
+.bh-ios-message-guest {
+  background: #DCE8E1;
+  border-radius: 4px 18px 18px 18px;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--bh-ios-encre, #14201B);
+  padding: 10px 14px;
+  max-width: 78%;
+  word-wrap: break-word;
+}
+
+/* ── 11. Manage icon containers ─────────────────────────────── */
+.bh-ios-manage-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: var(--bh-radius-manage-icon, 12px);
+  flex-shrink: 0;
+}
+
+.bh-ios-manage-icon--properties {
+  background: var(--bh-manage-properties-bg, #DCE8E1);
+  color:      var(--bh-manage-properties-fg, #0E3B2E);
+}
+.bh-ios-manage-icon--cleaning {
+  background: var(--bh-manage-cleaning-bg, rgba(251, 243, 226, 0.90));
+  color:      var(--bh-manage-cleaning-fg, #8A5B14);
+}
+.bh-ios-manage-icon--owners {
+  background: var(--bh-manage-owners-bg, rgba(255, 255, 255, 0.55));
+  color:      var(--bh-manage-owners-fg, #5E6B63);
+}
+.bh-ios-manage-icon--boost {
+  background: var(--bh-manage-boost-bg, #DCE8E1);
+  color:      var(--bh-manage-boost-fg, #2E8B62);
+}
+
+/* ── 12. Semantic status utilities ──────────────────────────── */
+.bh-ios-status--success {
+  color: var(--bh-ios-occupe, #2E8B62);
+  background: var(--bh-ios-menthe-fond, rgba(46, 139, 98, 0.13));
+}
+
+.bh-ios-status--urgency {
+  color: var(--bh-ios-terracotta, #A8452A);
+  background: var(--bh-ios-terracotta-bg, rgba(253, 240, 236, 0.72));
+  border-color: var(--bh-ios-terracotta-border, rgba(255, 222, 210, 0.90));
+}
+
+.bh-ios-status--gold {
+  color: var(--bh-ios-or, #8A5B14);
+  background: var(--bh-ios-or-bg, rgba(251, 243, 226, 0.90));
+}
+
+.bh-ios-status--neutral {
+  color: var(--bh-ios-attenue, #5E6B63);
+  background: rgba(255, 255, 255, 0.40);
+}
+
+/* ── 13. Typography utility classes ─────────────────────────── */
+.bh-ios-grand-titre {
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.96px;
+  color: var(--bh-ios-encre, #14201B);
+}
+
+.bh-ios-valeur-hero {
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -1.19px;
+  color: var(--bh-ios-encre, #14201B);
+}
+
+.bh-ios-titre-ligne {
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--bh-ios-encre, #14201B);
+}
+
+.bh-ios-corps {
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--bh-ios-corps, #3E4A44);
+}
+
+.bh-ios-meta {
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--bh-ios-attenue, #5E6B63);
+}
+
+/* ── 14. Reduced motion safety ──────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .bh-ios-circle-button,
+  .bh-ios-initials-button,
+  .bh-ios-filter-pill {
+    transition: none !important;
+  }
+  .bh-ios-circle-button:active,
+  .bh-ios-initials-button:active {
+    transform: none !important;
+  }
+}

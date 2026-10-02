@@ -123,7 +123,183 @@
 
   --bh-native-radius-card: 22px;
 
-  /* ── Ponts vers les nommages historiques ────────────────────────────
+  /* ── iOS parity design system — Foundation 02 ──────────────────────
+     Source of truth: Boostinghost iOS app (Palette.swift / Materials.swift).
+     These tokens are REFERENCE VALUES. Do not apply globally to legacy screens
+     without per-screen validation. Use bh-ios-parity.css for components.
+     ─────────────────────────────────────────────────────────────────── */
+
+  /* Text — iOS exact values */
+  --bh-ios-encre:        #14201B;
+  --bh-ios-encre-douce:  #2C3A33;
+  --bh-ios-corps:        #3E4A44;
+  --bh-ios-attenue:      #5E6B63;   /* lightest text allowed */
+
+  /* Greens — iOS exact values */
+  --bh-ios-vert:         #0E3B2E;
+  --bh-ios-vert-clair:   #8FD3B4;
+  --bh-ios-occupe:       #2E8B62;
+  --bh-ios-occupe-fonce: #1F6B4C;
+  --bh-ios-menthe-fond:  rgba(46, 139, 98, 0.13);
+
+  /* Terracotta — urgency / escalation only */
+  --bh-ios-terracotta:        #A8452A;
+  --bh-ios-terracotta-border: rgba(255, 222, 210, 0.90);
+  --bh-ios-terracotta-bg:     rgba(253, 240, 236, 0.72);
+
+  /* Gold — AI / BoostPrice / pending only */
+  --bh-ios-or:       #8A5B14;
+  --bh-ios-or-clair: #C9A15B;
+  --bh-ios-or-bg:    rgba(251, 243, 226, 0.90);
+
+  /* Semantic */
+  --bh-ios-depart:  #E8B48A;
+  --bh-ios-bleu:    #2563EB;
+  --bh-ios-bleu-bg: rgba(219, 234, 254, 0.72);
+
+  /* Platforms */
+  --bh-ios-airbnb:  #FF5A5F;
+  --bh-ios-booking: #003580;
+  --bh-ios-expedia: #FFC72C;
+  --bh-ios-vrbo:    #1A5276;
+  --bh-ios-direct:  #0E3B2E;
+  --bh-ios-bhguest: #0E3B2E;
+  --bh-ios-bloque:  #9CA3AF;
+
+  /* App background gradient stops */
+  --bh-ios-bg-top:    #F5F2EA;
+  --bh-ios-bg-mid:    #EBE7DC;
+  --bh-ios-bg-bottom: #E2DDD0;
+
+  /* App background halos */
+  --bh-ios-halo-green-tr:  rgba(46, 139, 98, 0.13);
+  --bh-ios-halo-terra-bl:  rgba(168, 69, 42, 0.06);
+  --bh-ios-halo-green-bc:  rgba(46, 139, 98, 0.13);
+  --bh-ios-halo-gold-mr:   rgba(251, 243, 226, 0.90);
+
+  /* Typography — iOS exact mappings to DM Sans */
+  --bh-ios-font-grand-titre:     font-size 30px / bold / letter-spacing -0.96px;  /* comment only */
+  --bh-font-grand-titre-size:    30px;
+  --bh-font-grand-titre-weight:  700;
+  --bh-font-grand-titre-tracking: -0.96px;
+
+  --bh-font-sur-titre-size:      12.5px;
+  --bh-font-sur-titre-weight:    600;
+
+  --bh-font-valeur-hero-size:    34px;
+  --bh-font-valeur-hero-weight:  600;
+  --bh-font-valeur-hero-tracking: -1.19px;
+
+  --bh-font-titre-ligne-size:    17px;
+  --bh-font-titre-ligne-weight:  600;
+
+  --bh-font-titre-ligne-large-size:   18px;
+  --bh-font-titre-ligne-large-weight: 600;
+
+  --bh-font-corps-size:    15px;
+  --bh-font-corps-weight:  400;
+
+  --bh-font-meta-size:     13px;
+  --bh-font-meta-weight:   400;
+
+  --bh-font-intertitre-size:     11.5px;
+  --bh-font-intertitre-weight:   700;
+  --bh-font-intertitre-tracking: 1.5px;
+
+  --bh-font-onglet-size:   10.5px;
+  --bh-font-onglet-weight: 500;
+
+  /* Font stack */
+  --bh-ios-font: "DM Sans", system-ui, -apple-system, sans-serif;
+
+  /* Spacing — canonical scale */
+  --bh-sp-1:   4px;
+  --bh-sp-2:   6px;
+  --bh-sp-3:   8px;
+  --bh-sp-4:   10px;
+  --bh-sp-5:   12px;
+  --bh-sp-6:   14px;
+  --bh-sp-7:   16px;
+  --bh-sp-8:   18px;
+  --bh-sp-9:   20px;
+  --bh-sp-10:  24px;
+  --bh-sp-11:  32px;
+
+  /* Structural spacing */
+  --bh-content-h-mobile:  18px;
+  --bh-content-top:       16px;
+  --bh-content-bottom:    32px;
+  --bh-section-today:     16px;
+  --bh-section-manage:    20px;
+  --bh-section-messages:  10px;
+  --bh-filter-gap:        6px;
+
+  /* Radius — canonical iOS values */
+  --bh-radius-card:              22px;
+  --bh-radius-card-large:        24px;
+  --bh-radius-card-small:        16px;
+  --bh-radius-button:            15px;
+  --bh-radius-circle-button:     19px;
+  --bh-radius-input:             18px;
+  --bh-radius-status:            9px;
+  --bh-radius-platform:          8px;
+  --bh-radius-calendar-chip:     14px;
+  --bh-radius-calendar-date-chip: 13px;
+  --bh-radius-manage-icon:       12px;
+  --bh-radius-calendar-bar:      11px;
+  --bh-radius-platform-mini:     4px;
+
+  /* Shadows */
+  --bh-shadow-card:   0 8px 22px rgba(20, 32, 27, 0.08);
+  --bh-shadow-chrome: 0 14px 38px rgba(20, 32, 27, 0.20);
+  --bh-shadow-chip:   0 2px 4px rgba(20, 32, 27, 0.10);
+
+  /* Glass surfaces */
+  --bh-glass-fill:    rgba(255, 255, 255, 0.62);
+  --bh-glass-border:  rgba(255, 255, 255, 0.70);
+  --bh-glass-blur:    blur(20px) saturate(180%);
+
+  /* Calendar reference tokens (iOS source) */
+  --bh-cal-ref-property-width:    76px;
+  --bh-cal-ref-day-header-height: 44px;
+  --bh-cal-ref-row-height:        64px;
+  --bh-cal-ref-bar-height:        44px;
+  --bh-cal-ref-bar-radius:        11px;
+  --bh-cal-ref-row-separator:     rgba(20, 32, 27, 0.06);
+  --bh-cal-ref-col-separator:     rgba(20, 32, 27, 0.10);
+  --bh-cal-ref-weekend:           rgba(201, 161, 91, 0.07);
+
+  /* Messages reference tokens (iOS source) */
+  --bh-msg-ref-avatar-size:       46px;
+  --bh-msg-ref-card-radius:       22px;
+  --bh-msg-ref-card-spacing:      10px;
+  --bh-msg-ref-guest-name-size:   16.5px;
+  --bh-msg-ref-context-size:      12.5px;
+  --bh-msg-ref-excerpt-size:      14px;
+  --bh-msg-ref-timestamp-size:    12.5px;
+  --bh-msg-ref-unread-dot:        9px;
+  --bh-msg-ref-text-size:         15px;
+  --bh-msg-ref-timestamp-bubble:  11px;
+  --bh-msg-ref-bubble-max:        78%;
+  --bh-msg-ref-input-radius:      18px;
+  --bh-msg-ref-send-size:         36px;
+
+  /* Messages bubble geometry (iOS canonical) */
+  --bh-msg-owner-fill:   rgba(255, 255, 255, 0.80);
+  --bh-msg-owner-stroke: rgba(255, 255, 255, 0.60);
+  --bh-msg-guest-fill:   #DCE8E1;
+
+  /* Manage icon tokens */
+  --bh-manage-properties-bg: #DCE8E1;
+  --bh-manage-properties-fg: #0E3B2E;
+  --bh-manage-cleaning-bg:   rgba(251, 243, 226, 0.90);
+  --bh-manage-cleaning-fg:   #8A5B14;
+  --bh-manage-owners-bg:     rgba(255, 255, 255, 0.55);
+  --bh-manage-owners-fg:     #5E6B63;
+  --bh-manage-boost-bg:      #DCE8E1;
+  --bh-manage-boost-fg:      #2E8B62;
+
+  /* Ponts vers les nommages historiques ────────────────────────────
      style.css et bh-theme-v3.css continuent d'utiliser ces noms. Les
      redefinir ici evite d'avoir a reecrire 81 Ko de feuille : les deux
      familles pointent desormais sur la meme echelle de vert. */
