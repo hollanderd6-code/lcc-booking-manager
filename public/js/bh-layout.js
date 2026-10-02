@@ -1507,7 +1507,7 @@ var _bhNativeConfirm = window.confirm;
       startIdx = 0;
       for (var i = 0; i < mc.length; i++) { if (p.clientX >= mc[i].left && p.clientX <= mc[i].left + mc[i].width) { startIdx = i; break; } }
       cap.classList.remove('lg-animate');
-      if (bar.setPointerCapture && e.pointerId != null) { try { bar.setPointerCapture(e.pointerId); } catch (er) {} }
+      if (bar.setPointerCapture && e.pointerId != null && e.pointerType !== 'mouse') { try { bar.setPointerCapture(e.pointerId); } catch (er) {} }
     }
     function onMove(e) {
       if (!dragging) return;
