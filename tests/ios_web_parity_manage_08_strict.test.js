@@ -171,8 +171,8 @@ describe('08 canonical entries: Logements', () => {
     expect(manageHtml).toMatch(/mgios-title[^>]*>Logements/);
   });
 
-  test('4-02 Logements route: /settings.html', () => {
-    expect(manageHtml).toMatch(/href="\/settings\.html"[^>]*data-perm="can_view_properties"|data-perm="can_view_properties"[^>]*href="\/settings\.html"/);
+  test('4-02 Logements route: /properties.html', () => {
+    expect(manageHtml).toMatch(/href="\/properties\.html"[^>]*data-perm="can_view_properties"|data-perm="can_view_properties"[^>]*href="\/properties\.html"/);
   });
 
   test('4-03 Logements subtitle: iOS exact text', () => {
@@ -180,13 +180,13 @@ describe('08 canonical entries: Logements', () => {
   });
 
   test('4-04 Logements icon bg: #DCE8E1', () => {
-    const logBlock = manageHtml.match(/href="\/settings\.html"[\s\S]{0,400}/);
+    const logBlock = manageHtml.match(/href="\/properties\.html"[\s\S]{0,400}/);
     expect(logBlock).toBeTruthy();
     expect(logBlock[0]).toMatch(/#DCE8E1/);
   });
 
   test('4-05 Logements icon fg: #0E3B2E (bhVert)', () => {
-    const logBlock = manageHtml.match(/href="\/settings\.html"[\s\S]{0,400}/);
+    const logBlock = manageHtml.match(/href="\/properties\.html"[\s\S]{0,400}/);
     expect(logBlock[0]).toMatch(/#0E3B2E/);
   });
 
@@ -286,7 +286,7 @@ describe('08 canonical entries: BoostPrice', () => {
 
 describe('08 canonical entry ORDER', () => {
   test('4-25 Logements appears before Ménage in HTML', () => {
-    expect(manageHtml.indexOf('/settings.html')).toBeLessThan(manageHtml.indexOf('/cleaning.html'));
+    expect(manageHtml.indexOf('/properties.html')).toBeLessThan(manageHtml.indexOf('/cleaning.html'));
   });
 
   test('4-26 Ménage before Propriétaires', () => {
@@ -704,7 +704,7 @@ describe('08 dynamic data JS', () => {
 
 describe('08 sub-account permissions', () => {
   test('16-01 data-perm on Logements row', () => {
-    expect(manageHtml).toMatch(/href="\/settings\.html"[^>]*data-perm="can_view_properties"|data-perm="can_view_properties"[^>]*href="\/settings\.html"/);
+    expect(manageHtml).toMatch(/href="\/properties\.html"[^>]*data-perm="can_view_properties"|data-perm="can_view_properties"[^>]*href="\/properties\.html"/);
   });
 
   test('16-02 data-perm on Ménage row', () => {
