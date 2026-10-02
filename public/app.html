@@ -692,6 +692,7 @@ setTimeout(function() {
   <link rel="stylesheet" href="/css/bh-today-v3.css?v=today15">
   <link rel="stylesheet" href="/css/bh-today-ios-05.css?v=today05">
   <link rel="stylesheet" href="/css/bh-calendar-v3.css?v=cal17c">
+  <link rel="stylesheet" href="/css/bh-calendar-ios-06.css?v=cal06">
 
   <!-- CSS propre a cette page. -->
   <style id="v3-critical">
@@ -7892,7 +7893,7 @@ try {
 
     // Property rows
     state.properties.forEach(function(prop) {
-      var row = div('display:grid;grid-template-columns:'+propW+'px repeat(7,1fr);border-bottom:1px solid #F5F2EC;min-height:56px;');
+      var row = div('display:grid;grid-template-columns:'+propW+'px repeat(7,1fr);border-bottom:1px solid #F5F2EC;min-height:64px;');
 
       var propCell = div('padding:10px 16px;background:#FFFFFF;border-right:1px solid #E5E7EB;display:flex;align-items:center;');
       propCell.innerHTML='<div style="font-size:14px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+prop.name+'</div>';
@@ -7901,7 +7902,7 @@ try {
       days.forEach(function(d2) {
         var dstr = ds(d2);
         var isToday = dstr===today;
-        var cell = div('border-right:1px solid #F5F2EC;position:relative;min-height:56px;'+(isToday?'background:rgba(14,59,46,.03);':''));
+        var cell = div('border-right:1px solid #F5F2EC;position:relative;min-height:64px;'+(isToday?'background:rgba(14,59,46,.03);':''));
 
         // Find bookings for this cell
         state.bookings.forEach(function(r) {
@@ -7971,7 +7972,7 @@ try {
     try { compactMode = localStorage.getItem('bhCalCompact') === '1'; } catch(e) {}
     var propW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cal-property-width')) || 160;
     var colW  = 64;  // --cal-col-w
-    var rowH  = compactMode ? 34 : 56;  // --cal-row-height
+    var rowH  = compactMode ? 34 : 64;  // --cal-row-height
     var hdrH  = 44;  // iOS dayHeaderH
     var renderProps = state.propertyFilter
       ? state.properties.filter(function(p){ return String(p.id) === state.propertyFilter; })

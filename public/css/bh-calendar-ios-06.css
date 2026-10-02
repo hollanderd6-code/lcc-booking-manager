@@ -1,0 +1,625 @@
+/* ============================================================================
+   BH-CALENDAR-IOS-06 — iOS CalendarView.swift parity
+   ============================================================================
+   Cascade position: after bh-calendar-v3.css, bh-ios-parity.css, bh-shell-04.css.
+   True calendar container: #bhCalRoot (inside #calendarSection in bh-cal-mode).
+
+   Override policy: !important used only when overriding inline styles set by JS.
+   Each !important is documented with the JS source (file + approx. line).
+   ============================================================================ */
+
+
+/* ── 0. Token alignment — row height 64px + property width ──────────────── */
+/* bh-calendar-v3.css root: --cal-row-h:56px, --cal-row-height:56px.
+   iOS CalBarLayout.swift: ROW_H = 64. Reference tokens in bh-tokens.css.
+   JS change in app.html renderMonth() also updated: rowH 56→64.
+   bh-calendar-v3.js already uses const ROW_H=64 (aligned). */
+
+:root {
+  --cal-row-h:      var(--bh-cal-ref-row-height, 64px);
+  --cal-row-height: var(--bh-cal-ref-row-height, 64px);
+  /* Property width: iOS ref 76px, controlled desktop adaptation 110px (< 140px max).
+     French property names exceed 10 chars; 76px clips at 10pt/DM Sans.
+     110px desktop, 76px on mobile — stays within the 76–140px allowed range. */
+  --cal-property-width: 110px;
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --cal-property-width: var(--bh-cal-ref-property-width, 76px);
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --cal-property-width: var(--bh-cal-ref-property-width, 76px);
+  }
+}
+
+
+/* ── 1. AppBackground: remove white overrides from bh-calendar-v3.css ─────── */
+/* bh-calendar-v3.css lines 883–892 force background:#FFFFFF in bh-cal-mode. */
+
+body.bh-cal-mode #calendarSection {
+  background: transparent !important;
+}
+
+body.bh-cal-mode main.main-content {
+  background: transparent !important;
+}
+
+
+/* ── 2. #bhCalRoot — glass container (not solid #F5F2EC) ─────────────────── */
+/* Inline override: renderModernCalendar() app.html ~line 8557
+   w.style.cssText = 'background:#F5F2EC;border-radius:16px;…' */
+
+#bhCalRoot {
+  background: rgba(255, 255, 255, 0.62) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.72) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 8px 32px rgba(20, 32, 27, 0.12) !important;
+  overflow: hidden !important;
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+
+/* ── 3. CalendarNavBar — glass header ─────────────────────────────────────── */
+/* Inline override: renderHeader() app.html ~line 7366
+   div('background:#FFFFFF;border-radius:16px 16px 0 0;…') */
+
+#bhCalRoot .bh-cal-header {
+  background: rgba(255, 255, 255, 0.82) !important;
+  backdrop-filter: blur(24px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+  border-bottom: 1px solid rgba(200, 184, 154, 0.35) !important;
+  border-radius: 24px 24px 0 0 !important;
+}
+
+
+/* ── 4. Month title — DM Sans 30px / 700 / −0.96px ──────────────────────── */
+/* Inline override: renderHeader() app.html ~line 7376
+   font-size:22px;font-weight:700;color:#14201B;letter-spacing:-.01em */
+
+#bhCalMonthTitle {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  font-size: 30px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.96px !important;
+  color: #14201B !important;
+  line-height: 1.05 !important;
+}
+
+/* bh-calendar-v3.css .cal-month-title uses Instrument Serif */
+.cal-month-title {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  font-size: 30px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.96px !important;
+  color: var(--bh-encre, #14201B) !important;
+}
+
+
+/* ── 5. Super-title — 12.5px / 600 / #5E6B63 — no uppercase ─────────────── */
+/* Inline override: renderHeader() app.html ~line 7375
+   font-size:11px;font-weight:600;color:#0E3B2E;text-transform:uppercase */
+
+#bhCalSuperLabel {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #5E6B63 !important;
+  text-transform: none !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* bh-calendar-v3.css .cal-supertitle uses rgba(20,32,27,.45) and uppercase */
+.cal-supertitle {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #5E6B63 !important;
+  text-transform: none !important;
+  letter-spacing: 0.01em !important;
+}
+
+
+/* ── 6. Glass buttons — circular 38×38 (border-radius: 50%) ────────────── */
+/* Inline override: glassBtn() app.html ~line 7383
+   border-radius:12px (inline style) */
+
+#bhCalActionsBtn,
+#bhCalPrevBtn,
+#bhCalNextBtn {
+  border-radius: 50% !important;
+  width: 38px !important;
+  height: 38px !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.80) !important;
+  box-shadow:
+    0 2px 8px rgba(20, 32, 27, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+/* .cal-glass-btn already has border-radius:50% — reinforce */
+.cal-glass-btn {
+  border-radius: 50% !important;
+}
+
+
+/* ── 7. Segmented control — iOS Picker(.segmented) ──────────────────────── */
+/* Container: enhance background for clearer glass appearance */
+
+#bhCalRoot .bh-ios-seg {
+  background: rgba(200, 184, 154, 0.20) !important;
+  border: 1px solid rgba(200, 184, 154, 0.28) !important;
+  border-radius: 12px !important;
+  padding: 3px !important;
+  gap: 2px !important;
+}
+
+#bhCalRoot .bh-ios-seg button {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  flex: 1 !important;
+  padding: 7px 4px !important;
+  border-radius: 9px !important;
+  font-size: 12.5px !important;
+  white-space: nowrap !important;
+  transition: background 0.18s, color 0.18s !important;
+}
+
+/* Inactive tab default (JS overrides active tab via inline style) */
+#bhCalRoot .bh-ios-seg button:not([style*="color: rgb(14, 59, 46)"]):not([style*="#0E3B2E"]) {
+  color: rgba(20, 32, 27, 0.50) !important;
+}
+
+/* .cal-seg-pill — bh-calendar-v3.js segmented control */
+.cal-seg-pill {
+  font-size: 12.5px !important;
+}
+
+.cal-seg-pill.active {
+  color: #0E3B2E !important;
+  font-weight: 700 !important;
+  border-radius: 9px !important;
+}
+
+
+/* ── 8. Nav strip below header ───────────────────────────────────────────── */
+/* Inline override: renderNav() app.html ~line 7580
+   background:rgba(255,255,255,.9) */
+
+#bhCalRoot .bh-cal-nav {
+  background: rgba(255, 255, 255, 0.68) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(200, 184, 154, 0.20) !important;
+}
+
+
+/* ── 9. Month/Week view containers — remove white backgrounds ────────────── */
+/* Inline override: renderMonth() app.html ~line 7982
+   outer div: background:white
+   renderWeek() ~line 7878: container div: background:white */
+
+#bhMonthOuter {
+  background: rgba(255, 255, 255, 0.45) !important;
+}
+
+/* Corner cell and property column: translucent */
+#bhCalRoot .bh-prop-cell {
+  background: rgba(255, 255, 255, 0.68) !important;
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+/* Day header cells */
+#bhCalRoot .bh-day-hcell {
+  background: rgba(255, 255, 255, 0.80) !important;
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+/* Day cells: keep weekend tint, add subtle glass */
+#bhCalRoot .bh-day-cell {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+
+/* ── 10. Reservation bars — iOS geometry ─────────────────────────────────── */
+/* bar-radius 11px already set in bh-calendar-v3.css via --cal-bar-r */
+/* bar-height 44px already set via --cal-bar-h */
+
+#bhCalRoot .booking-block-bh {
+  border-radius: var(--bh-cal-ref-bar-radius, 11px) !important;
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+/* Guest name: 12.5px / 600 */
+#bhCalRoot .booking-block-bh .bar-guest,
+#bhCalRoot .booking-block-bh [style*="font-size:12.5px"],
+#bhCalRoot .booking-block-bh [style*="font-weight:700"] {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+
+/* ── 11. Block bars — iOS hatch: 45° / #9CA3AF / 0.20 + 0.40 ────────────── */
+/* bh-calendar-v3.css uses 135deg. iOS uses 45deg / #9CA3AF. */
+
+.cal-bar-block {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(156, 163, 175, 0.20),
+    rgba(156, 163, 175, 0.20) 1.5px,
+    transparent 1.5px,
+    transparent 5.5px
+  ) !important;
+  border: 1px solid rgba(156, 163, 175, 0.25) !important;
+}
+
+/* app.html week/month view block bars (set via inline repeating-linear-gradient) */
+#bhCalRoot [style*="repeating-linear-gradient(45deg,#E5E7EB"],
+#bhCalRoot [style*="repeating-linear-gradient(45deg, #E5E7EB"] {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(156, 163, 175, 0.20),
+    rgba(156, 163, 175, 0.20) 1.5px,
+    transparent 1.5px,
+    transparent 5.5px
+  ) !important;
+}
+
+
+/* ── 12. BoostPrice badge — effective #1F6B4C / pending #C9A15B ──────────── */
+/* bh-calendar-v3.css: effective=#0E3B2E, pending=#C5940A.
+   iOS CalendarModels.swift canonical: effective=#1F6B4C, pending=#C9A15B */
+
+.cal-bp-badge.effective { color: #1F6B4C !important; }
+.cal-bp-badge.pending   { color: #C9A15B !important; }
+
+
+/* ── 13. Day view chips — 44×58px / radius 13px ──────────────────────────── */
+/* bh-calendar-v3.css: 40×56px, radius 10px */
+
+.cal-jour-chip {
+  width: 44px !important;
+  height: 58px !important;
+  border-radius: 13px !important;
+}
+
+/* Selected + today */
+.cal-jour-chip.selected {
+  background: var(--bh-vert, #0E3B2E) !important;
+}
+
+/* Day number: 16px / 700 when selected */
+.cal-jour-chip.selected .cal-jc-num {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+}
+
+/* Abbrev: 10px / 600 when selected */
+.cal-jour-chip.selected .cal-jc-letter {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: rgba(255, 255, 255, 0.80) !important;
+}
+
+/* Today unselected: number color #0E3B2E */
+.cal-jour-chip.today-unsel .cal-jc-num {
+  color: var(--bh-vert, #0E3B2E) !important;
+  font-weight: 700 !important;
+}
+
+/* Inactive */
+.cal-jc-num {
+  font-size: 16px !important;
+  color: #14201B !important;
+}
+
+.cal-jc-letter {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #5E6B63 !important;
+}
+
+
+/* ── 14. Day view cards — glass / iOS geometry ───────────────────────────── */
+/* bh-calendar-v3.css: background:#fff, radius 14px */
+
+.cal-jour-card {
+  background: rgba(255, 255, 255, 0.62) !important;
+  border: 1px solid rgba(255, 255, 255, 0.50) !important;
+  border-radius: 22px !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  box-shadow: 0 2px 12px rgba(20, 32, 27, 0.06) !important;
+  padding: 12px 14px !important;
+}
+
+.cal-jour-card:hover {
+  background: rgba(255, 255, 255, 0.80) !important;
+}
+
+/* Guest name: DM Sans 17px / 600 (not Instrument Serif) */
+.cal-jour-card-guest {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  color: #14201B !important;
+}
+
+/* Meta: 13px / #5E6B63 */
+.cal-jour-card-meta {
+  font-size: 13px !important;
+  color: #5E6B63 !important;
+}
+
+/* Section title: 11.5px / 700 / uppercase / 1.5px tracking */
+.cal-jour-section-title {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.13em !important;
+  text-transform: uppercase !important;
+  color: #5E6B63 !important;
+}
+
+/* Date strip background: transparent */
+.cal-jour-date-strip {
+  background: transparent !important;
+  gap: 2px !important;
+  padding: 10px 16px !important;
+}
+
+
+/* ── 15. Week view header — iOS day header ───────────────────────────────── */
+/* Day header background: rgba(255,255,255,0.28) */
+
+.cal-sem-hdr-row {
+  background: rgba(255, 255, 255, 0.28) !important;
+}
+
+/* Day letter: 9px / semibold */
+.cal-sem-day-hdr .cal-day-hdr-letter {
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  color: #5E6B63 !important;
+}
+
+/* Today day letter */
+.cal-sem-day-hdr.today .cal-day-hdr-letter {
+  color: #0E3B2E !important;
+}
+
+/* Day number: 13px */
+.cal-sem-day-hdr .cal-day-hdr-num {
+  font-size: 13px !important;
+  color: #14201B !important;
+}
+
+/* Today day number */
+.cal-sem-day-hdr.today .cal-day-hdr-num {
+  font-weight: 700 !important;
+  color: #0E3B2E !important;
+}
+
+/* Today underline bar: #0E3B2E / 2px */
+.cal-sem-day-hdr.today::after {
+  background: #0E3B2E !important;
+  height: 2px !important;
+}
+
+
+/* ── 16. Week view property column ───────────────────────────────────────── */
+/* width: 76px (from token via :root above) */
+
+.cal-sem-label-col {
+  width: var(--cal-property-width) !important;
+  background: rgba(255, 255, 255, 0.40) !important;
+}
+
+.cal-sem-prop-label {
+  height: var(--bh-cal-ref-row-height, 64px) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #14201B !important;
+  padding: 0 6px 0 12px !important;
+}
+
+
+/* ── 17. Week view separators ─────────────────────────────────────────────── */
+/* Row: rgba(20,32,27,0.06) / Col: rgba(20,32,27,0.10) — already in tokens */
+
+.cal-sem-row {
+  height: var(--bh-cal-ref-row-height, 64px) !important;
+  border-bottom: 1px solid var(--bh-cal-ref-row-separator, rgba(20, 32, 27, 0.06)) !important;
+}
+
+.cal-sem-cell {
+  border-right: 1px solid var(--bh-cal-ref-col-separator, rgba(20, 32, 27, 0.10)) !important;
+}
+
+/* Weekend cells */
+.cal-sem-cell.weekend {
+  background: var(--bh-cal-ref-weekend, rgba(201, 161, 91, 0.07)) !important;
+}
+
+
+/* ── 18. Week view bars — use reference tokens ───────────────────────────── */
+
+.cal-sem-bar {
+  height: var(--bh-cal-ref-bar-height, 44px) !important;
+  top: calc((var(--bh-cal-ref-row-height, 64px) - var(--bh-cal-ref-bar-height, 44px)) / 2) !important;
+  border-radius: var(--bh-cal-ref-bar-radius, 11px) !important;
+}
+
+
+/* ── 19. Month timeline — reference tokens ────────────────────────────────── */
+
+.cal-tl-row {
+  height: var(--bh-cal-ref-row-height, 64px) !important;
+  border-bottom: 1px solid var(--bh-cal-ref-row-separator, rgba(20, 32, 27, 0.06)) !important;
+}
+
+.cal-prop-label {
+  height: var(--bh-cal-ref-row-height, 64px) !important;
+}
+
+.cal-bar {
+  height: var(--bh-cal-ref-bar-height, 44px) !important;
+  top: calc((var(--bh-cal-ref-row-height, 64px) - var(--bh-cal-ref-bar-height, 44px)) / 2) !important;
+  border-radius: var(--bh-cal-ref-bar-radius, 11px) !important;
+}
+
+
+/* ── 20. Revenus view — DM Sans / glass cards / iOS typography ─────────────── */
+/* bh-calendar-v3.css uses Instrument Serif for .cal-rev-header, .cal-rev-kpi-value */
+
+.cal-rev-wrap {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+.cal-rev-header {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  font-size: 30px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.96px !important;
+  color: #14201B !important;
+}
+
+.cal-rev-kpi-value {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  font-size: 34px !important;
+  font-weight: 600 !important;
+  letter-spacing: -1.19px !important;
+  color: #14201B !important;
+}
+
+.cal-rev-kpi {
+  background: rgba(255, 255, 255, 0.62) !important;
+  border: 1px solid rgba(255, 255, 255, 0.50) !important;
+  border-radius: 22px !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  box-shadow: 0 2px 12px rgba(20, 32, 27, 0.06) !important;
+}
+
+.cal-rev-kpi-label {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.13em !important;
+  color: #5E6B63 !important;
+}
+
+.cal-rev-subtitle {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  font-size: 13px !important;
+  color: #5E6B63 !important;
+}
+
+.cal-rev-table {
+  background: rgba(255, 255, 255, 0.62) !important;
+  border-radius: 16px !important;
+}
+
+.cal-rev-table thead th {
+  background: rgba(255, 255, 255, 0.40) !important;
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+.cal-rev-table tbody td {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+.cal-rev-td-money {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--bh-vert, #0E3B2E) !important;
+}
+
+/* app.html renderRevenus inline KPI cards */
+#bhCalRoot .bh-cal-body [style*="border-radius:12px"][style*="background:rgba(255,255,255,.7)"] {
+  background: rgba(255, 255, 255, 0.62) !important;
+  border-radius: 16px !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+
+/* ── 21. Bottom nav clearance — calendar must not be hidden ──────────────── */
+/* Bottom nav: 62px height + 22px offset = 84px total.
+   Already handled by bh-shell-04.css section 3 for .page-content.
+   #bhCalRoot is a direct child of #calendarSection — add bottom padding. */
+
+#bhCalRoot .bh-cal-body {
+  padding-bottom: calc(62px + 22px + 16px);
+}
+
+@media (max-width: 1023px) {
+  #bhCalRoot .bh-cal-body {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px + 16px);
+  }
+}
+
+
+/* ── 22. Responsive — mobile layout ─────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  #bhCalRoot {
+    border-radius: 0 !important;
+  }
+
+  #bhCalRoot .bh-cal-header {
+    border-radius: 0 !important;
+  }
+
+  #bhCalMonthTitle {
+    font-size: 24px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  #bhCalRoot .bh-ios-seg button {
+    font-size: 11px !important;
+    padding: 6px 2px !important;
+  }
+}
+
+
+/* ── 23. Label column — month timeline ──────────────────────────────────── */
+
+.cal-label-col {
+  width: var(--cal-property-width) !important;
+  background: rgba(255, 255, 255, 0.40) !important;
+}
+
+
+/* ── 24. Property dropdown — glass ──────────────────────────────────────── */
+
+.cal-prop-dropdown {
+  background: rgba(250, 248, 243, 0.97) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+}
+
+#bhCalPropDropdown {
+  background: rgba(250, 248, 243, 0.97) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+
+/* ── 25. Typography — remove Instrument Serif from calendar scope ─────────── */
+/* Any remaining Instrument Serif elements */
+
+#bhCalRoot,
+.cal-navbar,
+.cal-segmented,
+.cal-tab-content,
+.cal-rev-wrap {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
