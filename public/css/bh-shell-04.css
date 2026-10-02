@@ -291,3 +291,18 @@ html[data-theme-v3="1"] body[data-page="app"] #newReservationBtn {
   }
 
 }
+
+
+/* ── 7. Remove legacy tab active indicator ───────────────────────────────── */
+/* bh-bottom-bar.css defines a ::before pulsing circle dot on .tab-btn.active
+   inside @media (max-width:1366px). SHELL_04 uses .lg-capsule as the only
+   active affordance. Suppress the legacy dot at all widths via CSS so the
+   override is guaranteed before any JS injection runs. */
+
+html[data-theme-v3="1"] .mobile-tabs .tab-btn::before,
+html[data-theme-v3="1"] .mobile-tabs .tab-btn::after {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
+  opacity: 0 !important;
+}
