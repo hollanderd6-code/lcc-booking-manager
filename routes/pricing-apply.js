@@ -193,6 +193,7 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
   // allowedDates = exactement les dates upsertées applied — nuits booked exclues
   let pubResult = { status: 'skipped_no_push', rates: { count: 0, pushed: 0, error: null }, restrictions: { count: 0, pushed: 0, error: null } };
   if (willPush) {
+    // NOTE: pubResult is mutated below; histStatus (computed after) reads pubResult.status
     const startDate = new Date().toISOString().slice(0, 10);
     const endDate   = addDays(startDate, 365);
     const allowedDates = nightsToUpsert.map(n => n.date);
@@ -212,6 +213,16 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
       pubResult = { status: 'error', rates: { count: allowedDates.length, pushed: 0, error: pubErr.message }, restrictions: { count: allowedDates.length, pushed: 0, error: null } };
     }
   }
+
+  // Effective status for pricing_history.
+  // 'applied'  — auto, price successfully pushed.
+  // 'error'    — auto, push attempted but publisher reported failure.
+  // 'skipped'  — auto, push not attempted (mock data or Channex not configured).
+  //              Does NOT surface as "À valider" in the dashboard / iOS.
+  // 'pending'  — manual, awaiting host approval in the UI.
+  const histStatus = willPush
+    ? (pubResult.status === 'error' ? 'error' : 'applied')
+    : (mode === 'auto' ? 'skipped' : 'pending');
 
   // 6. Récap HEBDO dans pricing_history (compat UI/email existants)
   const next7 = nights.slice(0, 7).map(n => n.price);
@@ -267,11 +278,11 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
          updated_at       = NOW()`,
       [
         cfg.user_id, cfg.property_id, weekStart,
-        priceBefore, avg7, willPush ? avg7 : null,
+        priceBefore, avg7, histStatus === 'applied' ? avg7 : null,
         marketStats?.median ?? null, marketStats?.occupancy ?? null, marketStats?.tensionLevel ?? null,
         first.breakdown.market, first.breakdown.pacing, first.breakdown.season,
-        selfOcc, willPush ? 'applied' : 'pending', mode, reason,
-        willPush ? 'auto' : null, willPush ? new Date() : null,
+        selfOcc, histStatus, mode, reason,
+        histStatus === 'applied' ? 'auto' : null, histStatus === 'applied' ? new Date() : null,
       ]
     );
   } catch (e) {
@@ -294,10 +305,10 @@ async function applyDynamicPricingForProperty(pool, { cfg, marketStats, isMock, 
   }
 
   return {
-    status: willPush ? 'applied' : 'pending',
+    status: histStatus,
     mode,
     priceBefore,
-    priceApplied: willPush ? avg7 : null,
+    priceApplied: histStatus === 'applied' ? avg7 : null,
     priceCalculated: avg7,
     nights: nights.length,
     pushed: pubResult.rates.pushed,
