@@ -3304,6 +3304,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   body.bh-cal-mode #calendarSection {
     display: block !important;
     margin: 0 !important;
+    overflow: visible !important;
   }
   /* CALENDAR-17D — En mode calendrier, masquer TOUT le contenu Today
      via .page-content (wrapper commun) + header Today.
@@ -7897,14 +7898,16 @@ try {
           if (!(s===dstr||(s<dstr&&e>dstr))) return;
           var isStart=s===dstr, isEnd=e===dstr||false;
           var p=pltInfo(r);
-          var blk = div('position:absolute;inset:4px 2px;border-radius:8px;padding:4px 7px;display:flex;align-items:center;gap:4px;cursor:pointer;overflow:hidden;background:'+p.bg+';color:white;');
+          var blk = div('position:absolute;inset:4px 2px;border-radius:8px;padding:4px 7px;display:flex;align-items:center;gap:4px;cursor:pointer;overflow:hidden;background:'+p.bg+';color:'+p.fg+';');
           // Note : le point rouge est affiché à la fin du bloc (côté checkout)
       var noteRaw = r.notes ? r.notes.trim() : '';
       var isRealNote = r.type !== 'block'
         && (r.source||r.platform||'').toUpperCase() !== 'BLOCK'
         && (window.bhNotesIsReal ? window.bhNotesIsReal(noteRaw) : (noteRaw.length > 2));
           blk.style.position='relative';
-          blk.innerHTML=pltBadge(r,14)+'<span style="font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
+          // Dot badge: accent colour on pastel background — good contrast (17E fix)
+          var acDot = '<div style="width:10px;height:10px;border-radius:50%;background:'+p.ac+';flex-shrink:0;"></div>';
+          blk.innerHTML=acDot+'<span style="font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+guestName(r)+'</span>';
           blk.onclick=function(){ openBooking(r); };
           cell.appendChild(blk);
           // Point rouge sur la cellule de checkout (si c'est le bon jour)
@@ -7952,7 +7955,7 @@ try {
     var numDays    = Math.ceil((startOff + lastDay.getDate())/7)*7;
     var compactMode = false;
     try { compactMode = localStorage.getItem('bhCalCompact') === '1'; } catch(e) {}
-    var propW = 88;  // iOS --cal-label-w
+    var propW = 160;  // iOS --cal-label-w (17E: wider for real property names)
     var colW  = 64;  // iOS --cal-col-w
     var rowH  = compactMode ? 34 : 64;  // iOS --cal-row-h
     var hdrH  = 44;  // iOS dayHeaderH
@@ -8427,19 +8430,22 @@ try {
     var month = state.date.getMonth() + 1;
     var token = (function(){ try{ return localStorage.getItem('lcc_token')||''; }catch(e){ return ''; } })();
     body.innerHTML = '<div style="padding:24px 16px;display:flex;align-items:center;justify-content:center;"><div style="width:28px;height:28px;border:3px solid rgba(14,59,46,.15);border-top-color:#0E3B2E;border-radius:50%;animation:spin .7s linear infinite;"></div></div>';
-    fetch('/api/reporting?year=' + year + '&month=' + month, { headers: { 'Authorization': 'Bearer ' + token } })
+    var reportUrl = '/api/reporting?year=' + year + '&month=' + month;
+    if (state.propertyFilter) reportUrl += '&property_id=' + encodeURIComponent(state.propertyFilter);
+    fetch(reportUrl, { headers: { 'Authorization': 'Bearer ' + token } })
       .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function(data) {
         body.innerHTML = '';
+        // API response nests aggregates under data.summary
+        var s = data.summary || {};
         var wrap = div('padding:16px;font-family:\'DM Sans\',system-ui,sans-serif;');
         var title = div('font-size:15px;font-weight:700;color:#14201B;margin-bottom:16px;');
         title.textContent = 'Revenus — ' + (data.monthLabel || (year + '/' + String(month).padStart(2,'0')));
         wrap.appendChild(title);
         var kpis = [
-          { label: 'Revenus bruts', value: fmtMoney(data.totalRevenue||data.gross_revenue||0), color: '#0E3B2E' },
-          { label: 'Nuits vendues',  value: String(data.totalNights||data.nights_sold||0),    color: '#374151' },
-          { label: 'Taux d\'occupation', value: (data.occupancyRate||data.occupancy||0)+'%', color: '#374151' },
-          { label: 'Réservations', value: String(data.totalBookings||data.bookings_count||0), color: '#374151' },
+          { label: 'Revenus bruts', value: s.totalGrossRevenue != null ? fmtMoney(s.totalGrossRevenue) : '—', color: '#0E3B2E' },
+          { label: 'Nuits vendues', value: s.totalNights      != null ? String(s.totalNights)           : '—', color: '#374151' },
+          { label: 'Réservations',  value: s.totalBookings    != null ? String(s.totalBookings)          : '—', color: '#374151' },
         ];
         var grid = div('display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;');
         kpis.forEach(function(k) {
@@ -8449,14 +8455,14 @@ try {
           grid.appendChild(card);
         });
         wrap.appendChild(grid);
-        // Breakdown par logement si disponible
-        var props = data.properties || data.breakdown || [];
+        // Breakdown par logement depuis data.byProperty
+        var props = data.byProperty || [];
         if (props.length > 0) {
           var tbl = el('table','width:100%;border-collapse:collapse;font-size:12.5px;');
           var thead = '<thead><tr style="border-bottom:2px solid rgba(200,184,154,.3);"><th style="text-align:left;padding:6px 8px;font-weight:600;color:#6B7280;font-size:11px;text-transform:uppercase;letter-spacing:.05em;">Logement</th><th style="text-align:right;padding:6px 8px;font-weight:600;color:#6B7280;font-size:11px;">Revenus</th><th style="text-align:right;padding:6px 8px;font-weight:600;color:#6B7280;font-size:11px;">Nuits</th></tr></thead>';
           var tbody = '<tbody>' + props.map(function(p){
-            return '<tr style="border-bottom:1px solid rgba(200,184,154,.15);"><td style="padding:8px;color:#14201B;font-weight:500;">'+((p.name||p.property_name||'—'))+'</td>'
-              +'<td style="padding:8px;text-align:right;color:#0E3B2E;font-weight:600;">'+fmtMoney(p.revenue||p.total||0)+'</td>'
+            return '<tr style="border-bottom:1px solid rgba(200,184,154,.15);"><td style="padding:8px;color:#14201B;font-weight:500;">'+(p.name||p.property_name||'—')+'</td>'
+              +'<td style="padding:8px;text-align:right;color:#0E3B2E;font-weight:600;">'+fmtMoney(p.grossRevenue||p.revenue||p.total||0)+'</td>'
               +'<td style="padding:8px;text-align:right;color:#374151;">'+String(p.nights||0)+'</td></tr>';
           }).join('') + '</tbody>';
           tbl.innerHTML = thead + tbody;
@@ -8465,7 +8471,10 @@ try {
         body.appendChild(wrap);
       })
       .catch(function(err) {
-        body.innerHTML = '<div style="padding:24px;text-align:center;color:#6B7280;font-family:\'DM Sans\',sans-serif;">Données de revenus indisponibles</div>';
+        body.innerHTML = '<div style="padding:24px;text-align:center;font-family:\'DM Sans\',sans-serif;">'
+          + '<p style="color:#D97706;font-size:14px;font-weight:600;margin:0 0 6px;">Données indisponibles</p>'
+          + '<p style="color:#6B7280;font-size:12px;margin:0;">Vérifiez votre connexion ou réessayez.</p>'
+          + '</div>';
       });
   }
 
@@ -13772,6 +13781,7 @@ if (window.Capacitor) {
     // Mettre à jour l'état d'historique pour le bouton back
     if (history.state && history.state.calMode) return;
     history.pushState({ calMode: true }, '', '/app.html#calendarSection');
+    if (typeof window.bhUpdateRailActive === 'function') window.bhUpdateRailActive();
     // Rafraîchir la capsule active de la barre mobile
     try {
       if (window.__bhActiveTab !== undefined) window.__bhActiveTab = 'calendar';
@@ -13795,6 +13805,7 @@ if (window.Capacitor) {
     window.scrollTo({ top: 0, behavior: 'instant' });
     if (history.state && !history.state.calMode) return;
     history.pushState({ calMode: false }, '', '/app.html');
+    if (typeof window.bhUpdateRailActive === 'function') window.bhUpdateRailActive();
     try {
       if (window.__bhActiveTab !== undefined) window.__bhActiveTab = 'today';
     } catch(e) {}

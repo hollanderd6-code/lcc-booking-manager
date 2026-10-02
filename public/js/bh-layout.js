@@ -263,13 +263,36 @@ function getSidebarHTML() {
 
     const currentPath = (window.location.pathname || "").toLowerCase();
     if (currentPath) {
+      // Exclude the calendar nav link — it carries a hash and must not win on pathname alone
       const byHref = Array.from(document.querySelectorAll(".nav-item[href]"))
-        .find(a => (a.getAttribute("href") || "").toLowerCase() === currentPath);
+        .find(a => a.id !== "navCalendarLink" && (a.getAttribute("href") || "").toLowerCase() === currentPath);
       if (byHref) {
         document.querySelectorAll(".nav-item.active").forEach(a => a.classList.remove("active"));
         byHref.classList.add("active");
       }
     }
+
+    // CALENDAR-17E: #calendarSection hash → activate Calendrier rail item
+    if ((window.location.hash || "").toLowerCase() === "#calendarsection") {
+      const calLink = document.getElementById("navCalendarLink");
+      if (calLink) {
+        document.querySelectorAll(".nav-item.active").forEach(a => a.classList.remove("active"));
+        calLink.classList.add("active");
+      }
+    }
+
+    // Expose for showCalendarMode / showTodayMode to call after pushState
+    window.bhUpdateRailActive = function() {
+      document.querySelectorAll(".nav-item.active").forEach(a => a.classList.remove("active"));
+      if ((window.location.hash || "").toLowerCase() === "#calendarsection") {
+        const cl = document.getElementById("navCalendarLink");
+        if (cl) { cl.classList.add("active"); return; }
+      }
+      const pn = (window.location.pathname || "").toLowerCase();
+      const hit = Array.from(document.querySelectorAll(".nav-item[href]"))
+        .find(a => a.id !== "navCalendarLink" && (a.getAttribute("href") || "").toLowerCase() === pn);
+      if (hit) hit.classList.add("active");
+    };
 
     const sidebar = document.getElementById("sidebar") || document.querySelector("aside.sidebar");
     const overlay = document.getElementById("sidebarOverlay");
