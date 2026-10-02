@@ -29,129 +29,31 @@
   <link rel="stylesheet" href="/css/bh-v3-mobile.css?v=2b3a5fdd">
   <link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
   <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+  <link rel="stylesheet" href="/css/bh-manage-ios-08.css">
 
   <style>
-    /* ── Page desktop header ── */
+    /* ── Desktop header (shown ≥ 1367px by bh-shell) ── */
     .manage-page-header {
       display: none;
       padding: 28px 24px 4px;
     }
     @media (min-width: 1367px) {
-      .manage-page-header { display: block; }
+      .manage-page-header { display: flex; align-items: flex-start; justify-content: space-between; }
     }
     .manage-page-header__kicker {
       font-family: 'DM Sans', sans-serif;
-      font-size: 11px;
+      font-size: 12.5px;
       font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--bh-t3, #6A6A64);
+      color: #5E6B63;
       margin-bottom: 4px;
     }
     .manage-page-header__title {
       font-family: 'DM Sans', sans-serif;
       font-size: 30px;
       font-weight: 700;
-      color: var(--bh-encre, #20221F);
+      letter-spacing: -0.04em;
+      color: #14201B;
       line-height: 1.1;
-    }
-
-    /* ── Section labels ── */
-    .manage-section-label {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--bh-t3, #6A6A64);
-      padding: 16px 20px 6px;
-    }
-
-    /* ── ManageEntry grid ── */
-    .manage-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      padding: 0 16px 4px;
-    }
-    @media (min-width: 768px) and (max-width: 1366px) {
-      .manage-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (min-width: 1367px) {
-      .manage-grid {
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        padding: 0 24px 4px;
-      }
-      .manage-section-label { padding: 16px 24px 6px; }
-    }
-
-    /* ── ManageEntry card ── */
-    .manage-entry {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 16px 18px;
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.72);
-      backdrop-filter: blur(20px) saturate(160%);
-      -webkit-backdrop-filter: blur(20px) saturate(160%);
-      border: 1px solid rgba(255, 255, 255, 0.75);
-      box-shadow: 0 2px 12px rgba(20, 32, 27, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-      text-decoration: none;
-      color: var(--bh-encre, #20221F);
-      cursor: pointer;
-      transition: background 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .manage-entry:hover {
-      background: rgba(255, 255, 255, 0.88);
-      box-shadow: 0 4px 20px rgba(20, 32, 27, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.7);
-    }
-    .manage-entry:active { transform: scale(0.98); }
-
-    /* ── Entry icon container ── */
-    .me-icon {
-      width: 46px;
-      height: 46px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .me-icon svg {
-      width: 22px;
-      height: 22px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 1.75;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    /* ── Entry text ── */
-    .me-body { flex: 1; min-width: 0; }
-    .me-title {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--bh-encre, #20221F);
-      line-height: 1.2;
-    }
-    .me-desc {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 12px;
-      color: var(--bh-t2, #5A5A54);
-      margin-top: 2px;
-      line-height: 1.4;
-    }
-
-    /* ── Chevron ── */
-    .me-chevron { flex-shrink: 0; color: var(--bh-t4, #878782); }
-    .me-chevron svg {
-      width: 16px; height: 16px;
-      stroke: currentColor; fill: none;
-      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
 
     /* ── Bottom padding for mobile tab bar ── */
@@ -162,7 +64,7 @@
   </style>
 </head>
 
-<body data-page="manage" data-kicker="Boostinghost" data-title="Gestion">
+<body data-page="manage" data-kicker="Gestion" data-title="Gestion">
 
   <script src="/js/auth-fetch.js?v=cd78753d"></script>
   <script src="/js/sub-account-guard.js?v=3558a1b3"></script>
@@ -177,133 +79,160 @@
 
       <div class="page-content">
 
+        <!-- ── Desktop header ── -->
         <div class="manage-page-header">
           <div>
-            <div class="manage-page-header__kicker">Boostinghost</div>
+            <div class="manage-page-header__kicker"><span id="manageKicker">&#160;</span></div>
             <div class="manage-page-header__title">Gestion</div>
           </div>
           <div class="bh-header-actions">
             <button class="bh-ios-circle-button bh-header-search-btn" id="manageSearchBtn" aria-label="Rechercher">
-              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
             <button class="bh-ios-initials-button bh-ios-initials-button--own bh-header-initials-btn" id="manageInitialsBtn" aria-label="Mon compte" onclick="window.openAgencySwitcherModal && window.openAgencySwitcherModal()">?</button>
           </div>
         </div>
 
-        <p class="manage-section-label">Propriétés &amp; équipe</p>
-        <div class="manage-grid" id="manageGridPrimary">
+        <!-- ── Main iOS-parity content ── -->
+        <div class="manage-content">
 
-          <a class="manage-entry" href="/settings.html" data-perm="can_view_properties">
-            <div class="me-icon" style="background:rgba(14,59,46,0.10);color:#0E3B2E;">
-              <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+          <!-- ── Primary ListCard — 5 main entries ── -->
+          <div class="mgios-card" id="managePrimaryCard">
+
+            <a class="mgios-row" href="/settings.html" data-perm="can_view_properties">
+              <div class="mgios-icon" style="background:#DCE8E1;color:#0E3B2E;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>
+                </svg>
+              </div>
+              <div class="mgios-text">
+                <div class="mgios-title">Logements</div>
+                <div class="mgios-subtitle">Livret, prix, accès, assistant</div>
+              </div>
+              <span class="mgios-badge" id="managePropCount"></span>
+              <div class="mgios-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
+
+            <a class="mgios-row" href="/cleaning.html" data-perm="can_view_cleaning">
+              <div class="mgios-icon" style="background:rgba(251,243,226,0.90);color:#8A5B14;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m14 12-8.5 8.5a2.12 2.12 0 1 1-3-3L11 9"/><path d="M15 13 9 7l4-4 6 6h3a8 8 0 0 1-7 7z"/>
+                </svg>
+              </div>
+              <div class="mgios-text">
+                <div class="mgios-title">Ménage</div>
+                <div class="mgios-subtitle">Planning, intervenants, historique</div>
+              </div>
+              <div class="mgios-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
+
+            <a class="mgios-row" href="/clients.html" data-perm="can_view_invoices">
+              <div class="mgios-icon" style="background:rgba(255,255,255,0.55);color:#5E6B63;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </div>
+              <div class="mgios-text">
+                <div class="mgios-title">Propriétaires</div>
+                <div class="mgios-subtitle">Clients, contrats, factures, débours</div>
+              </div>
+              <div class="mgios-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
+
+            <a class="mgios-row" href="/factures.html" data-perm="can_view_invoices">
+              <div class="mgios-icon" style="background:rgba(255,255,255,0.55);color:#5E6B63;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+              </div>
+              <div class="mgios-text">
+                <div class="mgios-title">Séjours</div>
+                <div class="mgios-subtitle">Factures voyageurs, cautions</div>
+              </div>
+              <div class="mgios-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
+
+            <a class="mgios-row" href="/dynamic-pricing.html" data-perm="pricing">
+              <div class="mgios-icon" style="background:#DCE8E1;color:#2E8B62;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9z"/>
+                </svg>
+              </div>
+              <div class="mgios-text">
+                <div class="mgios-title">BoostPrice</div>
+                <div class="mgios-subtitle">Tarification dynamique</div>
+              </div>
+              <div class="mgios-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
+
+          </div><!-- /#managePrimaryCard -->
+
+          <!-- ── Diffusion alert (hidden until JS populates it) ── -->
+          <a class="mgios-alert-card" id="manageDiffusionAlert" href="/settings.html" style="display:none" aria-label="Logements à compléter">
+            <div class="mgios-alert-bar"></div>
+            <div class="mgios-alert-body">
+              <div class="mgios-alert-headline">
+                <svg class="mgios-alert-icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2V10z"/></svg>
+                <span id="manageDiffusionText"></span>
+              </div>
+              <div class="mgios-alert-names" id="manageDiffusionNames"></div>
             </div>
-            <div class="me-body">
-              <div class="me-title">Logements</div>
-              <div class="me-desc">Propriétés, tarifs, disponibilités</div>
-            </div>
-            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
           </a>
 
-          <a class="manage-entry" href="/cleaning.html" data-perm="can_view_cleaning">
-            <div class="me-icon" style="background:rgba(6,182,212,0.10);color:#0891B2;">
-              <svg viewBox="0 0 24 24"><path d="m14 12-8.5 8.5a2.12 2.12 0 1 1-3-3L11 9"/><path d="M15 13 9 7l4-4 6 6h3a8 8 0 0 1-7 7z"/></svg>
-            </div>
-            <div class="me-body">
-              <div class="me-title">Ménage</div>
-              <div class="me-desc">Planning, checklists, équipe</div>
-            </div>
-            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-          </a>
+          <!-- ── Shortcuts / Outils section ── -->
+          <p class="mgios-section-label">Raccourcis</p>
+          <div class="mgios-card" id="manageShortcutsCard">
 
-          <a class="manage-entry" href="/clients.html" data-perm="can_view_invoices">
-            <div class="me-icon" style="background:rgba(124,58,237,0.10);color:#7C3AED;">
-              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-            <div class="me-body">
-              <div class="me-title">Propriétaires</div>
-              <div class="me-desc">Comptes, rapports, revenus</div>
-            </div>
-            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-          </a>
+            <a class="mgios-row" href="/welcome.html" data-perm="can_view_properties">
+              <div class="mgios-shortcut-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                </svg>
+              </div>
+              <span class="mgios-shortcut-title">Livrets d'accueil</span>
+              <div class="mgios-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
 
-          <a class="manage-entry" href="/factures.html" data-perm="can_view_invoices">
-            <div class="me-icon" style="background:rgba(145,96,24,0.10);color:#916018;">
-              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            </div>
-            <div class="me-body">
-              <div class="me-title">Séjours</div>
-              <div class="me-desc">Factures, dépôts, cautions</div>
-            </div>
-            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-          </a>
+            <a class="mgios-row" href="/contrat.html" data-perm="can_view_contracts">
+              <div class="mgios-shortcut-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6"/><path d="M9 17h3"/>
+                </svg>
+              </div>
+              <span class="mgios-shortcut-title">Contrats</span>
+              <div class="mgios-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
 
-          <a class="manage-entry" href="/dynamic-pricing.html" data-perm="pricing">
-            <div class="me-icon" style="background:rgba(16,185,129,0.10);color:#059669;">
-              <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-            </div>
-            <div class="me-body">
-              <div class="me-title">BoostPrice</div>
-              <div class="me-desc">Tarification dynamique, règles</div>
-            </div>
-            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-          </a>
+            <a class="mgios-row" href="/smart-locks.html" data-perm="can_view_smart_locks">
+              <div class="mgios-shortcut-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </div>
+              <span class="mgios-shortcut-title">Smart Locks</span>
+              <div class="mgios-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
 
-        </div>
+            <a class="mgios-row" href="/reporting.html" data-perm="can_view_reporting">
+              <div class="mgios-shortcut-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+              </div>
+              <span class="mgios-shortcut-title">Reporting</span>
+              <div class="mgios-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
 
-        <p class="manage-section-label">Outils</p>
-        <div class="manage-grid">
+          </div><!-- /#manageShortcutsCard -->
 
-          <a class="manage-entry" href="/welcome.html" data-perm="can_view_properties">
-            <div class="me-icon" style="background:rgba(14,59,46,0.08);color:#1E6E52;">
-              <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-            </div>
-            <div class="me-body">
-              <div class="me-title">Livrets d'accueil</div>
-              <div class="me-desc">Welcome books, instructions séjour</div>
-            </div>
-            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-          </a>
+          <div class="manage-bottom-pad"></div>
+        </div><!-- /.manage-content -->
 
-          <a class="manage-entry" href="/contrat.html" data-perm="can_view_contracts">
-            <div class="me-icon" style="background:rgba(14,59,46,0.08);color:#1E6E52;">
-              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
-            </div>
-            <div class="me-body">
-              <div class="me-title">Contrats</div>
-              <div class="me-desc">Modèles, signatures électroniques</div>
-            </div>
-            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-          </a>
-
-          <a class="manage-entry" href="/smart-locks.html" data-perm="can_view_smart_locks">
-            <div class="me-icon" style="background:rgba(14,59,46,0.08);color:#1E6E52;">
-              <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            </div>
-            <div class="me-body">
-              <div class="me-title">Smart Locks</div>
-              <div class="me-desc">Serrures connectées, codes d'accès</div>
-            </div>
-            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-          </a>
-
-          <a class="manage-entry" href="/reporting.html" data-perm="can_view_reporting">
-            <div class="me-icon" style="background:rgba(14,59,46,0.08);color:#1E6E52;">
-              <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            </div>
-            <div class="me-body">
-              <div class="me-title">Reporting</div>
-              <div class="me-desc">Statistiques, performance</div>
-            </div>
-            <div class="me-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-          </a>
-
-        </div>
-
-        <div class="manage-bottom-pad"></div>
-      </div>
+      </div><!-- /.page-content -->
     </main>
   </div>
 
+  <!-- ── Sub-account permission filtering ── -->
   <script>
   (function() {
     var isSubAccount = localStorage.getItem('lcc_is_sub_account') === 'true'
@@ -330,7 +259,7 @@
       'pricing':              'can_view_reservations'
     };
 
-    document.querySelectorAll('.manage-entry[data-perm]').forEach(function(el) {
+    document.querySelectorAll('.mgios-row[data-perm]').forEach(function(el) {
       var perm = el.getAttribute('data-perm');
       var permKey = permMap[perm] || perm;
       if (permissions[permKey] !== true) el.style.display = 'none';
@@ -345,6 +274,65 @@
   <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
   <script src="/js/bh-haptics.js?v=41ebfc2f"></script>
   <script src="/js/bh-page-transitions.js?v=6b08d80b"></script>
+
+  <!-- ── Dynamic kicker + counts + diffusion alert ── -->
+  <script>
+  (function () {
+    'use strict';
+
+    function buildKicker(propCount, groupCount) {
+      var lg = propCount === 1 ? '1 logement' : propCount + ' logements';
+      var gr = groupCount === 1 ? '1 groupe'   : groupCount + ' groupes';
+      return lg + ' · ' + gr;
+    }
+
+    function applyKicker(text) {
+      var desktopSpan = document.getElementById('manageKicker');
+      if (desktopSpan) desktopSpan.textContent = text;
+      document.body.setAttribute('data-kicker', text);
+      var mobileKicker = document.querySelector('#bhHeader .page-kicker');
+      if (mobileKicker) mobileKicker.textContent = text;
+    }
+
+    function applyPropCount(count) {
+      var badge = document.getElementById('managePropCount');
+      if (badge) badge.textContent = count > 0 ? count : '';
+    }
+
+    function applyDiffusionAlert(logements) {
+      if (!logements || !logements.length) return;
+      var incomplete = logements.filter(function (l) { return l.a_regler > 0; });
+      if (!incomplete.length) return;
+      var count = incomplete.length;
+      var noun = count === 1 ? 'logement à compléter' : 'logements à compléter';
+      var textEl = document.getElementById('manageDiffusionText');
+      if (textEl) textEl.textContent = count + ' ' + noun;
+      var namesEl = document.getElementById('manageDiffusionNames');
+      if (namesEl) namesEl.textContent = incomplete.map(function (l) { return l.nom; }).join(', ');
+      var alertEl = document.getElementById('manageDiffusionAlert');
+      if (alertEl) alertEl.style.display = 'flex';
+    }
+
+    if (typeof authFetch !== 'function') return;
+
+    Promise.all([
+      authFetch('/api/properties').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }),
+      authFetch('/api/property-groups').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }),
+      authFetch('/api/properties/diffusion').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; })
+    ]).then(function (results) {
+      var propsData  = results[0];
+      var groupsData = results[1];
+      var diffData   = results[2];
+
+      var propCount  = (propsData.properties  && propsData.properties.length)  || 0;
+      var groupCount = (groupsData.groups && groupsData.groups.length) || 0;
+
+      applyKicker(buildKicker(propCount, groupCount));
+      applyPropCount(propCount);
+      if (diffData.logements) applyDiffusionAlert(diffData.logements);
+    });
+  })();
+  </script>
 
 </body>
 </html>

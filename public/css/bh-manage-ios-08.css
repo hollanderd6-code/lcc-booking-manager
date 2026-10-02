@@ -1,0 +1,320 @@
+/* ============================================================
+   BH-MANAGE-IOS-08 — Gestion hub iOS visual parity
+   Scope: body[data-page="manage"] only.
+   Loaded after bh-shell-04.css.
+   ============================================================ */
+
+/* ─────────────────────────────────────────────────────────────
+   0. DESKTOP PADDING — remove generic shell top padding
+   ───────────────────────────────────────────────────────────── */
+
+@media (min-width: 1367px) {
+  html[data-theme-v3="1"] body[data-page="manage"] .main-content {
+    padding-top: 0 !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   1. HEADER KICKER — iOS GlassNavBar super-title style
+   (override legacy uppercase/11px)
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="manage"] .manage-page-header__kicker {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  color: #5E6B63 !important;
+  margin-bottom: 6px;
+}
+
+body[data-page="manage"] .manage-page-header__title {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: #14201B;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   2. CONTENT CONTAINER — max-width iOS parity
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="manage"] .manage-content {
+  padding: 12px 18px 32px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+@media (min-width: 1367px) {
+  body[data-page="manage"] .manage-content {
+    padding: 16px 24px 32px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   3. SECTION LABEL — "RACCOURCIS" iOS SectionLabel style
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="manage"] .mgios-section-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #5E6B63;
+  margin: 20px 0 8px 4px;
+  padding: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   4. LIST CARD — iOS GlassCardBackground (ultraThin + white.0.62)
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="manage"] .mgios-card {
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.70);
+  border-radius: 22px;
+  box-shadow: 0 8px 22px rgba(20, 32, 27, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+/* specular top edge */
+body[data-page="manage"] .mgios-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 1px;
+  right: 1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.90), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   5. ROW — iOS CardRow (padding 12×16, tap highlight)
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="manage"] .mgios-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  text-decoration: none;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+body[data-page="manage"] .mgios-row:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+body[data-page="manage"] .mgios-row:active {
+  background: rgba(20, 32, 27, 0.04);
+}
+
+/* separator — starts after icon (left: 70px = 16px pad + 40px icon + 14px gap) */
+body[data-page="manage"] .mgios-row + .mgios-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 70px;
+  right: 0;
+  height: 0.5px;
+  background: rgba(20, 32, 27, 0.06);
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   6. ICON CONTAINER — 40×40, radius 12 (iOS exact)
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="manage"] .mgios-icon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+body[data-page="manage"] .mgios-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   7. ROW TEXT — title 16/600, subtitle 13/400
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="manage"] .mgios-text {
+  flex: 1;
+  min-width: 0;
+}
+
+body[data-page="manage"] .mgios-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #14201B;
+  line-height: 1.2;
+}
+
+body[data-page="manage"] .mgios-subtitle {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: #5E6B63;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   8. BADGE — count 15/500
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="manage"] .mgios-badge {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #5E6B63;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   9. CHEVRON — 12px, attenuated
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="manage"] .mgios-chevron {
+  flex-shrink: 0;
+  color: rgba(94, 107, 99, 0.55);
+  display: flex;
+  align-items: center;
+}
+
+body[data-page="manage"] .mgios-chevron svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   10. DIFFUSION ALERT CARD — gold iOS accent card
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="manage"] .mgios-alert-card {
+  display: flex;
+  border-radius: 22px;
+  overflow: hidden;
+  background: rgba(251, 243, 226, 0.90);
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  margin-top: 12px;
+  transition: background 0.15s ease;
+  border: 1px solid rgba(201, 161, 91, 0.35);
+}
+
+body[data-page="manage"] .mgios-alert-card:hover {
+  background: rgba(251, 243, 226, 1.0);
+}
+
+/* left accent bar — gradient bhOrClair→bhOr */
+body[data-page="manage"] .mgios-alert-bar {
+  width: 4px;
+  background: linear-gradient(180deg, #C9A15B, #8A5B14);
+  flex-shrink: 0;
+}
+
+body[data-page="manage"] .mgios-alert-body {
+  padding: 14px;
+  flex: 1;
+}
+
+body[data-page="manage"] .mgios-alert-headline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #8A5B14;
+  margin-bottom: 4px;
+}
+
+body[data-page="manage"] .mgios-alert-icon-svg {
+  width: 13px;
+  height: 13px;
+  fill: #8A5B14;
+  flex-shrink: 0;
+}
+
+body[data-page="manage"] .mgios-alert-names {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #5E6B63;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   11. SHORTCUT ROW — compact icon 28px, title 15/500
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="manage"] .mgios-shortcut-icon {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #0E3B2E;
+}
+
+body[data-page="manage"] .mgios-shortcut-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+body[data-page="manage"] .mgios-shortcut-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #14201B;
+  flex: 1;
+}
+
+/* separator for shortcut rows — starts after shortcut icon */
+body[data-page="manage"] .mgios-card .mgios-row + .mgios-row::before {
+  left: 58px; /* 16px pad + 28px icon + 14px gap */
+}
+
+/* override for primary card separators (larger icon) */
+body[data-page="manage"] #managePrimaryCard .mgios-row + .mgios-row::before {
+  left: 70px; /* 16px pad + 40px icon + 14px gap */
+}
+
+/* ─────────────────────────────────────────────────────────────
+   12. HIDE LEGACY GRID LAYOUT — prevent any residual cascade
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="manage"] .manage-grid {
+  display: none !important;
+}
+
+body[data-page="manage"] .manage-section-label {
+  display: none !important;
+}
