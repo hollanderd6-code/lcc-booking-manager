@@ -736,20 +736,20 @@ describe('09-23: HTML scripts', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('09-24: JS data loading', () => {
-  test('09-24-01: authFetch is used for API calls', () => {
-    expect(html).toMatch(/authFetch\s*\(/);
+  test('09-24-01: fetch() is used for API calls (window.fetch patched by auth-fetch.js)', () => {
+    expect(html).toMatch(/fetch\s*\(\s*['"]\/api\//);
   });
 
   test('09-24-02: /api/properties endpoint fetched', () => {
-    expect(html).toMatch(/authFetch\s*\(['"]\/?api\/properties['"]\)/);
+    expect(html).toMatch(/fetch\s*\(\s*['"]\/?api\/properties['"]\s*\)/);
   });
 
   test('09-24-03: /api/property-groups endpoint fetched', () => {
-    expect(html).toMatch(/authFetch\s*\(['"]\/?api\/property-groups['"]\)/);
+    expect(html).toMatch(/fetch\s*\(\s*['"]\/?api\/property-groups['"]\s*\)/);
   });
 
   test('09-24-04: /api/properties/diffusion endpoint fetched', () => {
-    expect(html).toMatch(/authFetch\s*\(['"]\/?api\/properties\/diffusion['"]\)/);
+    expect(html).toMatch(/fetch\s*\(\s*['"]\/?api\/properties\/diffusion['"]\s*\)/);
   });
 
   test('09-24-05: Promise.all used for parallel fetching', () => {

@@ -327,13 +327,24 @@
       if (mobileKicker) mobileKicker.textContent = text;
     }
 
+    function showError() {
+      document.getElementById('propLoading').style.display = 'none';
+      var errorEl = document.getElementById('propError');
+      errorEl.innerHTML = '<div class="prop-error-msg">Erreur de chargement. Vérifiez votre connexion.</div>'
+        + '<button class="prop-retry-btn" onclick="window._propRetry && window._propRetry()">Réessayer</button>';
+      errorEl.style.display = '';
+    }
+
     function loadAll() {
-      if (typeof authFetch !== 'function') return;
+      document.getElementById('propLoading').style.display = '';
+      document.getElementById('propError').style.display = 'none';
+      document.getElementById('propItems').style.display = 'none';
+      document.getElementById('propEmpty').style.display = 'none';
 
       Promise.all([
-        authFetch('/api/properties').then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; }),
-        authFetch('/api/property-groups').then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; }),
-        authFetch('/api/properties/diffusion').then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; })
+        fetch('/api/properties').then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; }),
+        fetch('/api/property-groups').then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; }),
+        fetch('/api/properties/diffusion').then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; })
       ]).then(function(results) {
         var propsData  = results[0];
         var groupsData = results[1];
@@ -357,13 +368,11 @@
         document.getElementById('propLoading').style.display = 'none';
         render();
       }).catch(function() {
-        document.getElementById('propLoading').style.display = 'none';
-        var errorEl = document.getElementById('propError');
-        errorEl.textContent = 'Erreur de chargement. Vérifiez votre connexion.';
-        errorEl.style.display = '';
+        showError();
       });
     }
 
+    window._propRetry = loadAll;
     loadAll();
   })();
   </script>
