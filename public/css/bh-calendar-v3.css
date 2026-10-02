@@ -877,12 +877,12 @@
 body.bh-cal-mode #calendarSection {
   margin: 0 !important;
   border-radius: 0 !important;
-  background: var(--bh-creme, #F5F0E8) !important;
+  background: #FFFFFF !important;
   min-height: 100vh;
 }
 
 body.bh-cal-mode main.main-content {
-  background: var(--bh-creme, #F5F0E8) !important;
+  background: #FFFFFF !important;
 }
 
 /* === iOS NavBar header === */
@@ -917,10 +917,10 @@ body.bh-cal-mode main.main-content {
   background-color: rgba(201,161,91,.07) !important;
 }
 
-/* Property label column — sticky, warm background */
+/* Property label column — sticky, white background */
 #bhCalRoot .bh-prop-cell {
   font-family: 'DM Sans', system-ui, sans-serif !important;
-  background: rgba(245,242,236,.95) !important;
+  background: #FFFFFF !important;
   border-right-color: rgba(20,32,27,.14) !important;
 }
 
@@ -943,7 +943,7 @@ body.bh-cal-mode main.main-content {
 
 /* Outer container background */
 #bhMonthOuter {
-  background: var(--bh-creme, #F5F0E8) !important;
+  background: #FFFFFF !important;
 }
 
 /* Nav bar minimal iOS */

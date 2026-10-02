@@ -3304,7 +3304,7 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
   body.bh-cal-mode #calendarSection {
     display: block !important;
     margin: 0 !important;
-    overflow: visible !important;
+    overflow: clip !important;
   }
   /* CALENDAR-17D — En mode calendrier, masquer TOUT le contenu Today
      via .page-content (wrapper commun) + header Today.
@@ -7202,21 +7202,21 @@ try {
   var MS = 86400000;
 
   var PLT = {
-    airbnb:            { bg:'#F2C9C6', fg:'#8A2E29', ac:'#C0433C', label:'Airbnb',       cls:'airbnb'   },
-    booking:           { bg:'#C3D0E4', fg:'#1E3A5F', ac:'#2E5288', label:'Booking.com',   cls:'booking'  },
-    bdc:               { bg:'#C3D0E4', fg:'#1E3A5F', ac:'#2E5288', label:'Booking.com',   cls:'booking'  },
-    direct:            { bg:'#BFD8CC', fg:'#0F4433', ac:'#0E3B2E', label:'Direct',        cls:'direct'   },
-    manuel:            { bg:'#BFD8CC', fg:'#0F4433', ac:'#0E3B2E', label:'Direct',        cls:'direct'   },
-    abritel:           { bg:'#BFDCEC', fg:'#134A63', ac:'#2E86B0', label:'Abritel',       cls:'abritel'  },
-    expedia:           { bg:'#EDD9A4', fg:'#5F4609', ac:'#B88A22', label:'Expedia',       cls:'expedia'  },
-    vrbo:              { bg:'#C4D3E8', fg:'#173E6B', ac:'#2E6BB0', label:'Vrbo',          cls:'vrbo'     },
-    gites:             { bg:'#BFD8C4', fg:'#194A22', ac:'#2E7D32', label:'Gîtes',         cls:'gites'    },
+    airbnb:            { bg:'#FF5A5F', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'Airbnb',       cls:'airbnb'   },
+    booking:           { bg:'#003580', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'Booking.com',   cls:'booking'  },
+    bdc:               { bg:'#003580', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'Booking.com',   cls:'booking'  },
+    direct:            { bg:'#0E3B2E', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'Direct',        cls:'direct'   },
+    manuel:            { bg:'#0E3B2E', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'Direct',        cls:'direct'   },
+    abritel:           { bg:'#2E86B0', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'Abritel',       cls:'abritel'  },
+    expedia:           { bg:'#F97316', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'Expedia',       cls:'expedia'  },
+    vrbo:              { bg:'#2E6BB0', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'Vrbo',          cls:'vrbo'     },
+    gites:             { bg:'#2E7D32', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'Gîtes',         cls:'gites'    },
     // BHguest — réservations via l'app Boostinghost Guest
-    guest_app:         { bg:'#E8C7AE', fg:'#7A3410', ac:'#C2410C', label:'BHGuest',       cls:'bhguest'  },
-    bhguest:           { bg:'#E8C7AE', fg:'#7A3410', ac:'#C2410C', label:'BHGuest',       cls:'bhguest'  },
-    'boostinghost guest': { bg:'#E8C7AE', fg:'#7A3410', ac:'#C2410C', label:'BHGuest',    cls:'bhguest'  },
-    boostinghost_guest:{ bg:'#E8C7AE', fg:'#7A3410', ac:'#C2410C', label:'BHGuest',       cls:'bhguest'  },
-    bhguest_hold:      { bg:'#F0D6C2', fg:'#8A5230', ac:'rgba(194,65,12,.5)', label:'Pré-réservation', cls:'bhguest-hold' },
+    guest_app:         { bg:'#C2410C', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'BHGuest',       cls:'bhguest'  },
+    bhguest:           { bg:'#C2410C', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'BHGuest',       cls:'bhguest'  },
+    'boostinghost guest': { bg:'#C2410C', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'BHGuest',    cls:'bhguest'  },
+    boostinghost_guest:{ bg:'#C2410C', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'BHGuest',       cls:'bhguest'  },
+    bhguest_hold:      { bg:'#F97316', fg:'#FFFFFF', ac:'rgba(0,0,0,.18)', label:'Pré-réservation', cls:'bhguest-hold' },
   };
 
   function pltInfo(r) {
@@ -7335,7 +7335,7 @@ try {
     var existing = w.querySelector('.bh-cal-header');
     if (existing) existing.remove();
 
-    var hdr = div('background:var(--bh-creme,#F5F0E8);border-radius:16px 16px 0 0;border-bottom:1px solid rgba(200,184,154,.35);');
+    var hdr = div('background:#FFFFFF;border-radius:16px 16px 0 0;border-bottom:1px solid rgba(200,184,154,.35);');
     hdr.className = 'bh-cal-header';
 
     // ── Ligne 1 : supertitle + mois + boutons glass ──
@@ -7549,7 +7549,7 @@ try {
     if (state.view === 'day') return;
     if (state.view === 'revenus') return;
 
-    var nav = div('display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(245,242,236,.7);border-bottom:1px solid rgba(200,184,154,.25);');
+    var nav = div('display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(255,255,255,.9);border-bottom:1px solid rgba(200,184,154,.25);');
     nav.className = 'bh-cal-nav';
 
     // Bouton Aujourd’hui — pilule iOS
@@ -7567,21 +7567,6 @@ try {
 
     nav.appendChild(todayBtn);
     nav.appendChild(label);
-
-    // Légende plateformes — la grille devient auto-explicative
-    if (state.view === 'month' || state.view === 'week') {
-      var legend = div('flex-basis:100%;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding-top:7px;');
-      legend.className = 'bh-cal-legend';
-      function lgd(color, txt, radius) {
-        return '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:#6B7280;letter-spacing:.02em;"><span style="width:9px;height:9px;background:'+color+';border-radius:'+(radius||'50%')+';flex-shrink:0;"></span>'+txt+'</span>';
-      }
-      legend.innerHTML = lgd('#FF5A5F','Airbnb')
-        + lgd('#003580','Booking','2.5px')
-        + lgd('#C2410C','BHGuest')
-        + lgd('#F97316','Direct')
-        + '<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:#B7791F;letter-spacing:.02em;"><span style="width:9px;height:9px;border:1.5px solid #B7791F;border-radius:50%;flex-shrink:0;box-sizing:border-box;"></span>Ven &amp; sam \u00b7 tarif week-end</span>';
-      nav.appendChild(legend);
-    }
 
     // Insert after header
     var hdr = w.querySelector('.bh-cal-header');
@@ -7880,7 +7865,7 @@ try {
     state.properties.forEach(function(prop) {
       var row = div('display:grid;grid-template-columns:80px repeat(7,1fr);border-bottom:1px solid #F5F2EC;min-height:56px;');
 
-      var propCell = div('padding:10px 8px;background:#FAFAF9;border-right:1px solid #E5E7EB;display:flex;align-items:center;');
+      var propCell = div('padding:10px 8px;background:#FFFFFF;border-right:1px solid #E5E7EB;display:flex;align-items:center;');
       propCell.innerHTML='<div style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+prop.name+'</div>';
       row.appendChild(propCell);
 
@@ -7991,7 +7976,7 @@ try {
 
     // ── HEADER ROW ──
     // Coin "Logements"
-    var corner = div('position:sticky;left:0;z-index:20;background:#F0EDE8;border-right:2px solid #DDD9D3;border-bottom:2px solid #E8E4DF;display:flex;align-items:center;justify-content:center;box-sizing:border-box;');
+    var corner = div('position:sticky;left:0;z-index:20;background:#FFFFFF;border-right:2px solid #DDD9D3;border-bottom:2px solid #E8E4DF;display:flex;align-items:center;justify-content:center;box-sizing:border-box;');
     corner.style.gridColumn = '1';
     corner.style.gridRow    = '1';
     corner.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">'
@@ -8082,12 +8067,12 @@ try {
       var gridRow = String(rowIdx + 2); // rows start at 2
 
       // Cellule logement sticky left
-      var pc = div('position:sticky;left:0;z-index:15;background:#FAFAF9;border-right:2px solid #DDD9D3;border-bottom:1px solid #EEEBE6;display:flex;align-items:center;padding:0 8px;cursor:pointer;box-sizing:border-box;transition:background .15s;overflow:hidden;box-shadow:4px 0 0 0 #FAFAF9;');
+      var pc = div('position:sticky;left:0;z-index:15;background:#FFFFFF;border-right:2px solid #DDD9D3;border-bottom:1px solid #EEEBE6;display:flex;align-items:center;padding:0 8px;cursor:pointer;box-sizing:border-box;transition:background .15s;overflow:hidden;box-shadow:4px 0 0 0 #FFFFFF;');
       pc.style.gridColumn = '1';
       pc.style.gridRow    = gridRow;
       pc.className = 'bh-prop-cell';
       pc.dataset.propId = String(prop.id);
-      pc.innerHTML = '<span style="font-size:11px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
+      pc.innerHTML = '<span style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
 // clic logement supprimé
       grid.appendChild(pc);
 
@@ -8130,7 +8115,7 @@ try {
     grid.style.gridTemplateRows = hdrH + 'px repeat(' + nRows + ', ' + rowH + 'px) ' + hdrH + 'px';
 
     // Coin footer (vide)
-    var footerCorner = div('position:sticky;left:0;z-index:20;background:#F0EDE8;border-right:2px solid #DDD9D3;border-top:2px solid #E8E4DF;box-sizing:border-box;');
+    var footerCorner = div('position:sticky;left:0;z-index:20;background:#FFFFFF;border-right:2px solid #DDD9D3;border-top:2px solid #E8E4DF;box-sizing:border-box;');
     footerCorner.style.gridColumn = '1';
     footerCorner.style.gridRow = String(footerRow);
     grid.appendChild(footerCorner);

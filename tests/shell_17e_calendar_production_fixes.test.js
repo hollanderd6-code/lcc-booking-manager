@@ -112,20 +112,21 @@ assert.ok(
 );
 console.log('✅ 17E-12 — propW = 88 supprimé');
 
-// ── 17E-13: body.bh-cal-mode #calendarSection has overflow:visible ───────
+// ── 17E-13: body.bh-cal-mode #calendarSection has overflow override ───────
+// 17F upgraded overflow:visible → overflow:clip (clips without breaking sticky)
 assert.ok(
-  appHtml.includes('overflow: visible !important'),
-  '17E-13 FAIL: app.html body.bh-cal-mode #calendarSection must add overflow:visible !important'
+  appHtml.includes('overflow: clip !important') || appHtml.includes('overflow: visible !important'),
+  '17E-13 FAIL: app.html body.bh-cal-mode #calendarSection must override overflow'
 );
-console.log('✅ 17E-13 — body.bh-cal-mode #calendarSection: overflow:visible');
+console.log('✅ 17E-13 — body.bh-cal-mode #calendarSection: overflow override présent');
 
-// ── 17E-14: overflow:visible is in the bh-cal-mode section ──────────────
+// ── 17E-14: overflow override is in the bh-cal-mode section ──────────────
 const calModeSection = appHtml.slice(appHtml.indexOf('body.bh-cal-mode #calendarSection'));
 assert.ok(
-  calModeSection.slice(0, 200).includes('overflow: visible'),
-  '17E-14 FAIL: overflow:visible must appear inside the body.bh-cal-mode #calendarSection block'
+  calModeSection.slice(0, 200).includes('overflow: clip') || calModeSection.slice(0, 200).includes('overflow: visible'),
+  '17E-14 FAIL: overflow override must appear inside the body.bh-cal-mode #calendarSection block'
 );
-console.log('✅ 17E-14 — overflow:visible placé dans le bloc body.bh-cal-mode #calendarSection');
+console.log('✅ 17E-14 — overflow override placé dans le bloc body.bh-cal-mode #calendarSection');
 
 // ── 17E-15: gridTemplateColumns uses propW (160) as first column ─────────
 assert.ok(
@@ -322,33 +323,35 @@ assert.ok(
 );
 console.log('✅ 17E-39 — var acDot défini dans renderWeek');
 
-// ── 17E-40: PLT airbnb has dark fg ───────────────────────────────────────
+// ── 17E-40: PLT airbnb has readable fg (dark on pastel OR white on saturated) ──
+// 17F upgraded to saturated colors (#FF5A5F bg + #FFFFFF fg) — both are readable
 assert.ok(
-  appHtml.includes("airbnb:") && appHtml.includes("fg:'#8A2E29'"),
-  '17E-40 FAIL: PLT.airbnb must have dark fg (#8A2E29) for readable text on pastel background'
+  appHtml.includes("airbnb:") && (appHtml.includes("fg:'#8A2E29'") || appHtml.includes("fg:'#FFFFFF'")),
+  '17E-40 FAIL: PLT.airbnb must have readable fg (dark #8A2E29 or white #FFFFFF)'
 );
-console.log('✅ 17E-40 — PLT.airbnb fg: #8A2E29 (foncé)');
+console.log('✅ 17E-40 — PLT.airbnb fg: lisible (foncé ou blanc sur saturé)');
 
-// ── 17E-41: PLT booking has dark fg ──────────────────────────────────────
+// ── 17E-41: PLT booking has readable fg ──────────────────────────────────
 assert.ok(
-  appHtml.includes("fg:'#1E3A5F'"),
-  '17E-41 FAIL: PLT.booking must have dark fg (#1E3A5F) for readable text on pastel background'
+  appHtml.includes("fg:'#1E3A5F'") || appHtml.includes("fg:'#FFFFFF'"),
+  '17E-41 FAIL: PLT.booking must have readable fg (dark #1E3A5F or white #FFFFFF)'
 );
-console.log('✅ 17E-41 — PLT.booking fg: #1E3A5F (foncé)');
+console.log('✅ 17E-41 — PLT.booking fg: lisible');
 
-// ── 17E-42: PLT direct has dark fg ───────────────────────────────────────
+// ── 17E-42: PLT direct has readable fg ───────────────────────────────────
 assert.ok(
-  appHtml.includes("fg:'#0F4433'"),
-  '17E-42 FAIL: PLT.direct must have dark fg (#0F4433) for readable text on pastel background'
+  appHtml.includes("fg:'#0F4433'") || appHtml.includes("fg:'#FFFFFF'"),
+  '17E-42 FAIL: PLT.direct must have readable fg (dark #0F4433 or white #FFFFFF)'
 );
-console.log('✅ 17E-42 — PLT.direct fg: #0F4433 (foncé)');
+console.log('✅ 17E-42 — PLT.direct fg: lisible');
 
 // ── 17E-43: PLT airbnb has accent color ──────────────────────────────────
+// 17F uses rgba(0,0,0,.18) as universal dark overlay accent
 assert.ok(
-  appHtml.includes("ac:'#C0433C'"),
-  '17E-43 FAIL: PLT.airbnb must have ac:#C0433C (accent/saturated for dot badge)'
+  appHtml.includes("ac:'#C0433C'") || appHtml.includes("ac:'rgba(0,0,0,.18)'"),
+  '17E-43 FAIL: PLT.airbnb must have ac value (saturated or dark overlay)'
 );
-console.log('✅ 17E-43 — PLT.airbnb ac: #C0433C (accent)');
+console.log('✅ 17E-43 — PLT.airbnb ac: présent');
 
 // ── 17E-44: week view block still uses p.bg for background ───────────────
 assert.ok(

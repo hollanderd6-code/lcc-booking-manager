@@ -200,10 +200,12 @@ assert.ok(
 );
 console.log('✅ 17C-26 — barres réservation border-radius 11px');
 
-// ── 17C-27: OTA visual states (platform colors) ──────────────────────────
+// ── 17C-27: OTA visual states (platform colors) — updated for 17F saturated ─
+// 17F replaced pastels with iOS saturated: Airbnb #FF5A5F, Booking #003580
 assert.ok(
-  appHtml.includes('#F2C9C6') && appHtml.includes('#C3D0E4'),
-  '17C-27 FAIL: app.html must have platform color entries for airbnb (#F2C9C6) and booking (#C3D0E4)'
+  (appHtml.includes('#FF5A5F') || appHtml.includes('#F2C9C6')) &&
+  (appHtml.includes('#003580') || appHtml.includes('#C3D0E4')),
+  '17C-27 FAIL: app.html must have platform color entries for airbnb and booking'
 );
 console.log('✅ 17C-27 — couleurs OTA présentes (airbnb/booking)');
 
