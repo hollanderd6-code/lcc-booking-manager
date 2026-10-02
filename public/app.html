@@ -680,6 +680,8 @@ setTimeout(function() {
   <link rel="stylesheet" href="/css/bh-theme-v3.css?v=cb75551e">
   <link rel="stylesheet" href="/css/bh-tokens.css?v=9b734869">
   <link rel="stylesheet" href="/css/bh-native-bg.css">
+  <link rel="stylesheet" href="/css/bh-ios-parity.css">
+  <link rel="stylesheet" href="/css/bh-shell-ios.css">
   <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
   <link rel="stylesheet" href="/css/bh-lux.css?v=d686b5ab">
   <link rel="stylesheet" href="/css/bh-lux-app.css?v=9af52e1b">
@@ -3665,6 +3667,10 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
           </p>
 </div>
 <div class="header-actions">
+<button class="btn-icon bh-header-search-btn" id="appSearchBtn" aria-label="Rechercher" title="Rechercher">
+<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+</button>
+<button class="bh-ios-initials-button bh-ios-initials-button--own bh-header-initials-btn" id="appInitialsBtn" aria-label="Mon compte" onclick="window.openAgencySwitcherModal && window.openAgencySwitcherModal()">?</button>
 <button class="btn-icon" id="syncBtn" title="Synchroniser les calendriers">
 <i class="fas fa-sync-alt"></i>
 </button>

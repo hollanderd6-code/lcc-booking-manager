@@ -24,10 +24,12 @@
   <link href="/css/style.css?v=17204d03" rel="stylesheet"/>
   <link href="/css/bh-theme-v3.css?v=cb75551e" rel="stylesheet"/>
   <link rel="stylesheet" href="/css/bh-tokens.css?v=9b734869">
+  <link rel="stylesheet" href="/css/bh-ios-parity.css">
   <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
   <link rel="stylesheet" href="/css/bh-lux.css?v=d686b5ab">
   <link href="/css/bh-messages-lux.css?v=f2dc09ea" rel="stylesheet"/>
   <link href="/css/bh-messages-v3.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/bh-shell-ios.css">
   <link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/>
   <link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
   <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
@@ -1121,16 +1123,11 @@ html[data-theme-v3="1"] .app-container {
   <div id="bhSidebar"></div>
   <main class="main-content">
     <div id="bhHeader"></div>
-<div class="bh-desktop-header"><div><div class="bh-dh-kicker">Communication</div><div class="bh-dh-title">Messages <span id="msgsUnreadHeader" data-count=""></span></div></div></div>
+<div class="bh-desktop-header"><div><div class="bh-dh-kicker">Communication</div><div class="bh-dh-title">Messages <span id="msgsUnreadHeader" data-count=""></span></div></div><div class="bh-header-actions"><button class="bh-ios-circle-button bh-header-search-btn" id="msgsSearchBtn" aria-label="Rechercher" onclick="var el=document.getElementById('msgsSearchInput');if(el){el.focus();}"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button><button class="bh-ios-initials-button bh-ios-initials-button--own bh-header-initials-btn" id="msgsInitialsBtn" aria-label="Mon compte" onclick="window.openAgencySwitcherModal && window.openAgencySwitcherModal()">?</button></div></div>
 
     <!-- bhHeaderActions for bh-layout.js (empty) -->
     <div id="bhHeaderActions" style="display:none;"></div>
     
-    <!-- Back button injected directly -->
-    <button class="msgs-back-btn" id="msgsDirectBackBtn" onclick="window.location.href='/app.html'">
-      <i class="fas fa-arrow-left"></i> Tableau de bord
-    </button>
-
     <!-- Legacy hidden containers (JS compatibility) -->
     <div class="page-content" style="display:none!important">
       <div class="stats-section">
@@ -2959,7 +2956,6 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
   #bhHeader,
   #bhHeaderActions,
   .page-content,
-  #msgsDirectBackBtn,
   .msgs-back-btn {
     display: none !important;
   }

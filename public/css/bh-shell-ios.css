@@ -1,0 +1,200 @@
+/* ============================================================================
+   BH-SHELL-IOS — iOS visual shell global layer
+   ============================================================================
+   SHELL_03: AppBackground on all screens, page navbars (glass), header
+   search/account action buttons, mobile nav glass.
+
+   Token source: bh-tokens.css (must load first).
+   Loads after bh-tokens.css on each page.
+   Uses body[data-page="…"] specificity to beat bh-messages-v3.css white rules.
+   ============================================================================ */
+
+
+/* ── 1. AppBackground: extend iOS warm gradient to messages & manage ────────
+   bh-native-bg.css already covers body[data-page="app"].
+   messages.html overrides body with #FFFFFF !important from bh-messages-v3.css.
+   specificity body[data-page="messages"] (0,2,1) > body (0,1,1) in same !important
+   tier — our gradient wins regardless of load order.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+html[data-theme-v3="1"] body[data-page="messages"] {
+  background-image:
+    radial-gradient(
+      circle clamp(160px, 48vw, 350px)
+      at calc(100% - 20px) 60px,
+      rgba(46, 139, 98, 0.42) 0%, transparent 100%
+    ),
+    radial-gradient(
+      circle clamp(165px, 50vw, 360px)
+      at 30px calc(100% - 60px),
+      rgba(168, 69, 42, 0.30) 0%, transparent 100%
+    ),
+    radial-gradient(
+      circle clamp(140px, 42vw, 300px)
+      at 50% calc(100% + 30px),
+      rgba(46, 139, 98, 0.34) 0%, transparent 100%
+    ),
+    radial-gradient(
+      circle clamp(120px, 36vw, 260px)
+      at calc(100% + 30px) 52%,
+      rgba(201, 161, 91, 0.30) 0%, transparent 100%
+    ),
+    linear-gradient(168deg, #F5F2EA 0%, #EBE7DC 46%, #E2DDD0 100%) !important;
+  background-color:      #F5F2EA !important;
+  background-attachment: fixed !important;
+}
+
+html[data-theme-v3="1"] body[data-page="manage"] {
+  background-image:
+    radial-gradient(
+      circle clamp(160px, 48vw, 350px)
+      at calc(100% - 20px) 60px,
+      rgba(46, 139, 98, 0.42) 0%, transparent 100%
+    ),
+    radial-gradient(
+      circle clamp(165px, 50vw, 360px)
+      at 30px calc(100% - 60px),
+      rgba(168, 69, 42, 0.30) 0%, transparent 100%
+    ),
+    radial-gradient(
+      circle clamp(140px, 42vw, 300px)
+      at 50% calc(100% + 30px),
+      rgba(46, 139, 98, 0.34) 0%, transparent 100%
+    ),
+    radial-gradient(
+      circle clamp(120px, 36vw, 260px)
+      at calc(100% + 30px) 52%,
+      rgba(201, 161, 91, 0.30) 0%, transparent 100%
+    ),
+    linear-gradient(168deg, #F5F2EA 0%, #EBE7DC 46%, #E2DDD0 100%) !important;
+  background-color:      #F5F2EA !important;
+  background-attachment: fixed !important;
+}
+
+/* ── Transparent containers: let body gradient show through ────────────────── */
+
+html[data-theme-v3="1"] body[data-page="messages"] .app-container,
+html[data-theme-v3="1"] body[data-page="messages"] .main-content,
+html[data-theme-v3="1"] body[data-page="messages"] .msgs-tabs {
+  background: transparent !important;
+}
+
+html[data-theme-v3="1"] body[data-page="manage"] .app-container,
+html[data-theme-v3="1"] body[data-page="manage"] .main-content,
+html[data-theme-v3="1"] body[data-page="manage"] .page-content {
+  background: transparent !important;
+}
+
+
+/* ── 2. Messages page navbar glass ─────────────────────────────────────────── */
+
+/* Override #FFFFFF fill from bh-messages-v3.css on the desktop header */
+html[data-theme-v3="1"] .bh-desktop-header {
+  background: rgba(245, 242, 234, 0.88) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.60) !important;
+  box-shadow: 0 1px 0 rgba(20, 32, 27, 0.06) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 89 !important;
+}
+
+/* Title: DM Sans 30/700, iOS encre */
+html[data-theme-v3="1"] .bh-dh-title {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 30px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.032em !important;
+  color: var(--bh-ios-encre, #14201B) !important;
+}
+
+
+/* ── 3. Manage page navbar glass ────────────────────────────────────────────── */
+
+@media (min-width: 1367px) {
+  html[data-theme-v3="1"] .manage-page-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 20px 24px 16px !important;
+    background: rgba(245, 242, 234, 0.88) !important;
+    backdrop-filter: blur(20px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.60) !important;
+    box-shadow: 0 1px 0 rgba(20, 32, 27, 0.06) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 89 !important;
+    margin-bottom: 0 !important;
+  }
+
+  html[data-theme-v3="1"] .manage-page-header__kicker {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    color: var(--bh-ios-attenue, #5E6B63) !important;
+    margin-bottom: 2px !important;
+  }
+
+  html[data-theme-v3="1"] .manage-page-header__title {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 30px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.032em !important;
+    color: var(--bh-ios-encre, #14201B) !important;
+    line-height: 1.1 !important;
+  }
+}
+
+
+/* ── 4. Header action buttons: search circle + initials ─────────────────────── */
+
+/* Container for trailing action buttons in page headers */
+.bh-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* SVG sizing inside search circle buttons */
+.bh-header-search-btn svg {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: block;
+}
+
+/* Initials button in page header: hidden on desktop (sidebar shows account) */
+@media (min-width: 1367px) {
+  .bh-header-initials-btn {
+    display: none !important;
+  }
+}
+
+
+/* ── 5. Suppress legacy Tableau de bord back button ─────────────────────────── */
+
+.msgs-back-btn {
+  display: none !important;
+}
+
+
+/* ── 6. Mobile bottom nav — iOS warm glass surface ──────────────────────────── */
+
+@media (max-width: 1366px) {
+  html[data-theme-v3="1"] .mobile-tabs {
+    background: rgba(245, 242, 234, 0.92) !important;
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.72) !important;
+    box-shadow: 0 -2px 16px rgba(20, 32, 27, 0.08) !important;
+  }
+}
