@@ -265,15 +265,17 @@ describe('07: header iOS parity', () => {
 // 7. NO FAKE ACTIONABLE STATE
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('07: no fake "à reprendre" state', () => {
-  test('7-01 no "À reprendre" filter pill in messages.html', () => {
-    expect(msgsHtml).not.toMatch(/À reprendre/);
+describe('07→07C: real "à reprendre" state (escalated===true)', () => {
+  test('7-01 "À reprendre" filter pill present in messages.html (07C feature)', () => {
+    expect(msgsHtml).toMatch(/À reprendre/);
   });
 
-  test('7-02 filter bar only has Tout and Non lus pills', () => {
-    const filterBar = msgsHtml.match(/id="msgsFilterBar"[\s\S]{0,600}?<\/div>/);
+  test('7-02 filter bar has Tout, Non lus and À reprendre pills', () => {
+    const filterBar = msgsHtml.match(/id="msgsFilterBar"[\s\S]{0,800}?<\/div>/);
     expect(filterBar).toBeTruthy();
-    expect(filterBar[0]).not.toMatch(/reprendre/i);
+    expect(filterBar[0]).toMatch(/data-filter="all"/);
+    expect(filterBar[0]).toMatch(/data-filter="unread"/);
+    expect(filterBar[0]).toMatch(/data-filter="escalated"/);
   });
 
   test('7-03 no needs_reply column referenced', () => {
@@ -281,8 +283,7 @@ describe('07: no fake "à reprendre" state', () => {
     expect(chatOwner).not.toMatch(/needs_reply/);
   });
 
-  test('7-04 no actionable_count or follow_up state in iOS07 CSS', () => {
-    expect(ios07).not.toMatch(/reprendre/i);
+  test('7-04 no actionable_count or follow_up state in iOS07 CSS (07C CSS handles it)', () => {
     expect(ios07).not.toMatch(/actionable/i);
   });
 });

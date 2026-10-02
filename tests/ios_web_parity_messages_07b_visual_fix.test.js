@@ -216,8 +216,10 @@ describe('07B: filter pills preserved', () => {
     expect(msgsHtml).toMatch(/Non lus/);
   });
 
-  test('10-03 no fake À reprendre pill added', () => {
-    expect(msgsHtml).not.toMatch(/À reprendre/);
+  test('10-03 À reprendre pill added correctly (07C real implementation)', () => {
+    // 07C adds the real escalated-based filter — verify it uses correct data-filter
+    expect(msgsHtml).toMatch(/data-filter="escalated"/);
+    expect(msgsHtml).toMatch(/À reprendre/);
   });
 });
 

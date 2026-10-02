@@ -1,0 +1,138 @@
+/* ============================================================
+   BH-MESSAGES-IOS-07C — Actionable filter, badges, composer fix
+   Scope: body[data-page="messages"] only.
+   Loaded after bh-messages-ios-07.css.
+   ============================================================ */
+
+/* ─────────────────────────────────────────────────────────────
+   0. HEADER KICKER — JS sets full text; suppress CSS ::after
+   ───────────────────────────────────────────────────────────── */
+
+/* bh-messages-ios-07.css appends " non lu" via ::after.
+   07C JS sets the full "X non lus · Y à reprendre" text,
+   so the CSS suffix must be suppressed. */
+body[data-page="messages"] #msgsUnreadHeader:not(:empty)::after {
+  content: '' !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   1. "À reprendre" FILTER PILL — gold language
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="messages"] .msgs-filter-pill--escalated {
+  background: rgba(251, 243, 226, 0.45) !important;
+  border: 1px solid rgba(201, 161, 91, 0.35) !important;
+  color: #8A5B14 !important;
+}
+
+body[data-page="messages"] .msgs-filter-pill--escalated:hover {
+  background: rgba(251, 243, 226, 0.70) !important;
+  border-color: rgba(201, 161, 91, 0.50) !important;
+}
+
+body[data-page="messages"] .msgs-filter-pill--escalated.active {
+  background: rgba(251, 243, 226, 0.92) !important;
+  border-color: rgba(201, 161, 91, 0.70) !important;
+  color: #7A4F0F !important;
+}
+
+body[data-page="messages"] .msgs-filter-pill--escalated .msgs-filter-badge {
+  background: #8A5B14 !important;
+  color: #FEF3C7 !important;
+}
+
+body[data-page="messages"] .msgs-filter-pill--escalated.active .msgs-filter-badge {
+  background: rgba(138, 91, 20, 0.18) !important;
+  color: #8A5B14 !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   2. ESCALATED FILTER — hide non-escalated when active
+   ───────────────────────────────────────────────────────────── */
+
+#conversationsList.msgs-filter-escalated .conversation-item:not(.conv-escalated) {
+  display: none !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   3. ESCALATED CARD — subtle amber accent
+   Left border + warm tint — no text badge on card.
+   ───────────────────────────────────────────────────────────── */
+
+html[data-theme-v3="1"] body[data-page="messages"] #conversationsList .conversation-item.conv-escalated,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] #conversationsList .conversation-item.conv-escalated {
+  background: rgba(251, 243, 226, 0.62) !important;
+  border-color: rgba(201, 161, 91, 0.42) !important;
+}
+
+/* Accent bar on left edge */
+html[data-theme-v3="1"] body[data-page="messages"] #conversationsList .conversation-item.conv-escalated::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  background: #C9A15B;
+  border-radius: 0 2px 2px 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   4. CONVERSATION BADGES — IA en pause / Brouillon prêt
+   Injected by bh-messages-ios-07c.js
+   ───────────────────────────────────────────────────────────── */
+
+.bh-conv-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.bh-conv-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 7px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* "IA en pause" — glass neutral, discrete */
+.bh-conv-badge--ai-paused {
+  background: rgba(255, 255, 255, 0.60);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #6B7280;
+}
+
+/* "✨ Brouillon prêt" — gold iOS language */
+.bh-conv-badge--suggestion {
+  background: rgba(251, 243, 226, 0.90);
+  border: 1px solid rgba(201, 161, 91, 0.40);
+  color: #8A5B14;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   5. COMPOSER VISIBILITY — desktop: clear floating bottom nav
+   Floating nav: position:fixed; bottom:22px; min-height:62px
+   Nav footprint from viewport bottom: ~84px.
+   Current msgs-split height (07.css): calc(100dvh - 90px) puts
+   the split bottom ~8px BELOW viewport (overflow:hidden clips it),
+   which means the composer is hidden behind the floating nav.
+   Fix: reduce height to clear the nav with comfortable margin.
+   ───────────────────────────────────────────────────────────── */
+
+@media (min-width: 1367px) {
+  html[data-theme-v3="1"] body[data-page="messages"] .msgs-split {
+    /* header(90px) + nav-clearance(96px) = 186px total vertical reservation */
+    height: calc(100dvh - 186px) !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   6. MOBILE — badges above bottom nav safe area (already handled
+   by ios-07.css; no override needed)
+   ───────────────────────────────────────────────────────────── */

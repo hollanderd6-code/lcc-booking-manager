@@ -111,9 +111,11 @@ test('18B-15: Non lus filter pill with data-filter="unread"', () => {
   expect(html).toMatch(/data-filter="unread"/);
 });
 
-test('18B-16: no fake "À reprendre" filter state invented', () => {
+test('18B-16: "À reprendre" uses real escalated key, not fake reprendre key', () => {
+  // 07C implements the real filter using data-filter="escalated" (from iOS authoritative source)
   expect(html).not.toMatch(/data-filter="reprendre"/);
-  expect(html).not.toMatch(/À reprendre/);
+  expect(html).toMatch(/data-filter="escalated"/);
+  expect(html).toMatch(/À reprendre/);
 });
 
 // ── Conversation cards ───────────────────────────────────────────

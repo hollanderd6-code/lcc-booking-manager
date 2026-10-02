@@ -35,6 +35,7 @@
   <link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
   <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
   <link rel="stylesheet" href="/css/bh-messages-ios-07.css">
+  <link rel="stylesheet" href="/css/bh-messages-ios-07c.css">
 
   <!-- CSS propre a cette page. -->
   <style>
@@ -1185,10 +1186,11 @@ html[data-theme-v3="1"] .app-container {
             <input id="msgsSearchInput" placeholder="Rechercher un nom, un logement, un message…" type="text"/>
           </div>
         </div>
-        <!-- iOS-style filter pills: Tout / Non lus -->
+        <!-- iOS-style filter pills: Tout / Non lus / À reprendre -->
         <div id="msgsFilterBar" class="msgs-filter-bar">
           <button class="msgs-filter-pill active" data-filter="all" onclick="setMsgsFilter('all')" aria-label="Toutes les conversations">Tout</button>
           <button class="msgs-filter-pill" data-filter="unread" onclick="setMsgsFilter('unread')" aria-label="Conversations non lues">Non lus <span id="msgsUnreadFilterBadge" class="msgs-filter-badge"></span></button>
+          <button class="msgs-filter-pill msgs-filter-pill--escalated" data-filter="escalated" onclick="setMsgsFilter('escalated')" aria-label="Conversations à reprendre">À reprendre <span id="msgsEscalatedFilterBadge" class="msgs-filter-badge"></span></button>
         </div>
         <!-- chat-owner.js writes directly here -->
         <div id="conversationsList">
@@ -2223,6 +2225,7 @@ function closeBookingMessageModal() {
 <script src="/js/mobile-native-experience.js?v=eedbac9c"></script>
   <script src="/js/push-notifications-handler.js?v=2"></script>
 <script src="/js/mobile-tabs-handler.js?v=03a5b1c7"></script>
+<script src="/js/bh-messages-ios-07c.js"></script>
 <!-- chat-emoji-photo removed - emoji bar not wanted -->
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script> 
 <script>
@@ -3361,19 +3364,33 @@ function setMsgsFilter(f) {
     el.classList.toggle('active', el.dataset.filter === f);
   });
   var list = document.getElementById('conversationsList');
-  if (list) list.classList.toggle('msgs-filter-unread', f === 'unread');
+  if (list) {
+    list.classList.toggle('msgs-filter-unread',    f === 'unread');
+    list.classList.toggle('msgs-filter-escalated', f === 'escalated');
+  }
 }
 
 function _updateMsgsFilterCounts() {
   var convs = window.allConversations || [];
-  var n = convs.filter(function(c) { return (parseInt(c.unread_count) || 0) > 0; }).length;
-  var badge = document.getElementById('msgsUnreadFilterBadge');
-  if (badge) badge.textContent = n > 0 ? n : '';
+
+  // Unread conversations count (pill badge + kicker)
+  var nu = convs.filter(function(c) { return (parseInt(c.unread_count, 10) || 0) > 0; }).length;
+  var unreadBadge = document.getElementById('msgsUnreadFilterBadge');
+  if (unreadBadge) unreadBadge.textContent = nu > 0 ? nu : '';
+
+  // Escalated conversations count (pill badge + kicker)
+  var ne = convs.filter(function(c) { return c.escalated === true; }).length;
+  var escBadge = document.getElementById('msgsEscalatedFilterBadge');
+  if (escBadge) escBadge.textContent = ne > 0 ? ne : '';
+
+  // Header kicker: "X non lu(s) · Y à reprendre"
   var hdr = document.getElementById('msgsUnreadHeader');
   if (hdr) {
-    var total = convs.reduce(function(s, c) { return s + (parseInt(c.unread_count) || 0); }, 0);
-    hdr.dataset.count = total > 0 ? total : '';
-    hdr.textContent  = total > 0 ? total : '';
+    var parts = [];
+    if (nu > 0) parts.push(nu + ' non lu' + (nu > 1 ? 's' : ''));
+    if (ne > 0) parts.push(ne + ' à reprendre');
+    hdr.textContent  = parts.join(' · ');
+    hdr.dataset.count = parts.length > 0 ? '1' : '';
   }
 }
 
