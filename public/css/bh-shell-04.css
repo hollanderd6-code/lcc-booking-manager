@@ -1,0 +1,285 @@
+/* ============================================================================
+   BH-SHELL-04 — Universal floating bottom navigation
+   ============================================================================
+   SHELL_04_STRICT: Abandon desktop rail on 4 primary destinations.
+   The nav becomes a universal floating bottom bar — iOS tabView model —
+   visible on mobile AND desktop.
+
+   Mobile  (≤1366px): existing full-width glass bar at bottom (unchanged
+                       geometry, glass treatment from bh-shell-ios.css).
+   Desktop (≥1367px): centered floating Liquid Glass capsule, 520–620 px.
+
+   Token source: bh-tokens.css.
+   Cascade position: after bh-nav-rail.css and bh-shell-ios.css.
+   ============================================================================ */
+
+
+/* ── 1. Neutralise rail on the 4 primary destinations ──────────────────────── */
+
+@media (min-width: 1367px) {
+
+  html[data-theme-v3="1"] body[data-page="app"]          .sidebar.bh-nav-rail,
+  html[data-theme-v3="1"] body[data-page="messages"]     .sidebar.bh-nav-rail,
+  html[data-theme-v3="1"] body[data-page="manage"]       .sidebar.bh-nav-rail,
+  html[data-theme-v3="1"] body[data-page="reservations"] .sidebar.bh-nav-rail {
+    display: none !important;
+  }
+
+  /* bh-nav-rail.css sets margin-left: 248px (no !important) on .app-container.
+     Override to zero so AppBackground fills the full viewport. */
+  html[data-theme-v3="1"] body[data-page="app"]          .app-container,
+  html[data-theme-v3="1"] body[data-page="messages"]     .app-container,
+  html[data-theme-v3="1"] body[data-page="manage"]       .app-container,
+  html[data-theme-v3="1"] body[data-page="reservations"] .app-container {
+    margin-left: 0 !important;
+  }
+
+}
+
+
+/* ── 2. Floating bottom nav — desktop geometry & Liquid Glass ───────────────── */
+
+@media (min-width: 1367px) {
+
+  html[data-theme-v3="1"] .mobile-tabs {
+    /* Make visible; bh-bottom-bar.css styles are all inside @media (max-width:1366px) */
+    display: flex !important;
+    align-items: stretch !important;
+    /* Centered capsule floating above viewport bottom */
+    position: fixed !important;
+    bottom: 22px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: auto !important;
+    min-width: 520px !important;
+    max-width: 620px !important;
+    /* iOS Liquid Glass */
+    background: rgba(255, 255, 255, 0.68) !important;
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.72) !important;
+    border-radius: 50px !important;
+    box-shadow:
+      0 8px 32px rgba(20, 32, 27, 0.14),
+      0 2px 8px rgba(20, 32, 27, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.92) !important;
+    padding: 0 4px !important;
+    padding-bottom: 0 !important;
+    border-top: none !important;
+    gap: 0 !important;
+    overflow: visible !important;
+    z-index: 10001 !important;
+  }
+
+  /* Tab button: icon above, label below — iOS TabView layout */
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn {
+    position: relative !important;
+    z-index: 1 !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+    padding: 10px 16px 13px !important;
+    border: none !important;
+    background: transparent !important;
+    cursor: pointer !important;
+    min-height: 62px !important;
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    transition: color .2s ease !important;
+  }
+
+  /* Icon sizing */
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn i {
+    font-size: 20px !important;
+    line-height: 1 !important;
+    transition: transform .32s cubic-bezier(.34, 1.5, .5, 1) !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn svg {
+    width: 22px !important;
+    height: 22px !important;
+    display: block !important;
+    stroke-width: 1.75 !important;
+    transition: transform .32s cubic-bezier(.34, 1.5, .5, 1) !important;
+  }
+
+  /* Label below icon */
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn span:not(.badge) {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    line-height: 1 !important;
+    letter-spacing: 0.01em !important;
+  }
+
+  /* Inactive: #5E6B63 (--bh-ios-attenue) */
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn,
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn i,
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn span:not(.badge),
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn svg {
+    color: var(--bh-ios-attenue, #5E6B63) !important;
+    fill: none !important;
+    stroke: currentColor !important;
+  }
+
+  /* Active: #0E3B2E (--bh-ios-vert) */
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active,
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active i,
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active span:not(.badge),
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active svg,
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.lg-active,
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.lg-active i,
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.lg-active span:not(.badge),
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.lg-active svg {
+    color: var(--bh-ios-vert, #0E3B2E) !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active span:not(.badge),
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.lg-active span:not(.badge) {
+    font-weight: 700 !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active i,
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.lg-active i {
+    transform: translateY(-2px) scale(1.08) !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.active svg,
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn.lg-active svg {
+    transform: translateY(-2px) scale(1.08) !important;
+  }
+
+  /* Messages badge: preserve dynamic badge source */
+  html[data-theme-v3="1"] .mobile-tabs .tab-btn .badge {
+    color: #fff !important;
+    background: #DC2626 !important;
+  }
+
+  /* Liquid Glass capsule — active zone indicator (same JS as mobile) */
+  html[data-theme-v3="1"] .mobile-tabs .lg-capsule {
+    position: absolute !important;
+    top: 6px !important;
+    left: 0 !important;
+    height: calc(100% - 12px) !important;
+    width: 0 !important;
+    border-radius: 24px !important;
+    box-sizing: border-box !important;
+    background: rgba(14, 59, 46, 0.12) !important;
+    backdrop-filter: blur(14px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(180%) !important;
+    border: 1px solid rgba(14, 59, 46, 0.18) !important;
+    box-shadow:
+      0 4px 16px rgba(14, 59, 46, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.65),
+      inset 0 -1px 2px rgba(14, 59, 46, 0.08) !important;
+    opacity: 0 !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+    will-change: transform, width !important;
+    transform-origin: center center !important;
+    backface-visibility: hidden !important;
+    -webkit-backface-visibility: hidden !important;
+    transform: translateX(0) scaleX(1) translateZ(0) !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-tabs .lg-capsule.lg-visible {
+    opacity: 1 !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-tabs .lg-capsule.lg-animate {
+    transition:
+      transform .5s cubic-bezier(.34, 1.4, .5, 1),
+      width .4s cubic-bezier(.34, 1.2, .64, 1),
+      opacity .25s ease !important;
+  }
+
+  html[data-theme-v3="1"] .mobile-tabs .lg-capsule.lg-dragging {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(14, 59, 46, 0.20) !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+    transition: none !important;
+  }
+
+}
+
+
+/* ── 3. Content bottom padding: nav must not cover page content ─────────────── */
+
+/* Desktop: nav height (62px) + nav bottom offset (22px) + clearance (32px) */
+@media (min-width: 1367px) {
+
+  html[data-theme-v3="1"] body[data-page="app"] .page-content,
+  html[data-theme-v3="1"] body[data-page="manage"] .page-content {
+    padding-bottom: calc(62px + 22px + 32px) !important;
+  }
+
+  html[data-theme-v3="1"] body[data-page="reservations"] .main-content {
+    padding-bottom: calc(62px + 22px + 32px) !important;
+  }
+
+}
+
+/* Mobile: nav height + safe area */
+@media (max-width: 1366px) {
+
+  html[data-theme-v3="1"] body[data-page="app"] .page-content,
+  html[data-theme-v3="1"] body[data-page="manage"] .page-content {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px) !important;
+  }
+
+}
+
+
+/* ── 4. Messages composer: floating nav must not cover it ───────────────────── */
+
+/* Desktop: lift sticky composer above the floating nav */
+@media (min-width: 1367px) {
+
+  html[data-theme-v3="1"] body[data-page="messages"] #chatInputArea,
+  html[data-theme-v3="1"] body[data-page="messages"] .chat-modal-input {
+    bottom: calc(62px + 22px + 8px) !important;
+  }
+
+}
+
+/* Mobile: lift sticky composer above mobile nav bar */
+@media (max-width: 1366px) {
+
+  html[data-theme-v3="1"] body[data-page="messages"] #chatInputArea,
+  html[data-theme-v3="1"] body[data-page="messages"] .chat-modal-input {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 80px) !important;
+  }
+
+}
+
+
+/* ── 5. Today header: hide sync / notif / new-resa buttons ─────────────────── */
+/* Preserve functionality — these elements remain in the DOM and are accessible
+   via FAB, mobile header buttons, and other entry points. */
+
+html[data-theme-v3="1"] body[data-page="app"] #syncBtn,
+html[data-theme-v3="1"] body[data-page="app"] #notifHistoryBtn,
+html[data-theme-v3="1"] body[data-page="app"] #newReservationBtn {
+  display: none !important;
+}
+
+
+/* ── 6. Initials button: show on desktop for 4 main pages ──────────────────── */
+/* bh-shell-ios.css section 4 hides .bh-header-initials-btn at ≥1367px because
+   the rail sidebar held the account button. Rail is now gone → show it. */
+
+@media (min-width: 1367px) {
+
+  html[data-theme-v3="1"] body[data-page="app"]      .bh-header-initials-btn,
+  html[data-theme-v3="1"] body[data-page="messages"] .bh-header-initials-btn,
+  html[data-theme-v3="1"] body[data-page="manage"]   .bh-header-initials-btn {
+    display: flex !important;
+  }
+
+}
