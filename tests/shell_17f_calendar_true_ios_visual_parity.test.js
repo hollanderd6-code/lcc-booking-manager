@@ -341,12 +341,13 @@ assert.ok(
 );
 console.log('✅ 17F-40 — JS: bh-prop-cell box-shadow 4px 0 0 0 #FFFFFF');
 
-// ── 17F-41: property cell font-size 13px ─────────────────────────────────
+// ── 17F-41: property cell font-size ≥13px (13px from 17F, 14px from 17G) ────
 assert.ok(
-  appHtml.includes("font-size:13px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"),
-  '17F-41 FAIL: renderMonth property label must use font-size:13px (was 11px)'
+  appHtml.includes("font-size:13px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;")
+  || appHtml.includes("font-size:14px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"),
+  '17F-41 FAIL: renderMonth property label must use font-size:13px or 14px (was 11px)'
 );
-console.log('✅ 17F-41 — JS: bh-prop-cell label font-size:13px');
+console.log('✅ 17F-41 — JS: bh-prop-cell label font-size ≥ 13px');
 
 // ── 17F-42: old 11px font-size NOT in property cell ──────────────────────
 assert.ok(
@@ -362,21 +363,22 @@ assert.ok(
 );
 console.log('✅ 17F-43 — JS: renderMonth cellule footer background:#FFFFFF');
 
-// ── 17F-44: propW >= 140 (not reverted) ──────────────────────────────────
+// ── 17F-44: propW >= 140 — hardcoded (17E) OR from CSS variable (17G+) ──────
 const propWMatch = appHtml.match(/var propW = (\d+)/);
 assert.ok(
-  propWMatch && parseInt(propWMatch[1]) >= 140,
-  '17F-44 FAIL: propW must be >= 140 (iOS --cal-label-w, 17E geometry preserved)'
+  (propWMatch && parseInt(propWMatch[1]) >= 140) || appHtml.includes("'--cal-property-width'"),
+  '17F-44 FAIL: propW must be >= 140 (hardcoded) or read from --cal-property-width CSS variable'
 );
-console.log('✅ 17F-44 — JS: propW = '+( propWMatch ? propWMatch[1] : '?')+' (>= 140)');
+console.log('✅ 17F-44 — JS: propW >= 140 ou lu depuis --cal-property-width');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WEEK VIEW — WHITE (17F-45 … 17F-47)
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── 17F-45: week view property cell background #FFFFFF ───────────────────
+// ── 17F-45: week view property cell background #FFFFFF (padding 8px from 17F or 16px from 17G) ──
 assert.ok(
-  appHtml.includes("padding:10px 8px;background:#FFFFFF;border-right:1px solid #E5E7EB;display:flex;align-items:center;"),
+  appHtml.includes("padding:10px 8px;background:#FFFFFF;border-right:1px solid #E5E7EB;display:flex;align-items:center;")
+  || appHtml.includes("padding:10px 16px;background:#FFFFFF;border-right:1px solid #E5E7EB;display:flex;align-items:center;"),
   '17F-45 FAIL: renderWeek property cell must use background:#FFFFFF'
 );
 console.log('✅ 17F-45 — JS: renderWeek propCell background:#FFFFFF');

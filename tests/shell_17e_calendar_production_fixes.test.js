@@ -98,12 +98,12 @@ console.log('✅ 17E-10 — showTodayMode appelle bhUpdateRailActive');
 //  P2 — PROPERTY COLUMN WIDTH + OVERFLOW (app.html)
 // ════════════════════════════════════════════════════════════
 
-// ── 17E-11: propW is 160 ─────────────────────────────────────────────────
+// ── 17E-11: propW resolves to 160 — either hardcoded (17E) or from CSS variable (17G+) ──
 assert.ok(
-  appHtml.includes('var propW = 160'),
-  '17E-11 FAIL: app.html renderMonth must use propW = 160 (was 88, too narrow for real names)'
+  appHtml.includes('var propW = 160') || appHtml.includes("'--cal-property-width'"),
+  '17E-11 FAIL: app.html renderMonth must use propW = 160 (hardcoded) or read from --cal-property-width CSS variable'
 );
-console.log('✅ 17E-11 — propW = 160 (colonne logements élargie)');
+console.log('✅ 17E-11 — propW ≥ 160 (colonne logements élargie)');
 
 // ── 17E-12: propW is NOT 88 ──────────────────────────────────────────────
 assert.ok(

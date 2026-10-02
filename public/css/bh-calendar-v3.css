@@ -5,12 +5,18 @@
 /* ── Design tokens ─────────────────────────────────────────────── */
 :root {
   --cal-col-w:      64px;
-  --cal-row-h:      64px;
-  --cal-label-w:    88px;
+  --cal-row-h:      56px;
+  --cal-label-w:    160px;
   --cal-day-hdr-h:  44px;
   --cal-bar-h:      44px;
   --cal-bar-r:      11px;
   --cal-price-size: 11px;
+
+  /* Canonical geometry tokens (17G) */
+  --cal-property-width:     160px;
+  --cal-row-height:          56px;
+  --cal-property-padding-x:  16px;
+  --cal-grid-line:   rgba(20,32,27,.10);
 
   --cal-highlight:  rgba(20,32,27,.07);
   --cal-col-sep:    rgba(20,32,27,.10);
@@ -968,6 +974,9 @@ body.bh-cal-mode main.main-content {
 
 /* === Responsive === */
 @media (max-width: 1366px) {
+  :root {
+    --cal-property-width: 140px;
+  }
   body.bh-cal-mode #calendarSection {
     min-height: auto;
     border-radius: 0 !important;
@@ -977,6 +986,12 @@ body.bh-cal-mode main.main-content {
   }
   #bhCalRoot .bh-cal-header {
     border-radius: 0 !important;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --cal-property-width: 120px;
   }
 }
 

@@ -7845,11 +7845,12 @@ try {
     var days = [];
     for (var i=0;i<7;i++) { var d2=new Date(mon); d2.setDate(mon.getDate()+i); days.push(d2); }
     var today = ds(new Date());
+    var propW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cal-property-width')) || 160;
 
     var container = div('background:white;overflow:hidden;');
 
     // Header row
-    var hrow = div('display:grid;grid-template-columns:80px repeat(7,1fr);border-bottom:2px solid #F5F2EC;');
+    var hrow = div('display:grid;grid-template-columns:'+propW+'px repeat(7,1fr);border-bottom:2px solid #F5F2EC;');
     hrow.appendChild(div('padding:10px;background:#F5F2EC;border-right:1px solid #E5E7EB;'));
     days.forEach(function(d2) {
       var dstr = ds(d2);
@@ -7863,10 +7864,10 @@ try {
 
     // Property rows
     state.properties.forEach(function(prop) {
-      var row = div('display:grid;grid-template-columns:80px repeat(7,1fr);border-bottom:1px solid #F5F2EC;min-height:56px;');
+      var row = div('display:grid;grid-template-columns:'+propW+'px repeat(7,1fr);border-bottom:1px solid #F5F2EC;min-height:56px;');
 
-      var propCell = div('padding:10px 8px;background:#FFFFFF;border-right:1px solid #E5E7EB;display:flex;align-items:center;');
-      propCell.innerHTML='<div style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+prop.name+'</div>';
+      var propCell = div('padding:10px 16px;background:#FFFFFF;border-right:1px solid #E5E7EB;display:flex;align-items:center;');
+      propCell.innerHTML='<div style="font-size:14px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+prop.name+'</div>';
       row.appendChild(propCell);
 
       days.forEach(function(d2) {
@@ -7940,9 +7941,9 @@ try {
     var numDays    = Math.ceil((startOff + lastDay.getDate())/7)*7;
     var compactMode = false;
     try { compactMode = localStorage.getItem('bhCalCompact') === '1'; } catch(e) {}
-    var propW = 160;  // iOS --cal-label-w (17E: wider for real property names)
-    var colW  = 64;  // iOS --cal-col-w
-    var rowH  = compactMode ? 34 : 64;  // iOS --cal-row-h
+    var propW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cal-property-width')) || 160;
+    var colW  = 64;  // --cal-col-w
+    var rowH  = compactMode ? 34 : 56;  // --cal-row-height
     var hdrH  = 44;  // iOS dayHeaderH
     var renderProps = state.propertyFilter
       ? state.properties.filter(function(p){ return String(p.id) === state.propertyFilter; })
@@ -7950,7 +7951,7 @@ try {
     var nRows = renderProps.length;
 
     // Un seul scroll container
-    var outer = div('overflow:auto;-webkit-overflow-scrolling:touch;background:white;position:relative;');
+    var outer = div('overflow:auto;-webkit-overflow-scrolling:touch;background:white;position:relative;width:100%;box-sizing:border-box;');
     outer.id = 'bhMonthOuter';
     // --- BH FIX APP CONTAINER : debut ---
     // .app-container est un conteneur de defilement (overflow calcule
@@ -8067,12 +8068,12 @@ try {
       var gridRow = String(rowIdx + 2); // rows start at 2
 
       // Cellule logement sticky left
-      var pc = div('position:sticky;left:0;z-index:15;background:#FFFFFF;border-right:2px solid #DDD9D3;border-bottom:1px solid #EEEBE6;display:flex;align-items:center;padding:0 8px;cursor:pointer;box-sizing:border-box;transition:background .15s;overflow:hidden;box-shadow:4px 0 0 0 #FFFFFF;');
+      var pc = div('position:sticky;left:0;z-index:15;background:#FFFFFF;border-right:2px solid #DDD9D3;border-bottom:1px solid #EEEBE6;display:flex;align-items:center;padding:0 16px;cursor:pointer;box-sizing:border-box;transition:background .15s;overflow:hidden;box-shadow:4px 0 0 0 #FFFFFF;');
       pc.style.gridColumn = '1';
       pc.style.gridRow    = gridRow;
       pc.className = 'bh-prop-cell';
       pc.dataset.propId = String(prop.id);
-      pc.innerHTML = '<span style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
+      pc.innerHTML = '<span style="font-size:14px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
 // clic logement supprimé
       grid.appendChild(pc);
 
