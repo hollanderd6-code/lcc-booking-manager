@@ -1,0 +1,704 @@
+/* ============================================================
+   BH-MESSAGES-IOS-07 — Messages web → iOS visual parity
+   Scope: body[data-page="messages"] only.
+   Loaded after bh-messages-lux.css, bh-messages-v3.css,
+   bh-shell-04.css and all legacy inline <style> blocks.
+   chat-owner.js is never touched.
+   ============================================================ */
+
+/* ─────────────────────────────────────────────────────────────
+   1. APP BACKGROUND
+   Replaces white (#FFFFFF) from bh-messages-v3.css and
+   var(--lux-bg) from bh-messages-lux.css.
+   ───────────────────────────────────────────────────────────── */
+
+html[data-theme-v3="1"] body[data-page="messages"],
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"],
+html[data-theme-v3="1"] body[data-page="messages"] .main-content,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .main-content {
+  background: linear-gradient(
+    168deg,
+    #F5F2EA 0%,
+    #EBE7DC 50%,
+    #E2DDD0 100%
+  ) !important;
+  min-height: 100vh !important;
+}
+
+/* Fixed ambient halos — overlay above gradient, below content */
+html[data-theme-v3="1"] body[data-page="messages"]::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 320px 320px at 90%  8%,
+      rgba(46, 139, 98, 0.13)  0%, transparent 70%),
+    radial-gradient(ellipse 330px 330px at  8% 92%,
+      rgba(168, 69, 42, 0.06)  0%, transparent 70%),
+    radial-gradient(ellipse 280px 280px at 50% 95%,
+      rgba(46, 139, 98, 0.13)  0%, transparent 70%),
+    radial-gradient(ellipse 240px 240px at 88% 52%,
+      rgba(251, 243, 226, 0.90) 0%, transparent 70%);
+}
+
+/* App container stacks above halo layer */
+html[data-theme-v3="1"] body[data-page="messages"] .app-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   2. DESKTOP HEADER — iOS super-title + title typography
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="messages"] .bh-desktop-header {
+  background: transparent !important;
+  padding: 20px 24px 10px !important;
+}
+
+/* Super-title (kicker) — shows unread count as "X non lu" */
+body[data-page="messages"] .bh-dh-kicker {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #5E6B63 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  margin-bottom: 3px !important;
+  line-height: 1.3 !important;
+}
+
+/* #msgsUnreadHeader moved into kicker — strip badge style, show as plain text */
+body[data-page="messages"] #msgsUnreadHeader,
+html[data-theme-v3="1"] body[data-page="messages"] #msgsUnreadHeader,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] #msgsUnreadHeader {
+  display: inline !important;
+  background: transparent !important;
+  color: #5E6B63 !important;
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  min-width: 0 !important;
+  line-height: inherit !important;
+  vertical-align: middle !important;
+}
+
+/* "X non lu" suffix when count is set */
+body[data-page="messages"] #msgsUnreadHeader:not(:empty)::after {
+  content: ' non lu';
+}
+
+/* Fallback label when no unreads */
+body[data-page="messages"] #msgsUnreadHeader:empty::before {
+  content: 'Messages';
+}
+
+/* Title */
+body[data-page="messages"] .bh-dh-title {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 30px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.96px !important;
+  color: #14201B !important;
+  line-height: 1.1 !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   3. MSGS LAYOUT — transparent containers on AppBackground
+   ───────────────────────────────────────────────────────────── */
+
+html[data-theme-v3="1"] body[data-page="messages"] .msgs-split,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .msgs-split {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  margin: 8px 20px 16px !important;
+}
+
+html[data-theme-v3="1"] body[data-page="messages"] .msgs-left,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .msgs-left {
+  background: rgba(245, 242, 234, 0.30) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.40) !important;
+}
+
+html[data-theme-v3="1"] body[data-page="messages"] .msgs-right,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .msgs-right {
+  background: transparent !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   4. FILTER STRIP — iOS pill style
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="messages"] .msgs-filter-bar {
+  background: transparent !important;
+  padding: 6px 18px 14px !important;
+  gap: 6px !important;
+}
+
+body[data-page="messages"] .msgs-filter-pill {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  color: #5E6B63 !important;
+  border-radius: 13px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 5px 14px !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  transition: background .15s, border-color .15s !important;
+}
+
+body[data-page="messages"] .msgs-filter-pill:hover {
+  background: rgba(255, 255, 255, 0.45) !important;
+}
+
+body[data-page="messages"] .msgs-filter-pill.active {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border-color: rgba(255, 255, 255, 0.90) !important;
+  color: #14201B !important;
+}
+
+body[data-page="messages"] .msgs-filter-badge {
+  background: #0E3B2E !important;
+  color: #fff !important;
+}
+
+body[data-page="messages"] .msgs-filter-pill.active .msgs-filter-badge {
+  background: rgba(14, 59, 46, 0.18) !important;
+  color: #0E3B2E !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   5. SEARCH BAR — glass pill
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="messages"] .msgs-left .msgs-search-wrap {
+  background: transparent !important;
+}
+
+body[data-page="messages"] .msgs-search,
+html[data-theme-v3="1"] body[data-page="messages"] .msgs-search,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .msgs-search {
+  background: rgba(255, 255, 255, 0.52) !important;
+  border: 1px solid rgba(255, 255, 255, 0.65) !important;
+  border-radius: 18px !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+body[data-page="messages"] .msgs-search i {
+  color: #5E6B63 !important;
+}
+
+body[data-page="messages"] .msgs-search input {
+  color: #14201B !important;
+  font-size: 13px !important;
+}
+
+body[data-page="messages"] .msgs-search input::placeholder {
+  color: #5E6B63 !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   6. CONVERSATION LIST — iOS glass cards
+   chat-owner.js writes .conversation-item into #conversationsList
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="messages"] #conversationsList,
+html[data-theme-v3="1"] body[data-page="messages"] #conversationsList {
+  background: transparent !important;
+  padding: 6px 0 0 !important;
+}
+
+/* Individual card */
+html[data-theme-v3="1"] body[data-page="messages"] #conversationsList .conversation-item,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] #conversationsList .conversation-item {
+  background: rgba(255, 255, 255, 0.50) !important;
+  border: 1px solid rgba(255, 255, 255, 0.70) !important;
+  border-radius: 22px !important;
+  margin: 0 14px 10px !important;
+  padding: 16px 15px !important;
+  box-shadow: 0 2px 12px rgba(20, 32, 27, 0.07), 0 0 0 0.5px rgba(255,255,255,0.50) inset !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+  transition: box-shadow .15s, background .15s !important;
+  /* Specular edge */
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+html[data-theme-v3="1"] body[data-page="messages"] #conversationsList .conversation-item.conv-unread {
+  background: rgba(255, 255, 255, 0.72) !important;
+}
+
+html[data-theme-v3="1"] body[data-page="messages"] #conversationsList .conversation-item:hover {
+  background: rgba(255, 255, 255, 0.68) !important;
+  box-shadow: 0 4px 18px rgba(20, 32, 27, 0.10) !important;
+}
+
+html[data-theme-v3="1"] body[data-page="messages"] #conversationsList .conversation-item.active {
+  background: rgba(14, 59, 46, 0.10) !important;
+  border-color: rgba(14, 59, 46, 0.28) !important;
+  box-shadow: 0 2px 12px rgba(14, 59, 46, 0.12) !important;
+}
+
+/* Avatar: 46×46 circle */
+body[data-page="messages"] .conversation-avatar {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  border-radius: 50% !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   7. CONVERSATION DETAIL — HEADER (glass)
+   ───────────────────────────────────────────────────────────── */
+
+html[data-theme-v3="1"] body[data-page="messages"] #msgsChatHeader,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] #msgsChatHeader {
+  background: rgba(245, 242, 234, 0.88) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.50) !important;
+  backdrop-filter: blur(22px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(180%) !important;
+}
+
+body[data-page="messages"] .msgs-chat-name {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  color: #14201B !important;
+}
+
+body[data-page="messages"] .msgs-chat-meta {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 13px !important;
+  color: #5E6B63 !important;
+}
+
+/* Action buttons: glass circles 36×36 */
+body[data-page="messages"] .msgs-icon-btn,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .msgs-icon-btn {
+  background: rgba(255, 255, 255, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.60) !important;
+  border-radius: 50% !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  color: #3E4A44 !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+body[data-page="messages"] .msgs-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.68) !important;
+  color: #0E3B2E !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   8. MESSAGES AREA — transparent on AppBackground
+   ───────────────────────────────────────────────────────────── */
+
+html[data-theme-v3="1"] body[data-page="messages"] #chatMessages,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] #chatMessages {
+  background: transparent !important;
+  padding: 20px !important;
+}
+
+/* Empty state */
+html[data-theme-v3="1"] body[data-page="messages"] #msgsChatPlaceholder {
+  background: transparent !important;
+}
+
+body[data-page="messages"] #msgsChatPlaceholder h3 {
+  color: #14201B !important;
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 17px !important;
+  font-weight: 600 !important;
+}
+
+body[data-page="messages"] #msgsChatPlaceholder p {
+  color: #5E6B63 !important;
+}
+
+/* Date separators */
+body[data-page="messages"] .chat-date-sep span {
+  color: #5E6B63 !important;
+  font-size: 12px !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   9. OWNER BUBBLE — white glass (replaces vert #0E3B2E)
+   Overrides: bh-messages-lux.css green, inline <style> green
+   ───────────────────────────────────────────────────────────── */
+
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .chat-message.owner .chat-bubble,
+body[data-page="messages"] .chat-message.owner .chat-bubble,
+body[data-page="messages"] [class*="chat"] .owner .chat-bubble,
+body[data-page="messages"] .chat-bubble.owner-bubble {
+  background: rgba(255, 255, 255, 0.80) !important;
+  border: 1px solid rgba(255, 255, 255, 0.60) !important;
+  color: #14201B !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border-radius: 18px 18px 4px 18px !important;
+  box-shadow: 0 2px 8px rgba(20, 32, 27, 0.08) !important;
+}
+
+/* Anchor/link inside owner bubble */
+body[data-page="messages"] .chat-message.owner .chat-bubble a {
+  color: #0E3B2E !important;
+}
+
+/* Payment link inside owner bubble */
+body[data-page="messages"] .chat-message.owner .chat-bubble a[href*="tinyurl"],
+body[data-page="messages"] .chat-message.owner .chat-bubble a.bh-payment-link {
+  background: rgba(14, 59, 46, 0.08) !important;
+  border: 1px solid rgba(14, 59, 46, 0.20) !important;
+  color: #14201B !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   10. GUEST BUBBLE — mint green #DCE8E1
+   ───────────────────────────────────────────────────────────── */
+
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .chat-message.guest .chat-bubble,
+body[data-page="messages"] .chat-message.guest .chat-bubble {
+  background: #DCE8E1 !important;
+  border: none !important;
+  color: #14201B !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 18px 18px 18px 4px !important;
+  box-shadow: 0 2px 8px rgba(20, 32, 27, 0.06) !important;
+}
+
+/* Bot/auto-reply aligned with guest (left side) */
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .chat-message.bot .chat-bubble {
+  background: rgba(220, 232, 225, 0.80) !important;
+  border-radius: 18px 18px 18px 4px !important;
+  color: #14201B !important;
+}
+
+/* AI-generated owner reply: light mint */
+body[data-page="messages"] .chat-message.owner.bot-reply .chat-bubble {
+  background: rgba(220, 232, 225, 0.75) !important;
+  border: 1px solid rgba(14, 59, 46, 0.15) !important;
+  color: #0E3B2E !important;
+  border-radius: 18px 18px 4px 18px !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   11. BUBBLE TYPOGRAPHY + SIZE
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="messages"] .chat-bubble {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+}
+
+body[data-page="messages"] .chat-message {
+  max-width: min(78%, 720px) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   12. MESSAGE METADATA (timestamp / delivery / source)
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="messages"] .chat-time,
+body[data-page="messages"] .chat-meta {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 11.5px !important;
+  color: #5E6B63 !important;
+}
+
+/* Owner: time inside white glass — readable dark */
+body[data-page="messages"] .chat-message.owner .chat-time,
+body[data-page="messages"] .chat-message.owner .chat-meta,
+body[data-page="messages"] .chat-message.owner .chat-bubble .chat-time {
+  color: #5E6B63 !important;
+}
+
+body[data-page="messages"] .chat-status {
+  color: #5E6B63 !important;
+  font-size: 11px !important;
+}
+
+body[data-page="messages"] .chat-status.read {
+  color: #0E3B2E !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   13. AI / ACTION BAR — gold tokens
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="messages"] .ai-badge {
+  background: rgba(251, 243, 226, 0.90) !important;
+  color: #8A5B14 !important;
+  border: 1px solid rgba(201, 161, 91, 0.35) !important;
+}
+
+body[data-page="messages"] .ai-badge .ai-badge-spark {
+  color: #C9A15B !important;
+}
+
+/* AI toggle button in header */
+body[data-page="messages"] #btnToggleAI {
+  background: rgba(251, 243, 226, 0.70) !important;
+  border-color: rgba(201, 161, 91, 0.40) !important;
+  color: #8A5B14 !important;
+}
+
+/* Suggestion card */
+body[data-page="messages"] #ownerSuggestionCard {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border: 1px solid rgba(255, 255, 255, 0.60) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border-radius: 16px !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   14. COMPOSER — glass bar
+   ───────────────────────────────────────────────────────────── */
+
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .chat-modal-input,
+body[data-page="messages"] .chat-modal-input,
+body[data-page="messages"] #chatInputArea {
+  background: rgba(255, 255, 255, 0.28) !important;
+  border: 1px solid rgba(255, 255, 255, 0.55) !important;
+  border-radius: 28px !important;
+  backdrop-filter: blur(22px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(180%) !important;
+  padding: 8px 8px 8px 14px !important;
+  margin: 4px 16px 16px !important;
+  gap: 6px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+}
+
+body[data-page="messages"] .chat-input,
+body[data-page="messages"] #chatInput,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .chat-input {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 15px !important;
+  color: #14201B !important;
+  border-radius: 0 !important;
+  padding: 2px 0 !important;
+  min-height: 34px !important;
+  resize: none !important;
+}
+
+body[data-page="messages"] .chat-input::placeholder,
+body[data-page="messages"] #chatInput::placeholder {
+  color: #5E6B63 !important;
+}
+
+/* Send button 36×36 #0E3B2E */
+body[data-page="messages"] .send-btn,
+body[data-page="messages"] #sendBtn {
+  background: #0E3B2E !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 50% !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: none !important;
+  flex-shrink: 0 !important;
+}
+
+body[data-page="messages"] .send-btn:hover,
+body[data-page="messages"] #sendBtn:hover {
+  background: #1F6B4C !important;
+}
+
+/* Attach button: glass circle */
+body[data-page="messages"] .msgs-attach-btn,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .msgs-attach-btn {
+  background: rgba(255, 255, 255, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.50) !important;
+  border-radius: 50% !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #5E6B63 !important;
+  flex-shrink: 0 !important;
+}
+
+body[data-page="messages"] .msgs-attach-btn:hover {
+  background: rgba(255, 255, 255, 0.58) !important;
+  color: #0E3B2E !important;
+}
+
+/* SMS mode indicator */
+body[data-page="messages"] #smsModeBar {
+  background: rgba(219, 234, 254, 0.85) !important;
+  backdrop-filter: blur(8px) !important;
+  border-radius: 0 0 20px 20px !important;
+  margin: -4px 16px 8px !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   15. ATTACHMENTS — visual integration with bubbles
+   Pipeline (upload, OTA relay) is NEVER touched.
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="messages"] #chatMessages .chat-bubble img,
+body[data-page="messages"] .bh-att-img {
+  border-radius: 14px !important;
+  max-width: 260px !important;
+  max-height: 220px !important;
+  display: block !important;
+  object-fit: cover !important;
+}
+
+body[data-page="messages"] .bh-att-video {
+  border-radius: 14px !important;
+  max-width: 280px !important;
+}
+
+body[data-page="messages"] .bh-att-doc {
+  background: rgba(255, 255, 255, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.65) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   16. MSGS TABS — glass
+   ───────────────────────────────────────────────────────────── */
+
+html[data-theme-v3="1"] body[data-page="messages"] .msgs-tabs,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .msgs-tabs {
+  background: rgba(245, 242, 234, 0.85) !important;
+  border-bottom: 1px solid rgba(200, 184, 154, 0.30) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+body[data-page="messages"] .msgs-tab {
+  color: #5E6B63 !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+
+body[data-page="messages"] .msgs-tab.active,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .msgs-tab.active {
+  color: #0E3B2E !important;
+}
+
+body[data-page="messages"] .msgs-tab.active::after,
+html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .msgs-tab.active::after {
+  background: #0E3B2E !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   17. DESKTOP SPLIT VIEW GEOMETRY
+   ───────────────────────────────────────────────────────────── */
+
+@media (min-width: 1367px) {
+  /* Ensure msgs-right is transparent so AppBackground shows */
+  body[data-page="messages"] .msgs-right {
+    background: transparent !important;
+  }
+
+  /* Composer stays above bottom nav (bottom nav is 68px + safe area) */
+  body[data-page="messages"] #chatInputArea {
+    margin-bottom: 16px !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   18. MOBILE (≤1366px)
+   ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 1366px) {
+  html[data-theme-v3="1"] body[data-page="messages"],
+  html.bh-lux[data-theme-v3="1"] body[data-page="messages"],
+  html[data-theme-v3="1"] body[data-page="messages"] .main-content,
+  html.bh-lux[data-theme-v3="1"] body[data-page="messages"] .main-content {
+    background: linear-gradient(168deg, #F5F2EA 0%, #EBE7DC 50%, #E2DDD0 100%) !important;
+  }
+
+  /* Tighter cards on narrow mobile */
+  body[data-page="messages"] #conversationsList .conversation-item {
+    margin: 0 10px 8px !important;
+    border-radius: 18px !important;
+    padding: 14px 13px !important;
+  }
+
+  /* Composer above bottom nav */
+  body[data-page="messages"] #chatInputArea {
+    margin-bottom: calc(68px + env(safe-area-inset-bottom, 0px) + 10px) !important;
+  }
+
+  /* Mobile header glass */
+  body[data-page="messages"] .bh-desktop-header {
+    background: rgba(245, 242, 234, 0.90) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    padding: 14px 18px 10px !important;
+  }
+
+  /* Messages area above bottom nav */
+  body[data-page="messages"] #chatMessages {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px) + 80px) !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   19. INTERNAL NOTES — warm amber glass (preserved, adapted)
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="messages"] .chat-message.internal-note .chat-bubble {
+  background: rgba(255, 248, 230, 0.85) !important;
+  border: 1px solid rgba(242, 223, 168, 0.80) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   20. OUTBOUND ATTACHMENT PREVIEW
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="messages"] .bh-outbound-preview-zone {
+  background: rgba(255, 255, 255, 0.60) !important;
+  border: 1px solid rgba(255, 255, 255, 0.70) !important;
+  border-radius: 18px !important;
+  backdrop-filter: blur(14px) !important;
+  margin: 4px 16px !important;
+}
+
+body[data-page="messages"] .bh-outbound-send-btn {
+  background: #0E3B2E !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+}
+
+body[data-page="messages"] .bh-outbound-cancel-btn {
+  background: rgba(255, 255, 255, 0.50) !important;
+  border: 1px solid rgba(0, 0, 0, 0.10) !important;
+  border-radius: 10px !important;
+}
