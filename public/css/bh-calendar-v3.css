@@ -868,3 +868,123 @@
     position: relative;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   CALENDAR-17C — iOS design tokens on true calendar (#bhCalRoot)
+   ══════════════════════════════════════════════════════════════ */
+
+/* === calendarSection full-page layout in bh-cal-mode === */
+body.bh-cal-mode #calendarSection {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: var(--bh-creme, #F5F0E8) !important;
+  min-height: 100vh;
+}
+
+body.bh-cal-mode main.main-content {
+  background: var(--bh-creme, #F5F0E8) !important;
+}
+
+/* === iOS NavBar header === */
+.bh-cal-header {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+/* Glass buttons in iOS header */
+#bhCalPrevBtn,
+#bhCalNextBtn,
+#bhCalActionsBtn {
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+/* Segmented control iOS */
+.bh-ios-seg {
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.bh-ios-seg button {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  transition: background .18s, color .18s, font-weight .1s, box-shadow .18s;
+}
+
+/* === iOS monthly grid: override column separator colors === */
+#bhCalRoot .bh-day-cell {
+  border-right-color: rgba(20,32,27,.10) !important;
+  border-bottom-color: rgba(20,32,27,.06) !important;
+}
+
+#bhCalRoot .bh-day-cell.weekend {
+  background-color: rgba(201,161,91,.07) !important;
+}
+
+/* Property label column — sticky, warm background */
+#bhCalRoot .bh-prop-cell {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  background: rgba(245,242,236,.95) !important;
+  border-right-color: rgba(20,32,27,.14) !important;
+}
+
+/* Day header cells */
+#bhCalRoot .bh-day-hcell {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+  border-right-color: rgba(20,32,27,.10) !important;
+}
+
+/* Booking bars — iOS border-radius and shadow */
+#bhCalRoot .booking-block-bh {
+  border-radius: 11px !important;
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+/* Block bars — iOS hatching style */
+#bhCalRoot .booking-block-bh[style*="repeating-linear-gradient"] {
+  border-radius: 11px !important;
+}
+
+/* Outer container background */
+#bhMonthOuter {
+  background: var(--bh-creme, #F5F0E8) !important;
+}
+
+/* Nav bar minimal iOS */
+#bhCalRoot .bh-cal-nav {
+  font-family: 'DM Sans', system-ui, sans-serif !important;
+}
+
+/* Revenus table */
+#bhCalRoot table {
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+/* Property filter dropdown */
+#bhCalPropDropdown {
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+/* Actions panel */
+.bh-cal-actions-panel {
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+/* === Responsive === */
+@media (max-width: 1366px) {
+  body.bh-cal-mode #calendarSection {
+    min-height: auto;
+    border-radius: 0 !important;
+  }
+  body.bh-cal-mode main.main-content {
+    overflow-x: hidden !important;
+  }
+  #bhCalRoot .bh-cal-header {
+    border-radius: 0 !important;
+  }
+}
+
+/* No per-cell backdrop-filter (performance) */
+#bhCalRoot .bh-day-cell,
+#bhCalRoot .bh-day-hcell,
+#bhCalRoot .bh-prop-cell,
+#bhCalRoot .booking-block-bh {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}

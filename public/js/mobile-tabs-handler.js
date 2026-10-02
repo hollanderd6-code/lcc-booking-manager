@@ -14,7 +14,7 @@
 
   const ROUTES = {
     today:    '/app.html',
-    calendar: '/reservations.html',
+    calendar: '/app.html#calendarSection',
     messages: '/messages.html',
     manage:   '/manage.html'
   };
@@ -202,7 +202,7 @@
   } else if (currentPath.includes('manage')) {
     activeTab = 'manage';
   } else if (currentPath.includes('app')) {
-    activeTab = 'today';
+    activeTab = window.location.hash === '#calendarSection' ? 'calendar' : 'today';
   }
 
   // Exposé pour que la barre d'onglets démarre DIRECTEMENT sur le bon onglet.

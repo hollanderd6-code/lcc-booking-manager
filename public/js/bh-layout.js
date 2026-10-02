@@ -203,7 +203,7 @@ function getSidebarHTML() {
       ${IC.today}<span>Aujourd'hui</span>
     </a>` : ''}
     ${canSeePage('calendar') && role !== 'cleaner' ? `
-    <a class="nav-item" data-page="reservations" href="/reservations.html" id="navCalendarLink">
+    <a class="nav-item" data-page="app" href="/app.html#calendarSection" id="navCalendarLink">
       ${IC.calendar}<span>Calendrier</span>
     </a>` : ''}
     ${canSeePage('messages') ? `

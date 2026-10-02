@@ -74,11 +74,12 @@ console.log(`✅ P-T16-06 — ${navItems} destinations nav (≥4)`);
 
 // ── P-T16-07: all 4 required routes present ──────────────────────────────
 
-const routes = ['/app.html', '/reservations.html', '/messages.html', '/manage.html'];
+// CALENDAR-17C: /reservations.html nav route replaced by /app.html#calendarSection
+const routes = ['/app.html', '/app.html#calendarSection', '/messages.html', '/manage.html'];
 routes.forEach(r => {
   assert.ok(bhLayoutJs.includes(r), `P-T16-07 FAIL: bh-layout.js missing route ${r}`);
 });
-console.log('✅ P-T16-07 — Routes app/reservations/messages/manage présentes');
+console.log('✅ P-T16-07 — Routes app/app#calendarSection/messages/manage présentes');
 
 // ── P-T16-08: Messages badge class styled in bh-nav-rail.css ────────────
 // The badge-count element is injected by messages-badge-desktop-mobile.js,

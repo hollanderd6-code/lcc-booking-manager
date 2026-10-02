@@ -687,6 +687,7 @@ setTimeout(function() {
   <link rel="stylesheet" href="/css/bh-shell-07.css">
   <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
   <link rel="stylesheet" href="/css/bh-today-v3.css?v=today15">
+  <link rel="stylesheet" href="/css/bh-calendar-v3.css?v=cal17c">
 
   <!-- CSS propre a cette page. -->
   <style id="v3-critical">
@@ -3292,12 +3293,23 @@ html[data-theme-v3="1"] .booking-block.booking-blocked, .booking-block.booking-b
 
 }
 
-  /* 5. CALENDRIER */
+  /* 5. CALENDRIER — masqué par défaut, affiché en mode bh-cal-mode */
   #calendarSection {
-    display: block !important;
+    display: none;
     padding: 0 !important;
     border-radius: 16px !important;
     overflow: hidden !important;
+  }
+  body.bh-cal-mode #calendarSection {
+    display: block !important;
+  }
+  /* En mode calendrier, masquer le contenu Today */
+  body.bh-cal-mode .bh-today-v3,
+  body.bh-cal-mode #bhMainHeader { display: none !important; }
+  body.bh-cal-mode .bh-desktop-header { display: none !important; }
+  /* Sur mobile, conserver le calendrier accessible */
+  @media (max-width: 1366px) {
+    body.bh-cal-mode #calendarSection { display: block !important; }
   }
   #calendarSection .section-header { display: none !important; }
   .view-selector {
@@ -3969,7 +3981,7 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 
 <!-- Calendar Card — hidden from Today; accessible at /reservations.html (nav "Calendrier").
      DOM stays so calendar JS initialises cleanly. CSS overrides display:block !important. -->
-<section class="card" id="calendarSection" style="display:none !important;">
+<section class="card" id="calendarSection">
 <div class="section-header">
 <h2 class="section-title">
 </h2>
@@ -5679,7 +5691,8 @@ const guestName = window.cleanGuestName(r, r.source || r.platform);
       if (navCalendarLink) {
         navCalendarLink.addEventListener('click', function (e) {
           e.preventDefault();
-          window.location.href = '/reservations.html';
+          if (typeof window.showCalendarMode === 'function') window.showCalendarMode();
+          else window.location.href = '/app.html#calendarSection';
         });
       }
     });
@@ -7238,11 +7251,12 @@ try {
   // STATE
   // ─────────────────────────────────────────
   var state = {
-    view: 'month',           // day | week | month | year
+    view: 'month',           // day | week | month | year | revenus
     date: new Date(),        // reference date
     bookings: [],
     properties: [],
     initialLoad: true,       // scroll to today only on first render
+    propertyFilter: null,    // null=all, string=propertyId
   };
   window.__bhCalendarState = state;
   window.calendarState = state;
@@ -7303,65 +7317,215 @@ try {
   }
 
   // ─────────────────────────────────────────
-  // HEADER (always visible)
+  // HEADER iOS (CalendarNavBar.swift parity)
   // ─────────────────────────────────────────
   function renderHeader() {
     var w = getWrap();
     var existing = w.querySelector('.bh-cal-header');
     if (existing) existing.remove();
 
-    var hdr = div('background:#0D1117;border-radius:16px 16px 0 0;padding:0 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0;min-height:60px;');
+    var hdr = div('background:var(--bh-creme,#F5F0E8);border-radius:16px 16px 0 0;border-bottom:1px solid rgba(200,184,154,.35);');
     hdr.className = 'bh-cal-header';
 
-    // Left: logo + title
-    var left = div('display:flex;align-items:center;gap:10px;padding:12px 0;');
-    left.innerHTML = '<div style="background:#0E3B2E;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-calendar-alt" style="font-size:14px;color:white;"></i></div>'
-      + '<div><div style="font-size:15px;font-weight:600;color:white;line-height:1.2;">Calendrier des <em style="color:#4ADE80;font-style:italic;">réservations</em></div>'
-      + '<div id="bhCalSubtitle" style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">Vue mensuelle</div></div>';
+    // ── Ligne 1 : supertitle + mois + boutons glass ──
+    var row1 = div('display:flex;align-items:center;justify-content:space-between;padding:14px 16px 6px;gap:8px;');
 
-    // Center: tabs
-    var tabs = div('display:flex;background:rgba(255,255,255,.07);border-radius:999px;padding:3px;gap:2px;border:1px solid rgba(255,255,255,.1);');
-    tabs.className = 'bh-view-tabs';
-    [['day','Jour','fa-calendar-day'],['week','Sem.','fa-calendar-week'],['month','Mois','fa-calendar-alt'],['year','Année','fa-calendar']].forEach(function(v) {
-      var btn = el('button','padding:5px 11px;border-radius:999px;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:4px;transition:all .15s;font-family:inherit;white-space:nowrap;');
-      btn.dataset.view = v[0];
-      btn.innerHTML = '<i class="fas '+v[2]+'" style="font-size:10px;"></i><span>'+v[1]+'</span>';
-      btn.onclick = function() { switchView(v[0]); };
-      tabs.appendChild(btn);
+    // Supertitle — sélecteur logement iOS
+    var superTitle = el('button','background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:0;font-family:"DM Sans",system-ui,sans-serif;text-align:left;min-width:0;');
+    superTitle.id = 'bhCalSuperTitle';
+    superTitle.innerHTML = '<span id="bhCalSuperLabel" style="font-size:11px;font-weight:600;color:#0E3B2E;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Tous les logements <i class="fas fa-chevron-down" style="font-size:9px;margin-left:2px;"></i></span>'
+      + '<span id="bhCalMonthTitle" style="font-size:22px;font-weight:700;color:#14201B;letter-spacing:-.01em;line-height:1.15;font-family:\'DM Sans\',system-ui,sans-serif;white-space:nowrap;"></span>';
+    superTitle.onclick = function() { togglePropertyDropdown(); };
+    row1.appendChild(superTitle);
+
+    // Boutons glass droite (actions + prev + next)
+    var btnGroup = div('display:flex;align-items:center;gap:6px;flex-shrink:0;');
+    function glassBtn(id, icon, title, onclick) {
+      var b = el('button','width:38px;height:38px;border-radius:12px;border:1px solid rgba(200,184,154,.5);background:rgba(255,255,255,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 1px 3px rgba(0,0,0,.09),inset 0 1px 0 rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;color:#14201B;transition:all .15s;flex-shrink:0;');
+      b.id = id;
+      b.innerHTML = icon;
+      b.title = title;
+      b.onclick = onclick;
+      b.onmouseover = function(){ this.style.background='rgba(14,59,46,.12)'; };
+      b.onmouseout  = function(){ this.style.background='rgba(255,255,255,.55)'; };
+      return b;
+    }
+    btnGroup.appendChild(glassBtn('bhCalActionsBtn',
+      '<i class="fas fa-ellipsis-h" style="font-size:14px;"></i>',
+      'Actions',
+      function() { openCalActionsPanel(); }));
+    btnGroup.appendChild(glassBtn('bhCalPrevBtn',
+      '<i class="fas fa-chevron-left" style="font-size:13px;"></i>',
+      'Période précédente',
+      function() { navigate(-1); }));
+    btnGroup.appendChild(glassBtn('bhCalNextBtn',
+      '<i class="fas fa-chevron-right" style="font-size:13px;"></i>',
+      'Période suivante',
+      function() { navigate(1); }));
+    row1.appendChild(btnGroup);
+    hdr.appendChild(row1);
+
+    // Property dropdown (inline)
+    var propDd = div('display:none;position:absolute;top:100%;left:14px;right:14px;background:rgba(250,248,243,.97);border:1px solid rgba(200,184,154,.4);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.14);z-index:40;padding:6px 0;backdrop-filter:blur(12px);max-height:260px;overflow-y:auto;');
+    propDd.id = 'bhCalPropDropdown';
+    hdr.style.position = 'relative';
+    hdr.appendChild(propDd);
+
+    // ── Ligne 2 : segmented control iOS ──
+    var segRow = div('display:flex;align-items:center;padding:0 14px 12px;gap:0;');
+    var seg = div('display:flex;background:rgba(200,184,154,.18);border-radius:11px;padding:3px;gap:2px;flex:1;border:1px solid rgba(200,184,154,.25);');
+    seg.className = 'bh-ios-seg';
+    // Jour/Semaine/Mensuel/Revenus — Année dans le menu "..."
+    [['day','Jour'],['week','Semaine'],['month','Mensuel'],['revenus','Revenus']].forEach(function(v) {
+      var pill = el('button','flex:1;padding:6px 4px;border-radius:8px;border:none;cursor:pointer;font-size:12.5px;font-weight:500;font-family:\'DM Sans\',system-ui,sans-serif;transition:all .18s;white-space:nowrap;');
+      pill.dataset.view = v[0];
+      pill.textContent = v[1];
+      pill.onclick = function() { switchView(v[0]); };
+      seg.appendChild(pill);
     });
+    segRow.appendChild(seg);
+    hdr.appendChild(segRow);
 
-    // Right: actions
-    var right = div('display:flex;align-items:center;gap:6px;padding:12px 0;');
-    right.innerHTML = '<button id="bhCalSearchBtn" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Rechercher"><i class="fas fa-search" style="font-size:13px;"></i></button>'
-      + '<button id="bhCalPromoBtn" onclick="openPromoPanel && openPromoPanel()" style="display:flex;align-items:center;gap:6px;padding:0 12px;height:34px;background:linear-gradient(135deg,#C2410C,#9A3412);border:none;border-radius:9px;cursor:pointer;color:#fff;font-weight:700;font-size:12px;white-space:nowrap;box-shadow:0 2px 10px rgba(194,65,12,.3);" title="Réservation avec BHGuest · 3 % seulement"><span style="font-size:14px;font-weight:800;font-family:Georgia,serif;line-height:1;">B</span><span class="bh-desktop-only">Réservation avec BHGuest</span></button>'
-      + '<button id="bhCalSettingsBtn" style="width:34px;height:34px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:9px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;" title="Paramètres"><i class="fas fa-sliders-h" style="font-size:13px;"></i></button>'
-      + '<button onclick="openBatchEditModal && openBatchEditModal()" style="display:flex;align-items:center;gap:5px;padding:0 12px;height:34px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:9px;color:white;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;"><i class="fas fa-layer-group" style="font-size:12px;"></i><span class="bh-desktop-only">Édition groupée</span></button>';
-
-    hdr.appendChild(left);
-    hdr.appendChild(tabs);
-    hdr.appendChild(right);
     w.insertBefore(hdr, w.firstChild);
-
     updateTabStyles();
+    updateMonthTitleInHeader();
+    updateSuperTitleLabel();
+  }
 
-    // Settings btn
-    var sBtn = w.querySelector('#bhCalSettingsBtn');
-    if (sBtn) sBtn.onclick = openSettingsPanel;
-    // Search btn
-    var srBtn = w.querySelector('#bhCalSearchBtn');
-    if (srBtn) srBtn.onclick = toggleSearchPanel;
+  // Affiche/masque le dropdown logements dans le header iOS
+  function togglePropertyDropdown() {
+    var dd = document.getElementById('bhCalPropDropdown');
+    if (!dd) return;
+    var isOpen = dd.style.display !== 'none';
+    if (isOpen) { dd.style.display = 'none'; return; }
+    // Construire la liste
+    dd.innerHTML = '';
+    function ddItem(label, active, onclick) {
+      var it = div('padding:10px 16px;cursor:pointer;font-size:13.5px;font-weight:'+(active?'600':'400')+';color:#14201B;display:flex;align-items:center;justify-content:space-between;font-family:\'DM Sans\',system-ui,sans-serif;');
+      it.innerHTML = label + (active ? '<i class="fas fa-check" style="color:#0E3B2E;font-size:12px;"></i>' : '');
+      it.onmouseover = function(){ this.style.background='rgba(14,59,46,.06)'; };
+      it.onmouseout  = function(){ this.style.background=''; };
+      it.onclick = function(){ dd.style.display='none'; onclick(); };
+      return it;
+    }
+    var allActive = !state.propertyFilter;
+    dd.appendChild(ddItem('Tous les logements', allActive, function() {
+      state.propertyFilter = null; updateSuperTitleLabel(); render();
+    }));
+    (state.properties||[]).forEach(function(p) {
+      var active = state.propertyFilter === String(p.id);
+      dd.appendChild(ddItem(p.name, active, function() {
+        state.propertyFilter = String(p.id); updateSuperTitleLabel(); render();
+      }));
+    });
+    dd.style.display = 'block';
+    // Fermer si clic dehors
+    setTimeout(function() {
+      document.addEventListener('click', function _close(e) {
+        if (!dd.contains(e.target) && e.target.id !== 'bhCalSuperTitle') {
+          dd.style.display = 'none';
+        }
+        document.removeEventListener('click', _close);
+      });
+    }, 0);
+  }
+
+  function updateSuperTitleLabel() {
+    var lbl = document.getElementById('bhCalSuperLabel');
+    if (!lbl) return;
+    var name = 'Tous les logements';
+    if (state.propertyFilter) {
+      var p = (state.properties||[]).find(function(x){ return String(x.id) === state.propertyFilter; });
+      if (p) name = p.name;
+    }
+    lbl.innerHTML = name + ' <i class="fas fa-chevron-down" style="font-size:9px;margin-left:2px;"></i>';
+  }
+
+  function updateMonthTitleInHeader() {
+    var el2 = document.getElementById('bhCalMonthTitle');
+    if (!el2) return;
+    var MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    var d = state.date || new Date();
+    if (state.view === 'year') {
+      el2.textContent = String(d.getFullYear());
+    } else if (state.view === 'week') {
+      var mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay()+6)%7));
+      var sun = new Date(mon); sun.setDate(mon.getDate()+6);
+      if (mon.getMonth() === sun.getMonth()) {
+        el2.textContent = MONTHS_FR[mon.getMonth()] + ' ' + mon.getFullYear();
+      } else {
+        el2.textContent = MONTHS_FR[mon.getMonth()] + ' – ' + MONTHS_FR[sun.getMonth()] + ' ' + sun.getFullYear();
+      }
+    } else if (state.view === 'day') {
+      el2.textContent = MONTHS_FR[d.getMonth()] + ' ' + d.getFullYear();
+    } else if (state.view === 'revenus') {
+      el2.textContent = MONTHS_FR[d.getMonth()] + ' ' + d.getFullYear();
+    } else {
+      el2.textContent = MONTHS_FR[d.getMonth()] + ' ' + d.getFullYear();
+    }
+  }
+
+  // Panel actions (BHGuest, Édition groupée, Recherche, Paramètres, Compact, Année)
+  function openCalActionsPanel() {
+    var w = getWrap();
+    var existing = w.querySelector('.bh-cal-actions-panel');
+    if (existing) { existing.remove(); return; }
+    var panel = div('position:absolute;top:60px;right:14px;background:rgba(250,248,243,.97);border:1px solid rgba(200,184,154,.4);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.14);z-index:50;padding:6px 0;backdrop-filter:blur(12px);min-width:200px;');
+    panel.className = 'bh-cal-actions-panel';
+    function panelBtn(icon, label, fn) {
+      var b = div('padding:10px 16px;cursor:pointer;font-size:13px;font-weight:500;color:#14201B;display:flex;align-items:center;gap:10px;font-family:\'DM Sans\',system-ui,sans-serif;');
+      b.innerHTML = '<i class="fas '+icon+'" style="width:16px;text-align:center;color:#0E3B2E;font-size:13px;"></i>'+label;
+      b.onmouseover = function(){ this.style.background='rgba(14,59,46,.06)'; };
+      b.onmouseout  = function(){ this.style.background=''; };
+      b.onclick = function(){ panel.remove(); fn(); };
+      return b;
+    }
+    panel.appendChild(panelBtn('search','Rechercher', function(){ if(typeof toggleSearchPanel==='function') toggleSearchPanel(); }));
+    panel.appendChild(panelBtn('layer-group','Édition groupée', function(){ if(typeof openBatchEditModal==='function') openBatchEditModal(); }));
+    panel.appendChild(panelBtn('tag','Réservation BHGuest', function(){ if(typeof openPromoPanel==='function') openPromoPanel(); }));
+    panel.appendChild(panelBtn('sliders-h','Paramètres calendrier', function(){ if(typeof openSettingsPanel==='function') openSettingsPanel(); }));
+    // Compact toggle
+    var isCompact = false; try{ isCompact=localStorage.getItem('bhCalCompact')==='1'; }catch(e){}
+    panel.appendChild(panelBtn('compress-alt', isCompact ? 'Vue confort' : 'Vue compacte', function(){
+      try{ localStorage.setItem('bhCalCompact', isCompact?'0':'1'); }catch(e){} render();
+    }));
+    // Divider
+    var hr = div('height:1px;background:rgba(200,184,154,.3);margin:4px 0;');
+    panel.appendChild(hr);
+    // Vue Année
+    panel.appendChild(panelBtn('calendar','Vue Année', function(){ switchView('year'); }));
+    w.style.position = 'relative';
+    w.appendChild(panel);
+    setTimeout(function(){
+      document.addEventListener('click', function _close(e){
+        if(!panel.contains(e.target) && e.target.id!=='bhCalActionsBtn'){
+          panel.remove();
+        }
+        document.removeEventListener('click', _close);
+      });
+    }, 0);
   }
 
   function updateTabStyles() {
     var w = getWrap();
+    // Nouveau segmented control iOS
+    w.querySelectorAll('.bh-ios-seg button').forEach(function(btn) {
+      var active = btn.dataset.view === state.view;
+      btn.style.background = active ? 'white' : 'transparent';
+      btn.style.color = active ? '#0E3B2E' : 'rgba(20,32,27,.5)';
+      btn.style.fontWeight = active ? '700' : '500';
+      btn.style.boxShadow = active ? '0 1px 4px rgba(0,0,0,.1)' : 'none';
+    });
+    // Legacy tabs (masqués si présents)
     w.querySelectorAll('.bh-view-tabs button').forEach(function(btn) {
       var active = btn.dataset.view === state.view;
       btn.style.background = active ? '#0E3B2E' : 'transparent';
       btn.style.color = active ? 'white' : 'rgba(255,255,255,.6)';
       btn.style.fontWeight = active ? '600' : '500';
     });
+    updateMonthTitleInHeader();
     var sub = document.getElementById('bhCalSubtitle');
-    if (sub) sub.textContent = {day:'Vue journalière',week:'Vue hebdomadaire',month:'Vue mensuelle',year:'Vue annuelle'}[state.view]||'';
+    if (sub) sub.textContent = {day:'Jour',week:'Semaine',month:'Mensuel',year:'Année',revenus:'Revenus'}[state.view]||'';
   }
 
   // ─────────────────────────────────────────
@@ -7371,51 +7535,27 @@ try {
     var w = getWrap();
     var existing = w.querySelector('.bh-cal-nav');
     if (existing) existing.remove();
-    if (state.view === 'day') return; // day view has its own date selector
+    if (state.view === 'day') return;
+    if (state.view === 'revenus') return;
 
-    var nav = div('display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F5F2EC;border-bottom:1px solid rgba(0,0,0,.06);flex-wrap:wrap;');
+    var nav = div('display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(245,242,236,.7);border-bottom:1px solid rgba(200,184,154,.25);');
     nav.className = 'bh-cal-nav';
 
-    // Bouton Aujourd'hui — pilule verte token
-    var todayBtn = el('button','height:32px;padding:0 13px;border-radius:999px;border:none;background:#0E3B2E;color:white;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;transition:all .15s;font-family:inherit;box-shadow:0 1px 4px rgba(14,59,46,.25);');
-    todayBtn.textContent = 'Aujourd\u2019hui';
-    todayBtn.title = 'Revenir au mois courant';
+    // Bouton Aujourd’hui — pilule iOS
+    var todayBtn = el('button','height:28px;padding:0 12px;border-radius:999px;border:1px solid rgba(14,59,46,.3);background:rgba(14,59,46,.08);color:#0E3B2E;font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0;transition:all .15s;font-family:\'DM Sans\',system-ui,sans-serif;');
+    todayBtn.textContent = 'Aujourd’hui';
+    todayBtn.title = 'Revenir à la période en cours';
     todayBtn.onclick = function() { state.date = new Date(); render(); };
-    todayBtn.onmouseover = function(){ this.style.background='#15654E'; };
-    todayBtn.onmouseout  = function(){ this.style.background='#0E3B2E'; };
+    todayBtn.onmouseover = function(){ this.style.background='rgba(14,59,46,.15)'; };
+    todayBtn.onmouseout  = function(){ this.style.background='rgba(14,59,46,.08)'; };
 
-    var prev = el('button','width:32px;height:32px;border-radius:999px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
-    prev.innerHTML = '<i class="fas fa-chevron-left" style="font-size:11px;"></i>';
-    prev.onclick = function() { navigate(-1); };
-
-    // Titre du mois en serif — signature visuelle du dashboard
-    var label = div('flex:1;text-align:center;font-size:17px;font-weight:600;color:#1A1F2E;font-family:Georgia,\'Times New Roman\',serif;letter-spacing:.01em;min-width:140px;');
+    // Titre de période (secondaire)
+    var label = div('flex:1;text-align:left;font-size:12px;font-weight:500;color:rgba(20,32,27,.45);font-family:\'DM Sans\',system-ui,sans-serif;padding-left:8px;');
     label.id = 'bhCalPeriodLabel';
     label.textContent = getPeriodLabel();
 
-    var next = el('button','width:32px;height:32px;border-radius:999px;border:1px solid rgba(0,0,0,.1);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151;flex-shrink:0;transition:all .15s;');
-    next.innerHTML = '<i class="fas fa-chevron-right" style="font-size:11px;"></i>';
-    next.onclick = function() { navigate(1); };
-
-    // Toggle vue compacte (mois uniquement) — persiste en localStorage
-    var compactBtn = null;
-    if (state.view === 'month') {
-      var isCompact = false;
-      try { isCompact = localStorage.getItem('bhCalCompact') === '1'; } catch(e) {}
-      compactBtn = el('button','height:32px;padding:0 11px;border-radius:999px;border:1px solid '+(isCompact?'#0E3B2E':'rgba(0,0,0,.1)')+';background:'+(isCompact?'rgba(14,59,46,.1)':'white')+';color:'+(isCompact?'#0E3B2E':'#6B7280')+';font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0;display:flex;align-items:center;gap:5px;transition:all .15s;font-family:inherit;');
-      compactBtn.innerHTML = '<i class="fas fa-compress-alt" style="font-size:10px;"></i><span>Compact</span>';
-      compactBtn.title = isCompact ? 'Revenir à la vue confort' : 'Vue compacte (lignes réduites, prix masqués)';
-      compactBtn.onclick = function() {
-        try { localStorage.setItem('bhCalCompact', isCompact ? '0' : '1'); } catch(e) {}
-        render();
-      };
-    }
-
     nav.appendChild(todayBtn);
-    nav.appendChild(prev);
     nav.appendChild(label);
-    nav.appendChild(next);
-    if (compactBtn) nav.appendChild(compactBtn);
 
     // Légende plateformes — la grille devient auto-explicative
     if (state.view === 'month' || state.view === 'week') {
@@ -7497,10 +7637,11 @@ try {
     var body = div('');
     body.className = 'bh-cal-body';
 
-    if (state.view === 'day')   renderDay(body);
-    else if (state.view === 'week')  renderWeek(body);
-    else if (state.view === 'month') renderMonth(body);
-    else if (state.view === 'year')  renderYear(body);
+    if (state.view === 'day')      renderDay(body);
+    else if (state.view === 'week')    renderWeek(body);
+    else if (state.view === 'month')   renderMonth(body);
+    else if (state.view === 'year')    renderYear(body);
+    else if (state.view === 'revenus') renderRevenus(body);
 
     w.appendChild(body);
 
@@ -7801,11 +7942,14 @@ try {
     var numDays    = Math.ceil((startOff + lastDay.getDate())/7)*7;
     var compactMode = false;
     try { compactMode = localStorage.getItem('bhCalCompact') === '1'; } catch(e) {}
-    var propW = 76;
-    var colW  = 48;
-    var rowH  = compactMode ? 30 : 52;
-    var hdrH  = 44;
-    var nRows = state.properties.length;
+    var propW = 88;  // iOS --cal-label-w
+    var colW  = 64;  // iOS --cal-col-w
+    var rowH  = compactMode ? 34 : 64;  // iOS --cal-row-h
+    var hdrH  = 44;  // iOS dayHeaderH
+    var renderProps = state.propertyFilter
+      ? state.properties.filter(function(p){ return String(p.id) === state.propertyFilter; })
+      : state.properties;
+    var nRows = renderProps.length;
 
     // Un seul scroll container
     var outer = div('overflow:auto;-webkit-overflow-scrolling:touch;background:white;position:relative;');
@@ -7921,7 +8065,7 @@ try {
     }
 
     // ── PROPERTY ROWS ──
-    state.properties.forEach(function(prop, rowIdx) {
+    renderProps.forEach(function(prop, rowIdx) {
       var gridRow = String(rowIdx + 2); // rows start at 2
 
       // Cellule logement sticky left
@@ -7943,7 +8087,7 @@ try {
         var isToday2 = dstr3===today;
 
         var dcell = div('box-sizing:border-box;border-right:1px solid #F5F2EC;border-bottom:1px solid #EEEBE6;position:relative;overflow:hidden;'
-          +(isToday2?'background:rgba(14,59,46,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(183,121,31,.05);':''));
+          +(isToday2?'background:rgba(14,59,46,.04);':!inMonth2?'background:#FAFAF9;':isWknd2?'background:rgba(201,161,91,.07);':''));
         dcell.style.gridColumn = String(di2+2);
         dcell.style.gridRow    = gridRow;
         dcell.className = 'calendar-cell bh-day-cell'+(isWknd2?' weekend':'');
@@ -8017,7 +8161,7 @@ try {
 
     // ── BLOCS : placés directement dans les dcell (pas d'overlay absolu)
     // Chaque bloc est position:absolute dans sa dcell de départ, width calculée en px
-    state.properties.forEach(function(prop, rowIdx) {
+    renderProps.forEach(function(prop, rowIdx) {
       state.bookings.forEach(function(r) {
         if (String(r.propertyId) !== String(prop.id)) return;
         var s = (r.startDate||r.start||'').split('T')[0];
@@ -8039,8 +8183,8 @@ try {
         var p2 = pltInfo(r);
 
         // Le bloc est position:absolute dans anchorCell, width = nb cols * colW
-        var padPx = compactMode ? 3 : 6;
-        var blk = div('position:absolute;border-radius:'+(compactMode?'8px':'10px')+';display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s, box-shadow .15s;z-index:3;');
+        var padPx = compactMode ? 3 : 10;  // iOS: (rowH-barH)/2 = (64-44)/2
+        var blk = div('position:absolute;border-radius:'+(compactMode?'8px':'11px')+';display:flex;align-items:center;padding:0 8px;gap:5px;overflow:hidden;pointer-events:all;cursor:'+(isBlock?'default':'pointer')+';transition:filter .15s, box-shadow .15s;z-index:3;');
         // Géométrie verticale verrouillée (!important) — imperméable aux CSS externes,
         // et toujours cohérente avec rowH quel que soit le mode (confort/compact)
         blk.style.setProperty('top', padPx + 'px', 'important');
@@ -8263,6 +8407,61 @@ try {
 
     panel.appendChild(hdr2); panel.appendChild(bdy2); panel.appendChild(foot);
     document.body.appendChild(panel);
+  }
+
+  // ─────────────────────────────────────────
+  // REVENUS TAB — /api/reporting
+  // ─────────────────────────────────────────
+  function renderRevenus(body) {
+    var year  = state.date.getFullYear();
+    var month = state.date.getMonth() + 1;
+    var token = (function(){ try{ return localStorage.getItem('lcc_token')||''; }catch(e){ return ''; } })();
+    body.innerHTML = '<div style="padding:24px 16px;display:flex;align-items:center;justify-content:center;"><div style="width:28px;height:28px;border:3px solid rgba(14,59,46,.15);border-top-color:#0E3B2E;border-radius:50%;animation:spin .7s linear infinite;"></div></div>';
+    fetch('/api/reporting?year=' + year + '&month=' + month, { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function(data) {
+        body.innerHTML = '';
+        var wrap = div('padding:16px;font-family:\'DM Sans\',system-ui,sans-serif;');
+        var title = div('font-size:15px;font-weight:700;color:#14201B;margin-bottom:16px;');
+        title.textContent = 'Revenus — ' + (data.monthLabel || (year + '/' + String(month).padStart(2,'0')));
+        wrap.appendChild(title);
+        var kpis = [
+          { label: 'Revenus bruts', value: fmtMoney(data.totalRevenue||data.gross_revenue||0), color: '#0E3B2E' },
+          { label: 'Nuits vendues',  value: String(data.totalNights||data.nights_sold||0),    color: '#374151' },
+          { label: 'Taux d\'occupation', value: (data.occupancyRate||data.occupancy||0)+'%', color: '#374151' },
+          { label: 'Réservations', value: String(data.totalBookings||data.bookings_count||0), color: '#374151' },
+        ];
+        var grid = div('display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;');
+        kpis.forEach(function(k) {
+          var card = div('background:rgba(255,255,255,.7);border:1px solid rgba(200,184,154,.3);border-radius:12px;padding:14px 12px;');
+          card.innerHTML = '<div style="font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">'+k.label+'</div>'
+            +'<div style="font-size:20px;font-weight:700;color:'+k.color+';">'+k.value+'</div>';
+          grid.appendChild(card);
+        });
+        wrap.appendChild(grid);
+        // Breakdown par logement si disponible
+        var props = data.properties || data.breakdown || [];
+        if (props.length > 0) {
+          var tbl = el('table','width:100%;border-collapse:collapse;font-size:12.5px;');
+          var thead = '<thead><tr style="border-bottom:2px solid rgba(200,184,154,.3);"><th style="text-align:left;padding:6px 8px;font-weight:600;color:#6B7280;font-size:11px;text-transform:uppercase;letter-spacing:.05em;">Logement</th><th style="text-align:right;padding:6px 8px;font-weight:600;color:#6B7280;font-size:11px;">Revenus</th><th style="text-align:right;padding:6px 8px;font-weight:600;color:#6B7280;font-size:11px;">Nuits</th></tr></thead>';
+          var tbody = '<tbody>' + props.map(function(p){
+            return '<tr style="border-bottom:1px solid rgba(200,184,154,.15);"><td style="padding:8px;color:#14201B;font-weight:500;">'+((p.name||p.property_name||'—'))+'</td>'
+              +'<td style="padding:8px;text-align:right;color:#0E3B2E;font-weight:600;">'+fmtMoney(p.revenue||p.total||0)+'</td>'
+              +'<td style="padding:8px;text-align:right;color:#374151;">'+String(p.nights||0)+'</td></tr>';
+          }).join('') + '</tbody>';
+          tbl.innerHTML = thead + tbody;
+          wrap.appendChild(tbl);
+        }
+        body.appendChild(wrap);
+      })
+      .catch(function(err) {
+        body.innerHTML = '<div style="padding:24px;text-align:center;color:#6B7280;font-family:\'DM Sans\',sans-serif;">Données de revenus indisponibles</div>';
+      });
+  }
+
+  function fmtMoney(v) {
+    if (!v && v !== 0) return '—';
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(Number(v));
   }
 
   function applyPrefs() {
@@ -13548,6 +13747,90 @@ if (window.Capacitor) {
 <script src="/js/messages-badge-desktop-mobile.js?v=db6e7409"></script>
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
 <script src="/js/bh-layout.js?v=fix09"></script>
+
+<!-- ── CALENDAR-17C: mode bascule Aujourd'hui ↔ Calendrier ──────────────── -->
+<script>
+(function() {
+  'use strict';
+
+  function showCalendarMode() {
+    document.body.classList.add('bh-cal-mode');
+    var sec = document.getElementById('calendarSection');
+    if (sec) sec.style.removeProperty('display');
+    // Mettre à jour l'état d'historique pour le bouton back
+    if (history.state && history.state.calMode) return;
+    history.pushState({ calMode: true }, '', '/app.html#calendarSection');
+    // Rafraîchir la capsule active de la barre mobile
+    try {
+      if (window.__bhActiveTab !== undefined) window.__bhActiveTab = 'calendar';
+      var ev = new CustomEvent('bhCalModeActive');
+      document.dispatchEvent(ev);
+    } catch(e) {}
+    // Re-render le calendrier si les données sont prêtes
+    if (typeof window.renderModernCalendar === 'function' && window.calendarState) {
+      var st = window.calendarState;
+      if ((st.bookings||[]).length > 0 || (st.properties||[]).length > 0) {
+        try { window.renderModernCalendar(st.bookings || [], st.properties || []); } catch(e) {}
+      } else if (typeof window.loadDataAndUpdateKpis === 'function') {
+        window.loadDataAndUpdateKpis();
+      }
+    }
+  }
+
+  function showTodayMode() {
+    document.body.classList.remove('bh-cal-mode');
+    if (history.state && !history.state.calMode) return;
+    history.pushState({ calMode: false }, '', '/app.html');
+    try {
+      if (window.__bhActiveTab !== undefined) window.__bhActiveTab = 'today';
+    } catch(e) {}
+  }
+
+  // Exposer globalement pour les handlers
+  window.showCalendarMode = showCalendarMode;
+  window.showTodayMode    = showTodayMode;
+
+  // Activation par hash au chargement de la page
+  function checkHashOnLoad() {
+    if (window.location.hash === '#calendarSection') {
+      showCalendarMode();
+    }
+  }
+
+  // Retour arrière / avant navigateur
+  window.addEventListener('popstate', function(e) {
+    if (window.location.hash === '#calendarSection') {
+      showCalendarMode();
+    } else {
+      showTodayMode();
+    }
+  });
+
+  // Hashchange (navigation directe depuis la barre d'adresse ou onglet mobile)
+  window.addEventListener('hashchange', function() {
+    if (window.location.hash === '#calendarSection') {
+      showCalendarMode();
+    } else {
+      showTodayMode();
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    checkHashOnLoad();
+    // Relier Aujourd'hui (logo + nav) pour revenir à la vue Today
+    var todayLinks = document.querySelectorAll('a[data-page="app"][href="/app.html"]:not(#navCalendarLink)');
+    todayLinks.forEach(function(a) {
+      a.addEventListener('click', function(e) {
+        if (document.body.classList.contains('bh-cal-mode')) {
+          e.preventDefault();
+          showTodayMode();
+        }
+      });
+    });
+  });
+})();
+</script>
+
   <script src="/js/bh-clavier.js"></script>
   <script src="/js/bh-v3-finitions.js"></script>  
 
@@ -13647,13 +13930,11 @@ if (window.Capacitor) {
 <script>
 (function() {
   function doScroll() {
-    // Si vue Jour active, scroller vers calDayView
-    var dv = document.getElementById('calDayView');
-    if (dv && dv.style.display === 'block') {
-      dv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
+    if (typeof window.showCalendarMode === 'function') {
+      window.showCalendarMode();
+    } else {
+      window.location.href = '/app.html#calendarSection';
     }
-    window.location.href = '/reservations.html';
   }
 
   function bindCalendarLink() {

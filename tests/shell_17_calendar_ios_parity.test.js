@@ -14,6 +14,7 @@ const read = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
 const calCss  = read('public/css/bh-calendar-v3.css');
 const calJs   = read('public/js/bh-calendar-v3.js');
 const resaHtml = read('public/reservations.html');
+const appHtml  = read('public/app.html');
 
 // ── P-C17-01: bh-calendar-v3.css exists and has iOS design tokens ─
 assert.ok(
@@ -159,77 +160,69 @@ assert.ok(
 );
 console.log('✅ P-C17-20 — JS: défilement auto vers aujourd\'hui (todayOff + scrollLeft)');
 
-// ── P-C17-21: reservations.html links bh-calendar-v3.css ──────────
+// ── P-C17-21: app.html links bh-calendar-v3.css (CALENDAR-17C: moved to app.html) ──────
 assert.ok(
-  resaHtml.includes('bh-calendar-v3.css'),
-  'P-C17-21 FAIL: reservations.html must link /css/bh-calendar-v3.css'
+  appHtml.includes('bh-calendar-v3.css'),
+  'P-C17-21 FAIL: app.html must link /css/bh-calendar-v3.css (calendar moved from reservations.html)'
 );
-console.log('✅ P-C17-21 — HTML: lien bh-calendar-v3.css présent');
+console.log('✅ P-C17-21 — HTML: lien bh-calendar-v3.css dans app.html (vrai calendrier)');
 
-// ── P-C17-22: reservations.html loads bh-calendar-v3.js ───────────
+// ── P-C17-22: reservations.html must NOT load bh-calendar-v3.js (CALENDAR-17C: restored) ──
 assert.ok(
-  resaHtml.includes('bh-calendar-v3.js'),
-  'P-C17-22 FAIL: reservations.html must load /js/bh-calendar-v3.js'
+  !resaHtml.includes('bh-calendar-v3.js'),
+  'P-C17-22 FAIL: reservations.html must NOT load bh-calendar-v3.js (calendar belongs in app.html)'
 );
-console.log('✅ P-C17-22 — HTML: script bh-calendar-v3.js chargé');
+console.log('✅ P-C17-22 — HTML: bh-calendar-v3.js absent de reservations.html (CALENDAR-17C)');
 
-// ── P-C17-23: 4 tab panes in HTML ─────────────────────────────────
-const panes = ['calJour', 'calSemaine', 'calMensuel', 'calRevenus'];
-panes.forEach(id => {
-  assert.ok(resaHtml.includes(`id="${id}"`), `P-C17-23 FAIL: reservations.html must contain #${id} tab pane`);
-});
-console.log('✅ P-C17-23 — HTML: 4 panneaux d\'onglets (calJour/calSemaine/calMensuel/calRevenus)');
-
-// ── P-C17-24: segmented control buttons in HTML ───────────────────
-const segs = ['jour', 'semaine', 'mensuel', 'revenus'];
-segs.forEach(tab => {
-  assert.ok(
-    resaHtml.includes(`data-tab="${tab}"`),
-    `P-C17-24 FAIL: reservations.html must have a .cal-seg-pill with data-tab="${tab}"`
-  );
-});
-console.log('✅ P-C17-24 — HTML: 4 boutons segmentés avec data-tab');
-
-// ── P-C17-25: property supertitle present ─────────────────────────
+// ── P-C17-23: iOS segmented control in app.html (CALENDAR-17C) ────────────────────────
 assert.ok(
-  resaHtml.includes('calSuperTitle'),
-  'P-C17-25 FAIL: reservations.html must have #calSuperTitle (property selector, iOS supertitle)'
+  appHtml.includes('bh-ios-seg') && appHtml.includes('data-view="month"'),
+  'P-C17-23 FAIL: app.html must have iOS segmented control (.bh-ios-seg) with month tab'
 );
-console.log('✅ P-C17-25 — HTML: #calSuperTitle (sélecteur logement)');
+console.log('✅ P-C17-23 — HTML: segmented control iOS dans app.html (.bh-ios-seg)');
 
-// ── P-C17-26: prev/next navigation buttons ────────────────────────
+// ── P-C17-24: segmented control views in app.html ─────────────────────────────────────
+// Views are dynamically created (pill.dataset.view = v[0]); check for the array definition
 assert.ok(
-  resaHtml.includes('calPrevBtn') && resaHtml.includes('calNextBtn'),
-  'P-C17-26 FAIL: reservations.html must have #calPrevBtn and #calNextBtn'
+  appHtml.includes("'revenus'") && appHtml.includes("'month'") && appHtml.includes("'week'") && appHtml.includes("'day'"),
+  'P-C17-24 FAIL: app.html must define 4 view tabs including revenus in bh-ios-seg'
 );
-console.log('✅ P-C17-26 — HTML: #calPrevBtn et #calNextBtn présents');
+console.log('✅ P-C17-24 — HTML: 4 onglets segmentés (day/week/month/revenus) dans app.html');
 
-// ── P-C17-27: view toggle (Liste / Calendrier) ────────────────────
+// ── P-C17-25: property supertitle in app.html ─────────────────────────────────────────
 assert.ok(
-  resaHtml.includes('cal-view-toggle') &&
-  resaHtml.includes('data-mode="liste"') &&
-  resaHtml.includes('data-mode="calendrier"'),
-  'P-C17-27 FAIL: reservations.html must have .cal-view-toggle with data-mode="liste" and data-mode="calendrier"'
+  appHtml.includes('bhCalSuperTitle'),
+  'P-C17-25 FAIL: app.html must have #bhCalSuperTitle (property selector, iOS supertitle)'
 );
-console.log('✅ P-C17-27 — HTML: bascule Vue (Liste / Calendrier)');
+console.log('✅ P-C17-25 — HTML: #bhCalSuperTitle (sélecteur logement) dans app.html');
 
-// ── P-C17-28: existing list view preserved ────────────────────────
+// ── P-C17-26: prev/next navigation in app.html ───────────────────────────────────────
 assert.ok(
-  resaHtml.includes('id="listView"') &&
-  resaHtml.includes('resaTable') &&
-  resaHtml.includes('mobileCards'),
-  'P-C17-28 FAIL: reservations.html must preserve existing list view (resaTable + mobileCards) inside #listView'
+  appHtml.includes('bhCalPrevBtn') && appHtml.includes('bhCalNextBtn'),
+  'P-C17-26 FAIL: app.html must have bhCalPrevBtn and bhCalNextBtn (iOS glass buttons)'
 );
-console.log('✅ P-C17-28 — HTML: vue liste existante conservée (#listView, resaTable, mobileCards)');
+console.log('✅ P-C17-26 — HTML: bhCalPrevBtn + bhCalNextBtn présents dans app.html');
 
-// ── P-C17-29: calendar hidden on mobile via CSS ───────────────────
+// ── P-C17-27: reservations.html restored as list-only (no calendar toggle) ──────────
 assert.ok(
-  calCss.includes('@media (max-width: 1024px)') &&
-  calCss.includes('#calendarView') &&
-  calCss.includes('display: none !important'),
-  'P-C17-29 FAIL: bh-calendar-v3.css must hide #calendarView on ≤1024px (mobile — calendar is desktop-only)'
+  !resaHtml.includes('cal-view-toggle') && resaHtml.includes('resaTable'),
+  'P-C17-27 FAIL: reservations.html must NOT have .cal-view-toggle (CALENDAR-17C: list-only)'
 );
-console.log('✅ P-C17-29 — CSS: #calendarView masqué en mobile (≤1024px)');
+console.log('✅ P-C17-27 — HTML: reservations.html liste uniquement, pas de cal-view-toggle');
+
+// ── P-C17-28: existing list view preserved in reservations.html ──────────────────────
+assert.ok(
+  resaHtml.includes('resaTable') && resaHtml.includes('mobileCards'),
+  'P-C17-28 FAIL: reservations.html must preserve existing list view (resaTable + mobileCards)'
+);
+console.log('✅ P-C17-28 — HTML: vue liste conservée dans reservations.html (resaTable + mobileCards)');
+
+// ── P-C17-29: calendar accessible mobile via bh-cal-mode (CALENDAR-17C) ─────────────
+assert.ok(
+  calCss.includes('body.bh-cal-mode #calendarSection'),
+  'P-C17-29 FAIL: bh-calendar-v3.css must show #calendarSection via body.bh-cal-mode (CALENDAR-17C)'
+);
+console.log('✅ P-C17-29 — CSS: #calendarSection visible via body.bh-cal-mode (CALENDAR-17C)');
 
 // ── P-C17-30: bhCalV3 public API exposed ──────────────────────────
 assert.ok(

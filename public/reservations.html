@@ -368,13 +368,6 @@ html[data-theme-v3="1"] main.main-content {
   padding-left: 0 !important;
   padding-right: 0 !important;
 }
-/* Calendar view fills the main-content height */
-@media (min-width: 1025px) {
-  #calendarView.cal-active {
-    height: calc(100vh - 40px - 70px) !important;
-    display: flex !important;
-  }
-}
 /* Mobile : fix scroll sur page reservations uniquement */
 @media (max-width: 1366px) {
   body[data-page="reservations"] .app-container {
@@ -548,9 +541,6 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
 
 </style>
 
-  <!-- Calendar v3 — iOS parity -->
-  <link rel="stylesheet" href="/css/bh-calendar-v3.css?v=cal17a">
-
   <!-- Calques tardifs — mobile et correctifs empiles. Ils surchargent
        volontairement le CSS de la page et n'ont presque pas de
        !important : leur position finale est ce qui les fait tenir.
@@ -569,61 +559,6 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
 <div class="bh-desktop-header"><div><div class="bh-dh-kicker">Planning</div><div class="bh-dh-title">Réservations</div></div></div>
 
 <button class="resa-back-btn" onclick="window.location.href='/app.html'"><i class="fas fa-arrow-left"></i> Tableau de bord</button>
-
-<!-- View mode toggle (desktop only — hidden on mobile via CSS) -->
-<div id="calViewToggleWrap" style="position:fixed;top:50px;right:136px;z-index:60;display:none;">
-  <div class="cal-view-toggle">
-    <button class="cal-view-toggle-btn active" data-mode="liste">Liste</button>
-    <button class="cal-view-toggle-btn" data-mode="calendrier">Calendrier</button>
-  </div>
-</div>
-
-<!-- CALENDAR VIEW (iOS-parity, desktop only) -->
-<div id="calendarView">
-  <!-- NavBar -->
-  <div class="cal-navbar">
-    <div class="cal-navbar-left">
-      <div class="cal-supertitle" id="calSuperTitle">
-        Tous les logements <i class="fas fa-chevron-down"></i>
-      </div>
-      <div class="cal-month-title" id="calMonthTitle">Octobre</div>
-    </div>
-    <div class="cal-navbar-right">
-      <button class="cal-glass-btn" id="calFilterBtn" title="Actions groupées">
-        <i class="fas fa-sliders-h" style="font-size:14px;"></i>
-      </button>
-      <button class="cal-glass-btn" id="calPrevBtn" title="Mois précédent">
-        <i class="fas fa-chevron-left" style="font-size:13px;"></i>
-      </button>
-      <button class="cal-glass-btn" id="calNextBtn" title="Mois suivant">
-        <i class="fas fa-chevron-right" style="font-size:13px;"></i>
-      </button>
-    </div>
-    <!-- Property dropdown -->
-    <div class="cal-prop-dropdown" id="calPropDropdown"></div>
-  </div>
-
-  <!-- Segmented control -->
-  <div class="cal-segmented">
-    <button class="cal-seg-pill" data-tab="jour">Jour</button>
-    <button class="cal-seg-pill" data-tab="semaine">Semaine</button>
-    <button class="cal-seg-pill active" data-tab="mensuel">Mensuel</button>
-    <button class="cal-seg-pill" data-tab="revenus">Revenus</button>
-  </div>
-
-  <!-- Tab panes -->
-  <div class="cal-tab-content">
-    <div class="cal-tab-pane" id="calJour"></div>
-    <div class="cal-tab-pane" id="calSemaine"></div>
-    <div class="cal-tab-pane active" id="calMensuel">
-      <div class="cal-spinner-wrap"><div class="cal-spinner"></div></div>
-    </div>
-    <div class="cal-tab-pane" id="calRevenus"></div>
-  </div>
-</div>
-
-<!-- LIST VIEW wrapper (existing content) -->
-<div id="listView">
 
 <div id="pageLoader"><div class="loader-spinner"></div></div>
 
@@ -736,8 +671,6 @@ body[data-page="reservations"] .tab-btn[data-tab="dashboard"] {
     <div class="bh-resa-body" id="detailBody"></div>
   </div>
 </div>
-
-</div><!-- /listView -->
 
 </main>
 </div><!-- /app-container -->
@@ -2106,36 +2039,5 @@ body.notif-panel-open {
 <script src="/js/bh-polish.js?v=1"></script>
 <script src="/js/bh-pull-refresh.js?v=07bdb653"></script>
 
-<!-- Calendar v3 — iOS parity -->
-<script src="/js/bh-calendar-v3.js?v=cal17a"></script>
-<script>
-(function () {
-  // Show toggle on desktop only
-  const IS_DESKTOP = window.innerWidth >= 1025;
-  if (IS_DESKTOP) {
-    const toggleWrap = document.getElementById('calViewToggleWrap');
-    if (toggleWrap) toggleWrap.style.display = '';
-  }
-
-  // After loadData() populates allReservations + allProperties, init calendar
-  const _origLoadData = window.loadData;
-  window.loadData = async function () {
-    await _origLoadData.apply(this, arguments);
-    // Init calendar once data is ready
-    if (window.bhCalV3) {
-      window.bhCalV3.init();
-      window.bhCalV3.updateSuperTitle();
-      // On desktop, default to calendar view
-      if (IS_DESKTOP) {
-        window.bhCalV3.showCalendar(true);
-        // Update toggle button state
-        document.querySelectorAll('.cal-view-toggle-btn').forEach(btn => {
-          btn.classList.toggle('active', btn.dataset.mode === 'calendrier');
-        });
-      }
-    }
-  };
-})();
-</script>
 </body>
 </html>
