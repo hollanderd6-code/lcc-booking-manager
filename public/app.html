@@ -13992,9 +13992,12 @@ if (window.Capacitor) {
       var text = el.textContent.trim();
       if (text === 'Calendrier' || el.getAttribute('data-page') === 'calendar') {
         el._scrollBound = true;
+        var isMobileTab = !!el.getAttribute('data-tab');
         el.addEventListener('click', function(e) {
           e.preventDefault();
-          e.stopImmediatePropagation();
+          // Mobile tab buttons (data-tab): allow bubbling so bh-layout.js
+          // onBarClick can settle the lg-capsule via the direct path.
+          if (!isMobileTab) e.stopImmediatePropagation();
           doScroll();
         });
       }

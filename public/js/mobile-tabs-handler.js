@@ -217,7 +217,19 @@
   document.addEventListener('tabChanged', (e) => {
     const tab = e.detail.tab;
     console.log('Navigation vers:', tab);
-    
+
+    // On app.html, showCalendarMode / showTodayMode are exposed globally.
+    // Use them directly — avoids a WKWebView hash navigation that reloads the
+    // page and clears bh-cal-mode before checkHashOnLoad can restore it.
+    if (tab === 'calendar' && typeof window.showCalendarMode === 'function') {
+      window.showCalendarMode();
+      return;
+    }
+    if (tab === 'today' && typeof window.showTodayMode === 'function') {
+      window.showTodayMode();
+      return;
+    }
+
     if (ROUTES[tab]) {
       window.location.href = ROUTES[tab];
     }
