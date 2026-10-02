@@ -7,6 +7,39 @@
    ============================================================ */
 
 /* ─────────────────────────────────────────────────────────────
+   0. STRUCTURAL FIXES — top blank space + legacy nav
+   ───────────────────────────────────────────────────────────── */
+
+/* A. body padding-top: 40px was for .bh-demo-nav (removed in SHELL-FIX-09) */
+html[data-theme-v3="1"] body[data-page="messages"] {
+  padding-top: 0 !important;
+}
+
+/* B. Desktop main-content padding-top: 64px was for a legacy fixed header */
+@media (min-width: 1367px) {
+  html[data-theme-v3="1"] body[data-page="messages"] .main-content {
+    padding-top: 0 !important;
+  }
+  /* Split view height: viewport minus bh-desktop-header (~88px) and margins */
+  html[data-theme-v3="1"] body[data-page="messages"] .msgs-split {
+    height: calc(100dvh - 90px) !important;
+  }
+}
+
+/* C. Legacy msgs-tabs (Messages / Templates / Statut / SMS / Statut SMS)
+      hidden on screen — features preserved, their URLs/scripts intact */
+body[data-page="messages"] .msgs-tabs {
+  display: none !important;
+}
+
+/* D. DM Sans for conversation names (chat-owner.js uses font-weight:800
+      but DM Sans only loads up to 700 — cap to avoid synthesized bold) */
+body[data-page="messages"] .conversation-item h3 {
+  font-family: 'DM Sans', sans-serif !important;
+  font-weight: 700 !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
    1. APP BACKGROUND
    Replaces white (#FFFFFF) from bh-messages-v3.css and
    var(--lux-bg) from bh-messages-lux.css.
