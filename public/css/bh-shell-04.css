@@ -206,6 +206,14 @@
     transition: none !important;
   }
 
+  /* ── Specificity override: beat bh-v3-mobile.css `display:none !important` ──
+     bh-v3-mobile.css:330 uses `html[data-theme-v3="1"] .mobile-tabs` (0,2,1)
+     with !important, and loads later than bh-shell-04.css on all 4 pages.
+     Adding `body` raises specificity to (0,2,2) — wins unconditionally. */
+  html[data-theme-v3="1"] body .mobile-tabs {
+    display: flex !important;
+  }
+
 }
 
 

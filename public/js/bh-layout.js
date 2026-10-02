@@ -379,6 +379,25 @@ function getSidebarHTML() {
       if (companyEl) companyEl.textContent = user.company;
     }
 
+    // Sync header initials buttons on all 4 primary destinations (SHELL_04).
+    // The rail sidebar is hidden; these 38×38 circle buttons are the only
+    // account access point visible on desktop.
+    (function () {
+      var _isSub = localStorage.getItem('lcc_account_type') === 'sub'
+               || localStorage.getItem('lcc_is_sub_account') === 'true';
+      var _letter = ((displayUser.firstName || user.firstName || '')).charAt(0).toUpperCase() || '?';
+      document.querySelectorAll('.bh-header-initials-btn').forEach(function (btn) {
+        btn.textContent = _letter;
+        btn.classList.remove('bh-ios-initials-button--delegated', 'bh-ios-initials-button--all');
+        if (_isSub) {
+          btn.classList.remove('bh-ios-initials-button--own');
+          btn.classList.add('bh-ios-initials-button--delegated');
+        } else {
+          btn.classList.add('bh-ios-initials-button--own');
+        }
+      });
+    })();
+
     document.dispatchEvent(new CustomEvent('sidebarReady'));
     console.log("✅ Sidebar injectée avec filtrage permissions");
   }
