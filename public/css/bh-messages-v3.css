@@ -1,0 +1,512 @@
+/* ============================================================
+   BH-MESSAGES-V3 — iOS visual parity for messages.html
+   Loaded after bh-messages-lux.css. Overrides legacy inline
+   CSS and beige palette. chat-owner.js is never touched.
+   ============================================================ */
+
+/* ── 1. Design tokens ──────────────────────────────────────── */
+:root {
+  --msgs-bg:            #FFFFFF;
+  --msgs-surface:       #FFFFFF;
+  --msgs-sidebar-bg:    #F8FAF9;
+  --msgs-green:         var(--bh-vert, #0E3B2E);
+  --msgs-green-soft:    rgba(14, 59, 46, .07);
+  --msgs-green-mid:     rgba(14, 59, 46, .13);
+  --msgs-ink:           #0D1117;
+  --msgs-t2:            #374151;
+  --msgs-t3:            #6B7280;
+  --msgs-t4:            #9CA3AF;
+  --msgs-separator:     rgba(0, 0, 0, .07);
+  --msgs-shadow-sm:     0 1px 3px rgba(0, 0, 0, .05);
+  --msgs-shadow-md:     0 2px 20px rgba(0, 0, 0, .07);
+}
+
+/* ── 2. Page background: white (override beige) ────────────── */
+html[data-theme-v3="1"] body,
+html[data-theme-v3="1"] .main-content {
+  background: #FFFFFF !important;
+}
+
+html[data-theme-v3="1"] .msgs-tabs {
+  background: #FFFFFF !important;
+  border-bottom-color: rgba(0, 0, 0, .08) !important;
+}
+
+/* ── 3. Desktop header — iOS-like ──────────────────────────── */
+.bh-desktop-header {
+  padding: 18px 24px 8px !important;
+  background: #FFFFFF !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-shrink: 0 !important;
+}
+
+.bh-dh-kicker {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  color: var(--msgs-t4) !important;
+  margin-bottom: 2px !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+
+.bh-dh-title {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  color: var(--msgs-ink) !important;
+  line-height: 1.15 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+/* Unread counter badge next to title */
+#msgsUnreadHeader {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--msgs-green);
+  color: #FFFFFF;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 2px 9px;
+  min-width: 22px;
+  line-height: 16px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+#msgsUnreadHeader[data-count]:not([data-count=""]):not([data-count="0"]) {
+  display: inline-flex;
+}
+
+/* ── 4. Tabs: compact secondary nav ────────────────────────── */
+.msgs-tabs {
+  gap: 0 !important;
+  padding: 0 16px !important;
+}
+
+.msgs-tab {
+  font-size: 12.5px !important;
+  padding: 10px 16px !important;
+  gap: 6px !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+
+/* Conversations tab: slightly more prominent */
+#tabGuests {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+/* ── 5. Split container ────────────────────────────────────── */
+.msgs-split {
+  margin: 8px 16px 16px !important;
+  border-radius: 20px !important;
+  box-shadow: var(--msgs-shadow-md) !important;
+  border: 1px solid rgba(0, 0, 0, .07) !important;
+  background: #FFFFFF !important;
+}
+
+/* ── 6. Left panel: responsive width ──────────────────────── */
+.msgs-left {
+  width: 380px !important;
+  min-width: 380px !important;
+  background: var(--msgs-sidebar-bg) !important;
+}
+
+/* Large desktop: slightly wider */
+@media (min-width: 1440px) {
+  .msgs-left {
+    width: 400px !important;
+    min-width: 400px !important;
+  }
+}
+
+/* Tablet / smaller desktop: narrower */
+@media (max-width: 1366px) {
+  .msgs-left {
+    width: 330px !important;
+    min-width: 330px !important;
+  }
+}
+
+/* ── 7. Search bar: iOS pill style ─────────────────────────── */
+.msgs-search {
+  background: rgba(0, 0, 0, .05) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  height: 38px !important;
+  padding: 0 10px !important;
+}
+
+.msgs-search i {
+  color: var(--msgs-t4) !important;
+  font-size: 13px !important;
+}
+
+.msgs-search input {
+  font-size: 13px !important;
+  font-family: 'DM Sans', sans-serif !important;
+  color: var(--msgs-ink) !important;
+}
+
+.msgs-search input::placeholder {
+  color: var(--msgs-t4) !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+
+/* ── 8. Filter pills — iOS segmented control ───────────────── */
+.msgs-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 10px;
+  flex-shrink: 0;
+}
+
+.msgs-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, .1);
+  background: transparent;
+  color: var(--msgs-t3);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  line-height: 1;
+  min-height: 30px;
+}
+
+.msgs-filter-pill:hover {
+  background: rgba(0, 0, 0, .04);
+  color: var(--msgs-t2);
+}
+
+.msgs-filter-pill.active {
+  background: var(--msgs-green);
+  border-color: var(--msgs-green);
+  color: #FFFFFF;
+}
+
+.msgs-filter-pill:focus-visible {
+  outline: 2px solid var(--msgs-green);
+  outline-offset: 2px;
+}
+
+/* Unread count badge inside filter pill */
+.msgs-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--msgs-green);
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0 5px;
+  min-width: 16px;
+  line-height: 1.6;
+}
+
+.msgs-filter-pill.active .msgs-filter-badge {
+  background: rgba(255, 255, 255, .3);
+}
+
+.msgs-filter-badge:empty {
+  display: none;
+}
+
+/* CSS filter: hide non-unread items when unread filter is active */
+#conversationsList.msgs-filter-unread .conversation-item:not(.conv-unread) {
+  display: none !important;
+}
+
+/* ── 9. Conversation list: white-on-sidebar background ─────── */
+#conversationsList,
+.msgs-left .msgs-search-wrap {
+  background: var(--msgs-sidebar-bg) !important;
+}
+
+#conversationsList .conversation-item {
+  background: transparent !important;
+}
+
+#conversationsList .conversation-item:hover {
+  background: rgba(0, 0, 0, .03) !important;
+}
+
+#conversationsList .conversation-item.active {
+  background: var(--msgs-green-soft) !important;
+  border-left-color: var(--msgs-green) !important;
+}
+
+#conversationsList .conversation-item.conv-unread {
+  background: transparent !important;
+}
+
+#conversationsList .conversation-item.closed-conv {
+  opacity: .45 !important;
+}
+
+/* ── 10. Right panel ───────────────────────────────────────── */
+.msgs-right {
+  background: #FFFFFF !important;
+}
+
+/* ── 11. Empty state: clean minimal ────────────────────────── */
+#msgsChatPlaceholder {
+  gap: 10px !important;
+  padding: 40px 24px !important;
+  color: var(--msgs-t3) !important;
+}
+
+#msgsChatPlaceholder i {
+  font-size: 44px !important;
+  opacity: .18 !important;
+  color: var(--msgs-green) !important;
+}
+
+#msgsChatPlaceholder h3 {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: var(--msgs-ink) !important;
+  margin: 0 !important;
+}
+
+#msgsChatPlaceholder p {
+  font-size: 13px !important;
+  color: var(--msgs-t3) !important;
+  margin: 0 !important;
+  text-align: center !important;
+  max-width: 240px !important;
+  line-height: 1.5 !important;
+}
+
+/* ── 12. Chat header: iOS sticky header ────────────────────── */
+#msgsChatHeader {
+  background: #FFFFFF !important;
+  border-bottom: 1px solid rgba(0, 0, 0, .07) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 5 !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.msgs-chat-name {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: var(--msgs-ink) !important;
+}
+
+.msgs-chat-meta {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 12px !important;
+  color: var(--msgs-t3) !important;
+}
+
+/* ── 13. Messages area: white bg ───────────────────────────── */
+#chatMessages {
+  background: #FFFFFF !important;
+  padding: 16px 20px !important;
+}
+
+/* ── 14. Chat bubbles: iOS-style rounded ───────────────────── */
+.chat-message {
+  max-width: 72% !important;
+}
+
+.chat-bubble {
+  border-radius: 20px !important;
+  padding: 10px 15px !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+.chat-message.owner .chat-bubble {
+  border-radius: 20px 20px 4px 20px !important;
+}
+
+.chat-message.guest .chat-bubble,
+.chat-message.bot .chat-bubble {
+  border-radius: 4px 20px 20px 20px !important;
+}
+
+/* Image attachments in bubbles */
+#chatMessages .chat-bubble img {
+  border-radius: 14px !important;
+  max-width: 260px !important;
+  max-height: 220px !important;
+  object-fit: cover !important;
+  cursor: pointer !important;
+  display: block !important;
+  margin-top: 6px !important;
+}
+
+/* ── 15. Quick replies: horizontal scroll chips ────────────── */
+#quickRepliesBar {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  gap: 6px !important;
+  padding: 8px 14px !important;
+  background: #FFFFFF !important;
+  border-top: 1px solid rgba(0, 0, 0, .05) !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+#quickRepliesBar::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* ── 16. AI suggestion card ────────────────────────────────── */
+#ownerSuggestionCard {
+  margin: 8px 14px !important;
+  border: 1px solid rgba(14, 59, 46, .18) !important;
+  background: rgba(14, 59, 46, .04) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+/* ── 17. Composer: pill design ─────────────────────────────── */
+#chatInputArea,
+.chat-modal-input {
+  background: #FFFFFF !important;
+  border-top: 1px solid rgba(0, 0, 0, .07) !important;
+  padding: 10px 14px !important;
+  gap: 8px !important;
+  align-items: flex-end !important;
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 5 !important;
+}
+
+#chatInput,
+.chat-input {
+  border-radius: 20px !important;
+  border: 1px solid rgba(0, 0, 0, .1) !important;
+  background: #F3F4F6 !important;
+  padding: 9px 16px !important;
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 14px !important;
+  transition: border-color .15s, background .15s !important;
+}
+
+#chatInput:focus,
+.chat-input:focus {
+  background: #FFFFFF !important;
+  border-color: rgba(14, 59, 46, .35) !important;
+  box-shadow: 0 0 0 3px rgba(14, 59, 46, .07) !important;
+}
+
+/* Send button: circular green */
+#sendBtn,
+.send-btn {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+}
+
+/* Photo / attach button */
+#photoUploadBtn,
+.msgs-attach-btn {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--msgs-t3) !important;
+  font-size: 16px !important;
+  cursor: pointer !important;
+  transition: color .15s !important;
+}
+
+#photoUploadBtn:hover,
+.msgs-attach-btn:hover {
+  color: var(--msgs-green) !important;
+}
+
+/* ── 18. Responsive ────────────────────────────────────────── */
+
+/* Tablet (768–1366): narrower left — see section 6 above */
+
+/* Mobile (≤768): full-width stacked layout */
+@media (max-width: 768px) {
+  .msgs-split {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    height: calc(100dvh - 40px - 48px) !important;
+  }
+
+  .msgs-left {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+
+  #chatInputArea,
+  .chat-modal-input {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  #msgsChatHeader {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+  }
+
+  .chat-message {
+    max-width: 82% !important;
+  }
+}
+
+/* ── 19. Accessibility ─────────────────────────────────────── */
+
+.msgs-tab:focus-visible {
+  outline: 2px solid var(--msgs-green);
+  outline-offset: -2px;
+}
+
+.msgs-icon-btn:focus-visible,
+#sendBtn:focus-visible,
+#photoUploadBtn:focus-visible {
+  outline: 2px solid var(--msgs-green);
+  outline-offset: 2px;
+}
+
+/* Prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .chat-message {
+    animation: none !important;
+  }
+  .msgs-filter-pill,
+  .msgs-tab,
+  #chatInput,
+  .chat-input {
+    transition: none !important;
+  }
+}

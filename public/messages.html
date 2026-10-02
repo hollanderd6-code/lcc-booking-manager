@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="/css/bh-brand.css?v=3140b004">
   <link rel="stylesheet" href="/css/bh-lux.css?v=d686b5ab">
   <link href="/css/bh-messages-lux.css?v=f2dc09ea" rel="stylesheet"/>
+  <link href="/css/bh-messages-v3.css" rel="stylesheet"/>
   <link href="/css/bh-shared.css?v=9a9bd9bd" rel="stylesheet"/>
   <link rel="stylesheet" href="/css/bh-bottom-bar.css?v=44c300e1">
   <link rel="stylesheet" href="/css/bh-badges.css?v=4ae5091d">
@@ -1120,7 +1121,7 @@ html[data-theme-v3="1"] .app-container {
   <div id="bhSidebar"></div>
   <main class="main-content">
     <div id="bhHeader"></div>
-<div class="bh-desktop-header"><div><div class="bh-dh-kicker">Communication</div><div class="bh-dh-title">Messages</div></div></div>
+<div class="bh-desktop-header"><div><div class="bh-dh-kicker">Communication</div><div class="bh-dh-title">Messages <span id="msgsUnreadHeader" data-count=""></span></div></div></div>
 
     <!-- bhHeaderActions for bh-layout.js (empty) -->
     <div id="bhHeaderActions" style="display:none;"></div>
@@ -1185,6 +1186,11 @@ html[data-theme-v3="1"] .app-container {
             <input id="msgsSearchInput" placeholder="Rechercher un nom, un logement, un message…" type="text"/>
           </div>
         </div>
+        <!-- iOS-style filter pills: Tout / Non lus -->
+        <div id="msgsFilterBar" class="msgs-filter-bar">
+          <button class="msgs-filter-pill active" data-filter="all" onclick="setMsgsFilter('all')" aria-label="Toutes les conversations">Tout</button>
+          <button class="msgs-filter-pill" data-filter="unread" onclick="setMsgsFilter('unread')" aria-label="Conversations non lues">Non lus <span id="msgsUnreadFilterBadge" class="msgs-filter-badge"></span></button>
+        </div>
         <!-- chat-owner.js writes directly here -->
         <div id="conversationsList">
           <div class="empty-state">
@@ -1199,8 +1205,9 @@ html[data-theme-v3="1"] .app-container {
 
         <!-- Placeholder -->
         <div id="msgsChatPlaceholder">
-          <i class="fas fa-comments"></i>
-          <p>Sélectionnez une conversation</p>
+          <i class="fas fa-message"></i>
+          <h3>Vos conversations</h3>
+          <p>Sélectionnez un voyageur pour afficher les messages.</p>
         </div>
 
         <!-- Chat header (shown after selecting conversation) -->
@@ -3345,6 +3352,51 @@ function switchMsgsTab(tab) {
     loadChannexProperties();
   }
 }
+
+// ── Filter pills: Tout / Non lus ──────────────────────────────
+// Pure CSS+DOM — no backend call, no modification to chat-owner.js.
+var _msgsActiveFilter = 'all';
+
+function setMsgsFilter(f) {
+  _msgsActiveFilter = f;
+  document.querySelectorAll('.msgs-filter-pill').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.filter === f);
+  });
+  var list = document.getElementById('conversationsList');
+  if (list) list.classList.toggle('msgs-filter-unread', f === 'unread');
+}
+
+function _updateMsgsFilterCounts() {
+  var convs = window.allConversations || [];
+  var n = convs.filter(function(c) { return (parseInt(c.unread_count) || 0) > 0; }).length;
+  var badge = document.getElementById('msgsUnreadFilterBadge');
+  if (badge) badge.textContent = n > 0 ? n : '';
+  var hdr = document.getElementById('msgsUnreadHeader');
+  if (hdr) {
+    var total = convs.reduce(function(s, c) { return s + (parseInt(c.unread_count) || 0); }, 0);
+    hdr.dataset.count = total > 0 ? total : '';
+    hdr.textContent  = total > 0 ? total : '';
+  }
+}
+
+// MutationObserver on conversationsList to update counts after each render
+(function() {
+  function _attachObserver() {
+    var list = document.getElementById('conversationsList');
+    if (!list) return;
+    new MutationObserver(function() {
+      var unread = list.querySelectorAll('.conv-unread').length;
+      var badge = document.getElementById('msgsUnreadFilterBadge');
+      if (badge) badge.textContent = unread > 0 ? unread : '';
+      _updateMsgsFilterCounts();
+    }).observe(list, { childList: true, subtree: false });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _attachObserver);
+  } else {
+    _attachObserver();
+  }
+})();
 
 async function loadChannexProperties() {
   channexPropertiesLoaded = true;
