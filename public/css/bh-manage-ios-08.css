@@ -26,6 +26,7 @@ body[data-page="manage"] .manage-page-header__kicker {
   text-transform: none !important;
   color: #5E6B63 !important;
   margin-bottom: 6px;
+  min-height: 1.2em;
 }
 
 body[data-page="manage"] .manage-page-header__title {
@@ -41,8 +42,6 @@ body[data-page="manage"] .manage-page-header__title {
 
 body[data-page="manage"] .manage-content {
   padding: 12px 18px 32px;
-  max-width: 760px;
-  margin: 0 auto;
 }
 
 @media (min-width: 1367px) {
@@ -305,6 +304,54 @@ body[data-page="manage"] .mgios-card .mgios-row + .mgios-row::before {
 /* override for primary card separators (larger icon) */
 body[data-page="manage"] #managePrimaryCard .mgios-row + .mgios-row::before {
   left: 70px; /* 16px pad + 40px icon + 14px gap */
+}
+
+/* ─────────────────────────────────────────────────────────────
+   11b. SHORTCUTS DESKTOP 2-COLUMN GRID
+   Each row becomes a standalone glass mini-card at ≥1100px
+   ───────────────────────────────────────────────────────────── */
+
+@media (min-width: 1100px) {
+  body[data-page="manage"] .manage-content,
+  html[data-theme-v3="1"] body[data-page="manage"] .manage-page-header {
+    width: calc(100% - 80px);
+    max-width: 1440px;
+    margin-inline: auto;
+  }
+
+  body[data-page="manage"] #manageShortcutsCard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  body[data-page="manage"] #manageShortcutsCard::before {
+    display: none;
+  }
+
+  body[data-page="manage"] #manageShortcutsCard .mgios-row {
+    background: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.70);
+    border-radius: 16px;
+    box-shadow: 0 4px 14px rgba(20, 32, 27, 0.07);
+  }
+
+  body[data-page="manage"] #manageShortcutsCard .mgios-row + .mgios-row::before {
+    display: none;
+  }
+
+  body[data-page="manage"] #manageShortcutsCard .mgios-row:hover {
+    background: rgba(255, 255, 255, 0.82);
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
