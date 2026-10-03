@@ -1231,21 +1231,44 @@ html.bhas-sr-open .bhas-sr{transform:translate(-50%,0) scale(1);opacity:1;pointe
     return base ? base.trim().charAt(0).toUpperCase() : '';
   }
   var applying = false;
+  // Styles posés en ligne avec !important : certaines pages (app.html) ont des règles plus fortes que notre feuille.
+  function forceCss(el, css) {
+    if (!el) return;
+    css.split(';').forEach(function (d) {
+      var i = d.indexOf(':'); if (i < 0) return;
+      el.style.setProperty(d.slice(0, i).trim(), d.slice(i + 1).trim(), 'important');
+    });
+  }
+  function clearCss(el, css) { if (!el) return; css.split(';').forEach(function (d) { var i = d.indexOf(':'); if (i > 0) el.style.removeProperty(d.slice(0, i).trim()); }); }
+  var DESK = window.matchMedia ? window.matchMedia('(min-width: 860px)') : { matches: true };
+  var PILL_CSS = 'width:380px;max-width:38vw;min-width:240px;height:44px;border-radius:22px;padding:0 14px;display:inline-flex;align-items:center;justify-content:flex-start;gap:10px;background:rgba(255,255,255,.62);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border:1px solid rgba(255,255,255,.7);box-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 8px 22px rgba(20,32,27,.06);color:#5E6B63;cursor:text;overflow:hidden;flex:0 1 auto';
+  var PILL_SVG = 'width:18px;height:18px;min-width:18px;flex:0 0 18px;display:block;stroke:currentColor;fill:none;opacity:1;visibility:visible';
+  var PILL_PH = 'display:block;flex:1 1 auto;min-width:0;text-align:left;font:400 14.5px DM Sans,system-ui,sans-serif;color:#5E6B63;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+  var PILL_KBD = 'display:inline-block;flex:0 0 auto;font:600 12px DM Sans,system-ui,sans-serif;color:#5E6B63;padding:2px 7px;border-radius:7px;background:rgba(0,0,0,.05);line-height:1.4';
+  var RING_CSS = 'width:44px;height:44px;min-width:44px;border-radius:50%;border:2px solid #0E3B2E;background:rgba(255,255,255,.62);color:#0E3B2E;font:700 16px DM Sans,system-ui,sans-serif;box-shadow:0 8px 22px rgba(20,32,27,.08);display:inline-flex;align-items:center;justify-content:center;padding:0';
+  function stylePill(b) {
+    var svgEl = b.querySelector('svg'), ph = b.querySelector('.bhas-pill-ph'), kb = b.querySelector('.bhas-pill-kbd');
+    if (DESK.matches) { forceCss(b, PILL_CSS); forceCss(svgEl, PILL_SVG); forceCss(ph, PILL_PH); forceCss(kb, PILL_KBD); }
+    else { clearCss(b, PILL_CSS); clearCss(svgEl, PILL_SVG); [ph, kb].forEach(function (x) { if (x) { clearCss(x, PILL_PH + ';' + PILL_KBD); x.style.setProperty('display', 'none', 'important'); } }); }
+  }
   function enhanceHeader() {
     if (applying) return; applying = true;
     var ini = firstNameInitial();
     document.querySelectorAll('.bh-ios-initials-button, .bh-header-initials-btn').forEach(function (b) {
       if (b.closest('#bhasSheet')) return;
       b.classList.add('bhas-ring');
+      forceCss(b, RING_CSS);
       if (ini && b.textContent.trim() !== ini) b.textContent = ini;
     });
     ['gxAvatarBtn', 'gxInitials'].forEach(function (id) { var el = $(id); if (el && ini && el.textContent.trim() !== ini) el.textContent = ini; });
     document.querySelectorAll('.bh-header-search-btn').forEach(function (b) {
-      if (b.classList.contains('bhas-pill')) return;
-      b.classList.add('bhas-pill');
-      b.setAttribute('aria-label', 'Rechercher');
-      b.appendChild(h('span', { class: 'bhas-pill-ph' }, 'Rechercher un voyageur, un logement…'));
-      b.appendChild(h('span', { class: 'bhas-pill-kbd' }, /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K'));
+      if (!b.classList.contains('bhas-pill')) {
+        b.classList.add('bhas-pill');
+        b.setAttribute('aria-label', 'Rechercher');
+        b.appendChild(h('span', { class: 'bhas-pill-ph' }, 'Rechercher un voyageur, un logement…'));
+        b.appendChild(h('span', { class: 'bhas-pill-kbd' }, /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K'));
+      }
+      stylePill(b);
     });
     applying = false;
   }
@@ -1256,6 +1279,7 @@ html.bhas-sr-open .bhas-sr{transform:translate(-50%,0) scale(1);opacity:1;pointe
   }
   function bootHeader() {
     ensureStyle(); enhanceHeader();
+    if (DESK.addEventListener) DESK.addEventListener('change', enhanceHeader); else if (DESK.addListener) DESK.addListener(enhanceHeader);
     var mo = new MutationObserver(function () { if (!applying) enhanceHeader(); });
     mo.observe(document.body, { childList: true, subtree: true, characterData: true });
     if (!isSub() && !cache.profile) GET('/api/user/profile').then(function (p) { cache.profile = p; enhanceHeader(); }).catch(function () {});
