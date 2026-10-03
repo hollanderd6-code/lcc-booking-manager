@@ -1,0 +1,75 @@
+/* bh-boostprice-ios-20.css — BoostPrice. Complète bh-prop-ios-12 / bh-menage-ios-13 */
+.bhb-seg { overflow-x: auto; scrollbar-width: none; }
+.bhb-seg::-webkit-scrollbar { display: none; }
+.bhb-seg .bhm-seg__b { white-space: nowrap; padding-left: 10px; padding-right: 10px; }
+
+.bhb-pause { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+.bhb-pause.is-off { background: var(--bhp-terra-fond); border: 1px solid var(--bhp-terra-bd); }
+.bhb-pause__t { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 10px; }
+.bhb-pause__t > div { display: flex; flex-direction: column; gap: 2px; }
+.bhb-pause__t b { font-size: 15px; font-weight: 600; color: var(--bhp-encre); }
+.bhb-pause__t .bhp-ic { font-size: 18px; color: var(--bhp-terra); margin-top: 1px; }
+.bhb-pause__t .bhb-ok { color: var(--bhp-occ); }
+
+.bhb-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.bhb-stat { display: flex; flex-direction: column; gap: 4px; padding: 14px; }
+.bhb-stat b { font-size: 24px; font-weight: 600; letter-spacing: -.03em; color: var(--bhp-encre); line-height: 1.1; overflow-wrap: anywhere; }
+.bhb-hot { background: var(--bhp-or-fond); border-radius: 16px; padding: 12px 14px; color: var(--bhp-or); }
+.bhb-hot b { color: var(--bhp-or); }
+
+.bhb-prop { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.bhb-prop.is-pending { border: 1px solid rgba(201,161,91,.55); }
+.bhb-prop__top { display: flex; align-items: flex-start; gap: 10px; }
+.bhb-prop__t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bhb-market { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.bhb-market > div, .bhb-price > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.bhb-market span, .bhb-price span { font-size: 11.5px; color: var(--bhp-att); }
+.bhb-market b { font-size: 15px; font-weight: 600; color: var(--bhp-encre); }
+.bhb-market .bhp-pill { align-self: flex-start; }
+.bhb-price { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.55); }
+.bhb-price b { font-size: 18px; font-weight: 600; color: var(--bhp-encre); white-space: nowrap; }
+.bhb-price b.is-or { color: var(--bhp-or); }
+.bhb-price b.is-vert { color: var(--bhp-occ-f); }
+.bhb-price em { font-style: normal; font-size: 12px; font-weight: 600; padding: 2px 6px; border-radius: 6px; }
+.bhb-price em.up { color: var(--bhp-occ-f); background: var(--bhp-menthe); }
+.bhb-price em.down { color: var(--bhp-terra); background: var(--bhp-terra-fond); }
+.bhb-price__r { margin-left: auto; text-align: right; align-items: flex-end; }
+.bhb-price__r b { font-size: 14px; color: var(--bhp-att); }
+.bhb-arrow { font-size: 14px; color: var(--bhp-att); }
+.bhb-line { display: flex; align-items: center; gap: 8px; }
+
+.bhb-toolbar { display: flex; align-items: center; gap: 10px; }
+.bhb-sel { flex: 1; max-width: none; }
+.bhb-calmeta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--bhp-att); margin: 0 2px; }
+.bhb-legend { display: inline-flex; align-items: center; gap: 4px; }
+.bhb-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-left: 6px; }
+.bhb-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.bhb-night { min-width: 0; overflow: hidden; }
+.bhb-dow { font-style: normal; }
+.bhb-night { border: 1px solid rgba(20,32,27,.06); cursor: pointer; border-radius: 12px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-family: var(--bhp-font); color: var(--bhp-encre); transition: transform .12s, box-shadow .12s; }
+.bhb-night span { font-size: 11px; color: var(--bhp-att); white-space: nowrap; }
+.bhb-night b { font-size: 15px; font-weight: 600; }
+.bhb-night.is-dark { color: #fff; border-color: transparent; }
+.bhb-night.is-dark span { color: rgba(255,255,255,.85); }
+.bhb-night.is-sel { box-shadow: 0 0 0 2px var(--bhp-vert); }
+.bhb-night:hover { transform: translateY(-1px); }
+.bhb-up { color: var(--bhp-occ-f) !important; font-weight: 600; }
+.bhb-down { color: var(--bhp-terra) !important; font-weight: 600; }
+
+.bhb-cfg.is-on { border: 1px solid rgba(14,59,46,.18); }
+.bhb-tg { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; padding-right: 12px; }
+.bhb-strat { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.bhb-strat b { font-size: 14px; font-weight: 600; color: var(--bhp-vert); }
+.bhb-range { width: 100%; accent-color: var(--bhp-vert); margin: 10px 0 4px; cursor: pointer; }
+
+@media (max-width: 640px) {
+  .bhb-stats { grid-template-columns: 1fr 1fr; }
+  .bhb-stats > :first-child { grid-column: 1 / -1; }
+  .bhb-market { grid-template-columns: 1fr 1fr; }
+  .bhb-cal { gap: 4px; }
+  .bhb-night { padding: 6px 2px; border-radius: 10px; }
+  .bhb-night b { font-size: 13px; }
+  .bhb-night span { font-size: 9.5px; }
+  .bhb-dow { display: none; }
+  .bhb-price { flex-wrap: wrap; }
+}
