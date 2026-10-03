@@ -8,7 +8,8 @@
   'use strict';
 
   var propertyId = null;
-  var propData = null;
+  var propData   = null;
+  var upsellData = null;
 
   /* ── Helpers ───────────────────────────────────────────── */
   function escHtml(s) {
@@ -80,7 +81,12 @@
       identity:     (p.name && p.internalName) ? 'complete' : (p.name ? 'to-fill' : 'to-fill'),
       stay:         (p.arrivalTime && p.departureTime && p.maxGuests) ? 'complete' : 'to-fill',
       pricing:      (p.basePrice) ? 'complete' : 'to-fill',
-      upsell:       'inactive',
+      upsell:       (function () {
+        if (!upsellData) return 'inactive';
+        var u = upsellData;
+        return (u.late_checkout_enabled || u.early_checkin_enabled || u.welcome_basket_enabled)
+          ? 'complete' : 'inactive';
+      }()),
       access:       (p.accessCode || p.wifiName) ? 'complete' : 'to-fill',
       neighborhood: hasContent(p.practicalInfo) ? 'complete' : 'to-fill',
       amenities:    hasContent(p.amenities) ? 'complete' : 'to-fill',
@@ -136,10 +142,18 @@
 
   /* ── Render single block row ──────────────────────────── */
   function renderBlock(iconKey, label, status, hasLivretBadge, sub) {
-    var sectionRoutes = { identity: 'identity', stay: 'stay', pricing: 'money' };
+    var sectionRoutes = {
+      identity:     'identity',
+      stay:         'stay',
+      pricing:      'money',
+      upsell:       'upsell',
+      access:       'access',
+      neighborhood: 'neighborhood',
+      amenities:    'amenities'
+    };
     var href = sectionRoutes[iconKey]
       ? '/property.html?id=' + propertyId + '&section=' + sectionRoutes[iconKey]
-      : '/settings.html'; /* Bridge: PROPERTIES_11B+ for remaining blocks */
+      : '/settings.html'; /* Bridge: ai, platforms — PROPERTIES_11C+ */
 
     var badgesHtml = '';
     if (status !== 'inactive') {
@@ -471,12 +485,16 @@
       fetch('/api/properties/diffusion').then(function (r) { return r.json(); })
         .catch(function () { return { logements: [] }; }),
       fetch('/api/welcome-books/by-property/' + propertyId).then(function (r) { return r.json(); })
-        .catch(function () { return { exists: false }; })
+        .catch(function () { return { exists: false }; }),
+      fetch('/api/properties/' + propertyId + '/upsell')
+        .then(function (r) { return r.ok ? r.json() : {}; })
+        .catch(function () { return {}; })
     ]).then(function (results) {
-      var p           = results[0];
+      var p            = results[0];
       var groupsResult = results[1];
-      var diffResult  = results[2];
-      var livret      = results[3];
+      var diffResult   = results[2];
+      var livret       = results[3];
+      upsellData       = results[4] || {};
 
       if (!p || !p.id) { showError('Logement introuvable.'); return; }
       propData = p;
@@ -508,10 +526,23 @@
     }).then(function (p) {
       if (!p || !p.id) { showError('Logement introuvable.'); return; }
       propData = p;
-      if (window.BhPropSections && window.BhPropSections.mount) {
-        window.BhPropSections.mount(propertyId, section, p);
+      var is11a = (section === 'identity' || section === 'stay' || section === 'money');
+      var is11b = (section === 'upsell' || section === 'access'
+        || section === 'neighborhood' || section === 'amenities');
+      if (is11a) {
+        if (window.BhPropSections && window.BhPropSections.mount) {
+          window.BhPropSections.mount(propertyId, section, p);
+        } else {
+          showError('Erreur de chargement du module de section.');
+        }
+      } else if (is11b) {
+        if (window.BhPropSections11b && window.BhPropSections11b.mount) {
+          window.BhPropSections11b.mount(propertyId, section, p);
+        } else {
+          showError('Erreur de chargement du module de section.');
+        }
       } else {
-        showError('Erreur de chargement du module de section.');
+        showError('Section inconnue.');
       }
     }).catch(function () {
       showError('Erreur de chargement. Vérifiez votre connexion.');
@@ -527,7 +558,9 @@
       showError('Identifiant de logement manquant.');
       return;
     }
-    if (section === 'identity' || section === 'stay' || section === 'money') {
+    var knownSections = ['identity', 'stay', 'money',
+      'upsell', 'access', 'neighborhood', 'amenities'];
+    if (section && knownSections.indexOf(section) !== -1) {
       window._propDetRetry = function () { loadSection(section); };
       loadSection(section);
     } else {

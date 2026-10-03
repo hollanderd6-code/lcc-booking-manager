@@ -524,7 +524,7 @@ describe('10-18 JS block status', () => {
     expect(js).toMatch(/pricing\s*:[\s\S]{0,60}?p\.basePrice/);
   });
   test('10-18-05 upsell is "inactive"', () => {
-    expect(js).toMatch(/upsell\s*:\s*'inactive'/);
+    expect(js).toMatch(/upsell\s*:[\s\S]{0,80}?'inactive'/);
   });
   test('10-18-06 access uses accessCode OR wifiName', () => {
     expect(js).toMatch(/access\s*:[\s\S]{0,80}?accessCode[\s\S]{0,20}?wifiName/);
@@ -1024,7 +1024,7 @@ describe('10-34 CSS section label', () => {
 describe('10-35 JS block bridge documentation', () => {
   test('10-35-01 renderBlock links to /settings.html', () => {
     var fnStart = js.indexOf('function renderBlock');
-    var fnBody  = js.slice(fnStart, fnStart + 300);
+    var fnBody  = js.slice(fnStart, fnStart + 500);
     expect(fnBody).toMatch(/\/settings\.html/);
   });
   test('10-35-02 bridge comment mentions PROPERTIES_11', () => {

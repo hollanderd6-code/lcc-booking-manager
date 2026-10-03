@@ -125,7 +125,7 @@ describe('11A-05 ios-10.js loadSection function', () => {
   });
   test('11A-05-03 loadSection calls window.BhPropSections.mount', () => {
     var fnIdx  = js10.indexOf('function loadSection');
-    var fnBody = js10.slice(fnIdx, fnIdx + 700);
+    var fnBody = js10.slice(fnIdx, fnIdx + 1000);
     expect(fnBody).toMatch(/window\.BhPropSections[\s\S]{0,50}?\.mount/);
   });
   test('11A-05-04 loadSection resets propDetLoading', () => {
@@ -187,7 +187,7 @@ describe('11A-07 ios-10.js bridge blocks preserved', () => {
   });
   test('11A-07-06 fallback href is /settings.html in renderBlock', () => {
     var fnIdx  = js10.indexOf('function renderBlock');
-    var fnBody = js10.slice(fnIdx, fnIdx + 400);
+    var fnBody = js10.slice(fnIdx, fnIdx + 500);
     expect(fnBody).toMatch(/\/settings\.html/);
   });
 });
