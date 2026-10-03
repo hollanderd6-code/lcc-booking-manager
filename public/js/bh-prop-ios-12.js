@@ -1137,7 +1137,7 @@
         ]);
       }
       if (act === 'go') return goSection(el.dataset.sec);
-      if (act === 'livret-edit') { var L = S.livret || {}; window.location.href = '/welcome.html' + (L.uniqueId ? '?id=' + encodeURIComponent(L.uniqueId) : '?property=' + encodeURIComponent(S.id)); return; }
+      if (act === 'livret-edit') { var L = S.livret || {}; window.location.href = '/livrets.html' + (L.uniqueId ? '?id=' + encodeURIComponent(L.uniqueId) : '?property=' + encodeURIComponent(S.id)); return; }
       if (act === 'livret-preview') { var u = livretUrl(); if (u) window.open(u, '_blank', 'noopener'); return; }
       if (act === 'livret-share') {
         var su = livretUrl(); if (!su) return;
