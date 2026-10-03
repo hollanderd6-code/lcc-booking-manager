@@ -1056,6 +1056,7 @@ html[data-theme-v3="1"] .app-container {
   <link rel="stylesheet" href="/css/bh-v3-mobile.css?v=2b3a5fdd">
   <link rel="stylesheet" href="/css/mobile-native-styles.css?v=df3b12db">
   <link rel="stylesheet" href="/css/bh-core.css?v=196810a2">
+  <link rel="stylesheet" href="/css/bh-messages-desk.css?v=1">
 </head>
 
 <body data-page="messages" data-kicker="Messages" data-title="Messages" data-subtitle="">
@@ -1742,7 +1743,7 @@ function isMobileDevice() { return false; }
 window.isMobileDevice = function() { return false; };
 </script>
 <script src="/js/bh-guest-mark.js?v=535077b0"></script>
-<script src="/js/chat-owner.js?v=attachments-prod-fix-10"></script>
+<script src="/js/chat-owner.js?v=attachments-prod-fix-11"></script>
 <!-- Auth + User -->
 <script>
     (async function() {
@@ -3210,7 +3211,7 @@ if (window.Capacitor && window.Capacitor.isNativePlatform()) {
     backBar.id = 'msgsMobileBack';
     backBar.className = 'msgs-mobile-back';
     backBar.style.cssText = [
-      'display:flex !important',
+      'display:flex',
       'align-items:center',
       'gap:10px',
       'padding:12px 16px',

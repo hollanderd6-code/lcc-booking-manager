@@ -554,7 +554,7 @@ function renderConversations() {
     const isUnread = unreadCount > 0;
 
     return `
-      <div class="conversation-item ${isUnread ? 'conv-unread' : ''}" data-conversation-id="${conv.id}" onclick="openChat(${conv.id})">
+      <div class="conversation-item ${isUnread ? 'conv-unread' : ''}${currentConversationId != null && String(currentConversationId) === String(conv.id) ? ' active' : ''}" data-conversation-id="${conv.id}" onclick="openChat(${conv.id})">
 
         <!-- Avatar avec indicateur non-lu -->
         <div style="position:relative;flex-shrink:0;">

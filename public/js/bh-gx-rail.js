@@ -19,7 +19,7 @@
   var css = ''
     + '@media (min-width:' + BP + 'px){'
     + 'html.bh-rail-on body{padding-left:var(--bh-rail-w,100px)!important;transition:padding-left .25s ease}'
-    + 'html.bh-rail-on .mobile-tabs,html.bh-rail-on .tab-bar{display:none!important}'
+    + 'html.bh-rail-on.bh-rail-on body .mobile-tabs,html.bh-rail-on.bh-rail-on body .tab-bar{display:none!important}'
     + 'html.bh-rail-on .sidebar,html.bh-rail-on #bhSidebar{display:none!important}'
     // En-tête « mobile » fixe des pages historiques (jusqu'à 1366 px) : décalé pour ne pas passer sur la barre
     + 'html.bh-rail-on.bh-rail-on body .mobile-header{left:var(--bh-rail-w,100px)!important;width:auto!important;right:0!important;transition:left .25s ease}'
