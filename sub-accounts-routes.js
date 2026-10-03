@@ -110,7 +110,7 @@ function setupSubAccountsRoutes(app, pool, authenticateToken, sendEmail) {
     <p class="signoff">L'équipe Boostinghost</p>
   </div>
   <div class="footer-bar">
-    <p style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.65);letter-spacing:1.5px;margin-bottom:8px;">BOOSTINGHOST</p>
+    <p style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.65);letter-spacing:-0.2px;margin-bottom:8px;">Boostinghost</p>
     <p>© ${new Date().getFullYear()} Boostinghost · Tous droits réservés</p>
     <p><a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
   </div>

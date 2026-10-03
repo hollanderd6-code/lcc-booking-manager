@@ -198,8 +198,8 @@ function buildWeeklyEmailHtml(firstName, rows, weekLabel) {
     <!-- Header -->
     <tr><td style="background:#1A7A5E;padding:28px 32px;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:white;">B</div>
-        <span style="color:white;font-size:18px;font-weight:700;margin-left:8px;">Boostinghost</span>
+        <img src="${(process.env.APP_URL || 'https://www.boostinghost.fr').replace(/\/$/, '')}/img/brand/email/logo-email.png" alt="Boostinghost" width="36" height="36" style="display:inline-block;vertical-align:middle;border:0;border-radius:8px;width:36px;height:36px;">
+        <span style="color:white;font-size:18px;font-weight:700;margin-left:8px;vertical-align:middle;">Boostinghost</span>
       </div>
       <h1 style="color:white;font-size:22px;font-weight:400;margin:16px 0 4px;font-family:Georgia,serif;">
         📊 Pricing dynamique — <em>${weekLabel}</em>

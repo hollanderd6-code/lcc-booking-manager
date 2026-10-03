@@ -6,12 +6,12 @@ const T = require('./emailTokens');
 // Dedicated email asset — decoupled from app icon lifecycle (android/ios untouched).
 function logoHtml() {
   const src = process.env.EMAIL_LOGO_URL ||
-    (process.env.APP_URL ? `${process.env.APP_URL}/img/brand/email/logo-email.png` : null);
+    `${(process.env.APP_URL || 'https://www.boostinghost.fr').replace(/\/$/, '')}/img/brand/email/logo-email.png`;
   if (src) {
     return `<img src="${src}" alt="Boostinghost" width="48" height="48" style="display:block;border:0;border-radius:10px;width:48px;height:48px;">`;
   }
   // Text fallback: styled monogram
-  return `<span style="display:inline-block;width:48px;height:48px;line-height:48px;text-align:center;background-color:${T.vert800};border-radius:10px;font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:bold;color:${T.ivoire};">B</span>`;
+  return `<span style="display:inline-block;width:48px;height:48px;line-height:48px;text-align:center;background-color:${T.vert800};border-radius:10px;font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:bold;color:${T.ivoire};">BH</span>`;
 }
 
 /**
