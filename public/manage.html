@@ -36,9 +36,9 @@
       border:1px solid rgba(255,255,255,.5);
       box-shadow:inset 0 1.5px 1px rgba(255,255,255,.95),inset 0 -1.5px 1px rgba(255,255,255,.45),0 14px 38px rgba(20,32,27,.14);
       transition:width .25s ease}
-    .gx-logo{display:flex;align-items:center;padding:2px 8px 22px;min-height:60px}
-    .gx-logo .full{width:148px;height:38px;display:block}
-    .gx-logo .mono{width:36px;height:36px;display:none;margin-left:-2px}
+    .gx-logo{display:flex;align-items:center;gap:10px;padding:2px 8px 22px;min-height:60px}
+    .gx-logo .mono{width:36px;height:36px;flex:0 0 36px;border-radius:10px;display:block;margin-left:-2px}
+    .gx-logo .full{font-size:16.5px;font-weight:700;letter-spacing:-0.02em;color:#14201B;white-space:nowrap}
     .gx-item{position:relative;display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:14px;color:#3E4A44;font-size:14.5px;font-weight:500;border:0;background:transparent;font-family:inherit;cursor:pointer;text-align:left;width:100%}
     .gx-item:hover{background:rgba(0,0,0,.05);color:#14201B}
     .gx-item.is-active{background:rgba(0,0,0,.07);color:#14201B;font-weight:600}
@@ -57,8 +57,7 @@
 
     body.gx-collapsed .gx-nav{width:68px}
     body.gx-collapsed .gx-logo .full{display:none}
-    body.gx-collapsed .gx-logo .mono{display:block}
-    body.gx-collapsed .gx-item .lbl,body.gx-collapsed .gx-account .txt{display:none}
+        body.gx-collapsed .gx-item .lbl,body.gx-collapsed .gx-account .txt{display:none}
     body.gx-collapsed .gx-badge{position:absolute;top:6px;left:26px}
 
     /* Main */
@@ -147,8 +146,8 @@
     <aside class="gx-aside">
       <nav class="gx-nav" aria-label="Navigation principale">
         <a class="gx-logo" href="/app.html">
-          <img class="full" src="/img/brand/verrou/verrou-sidebar.svg" alt="Boostinghost — Smart Property Manager">
-          <img class="mono" src="/img/brand/web/mono-rond.svg" alt="Boostinghost">
+          <img class="mono" src="/img/brand/bh-icon-256.png" alt="Boostinghost">
+          <span class="full">Boostinghost</span>
         </a>
         <a class="gx-item" href="/app.html" title="Aujourd'hui">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M7 14h10M7 18h6"/></svg>
