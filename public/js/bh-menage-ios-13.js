@@ -47,6 +47,7 @@
     return {
       propertyId: pick(a, 'propertyId', 'property_id') != null ? String(pick(a, 'propertyId', 'property_id')) : null,
       reservationKey: pick(a, 'reservationKey', 'reservation_key') || null,
+      cleanerId: pick(a, 'cleanerId', 'cleaner_id') != null ? String(pick(a, 'cleanerId', 'cleaner_id')) : null,
       cleanerName: pick(a, 'cleanerName', 'cleaner_name') || null,
       cleanerPhone: pick(a, 'cleanerPhone', 'cleaner_phone') || null,
       propertyName: pick(a, 'propertyName', 'property_name') || null
@@ -472,13 +473,75 @@
       document.body.appendChild(ov);
     }
 
+    /* ── « + » : assigner les départs à venir / ajouter un intervenant (mêmes routes que cleaning.html) ── */
+    function openAssign() {
+      var sh = U.openSheet({ head: { title: 'Assigner les ménages', kicker: '30 prochains jours', right: '<button class="bhp-textbtn" data-act="sheet-close">OK</button>' } });
+      sh.body.innerHTML = '<div class="bhp-stack">' + card(U.loadingRow()) + '</div>';
+      var today = ymd(new Date()), max = ymd(addDays(new Date(), 30));
+      Promise.all([
+        U.api('GET', '/api/reservations'), U.api('GET', '/api/cleaning/assignments').catch(function () { return {}; }),
+        U.api('GET', '/api/properties').catch(function () { return {}; })
+      ]).then(function (r) {
+        var names = {}; ((r[2].properties || (Array.isArray(r[2]) ? r[2] : [])).map(U.normProperty)).forEach(function (p) { names[p.id] = U.dname(p); });
+        var cur = {}; (r[1].assignments || (Array.isArray(r[1]) ? r[1] : [])).map(normAssign).forEach(function (a) { if (a.reservationKey) cur[a.reservationKey] = a.cleanerId; });
+        var deps = (r[0].reservations || (Array.isArray(r[0]) ? r[0] : [])).map(function (x) {
+          var pid = pick(x, 'propertyId', 'property_id'), st = String(pick(x, 'startDate', 'start_date', 'start') || '').slice(0, 10), en = String(pick(x, 'endDate', 'end_date', 'end') || '').slice(0, 10);
+          var type = String(pick(x, 'type', 'source', 'platform') || '');
+          if (pid == null || !st || !en || U.bool(pick(x, 'isBlock', 'is_block')) === true || /^block(ed)?$/i.test(type) || /cancel/i.test(String(x.status || ''))) return null;
+          return { key: pid + '_' + st + '_' + en, pid: String(pid), end: en, guest: x.guestName || x.guest_name || 'Voyageur', name: names[String(pid)] || x.propertyName || String(pid) };
+        }).filter(function (d) { return d && d.end >= today && d.end <= max; }).sort(function (a, b) { return a.end < b.end ? -1 : a.end > b.end ? 1 : 0; });
+        var seen = {}; deps = deps.filter(function (d) { if (seen[d.key]) return false; seen[d.key] = 1; return true; });
+        var active = S.cleaners.filter(function (c) { return c.isActive; });
+        if (!active.length) { sh.body.innerHTML = '<div class="bhp-stack"><div class="bhm-empty">' + ic('user') + '<span>Ajoutez d\'abord un intervenant.</span><button class="bhm-call" data-x="new">Ajouter un intervenant</button></div></div>'; return; }
+        if (!deps.length) { sh.body.innerHTML = '<div class="bhp-stack"><div class="bhm-empty">' + ic('calendar') + '<span>Aucun départ dans les 30 prochains jours.</span></div></div>'; return; }
+        var opts = function (sel) { return '<option value="">Non assigné</option>' + active.map(function (c) { return '<option value="' + esc(c.id) + '"' + (c.id === sel ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join(''); };
+        var by = {}; deps.forEach(function (d) { (by[d.end] = by[d.end] || []).push(d); });
+        sh.body.innerHTML = '<div class="bhp-stack"><p class="bhp-note" style="font-size:14px">Choisissez qui fait le ménage après chaque départ. C\'est enregistré tout de suite.</p>' + Object.keys(by).map(function (day) {
+          return '<div class="bhp-group">' + U.label(dayLabel(day)) + card(by[day].map(function (d) {
+            return '<div class="bhp-row bhp-kv"><div class="bhm-cl__t"><div class="bhm-cl__n">' + esc(d.name) + '</div><div class="bhp-meta">Départ de ' + esc(d.guest) + '</div></div>'
+              + '<select class="bhp-input bhp-select" data-key="' + esc(d.key) + '" data-pid="' + esc(d.pid) + '">' + opts(cur[d.key] ? String(cur[d.key]) : '') + '</select></div>';
+          }).join('')) + '</div>';
+        }).join('') + '</div>';
+      }).catch(function (e) { sh.body.innerHTML = '<div class="bhp-stack">' + U.warn(e.message, true) + '</div>'; });
+      sh.body.addEventListener('change', function (e) {
+        var t = e.target; if (!t.dataset.key) return;
+        t.disabled = true;
+        U.api('POST', '/api/cleaning/assignments', { reservationKey: t.dataset.key, propertyId: t.dataset.pid, cleanerId: t.value || null })
+          .then(function () { t.style.borderColor = 'rgba(46,139,98,.6)'; })
+          .catch(function (er) { U.alertMsg('Erreur', er.message); }).then(function () { t.disabled = false; });
+      });
+      sh.body.addEventListener('click', function (e) { if (e.target.closest('[data-x="new"]')) { sh.close(); openNewCleaner(); } });
+      var prevClose = sh.close; sh.close = function () { prevClose(); load(); };
+    }
+    function openNewCleaner() {
+      var sh = U.openSheet({ head: { title: 'Nouvel intervenant', left: '<button class="bhp-textbtn bhp-textbtn--vert" data-act="sheet-close">Annuler</button>', right: '<button class="bhp-textbtn bhp-textbtn--vert" style="font-weight:600" data-act="go">Ajouter</button>' } });
+      sh.body.innerHTML = '<div class="bhp-stack">' + card('<div class="bhp-row"><input class="bhp-input" data-f="name" placeholder="Nom (obligatoire)"></div>'
+        + '<div class="bhp-row"><input class="bhp-input" data-f="phone" type="tel" placeholder="Téléphone"></div><div class="bhp-row"><input class="bhp-input" data-f="email" type="email" placeholder="Email"></div>'
+        + '<div class="bhp-row"><textarea class="bhp-input bhp-ta" data-f="notes" rows="2" placeholder="Notes"></textarea></div>') + '<p class="bhp-note">L\'intervenant reçoit un code PIN pour remplir ses checklists de ménage.</p></div>';
+      sh.el.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-act="go"]') || sh.locked) return;
+        var v = function (f) { return sh.body.querySelector('[data-f="' + f + '"]').value.trim(); };
+        if (!v('name')) { U.alertMsg('Nom requis', 'Indiquez le nom de l\'intervenant.'); return; }
+        sh.locked = true;
+        U.api('POST', '/api/cleaners', { name: v('name'), phone: v('phone') || null, email: v('email') || null, notes: v('notes') || null, isActive: true }).then(function () { sh.locked = false; sh.close(); load(); })
+          .catch(function (er) { sh.locked = false; U.alertMsg('Erreur', er.message); });
+      });
+    }
+
     /* ── Délégation ── */
     root.addEventListener('click', function (e) {
       if (e.target.closest('[data-stop]')) return;
       var el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
       var act = el.dataset.act;
       if (act === 'back') { location.href = '/manage.html'; return; }
-      if (act === 'add') { location.href = '/cleaning.html'; return; }
+      if (act === 'add') {
+        if (!canManage) return;
+        U.openMenu(el, [
+          { label: 'Assigner un ménage', icon: 'calendar', onClick: openAssign },
+          { label: 'Ajouter un intervenant', icon: 'user', onClick: openNewCleaner }
+        ]);
+        return;
+      }
       if (act === 'retry') return load();
       if (act === 'period') { S.period = el.dataset.v; history.replaceState(null, '', location.pathname + (S.period === 'today' ? '' : '?vue=' + S.period)); render(); window.scrollTo(0, 0); return; }
       if (act === 'hfilter') { var v = el.dataset.v || null; S.histFilter = (v === S.histFilter) ? null : v; render(); return; }
