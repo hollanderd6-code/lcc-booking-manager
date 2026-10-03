@@ -123,6 +123,7 @@
     ['Livrets d\u2019accueil', '/livrets.html', 'fa-book-open'],
     ['Propriétaires', '/proprietaires.html', 'fa-users'],
     ['Serrures connectées', '/serrures.html', 'fa-lock'],
+    ['Reporting', '/revenus.html', 'fa-chart-bar'],
     ['Mon compte', '/settings-account.html', 'fa-user-cog']
   ];
 
