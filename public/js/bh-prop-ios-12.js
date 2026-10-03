@@ -117,7 +117,8 @@
     var init = { method: method, headers: {} };
     if (typeof FormData !== 'undefined' && body instanceof FormData) init.body = body;
     else if (body !== undefined) { init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(body); }
-    return fetch(url, init).catch(function () { throw new Error('Erreur réseau. Vérifiez votre connexion.'); })
+    var f = (typeof window.authFetch === 'function' && !(typeof FormData !== 'undefined' && body instanceof FormData)) ? window.authFetch : fetch;
+    return f(url, init).catch(function () { throw new Error('Erreur réseau. Vérifiez votre connexion.'); })
       .then(function (res) {
         return res.text().then(function (txt) {
           var data = null;
@@ -500,7 +501,21 @@
   }
 
   /* ════════════════ Chargements communs ════════════════ */
-  function fetchProperty(id) { return api('GET', '/api/properties/' + encodeURIComponent(id)).then(normProperty); }
+  function findInList(id) {
+    return api('GET', '/api/properties').then(function (r) {
+      var arr = r.properties || (Array.isArray(r) ? r : []);
+      var raw = arr.filter(function (x) { return String(x.id) === String(id) || String(x._id) === String(id); })[0];
+      if (!raw) { var e = new Error('Logement introuvable.'); e.status = 404; throw e; }
+      return normProperty(raw);
+    });
+  }
+  function fetchProperty(id) {
+    return api('GET', '/api/properties/' + encodeURIComponent(id)).then(function (r) {
+      var p = normProperty(r);
+      if (!p.id) throw new Error('vide');
+      return p;
+    }).catch(function () { return findInList(id); });
+  }
   var clientsPromise = null;
   function loadClients() {
     if (!clientsPromise) clientsPromise = api('GET', '/api/owner-clients').then(function (r) { return r.clients || []; }).catch(function () { return []; });
