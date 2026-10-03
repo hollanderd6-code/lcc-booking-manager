@@ -692,7 +692,7 @@ setTimeout(function() {
   <link rel="stylesheet" href="/css/bh-today-v3.css?v=today15">
   <link rel="stylesheet" href="/css/bh-today-ios-05.css?v=today05">
   <link rel="stylesheet" href="/css/bh-calendar-v3.css?v=cal17c">
-  <link rel="stylesheet" href="/css/bh-calendar-ios-06.css?v=cal06">
+  <link rel="stylesheet" href="/css/bh-calendar-ios-06.css?v=cal07">
 
   <!-- CSS propre a cette page. -->
   <style id="v3-critical">
@@ -8101,6 +8101,8 @@ try {
       pc.style.gridColumn = '1';
       pc.style.gridRow    = gridRow;
       pc.className = 'bh-prop-cell';
+      // Fond opaque garanti : la colonne sticky passe au-dessus des barres au scroll.
+      pc.style.setProperty('background', '#FFFFFF', 'important');
       pc.dataset.propId = String(prop.id);
       pc.innerHTML = '<span style="font-size:14px;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+prop.name+'">'+prop.name+'</span>';
 // clic logement supprimé
@@ -8123,6 +8125,10 @@ try {
         dcell.dataset.propertyId = String(prop.id);
         dcell.dataset.propId     = String(prop.id);
         dcell.dataset.colIdx     = String(di2);
+        // bh-theme-v3.css force .calendar-cell{height:44px!important} (ancienne
+        // grille) : la cellule ne couvrait que le haut de la ligne de 64px et le
+        // prix centré apparaissait décalé vers le haut par rapport aux barres.
+        dcell.style.setProperty('height', 'auto', 'important');
 
         if (inMonth2 && !compactMode) {
           var priceEl = div('position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;pointer-events:none;color:'+(isWknd2?'#B7791F':'#0E3B2E')+';');

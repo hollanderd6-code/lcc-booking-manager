@@ -207,9 +207,9 @@ body.bh-cal-mode main.main-content {
   background: rgba(255, 255, 255, 0.45) !important;
 }
 
-/* Corner cell and property column: translucent */
+/* Property column: opaque — elle est sticky et les barres glissent dessous */
 #bhCalRoot .bh-prop-cell {
-  background: rgba(255, 255, 255, 0.68) !important;
+  background: #FFFFFF !important;
   font-family: 'DM Sans', system-ui, sans-serif !important;
 }
 
