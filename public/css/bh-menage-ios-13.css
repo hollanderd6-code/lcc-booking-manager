@@ -1,0 +1,71 @@
+/* bh-menage-ios-13.css — Gestion › Ménage (CleaningView.swift). Complète bh-prop-ios-12.css */
+.bhm-nav__in { display: flex; align-items: flex-end; gap: 12px; max-width: 720px; margin: 0 auto; }
+.bhm-nav__t { flex: 1; min-width: 0; }
+.bhm-title { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -.032em; line-height: 1.1; color: var(--bhp-encre); }
+.bhm-nav__in2 { max-width: 720px; margin: 12px auto 0; }
+.bhm-seg { display: flex; padding: 2px; border-radius: 9px; background: rgba(118,118,128,.14); }
+.bhm-seg__b { flex: 1; border: 0; background: none; cursor: pointer; font-size: 13.5px; font-weight: 500; color: var(--bhp-encre); padding: 7px 6px; border-radius: 7px; transition: background .15s, box-shadow .15s; }
+.bhm-seg__b.is-on { background: #fff; font-weight: 600; box-shadow: 0 3px 8px rgba(0,0,0,.10), 0 0 0 .5px rgba(0,0,0,.04); }
+.bhm-chip { flex: none; border: 0; cursor: pointer; font-size: 13.5px; color: var(--bhp-encre); padding: 7px 13px; border-radius: 999px; white-space: nowrap;
+  background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.38)); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 1px rgba(255,255,255,.5); }
+.bhm-chip.is-on { background: var(--bhp-vert); color: #fff; font-weight: 600; box-shadow: none; }
+.bhm-stack { gap: 14px; padding-top: 16px; }
+.bhm-stack > .bhp-label { margin-top: 6px; }
+.bhm-count { margin: 0 2px; font-size: 14.5px; color: var(--bhp-att); }
+
+/* Carte d'assignation */
+.bhm-ac { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.bhm-ac__top { display: flex; align-items: flex-start; gap: 8px; }
+.bhm-ac__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.bhm-ac__n { font-size: 18px; font-weight: 600; color: var(--bhp-encre); }
+.bhm-ac__r { display: flex; align-items: center; gap: 6px; flex: none; }
+.bhm-ac__st { font-size: 13.5px; }
+.bhm-badge { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; color: #fff; padding: 4px 8px; border-radius: 999px; }
+.bhm-tight { position: relative; border-radius: 22px; overflow: hidden; background: rgba(255,222,210,.9); cursor: pointer; padding-left: 4px; }
+.bhm-tight.is-ok { background: rgba(46,139,98,.13); }
+.bhm-tight__rail { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.bhm-gauge { display: flex; align-items: center; gap: 8px; }
+.bhm-gauge__l, .bhm-gauge__r { font-size: 13px; color: var(--bhp-att); min-width: 38px; }
+.bhm-gauge__l { text-align: right; }
+.bhm-gauge__bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(94,107,99,.15); overflow: hidden; }
+.bhm-gauge__bar i { display: block; height: 100%; border-radius: 3px; }
+.bhm-call { display: inline-flex; align-items: center; gap: 6px; border: 0; cursor: pointer; text-decoration: none; background: var(--bhp-vert); color: #fff !important; font-size: 14px; font-weight: 600; padding: 9px 14px; border-radius: 999px; }
+.bhm-call .bhp-ic { font-size: 14px; }
+.bhm-call[disabled] { opacity: .6; }
+.bhm-phonechip { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; background: rgba(94,107,99,.10); color: var(--bhp-att) !important; font-size: 13px; font-weight: 500; padding: 6px 10px; border-radius: 999px; }
+.bhm-phonechip .bhp-ic { font-size: 13px; }
+.bhm-vc { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
+.bhm-vc__acts { display: flex; gap: 10px; }
+.bhm-reject { color: var(--bhp-terra); border-radius: 999px; font-size: 14.5px; }
+
+/* Intervenants / historique */
+.bhm-cl, .bhm-hr { display: flex; align-items: center; gap: 12px; }
+.bhm-hr { cursor: pointer; }
+.bhm-hr:active { background: rgba(255,255,255,.35); }
+.bhm-ini { width: 40px; height: 40px; border-radius: 50%; background: #DCE8E1; color: var(--bhp-vert); font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex: none; }
+.bhm-cl__t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bhm-cl__n { font-size: 15.5px; font-weight: 500; color: var(--bhp-encre); }
+.bhm-icbtn { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--bhp-vert); background: var(--bhp-menthe); font-size: 16px; flex: none; }
+.bhm-icbtn svg { width: 1em; height: 1em; }
+.bhm-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 48px 20px; color: var(--bhp-att); font-size: 15px; text-align: center; }
+.bhm-empty > .bhp-ic { font-size: 36px; }
+
+/* Fiche ménage */
+.bhm-task { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; line-height: 1.4; color: var(--bhp-encre); }
+.bhm-task.is-no { color: var(--bhp-att); }
+.bhm-ok { font-size: 18px; color: var(--bhp-occ); margin-top: 1px; }
+.bhm-box { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid rgba(94,107,99,.45); flex: none; margin-top: 1px; }
+.bhm-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.bhm-photos--s { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); margin-top: 10px; }
+.bhm-ph { border: 0; padding: 0; cursor: zoom-in; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: rgba(255,255,255,.5); display: block; }
+.bhm-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bhm-sig { background: #fff; border-radius: 12px; padding: 10px; display: flex; justify-content: center; }
+.bhm-sig img { max-width: 100%; max-height: 140px; display: block; }
+.bhm-lb { position: fixed; inset: 0; z-index: 10100; background: rgba(10,14,12,.92); display: flex; align-items: center; justify-content: center; }
+.bhm-lb img { max-width: 94vw; max-height: 86vh; object-fit: contain; border-radius: 6px; }
+.bhm-lb button { position: absolute; border: 0; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.16); color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+.bhm-lb button svg { width: 1em; height: 1em; }
+.bhm-lb__x { top: calc(16px + env(safe-area-inset-top,0px)); right: 16px; }
+.bhm-lb__p { left: 16px; top: 50%; margin-top: -22px; }
+.bhm-lb__n { right: 16px; top: 50%; margin-top: -22px; }
+.bhm-lb__c { position: absolute; bottom: calc(20px + env(safe-area-inset-bottom,0px)); color: rgba(255,255,255,.8); font-size: 13px; font-family: var(--bhp-font); }

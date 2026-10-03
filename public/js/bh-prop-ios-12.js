@@ -354,6 +354,8 @@
     chart: S('<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>'),
     envOpen: S('<path d="M21.5 10v9.5a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2V10l9.5-7z"/><path d="M21.5 10 12 16 2.5 10"/>'),
     xsmall: S('<path d="M17 7 7 17M7 7l10 10"/>'),
+    phone: S('<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>'),
+    doc: S('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>'),
     wifiOff: S('<path d="M2 2l20 20M8.5 16a5 5 0 0 1 7 0M5 12.5a10 10 0 0 1 4-2.4M1.5 9a15 15 0 0 1 4.3-2.8M19 12.5a10 10 0 0 0-2-1.5M22.5 9a15 15 0 0 0-11-4"/>')
   };
   function ic(name, cls) { return '<span class="bhp-ic ' + (cls || '') + '">' + (I[name] || '') + '</span>'; }
@@ -1705,4 +1707,11 @@
   };
 
   BHP._internals = { normProperty: normProperty, fmtTime: fmtTime, fmtAmount: fmtAmount };
+  BHP.ui = {
+    esc: esc, pick: pick, num: num, int: int, bool: bool, str: str, pl: pl, hhmm: hhmm, fmtTime: fmtTime, fmtAmount: fmtAmount,
+    api: api, dialog: dialog, alertMsg: alertMsg, confirmMsg: confirmMsg, openSheet: openSheet, openMenu: openMenu,
+    navHTML: navHTML, circleBtn: circleBtn, glassBtn: glassBtn, card: card, fh: fh, kv: kv, txtRow: txtRow, htmlRow: htmlRow,
+    emptyCard: emptyCard, loadingRow: loadingRow, label: label, warn: warn, okLine: okLine, pill: pill, ic: ic, I: I,
+    SPIN: SPIN, CHEV: CHEV, isSubAccount: isSubAccount, subPermissions: subPermissions, normProperty: normProperty, dname: dname
+  };
 })();
