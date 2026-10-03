@@ -187,7 +187,7 @@ describe('11A-07 ios-10.js bridge blocks preserved', () => {
   });
   test('11A-07-06 fallback href is /settings.html in renderBlock', () => {
     var fnIdx  = js10.indexOf('function renderBlock');
-    var fnBody = js10.slice(fnIdx, fnIdx + 500);
+    var fnBody = js10.slice(fnIdx, fnIdx + 600);
     expect(fnBody).toMatch(/\/settings\.html/);
   });
 });

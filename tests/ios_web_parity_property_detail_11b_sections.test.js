@@ -127,10 +127,10 @@ describe('11B-03 ios-10.js hub routing', () => {
   test('11B-03-07 sectionRoutes still has pricing→money', () => {
     expect(js10).toMatch(/pricing\s*:\s*['"]money['"]/);
   });
-  test('11B-03-08 exactly 2 fallback bridges ai and platforms go to settings.html', () => {
-    /* ai and platforms are NOT in sectionRoutes so they fall through to /settings.html */
-    expect(js10).not.toMatch(/ai\s*:\s*['"]ai['"]/);
-    expect(js10).not.toMatch(/platforms\s*:\s*['"]platforms['"]/);
+  test('11B-03-08 ai and platforms are in sectionRoutes (PROPERTIES_11C)', () => {
+    /* ai and platforms ARE in sectionRoutes — migrated in PROPERTIES_11C */
+    expect(js10).toMatch(/ai\s*:\s*['"]ai['"]/);
+    expect(js10).toMatch(/platforms\s*:\s*['"]platforms['"]/);
   });
 });
 
@@ -983,22 +983,19 @@ describe('11B-80 css key classes', () => {
    11B-90 · Hub — 7 migrated, 2 legacy bridges
    ═══════════════════════════════════════════════════════════════ */
 describe('11B-90 hub block count', () => {
-  test('11B-90-01 sectionRoutes has 7 entries', () => {
+  test('11B-90-01 sectionRoutes has 9 entries (PROPERTIES_11C)', () => {
     var routesIdx = js10.indexOf('var sectionRoutes =');
     var body      = js10.slice(routesIdx, routesIdx + 500);
     var entries   = body.match(/:\s*['"][a-z]+['"]/g) || [];
-    expect(entries.length).toBe(7);
+    expect(entries.length).toBe(9);
   });
-  test('11B-90-02 ai block still links settings.html (bridge)', () => {
-    var blockIdx = js10.indexOf("renderBlock('ai'");
-    var ctx      = js10.slice(blockIdx, blockIdx + 50);
-    /* ai not in sectionRoutes so href will be /settings.html */
-    expect(ctx).not.toMatch(/section=ai/);
+  test('11B-90-02 ai block in sectionRoutes (PROPERTIES_11C)', () => {
+    /* ai IS in sectionRoutes — no longer a bridge */
+    expect(js10).toMatch(/ai\s*:\s*['"]ai['"]/);
   });
-  test('11B-90-03 platforms block still links settings.html (bridge)', () => {
-    var blockIdx = js10.indexOf("renderBlock('platforms'");
-    var ctx      = js10.slice(blockIdx, blockIdx + 50);
-    expect(ctx).not.toMatch(/section=platforms/);
+  test('11B-90-03 platforms block in sectionRoutes (PROPERTIES_11C)', () => {
+    /* platforms IS in sectionRoutes — no longer a bridge */
+    expect(js10).toMatch(/platforms\s*:\s*['"]platforms['"]/);
   });
   test('11B-90-04 access block has livret badge', () => {
     expect(js10).toMatch(/renderBlock\s*\(\s*['"]access['"]/);
@@ -1033,8 +1030,8 @@ describe('11B-91 safety', () => {
     expect(fs.existsSync(serverPath)).toBe(true);
     /* If server.js was modified it would appear in git status — we just confirm file exists */
   });
-  test('11B-91-02 iCal section still links settings.html', () => {
-    expect(js10).toMatch(/renderIcal[\s\S]{0,800}?settings\.html/);
+  test('11B-91-02 iCal section links to platforms section (PROPERTIES_11C)', () => {
+    expect(js10).toMatch(/renderIcal[\s\S]{0,800}?section=platforms/);
   });
   test('11B-91-03 settings.html still exists', () => {
     expect(fs.existsSync(path.join(__dirname, '../public/settings.html'))).toBe(true);

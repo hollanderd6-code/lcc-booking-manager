@@ -676,10 +676,10 @@ describe('10-22 JS iCal section', () => {
   test('10-22-09 "Modifier les flux iCal" shown when non-empty', () => {
     expect(js).toMatch(/Modifier les flux iCal/);
   });
-  test('10-22-10 action row links to /settings.html', () => {
+  test('10-22-10 action row links to platforms section (PROPERTIES_11C)', () => {
     var fnStart = js.indexOf('function renderIcal');
     var fnBody = js.slice(fnStart, fnStart + 1200);
-    expect(fnBody).toMatch(/\/settings\.html/);
+    expect(fnBody).toMatch(/section=platforms/);
   });
 });
 
@@ -1024,7 +1024,7 @@ describe('10-34 CSS section label', () => {
 describe('10-35 JS block bridge documentation', () => {
   test('10-35-01 renderBlock links to /settings.html', () => {
     var fnStart = js.indexOf('function renderBlock');
-    var fnBody  = js.slice(fnStart, fnStart + 500);
+    var fnBody  = js.slice(fnStart, fnStart + 600);
     expect(fnBody).toMatch(/\/settings\.html/);
   });
   test('10-35-02 bridge comment mentions PROPERTIES_11', () => {

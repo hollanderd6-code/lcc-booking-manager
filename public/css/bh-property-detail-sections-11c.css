@@ -1,0 +1,428 @@
+/* ============================================================
+   BH-PROPERTY-DETAIL-SECTIONS-11C — AI & Platforms sections
+   Scope: body[data-page="property"] only.
+   Loaded after bh-property-detail-sections-11b.css.
+   Introduced by PROPERTIES_11C.
+   ============================================================ */
+
+/* ─────────────────────────────────────────────────────────────
+   1. PLATFORM BADGE
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-platform-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   2. MARKUP ROW
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-markup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(20, 32, 27, 0.06);
+}
+
+body[data-page="property"] .prop-markup-row:first-child {
+  padding-top: 0;
+}
+
+body[data-page="property"] .prop-markup-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+body[data-page="property"] .prop-markup-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #14201B;
+  flex: 1;
+}
+
+body[data-page="property"] .prop-markup-pct {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #14201B;
+  text-align: right;
+}
+
+body[data-page="property"] .prop-markup-input {
+  width: 80px;
+  height: 38px;
+  text-align: right;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 0 10px;
+  border: 1.5px solid rgba(20, 32, 27, 0.14);
+  border-radius: 10px;
+  background: #fff;
+  color: #14201B;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+body[data-page="property"] .prop-markup-input::-webkit-inner-spin-button,
+body[data-page="property"] .prop-markup-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   3. FACT ROW
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-fact-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(20, 32, 27, 0.06);
+}
+
+body[data-page="property"] .prop-fact-row:first-child {
+  padding-top: 0;
+}
+
+body[data-page="property"] .prop-fact-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+body[data-page="property"] .prop-fact-answer-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+body[data-page="property"] .prop-fact-answer-badge--true {
+  background: rgba(46, 139, 98, 0.13);
+  color: #1F6B4C;
+}
+
+body[data-page="property"] .prop-fact-answer-badge--false {
+  background: rgba(168, 69, 42, 0.10);
+  color: #A8452A;
+}
+
+body[data-page="property"] .prop-fact-content {
+  flex: 1;
+}
+
+body[data-page="property"] .prop-fact-question {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #14201B;
+  line-height: 1.35;
+}
+
+body[data-page="property"] .prop-fact-detail {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  color: #5E6B63;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+body[data-page="property"] .prop-fact-delete-btn {
+  background: none;
+  border: none;
+  color: #A8452A;
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: 6px;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   4. QUICK REPLY ROW
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-qr-row {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(20, 32, 27, 0.06);
+}
+
+body[data-page="property"] .prop-qr-row:first-child {
+  padding-top: 0;
+}
+
+body[data-page="property"] .prop-qr-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+body[data-page="property"] .prop-qr-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5E6B63;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 3px;
+}
+
+body[data-page="property"] .prop-qr-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: #14201B;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   5. iCal COLOR DOT
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-ical-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   6. DIFFUSION STATUS
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-diffusion-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(20, 32, 27, 0.06);
+}
+
+body[data-page="property"] .prop-diffusion-status-row:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+body[data-page="property"] .prop-diffusion-status-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #14201B;
+}
+
+body[data-page="property"] .prop-diffusion-status-badge {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+body[data-page="property"] .prop-diffusion-status-badge--connected {
+  background: rgba(46, 139, 98, 0.13);
+  color: #1F6B4C;
+}
+
+body[data-page="property"] .prop-diffusion-status-badge--disconnected {
+  background: rgba(20, 32, 27, 0.07);
+  color: #5E6B63;
+}
+
+body[data-page="property"] .prop-diffusion-connect-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 46px;
+  background: #0E3B2E;
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  margin-top: 10px;
+  transition: opacity 0.15s;
+}
+
+body[data-page="property"] .prop-diffusion-connect-btn:active {
+  opacity: 0.78;
+}
+
+body[data-page="property"] .prop-diffusion-disconnect-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 46px;
+  background: rgba(168, 69, 42, 0.10);
+  color: #A8452A;
+  border: none;
+  border-radius: 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  margin-top: 10px;
+  transition: opacity 0.15s;
+}
+
+body[data-page="property"] .prop-diffusion-disconnect-btn:active {
+  opacity: 0.78;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   7. ADD FACT FORM
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-fact-add-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(20, 32, 27, 0.06);
+}
+
+body[data-page="property"] .prop-fact-answer-select {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border: 1.5px solid rgba(20, 32, 27, 0.14);
+  border-radius: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: #14201B;
+  background: #fff;
+  outline: none;
+}
+
+body[data-page="property"] .prop-fact-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 44px;
+  background: rgba(14, 59, 46, 0.08);
+  color: #0E3B2E;
+  border: none;
+  border-radius: 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body[data-page="property"] .prop-fact-add-btn:active {
+  opacity: 0.75;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   8. QUICK REPLY EDIT ITEM
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-qr-edit-item {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(20, 32, 27, 0.06);
+}
+
+body[data-page="property"] .prop-qr-edit-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+body[data-page="property"] .prop-qr-edit-item:first-child {
+  padding-top: 0;
+}
+
+body[data-page="property"] .prop-qr-edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+body[data-page="property"] .prop-qr-edit-num {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5E6B63;
+  text-transform: uppercase;
+}
+
+body[data-page="property"] .prop-qr-char-hint {
+  font-size: 11.5px;
+  color: #8FA99A;
+  margin-top: 3px;
+  text-align: right;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   9. ADD iCAL FORM & SYNC
+   ───────────────────────────────────────────────────────────── */
+
+body[data-page="property"] .prop-ical-add-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(20, 32, 27, 0.06);
+}
+
+body[data-page="property"] .prop-ical-sync-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  background: rgba(14, 59, 46, 0.08);
+  color: #0E3B2E;
+  border: none;
+  border-radius: 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 10px;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+
+body[data-page="property"] .prop-ical-sync-btn:active {
+  opacity: 0.75;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   10. DESKTOP RESPONSIVE
+   ───────────────────────────────────────────────────────────── */
+
+@media (min-width: 1100px) {
+  body[data-page="property"] .prop-section-view {
+    max-width: 900px;
+  }
+}

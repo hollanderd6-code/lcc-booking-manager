@@ -2,8 +2,8 @@
    Fetches /api/properties/:id + /api/property-groups +
    /api/properties/diffusion + /api/welcome-books/by-property/:id
    then renders livret card, 9 blocks, diffusion, iCal, actions.
-   Bridge: block rows link to /settings.html until PROPERTIES_11
-   introduces per-section editors. */
+   All 9 blocks are native sections (PROPERTIES_11A/11B/11C).
+   /settings.html fallback retained for any unknown future keys. */
 (function () {
   'use strict';
 
@@ -149,11 +149,13 @@
       upsell:       'upsell',
       access:       'access',
       neighborhood: 'neighborhood',
-      amenities:    'amenities'
+      amenities:    'amenities',
+      ai:           'ai',
+      platforms:    'platforms'
     };
     var href = sectionRoutes[iconKey]
       ? '/property.html?id=' + propertyId + '&section=' + sectionRoutes[iconKey]
-      : '/settings.html'; /* Bridge: ai, platforms — PROPERTIES_11C+ */
+      : '/settings.html'; /* fallback for unknown keys */
 
     var badgesHtml = '';
     if (status !== 'inactive') {
@@ -211,14 +213,15 @@
     var isConnected = !!(p.channexEnabled && p.channexPropertyId);
     var html = '<div class="prop-detail-card">';
 
+    var platHref = '/property.html?id=' + propertyId + '&section=platforms';
     if (!isConnected) {
-      html += '<a href="/settings.html" class="prop-diffusion-row">'
+      html += '<a href="' + platHref + '" class="prop-diffusion-row">'
         + '<div class="prop-block-icon">' + ICONS.connect + '</div>'
         + '<span class="prop-diffusion-label">Connecter à la diffusion</span>'
         + '<div class="prop-block-chevron">' + chevronSvg() + '</div>'
         + '</a>';
     } else {
-      html += '<a href="/settings.html" class="prop-diffusion-row">'
+      html += '<a href="' + platHref + '" class="prop-diffusion-row">'
         + '<div class="prop-block-icon">' + ICONS.connect + '</div>'
         + '<span class="prop-diffusion-label">Gérer la diffusion</span>'
         + '<div class="prop-block-chevron">' + chevronSvg() + '</div>'
@@ -248,8 +251,9 @@
         + '</div>';
     });
 
-    var actionLabel = icalUrls.length > 0 ? 'Modifier les flux iCal' : 'Ajouter un flux iCal';
-    html += '<a href="/settings.html" class="prop-block-row">'
+    var actionLabel  = icalUrls.length > 0 ? 'Modifier les flux iCal' : 'Ajouter un flux iCal';
+    var icalHref     = '/property.html?id=' + propertyId + '&section=platforms';
+    html += '<a href="' + icalHref + '" class="prop-block-row">'
       + '<div class="prop-block-text"><div class="prop-block-name">' + escHtml(actionLabel) + '</div></div>'
       + '<div class="prop-block-chevron">' + chevronSvg() + '</div>'
       + '</a>';
@@ -417,12 +421,13 @@
     var disconnectBtn = document.getElementById('propDetDisconnectBtn');
     if (disconnectBtn) {
       disconnectBtn.addEventListener('click', function () {
-        /* Bridge: Channex disconnect lives in settings.html for now */
-        window.location.href = '/settings.html';
+        window.location.href = '/property.html?id=' + p.id + '&section=platforms';
       });
     }
 
-    window._propDetDisconnect = function () { window.location.href = '/settings.html'; };
+    window._propDetDisconnect = function () {
+      window.location.href = '/property.html?id=' + propertyId + '&section=platforms';
+    };
   }
 
   /* ── Main render ──────────────────────────────────────── */
@@ -529,6 +534,7 @@
       var is11a = (section === 'identity' || section === 'stay' || section === 'money');
       var is11b = (section === 'upsell' || section === 'access'
         || section === 'neighborhood' || section === 'amenities');
+      var is11c = (section === 'ai' || section === 'platforms');
       if (is11a) {
         if (window.BhPropSections && window.BhPropSections.mount) {
           window.BhPropSections.mount(propertyId, section, p);
@@ -538,6 +544,12 @@
       } else if (is11b) {
         if (window.BhPropSections11b && window.BhPropSections11b.mount) {
           window.BhPropSections11b.mount(propertyId, section, p);
+        } else {
+          showError('Erreur de chargement du module de section.');
+        }
+      } else if (is11c) {
+        if (window.BhPropSections11c && window.BhPropSections11c.mount) {
+          window.BhPropSections11c.mount(propertyId, section, p);
         } else {
           showError('Erreur de chargement du module de section.');
         }
@@ -559,7 +571,8 @@
       return;
     }
     var knownSections = ['identity', 'stay', 'money',
-      'upsell', 'access', 'neighborhood', 'amenities'];
+      'upsell', 'access', 'neighborhood', 'amenities',
+      'ai', 'platforms'];
     if (section && knownSections.indexOf(section) !== -1) {
       window._propDetRetry = function () { loadSection(section); };
       loadSection(section);
