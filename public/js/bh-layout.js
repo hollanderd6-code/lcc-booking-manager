@@ -96,14 +96,24 @@ function verrouHTML(chemin, largeur, hauteur, texte) {
     + 'background:url(' + chemin + ') no-repeat center/contain;'
     + 'border-radius:0;"></span>';
 }
-const LOGO_SIDEBAR = verrouHTML('/img/brand/verrou/verrou-sidebar.svg?v=f332a05e', 144, 38, 'Boostinghost — Smart Property Manager');
-const LOGO_MOBILE  = verrouHTML('/img/brand/verrou/verrou-mobile.svg?v=e25a7b6f',  186, 42, 'Boostinghost — Smart Property Manager');
-// mono-rond.svg et non mono-sidebar.svg : bh-v3-mobile.css force
-// border-radius:50% sur `.mobile-logo img:not(.bh-verrou)`. Le monogramme
-// carre (rx=9) s'y faisait rogner les quatre coins et son filet interieur
-// etait tranche. mono-rond est dessine comme un disque : plus de conflit.
-const LOGO_MONO_SRC = '/img/brand/web/mono-rond.svg?v=5e754f20';
-const LOGO_MONO    = `<img src="${LOGO_MONO_SRC}" alt="Boostinghost" width="34" height="34" style="display:block;flex-shrink:0;">`;
+// Nouveau logo (oct. 2026) : monogramme BH + « Boostinghost » en DM Sans, comme la barre
+// latérale des écrans Gestion et l'app iOS. Gardé dans un span.bh-verrou : c'est la classe
+// que les fonctions ci-dessous cherchent pour savoir si le logo est déjà posé, et que les
+// règles « .mobile-logo img:not(.bh-verrou) » épargnent. Styles inline !important : plusieurs
+// feuilles forcent taille et forme de « toute image du logo ».
+function lockupHTML(icon, font) {
+  return '<span class="bh-verrou bh-lockup" role="img" aria-label="Boostinghost" style="'
+    + 'display:inline-flex !important;align-items:center;gap:9px;width:auto !important;height:auto !important;'
+    + 'aspect-ratio:auto !important;background:none !important;max-width:100%;">'
+    + '<img src="/img/brand/bh-icon-256.png" alt="" style="width:' + icon + 'px !important;height:' + icon + 'px !important;'
+    + 'min-width:' + icon + 'px;border-radius:' + Math.round(icon * .27) + 'px !important;display:block;flex:none;object-fit:cover !important;">'
+    + '<span class="bh-lockup__t" style="font-family:\'DM Sans\',system-ui,-apple-system,sans-serif;font-weight:700;font-size:' + font + 'px;'
+    + 'letter-spacing:-.02em;color:#14201B;white-space:nowrap;text-transform:none;">Boostinghost</span></span>';
+}
+const LOGO_SIDEBAR = lockupHTML(34, 16.5);
+const LOGO_MOBILE  = lockupHTML(30, 16);
+const LOGO_MONO_SRC = '/img/brand/bh-icon-256.png';
+const LOGO_MONO    = `<img src="${LOGO_MONO_SRC}" alt="Boostinghost" width="34" height="34" style="display:block;flex-shrink:0;width:34px !important;height:34px !important;border-radius:9px !important;object-fit:cover !important;">`;
 
 function getSidebarHTML() {
   // ── Détecter le type de compte ──

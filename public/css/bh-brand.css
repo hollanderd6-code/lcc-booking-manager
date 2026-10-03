@@ -97,15 +97,19 @@ html.bh-lux[data-theme-v3="1"] .bh2-ca-subrow { color: rgba(242,234,218,.45) !im
    tres espace, avec la baseline calee sur la meme largeur.
    ============================================================================ */
 .bh-mot {
-  font-family: 'Marcellus', 'Instrument Serif', Georgia, serif;
-  font-size: 16px;
+  /* Nouveau logo (oct. 2026) : « Boostinghost » en DM Sans gras, comme la barre
+     latérale et l'app iOS — plus de capitales espacées en Marcellus. */
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  font-size: 17px;
   line-height: 1.1;
-  letter-spacing: .16em;
-  text-transform: uppercase;
+  letter-spacing: -.02em;
+  text-transform: none;
   color: var(--bh-encre);
   white-space: nowrap;
-  font-weight: 400;
+  font-weight: 700;
 }
+.bh-baseline { display: none !important; }
+.sur-vert .bh-lockup__t { color: var(--bh-ivoire) !important; }
 .bh-baseline {
   font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 7.5px;
@@ -365,11 +369,11 @@ html[data-theme-v3="1"] .sidebar .sidebar-logo > img {
 .logo-link .bh-mot,
 .brand .bh-mot,
 header .bh-mot {
-  font-size: 17px;
-  letter-spacing: .15em;
+  font-size: 18px;
+  letter-spacing: -.02em;
 }
 @media (max-width: 640px) {
   .logo-link .bh-mot,
   .brand .bh-mot,
-  header .bh-mot { font-size: 14px; letter-spacing: .12em; }
+  header .bh-mot { font-size: 17px; letter-spacing: -.02em; }
 }
