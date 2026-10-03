@@ -30,7 +30,21 @@
     + 'html.bh-rail-on #fabAddResa{display:none!important}'
     + '.bhr-rail{position:fixed;top:0;left:0;bottom:0;z-index:900;padding:16px 0 16px 16px;display:flex;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","DM Sans",system-ui,sans-serif}'
     + '}'
-    + '@media (max-width:' + (BP - 1) + 'px){.bhr-rail{display:none!important}}'
+    + '@media (max-width:' + (BP - 1) + 'px){.bhr-rail{display:none!important}'
+    // Téléphone : une seule barre d'onglets, la même pilule flottante que les écrans Gestion
+    + 'html.bh-tabs-on .mobile-tabs,html.bh-tabs-on .tab-bar{display:none!important}'
+    // Messages : le panneau plein écran avait une marge gauche de 20 px en plus de sa largeur 100vw
+    + 'html.bh-tabs-on.bh-tabs-on.bh-tabs-on body[data-page] .msgs-split{margin-left:0!important;margin-right:0!important}'
+    + '.bhr-tabs{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:1200;display:flex;gap:4px;padding:6px;border-radius:999px;'
+    + 'background:rgba(255,255,255,.78);backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);border:1px solid rgba(0,0,0,.07);box-shadow:0 6px 24px rgba(20,32,27,.16);'
+    + 'font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","DM Sans",system-ui,sans-serif}'
+    + '.bhr-tabs a{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;width:78px;padding:7px 0 6px;border-radius:999px;color:#5E6B63;font-size:10.5px;font-weight:500;text-decoration:none;-webkit-tap-highlight-color:transparent}'
+    + '.bhr-tabs a svg{width:22px;height:22px}'
+    + '.bhr-tabs a.is-active{background:rgba(0,0,0,.07);color:#14201B;font-weight:600}'
+    + '.bhr-tabs .gx-badge{position:absolute;top:2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#A8452A;color:#fff;font-size:10.5px;font-weight:700;display:none;align-items:center;justify-content:center;box-sizing:border-box}'
+    + '.bhr-tabs .gx-badge.on{display:flex}'
+    + '}'
+    + '@media (min-width:' + BP + 'px){.bhr-tabs{display:none!important}}'
     + '.bhr-rail a{text-decoration:none}'
     + '.bhr-rail .gx-nav{width:232px;display:flex;flex-direction:column;gap:4px;padding:20px 12px 14px;border-radius:30px;box-sizing:border-box;'
     + 'background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.55) 55%,rgba(255,255,255,.66));'
@@ -109,6 +123,7 @@
       applyWidth();
       window.dispatchEvent(new Event('resize'));
     });
+    mountTabs();
     // En-tête mobile : bh-layout.js lui pose « left:0 » en style inline !important,
     // que seule une autre écriture inline peut corriger. On la refait s'il revient.
     function fixHeader() {
@@ -121,12 +136,41 @@
     }
     fixHeader(); setTimeout(fixHeader, 300); setTimeout(fixHeader, 1200);
     window.addEventListener('resize', fixHeader);
-    // Calendrier et Aujourd'hui partagent app.html : l'onglet actif suit l'ancre.
-    window.addEventListener('hashchange', function () {
-      if (active !== 'today' && active !== 'calendar') return;
-      var cal = location.hash === '#calendarSection';
-      aside.querySelectorAll('.gx-item[href^="/app.html"]').forEach(function (a) { a.classList.toggle('is-active', (a.getAttribute('href') === '/app.html#calendarSection') === cal); });
+  }
+  function mountTabs() {
+    if (document.querySelector('.bhr-tabs')) return;
+    var nav = document.createElement('nav');
+    nav.className = 'bhr-tabs'; nav.setAttribute('aria-label', 'Onglets');
+    nav.innerHTML = [['today', '/app.html', 'Aujourd\'hui'], ['calendar', '/app.html#calendarSection', 'Calendrier'], ['messages', '/messages.html', 'Messages'], ['manage', '/manage.html', 'Gestion']].map(function (t) {
+      return '<a href="' + t[1] + '" data-tab="' + t[0] + '"' + (active === t[0] ? ' class="is-active" aria-current="page"' : '') + '>' + IC[t[0]] + '<span>' + t[2] + '</span>' + (t[0] === 'messages' ? '<span class="gx-badge" data-gx-unread></span>' : '') + '</a>';
+    }).join('');
+    document.body.appendChild(nav);
+    document.documentElement.classList.add('bh-tabs-on');
+  }
+
+  // Aujourd'hui ↔ Calendrier sur app.html : bascule sans recharger (showTodayMode / showCalendarMode
+  // d'app.html), et onglet actif tenu à jour (app.html appelle window.bhUpdateRailActive).
+  function syncActive() {
+    if (!/\/(app|index|dashboard)\.html$/.test(location.pathname) && location.pathname !== '/') return;
+    var cal = document.body.classList.contains('bh-cal-mode') || location.hash === '#calendarSection';
+    active = cal ? 'calendar' : 'today';
+    document.querySelectorAll('.bhr-rail .gx-item[href^="/app.html"], .bhr-tabs a[href^="/app.html"]').forEach(function (a) {
+      var isCal = a.getAttribute('href') === '/app.html#calendarSection', on = isCal === cal;
+      a.classList.toggle('is-active', on);
+      if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
   }
+  window.bhUpdateRailActive = syncActive;
+  window.addEventListener('hashchange', syncActive);
+  window.addEventListener('popstate', function () { setTimeout(syncActive, 0); });
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('.bhr-rail a[href^="/app.html"], .bhr-tabs a[href^="/app.html"]');
+    if (!a || !/\/app\.html$/.test(location.pathname) || typeof window.showCalendarMode !== 'function') return;
+    e.preventDefault();
+    if (a.getAttribute('href') === '/app.html#calendarSection') window.showCalendarMode(); else window.showTodayMode();
+    syncActive();
+  });
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
+  window.addEventListener('load', function () { setTimeout(syncActive, 50); });
 })();
