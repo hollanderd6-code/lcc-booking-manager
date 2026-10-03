@@ -43,8 +43,21 @@
     + '.bhr-tabs a.is-active{background:rgba(0,0,0,.07);color:#14201B;font-weight:600}'
     + '.bhr-tabs .gx-badge{position:absolute;top:2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#A8452A;color:#fff;font-size:10.5px;font-weight:700;display:none;align-items:center;justify-content:center;box-sizing:border-box}'
     + '.bhr-tabs .gx-badge.on{display:flex}'
+    // En-tête épuré façon iOS (date + grand titre, recherche, initiale) à la place de l'en-tête logo + raccourcis
+    + 'html.bh-top-on .mobile-header,html.bh-top-on #bhMobileHeader{display:none!important}'
+    // Messages : le panneau laissait la place des anciens onglets (44 px) sous l'en-tête
+    + 'html.bh-top-on.bh-top-on.bh-top-on body[data-page] .msgs-split,html.bh-top-on.bh-top-on.bh-top-on body[data-page] #panelLogs{top:calc(60px + env(safe-area-inset-top,0px))!important}'
+    + '.bhr-top{position:fixed;top:0;left:0;right:0;z-index:1100;height:calc(60px + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 16px 0;box-sizing:border-box;display:flex;align-items:center;gap:10px;'
+    + 'background:rgba(245,242,236,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(20,32,27,.07);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","DM Sans",system-ui,sans-serif}'
+    + '.bhr-top__t{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}'
+    + '.bhr-top__k{font-size:12.5px;font-weight:600;color:#5E6B63;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    + '.bhr-top__h{font-size:26px;font-weight:700;letter-spacing:-.03em;color:#14201B;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}'
+    + '.bhr-top__b{width:40px;height:40px;flex:none;border-radius:50%;border:0;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#14201B;text-decoration:none;'
+    + 'background:rgba(255,255,255,.75);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 2px 8px rgba(20,32,27,.10)}'
+    + '.bhr-top__b svg{width:19px;height:19px}'
+    + '.bhr-top__i{border:1.5px solid #14201B;background:transparent;box-shadow:none;font-weight:700;font-size:15px;color:#1F6B4C}'
     + '}'
-    + '@media (min-width:' + BP + 'px){.bhr-tabs{display:none!important}}'
+    + '@media (min-width:' + BP + 'px){.bhr-tabs,.bhr-top{display:none!important}}'
     + '.bhr-rail a{text-decoration:none}'
     + '.bhr-rail .gx-nav{width:232px;display:flex;flex-direction:column;gap:4px;padding:20px 12px 14px;border-radius:30px;box-sizing:border-box;'
     + 'background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.55) 55%,rgba(255,255,255,.66));'
@@ -124,6 +137,7 @@
       window.dispatchEvent(new Event('resize'));
     });
     mountTabs();
+    mountTop();
     // En-tête mobile : bh-layout.js lui pose « left:0 » en style inline !important,
     // que seule une autre écriture inline peut corriger. On la refait s'il revient.
     function fixHeader() {
@@ -148,6 +162,37 @@
     document.documentElement.classList.add('bh-tabs-on');
   }
 
+  function topTitle() {
+    var b = document.body.dataset;
+    if (active === 'today') return { k: new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }), t: 'Aujourd\'hui' };
+    if (active === 'calendar' && page === 'app') return { k: 'Planning', t: 'Calendrier' };
+    if (active === 'messages') return { k: b.kicker || 'Voyageurs', t: 'Messages' };
+    return { k: b.kicker || '', t: b.title || (document.title || '').split(/[—|-]/)[0].trim() || 'Boostinghost' };
+  }
+  function mountTop() {
+    if (document.querySelector('.bhr-top')) return;
+    var top = document.createElement('header');
+    top.className = 'bhr-top';
+    var back = document.body.dataset.backHref && ['today', 'calendar', 'messages'].indexOf(active) < 0;
+    var u = {}; try { u = JSON.parse(localStorage.getItem('lcc_user') || localStorage.getItem('user') || '{}'); } catch (e) {}
+    var first = u.firstName || u.first_name || '', nm = first || u.company || u.company_name || u.name || u.email || '';
+    top.innerHTML = (back ? '<a class="bhr-top__b" href="' + document.body.dataset.backHref.replace(/"/g, '') + '" aria-label="Retour">' + svg('<polyline points="15 18 9 12 15 6"/>') + '</a>' : '')
+      + '<div class="bhr-top__t"><div class="bhr-top__k" data-top-k></div><h1 class="bhr-top__h" data-top-t></h1></div>'
+      + '<button class="bhr-top__b" type="button" data-global-search aria-label="Rechercher">' + svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>') + '</button>'
+      + '<button class="bhr-top__b bhr-top__i" type="button" data-account-sheet aria-label="Mon compte">' + (nm ? nm.trim().charAt(0).toUpperCase() : '?') + '</button>';
+    document.body.appendChild(top);
+    document.documentElement.classList.add('bh-top-on');
+    fillTop();
+  }
+  function fillTop() {
+    var x = topTitle(), k = document.querySelector('[data-top-k]'), t = document.querySelector('[data-top-t]');
+    if (!k) return;
+    if (x.k && x.k.toLowerCase() === String(x.t).toLowerCase()) x.k = '';
+    k.textContent = x.k || '';
+    k.style.display = x.k ? '' : 'none';
+    t.textContent = x.t;
+  }
+
   // Aujourd'hui ↔ Calendrier sur app.html : bascule sans recharger (showTodayMode / showCalendarMode
   // d'app.html), et onglet actif tenu à jour (app.html appelle window.bhUpdateRailActive).
   function syncActive() {
@@ -159,6 +204,7 @@
       a.classList.toggle('is-active', on);
       if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
+    fillTop();
   }
   window.bhUpdateRailActive = syncActive;
   window.addEventListener('hashchange', syncActive);

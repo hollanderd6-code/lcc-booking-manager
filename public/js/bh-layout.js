@@ -670,7 +670,7 @@ function getSidebarHTML() {
     // Barre latérale « verre » des écrans Gestion, sur ordinateur (bh-gx-rail.js)
     if (!document.getElementById('bhGxRailJs')) {
       var _rail = document.createElement('script');
-      _rail.id = 'bhGxRailJs'; _rail.src = '/js/bh-gx-rail.js?v=2';
+      _rail.id = 'bhGxRailJs'; _rail.src = '/js/bh-gx-rail.js?v=3';
       document.head.appendChild(_rail);
     }
     injectHeader();
