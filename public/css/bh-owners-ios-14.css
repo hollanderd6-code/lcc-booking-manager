@@ -1,0 +1,27 @@
+/* bh-owners-ios-14.css — Gestion › Propriétaires (OwnersView.swift). Complète bh-prop-ios-12.css + bh-menage-ios-13.css */
+.bho-av { border-radius: 50%; background: #DCE8E1; color: var(--bhp-vert); font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
+.bho-cl { display: flex; align-items: center; gap: 12px; cursor: pointer; padding-top: 13px; padding-bottom: 13px; }
+.bho-cl:active, .bho-doc:active, .bho-prop:active, .bho-pick:active { background: rgba(255,255,255,.35); }
+.bho-cl__t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.bho-cl__n { font-size: 16px; font-weight: 600; color: var(--bhp-encre); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bho-alert { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 22px; background: var(--bhp-or-fond); border: 1px solid rgba(201,161,91,.45); }
+.bho-alert > .bhp-ic { width: 36px; font-size: 24px; color: var(--bhp-or); }
+.bho-alert__t { font-size: 15px; font-weight: 600; color: var(--bhp-or); margin-bottom: 3px; }
+.bho-doc, .bho-prop, .bho-link { display: flex; align-items: center; gap: 12px; text-decoration: none !important; color: var(--bhp-encre) !important; }
+.bho-doc > .bhp-ic:first-child { width: 28px; font-size: 19px; color: var(--bhp-vert); }
+.bho-doc__l { flex: 1; font-size: 15px; font-weight: 500; }
+.bho-prop > .bhp-ic:first-child { width: 20px; font-size: 14px; color: var(--bhp-vert); }
+.bho-prop > span:nth-child(2) { flex: 1; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bho-lblrow { display: flex; align-items: baseline; justify-content: space-between; }
+.bho-override { display: inline-flex; align-self: flex-start; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 12px; background: rgba(138,91,20,.10); border: 1px solid rgba(138,91,20,.30); color: var(--bhp-or); font-size: 13px; }
+.bho-field { display: flex; align-items: center; gap: 10px; }
+.bho-field__l { width: 130px; flex: none; font-size: 14.5px; font-weight: 500; color: var(--bhp-encre); }
+.bho-field__i { text-align: right; font-size: 14.5px; }
+.bho-hint { display: flex; align-items: flex-start; gap: 6px; font-size: 13px; color: var(--bhp-att); margin: 0 2px; }
+.bho-hint .bhp-ic { color: var(--bhp-or); font-size: 14px; margin-top: 1px; }
+.bho-pick { width: 100%; border: 0; background: none; cursor: pointer; display: flex; align-items: center; gap: 12px; text-align: left; font: inherit; }
+.bho-pick__c { font-size: 21px; color: rgba(94,107,99,.4); }
+.bho-pick__c.is-on { color: var(--bhp-vert); }
+.bho-pick__t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; font-size: 14.5px; color: var(--bhp-encre); }
+.bho-pick__o { font-size: 12px; color: var(--bhp-or); }
+@media (max-width: 420px) { .bho-field__l { width: 104px; } }
