@@ -14,7 +14,20 @@ const UPSELL_COMMISSION_PCT = 0.03; // 3% commission BHGuest
 
 // ── Choix du compte Stripe (proprio → user → plateforme BH) ──
 // Aligné sur getStripeForProperty() de server.js.
-async function _resolveStripeTarget(pool, propertyId, userId) {
+async function _resolveStripeTarget(pool, propertyId, userId, ownerClientId) {
+  // Propriétaire choisi explicitement (lien sans logement, mode agence) : son Stripe d'abord
+  if (ownerClientId) {
+    try {
+      const r = await pool.query(
+        'SELECT stripe_account_id, use_bh_stripe FROM owner_clients WHERE id::text = $1',
+        [String(ownerClientId).replace(/^agency_client_/, '')]
+      );
+      const oc = r.rows[0];
+      if (oc?.stripe_account_id && !oc?.use_bh_stripe) {
+        return { stripeAccountId: oc.stripe_account_id };
+      }
+    } catch(e) {}
+  }
   if (propertyId) {
     try {
       const r = await pool.query(
@@ -83,7 +96,7 @@ async function _makeShortLink(pool, longUrl, userId, paymentId) {
 //   currency            : ISO-4217 resolved server-side (reservation.currency > property.currency > EUR)
 //   extraMeta           : objet additionnel stocké dans metadata
 // Retour : { url, paymentId, feeCents, currency } ou null
-async function createUpsellPaymentLink({ pool, stripe, conversation, property, kind, label, description, amountCents, currency, extraMeta = {} }) {
+async function createUpsellPaymentLink({ pool, stripe, conversation, property, kind, label, description, amountCents, currency, extraMeta = {}, ownerClientId = null }) {
   if (!stripe) { console.warn('⚠️ [UPSELL] Stripe non configuré'); return null; }
   if (!amountCents || amountCents < 50) { console.warn('⚠️ [UPSELL] Montant invalide:', amountCents); return null; }
 
@@ -93,7 +106,7 @@ async function createUpsellPaymentLink({ pool, stripe, conversation, property, k
   const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
   const paymentId = 'pay_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
 
-  const target = await _resolveStripeTarget(pool, conversation.property_id, conversation.user_id);
+  const target = await _resolveStripeTarget(pool, conversation.property_id, conversation.user_id, ownerClientId);
   const isConnected = !!target.stripeAccountId;
   const feeCents = isConnected ? Math.round(amountCents * UPSELL_COMMISSION_PCT) : 0;
 

@@ -52497,21 +52497,77 @@ app.get('/api/guest/promo/list', authenticateToken, async (req, res) => {
   }
 });
 
+// ── GET /api/upsell/targets — de quoi créer un lien de paiement « pour n'importe qui » ──
+// Comptes visibles (respecte le mode « tous les comptes » via agency=all), leurs
+// propriétaires et logements, avec l'état Stripe de chacun (qui encaissera).
+app.get('/api/upsell/targets', authenticateAny, async (req, res) => {
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
+    const ids = await getAgencyUserIds(req, user.id);
+
+    const accRes = await pool.query(
+      `SELECT id, first_name, last_name, company, email, stripe_account_id, use_bh_stripe
+         FROM users WHERE id = ANY($1::text[])`, [ids]
+    );
+    const accounts = ids.map(id => {
+      const u = accRes.rows.find(r => String(r.id) === String(id)) || {};
+      const name = (u.company || [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email || 'Compte').trim();
+      return { id: String(id), name, isMe: String(id) === String(user.id), stripeConnected: !!(u.stripe_account_id && !u.use_bh_stripe) };
+    });
+
+    let owners = [];
+    try {
+      const oRes = await pool.query(
+        `SELECT id, user_id, client_type, company_name, first_name, last_name, stripe_account_id, use_bh_stripe
+           FROM owner_clients WHERE user_id = ANY($1::text[])
+          ORDER BY COALESCE(NULLIF(company_name, ''), last_name, first_name)`, [ids]
+      );
+      owners = oRes.rows.map(o => ({
+        id: String(o.id),
+        accountId: String(o.user_id),
+        name: (o.client_type === 'business' && o.company_name) ? o.company_name : ([o.first_name, o.last_name].filter(Boolean).join(' ') || o.company_name || 'Propriétaire'),
+        stripeConnected: !!(o.stripe_account_id && !o.use_bh_stripe),
+      }));
+    } catch (e) { /* module propriétaires absent */ }
+
+    const pRes = await pool.query(
+      `SELECT id, name, internal_name, user_id, owner_id FROM properties
+        WHERE user_id = ANY($1::text[]) ORDER BY COALESCE(NULLIF(internal_name, ''), name)`, [ids]
+    );
+    const properties = pRes.rows.map(p => ({
+      id: String(p.id), name: p.internal_name || p.name, accountId: String(p.user_id),
+      ownerId: p.owner_id ? String(p.owner_id).replace(/^agency_client_/, '') : null,
+    }));
+
+    res.json({ accounts, owners, properties, mustChooseAccount: accounts.length > 1 });
+  } catch (e) {
+    console.error('❌ [UPSELL targets]', e.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.post('/api/upsell/manual', authenticateAny, async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     const { createUpsellPaymentLink } = require('./upsell-service');
-    const { kind, amountEuros, conversationId, propertyId, email, phone, reqLabel, refLabel, description } = req.body || {};
+    const { kind, amountEuros, conversationId, propertyId, email, phone, reqLabel, refLabel, description,
+            accountUserId, ownerClientId } = req.body || {};
 
-    const KIND_LABELS = { late_checkout: 'Départ tardif', early_checkin: 'Arrivée anticipée', welcome_basket: "Panier d'accueil" };
+    // custom = prestation libre (dépannage, ménage supplémentaire…) : le libellé est saisi par l'hôte
+    const KIND_LABELS = { late_checkout: 'Départ tardif', early_checkin: 'Arrivée anticipée', welcome_basket: "Panier d'accueil", custom: 'Prestation' };
     if (!KIND_LABELS[kind]) return res.status(400).json({ error: 'Type de prestation invalide' });
+    const customLabel = kind === 'custom' ? String(reqLabel || '').trim().slice(0, 120) : '';
+    if (kind === 'custom' && !customLabel) return res.status(400).json({ error: 'Décrivez la prestation (ex : Dépannage plomberie)' });
 
     const amountCents = Math.round(parseFloat(amountEuros) * 100);
     if (!amountCents || amountCents < 50) return res.status(400).json({ error: 'Montant invalide (minimum 0,50 €)' });
 
-    const label = KIND_LABELS[kind] + (reqLabel ? ` ${reqLabel}` : '');
+    const label = kind === 'custom' ? customLabel : KIND_LABELS[kind] + (reqLabel ? ` ${reqLabel}` : '');
+    // Libellé lisible (e-mail, chat) : « dépannage plomberie » / « départ tardif (14h) »
+    const kindText = kind === 'custom' ? customLabel : KIND_LABELS[kind].toLowerCase() + (reqLabel ? ' (' + reqLabel + ')' : '');
 
     // Comptes autorisés (opérateur + comptes délégués acceptés) — sécurité agence.
     let candidateIds = [user.id];
@@ -52537,14 +52593,35 @@ app.post('/api/upsell/manual', authenticateAny, async (req, res) => {
       }
       attached = true;
     } else {
-      // ── Mode volant : logement + email/téléphone, sans conversation → pas de confirmation auto ──
-      if (!propertyId) return res.status(400).json({ error: 'Logement requis pour un lien volant' });
-      if (!email && !phone) return res.status(400).json({ error: 'Email ou téléphone requis pour un lien volant' });
-      const pRes = await pool.query('SELECT id, name, user_id, currency FROM properties WHERE id = $1 AND user_id = ANY($2::text[])', [propertyId, candidateIds]);
-      property = pRes.rows[0];
-      if (!property) return res.status(404).json({ error: 'Logement introuvable' });
+      // ── Mode volant : pour n'importe qui (dépannage…), sans conversation → pas de confirmation auto.
+      // Logement et contact facultatifs : sans contact, le lien est simplement copié / partagé.
+      // Compte qui encaisse : celui du logement, sinon le compte choisi (obligatoire si plusieurs
+      // comptes sont visibles — mode « tous les comptes »), sinon le compte courant.
+      let accountId = null;
+      if (propertyId) {
+        const pRes = await pool.query('SELECT id, name, user_id, currency FROM properties WHERE id = $1 AND user_id = ANY($2::text[])', [propertyId, candidateIds]);
+        property = pRes.rows[0];
+        if (!property) return res.status(404).json({ error: 'Logement introuvable' });
+        accountId = property.user_id;
+      } else if (accountUserId) {
+        if (!candidateIds.includes(String(accountUserId))) return res.status(403).json({ error: 'Compte non autorisé' });
+        accountId = String(accountUserId);
+      } else {
+        // Mode « tous les comptes » (agency=all) : impossible de deviner qui encaisse
+        if ((req.query && req.query.agency === 'all') && candidateIds.length > 1) {
+          return res.status(400).json({ error: 'Choisissez le compte qui encaisse le paiement', code: 'ACCOUNT_REQUIRED' });
+        }
+        accountId = user.id;
+      }
+      if (ownerClientId) {
+        const oRes = await pool.query(
+          'SELECT id FROM owner_clients WHERE id::text = $1 AND user_id = $2',
+          [String(ownerClientId).replace(/^agency_client_/, ''), accountId]
+        );
+        if (!oRes.rows[0]) return res.status(404).json({ error: 'Propriétaire introuvable pour ce compte' });
+      }
       // Conversation synthétique (id null) : confirmUpsellPaid s'arrêtera proprement (voulu).
-      conversation = { id: null, user_id: property.user_id || user.id, property_id: propertyId, reservation_uid: '', guest_name: '', channex_booking_id: null };
+      conversation = { id: null, user_id: accountId, property_id: property ? property.id : null, reservation_uid: '', guest_name: '', channex_booking_id: null };
     }
 
     // ── Devise upsell : réservation > logement > EUR (serveur autorité) ─────
@@ -52562,7 +52639,8 @@ app.post('/api/upsell/manual', authenticateAny, async (req, res) => {
       description: description || (property && property.name ? property.name : ''),
       amountCents,
       currency: upsellCurrency,
-      extraMeta: { req_label: reqLabel || '', ref_label: refLabel || '', manual: '1' },
+      extraMeta: { req_label: reqLabel || '', ref_label: refLabel || '', manual: '1', owner_client_id: ownerClientId ? String(ownerClientId) : '' },
+      ownerClientId: attached ? null : (ownerClientId || null),
     });
     if (!link || !link.url) return res.status(500).json({ error: 'Création du lien de paiement échouée' });
 
@@ -52571,7 +52649,7 @@ app.post('/api/upsell/manual', authenticateAny, async (req, res) => {
     if (attached && conversation.id) {
       try {
         const channexId = conversation.channex_booking_id || null;
-        const text = `Voici votre lien pour ${KIND_LABELS[kind].toLowerCase()}${reqLabel ? ' (' + reqLabel + ')' : ''} : ${link.url}`;
+        const text = `Voici votre lien pour ${kindText} : ${link.url}`;
         await sendBotMessage(conversation.id, text, pool, io, channexId);
         sentChat = true;
       } catch (e) { console.warn('⚠️ [UPSELL manuel] post chat:', e.message); }
@@ -52580,12 +52658,12 @@ app.post('/api/upsell/manual', authenticateAny, async (req, res) => {
       try {
         await sendEmail({
           to: email,
-          subject: `${KIND_LABELS[kind]}${property && property.name ? ' — ' + property.name : ''}`,
+          subject: `${kind === 'custom' ? customLabel : KIND_LABELS[kind]}${property && property.name ? ' — ' + property.name : ''}`,
           html: bhEmailTemplate({
-            title: escapeHtml(KIND_LABELS[kind]),
+            title: escapeHtml(kind === 'custom' ? customLabel : KIND_LABELS[kind]),
             tag: property && property.name ? escapeHtml(property.name) : '',
             bodyHtml: `
-              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Voici votre lien pour <strong>${escapeHtml(KIND_LABELS[kind].toLowerCase())}${reqLabel ? ' (' + escapeHtml(reqLabel) + ')' : ''}</strong> :</p>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;margin:0 0 14px;">Voici votre lien pour <strong>${escapeHtml(kindText)}</strong> :</p>
               ${emailCTABlock(link.url, `Payer ${bhFmtAmount(amountCents / 100, link.currency || upsellCurrency)}`)}
             `
           }),

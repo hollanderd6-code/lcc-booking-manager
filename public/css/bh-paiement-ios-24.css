@@ -1,0 +1,11 @@
+/* bh-paiement-ios-24.css — Gestion › Lien de paiement */
+.bhpay-seg { flex-wrap: wrap; }
+.bhpay-seg .bhm-seg__b { white-space: nowrap; padding-left: 10px; padding-right: 10px; }
+.bhpay-payee { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; line-height: 1.45; color: var(--bhp-corps, #3E4A44); }
+.bhpay-payee .bhp-ic { flex: none; margin-top: 2px; color: var(--bhp-vert, #0E3B2E); font-size: 16px; }
+.bhpay-payee b { color: var(--bhp-encre, #14201B); font-weight: 600; }
+.bhpay-done { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 18px; background: rgba(46,139,98,.12); color: var(--bhp-vert, #0E3B2E); }
+.bhpay-done .bhp-ic { font-size: 26px; flex: none; }
+.bhpay-done b { display: block; font-size: 16px; font-weight: 600; }
+.bhpay-done span { display: block; font-size: 13.5px; color: var(--bhp-att, #5E6B63); margin-top: 2px; }
+.bhpay-url { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; word-break: break-all; line-height: 1.5; color: var(--bhp-encre, #14201B); background: rgba(255,255,255,.55); border: 1px solid rgba(20,32,27,.08); border-radius: 10px; padding: 10px 12px; user-select: all; }
