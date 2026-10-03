@@ -28180,6 +28180,86 @@ async function loadOwnerInfoForInvoice(pool, { propertyId, propertyName, propert
 // ============================================
 // POST - Renvoyer une facture par numéro
 // ============================================
+// ── Envoi par e-mail d'une facture voyageur déjà émise ──────────────────────
+// PDF joint + lien de téléchargement. L'émetteur est résolu comme au
+// téléchargement : propriétaire associé au logement (owner_clients), sinon le
+// compte qui possède le logement — jamais l'opérateur délégué.
+// ownerUserIds : comptes autorisés (les numéros FACT-AAAA-NNNN ne sont uniques
+// que par compte, la recherche doit donc toujours être bornée).
+async function emailGuestInvoice({ invoiceNumber, ownerUserIds, toEmail = null }) {
+  const ids = (Array.isArray(ownerUserIds) ? ownerUserIds : [ownerUserIds]).filter(Boolean).map(String);
+  if (!invoiceNumber || !ids.length) throw new Error('Facture introuvable');
+  const tokRes = await pool.query(
+    `SELECT token, file_path, user_id, expires_at FROM invoice_download_tokens
+      WHERE invoice_number = $1 AND user_id = ANY($2::text[])
+      ORDER BY created_at DESC`,
+    [invoiceNumber, ids]
+  );
+  if (!tokRes.rows.length) throw new Error('Facture introuvable');
+  const row = tokRes.rows[0];
+  let meta = {};
+  try { meta = JSON.parse(row.file_path || '{}'); } catch (e) {}
+  const email = String(toEmail || meta.clientEmail || '').trim();
+  if (!email.includes('@') || email.length < 5) throw new Error('Email client introuvable pour cette facture');
+
+  const ownerUserId = row.user_id;
+  const user = (await pool.query('SELECT * FROM users WHERE id = $1', [ownerUserId])).rows[0];
+  if (!user) throw new Error('Compte émetteur introuvable');
+  const ownerInfo = await loadOwnerInfoForInvoice(pool, {
+    propertyId:      meta.propertyId      || null,
+    propertyName:    meta.propertyName    || null,
+    propertyAddress: meta.propertyAddress || null,
+    userId:          ownerUserId,
+    ownerIdHint:     meta.ownerId         || null
+  }).catch(() => null);
+
+  const appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
+  const validTok = tokRes.rows.find(t => new Date(t.expires_at) > new Date());
+  const downloadUrl = validTok ? `${appUrl}/api/invoice/download/${validTok.token}` : null;
+
+  // INTL-P1-F4 — propagate historical invoice currency; never re-read property.currency
+  const savedVars = {
+    ...meta,
+    clientEmail: email, invoiceNumber,
+    serviceFee: meta.serviceFee || 0, paid: !!meta.paid,
+    paidDate: meta.paidDate || null, platform: meta.platform || '',
+    currency: normalizeCurrency(meta.currency) || 'EUR'
+  };
+  const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_mail_${crypto.randomBytes(4).toString('hex')}.pdf`);
+  await generateInvoicePdf(pdfPath, savedVars, user, ownerInfo);
+  let pdfBuffer;
+  try { pdfBuffer = fs.readFileSync(pdfPath); } finally { try { fs.unlinkSync(pdfPath); } catch (e) {} }
+
+  const emitterName = ownerInfo
+    ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim())
+    : (user.company || `${user.first_name||''} ${user.last_name||''}`.replace(/\s+/g, ' ').trim() || 'Votre hôte');
+  const checkinFr  = meta.checkinDate  ? new Date(meta.checkinDate).toLocaleDateString('fr-FR',  {day:'2-digit', month:'long', year:'numeric'}) : '';
+  const checkoutFr = meta.checkoutDate ? new Date(meta.checkoutDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'}) : '';
+  const P = 'font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;';
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
+    to: email,
+    subject: `Facture ${invoiceNumber} – Séjour à ${meta.propertyName || ''}${meta.checkinDate ? ' du ' + new Date(meta.checkinDate).toLocaleDateString('fr-FR') : ''}`,
+    html: bhEmailTemplate({
+      icon: '📄',
+      title: `Facture ${escapeHtml(invoiceNumber)}`,
+      subtitle: `${escapeHtml(meta.propertyName || '')}${checkinFr ? ' · du ' + escapeHtml(checkinFr) + ' au ' + escapeHtml(checkoutFr) : ''}`,
+      bodyHtml: `
+        <p style="${P}">Bonjour <strong>${escapeHtml(meta.clientName || '')}</strong>,</p>
+        <p style="${P}">Veuillez trouver ci-joint votre facture <strong>${escapeHtml(invoiceNumber)}</strong>${meta.propertyName ? ` pour votre séjour à <strong>${escapeHtml(meta.propertyName)}</strong>` : ''}${checkinFr ? ` du ${escapeHtml(checkinFr)} au ${escapeHtml(checkoutFr)}` : ''}.</p>
+        ${emailCard('success', '📎 Votre facture PDF est jointe à cet email.')}
+        ${downloadUrl ? emailButton(downloadUrl, 'Télécharger ma facture') : ''}
+        <p style="${P}">Pour toute question, n'hésitez pas à nous contacter.</p>
+        <p style="${P}">Cordialement,<br><strong>${escapeHtml(emitterName)}</strong></p>
+      `
+    }),
+    attachments: [{ filename: `${invoiceNumber}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
+  });
+  console.log(`✅ [INVOICE] Facture ${invoiceNumber} envoyée par email à ${email} (émetteur : ${emitterName})`);
+  return { sentTo: email, emitterName, downloadUrl };
+}
+
 app.post('/api/invoice/resend',
   authenticateAny,
   requirePermission(pool, 'can_manage_invoices'),
@@ -28193,83 +28273,17 @@ app.post('/api/invoice/resend',
     const { invoiceNumber } = req.body;
     if (!invoiceNumber) return res.status(400).json({ error: 'invoiceNumber requis' });
 
-    // Récupérer les métadonnées (périmètre agence inclus)
+    // Périmètre agence inclus
     const agencyIds = await getAgencyUserIds(req, userId);
-    const result = await pool.query(
-      `SELECT file_path, user_id FROM invoice_download_tokens WHERE user_id = ANY($1::text[]) AND invoice_number = $2 ORDER BY created_at DESC LIMIT 1`,
-      [agencyIds, invoiceNumber]
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Facture introuvable' });
-
-    const ownerUserId = result.rows[0].user_id || userId;
-
-    let meta = {};
-    try { meta = JSON.parse(result.rows[0].file_path || '{}'); } catch(e) {}
-
-    if (!meta.clientEmail) return res.status(400).json({ error: 'Email client introuvable pour cette facture' });
-
-    // Récupérer profil utilisateur (compte propriétaire réel de la facture)
-    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [ownerUserId]);
-    const user = profileResult.rows[0];
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
-
-    // Résoudre l'émetteur via loadOwnerInfoForInvoice (priorité propertyId > propertyName > ownerId)
-    const ownerInfo = await loadOwnerInfoForInvoice(pool, {
-      propertyId:      meta.propertyId      || null,
-      propertyName:    meta.propertyName    || null,
-      propertyAddress: meta.propertyAddress || null,
-      userId:          ownerUserId,
-      ownerIdHint:     meta.ownerId         || null
-    });
-
-    // Régénérer le PDF
-    const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_resend.pdf`);
-    
-    // Reconstituer les variables pour generateInvoicePdfToFile
-    // INTL-P1-F4 — propagate historical invoice currency; never re-read property.currency
-    const savedVars = {
-      clientName: meta.clientName, clientEmail: meta.clientEmail,
-      clientAddress: meta.clientAddress, clientPostalCode: meta.clientPostalCode,
-      clientCity: meta.clientCity, clientSiret: meta.clientSiret, clientPhone: meta.clientPhone || '',
-      propertyName: meta.propertyName, propertyAddress: meta.propertyAddress,
-      checkinDate: meta.checkinDate, checkoutDate: meta.checkoutDate,
-      nights: meta.nights, rentAmount: meta.rentAmount,
-      touristTaxAmount: meta.touristTaxAmount, cleaningFee: meta.cleaningFee,
-      vatRate: meta.vatRate, invoiceNumber,
-      serviceFee: meta.serviceFee || 0, paid: !!meta.paid,
-      paidDate: meta.paidDate || null, platform: meta.platform || '',
-      currency: normalizeCurrency(meta.currency) || 'EUR'
-    };
-
-    await generateInvoicePdf(pdfPath, savedVars, user, ownerInfo);
-    const pdfBuffer = fs.readFileSync(pdfPath);
-
-    const checkinFr  = meta.checkinDate  ? new Date(meta.checkinDate).toLocaleDateString('fr-FR',  {day:'2-digit', month:'long', year:'numeric'}) : '';
-    const checkoutFr = meta.checkoutDate ? new Date(meta.checkoutDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'}) : '';
-    const emitterName = ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.trim()) : (user.company || 'Ma Conciergerie');
-    const total = parseFloat(meta.rentAmount || 0) + parseFloat(meta.touristTaxAmount || 0) + parseFloat(meta.cleaningFee || 0);
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'Boostinghost <no-reply@boostinghost.fr>',
-      to: meta.clientEmail,
-      subject: `Facture ${invoiceNumber} – Séjour à ${meta.propertyName || ''}${meta.checkinDate ? ' du ' + new Date(meta.checkinDate).toLocaleDateString('fr-FR') : ''}`,
-      html: bhEmailTemplate({
-        icon: '📄',
-        title: `Facture ${escapeHtml(invoiceNumber)}`,
-        subtitle: `${escapeHtml(meta.propertyName || '')}${checkinFr ? ' · du ' + escapeHtml(checkinFr) + ' au ' + escapeHtml(checkoutFr) : ''}`,
-        bodyHtml: `
-          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour <strong>${escapeHtml(meta.clientName || '')}</strong>,</p>
-          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Veuillez trouver ci-joint votre facture <strong>${escapeHtml(invoiceNumber)}</strong>${meta.propertyName ? ` pour votre séjour à <strong>${escapeHtml(meta.propertyName)}</strong>` : ''}${checkinFr ? ` du ${escapeHtml(checkinFr)} au ${escapeHtml(checkoutFr)}` : ''}.</p>
-          ${emailCard('success', '📎 Votre facture PDF est jointe à cet email.')}
-          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Pour toute question, n'hésitez pas à nous contacter.</p>
-          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Cordialement,<br><strong>${escapeHtml(emitterName)}</strong></p>
-        `
-      }),
-      attachments: [{ filename: `${invoiceNumber}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
-    });
-
-    try { fs.unlinkSync(pdfPath); } catch(e) {}
-    res.json({ success: true, message: `Facture renvoyée à ${meta.clientEmail}` });
+    let sent;
+    try {
+      sent = await emailGuestInvoice({ invoiceNumber, ownerUserIds: agencyIds });
+    } catch (e) {
+      if (e.message === 'Facture introuvable') return res.status(404).json({ error: e.message });
+      if (e.message === 'Email client introuvable pour cette facture') return res.status(400).json({ error: e.message });
+      throw e;
+    }
+    res.json({ success: true, message: `Facture renvoyée à ${sent.sentTo}` });
   } catch (err) {
     console.error('Erreur /api/invoice/resend:', err);
     res.status(500).json({ error: err.message || 'Erreur serveur' });
@@ -28290,23 +28304,39 @@ app.post('/api/invoice/generate-pdf',
       : (await getUserFromRequest(req))?.id;
     if (!userId) return res.status(401).json({ error: 'Non autorisé' });
 
-    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    const user = profileResult.rows[0];
-    if (!user) return res.status(401).json({ error: 'Non autorisé' });
-
     const data = req.body;
     const invoiceNumber = data.invoiceNumber || 'FACT-XXX';
+
+    // Émetteur = compte qui possède le logement (mode agence : le délégant,
+    // pas l'opérateur connecté), puis son propriétaire associé s'il y en a un.
+    let billingUserId = userId;
+    try {
+      const agencyIds = await getAgencyUserIds({ ...req, query: { ...req.query, agency: 'all' } }, userId);
+      const pr = data.propertyId
+        ? await pool.query('SELECT user_id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])', [data.propertyId, agencyIds])
+        : data.propertyName
+          ? await pool.query(
+              `SELECT user_id FROM properties WHERE (name = $1 OR internal_name = $1) AND user_id = ANY($2::text[])
+                ORDER BY (user_id = $3) DESC, (owner_id IS NOT NULL) DESC LIMIT 1`,
+              [data.propertyName, agencyIds, userId])
+          : { rows: [] };
+      if (pr.rows[0]?.user_id) billingUserId = pr.rows[0].user_id;
+    } catch (e) { console.warn('⚠️ [generate-pdf] Résolution émetteur:', e.message); }
+
+    const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [billingUserId]);
+    const user = profileResult.rows[0];
+    if (!user) return res.status(401).json({ error: 'Non autorisé' });
 
     // Résoudre l'émetteur via loadOwnerInfoForInvoice
     const ownerInfo = await loadOwnerInfoForInvoice(pool, {
       propertyId:      data.propertyId      || null,
       propertyName:    data.propertyName    || null,
       propertyAddress: data.propertyAddress || null,
-      userId,
+      userId:          billingUserId,
       ownerIdHint:     data.ownerId         || null
     });
 
-    const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_direct.pdf`);
+    const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_direct_${crypto.randomBytes(4).toString('hex')}.pdf`);
     await generateInvoicePdf(pdfPath, data, user, ownerInfo);
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -28542,8 +28572,9 @@ app.get('/api/invoice/history',
 });
 
 // Reporte sur une facture existante les infos client saisies lors d'une nouvelle tentative (même numéro).
-async function _majInfosFactureExistante(pool, invoiceNumber, body) {
-  if (!invoiceNumber || !body) return;
+// userIds : comptes du périmètre — les numéros ne sont uniques que par compte.
+async function _majInfosFactureExistante(pool, invoiceNumber, body, userIds) {
+  if (!invoiceNumber || !body || !userIds?.length) return;
   const champs = {
     clientName: ['clientName', 'client_name'], clientEmail: ['clientEmail', 'client_email'],
     clientAddress: ['clientAddress', 'client_address'], clientPostalCode: ['clientPostalCode', 'client_postal_code'],
@@ -28557,7 +28588,7 @@ async function _majInfosFactureExistante(pool, invoiceNumber, body) {
   }
   if (!Object.keys(maj).length) return;
   try {
-    const toks = await pool.query('SELECT token, file_path FROM invoice_download_tokens WHERE invoice_number = $1', [invoiceNumber]);
+    const toks = await pool.query('SELECT token, file_path FROM invoice_download_tokens WHERE invoice_number = $1 AND user_id = ANY($2::text[])', [invoiceNumber, userIds]);
     for (const t of toks.rows) {
       let m; try { m = JSON.parse(t.file_path || '{}'); } catch (e) { continue; }
       const avant = JSON.stringify(m);
@@ -28682,13 +28713,23 @@ app.post('/api/invoice/create',
       return null;
     }
 
+    // Facture déjà émise pour ce séjour : on ne la refait pas, mais si l'envoi
+    // par e-mail est demandé, on l'envoie (sinon le voyageur ne reçoit rien).
+    async function _emailExistingIfAsked(num) {
+      if (!(sendEmail && clientEmail)) return {};
+      try { return await emailGuestInvoice({ invoiceNumber: num, ownerUserIds: agencyIds, toEmail: clientEmail }); }
+      catch (e) { console.error('❌ [INVOICE] Envoi facture existante:', e.message); return { error: e.message }; }
+    }
+
     if (reservationUid) {
       const preflight = await _findExistingInvoice(pool);
       if (preflight) {
         console.log(`🔄 [INVOICE] Idempotent pré-vol — reservationUid=${reservationUid} → ${preflight.invoiceNumber}`);
-        await _majInfosFactureExistante(pool, preflight.invoiceNumber, req.body);
+        await _majInfosFactureExistante(pool, preflight.invoiceNumber, req.body, agencyIds);
+        const _emailed = await _emailExistingIfAsked(preflight.invoiceNumber);
+        if (_emailed.error) return res.status(500).json({ error: "Facture existante, mais erreur d'envoi email : " + _emailed.error });
         return res.json({
-          success: true, existing: true, duplicate: true,
+          success: true, existing: true, duplicate: true, emailSent: !!_emailed.sentTo,
           invoiceNumber: preflight.invoiceNumber,
           reservationUid,
           conversationId: preflight.conversationId,
@@ -28748,6 +28789,16 @@ app.post('/api/invoice/create',
       console.error('Erreur résolution propriétaire (mode agence):', e.message);
     }
 
+    // Profil émetteur = compte qui possède le logement (pas l'opérateur délégué).
+    // Sert de repli quand le logement n'a pas de propriétaire (owner_clients) associé.
+    let billingUser = user;
+    if (billingUserId !== userId) {
+      try {
+        const _bu = await pool.query('SELECT * FROM users WHERE id = $1', [billingUserId]);
+        if (_bu.rows[0]) billingUser = _bu.rows[0];
+      } catch (e) { console.warn('⚠️ [INVOICE] Profil émetteur:', e.message); }
+    }
+
     // Currency authority: reservation.currency → property.currency → EUR
     const resolvedCurrency = normalizeCurrency(propResult?.rows[0]?.reservation_currency) || normalizeCurrency(propResult?.rows[0]?.property_currency) || 'EUR';
 
@@ -28787,9 +28838,11 @@ app.post('/api/invoice/create',
       }
     }
     if (_innerIdempotent) {
-      await _majInfosFactureExistante(pool, _innerIdempotent.invoiceNumber, req.body);
+      await _majInfosFactureExistante(pool, _innerIdempotent.invoiceNumber, req.body, agencyIds);
+      const _emailed = await _emailExistingIfAsked(_innerIdempotent.invoiceNumber);
+      if (_emailed.error) return res.status(500).json({ error: "Facture existante, mais erreur d'envoi email : " + _emailed.error });
       return res.json({
-        success: true, existing: true, duplicate: true,
+        success: true, existing: true, duplicate: true, emailSent: !!_emailed.sentTo,
         invoiceNumber: _innerIdempotent.invoiceNumber,
         reservationUid,
         conversationId: _innerIdempotent.conversationId,
@@ -28822,7 +28875,7 @@ app.post('/api/invoice/create',
         propertyName, propertyAddress, checkinDate, checkoutDate, nights,
         rentAmount, touristTaxAmount, cleaningFee, vatRate, invoiceNumber,
         currency: resolvedCurrency
-      }, user, ownerInfo);
+      }, billingUser, ownerInfo);
     }
 
 // Si sendEmail est true, envoyer l'email via API Brevo
@@ -28831,7 +28884,7 @@ app.post('/api/invoice/create',
       const profile = user;
 
       // 1) Générer le fichier PDF
-      const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}.pdf`);
+      const pdfPath = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_${String(billingUserId).replace(/[^a-zA-Z0-9_-]/g, '')}.pdf`);
       try {
         await generateInvoicePdfToFile(pdfPath);
       } catch (pdfErr) {
@@ -28886,7 +28939,7 @@ app.post('/api/invoice/create',
       const checkoutFr = checkoutDate ? new Date(checkoutDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'}) : '';
       const emitterNameEmail = ownerInfo
         ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim())
-        : (user.company || 'Ma Conciergerie');
+        : (billingUser.company || `${billingUser.first_name||''} ${billingUser.last_name||''}`.replace(/\s+/g, ' ').trim() || 'Ma Conciergerie');
 
       const emailHtml = bhEmailTemplate({
         icon: '📄',
@@ -29031,17 +29084,17 @@ app.post('/api/invoice/create',
         invoiceNumber,
         reservationUid: reservationUid || null,
         conversationId: linkedConvId || null,
-        emitterName: ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim()) : (user?.company || ''),
+        emitterName: ownerInfo ? (ownerInfo.company_name || `${ownerInfo.first_name||''} ${ownerInfo.last_name||''}`.replace(/\s+/g, ' ').trim()) : (billingUser?.company || ''),
         emitterAddress: ownerInfo?.address || '',
         emitterPostalCode: ownerInfo?.postal_code || '',
         emitterCity: ownerInfo?.city || '',
-        emitterEmail: ownerInfo?.email || user?.email || '',
+        emitterEmail: ownerInfo?.email || billingUser?.invoice_email || billingUser?.email || '',
         emitterSiret: ownerInfo?.siret || '',
         currency: resolvedCurrency
       });
 
       // Générer le PDF si pas encore fait (cas sans sendEmail)
-      const pdfPath2 = path.join(INVOICE_PDF_DIR, `${invoiceNumber}.pdf`);
+      const pdfPath2 = path.join(INVOICE_PDF_DIR, `${invoiceNumber}_${String(billingUserId).replace(/[^a-zA-Z0-9_-]/g, '')}.pdf`);
       if (!fs.existsSync(pdfPath2)) {
         await generateInvoicePdfToFile(pdfPath2);
       }
@@ -36352,6 +36405,7 @@ async function runInvoiceQueue(mode) {
               r.created_at AS res_created_at, r.airbnb_data,
               p.name as property_name, p.address as property_address,
               p.cleaning_fee as prop_cleaning_fee, p.tourist_tax_per_night,
+              p.user_id AS property_user_id,
               u.email as user_email, u.company as user_company
        FROM invoice_requests ir
        LEFT JOIN reservations r ON r.uid = ir.reservation_uid
@@ -36370,17 +36424,24 @@ async function runInvoiceQueue(mode) {
 
     for (const req of requests.rows) {
       try {
-        const userId = req.user_id;
+        // Émetteur + numérotation = compte qui possède le logement (mode agence :
+        // le délégant). Le nom affiché est ensuite celui du propriétaire associé
+        // au logement, résolu au téléchargement / à l'envoi (loadOwnerInfoForInvoice).
+        const userId = req.property_user_id || req.user_id;
+        const _ownerIds = [...new Set([userId, req.user_id].filter(Boolean).map(String))];
+        const _reqEmail = (req.client_email || '').trim();
+        const _reqHasEmail = _reqEmail.includes('@') && _reqEmail.length >= 5;
         // Une facture émise ne se refait pas : si la réservation a déjà un numéro, on le réutilise.
         if (req.reservation_uid) {
           const _dejaFacturee = await pool.query(
-            `SELECT invoice_number FROM invoice_requests
-              WHERE reservation_uid = $1 AND status = 'sent' AND invoice_number IS NOT NULL AND id <> $2
-             UNION ALL
-             SELECT invoice_number FROM invoice_download_tokens
+            `SELECT invoice_number, user_id FROM invoice_download_tokens
               WHERE file_path LIKE '{%' AND file_path::jsonb->>'reservationUid' = $1
+                AND user_id = ANY($3::text[])
+             UNION ALL
+             SELECT invoice_number, NULL AS user_id FROM invoice_requests
+              WHERE reservation_uid = $1 AND status = 'sent' AND invoice_number IS NOT NULL AND id <> $2
              LIMIT 1`,
-            [req.reservation_uid, req.id]
+            [req.reservation_uid, req.id, _ownerIds]
           ).catch(() => ({ rows: [] }));
           if (_dejaFacturee.rows[0]) {
             await pool.query(
@@ -36388,53 +36449,40 @@ async function runInvoiceQueue(mode) {
               [_dejaFacturee.rows[0].invoice_number, req.id]
             );
             const _num = _dejaFacturee.rows[0].invoice_number;
+            if (_dejaFacturee.rows[0].user_id) _ownerIds.unshift(String(_dejaFacturee.rows[0].user_id));
             console.log(`🔁 [INVOICE CRON] Résa ${req.reservation_uid} déjà facturée (${_num}) → renvoi, pas de nouveau numéro`);
-            // _majInfosClient : infos apportées par la nouvelle demande → reportées sur la facture existante
+            // Infos apportées par la nouvelle demande → reportées sur la facture existante
+            await _majInfosFactureExistante(pool, _num, req, _ownerIds);
+            // Renvoi : par e-mail si le voyageur en a donné un, sinon lien dans le chat
             try {
-              const _maj = {};
-              const _champs = { clientName: 'client_name', clientEmail: 'client_email', clientSiret: 'client_siret',
-                                clientCompany: 'client_company', clientAddress: 'client_address',
-                                clientPostalCode: 'client_postal_code', clientCity: 'client_city' };
-              for (const [k, col] of Object.entries(_champs)) {
-                if (req[col] && String(req[col]).trim()) _maj[k] = String(req[col]).trim();
+              let _sentTo = null;
+              if (_reqHasEmail) {
+                try {
+                  _sentTo = (await emailGuestInvoice({ invoiceNumber: _num, ownerUserIds: _ownerIds, toEmail: _reqEmail })).sentTo;
+                } catch (e) { console.error(`❌ [INVOICE CRON] Renvoi email ${_num}:`, e.message); }
               }
-              if (Object.keys(_maj).length) {
-                const _toks = await pool.query(
-                  `SELECT id, file_path FROM invoice_download_tokens WHERE invoice_number = $1`, [_num]);
-                let _n = 0;
-                for (const t of _toks.rows) {
-                  let m = {}; try { m = JSON.parse(t.file_path || '{}'); } catch (e) { continue; }
-                  const avant = JSON.stringify(m);
-                  Object.assign(m, _maj);
-                  if (JSON.stringify(m) !== avant) {
-                    await pool.query('UPDATE invoice_download_tokens SET file_path = $1 WHERE id = $2', [JSON.stringify(m), t.id]);
-                    _n++;
-                  }
-                }
-                if (_n) console.log(`✏️ [INVOICE CRON] Facture ${_num} mise à jour avec les infos client :`, Object.keys(_maj).join(', '));
-              }
-            } catch (e) { console.warn('⚠️ [INVOICE CRON] Mise à jour infos facture existante:', e.message); }
-            // _renvoiExistante : on renvoie la facture déjà émise (lien valide le plus récent)
-            try {
               const _tok = await pool.query(
                 `SELECT token FROM invoice_download_tokens
-                  WHERE invoice_number = $1 AND expires_at > NOW()
-                  ORDER BY created_at DESC LIMIT 1`, [_num]);
+                  WHERE invoice_number = $1 AND user_id = ANY($2::text[]) AND expires_at > NOW()
+                  ORDER BY created_at DESC LIMIT 1`, [_num, _ownerIds]);
               const _appUrl = (process.env.APP_URL || 'https://boostinghost.fr').replace(/\/$/, '');
               const _url = _tok.rows[0] ? `${_appUrl}/api/invoice/download/${_tok.rows[0].token}` : null;
               const _conv = await pool.query(
                 'SELECT id, channex_booking_id FROM conversations WHERE id = $1 LIMIT 1', [req.conversation_id]);
               const _c = _conv.rows[0];
-              if (_c && _url) {
-                const _msg = `📄 Voici à nouveau votre facture ${_num}.\n\n📥 Télécharger : ${_url}\n(lien valable 1 an)`;
+              if (_c && (_sentTo || _url)) {
+                const _msg = _sentTo
+                  ? `📄 Votre facture ${_num} vient de vous être envoyée par email à ${_sentTo}.${_url ? `\n\n📥 Elle est aussi téléchargeable ici : ${_url}` : ''}`
+                  : `📄 Voici à nouveau votre facture ${_num}.\n\n📥 Télécharger : ${_url}\n(lien valable 1 an)`;
                 await sendAutomatedMessage(_c.id, _msg, io);
                 if (_c.channex_booking_id) {
                   try {
-                    await require('./channex').sendBookingMessage(_c.channex_booking_id,
-                      `Voici à nouveau votre facture ${_num} : ${_url} (lien valable 1 an)`);
+                    await require('./channex').sendBookingMessage(_c.channex_booking_id, _sentTo
+                      ? `Votre facture ${_num} vous a été envoyée par email.${_url ? ` Lien : ${_url}` : ''}`
+                      : `Voici à nouveau votre facture ${_num} : ${_url} (lien valable 1 an)`);
                   } catch (e) { console.warn('⚠️ [INVOICE CRON] Renvoi Channex:', e.message, JSON.stringify(e.response?.data || {})); }
                 }
-                console.log(`✅ [INVOICE CRON] Facture ${_num} renvoyée (conv ${_c.id})`);
+                console.log(`✅ [INVOICE CRON] Facture ${_num} renvoyée (conv ${_c.id}${_sentTo ? ', email ' + _sentTo : ''})`);
               } else {
                 console.warn(`⚠️ [INVOICE CRON] Renvoi ${_num} impossible (conversation ou lien introuvable)`);
               }
@@ -36446,9 +36494,7 @@ async function runInvoiceQueue(mode) {
         // ⚠️ Livraison : email UNIQUEMENT si le voyageur a fourni une adresse explicite.
         // Les emails plateforme (Airbnb/Booking) sont souvent factices → sinon on livre
         // la facture directement dans le chat de la conversation (app + Channex).
-        const explicitEmail = (req.client_email || '').trim();
-        const hasEmail = explicitEmail.includes('@') && explicitEmail.length >= 5;
-        const clientEmail = hasEmail ? explicitEmail : '';
+        const clientEmail = _reqHasEmail ? _reqEmail : '';
 
         // Calculer les nuits
         const checkin = new Date(req.start_date);
@@ -36514,7 +36560,9 @@ async function runInvoiceQueue(mode) {
               serviceFee, paid: _isOta, paidDate: _isOta ? req.res_created_at : null,
               platform: req.ota_name || '',
               invoiceNumber,
-              propertyId: req.property_id || null
+              propertyId: req.property_id || null,
+              reservationUid: req.reservation_uid || null,
+              conversationId: req.conversation_id || null
             });
             await cronClient.query(
               `INSERT INTO invoice_download_tokens (token, user_id, invoice_number, file_path, expires_at)
@@ -36537,51 +36585,17 @@ async function runInvoiceQueue(mode) {
         }
         downloadUrl = `${appUrl}/api/invoice/download/${publicToken}`;
 
-        // Charger le profil utilisateur pour les étapes suivantes
-        const profileResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-        const user = profileResult.rows[0];
-        if (!user) continue;
-
-        // Paramètres conservés pour compatibilité avec le code aval (email, etc.)
-        const invoicePayload = {
-          clientName,
-          clientEmail,
-          clientAddress: req.client_address || '',
-          clientPostalCode: req.client_postal_code || '',
-          clientCity: req.client_city || '',
-          clientSiret: req.client_siret || '', clientPhone: req.client_phone || '',
-          propertyName: req.property_name || '',
-          propertyAddress: req.property_address || '',
-          checkinDate: req.start_date,
-          checkoutDate: req.end_date,
-          nights,
-          rentAmount: parseFloat(rentAmount),
-          touristTaxAmount: parseFloat(touristTax),
-          cleaningFee: parseFloat(cleaningFee),
-          vatRate: 0,
-          sendEmail: true,
-          invoiceNumber
-        };
-
-        const emailHtml = bhEmailTemplate({
-          icon: '📄',
-          title: `Facture ${escapeHtml(invoiceNumber)}`,
-          subtitle: escapeHtml(req.property_name || ''),
-          bodyHtml: `
-            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Bonjour <strong>${escapeHtml(clientName)}</strong>,</p>
-            <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#20221F;line-height:1.6;">Comme convenu, veuillez trouver ci-joint votre facture pour votre séjour à <strong>${escapeHtml(req.property_name || '')}</strong> du ${new Date(req.start_date).toLocaleDateString('fr-FR')} au ${new Date(req.end_date).toLocaleDateString('fr-FR')}.</p>
-            ${emailButton(downloadUrl, 'Télécharger ma facture')}
-            <p style="font-size:12px;color:#9ca3af;text-align:center;font-family:Arial,Helvetica,sans-serif;">Lien valable 1 an</p>
-            <p style="font-size:14px;color:#5A5A54;font-family:Arial,Helvetica,sans-serif;">Cordialement,</p>
-          `
-        });
-
-        if (hasEmail) {
-          await sendEmailViaBrevo({
-            to: clientEmail,
-            subject: `Votre facture ${invoiceNumber} – ${req.property_name || ''}`,
-            html: emailHtml
-          });
+        // E-mail : PDF joint + lien, au nom du propriétaire du logement.
+        // Un échec d'envoi ne bloque pas : le numéro est déjà attribué, la facture
+        // est alors livrée dans le chat (sinon chaque relance créerait un numéro).
+        let hasEmail = false;
+        if (clientEmail) {
+          try {
+            await emailGuestInvoice({ invoiceNumber, ownerUserIds: [userId], toEmail: clientEmail });
+            hasEmail = true;
+          } catch (mailErr) {
+            console.error(`❌ [INVOICE CRON] Email facture ${invoiceNumber} → ${clientEmail}:`, mailErr.message);
+          }
         }
 
         // Marquer comme envoyée
