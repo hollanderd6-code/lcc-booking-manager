@@ -19359,10 +19359,29 @@ app.get('/api/properties/:propertyId',
     }
     
     const { propertyId } = req.params;
-    const property = PROPERTIES.find(p => p.id === propertyId && p.userId === userId);
+    // Mode agence (?agency=all) : les logements des comptes délégués sont lisibles,
+    // comme dans la liste et pour le PUT.
+    const agencyIds = await getAgencyUserIds(req, userId);
+    const property = PROPERTIES.find(p => p.id === propertyId && agencyIds.includes(p.userId));
     
     if (!property) {
       return res.status(404).json({ error: 'Logement non trouvé' });
+    }
+
+    // Colonnes absentes du cache PROPERTIES (prestations payantes, tarification externe)
+    let extra = {};
+    try {
+      const extraRes = await pool.query(
+        `SELECT external_pricing,
+                late_checkout_enabled, late_checkout_tolerance_minutes, late_checkout_price_per_hour, late_checkout_max_minutes,
+                early_checkin_enabled, early_checkin_tolerance_minutes, early_checkin_price_per_hour, early_checkin_max_minutes,
+                welcome_basket_enabled, welcome_basket_price, welcome_basket_description
+           FROM properties WHERE id = $1 LIMIT 1`,
+        [propertyId]
+      );
+      extra = extraRes.rows[0] || {};
+    } catch (e) {
+      console.warn('[GET property] colonnes complémentaires indisponibles:', e.message);
     }
     
     // ✅ Vérifier accès si sous-compte
@@ -19421,6 +19440,26 @@ app.get('/api/properties/:propertyId',
       booking_commission_pct: property.bookingCommissionPct ?? property.booking_commission_pct ?? 15,
 
       currency: property.currency || null,
+
+      // ✅ Champs alignés sur GET /api/properties (fiches logement des apps)
+      arrivalMessage: property.arrival_message || null,
+      channexEnabled: property.channex_enabled || false,
+      channexPropertyId: property.channex_property_id || null,
+      touristTax: property.touristTaxPerNight ?? property.tourist_tax_per_night ?? null,
+      customAutoResponses: property.custom_auto_responses || [],
+      quickReplies: (() => { let q = property.quick_replies || []; if (typeof q === 'string') { try { q = JSON.parse(q); } catch (e) { q = []; } } return Array.isArray(q) ? q : []; })(),
+      externalPricing: extra.external_pricing ?? null,
+      lateCheckoutEnabled: extra.late_checkout_enabled ?? null,
+      lateCheckoutToleranceMinutes: extra.late_checkout_tolerance_minutes ?? null,
+      lateCheckoutPricePerHour: extra.late_checkout_price_per_hour ?? null,
+      lateCheckoutMaxMinutes: extra.late_checkout_max_minutes ?? null,
+      earlyCheckinEnabled: extra.early_checkin_enabled ?? null,
+      earlyCheckinToleranceMinutes: extra.early_checkin_tolerance_minutes ?? null,
+      earlyCheckinPricePerHour: extra.early_checkin_price_per_hour ?? null,
+      earlyCheckinMaxMinutes: extra.early_checkin_max_minutes ?? null,
+      welcomeBasketEnabled: extra.welcome_basket_enabled ?? null,
+      welcomeBasketPrice: extra.welcome_basket_price ?? null,
+      welcomeBasketDescription: extra.welcome_basket_description ?? null,
 
       reservationCount: (reservationsStore.properties[property.id] || []).length,
       lastIcalSyncAt: property.last_ical_sync_at || null,
