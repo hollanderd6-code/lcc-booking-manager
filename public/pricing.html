@@ -33,593 +33,242 @@
 /* ─── BASE ─── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --primary: var(--bh-vert); --primary-dark: #15624B; --primary-soft: rgba(14,59,46,.1);
-  --ink: #0D1117; --muted: #7A8695; --text: #374151;
-  --border: rgba(200,184,154,.35); --cream: #F5F0E8; --white: #FAFAF8;
+  --g900: #013B30; --g800: #0E3B2E; --g700: #15624B; --g600: #1A7A5E; --g100: #E4EFE9; --g050: #F1F6F3;
+  --ink: #14201B; --text: #3A4640; --muted: #75807A; --line: rgba(20,32,27,.09);
+  --cream: #F6F3EC; --card: #FFFFFF; --amber: #B45309; --amber-bg: #FEF3C7;
+  --r-lg: 24px; --r-md: 16px;
+  --shadow: 0 1px 2px rgba(20,32,27,.04), 0 8px 28px rgba(20,32,27,.06);
 }
 html { scroll-behavior: smooth; }
-body { font-family: 'DM Sans', sans-serif; color: var(--ink); background: var(--white); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
-h1, h2 { font-family: 'Instrument Serif', serif; font-weight: 400; }
-p { color: var(--muted); }
-a { color: var(--primary); text-decoration: none; }
-.container { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif; color: var(--ink); background: var(--cream); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+.container { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+.pr-halo { position: absolute; inset: 0 0 auto 0; height: 900px; pointer-events: none; z-index: 0; overflow: hidden;
+  background: radial-gradient(520px 380px at 12% 8%, rgba(26,122,94,.16), transparent 70%), radial-gradient(560px 420px at 92% 18%, rgba(196,170,120,.20), transparent 70%); }
+main { position: relative; }
+main > * { position: relative; z-index: 1; }
 
 /* ─── BTN ─── */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 22px; border-radius: 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; border: none; text-decoration: none; transition: all .2s; width: 100%; }
-.btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 16px rgba(14,59,46,.3); }
-.btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(14,59,46,.35); color: white; }
-.btn-outline { background: white; color: var(--ink); border: 1.5px solid var(--border); }
-.btn-outline:hover { border-color: var(--primary); color: var(--primary); }
-.btn-dark { background: var(--ink); color: white; }
-.btn-dark:hover { background: #1C2333; transform: translateY(-2px); color: white; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 22px; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: background .2s, box-shadow .2s, transform .2s; width: 100%; }
+.btn-primary { background: var(--g900); color: #fff; box-shadow: 0 6px 18px rgba(1,59,48,.25); }
+.btn-primary:hover { background: var(--g700); }
+.btn-outline { background: #fff; color: var(--ink); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(20,32,27,.05); }
+.btn-outline:hover { border-color: var(--g600); color: var(--g700); }
+.btn-sm { padding: 9px 16px; font-size: 14px; border-radius: 11px; width: auto; min-height: 0; }
+.btn:disabled { cursor: default; }
 
 /* ─── HEADER ─── */
-.site-header { position: sticky; top: 0; z-index: 200; background: rgba(250,250,248,.92); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(200,184,154,.2); }
-.header-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; max-width: 1200px; margin: 0 auto; }
-.logo-link { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 18px; }
-.logo-icon { width: 34px; height: 34px; border-radius: 9px; overflow: hidden; flex-shrink: 0; }
+.site-header { position: sticky; top: 0; z-index: 200; background: rgba(246,243,236,.78); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--line); }
+.header-inner { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; max-width: 1160px; margin: 0 auto; }
+.logo-link { display: flex; align-items: center; gap: 10px; color: var(--ink); }
+.logo-icon { width: 32px; height: 32px; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
 .logo-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.brand-host { color: var(--primary); }
-.nav-main { display: flex; gap: 6px; }
-.nav-main a { color: var(--text); font-size: 14px; font-weight: 500; padding: 7px 14px; border-radius: 10px; transition: all .15s; }
-.nav-main a:hover, .nav-main a.active { color: var(--primary); background: var(--primary-soft); }
-.header-actions { display: flex; gap: 8px; }
-.btn-sm { padding: 9px 16px; font-size: 13px; border-radius: 10px; }
-.btn-label-short { display: none; }
-.menu-toggle { display: none; background: none; border: none; font-size: 22px; color: var(--ink); cursor: pointer; }
+.nav-main { display: flex; gap: 4px; }
+.nav-main a { color: var(--text); font-size: 14px; font-weight: 500; padding: 7px 14px; border-radius: 999px; transition: all .15s; }
+.nav-main a:hover, .nav-main a.active { color: var(--g800); background: rgba(1,59,48,.07); }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+.menu-toggle { display: none; background: none; border: none; font-size: 20px; color: var(--ink); cursor: pointer; width: 40px; height: 40px; }
 
 /* ─── HERO ─── */
-.pricing-hero { text-align: center; padding: 80px 0 60px; }
-.hero-kicker { display: inline-flex; align-items: center; gap: 7px; background: var(--primary-soft); color: var(--primary); border: 1px solid rgba(14,59,46,.15); padding: 5px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 20px; }
-.pricing-hero h1 { font-size: clamp(36px,5vw,58px); color: var(--ink); margin-bottom: 16px; line-height: 1.1; }
-.pricing-hero h1 em { color: var(--primary); }
-.pricing-hero p { font-size: 17px; color: var(--muted); margin-bottom: 0; }
-.launch-strip { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #f59e0b; color: #92400e; font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 999px; margin-top: 20px; }
+.pr-hero { text-align: center; padding: 72px 0 8px; }
+.pr-kicker { display: inline-flex; align-items: center; gap: 7px; background: rgba(255,255,255,.7); border: 1px solid var(--line); color: var(--g700); padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; margin-bottom: 22px; }
+.pr-hero h1 { font-size: clamp(36px, 5.4vw, 60px); font-weight: 700; letter-spacing: -.035em; line-height: 1.05; color: var(--ink); }
+.pr-hero h1 span { color: var(--g600); }
+.pr-hero p { font-size: 17px; color: var(--muted); margin-top: 18px; }
+.pr-launch { display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; background: var(--amber-bg); color: #92400E; font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 999px; }
 
-/* ─── BILLING TOGGLE ─── */
-.billing-section { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 32px 0 0; }
-.billing-toggle {
-  display: flex; align-items: center;
-  background: white; border: 1.5px solid var(--border);
-  border-radius: 999px; padding: 4px; gap: 2px;
-  box-shadow: 0 2px 12px rgba(32,34,31,.06);
-}
-.billing-btn {
-  padding: 9px 22px; border-radius: 999px; border: none;
-  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
-  cursor: pointer; background: transparent; color: var(--muted);
-  transition: all .2s; white-space: nowrap;
-}
-.billing-btn.active { background: var(--ink); color: white; box-shadow: 0 2px 8px rgba(32,34,31,.2); }
-.annual-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--vert-050); color: var(--bh-vert-fonce); border: 1px solid #C3DBD0; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; margin-left: 6px; }
-.billing-saving { margin-top: 14px; font-size: 13px; color: var(--muted); height: 20px; transition: opacity .3s; }
-.billing-saving strong { color: var(--primary); }
+/* ─── CONTROLS ─── */
+.pr-controls { max-width: 760px; margin: 40px auto 0; background: rgba(255,255,255,.72); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,.9); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 18px 22px; display: grid; grid-template-columns: auto 1fr; gap: 18px 26px; align-items: center; }
+.pr-seg { position: relative; display: grid; grid-template-columns: 1fr 1fr; background: rgba(118,118,128,.12); border-radius: 11px; padding: 2px; min-width: 250px; }
+.pr-seg::before { content: ''; position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); background: #fff; border-radius: 9px; box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 1px 1px rgba(0,0,0,.04); transition: transform .28s cubic-bezier(.3,.7,.3,1); }
+.pr-seg.annual::before { transform: translateX(100%); }
+.billing-btn { position: relative; z-index: 1; border: none; background: none; padding: 9px 14px; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; border-radius: 9px; white-space: nowrap; min-height: 0; }
+.annual-badge { display: inline-block; margin-left: 4px; color: var(--g600); font-size: 12px; font-weight: 700; }
+.pr-props { display: flex; align-items: center; gap: 14px; }
+.pr-props-label { font-size: 13px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.pr-props-label b { display: block; font-size: 22px; color: var(--ink); font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.pr-step { width: 34px; height: 34px; min-height: 0; border-radius: 50%; border: 1px solid var(--line); background: #fff; color: var(--ink); cursor: pointer; font-size: 12px; flex-shrink: 0; }
+.pr-step:hover { border-color: var(--g600); color: var(--g600); }
+.range-wrap { flex: 1; display: flex; align-items: center; }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; outline: none; cursor: pointer;
+  background: linear-gradient(to right, var(--g600) 0%, var(--g600) var(--pct, 0%), rgba(20,32,27,.1) var(--pct, 0%), rgba(20,32,27,.1) 100%); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 2px 7px rgba(0,0,0,.2), 0 0 0 .5px rgba(0,0,0,.06); }
+input[type="range"]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; border: none; background: #fff; box-shadow: 0 2px 7px rgba(0,0,0,.2); }
+.pr-hint { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; flex-wrap: wrap; text-align: center; }
+.pr-hint strong { color: var(--g700); }
+.pr-hint .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .5; }
 
-/* ─── CONTROLS BAR ─── */
-.controls-bar { max-width: 1144px; margin: 32px auto 0; }
-.controls-bar-inner {
-  display: flex; align-items: center;
-  background: white; border: 1.5px solid var(--border);
-  border-radius: 20px; padding: 14px 20px;
-  box-shadow: 0 4px 24px rgba(32,34,31,.05);
-  gap: 10px; flex-wrap: nowrap;
-  min-height: 72px;
-}
-.cb-group { display: flex; align-items: center; gap: 10px; }
-.cb-group-props { gap: 6px; }
-.cb-group-range { flex: 1; min-width: 160px; }
-.cb-label { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
-.cb-count { font-family: 'Instrument Serif', serif; font-size: 26px; color: var(--primary); min-width: 56px; width: 56px; text-align: center; line-height: 1; }
-.cb-sep { width: 1px; height: 32px; background: var(--border); flex-shrink: 0; }
-.cb-props-row { display: flex; align-items: center; gap: 8px; }
-.range-wrap { position: relative; padding: 4px 0; }
-input[type="range"] {
-  -webkit-appearance: none; appearance: none;
-  width: 100%; height: 6px; border-radius: 3px;
-  background: linear-gradient(to right, var(--primary) 0%, var(--primary) var(--pct, 30%), var(--bh-ligne) var(--pct, 30%), var(--bh-ligne) 100%);
-  outline: none; cursor: pointer;
-}
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: 24px; height: 24px; border-radius: 50%;
-  background: white; border: 2.5px solid var(--primary);
-  box-shadow: 0 2px 8px rgba(14,59,46,.3);
-  cursor: pointer; transition: transform .15s;
-}
-input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-.range-ticks { display: flex; justify-content: space-between; margin-top: 8px; padding: 0 2px; }
-.range-tick { font-size: 11px; color: #C0C8D4; font-weight: 500; }
-.slider-plan-hint {
-  margin-top: 20px; padding: 12px 20px;
-  background: var(--primary-soft); border-radius: 12px;
-  font-size: 14px; font-weight: 600; color: var(--primary);
-  display: flex; align-items: center; gap: 8px; justify-content: center;
-  transition: all .2s;
-}
-.slider-plan-hint i { font-size: 16px; }
+/* ─── PLANS ─── */
+.plans-section { padding: 36px 0 24px; }
+.plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch; }
+.plan-card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 28px 26px 26px; box-shadow: var(--shadow); display: flex; flex-direction: column; transition: opacity .25s, transform .25s, box-shadow .25s; }
+.plan-card.featured { background: var(--g900); border-color: var(--g900); color: #fff; box-shadow: 0 24px 60px rgba(1,59,48,.28); }
+.plan-card.plan-over-limit { opacity: .45; }
+.plan-card.is-rec:not(.featured) { border-color: var(--g600); box-shadow: 0 0 0 1px var(--g600), var(--shadow); }
+.plan-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 26px; }
+.plan-name { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+.plan-flag { font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.14); color: #CFE6DB; white-space: nowrap; }
+.plan-rec { display: none; font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--g050); color: var(--g700); white-space: nowrap; }
+.plan-card.is-rec .plan-rec { display: inline-flex; align-items: center; gap: 5px; }
+.plan-card.is-rec.featured .plan-flag { display: none; }
+.plan-card.featured .plan-rec { background: rgba(255,255,255,.14); color: #CFE6DB; }
+.plan-desc { font-size: 14px; color: var(--muted); line-height: 1.5; margin-top: 8px; min-height: 42px; }
+.featured .plan-desc { color: rgba(255,255,255,.62); }
+.plan-price { margin-top: 22px; }
+.price-old { font-size: 14px; color: var(--muted); text-decoration: line-through; height: 18px; }
+.featured .price-old { color: rgba(255,255,255,.45); }
+.price-row { display: flex; align-items: baseline; gap: 4px; margin-top: 2px; }
+.price-amount { font-size: 54px; font-weight: 700; letter-spacing: -.045em; line-height: 1; font-variant-numeric: tabular-nums; }
+.price-currency { font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
+.price-period { font-size: 15px; color: var(--muted); font-weight: 500; margin-left: 2px; }
+.featured .price-period { color: rgba(255,255,255,.6); }
+.price-annual-note { font-size: 13px; color: var(--g600); font-weight: 600; height: 18px; margin-top: 6px; }
+.featured .price-annual-note { color: #9FD3BD; }
+.price-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--amber); margin-top: 10px; }
+.featured .price-badge { color: #FCD34D; }
+.plan-includes { margin-top: 16px; padding: 11px 13px; border-radius: 12px; background: var(--g050); font-size: 13.5px; color: var(--text); line-height: 1.4; }
+.plan-includes strong { color: var(--ink); }
+.featured .plan-includes { background: rgba(255,255,255,.08); color: rgba(255,255,255,.75); }
+.featured .plan-includes strong { color: #fff; }
+.plan-cta { margin-top: 18px; }
+.featured .btn-primary { background: #fff; color: var(--g900); box-shadow: none; }
+.featured .btn-primary:hover { background: #E9F3EE; }
+.plan-points { list-style: none; margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 11px; }
+.featured .plan-points { border-top-color: rgba(255,255,255,.12); }
+.plan-points li { display: flex; gap: 10px; font-size: 14px; line-height: 1.4; color: var(--text); }
+.featured .plan-points li { color: rgba(255,255,255,.86); }
+.plan-points li i { width: 18px; height: 18px; border-radius: 50%; background: var(--g100); color: var(--g700); font-size: 9px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.featured .plan-points li i { background: rgba(255,255,255,.14); color: #9FD3BD; }
+.plan-points li.lead { font-weight: 600; color: var(--ink); }
+.plan-points li.lead i { display: none; }
+.nav-main .nav-login-m { display: none; }
+.featured .plan-points li.lead { color: #fff; }
+.pr-options { text-align: center; font-size: 13px; color: var(--muted); margin-top: 22px; line-height: 1.6; }
+.pr-options i { color: var(--amber); margin-right: 4px; }
 
-/* ─── PLANS GRID ─── */
-.plans-section { padding: 48px 0 0; }
-.plans-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; align-items: start; }
-.plan-card {
-  background: white; border: 1.5px solid var(--border);
-  border-radius: 24px; overflow: hidden;
-  transition: box-shadow .2s, transform .2s, border-color .2s;
-  position: relative;
-}
-.plan-card:hover { box-shadow: 0 16px 48px rgba(32,34,31,.1); transform: translateY(-4px); }
-.plan-card.featured {
-  border-color: var(--primary);
-  box-shadow: 0 8px 32px rgba(14,59,46,.15);
-  overflow: hidden;
-}
-/* ─── BANDEAU "LE PLUS POPULAIRE" ─── */
-/* .plan-popular-banner remplacé par .plan-wrap-banner */
-.plan-wrap { display: flex; flex-direction: column; }
-.plan-wrap-banner {
-  background: var(--primary);
-  color: white;
-  text-align: center;
-  font-size: 16px;
-  font-weight: 800;
-  line-height: 1.2;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  padding: 13px 24px;
-  border-radius: 22px 22px 0 0;
-  margin-bottom: -1px; /* colle au plan-card sans espace */
-  position: relative; z-index: 1;
-}
-.plan-wrap-spacer { height: 45px; }
-/* Carte Pro : pas de radius en haut, le bandeau la coiffe */
-.plan-wrap-banner + .plan-card.featured {
-  border-radius: 0 0 24px 24px !important;
-  border-top-color: transparent !important;
-}
-.plan-card.featured:hover { transform: translateY(-4px); box-shadow: 0 20px 56px rgba(14,59,46,.2); }
-.plan-card.highlighted { border-color: rgba(14,59,46,.4); box-shadow: 0 4px 16px rgba(14,59,46,.1); }
-.plan-card.active-recommendation {
-  border-color: var(--primary) !important;
-  box-shadow: 0 8px 32px rgba(14,59,46,.25) !important;
-  transition: all .3s cubic-bezier(.34,1.56,.64,1);
-}
-.plan-card.active-recommendation .plan-badge {
-  animation: pulse-badge .4s ease;
-}
-@keyframes pulse-badge {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.08); }
-  100% { transform: scale(1); }
-}
-.plan-recommended-tag {
-  display:inline-flex;align-items:center;gap:5px;
-  background:var(--vert-100);color:var(--bh-vert-fonce);border:1px solid #bbf7d0;
-  font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;
-  margin-bottom:10px;animation:fadeInTag .3s ease;
-}
-@keyframes fadeInTag {
-  from { opacity:0; transform:translateY(-4px); }
-  to { opacity:1; transform:translateY(0); }
-}
+/* ─── COMPARE ─── */
+.pr-compare { padding: 24px 0 72px; }
+.pr-compare-toggle { display: flex; margin: 0 auto; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 11px 20px; font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; box-shadow: var(--shadow); min-height: 0; }
+.pr-compare-toggle i { transition: transform .25s; font-size: 12px; color: var(--muted); }
+.pr-compare.open .pr-compare-toggle i { transform: rotate(180deg); }
+.pr-table-wrap { display: none; margin-top: 28px; background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); overflow: clip; }
+.pr-compare.open .pr-table-wrap { display: block; animation: prFade .3s ease; }
+@keyframes prFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.pr-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.pr-table thead th { position: sticky; top: 61px; background: rgba(255,255,255,.96); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); z-index: 2; padding: 16px 14px; font-size: 15px; font-weight: 700; text-align: center; border-bottom: 1px solid var(--line); }
+.pr-table thead th:first-child { text-align: left; }
+.pr-table thead th.hl { color: var(--g600); }
+.pr-table td { padding: 13px 14px; border-bottom: 1px solid var(--line); text-align: center; color: var(--text); }
+.pr-table td:first-child { text-align: left; color: var(--ink); width: 40%; }
+.pr-table td:nth-child(3) { background: rgba(26,122,94,.035); }
+.pr-table tr.grp td { background: var(--g050); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--g700); padding: 10px 14px; text-align: left; }
+.pr-table .yes { color: var(--g600); }
+.pr-table .no { color: #C5CBC7; }
+.pr-table .opt { display: inline-block; font-size: 12px; font-weight: 600; color: var(--amber); background: var(--amber-bg); padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.pr-table .txt { font-size: 13px; font-weight: 600; }
+.pr-table tr:last-child td { border-bottom: none; }
 
-.plan-header { padding: 28px 28px 24px; }
-.plan-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  padding: 4px 12px; border-radius: 999px; margin-bottom: 16px;
-}
-.plan-badge.default { background: var(--cream); color: var(--muted); }
-.plan-badge.featured { background: var(--primary); color: white; }
-.plan-badge.pro { background: var(--ink); color: white; }
-.plan-name { font-family: 'Instrument Serif', serif; font-size: 30px; font-weight: 400; color: var(--ink); margin-bottom: 6px; }
-.plan-desc { font-size: 13px; color: var(--muted); line-height: 1.55; margin-bottom: 20px; }
-
-.plan-price { margin-bottom: 24px; }
-.price-old { font-size: 14px; color: #C0C8D4; text-decoration: line-through; height: 22px; margin-bottom: 2px; }
-.price-row { display: flex; align-items: flex-end; gap: 4px; }
-.price-amount { font-family: 'Instrument Serif', serif; font-size: 52px; color: var(--ink); line-height: 1; }
-.price-currency { font-size: 22px; color: var(--muted); margin-bottom: 8px; }
-.price-period { font-size: 14px; color: var(--muted); margin-bottom: 4px; margin-left: 2px; padding-bottom: 6px; }
-.price-annual-note { font-size: 12px; color: var(--primary); font-weight: 600; height: 18px; margin-top: 4px; }
-.price-badge { display: inline-flex; align-items: center; gap: 5px; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; margin-top: 8px; }
-
-.plan-includes { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
-.plan-includes i { color: var(--primary); font-size: 12px; }
-
-.plan-cta { padding: 0 28px 24px; }
-
-/* ─── FEATURES LIST ─── */
-.plan-features { padding: 0 28px 24px; border-top: 1px solid var(--border); padding-top: 20px; }
-.features-title { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
-.plan-features ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
-.plan-features li { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; color: var(--text); line-height: 1.4; }
-.plan-features li i { color: var(--primary); font-size: 11px; flex-shrink: 0; margin-top: 2px; width: 14px; }
-.plan-features li i.fa-minus { color: #D1D5DB; }
-.feat-tag { display: inline-block; background: var(--primary-soft); color: var(--primary); font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
-
-/* ─── COMPARISON TABLE ─── */
-.comparison-section { padding: 80px 0; }
-.comparison-header { text-align: center; margin-bottom: 48px; }
-.section-kicker { display: inline-flex; align-items: center; gap: 7px; background: var(--primary-soft); color: var(--primary); border: 1px solid rgba(14,59,46,.15); padding: 5px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 16px; }
-.comparison-header h2 { font-size: clamp(28px,4vw,42px); color: var(--ink); }
-
-.comparison-table { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); }
-.comparison-table th { padding: 20px 24px; font-family: 'DM Sans', sans-serif; font-size: 14px; text-align: left; background: white; border-bottom: 1px solid var(--border); }
-.comparison-table th:first-child { width: 35%; font-weight: 600; color: var(--ink); background: var(--cream); }
-.comparison-table th:not(:first-child) { text-align: center; font-weight: 700; color: var(--ink); }
-.th-featured { background: linear-gradient(135deg, rgba(14,59,46,.08), rgba(14,59,46,.04)) !important; position: relative; }
-.th-featured::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--primary); }
-.th-name { font-family: 'Instrument Serif', serif; font-size: 20px; font-weight: 400; display: block; margin-bottom: 4px; }
-.th-price { font-size: 13px; color: var(--primary); font-weight: 600; }
-
-.comparison-table td { padding: 14px 24px; font-size: 13.5px; color: var(--text); border-bottom: 1px solid rgba(200,184,154,.2); background: white; }
-.comparison-table tr:last-child td { border-bottom: none; }
-.comparison-table td:first-child { font-weight: 500; color: var(--ink); background: var(--bh-fond); }
-.comparison-table td:not(:first-child) { text-align: center; }
-.td-featured { background: rgba(14,59,46,.03) !important; }
-.comparison-table tr:hover td { background: rgba(245,240,232,.5); }
-.comparison-table tr:hover td.td-featured { background: rgba(14,59,46,.06) !important; }
-
-.cat-row td { background: var(--cream) !important; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 10px 24px; }
-.cat-row td.td-featured { background: rgba(14,59,46,.05) !important; }
-
-.check-yes { color: var(--primary); font-size: 16px; }
-.check-no { color: #D1D5DB; font-size: 14px; }
+/* ─── AGENCE ─── */
+.pr-agency { padding: 0 0 80px; }
+.pr-agency-box { background: var(--g900); border-radius: 28px; padding: 56px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: center; color: #fff; overflow: hidden; position: relative; }
+.pr-agency-box::before { content: ''; position: absolute; width: 520px; height: 520px; right: -160px; top: -200px; background: radial-gradient(circle, rgba(159,211,189,.18), transparent 65%); }
+.pr-agency-box > * { position: relative; }
+.pr-agency .eyebrow { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: #9FD3BD; background: rgba(255,255,255,.08); padding: 6px 12px; border-radius: 999px; }
+.pr-agency h2 { font-size: clamp(28px, 3.2vw, 40px); font-weight: 700; letter-spacing: -.03em; line-height: 1.1; margin: 18px 0 14px; }
+.pr-agency p { color: rgba(255,255,255,.65); font-size: 15.5px; line-height: 1.65; }
+.pr-agency ul { list-style: none; display: flex; flex-direction: column; gap: 11px; margin: 24px 0 30px; }
+.pr-agency li { display: flex; gap: 10px; align-items: center; color: rgba(255,255,255,.86); font-size: 14.5px; }
+.pr-agency li i { color: #9FD3BD; font-size: 12px; }
+.pr-agency .btn { width: auto; background: #fff; color: var(--g900); }
+.pr-agency .btn:hover { background: #E9F3EE; }
+.pr-mock { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 22px; padding: 24px; display: flex; flex-direction: column; gap: 16px; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.pr-mock-head { display: flex; align-items: center; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.pr-mock-ic { width: 40px; height: 40px; border-radius: 11px; background: rgba(159,211,189,.18); color: #9FD3BD; display: flex; align-items: center; justify-content: center; }
+.pr-mock-row { display: flex; justify-content: space-between; font-size: 14px; color: rgba(255,255,255,.55); }
+.pr-mock-row b { color: #fff; font-weight: 700; }
+.pr-mock-row b.g { color: #9FD3BD; }
+.pr-pill-ok { margin-left: auto; font-size: 11.5px; font-weight: 600; color: #9FD3BD; background: rgba(159,211,189,.14); padding: 4px 10px; border-radius: 999px; }
 
 /* ─── FAQ ─── */
-.faq-section { padding: 80px 0; background: var(--cream); }
-.faq-header { text-align: center; margin-bottom: 56px; }
-.faq-header h2 { font-size: clamp(28px,3vw,40px); color: var(--ink); }
-.faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 900px; margin: 0 auto; }
-.faq-card { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 24px; transition: box-shadow .15s; }
-.faq-card:hover { box-shadow: 0 8px 24px rgba(32,34,31,.07); }
-.faq-card h4 { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px; }
-.faq-card h4 i { color: var(--primary); font-size: 14px; margin-top: 2px; flex-shrink: 0; }
-.faq-card p { font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+.faq-section { padding: 0 0 80px; }
+.pr-h2 { text-align: center; font-size: clamp(28px, 3.4vw, 40px); font-weight: 700; letter-spacing: -.03em; margin-bottom: 32px; }
+.faq-list { max-width: 760px; margin: 0 auto; background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); overflow: hidden; }
+.faq-list details { border-bottom: 1px solid var(--line); }
+.faq-list details:last-child { border-bottom: none; }
+.faq-list summary { list-style: none; cursor: pointer; padding: 20px 24px; font-size: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.faq-list summary::-webkit-details-marker { display: none; }
+.faq-list summary::after { content: '+'; font-size: 22px; font-weight: 400; color: var(--muted); transition: transform .25s; flex-shrink: 0; }
+.faq-list details[open] summary::after { transform: rotate(45deg); }
+.faq-list details p { padding: 0 24px 22px; color: var(--text); font-size: 15px; line-height: 1.65; }
+.faq-list details p strong { color: var(--ink); }
 
 /* ─── CTA ─── */
-.cta-section { padding: 80px 0 100px; }
-.cta-box { position: relative; overflow: hidden; border-radius: 28px; background: url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1400&q=80') center/cover; padding: 80px 60px; text-align: center; }
-.cta-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(32,34,31,.92) 0%, rgba(14,59,46,.7) 100%); }
-.cta-content { position: relative; z-index: 1; }
-.cta-box h2 { font-size: clamp(28px,4vw,44px); color: white; margin-bottom: 14px; }
-.cta-box p { font-size: 17px; color: rgba(255,255,255,.7); margin-bottom: 36px; }
-.cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-.cta-actions .btn { width: auto; }
-.cta-trust { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
-.cta-trust span { font-size: 13px; color: rgba(255,255,255,.45); display: flex; align-items: center; gap: 7px; }
-.cta-trust span i { color: var(--vert-300); }
+.cta-section { padding: 0 0 80px; }
+.cta-box { background: linear-gradient(160deg, #fff 0%, #EEF4EF 100%); border: 1px solid var(--line); border-radius: 28px; padding: 60px 32px; text-align: center; box-shadow: var(--shadow); }
+.cta-box img { width: 56px; height: 56px; border-radius: 14px; box-shadow: 0 10px 24px rgba(1,59,48,.25); }
+.cta-box h2 { font-size: clamp(28px, 3.4vw, 40px); font-weight: 700; letter-spacing: -.03em; margin-top: 20px; }
+.cta-box p { color: var(--muted); font-size: 16px; margin-top: 12px; }
+.cta-actions { display: flex; gap: 10px; justify-content: center; margin-top: 28px; flex-wrap: wrap; }
+.cta-actions .btn { width: auto; padding: 14px 26px; }
+.cta-trust { display: flex; gap: 22px; justify-content: center; margin-top: 24px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.cta-trust i { color: var(--g600); margin-right: 5px; }
 
 /* ─── FOOTER ─── */
-.site-footer { background: var(--ink); color: rgba(255,255,255,.5); padding: 60px 0 40px; }
-.footer-inner { max-width: 1200px; margin: 0 auto; padding: 0 28px; display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: start; }
-.footer-brand span { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 17px; color: white; }
-.footer-brand .brand-host { color: var(--vert-300); }
-.footer-copy { font-size: 13px; margin: 8px 0; }
-.footer-copy a { color: rgba(255,255,255,.6); }
-.footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
-.footer-links a { font-size: 12px; color: rgba(255,255,255,.35); transition: color .15s; }
-.footer-links a:hover { color: rgba(255,255,255,.7); }
-.footer-badges { display: flex; flex-direction: column; gap: 10px; }
-.footer-badge { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 10px 16px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.6); display: flex; align-items: center; gap: 7px; }
-.footer-badge i { color: var(--vert-300); }
+.site-footer { border-top: 1px solid var(--line); padding: 36px 24px; }
+.footer-inner { max-width: 1160px; margin: 0 auto; display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; align-items: center; }
+.footer-brand { display: flex; align-items: center; gap: 9px; font-weight: 700; }
+.footer-brand img { width: 26px; height: 26px; border-radius: 7px; }
+.footer-copy { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.footer-links { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: var(--muted); }
+.footer-links a:hover { color: var(--g700); }
+.footer-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.footer-badge { font-size: 12.5px; color: var(--text); background: #fff; border: 1px solid var(--line); padding: 7px 12px; border-radius: 999px; display: inline-flex; gap: 6px; align-items: center; }
 
-
-/* ─── SCROLL ARROW ─── */
-.scroll-arrow-wrap {
-  display: flex; justify-content: center;
-  padding: 8px 0 0;
-}
-.scroll-arrow {
-  width: 48px; height: 48px;
-  background: var(--primary);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  color: white; font-size: 20px;
-  animation: bounceDown 1.8s ease-in-out infinite;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(14,59,46,.35);
-  border: none; text-decoration: none;
-}
-.scroll-arrow:hover { background: var(--primary-dark); color: white; }
-@keyframes bounceDown {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(8px); }
-}
-
-/* ─── SCROLL REVEAL ─── */
-.reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s cubic-bezier(.25,0,0,1), transform .7s cubic-bezier(.25,0,0,1); }
+/* ─── REVEAL ─── */
+.reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
 .reveal.visible { opacity: 1; transform: none; }
-.reveal-delay-1 { transition-delay: .1s; }
-.reveal-delay-2 { transition-delay: .2s; }
-.reveal-delay-3 { transition-delay: .3s; }
 
 /* ─── RESPONSIVE ─── */
-@media (max-width: 1024px) {
+@media (max-width: 1000px) {
   .plans-grid { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
-  .plan-card.featured { transform: none; }
-  .plan-card.featured:hover { transform: translateY(-4px); }
-  .comparison-table { display: none; }
-  .faq-grid { grid-template-columns: 1fr; }
-  .footer-inner { grid-template-columns: 1fr; }
+  .plan-wrap-pro { order: -1; }
+  .pr-agency-box { grid-template-columns: 1fr; padding: 40px 28px; gap: 32px; }
 }
-@media (max-width: 768px) {
-  .nav-main { display: none; }
-  .menu-toggle { display: block; }
-  .nav-main.open { display: flex; flex-direction: column; position: fixed; left: 0; right: 0; height: auto; background: white; border-bottom: 1px solid rgba(200,184,154,.3); padding: 12px 20px 20px; gap: 2px; z-index: 9999; box-shadow: 0 8px 24px rgba(0,0,0,.10); }
-  .nav-main.open a { padding: 12px 16px; font-size: 15px; border-radius: 10px; color: var(--ink); font-weight: 500; }
+@media (max-width: 860px) {
+  .nav-main { display: none; position: fixed; left: 12px; right: 12px; top: 62px; flex-direction: column; background: rgba(255,255,255,.96); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid var(--line); border-radius: 18px; padding: 8px; box-shadow: 0 20px 40px rgba(0,0,0,.12); }
+  .nav-main.open { display: flex; }
+  .nav-main a { padding: 12px 14px; font-size: 16px; border-radius: 12px; }
+  .menu-toggle { display: inline-flex; align-items: center; justify-content: center; }
   .header-actions .btn-outline { display: none; }
-  .header-actions .btn-primary .btn-label { display: none; }
-  .agency-highlight-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
-  .header-actions .btn-primary .btn-label-short { display: inline; }
-  .slider-section { padding: 24px 20px; }
-  .cta-box { padding: 52px 24px; }
-
-  /* Plan cards — padding réduit + typo ajustée */
-  .plans-grid { max-width: 100%; }
-  .plan-header { padding: 18px 16px 16px; }
-
-  .plan-cta { padding: 0 16px 16px; }
-  .plan-features { padding: 16px 16px 20px; }
-  .price-amount { font-size: 42px; }
-  .plan-name { font-size: 24px; }
-  .plan-includes { font-size: 12px; flex-wrap: wrap; }
-  .plan-features li { font-size: 13px; }
-  .feat-tag { font-size: 9px; }
-
-  /* Footer */
-  .footer-badges { flex-direction: row; flex-wrap: wrap; }
+  .nav-main .nav-login-m { display: block; }
 }
-@media (max-width: 520px) {
-  .slider-section { margin: 28px 0 0; }
+@media (max-width: 640px) {
+  .container { padding: 0 16px; }
+  .header-inner { padding: 10px 16px; }
+  .header-actions .btn-primary { padding: 8px 13px; font-size: 13px; }
+  .header-actions .btn-primary i { display: none; }
+  .pr-hero { padding: 44px 0 0; }
+  .pr-hero p { font-size: 15px; }
+  .pr-controls { grid-template-columns: 1fr; padding: 16px; margin-top: 28px; gap: 16px; }
+  .pr-seg { min-width: 0; }
+  .pr-props { gap: 10px; }
+  .plan-card { padding: 24px 20px 22px; }
+  .plan-desc { min-height: 0; }
+  .pr-table { font-size: 12.5px; }
+  .pr-table td, .pr-table thead th { padding: 11px 6px; }
+  .pr-table thead th { font-size: 13px; top: 63px; }
+  .pr-table td:first-child { padding-left: 14px; width: 38%; }
+  .pr-table .opt { font-size: 10.5px; padding: 2px 6px; white-space: normal; }
+  .pr-agency-box { padding: 32px 22px; border-radius: 24px; }
+  .faq-list summary { padding: 18px; font-size: 15px; }
+  .faq-list details p { padding: 0 18px 18px; font-size: 14.5px; }
+  .cta-box { padding: 44px 20px; }
+  .cta-actions .btn { width: 100%; }
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+  .site-footer { padding-bottom: calc(36px + env(safe-area-inset-bottom)); }
 }
-
-/* ─── FEATURE SECTIONS ─── */
-.feat-section { margin-bottom: 18px; }
-.feat-section:last-child { margin-bottom: 0; }
-.feat-section-title {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
-  color: var(--ink); padding-bottom: 8px;
-  border-bottom: 1px solid rgba(200,184,154,.25); margin-bottom: 10px;
-}
-.feat-section-title i { font-size: 10px; color: var(--primary); width: 14px; text-align: center; }
-.feat-section-unavailable .feat-section-title { color: var(--ink); }
-.feat-section-unavailable .feat-section-title i { color: var(--muted); }
-.feat-section-unavailable li { opacity: .5; }
-/* Items de la liste : jamais en gras, seul le titre de section l'est */
-.plan-features li strong { font-weight: 400; }
-
-/* ─── SLIDER CONTROLS ─── */
-.slider-controls { display: flex; align-items: center; gap: 12px; }
-.slider-controls .range-wrap { flex: 1; }
-.slider-btn {
-  width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--border);
-  background: white; color: var(--ink); font-size: 13px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  transition: all .15s; box-shadow: 0 1px 4px rgba(32,34,31,.08);
-}
-.slider-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
-.slider-btn:active { transform: scale(.92); }
-
-/* ─── FEATURES INTRO ─── */
-.features-intro {
-  font-size: 12px; font-weight: 700; color: var(--muted);
-  text-transform: uppercase; letter-spacing: .06em;
-  margin-bottom: 16px; padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-/* ─── FEATURE COLOR CODING ─── */
-.fi-included { background: none; border-radius: 0; padding: 0; margin: 0; }
-.fi-included i { color: var(--primary) !important; }
-.fi-unavailable { opacity: .4; }
-.fi-unavailable i { color: #d1d5db !important; }
-
-/* Option : fond ambre original restauré */
-.fi-option { background: rgba(254,243,199,.5); border-radius: 6px; padding: 2px 6px 2px 4px; margin: 0 -6px; }
-.fi-option i.fa-circle-dot { color: #d97706 !important; display: inline-block; }
-.fi-option i.fa-check { color: #d97706 !important; }
-
-/* Bientôt : bleu ardoise, distinct des options ambre */
-.fi-soon { opacity: .75; }
-.fi-soon i { color: #6366f1 !important; }
-
-/* feat-tag par défaut : sobre (commission 3%, etc.) */
-.feat-tag {
-  background: rgba(32,34,31,.06) !important;
-  color: var(--muted) !important;
-  border: 1px solid rgba(32,34,31,.1) !important;
-}
-
-/* feat-tag "Option +X€" dans fi-option : couleur ambre */
-.fi-option .feat-tag {
-  background: #fef3c7 !important;
-  color: #92400e !important;
-  border: 1px solid #f59e0b !important;
-}
-
-/* feat-tag "Bientôt" : bleu ardoise */
-.fi-soon .feat-tag {
-  background: #ede9fe !important;
-  color: #4338ca !important;
-  border: 1px solid #c4b5fd !important;
-}
-
-/* feat-tag dans les titres de section (Exclusif, Conciergerie) */
-.feat-section-title .feat-tag {
-  background: rgba(32,34,31,.08) !important;
-  color: var(--ink) !important;
-  border-color: rgba(32,34,31,.15) !important;
-}
-
-/* ─── PLAN PICTO ─── */
-/* ─── PLAN TITLE BANNER ─── */
-.plan-title-banner {
-  display: grid;
-  grid-template-columns: 24px 1fr 24px;
-  align-items: center;
-  gap: 10px; padding: 13px 20px;
-  margin: 0 0 20px 0;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 16px; font-weight: 800;
-  letter-spacing: .1em; text-transform: uppercase;
-}
-.plan-title-banner .plan-title-icon {
-  font-size: 26px; flex-shrink: 0;
-  text-align: left;
-}
-.plan-title-banner .plan-name {
-  text-align: center;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 16px; font-weight: 800;
-  letter-spacing: .1em; text-transform: uppercase;
-  margin: 0; color: inherit;
-}
-.plan-title-banner::after {
-  content: ''; display: block; width: 24px;
-}
-.plan-title-banner-starter { background: rgba(14,59,46,.12); color: var(--primary); }
-.plan-title-banner-pro     { background: rgba(32,34,31,.08);  color: var(--ink); }
-.plan-title-banner-agence  { background: rgba(124,58,237,.1); color: var(--bh-violet); }
-/* on retire l'ancien header-top */
-.plan-header-top { display: none; }
-
-/* ─── CONTROLS BAR RESPONSIVE ─── */
-@media (max-width: 768px) {
-  .controls-bar { margin: 20px 0 0; }
-  .controls-bar-inner {
-    flex-direction: column;
-    gap: 14px;
-    padding: 16px;
-    border-radius: 18px;
-  }
-  .cb-sep { display: none; }
-
-  /* Ligne 1 : toggle mensuel/annuel pleine largeur */
-  .cb-group:first-child { width: 100%; justify-content: space-between; }
-  .billing-toggle { flex: 1; }
-  .billing-btn { flex: 1; text-align: center; padding: 10px 12px; font-size: 14px; }
-
-  /* Ligne 2 : logements + hint côte à côte */
-  .cb-group-props { flex: 0 0 auto; }
-  .cb-group:last-child { flex: 1; justify-content: flex-end; }
-
-  /* Wrapper ligne 2 */
-  .cb-group-props,
-  .cb-group:last-child {
-    display: flex;
-    align-items: center;
-  }
-
-  /* Réorganiser : compteur à gauche, hint à droite sur la même ligne */
-  .controls-bar-inner {
-    display: flex;
-    flex-wrap: wrap;
-  }
-
-  /* Ligne 2 : compteur + hint sur une même rangée */
-  .cb-group-props { order: 2; flex: 1; }
-  .cb-group:last-child { order: 2; }
-
-  /* Slider pleine largeur en dernier */
-  .cb-group-range { order: 3; width: 100%; min-width: unset; }
-
-  /* Compteur de logements : plus grand et lisible */
-  .cb-count { font-size: 32px; min-width: 48px; }
-  .cb-label { font-size: 13px; }
-
-  /* Hint plus compact */
-  .slider-plan-hint {
-    font-size: 13px !important;
-    padding: 8px 14px !important;
-    white-space: nowrap;
-    border-radius: 10px;
-  }
-
-  /* Boutons +/- plus grands sur mobile */
-  .slider-btn {
-    width: 40px;
-    height: 40px;
-    font-size: 15px;
-  }
-}
-
-/* ─── HIDE OLD slider styles no longer needed ─── */
-.slider-count, .slider-unit, .slider-label, .range-ticks, .range-tick,
-.slider-plan-hint i.fa-check-circle { /* kept */ }
-
-
-/* ─── PRICE ALIGNMENT ─── */
-.plan-price { min-height: 110px; }
-.plan-includes { min-height: 40px; }
-.plans-grid { align-items: stretch; }
-.plan-card { display: flex; flex-direction: column; }
-.plan-features { flex: 1; }
-
-
-/* ─── PLAN OVER LIMIT ─── */
-.plan-over-limit {
-  opacity: .38;
-  filter: grayscale(.5);
-  pointer-events: none;
-}
-.plan-over-limit .plan-header::before {
-  content: '⚠ Limite dépassée';
-  display: block;
-  background: #fef9c3; color: #854d0e;
-  font-size: 11px; font-weight: 700;
-  padding: 5px 12px; margin: -28px -28px 16px -28px;
-  border-bottom: 1px solid #fde68a;
-  text-align: center;
-}
-
-
-/* ─── HERO SPLIT ─── */
-.pricing-hero-split { padding: 52px 0 0 !important; text-align: left !important; }
-.hero-split {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 64px;
-  align-items: center;
-  min-height: 460px;
-}
-.hero-photo-col { position: relative; }
-.hero-photo-wrap { position: relative; }
-.hero-photo-main {
-  width: 100%; height: 420px;
-  object-fit: cover;
-  border-radius: 28px;
-  display: block;
-  box-shadow: 0 24px 64px rgba(32,34,31,.14);
-}
-.hero-photo-badge {
-  position: absolute; left: -20px;
-  display: flex; align-items: center; gap: 10px;
-  background: white; border: 1px solid var(--border);
-  border-radius: 14px; padding: 10px 16px;
-  box-shadow: 0 8px 24px rgba(32,34,31,.1);
-  animation: floatBadge 3s ease-in-out infinite alternate;
-}
-.hero-badge-top { top: 32px; animation-delay: 0s; }
-.hero-badge-bottom { bottom: 44px; animation-delay: 1.5s; }
-@keyframes floatBadge {
-  from { transform: translateY(0); }
-  to   { transform: translateY(-7px); }
-}
-.hero-content-col {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
-}
-.hero-content-col h1 { margin-bottom: 0; }
-.hero-content-col p { margin-bottom: 0; }
-.hero-content-col .launch-strip { margin-top: 4px; }
-@media (max-width: 920px) {
-  .hero-split { grid-template-columns: 1fr; }
-  .hero-photo-col { display: none; }
-  .pricing-hero-split { text-align: center !important; }
-  .hero-content-col { align-items: center; }
-}
-
 </style>
 
   <!-- Calques tardifs — mobile et correctifs empiles. Ils surchargent
@@ -641,9 +290,10 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
     </a>
     <nav class="nav-main" id="navMain">
       <a href="/#features">Fonctionnalités</a>
-      <a href="/ia.html"><i class="fas fa-sparkles" style="font-size:11px;margin-right:3px;color:var(--primary);"></i>IA</a>
+      <a href="/ia.html">IA</a>
       <a href="/pricing.html" class="active">Tarifs</a>
       <a href="/blog.html">Blog</a>
+      <a href="/login.html" class="nav-login-m">Se connecter</a>
     </nav>
     <div class="header-actions">
       <a href="/login.html" class="btn btn-outline btn-sm">Se connecter</a>
@@ -653,444 +303,256 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
   </div>
 </header>
 
+<main>
+<div class="pr-halo" aria-hidden="true"></div>
+
 <!-- HERO -->
-<section class="pricing-hero pricing-hero-split">
+<section class="pr-hero">
   <div class="container">
-    <div class="hero-split reveal">
+    <div class="pr-kicker"><i class="fas fa-tag"></i> Tarifs simples & transparents</div>
+    <h1>Choisissez votre plan,<br><span>démarrez en 15 minutes.</span></h1>
+    <p>14 jours d'essai gratuit · Aucune carte requise · Annulez à tout moment</p>
+    <div class="pr-launch"><i class="fas fa-rocket"></i> Offre de lancement : prix réduits pour les 200 premiers clients</div>
 
-      <!-- Photo gauche -->
-      <div class="hero-photo-col">
-        <div class="hero-photo-wrap">
-          <img
-            src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=700&q=80"
-            alt="Gestion de logements"
-            class="hero-photo-main">
-          <div class="hero-photo-badge hero-badge-top">
-            <i class="fas fa-chart-line" style="color:var(--primary);font-size:15px;"></i>
-            <div>
-              <div style="font-size:13px;font-weight:700;color:var(--ink);">+34% de revenus</div>
-              <div style="font-size:11px;color:var(--muted);">en moyenne · nos hôtes</div>
-            </div>
-          </div>
-          <div class="hero-photo-badge hero-badge-bottom">
-            <i class="fas fa-robot" style="color:#7c3aed;font-size:15px;"></i>
-            <div>
-              <div style="font-size:13px;font-weight:700;color:var(--ink);">-8h / semaine</div>
-              <div style="font-size:11px;color:var(--muted);">économisées grâce à l'IA</div>
-            </div>
-          </div>
-        </div>
+    <!-- Facturation + logements -->
+    <div class="pr-controls" id="plansAnchor">
+      <div class="pr-seg" id="billingSeg" role="tablist" aria-label="Facturation">
+        <button class="billing-btn active" id="btnMonthly" onclick="setBilling('monthly')">Mensuel</button>
+        <button class="billing-btn" id="btnAnnual" onclick="setBilling('annual')">Annuel <span class="annual-badge">–17 %</span></button>
       </div>
-
-      <!-- Contenu droite -->
-      <div class="hero-content-col">
-        <div class="hero-kicker"><i class="fas fa-tag"></i> Tarifs simples & transparents</div>
-        <h1>Choisissez votre plan,<br>démarrez en <em>15 minutes.</em></h1>
-        <p>14 jours d'essai gratuit · Aucune carte requise · Annulez à tout moment</p>
-        <div class="launch-strip"><i class="fas fa-rocket"></i> Offre de lancement — Prix réduits pour les 200 premiers clients !</div>
+      <div class="pr-props">
+        <div class="pr-props-label">Logements<b id="sliderCount">1</b></div>
+        <button class="pr-step" onclick="updateSlider(Math.max(1, propCount - 1))" aria-label="Moins"><i class="fas fa-minus"></i></button>
+        <div class="range-wrap"><input type="range" id="propSlider" min="1" max="200" value="1" oninput="updateSlider(this.value)" aria-label="Nombre de logements"></div>
+        <button class="pr-step" onclick="updateSlider(Math.min(200, propCount + 1))" aria-label="Plus"><i class="fas fa-plus"></i></button>
       </div>
-
+      <div class="pr-hint" id="sliderHint">
+        <span><i class="fas fa-circle-check" style="color:var(--g600)"></i> <strong id="sliderHintText">Plan Starter</strong></span>
+        <span id="sliderHintExtra"></span>
+        <span class="dot" id="billingDot" hidden></span>
+        <span id="billingSaving"></span>
+      </div>
     </div>
   </div>
 </section>
-
-<div class="scroll-arrow-wrap">
-  <a class="scroll-arrow" onclick="document.getElementById('plansAnchor').scrollIntoView({behavior:'smooth'})" aria-label="Voir les plans"><i class="fas fa-chevron-down"></i></a>
-</div>
-
-<!-- TOGGLE + SLIDER -->
-<div id="plansAnchor" class="container">
-  <div class="billing-section reveal">
-
-    <!-- Barre unique horizontale : toggle + logements -->
-    <div class="controls-bar">
-      <div class="controls-bar-inner">
-        <!-- Toggle mensuel/annuel -->
-        <div class="cb-group">
-          <span class="cb-label">Facturation</span>
-          <div class="billing-toggle">
-            <button class="billing-btn active" id="btnMonthly" onclick="setBilling('monthly')">Mensuel</button>
-            <button class="billing-btn" id="btnAnnual" onclick="setBilling('annual')">
-              Annuel <span class="annual-badge"><i class="fas fa-tag" style="font-size:9px;"></i> –17%</span>
-            </button>
-          </div>
-        </div>
-        <div class="cb-sep"></div>
-        <!-- Logements -->
-        <div class="cb-group cb-group-props">
-          <span class="cb-label">Logements</span>
-          <div class="cb-props-row">
-            <button class="slider-btn" onclick="updateSlider(Math.max(1, propCount - 1))" aria-label="Moins"><i class="fas fa-minus"></i></button>
-            <span class="cb-count" id="sliderCount">1</span>
-            <button class="slider-btn" onclick="updateSlider(Math.min(200, propCount + 1))" aria-label="Plus"><i class="fas fa-plus"></i></button>
-          </div>
-        </div>
-        <div class="cb-sep"></div>
-        <!-- Slider -->
-        <div class="cb-group cb-group-range">
-          <div class="range-wrap" style="width:100%;">
-            <input type="range" id="propSlider" min="1" max="200" value="1" oninput="updateSlider(this.value)">
-          </div>
-        </div>
-        <div class="cb-sep"></div>
-        <!-- Hint -->
-        <div class="cb-group">
-          <div class="slider-plan-hint" id="sliderHint" style="margin:0;padding:6px 13px;flex-shrink:0;white-space:nowrap;min-width:148px;text-align:center;justify-content:center;flex-direction:column;gap:1px;height:52px;">
-            <div style="display:flex;align-items:center;gap:6px;justify-content:center;font-weight:700;">
-              <i class="fas fa-check-circle"></i>
-              <span id="sliderHintText">Plan Starter</span>
-            </div>
-            <div id="sliderHintExtra" style="font-size:11px;font-weight:500;opacity:0.75;height:16px;line-height:16px;">&nbsp;</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="billing-saving" id="billingSaving">&nbsp;</div>
-
-  </div>
-</div>
 
 <!-- PLANS -->
 <section class="plans-section">
   <div class="container">
     <div class="plans-grid">
 
-      <!-- ─── STARTER ─── -->
-      <div class="plan-wrap">
-        <div class="plan-wrap-spacer"></div>
+      <div class="plan-wrap plan-wrap-starter">
         <div class="plan-card" id="card-starter">
-        <div class="plan-title-banner plan-title-banner-starter"><i class="fas fa-rocket plan-title-icon"></i><span class="plan-name">Starter</span></div>
-        <div class="plan-header">
-          <div class="plan-desc">Pour les propriétaires qui démarrent. Jusqu'à 3 logements, tout ce qu'il faut pour bien gérer.</div>
+          <div class="plan-top">
+            <span class="plan-name">Starter</span>
+            
+            <span class="plan-rec"><i class="fas fa-circle-check"></i> Recommandé pour vous</span>
+          </div>
+          <div class="plan-desc">Pour les propriétaires qui démarrent, jusqu'à 3 logements.</div>
           <div class="plan-price">
             <div class="price-old" id="starter-old"></div>
             <div class="price-row">
+              <span class="price-amount" id="starter-amount"></span>
               <span class="price-currency">€</span>
-              <span class="price-amount" id="starter-amount">15</span>
               <span class="price-period" id="starter-period">/mois</span>
             </div>
             <div class="price-annual-note" id="starter-annual-note"></div>
-            <div class="price-badge"><i class="fas fa-bolt" style="font-size:9px;"></i> Prix garanti à vie · 200 premiers</div>
+            <div class="price-badge"><i class="fas fa-bolt"></i> Prix garanti à vie · 200 premiers clients</div>
           </div>
-          <div class="plan-includes"><i class="fas fa-home"></i> <strong>Jusqu'à 3 logements</strong> · +9€/logement supp.</div>
+          <div class="plan-includes"><strong>1 logement inclus</strong> · +9 €/logement supp. (jusqu'à 3)</div>
+          <div class="plan-cta">
+            <button class="btn btn-outline" onclick="startCheckout('starter', event)">Essayer 14 jours gratuit</button>
+          </div>
+          <ul class="plan-points">
+            <li><i class="fas fa-check"></i><span>Calendrier & connexion Airbnb, Booking, Abritel</span></li>
+            <li><i class="fas fa-check"></i><span>Messagerie IA 24/7 en 26 langues</span></li>
+            <li><i class="fas fa-check"></i><span>Paiements Stripe & cautions voyageurs (3 %)</span></li>
+            <li><i class="fas fa-check"></i><span>Ménage, livret d'accueil & contrats PDF</span></li>
+            <li><i class="fas fa-check"></i><span>Rapports & revenus</span></li>
+            <li><i class="fas fa-check"></i><span>App iOS & Android</span></li>
+          </ul>
         </div>
-        <div class="plan-cta">
-          <button class="btn btn-outline" onclick="startCheckout('starter', event)">Essayer 14 jours gratuit</button>
-        </div>
-        <div class="plan-features">
-          <div class="features-intro">Ce que comprend la formule :</div>
+      </div>
 
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-calendar-alt"></i> Calendrier & sync</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> Calendrier centralisé</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Connexion API (Airbnb, Booking, Abritel…)</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Import / Export iCal</li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-credit-card"></i> Paiements & cautions</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> Paiements directs Stripe</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Cautions voyageurs <span class="feat-tag" style="background:#fef3c7;color:#92400e;border-color:#f59e0b;">3% commission</span></li>
-              <li class="fi-included"><i class="fas fa-check"></i> App voyageur BHGuest</li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-robot"></i> Messagerie & IA</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> Messagerie IA 24/7 · 26 langues</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Notifications push</li>
-              <li class="fi-option"><i class="fas fa-circle-dot" style="color:#d97706;"></i><i class="fas fa-check"></i> SMS voyageurs <span class="feat-tag">Option +7,99€/mois</span></li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-broom"></i> Ménage & outils</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> Ménage & checklists</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Livret d'accueil digital</li>
-              <li class="fi-included"><i class="fas fa-check"></i> App iOS & Android</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Règles tarifaires</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Rapports & revenus</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Contrats de location PDF</li>
-              <li class="fi-option"><i class="fas fa-circle-dot" style="color:#d97706;"></i> Pricing dynamique <span class="feat-tag">4,99 €/logement</span></li>
-            </ul>
-          </div>
-
-          <div class="feat-section feat-section-unavailable">
-            <div class="feat-section-title"><i class="fas fa-times-circle"></i> Non inclus</div>
-            <ul>
-              <li class="fi-unavailable"><i class="fas fa-minus"></i> Facturation propriétaires</li>
-              <li class="fi-unavailable"><i class="fas fa-minus"></i> Sous-comptes équipe</li>
-              <li class="fi-unavailable"><i class="fas fa-minus"></i> Serrures connectées</li>
-            </ul>
-          </div>
-
-        </div>
-      </div><!-- /card-starter -->
-      </div><!-- /plan-wrap starter -->
-
-      <!-- ─── PRO ─── -->
-      <div class="plan-wrap">
-        <div class="plan-wrap-banner"><i class="fas fa-star" style="font-size:12px;margin-right:8px;"></i>Le plus populaire</div>
+      <div class="plan-wrap plan-wrap-pro">
         <div class="plan-card featured" id="card-pro">
-        <div class="plan-title-banner plan-title-banner-pro"><i class="fas fa-gear plan-title-icon"></i><span class="plan-name">Pro</span></div>
-        <div class="plan-header">
-          <div class="plan-desc">Pour les conciergeries et gestionnaires. Jusqu'à 50 logements, toutes les fonctionnalités.</div>
+          <div class="plan-top">
+            <span class="plan-name">Pro</span>
+            <span class="plan-flag">Le plus populaire</span>
+            <span class="plan-rec"><i class="fas fa-circle-check"></i> Recommandé pour vous</span>
+          </div>
+          <div class="plan-desc">Pour les conciergeries et gestionnaires, jusqu'à 50 logements.</div>
           <div class="plan-price">
             <div class="price-old" id="pro-old"></div>
             <div class="price-row">
+              <span class="price-amount" id="pro-amount"></span>
               <span class="price-currency">€</span>
-              <span class="price-amount" id="pro-amount">49</span>
               <span class="price-period" id="pro-period">/mois</span>
             </div>
             <div class="price-annual-note" id="pro-annual-note"></div>
-            <div class="price-badge"><i class="fas fa-bolt" style="font-size:9px;"></i> Prix garanti à vie · 200 premiers</div>
+            <div class="price-badge"><i class="fas fa-bolt"></i> Prix garanti à vie · 200 premiers clients</div>
           </div>
-          <div class="plan-includes"><i class="fas fa-home"></i> <strong>4 logements inclus</strong> · +7€/logement (max 50)</div>
+          <div class="plan-includes"><strong>4 logements inclus</strong> · +7 €/logement supp. (max 50)</div>
+          <div class="plan-cta">
+            <button class="btn btn-primary" onclick="startCheckout('pro', event)">Essayer 14 jours gratuit</button>
+          </div>
+          <ul class="plan-points">
+            <li class="lead"><i class="fas fa-check"></i><span>Tout Starter, et :</span></li>
+            <li><i class="fas fa-check"></i><span>Cautions sans commission</span></li>
+            <li><i class="fas fa-check"></i><span>Facturation propriétaires & attestation fiscale</span></li>
+            <li><i class="fas fa-check"></i><span>Sous-comptes équipe & checklists avancées</span></li>
+            <li><i class="fas fa-check"></i><span>Serrures connectées (Igloohome, Nuki, TTLock)</span></li>
+            <li><i class="fas fa-check"></i><span>Rapports financiers avancés</span></li>
+          </ul>
         </div>
-        <div class="plan-cta">
-          <button class="btn btn-primary" onclick="startCheckout('pro', event)">Essayer 14 jours gratuit</button>
-        </div>
-        <div class="plan-features">
-          <div class="features-intro">Tout du plan Starter, et :</div>
+      </div>
 
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-calendar-alt"></i> Calendrier & sync</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> Tout Starter, jusqu'à 50 logements</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Règles tarifaires avancées</li>
-              <li class="fi-option"><i class="fas fa-circle-dot" style="color:#d97706;"></i> Pricing dynamique <span class="feat-tag">4,99 €/logement</span></li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-credit-card"></i> Paiements & cautions</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> <strong>Cautions sans commission</strong></li>
-              <li class="fi-included"><i class="fas fa-check"></i> App voyageur BHGuest</li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-robot"></i> Messagerie & IA</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> Messagerie IA 24/7 · 26 langues</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Notifications push</li>
-              <li class="fi-option"><i class="fas fa-circle-dot" style="color:#d97706;"></i><i class="fas fa-check"></i> SMS voyageurs <span class="feat-tag">Option +1€/log/mois</span></li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-file-invoice"></i> Facturation & admin</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> <strong>Facturation propriétaires</strong> <span class="feat-tag">Conciergerie</span></li>
-              <li class="fi-included"><i class="fas fa-check"></i> Factures clients & débours</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Attestation fiscale conciergerie</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Rapports financiers avancés</li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-users"></i> Équipe</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> <strong>Sous-comptes équipe</strong></li>
-              <li class="fi-included"><i class="fas fa-check"></i> Checklists avancées par logement</li>
-              <li class="fi-option"><i class="fas fa-circle-dot" style="color:#d97706;"></i><i class="fas fa-check"></i> Droits par profil <span class="feat-tag">Option +5€/mois</span></li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-lock"></i> Serrures connectées</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> <strong>Codes d'accès automatiques</strong></li>
-              <li class="fi-included"><i class="fas fa-check"></i> Igloohome · Nuki · TTLock</li>
-            </ul>
-          </div>
-
-          <div class="feat-section feat-section-unavailable">
-            <div class="feat-section-title"><i class="fas fa-times-circle"></i> Non inclus</div>
-            <ul>
-              <li class="fi-unavailable"><i class="fas fa-minus"></i> Mode Agence (multi-comptes clients)</li>
-              <li class="fi-unavailable"><i class="fas fa-minus"></i> Support prioritaire</li>
-            </ul>
-          </div>
-
-        </div>
-      </div><!-- /card-pro -->
-      </div><!-- /plan-wrap pro -->
-
-      <!-- ─── AGENCE ─── -->
-      <div class="plan-wrap">
-        <div class="plan-wrap-spacer"></div>
+      <div class="plan-wrap plan-wrap-agence">
         <div class="plan-card" id="card-agence">
-        <div class="plan-title-banner plan-title-banner-agence"><i class="fas fa-building plan-title-icon"></i><span class="plan-name">Agence</span></div>
-        <div class="plan-header">
-          <div class="plan-desc">Pour les agences et grands gestionnaires. Portefeuille illimité, multi-comptes clients.</div>
+          <div class="plan-top">
+            <span class="plan-name">Agence</span>
+            
+            <span class="plan-rec"><i class="fas fa-circle-check"></i> Recommandé pour vous</span>
+          </div>
+          <div class="plan-desc">Pour les agences et grands gestionnaires, portefeuille illimité.</div>
           <div class="plan-price">
             <div class="price-old" id="agence-old"></div>
             <div class="price-row">
+              <span class="price-amount" id="agence-amount"></span>
               <span class="price-currency">€</span>
-              <span class="price-amount" id="agence-amount">299</span>
               <span class="price-period" id="agence-period">/mois</span>
             </div>
             <div class="price-annual-note" id="agence-annual-note"></div>
-            <div class="price-badge"><i class="fas fa-bolt" style="font-size:9px;"></i> Prix garanti à vie · 200 premiers</div>
+            <div class="price-badge"><i class="fas fa-bolt"></i> Prix garanti à vie · 200 premiers clients</div>
           </div>
-          <div class="plan-includes"><i class="fas fa-home"></i> <strong>51 logements inclus</strong> · +5€/logement (illimité)</div>
+          <div class="plan-includes"><strong>51 logements inclus</strong> · +5 €/logement supp. (illimité)</div>
+          <div class="plan-cta">
+            <button class="btn btn-outline" onclick="startCheckout('agence', event)">Essayer 14 jours gratuit</button>
+          </div>
+          <ul class="plan-points">
+            <li class="lead"><i class="fas fa-check"></i><span>Tout Pro, et :</span></li>
+            <li><i class="fas fa-check"></i><span>Mode Agence : accès aux comptes clients</span></li>
+            <li><i class="fas fa-check"></i><span>Facturation clients depuis votre compte</span></li>
+            <li><i class="fas fa-check"></i><span>Droits par profil inclus</span></li>
+            <li><i class="fas fa-check"></i><span>Portefeuille illimité</span></li>
+            <li><i class="fas fa-check"></i><span>Support prioritaire</span></li>
+          </ul>
         </div>
-        <div class="plan-cta">
-          <button class="btn btn-dark" onclick="startCheckout('agence', event)">Essayer 14 jours gratuit</button>
-        </div>
-        <div class="plan-features">
-          <div class="features-intro">Tout des plans Starter et Pro avec :</div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-building"></i> Mode Agence <span class="feat-tag" style="background:#7c3aed;color:white;border-color:#7c3aed;margin-left:6px;">Exclusif</span></div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> <strong>Accès aux comptes clients propriétaires</strong></li>
-              <li class="fi-included"><i class="fas fa-check"></i> Notifications résas & messages clients</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Facturation clients depuis votre compte</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Portefeuille illimité</li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-credit-card"></i> Paiements & cautions</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> Cautions sans commission</li>
-              <li class="fi-included"><i class="fas fa-check"></i> App voyageur BHGuest</li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-robot"></i> Messagerie & IA</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> Messagerie IA 24/7 · 26 langues</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Notifications push</li>
-              <li class="fi-option"><i class="fas fa-circle-dot" style="color:#d97706;"></i><i class="fas fa-check"></i> SMS voyageurs <span class="feat-tag">Option +0,50€/log/mois</span></li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-file-invoice"></i> Facturation & admin</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> Facturation propriétaires</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Factures clients & débours</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Attestation fiscale conciergerie</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Rapports financiers avancés</li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-users"></i> Équipe & support</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> Sous-comptes équipe</li>
-              <li class="fi-included"><i class="fas fa-check"></i> Droits par profil <span class="feat-tag" style="background:#F1F6F3;color:#0A2C22;border-color:#C3DBD0;">Inclus</span></li>
-              <li class="fi-included"><i class="fas fa-check"></i> Checklists avancées</li>
-              <li class="fi-included"><i class="fas fa-check"></i> <strong>Support prioritaire</strong></li>
-              <li class="fi-option"><i class="fas fa-circle-dot" style="color:#d97706;"></i> Pricing dynamique <span class="feat-tag">4,99 €/logement</span></li>
-            </ul>
-          </div>
-
-          <div class="feat-section">
-            <div class="feat-section-title"><i class="fas fa-lock"></i> Serrures connectées</div>
-            <ul>
-              <li class="fi-included"><i class="fas fa-check"></i> <strong>Codes d'accès automatiques</strong></li>
-              <li class="fi-included"><i class="fas fa-check"></i> Igloohome · Nuki · TTLock</li>
-            </ul>
-          </div>
-
-        </div>
-      </div><!-- /card-agence -->
-      </div><!-- /plan-wrap agence -->
+      </div>
 
     </div>
+    <p class="pr-options"><i class="fas fa-circle-plus"></i> Options : pricing dynamique 4,99 €/logement · SMS voyageurs · droits par profil (Pro). Prix HT.</p>
   </div>
 </section>
 
-
-<!-- MODE AGENCE HIGHLIGHT -->
-<section style="padding:60px 0;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);">
+<!-- COMPARATIF -->
+<section class="pr-compare" id="compare">
   <div class="container">
-    <div class="agency-highlight-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;max-width:900px;margin:0 auto;">
-      <div>
-        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.2);color:#c4b5fd;border:1px solid rgba(124,58,237,.3);border-radius:999px;padding:5px 14px;font-size:12px;font-weight:600;margin-bottom:20px;"><i class="fas fa-building"></i> Exclusif Agence</div>
-        <h2 style="font-family:'Instrument Serif',serif;font-size:clamp(26px,3vw,38px);color:white;font-weight:400;margin-bottom:16px;">Le Mode Agence, pour les pros du locatif</h2>
-        <p style="color:rgba(255,255,255,.6);font-size:15px;line-height:1.7;margin-bottom:28px;">Accédez aux réservations, messages et finances de vos clients propriétaires depuis un seul compte. Recevez leurs notifications, basculez d'un portefeuille à l'autre, et facturez-les directement.</p>
-        <ul style="list-style:none;display:flex;flex-direction:column;gap:12px;margin-bottom:32px;">
-          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#8FC7AF;font-size:11px;"></i> Calendrier, messages et ménage de chaque client</li>
-          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#8FC7AF;font-size:11px;"></i> Notifications en temps réel pour toutes les résas</li>
-          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#8FC7AF;font-size:11px;"></i> Facturation clients depuis votre espace</li>
-          <li style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.8);font-size:14px;"><i class="fas fa-check" style="color:#8FC7AF;font-size:11px;"></i> Basculez d'un compte à l'autre en un clic</li>
-        </ul>
-        <a href="/register.html" style="display:inline-flex;align-items:center;gap:8px;background:#7c3aed;color:white;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;transition:opacity .2s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Démarrer en Agence <i class="fas fa-arrow-right"></i></a>
-      </div>
-      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:16px;">
-        <div style="display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.08);">
-          <div style="width:40px;height:40px;background:#7c3aed;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-building" style="color:white;font-size:16px;"></i></div>
-          <div><div style="font-size:13px;font-weight:700;color:white;">Mode Agence actif</div><div style="font-size:11px;color:rgba(255,255,255,.4);">Compte client</div></div>
-          <div style="margin-left:auto;background:rgba(143,199,175,.15);color:#8FC7AF;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;">Connecté</div>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:13px;color:rgba(255,255,255,.5);">Logements gérés</span>
-          <span style="font-size:15px;font-weight:700;color:white;">8</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:13px;color:rgba(255,255,255,.5);">CA mensuel client</span>
-          <span style="font-size:15px;font-weight:700;color:#8FC7AF;">12 450 €</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:13px;color:rgba(255,255,255,.5);">Nouvelles résas</span>
-          <span style="font-size:15px;font-weight:700;color:white;">3 ce mois</span>
-        </div>
-        <div style="margin-top:8px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:8px;">
-          <button style="flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:white;padding:8px;border-radius:8px;font-size:12px;cursor:default;pointer-events:none;opacity:.7;" disabled>Voir calendrier</button>
-          <button style="flex:1;background:#7c3aed;border:none;color:white;padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:default;pointer-events:none;opacity:.85;" disabled>Créer facture</button>
-        </div>
-      </div>
+    <button class="pr-compare-toggle" onclick="document.getElementById('compare').classList.toggle('open')">Comparer toutes les fonctionnalités <i class="fas fa-chevron-down"></i></button>
+    <div class="pr-table-wrap">
+      <table class="pr-table">
+        <thead><tr><th></th><th>Starter</th><th class="hl">Pro</th><th>Agence</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="4">Calendrier & synchronisation</td></tr>
+          <tr><td>Calendrier centralisé</td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>Connexion API (Airbnb, Booking, Abritel…)</td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>Import / Export iCal</td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>Règles tarifaires</td><td><i class="fas fa-check yes"></i></td><td><span class="txt">Avancées</span></td><td><span class="txt">Avancées</span></td></tr>
+          <tr><td>Pricing dynamique</td><td><span class="opt">4,99 €/logement</span></td><td><span class="opt">4,99 €/logement</span></td><td><span class="opt">4,99 €/logement</span></td></tr>
+          <tr class="grp"><td colspan="4">Paiements & cautions</td></tr>
+          <tr><td>Paiements directs Stripe</td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>Cautions voyageurs</td><td><span class="txt">3 % commission</span></td><td><span class="txt">Sans commission</span></td><td><span class="txt">Sans commission</span></td></tr>
+          <tr><td>App voyageur BHGuest</td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr class="grp"><td colspan="4">Messagerie & IA</td></tr>
+          <tr><td>Messagerie IA 24/7 · 26 langues</td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>Notifications push</td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>SMS voyageurs</td><td><span class="opt">+7,99 €/mois</span></td><td><span class="opt">+1 €/log/mois</span></td><td><span class="opt">+0,50 €/log/mois</span></td></tr>
+          <tr class="grp"><td colspan="4">Gestion au quotidien</td></tr>
+          <tr><td>Ménage & checklists</td><td><i class="fas fa-check yes"></i></td><td><span class="txt">Avancées</span></td><td><span class="txt">Avancées</span></td></tr>
+          <tr><td>Livret d'accueil digital</td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>Contrats de location PDF</td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>Rapports & revenus</td><td><i class="fas fa-check yes"></i></td><td><span class="txt">Avancés</span></td><td><span class="txt">Avancés</span></td></tr>
+          <tr><td>App iOS & Android</td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr class="grp"><td colspan="4">Facturation & admin</td></tr>
+          <tr><td>Facturation propriétaires</td><td><i class="fas fa-minus no"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>Factures clients & débours</td><td><i class="fas fa-minus no"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>Attestation fiscale conciergerie</td><td><i class="fas fa-minus no"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr class="grp"><td colspan="4">Équipe</td></tr>
+          <tr><td>Sous-comptes équipe</td><td><i class="fas fa-minus no"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>Droits par profil</td><td><i class="fas fa-minus no"></i></td><td><span class="opt">+5 €/mois</span></td><td><span class="txt">Inclus</span></td></tr>
+          <tr class="grp"><td colspan="4">Serrures connectées</td></tr>
+          <tr><td>Codes d'accès automatiques (Igloohome · Nuki · TTLock)</td><td><i class="fas fa-minus no"></i></td><td><i class="fas fa-check yes"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr class="grp"><td colspan="4">Agence & support</td></tr>
+          <tr><td>Mode Agence (multi-comptes clients)</td><td><i class="fas fa-minus no"></i></td><td><i class="fas fa-minus no"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>Facturation clients depuis votre compte</td><td><i class="fas fa-minus no"></i></td><td><i class="fas fa-minus no"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+          <tr><td>Support prioritaire</td><td><i class="fas fa-minus no"></i></td><td><i class="fas fa-minus no"></i></td><td><i class="fas fa-check yes"></i></td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </section>
 
+<!-- MODE AGENCE -->
+<section class="pr-agency">
+  <div class="container">
+    <div class="pr-agency-box reveal">
+      <div>
+        <span class="eyebrow"><i class="fas fa-building"></i> Exclusif Agence</span>
+        <h2>Le Mode Agence, pour les pros du locatif</h2>
+        <p>Accédez aux réservations, messages et finances de vos clients propriétaires depuis un seul compte. Recevez leurs notifications, basculez d'un portefeuille à l'autre, et facturez-les directement.</p>
+        <ul>
+          <li><i class="fas fa-check"></i> Calendrier, messages et ménage de chaque client</li>
+          <li><i class="fas fa-check"></i> Notifications en temps réel pour toutes les résas</li>
+          <li><i class="fas fa-check"></i> Facturation clients depuis votre espace</li>
+          <li><i class="fas fa-check"></i> Basculez d'un compte à l'autre en un clic</li>
+        </ul>
+        <a href="/register.html" class="btn">Démarrer en Agence <i class="fas fa-arrow-right"></i></a>
+      </div>
+      <div class="pr-mock" aria-hidden="true">
+        <div class="pr-mock-head">
+          <div class="pr-mock-ic"><i class="fas fa-building"></i></div>
+          <div><div style="font-size:14px;font-weight:700;">Mode Agence actif</div><div style="font-size:12px;color:rgba(255,255,255,.45);">Compte client · Villa Les Pins</div></div>
+          <span class="pr-pill-ok">Connecté</span>
+        </div>
+        <div class="pr-mock-row"><span>Logements gérés</span><b>8</b></div>
+        <div class="pr-mock-row"><span>CA mensuel client</span><b class="g">12 450 €</b></div>
+        <div class="pr-mock-row"><span>Nouvelles résas</span><b>3 ce mois</b></div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- FAQ -->
 <section class="faq-section">
   <div class="container">
-    <div class="faq-header reveal">
-      <div class="section-kicker" style="margin:0 auto 16px;"><i class="fas fa-circle-question"></i> FAQ</div>
-      <h2>Questions fréquentes</h2>
-    </div>
-    <div class="faq-grid reveal">
-      <div class="faq-card">
-        <h4><i class="fas fa-gift"></i> Comment fonctionne l'essai gratuit ?</h4>
+    <h2 class="pr-h2">Questions fréquentes</h2>
+    <div class="faq-list reveal">
+      <details open>
+        <summary>Comment fonctionne l'essai gratuit ?</summary>
         <p>14 jours d'accès complet sans aucune carte bancaire. À la fin, choisissez de continuer ou de partir — sans engagement.</p>
-      </div>
-      <div class="faq-card">
-        <h4><i class="fas fa-home"></i> Que se passe-t-il si j'ai plus de logements ?</h4>
-        <p>Des frais par logement supplémentaire s'appliquent automatiquement : +9€/logement en Starter, +7€/logement en Pro (jusqu'à 50), +5€/logement en Agence. Vous pouvez aussi changer de plan à tout moment.</p>
-      </div>
-      <div class="faq-card">
-        <h4><i class="fas fa-arrows-rotate"></i> Puis-je changer de plan ?</h4>
+      </details>
+      <details>
+        <summary>Que se passe-t-il si j'ai plus de logements ?</summary>
+        <p>Des frais par logement supplémentaire s'appliquent automatiquement : +9 €/logement en Starter, +7 €/logement en Pro (jusqu'à 50), +5 €/logement en Agence. Vous pouvez aussi changer de plan à tout moment.</p>
+      </details>
+      <details>
+        <summary>Puis-je changer de plan ?</summary>
         <p>Oui, à tout moment depuis vos paramètres. Le changement est immédiat et le montant est proratisé au jour près.</p>
-      </div>
-      <div class="faq-card">
-        <h4><i class="fas fa-times-circle"></i> Puis-je annuler ?</h4>
+      </details>
+      <details>
+        <summary>Puis-je annuler ?</summary>
         <p>Oui, sans engagement. Annulation depuis vos paramètres, accès conservé jusqu'à la fin de la période payée.</p>
-      </div>
-      <div class="faq-card">
-        <h4><i class="fas fa-percent"></i> Y a-t-il des frais sur les paiements ?</h4>
-        <p>Les cautions et paiements directs via votre compte Stripe connecté sont <strong>sans frais de service Boostinghost</strong>. Seuls les frais Stripe (~1,5%) s'appliquent, directement sur votre compte.<br><br>
-        Les réservations via <strong>BHGuest</strong> (notre plateforme de réservation directe) sont soumises à <strong>3% de frais de service</strong> — car nous apportons le canal de réservation et gérons le paiement voyageur.<br><br>
-        Si vous utilisez le compte Stripe de Boostinghost (sans avoir connecté le vôtre), des frais de <strong>3%</strong> s'appliquent sur les transactions. Nous vous conseillons de connecter votre propre compte Stripe depuis vos paramètres.</p>
-      </div>
-      <div class="faq-card">
-        <h4><i class="fas fa-building"></i> Suis-je propriétaire ou conciergerie ?</h4>
+      </details>
+      <details>
+        <summary>Y a-t-il des frais sur les paiements ?</summary>
+        <p>Les cautions et paiements directs via votre compte Stripe connecté sont <strong>sans frais de service Boostinghost</strong>. Seuls les frais Stripe (~1,5 %) s'appliquent, directement sur votre compte.<br><br>
+        Les réservations via <strong>BHGuest</strong> (notre plateforme de réservation directe) sont soumises à <strong>3 % de frais de service</strong> — car nous apportons le canal de réservation et gérons le paiement voyageur.<br><br>
+        Si vous utilisez le compte Stripe de Boostinghost (sans avoir connecté le vôtre), des frais de <strong>3 %</strong> s'appliquent sur les transactions. Nous vous conseillons de connecter votre propre compte Stripe depuis vos paramètres.</p>
+      </details>
+      <details>
+        <summary>Suis-je propriétaire ou conciergerie ?</summary>
         <p>Tous les plans fonctionnent pour les deux. La facturation propriétaires (module conciergerie) est incluse à partir du plan Pro.</p>
-      </div>
+      </details>
     </div>
   </div>
 </section>
@@ -1099,29 +561,28 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 <section class="cta-section">
   <div class="container">
     <div class="cta-box reveal">
-      <div class="cta-overlay"></div>
-      <div class="cta-content">
-        <h2>Commencez gratuitement aujourd'hui</h2>
-        <p>14 jours offerts, aucune carte requise, opérationnel en 15 minutes.</p>
-        <div class="cta-actions">
-          <a href="/register.html" class="btn btn-white btn-sm" style="padding:14px 28px;font-size:15px;"><i class="fas fa-rocket"></i> Créer mon compte gratuit</a>
-          <a href="/login.html" class="btn btn-outline btn-sm" style="padding:14px 28px;font-size:15px;border-color:rgba(255,255,255,.3);color:white;background:rgba(255,255,255,.08);">J'ai déjà un compte</a>
-        </div>
-        <div class="cta-trust">
-          <span><i class="fas fa-shield-alt"></i> Données en UE</span>
-          <span><i class="fas fa-mobile-screen"></i> Web, iOS & Android</span>
-          <span><i class="fas fa-circle-check"></i> Sans engagement</span>
-        </div>
+      <img src="/img/brand/bh-icon-256.png" alt="">
+      <h2>Commencez gratuitement aujourd'hui</h2>
+      <p>14 jours offerts, aucune carte requise, opérationnel en 15 minutes.</p>
+      <div class="cta-actions">
+        <a href="/register.html" class="btn btn-primary">Créer mon compte gratuit</a>
+        <a href="/login.html" class="btn btn-outline">J'ai déjà un compte</a>
+      </div>
+      <div class="cta-trust">
+        <span><i class="fas fa-shield-halved"></i>Données en UE</span>
+        <span><i class="fas fa-mobile-screen"></i>Web, iOS & Android</span>
+        <span><i class="fas fa-circle-check"></i>Sans engagement</span>
       </div>
     </div>
   </div>
 </section>
+</main>
 
 <!-- FOOTER -->
 <footer class="site-footer">
   <div class="footer-inner">
     <div>
-      <div class="footer-brand"><span><span class="bh-mot">Boostinghost</span></span></div>
+      <div class="footer-brand"><img src="/img/brand/bh-icon-256.png" alt=""><span class="bh-mot">Boostinghost</span></div>
       <p class="footer-copy">© 2026 Boostinghost · <a href="mailto:contact@boostinghost.fr">contact@boostinghost.fr</a></p>
       <div class="footer-links">
         <a href="/mentions-legales.html">Mentions légales</a>
@@ -1132,7 +593,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
       </div>
     </div>
     <div class="footer-badges">
-      <div class="footer-badge"><i class="fas fa-shield-alt"></i> RGPD · Données en UE</div>
+      <div class="footer-badge"><i class="fas fa-shield-halved"></i> RGPD · Données en UE</div>
       <div class="footer-badge"><i class="fab fa-apple"></i> App Store</div>
       <div class="footer-badge"><i class="fab fa-google-play"></i> Google Play</div>
     </div>
@@ -1156,10 +617,10 @@ function setBilling(mode) {
   billing = mode;
   document.getElementById('btnMonthly').classList.toggle('active', mode === 'monthly');
   document.getElementById('btnAnnual').classList.toggle('active', mode === 'annual');
+  document.getElementById('billingSeg').classList.toggle('annual', mode === 'annual');
   const savingEl = document.getElementById('billingSaving');
-  savingEl.innerHTML = mode === 'annual'
-    ? '<strong>2 mois offerts</strong> · Vous économisez jusqu\'à <strong>98€/an</strong> en Starter'
-    : '&nbsp;';
+  savingEl.innerHTML = mode === 'annual' ? '<strong>2 mois offerts</strong> avec la facturation annuelle' : '';
+  document.getElementById('billingDot').hidden = mode !== 'annual';
   updateAllPrices();
 }
 
@@ -1181,37 +642,25 @@ function updateSlider(val) {
   const hintEl = document.getElementById('sliderHintText');
   const hint = document.getElementById('sliderHint');
   let recommendedPlan, hintText, hintExtra = '';
-  if (propCount <= 3) { recommendedPlan = 'starter'; const extraStarter = Math.max(0, propCount - 1); hintText = 'Plan Starter'; hintExtra = extraStarter > 0 ? '+' + extraStarter + ' log. (+' + (extraStarter * 9) + '€)' : ''; }
+  if (propCount <= 3) { recommendedPlan = 'starter'; const extraStarter = Math.max(0, propCount - 1); hintText = 'Plan Starter recommandé'; hintExtra = extraStarter > 0 ? '+' + extraStarter + ' log. supp. (+' + (extraStarter * 9) + '€)' : ''; }
   else if (propCount <= 50) {
     recommendedPlan = 'pro';
     const extraPro = Math.max(0, propCount - 4);
-    hintText = 'Plan Pro'; hintExtra = extraPro > 0 ? '+' + extraPro + ' log. (+' + (extraPro*7) + '€)' : '';
+    hintText = 'Plan Pro recommandé'; hintExtra = extraPro > 0 ? '+' + extraPro + ' log. supp. (+' + (extraPro*7) + '€)' : '';
   }
   else {
     recommendedPlan = 'agence';
     const extraAgence = Math.max(0, propCount - 51);
-    hintText = 'Plan Agence'; hintExtra = extraAgence > 0 ? '+' + extraAgence + ' log. (+' + (extraAgence*5) + '€)' : '';
+    hintText = 'Plan Agence recommandé'; hintExtra = extraAgence > 0 ? '+' + extraAgence + ' log. supp. (+' + (extraAgence*5) + '€)' : '';
   }
   document.getElementById('sliderHintText').textContent = hintText;
-  document.getElementById('sliderHintExtra').textContent = hintExtra || '\u00a0';
+  document.getElementById('sliderHintExtra').textContent = hintExtra ? hintExtra : (propCount > 1 ? '' : '1 logement');
 
-  // Mettre à jour uniquement le tag "Recommandé pour vous" — sans bouger la classe featured
+  // Carte recommandée selon le nombre de logements
   ['starter','pro','agence'].forEach(p => {
     const card = document.getElementById('card-' + p);
-    if (!card) return;
-    const existingTag = card.querySelector('.plan-recommended-tag');
-    if (existingTag) existingTag.remove();
+    if (card) card.classList.toggle('is-rec', p === recommendedPlan);
   });
-  const recCard = document.getElementById('card-' + recommendedPlan);
-  if (recCard) {
-    const planHeader = recCard.querySelector('.plan-header');
-    if (planHeader) {
-      const tag = document.createElement('div');
-      tag.className = 'plan-recommended-tag';
-      tag.innerHTML = '<i class="fas fa-check-circle"></i> Recommandé pour vous';
-      planHeader.insertBefore(tag, planHeader.firstChild);
-    }
-  }
 
   updateAllPrices();
 }
