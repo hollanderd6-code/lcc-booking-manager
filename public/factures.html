@@ -1449,31 +1449,17 @@ html[data-theme-v3="1"] .btn-ghost {
 
       // Récupérer les infos du propriétaire d'un logement
       async function getOwnerForProperty(propertyName) {
+        // Émetteur résolu côté serveur, comme sur le PDF : propriétaire associé au
+        // logement, sinon le compte qui possède le logement (mode agence inclus).
         try {
-          const select = document.getElementById('propertyName');
-          const selectedOption = select.options[select.selectedIndex];
           const prop = propertiesByName[propertyName];
-          const ownerId = selectedOption?.dataset?.ownerId || prop?.owner_id || prop?.ownerId;
-          
-          console.log('🏠 Logement:', propertyName, '→ owner_id:', ownerId);
-          if (!ownerId) {
-            console.warn('⚠️ Pas de owner_id pour ce logement');
-            return null;
-          }
-
-          // Appel direct sur l'ID du proprio
-          const res = await fetch('/api/owner-clients/' + ownerId, {
+          const q = prop?.id ? 'propertyId=' + encodeURIComponent(prop.id) : 'propertyName=' + encodeURIComponent(propertyName);
+          const res = await fetch('/api/invoice/emitter?' + q, {
             headers: { 'Authorization': 'Bearer ' + token }
           });
-          if (!res.ok) {
-            console.warn('⚠️ owner-clients/' + ownerId + ' → ' + res.status);
-            return null;
-          }
-          const owner = await res.json();
-          console.log('✅ Proprio trouvé:', owner);
-          return owner;
+          return res.ok ? await res.json() : null;
         } catch (e) {
-          console.error('Erreur récupération propriétaire:', e);
+          console.error('Erreur récupération émetteur:', e);
           return null;
         }
       }

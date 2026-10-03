@@ -28295,6 +28295,60 @@ app.post('/api/invoice/resend',
 // POST - Générer et télécharger PDF directement
 // (données passées en body, pas de lecture BDD)
 // ============================================
+// ── GET /api/invoice/emitter?propertyId=…|propertyName=… ───────────────────
+// Émetteur d'une facture voyageur, pour les aperçus du site : même règle que le
+// PDF — propriétaire associé au logement, sinon le compte qui possède le
+// logement (mode agence : le délégant, jamais l'opérateur connecté).
+// Format « owner_clients » (company_name, address…) attendu par les aperçus.
+app.get('/api/invoice/emitter', authenticateAny, async (req, res) => {
+  try {
+    const userId = req.user.isSubAccount
+      ? (await getRealUserId(pool, req))
+      : (await getUserFromRequest(req))?.id;
+    if (!userId) return res.status(401).json({ error: 'Non autorisé' });
+
+    const { propertyId, propertyName } = req.query;
+    const agencyIds = await getAgencyUserIds({ ...req, query: { ...req.query, agency: 'all' } }, userId);
+    let prop = null;
+    if (propertyId) {
+      prop = (await pool.query(
+        'SELECT id, user_id FROM properties WHERE id = $1 AND user_id = ANY($2::text[])',
+        [String(propertyId), agencyIds])).rows[0] || null;
+    }
+    if (!prop && propertyName) {
+      prop = (await pool.query(
+        `SELECT id, user_id FROM properties WHERE (name = $1 OR internal_name = $1) AND user_id = ANY($2::text[])
+          ORDER BY (user_id = $3) DESC, (owner_id IS NOT NULL) DESC LIMIT 1`,
+        [String(propertyName), agencyIds, userId])).rows[0] || null;
+    }
+    const billingUserId = prop?.user_id || userId;
+
+    const ownerInfo = prop
+      ? await loadOwnerInfoForInvoice(pool, { propertyId: prop.id, userId: billingUserId }).catch(() => null)
+      : null;
+    if (ownerInfo) {
+      return res.json({
+        source: 'owner',
+        company_name: ownerInfo.company_name || '',
+        first_name: ownerInfo.first_name || '', last_name: ownerInfo.last_name || '',
+        address: ownerInfo.address || '', postal_code: ownerInfo.postal_code || '',
+        city: ownerInfo.city || '', siret: ownerInfo.siret || '', email: ownerInfo.email || ''
+      });
+    }
+    const u = (await pool.query('SELECT * FROM users WHERE id = $1', [billingUserId])).rows[0] || {};
+    res.json({
+      source: 'account',
+      company_name: u.company || `${u.first_name || ''} ${u.last_name || ''}`.replace(/\s+/g, ' ').trim() || 'Ma Conciergerie',
+      first_name: '', last_name: '',
+      address: u.address || '', postal_code: u.postal_code || '',
+      city: u.city || '', siret: u.siret || '', email: u.invoice_email || u.email || ''
+    });
+  } catch (err) {
+    console.error('Erreur /api/invoice/emitter:', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 app.post('/api/invoice/generate-pdf',
   authenticateAny,
   async (req, res) => {

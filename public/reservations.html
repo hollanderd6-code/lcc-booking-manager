@@ -1711,21 +1711,16 @@ body.notif-panel-open {
 
   async function _getInvOwner(propertyId) {
     if (!propertyId) return null;
-    // Récupérer l'ownerId depuis le dataset de l'option sélectionnée
-    const sel = document.getElementById('inv_propertyName');
-    const selectedOpt = sel ? sel.options[sel.selectedIndex] : null;
-    const ownerId = selectedOpt?.dataset?.ownerId || null;
-    if (!ownerId) return null;
-    if (_invOwnerCache[ownerId] !== undefined) return _invOwnerCache[ownerId];
+    if (_invOwnerCache[propertyId] !== undefined) return _invOwnerCache[propertyId];
+    // Émetteur résolu côté serveur, comme sur le PDF : propriétaire associé au
+    // logement, sinon le compte qui possède le logement (mode agence inclus).
     try {
-      const res = await fetch('/api/owner-clients/' + ownerId, {
+      const res = await fetch('/api/invoice/emitter?propertyId=' + encodeURIComponent(propertyId), {
         headers: { 'Authorization': 'Bearer ' + localStorage.getItem('lcc_token') }
       });
-      if (!res.ok) { _invOwnerCache[ownerId] = null; return null; }
-      const owner = await res.json();
-      _invOwnerCache[ownerId] = owner;
-      return owner;
-    } catch(e) { _invOwnerCache[ownerId] = null; return null; }
+      _invOwnerCache[propertyId] = res.ok ? await res.json() : null;
+    } catch(e) { _invOwnerCache[propertyId] = null; }
+    return _invOwnerCache[propertyId];
   }
 
   window.renderInvoicePreview = async function() {
