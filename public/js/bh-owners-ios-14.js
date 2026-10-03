@@ -13,8 +13,8 @@
   var DOCS = [
     { icon: 'signature', label: 'Contrats', href: '/contrats.html', key: 'contracts' },
     { icon: 'doc', label: 'Factures propriétaires', href: '/factures-proprio.html', key: 'invoices' },
-    { icon: 'docPlain', label: 'Attestation fiscale', href: '/clients.html#attestation' },
-    { icon: 'euro', label: 'Débours', href: '/clients.html#debours' }
+    { icon: 'docPlain', label: 'Attestation fiscale', href: '/attestation.html' },
+    { icon: 'euro', label: 'Débours', href: '/debours.html' }
   ];
   I.signature = I.signature || '<svg class="bhp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c3-1 4-9 6-9s-1 9 2 9 2-5 4-5 1 4 3 4 3-2 3-2"/><path d="M3 21h18"/></svg>';
   I.docPlain = I.docPlain || '<svg class="bhp-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
