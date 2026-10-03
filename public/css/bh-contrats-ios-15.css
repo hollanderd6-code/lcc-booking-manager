@@ -1,0 +1,30 @@
+/* bh-contrats-ios-15.css — Contrats (ContractsView / ContractDetailView) */
+.bhc-chip { flex: none; border: 0; cursor: pointer; font-size: 14.5px; color: var(--bhp-att); padding: 9px 16px; border-radius: 14px; background: rgba(255,255,255,.30); white-space: nowrap; }
+.bhc-chip.is-on { background: var(--bhp-vert); color: #fff; font-weight: 600; }
+.bhc-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: none; }
+.bhc-signer { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 18px; }
+.bhc-sum { display: flex; gap: 8px; }
+.bhc-sum__b { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 6px; border-radius: 18px; background: rgba(255,255,255,.66); text-align: center; }
+.bhc-sum__b b { font-size: 16px; font-weight: 600; color: var(--bhp-encre); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.bhc-sum__b span { font-size: 12px; color: var(--bhp-att); }
+.bhc-doc { padding: 18px; border-radius: 22px; background: rgba(255,255,255,.72); box-shadow: 0 8px 22px rgba(20,32,27,.08); }
+.bhc-doc__t { text-align: center; font-size: 10.5px; font-weight: 600; letter-spacing: .14em; color: var(--bhp-att); padding-bottom: 6px; }
+.bhc-sec + .bhc-sec { border-top: 1px solid rgba(20,32,27,.07); }
+.bhc-sec__h { width: 100%; border: 0; background: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 14px 0; font: inherit; font-size: 14.5px; font-weight: 600; color: var(--bhp-att); text-align: left; }
+.bhc-sec__h > span:first-child { flex: none; }
+.bhc-sec__c { margin-left: auto; font-size: 13px; color: var(--bhp-vert); transition: transform .2s; }
+.bhc-sec.is-open .bhc-sec__c { transform: rotate(180deg); }
+.bhc-count { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 999px; color: var(--bhp-att); background: rgba(94,107,99,.12); }
+.bhc-count.is-on { color: var(--bhp-vert); background: var(--bhp-menthe); }
+.bhc-sec__b { padding: 0 0 12px; border-top: 1px solid rgba(20,32,27,.07); }
+.bhc-dr { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 13.5px; border-bottom: 1px solid rgba(20,32,27,.05); }
+.bhc-dr span:first-child { color: var(--bhp-att); flex: none; }
+.bhc-dr span:last-child { color: var(--bhp-encre); text-align: right; overflow-wrap: anywhere; }
+.bhc-di { font-size: 13.5px; color: var(--bhp-encre); padding: 8px 0; border-bottom: 1px solid rgba(20,32,27,.05); line-height: 1.5; }
+.bhc-none { font-size: 13.5px; color: var(--bhp-att); padding: 8px 0; }
+.bhc-bar { position: sticky; bottom: calc(86px + env(safe-area-inset-bottom,0px)); z-index: 5; display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 8px; margin: 0 -2px; border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.38)); -webkit-backdrop-filter: blur(40px) saturate(220%); backdrop-filter: blur(40px) saturate(220%);
+  border: 1px solid rgba(255,255,255,.5); box-shadow: inset 0 1.5px 1px rgba(255,255,255,.95), 0 14px 38px rgba(20,32,27,.16); }
+@media (min-width: 860px) { .bhc-bar { bottom: 16px; } }
+.bhc-foot { margin: 0; text-align: center; font-size: 13px; color: var(--bhp-att); }
+.bhc-del { border: 0; background: none; cursor: pointer; font-size: 15px; font-weight: 600; color: var(--bhp-terra); padding: 12px; display: flex; justify-content: center; }

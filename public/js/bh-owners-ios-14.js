@@ -11,7 +11,7 @@
   var esc = U.esc, pick = U.pick, I = U.I, ic = U.ic, pl = U.pl, card = U.card, htmlRow = U.htmlRow, CHEV = U.CHEV;
 
   var DOCS = [
-    { icon: 'signature', label: 'Contrats', href: '/contrat.html', key: 'contracts' },
+    { icon: 'signature', label: 'Contrats', href: '/contrats.html', key: 'contracts' },
     { icon: 'doc', label: 'Factures propriétaires', href: '/factures-proprietaires.html', key: 'invoices' },
     { icon: 'docPlain', label: 'Attestation fiscale', href: '/clients.html#attestation' },
     { icon: 'euro', label: 'Débours', href: '/clients.html#debours' }
