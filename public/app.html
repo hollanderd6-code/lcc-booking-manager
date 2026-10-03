@@ -4030,8 +4030,9 @@ html[data-theme-v3="1"] .bh2-stat, .bh2-stat, #kpiPropertiesCard.bh2-stat{backgr
 </div>
 <!-- Vue Jour -->
 <div id="calDayView" style="display:none;background:#F5F2EC;min-height:500px;overflow-y:auto;border-radius:var(--radius-2xl);box-shadow:var(--shadow-lg);border:1px solid var(--border-color);"></div>
-<!-- NOUVEAU CALENDRIER MODERNE -->
-<div class="calendar-wrapper">
+<!-- ANCIEN CALENDRIER : masqué dès le départ (remplacé par #bhCalRoot,
+     cf. getWrap) — sinon il s'affiche le temps du chargement des données. -->
+<div class="calendar-wrapper" style="display:none">
 <!-- Calendar Header -->
 <div class="calendar-modern-header">
 <div class="calendar-header-top">
