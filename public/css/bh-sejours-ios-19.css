@@ -1,0 +1,5 @@
+/* bh-sejours-ios-19.css — Séjours */
+.bhs-hero { font-size: 34px; font-weight: 600; letter-spacing: -.035em; color: var(--bhp-encre); line-height: 1.05; }
+.bhs-urgent { background: rgba(255,255,255,.62); border: 1px solid var(--bhp-terra-bd); box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 8px 22px rgba(20,32,27,.08); }
+.bhs-warn { display: inline-flex; align-self: flex-start; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 500; color: var(--bhp-terra); background: var(--bhp-terra-fond); padding: 6px 10px; border-radius: 10px; }
+.bhs-warn .bhp-ic { font-size: 12px; }
