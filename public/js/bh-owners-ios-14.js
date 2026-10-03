@@ -12,7 +12,7 @@
 
   var DOCS = [
     { icon: 'signature', label: 'Contrats', href: '/contrats.html', key: 'contracts' },
-    { icon: 'doc', label: 'Factures propriétaires', href: '/factures-proprietaires.html', key: 'invoices' },
+    { icon: 'doc', label: 'Factures propriétaires', href: '/factures-proprio.html', key: 'invoices' },
     { icon: 'docPlain', label: 'Attestation fiscale', href: '/clients.html#attestation' },
     { icon: 'euro', label: 'Débours', href: '/clients.html#debours' }
   ];

@@ -1,0 +1,12 @@
+/* bh-factures-ios-16.css — Factures propriétaires */
+.bhf-n { font-size: 12px; font-weight: 600; opacity: .8; margin-left: 3px; }
+.bhf-num { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 600; color: var(--bhp-encre); }
+.bhf-avoir { font-size: 11px; font-weight: 600; color: var(--bhp-or); background: var(--bhp-or-fond); padding: 2px 6px; border-radius: 5px; }
+.bhf-amt { display: flex; align-items: baseline; gap: 6px; }
+.bhf-amt b { font-size: 13px; font-weight: 600; color: var(--bhp-encre); }
+.bhf-hero { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px; background: rgba(255,255,255,.70); }
+.bhf-hero__l { display: flex; flex-direction: column; gap: 4px; }
+.bhf-hero__l b { font-size: 34px; font-weight: 600; letter-spacing: -.035em; color: var(--bhp-encre); line-height: 1.05; }
+.bhf-item { display: flex; align-items: center; gap: 12px; }
+.bhf-item__d { font-size: 14.5px; color: var(--bhp-encre); }
+.bhf-item > b { font-size: 14.5px; font-weight: 600; flex: none; }
