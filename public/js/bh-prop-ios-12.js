@@ -1706,12 +1706,20 @@
     }
   };
 
+  /* PDF : sur ordinateur, nouvel onglet ouvert tout de suite (sinon bloqué comme popup).
+     Sur téléphone, Safari ne sait pas afficher un blob dans un onglet ouvert vide :
+     on renvoie null et l'appelant ouvre le PDF dans l'onglet courant (location.href). */
+  function pdfWindow() {
+    var mobile = (window.matchMedia && window.matchMedia('(max-width: 859px)').matches) || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+    return mobile ? null : window.open('', '_blank');
+  }
+
   BHP._internals = { normProperty: normProperty, fmtTime: fmtTime, fmtAmount: fmtAmount };
   BHP.ui = {
     esc: esc, pick: pick, num: num, int: int, bool: bool, str: str, pl: pl, hhmm: hhmm, fmtTime: fmtTime, fmtAmount: fmtAmount,
     api: api, dialog: dialog, alertMsg: alertMsg, confirmMsg: confirmMsg, openSheet: openSheet, openMenu: openMenu,
     navHTML: navHTML, circleBtn: circleBtn, glassBtn: glassBtn, card: card, fh: fh, kv: kv, txtRow: txtRow, htmlRow: htmlRow,
     emptyCard: emptyCard, loadingRow: loadingRow, label: label, warn: warn, okLine: okLine, pill: pill, ic: ic, I: I,
-    SPIN: SPIN, CHEV: CHEV, isSubAccount: isSubAccount, subPermissions: subPermissions, normProperty: normProperty, dname: dname
+    SPIN: SPIN, CHEV: CHEV, pdfWindow: pdfWindow, isSubAccount: isSubAccount, subPermissions: subPermissions, normProperty: normProperty, dname: dname
   };
 })();

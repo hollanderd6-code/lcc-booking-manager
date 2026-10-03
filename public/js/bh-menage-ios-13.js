@@ -424,7 +424,7 @@
         }
         if (act === 'dv-reject') openReject(st.d.id, function (r) { if (r && r.checklist) st.d = normDetail(r.checklist); else st.d.ownerStatus = 'rejected'; r2(); });
         if (act === 'dv-pdf') {
-          var w = window.open('', '_blank');
+          var w = U.pdfWindow();
           var f = typeof window.authFetch === 'function' ? window.authFetch : fetch;
           f('/api/cleaning/checklists/' + encodeURIComponent(st.d.id) + '/pdf').then(function (res) { if (!res.ok) throw new Error('PDF indisponible.'); return res.blob(); })
             .then(function (b) { var u = URL.createObjectURL(b); if (w) w.location = u; else window.location = u; })

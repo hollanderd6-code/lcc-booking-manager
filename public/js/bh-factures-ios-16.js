@@ -35,8 +35,8 @@
   function pill(inv) { if (inv.isCredit) return U.pill('Avoir', 'or'); var s = STATUS[inv.status]; return U.pill(s ? s[0] : (inv.status || '—'), s ? s[1] : 'neutre'); }
   var PAY = { virement: 'Virement bancaire', cheque: 'Chèque', especes: 'Espèces', carte: 'Carte bancaire', prelevement: 'Prélèvement' };
   function openPdf(id) {
-    var w = window.open('', '_blank'), f = typeof window.authFetch === 'function' ? window.authFetch : fetch;
-    f('/api/owner-invoices/' + encodeURIComponent(id) + '/pdf').then(function (r) { if (!r.ok) throw new Error('Impossible de charger le PDF.'); return r.blob(); })
+    var w = U.pdfWindow(), f = typeof window.authFetch === 'function' ? window.authFetch : fetch;
+    f('/api/owner-invoices/' + encodeURIComponent(id) + '/pdf', { method: 'POST' }).then(function (r) { if (!r.ok) throw new Error('Impossible de charger le PDF.'); return r.blob(); })
       .then(function (b) { var u = URL.createObjectURL(b); if (w) w.location = u; else location.href = u; })
       .catch(function (e) { if (w) w.close(); U.alertMsg('Erreur PDF', e.message); });
   }

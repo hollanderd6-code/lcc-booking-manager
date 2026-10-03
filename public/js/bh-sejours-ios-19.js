@@ -204,7 +204,7 @@
         var el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
         var a = el.dataset.act;
         if (a === 'i-pdf') {
-          var w = window.open('', '_blank'), f = typeof window.authFetch === 'function' ? window.authFetch : fetch;
+          var w = U.pdfWindow(), f = typeof window.authFetch === 'function' ? window.authFetch : fetch;
           f('/api/invoice/download-by-number/' + encodeURIComponent(v.number)).then(function (r) { if (!r.ok) throw new Error('PDF indisponible.'); return r.blob(); })
             .then(function (b) { var u = URL.createObjectURL(b); if (w) w.location = u; else location.href = u; }).catch(function (er) { if (w) w.close(); U.alertMsg('Erreur', er.message); });
         }

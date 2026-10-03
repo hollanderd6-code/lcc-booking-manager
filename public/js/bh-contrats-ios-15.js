@@ -52,7 +52,7 @@
   }
   function avatar(c, size) { return '<span class="bho-av" style="width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * .36) + 'px">' + esc(c.initials) + '</span>'; }
   function openPdf(id) {
-    var w = window.open('', '_blank');
+    var w = U.pdfWindow();
     var f = typeof window.authFetch === 'function' ? window.authFetch : fetch;
     return f('/api/contrats/' + encodeURIComponent(id) + '/pdf').then(function (r) { if (!r.ok) throw new Error('Impossible de charger le PDF.'); return r.blob(); })
       .then(function (b) { var u = URL.createObjectURL(b); if (w) w.location = u; else location.href = u; })

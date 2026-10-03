@@ -286,7 +286,7 @@
       if (a === 'add-month') { var used = S.d.months.map(function (m) { return m.mois; }); S.d.months.push({ mois: MONTHS.filter(function (m) { return used.indexOf(m) < 0; })[0] || MONTHS[0], heures: '', montant: '' }); render(); return; }
       if (a === 'del-month') { S.d.months.splice(+el.dataset.i, 1); render(); return; }
       if (a === 'preview') {
-        var w = window.open('', '_blank'); S.gen = true; render();
+        var w = U.pdfWindow(); S.gen = true; render();
         postBlob('/api/attestation/generate', body('')).then(function (b) { var u = URL.createObjectURL(b); if (w) w.location = u; else location.href = u; })
           .catch(function (er) { if (w) w.close(); U.alertMsg('Erreur', er.message); }).then(function () { S.gen = false; render(); });
         return;
