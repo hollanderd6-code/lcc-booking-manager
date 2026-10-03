@@ -6203,7 +6203,8 @@ window.openDeboursPhoto = function(id) {
   const d = deboursData.find(x => x.id === id);
   if (!d?.photoDataUrl) return;
   const w = window.open('', '_blank');
-  w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${d.photoDataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;"><script src="/js/bh-polish.js?v=1"><\/script>\n</body></html>`);
+  w.document.write(`<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${d.photoDataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;"><script src="/js/bh-polish.js?v=1"><\/script>\n  <script src="/js/bh-account-sheet.js" defer></script>
+</body></html>`);
 };
 
 // ── Sauvegarder débours ──
