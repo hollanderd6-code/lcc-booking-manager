@@ -1,0 +1,15 @@
+/* bh-serrures-ios-22.css — Serrures connectées. Complète bh-prop-ios-12 / bh-menage-ios-13 / bh-livrets-ios-21 */
+.bhk-ic { width: 40px; height: 40px; border-radius: 12px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--bhp-att); background: rgba(94,107,99,.12); }
+.bhk-ic svg { width: 1em; height: 1em; }
+.bhk-ic.is-on { color: var(--bhp-vert); background: var(--bhp-menthe); }
+.bhk-batl { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.bhk-bat { width: 24px; height: 12px; border-radius: 3px; border: 1.5px solid currentColor; padding: 1px; display: inline-flex; opacity: .85; }
+.bhk-bat i { display: block; height: 100%; border-radius: 1px; background: currentColor; }
+.bhk-bat.is-ok { color: var(--bhp-occ); }
+.bhk-bat.is-mid { color: var(--bhp-or-clair); }
+.bhk-bat.is-low { color: var(--bhp-terra); }
+.bhk-code { font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 19px; font-weight: 600; letter-spacing: .14em; color: var(--bhp-vert); }
+.bhk-code.is-off { color: var(--bhp-att); text-decoration: line-through; text-decoration-thickness: 1px; }
+.bhk-brand { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.bhk-brand__top { display: flex; align-items: center; gap: 12px; }
+.bhk-brand .bhp-note { margin: 0; }

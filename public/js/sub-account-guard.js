@@ -17,6 +17,7 @@
     // 'can_manage_locks' n'existe ni en base ni dans le payload de login :
     // les vraies colonnes sont can_view_smart_locks / can_manage_smart_locks.
     'smart-locks.html': { view: 'can_view_smart_locks', edit: 'can_manage_smart_locks' },
+    'serrures.html': { view: 'can_view_smart_locks', edit: 'can_manage_smart_locks' },
     'contrat.html': { view: 'can_view_contracts', edit: null }
   };
 

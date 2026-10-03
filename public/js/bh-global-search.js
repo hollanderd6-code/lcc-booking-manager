@@ -122,7 +122,7 @@
     ['BoostPrice', '/boostprice.html', 'fa-bolt'],
     ['Livrets d\u2019accueil', '/livrets.html', 'fa-book-open'],
     ['Propriétaires', '/proprietaires.html', 'fa-users'],
-    ['Serrures connectées', '/smart-locks.html', 'fa-lock'],
+    ['Serrures connectées', '/serrures.html', 'fa-lock'],
     ['Mon compte', '/settings-account.html', 'fa-user-cog']
   ];
 
