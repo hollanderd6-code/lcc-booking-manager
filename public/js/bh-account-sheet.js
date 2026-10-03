@@ -417,9 +417,9 @@ html.bhas-sub .bhas-group{display:none}
     GET('/api/cleaners', { agency: true }).then(function (d) { var a = Array.isArray(d) ? d : (d.cleaners || []); setVal('bhasvCleaners', a.length ? plural(a.length, 'intervenant') : '', 'cleaners'); }).catch(function () {});
     GET('/api/message-templates', { agency: true }).then(function (d) { var a = Array.isArray(d) ? d : (d.templates || []); setVal('bhasvTemplates', a.length ? plural(a.length, 'modèle') : '', 'templates'); }).catch(function () {});
     GET('/api/settings/notifications').then(function (d) { cache.notifs = d; updateNotifLabel(); }).catch(function () {});
-    GET('/api/agency/delegations').then(function (d) {
-      var list = Array.isArray(d) ? d : (d.delegations || d.accounts || []);
-      var n = list.length + 1; setVal('bhasvAccounts', plural(n, 'compte'), 'accounts');
+    loadDelegations().then(function (list) {
+      var mu = managedUser();
+      setVal('bhasvAccounts', mu ? (mu.name || mu.email || 'Compte géré') : (ls('bh_agency_view') === 'all' ? 'Tous les comptes' : plural(list.length + 1, 'compte')), 'accounts');
     }).catch(function () {});
   }
   function updateProfileCard() {
@@ -972,6 +972,86 @@ html.bhas-sub .bhas-group{display:none}
     }
   };
 
+
+  /* ───────────── Comptes gérés (remplace l'ancien sélecteur) ───────────── */
+  function managedUser() { try { return JSON.parse(ls('lcc_managed_user') || 'null'); } catch (e) { return null; } }
+  function agencyToken() { return ls('lcc_agency_token') || ls('lcc_token') || ''; }
+  function loadDelegations() {
+    if (cache.delegations) return Promise.resolve(cache.delegations);
+    return fetch('/api/agency/delegations', { headers: { Authorization: 'Bearer ' + agencyToken() } })
+      .then(function (r) { return r.ok ? r.json() : {}; })
+      .then(function (d) {
+        var list = (d.iManage || d.delegations || []).filter(function (x) { return x.status ? x.status === 'accepted' || !!gs(x, 'accepted_at') : true; });
+        cache.canAct = d.canActAsAgent !== false;
+        cache.delegations = list;
+        return list;
+      });
+  }
+  var CLEAR_KEYS = ['lcc_agency_token', 'lcc_managed_user', 'lcc_settings_profile', 'lcc_properties_cache'];
+  function goHome() { location.href = '/app.html'; }
+  function restoreOwn(stayAll) {
+    var orig = ls('lcc_agency_token');
+    try {
+      if (orig) localStorage.setItem('lcc_token', orig);
+      CLEAR_KEYS.forEach(function (k) { localStorage.removeItem(k); });
+      localStorage.setItem('bh_agency_view', stayAll ? 'all' : 'mine');
+    } catch (e) {}
+  }
+  function switchOwn() {
+    if (managedUser() && typeof window.exitAgencyMode === 'function') { try { localStorage.setItem('bh_agency_view', 'mine'); } catch (e) {} return window.exitAgencyMode(); }
+    restoreOwn(false); window._agencyViewActive = false; goHome();
+  }
+  function switchAll() {
+    restoreOwn(true); window._agencyViewActive = true; goHome();
+  }
+  function switchTo(d, rowEl) {
+    var uid = String(gs(d, 'user_id') || d.id);
+    if (typeof window.switchAgencyAccount === 'function') { close(); return window.switchAgencyAccount(uid, d.name || d.email, d.color || '#6B7280'); }
+    rowEl.style.opacity = '.5';
+    fetch('/api/agency/switch', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + agencyToken() }, body: JSON.stringify({ targetUserId: uid }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.token) throw new Error(j.error || j.message || 'Bascule impossible'); return j; }); })
+      .then(function (j) {
+        try {
+          if (!ls('lcc_agency_token')) localStorage.setItem('lcc_agency_token', ls('lcc_token'));
+          localStorage.setItem('lcc_token', j.token);
+          localStorage.setItem('lcc_managed_user', JSON.stringify(j.managedUser || { id: uid, name: d.name, email: d.email }));
+          localStorage.removeItem('lcc_settings_profile'); localStorage.removeItem('lcc_properties_cache');
+          localStorage.setItem('bh_agency_view', 'mine');
+        } catch (e) {}
+        goHome();
+      })
+      .catch(function (e) { rowEl.style.opacity = ''; toast(e.message, true); });
+  }
+  function check() { var c = svg('chevR', 16, 2.4); c.innerHTML = '<polyline points="20 6 9 17 4 12"/>'; c.style.color = '#0E3B2E'; return c; }
+  VIEWS.accounts = {
+    render: function (ctx) {
+      ctx.setHead('Comptes gérés', null, 'Choisissez le compte sur lequel vous travaillez.');
+      var b = ctx.body();
+      var mu = managedUser();
+      var all = !mu && ls('bh_agency_view') === 'all';
+      var own = !mu && !all;
+      var me = (cache.root && cache.root.name) || 'Mon compte';
+      b.appendChild(card([
+        row({ lead: h('span', { class: 'bhas-av sm' }, initials(me)), label: 'Mon compte', sub: me, right: own ? check() : null, onClick: own ? null : switchOwn, chevron: false }),
+        row({ lead: h('span', { class: 'bhas-av sm' }, svg('office', 18)), label: 'Tous les comptes', sub: 'Vue agence complète', right: all ? check() : null, onClick: all ? null : switchAll, chevron: false })
+      ]));
+      var lbl = label('Comptes délégants'), list = card([loading()]);
+      b.appendChild(lbl); b.appendChild(list);
+      loadDelegations().then(function (ds) {
+        list.innerHTML = '';
+        if (!ds.length) { lbl.remove(); list.remove(); b.appendChild(h('div', { class: 'bhas-note' }, "Aucun compte ne vous a encore délégué sa gestion.")); return; }
+        ds.forEach(function (d) {
+          var uid = String(gs(d, 'user_id') || d.id);
+          var active = mu && String(mu.id) === uid;
+          var n = gs(d, 'property_count');
+          var r = row({ lead: h('span', { class: 'bhas-av sm' }, initials(d.name || d.email)), label: d.name || d.email, sub: n != null ? plural(+n, 'logement') : (d.name ? d.email : null), right: active ? check() : null, chevron: false,
+            onClick: active ? null : function () { switchTo(d, r); } });
+          list.appendChild(r);
+        });
+      }).catch(function (e) { list.innerHTML = ''; list.appendChild(empty(e.message || 'Impossible de charger les comptes.')); });
+    }
+  };
+
   /* ───────────── Notifications ───────────── */
   var NOTIFS = [['notif_new_reservation', 'Nouvelle réservation'], ['notif_reservation_cancelled', 'Réservation annulée'], ['notif_new_message', 'Nouveau message voyageur'], ['notif_daily_summary', 'Résumé quotidien (8 h)'], ['notif_reminder_j1', 'Rappel la veille (18 h)'], ['notif_cleaning_alert', 'Ménage non commencé, arrivée proche'], ['notif_checklist_done', 'Checklist ménage validée'], ['notif_new_invoice', 'Nouvelle facture'], ['notif_template_failed', "Échec d'un message automatique"]];
   function updateNotifLabel() {
@@ -1139,16 +1219,14 @@ html.bhas-sub .bhas-group{display:none}
 
   // « Comptes gérés » ouvre l'ancien sélecteur d'agence ; le rond aux initiales ouvre la feuille.
   var origSwitcher = null;
-  function openSwitcher() {
-    if (typeof origSwitcher === 'function') { close(); origSwitcher(); }
-    else toast('Aucun autre compte géré.', false);
-  }
+  function openSwitcher() { push('accounts'); }
   function hijack() {
     var cur = window.openAgencySwitcherModal;
     if (cur && cur !== openFromLegacy) origSwitcher = cur;
     if (cur !== openFromLegacy) window.openAgencySwitcherModal = openFromLegacy;
   }
   function openFromLegacy() { open(); }
+  window.openAgencySwitcherFromSheet = function () { open('accounts'); };
   hijack();
   window.addEventListener('load', hijack);
   setTimeout(hijack, 1500);
