@@ -173,6 +173,8 @@
       } };
   }
 
+  BHP.signaturePad = signaturePad;
+
   BHP.initAttestation = function () {
     var root = document.getElementById('bhpApp');
     var y0 = new Date().getFullYear();

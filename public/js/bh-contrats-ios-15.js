@@ -288,7 +288,7 @@
       var el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
       var a = el.dataset.act;
       if (a === 'back') { location.href = '/proprietaires.html'; return; }
-      if (a === 'new') { location.href = '/contrat.html'; return; }
+      if (a === 'new') { location.href = '/mandat.html'; return; }
       if (a === 'retry') return reload();
       if (a === 'more') return loadMore();
       if (a === 'filter') { if (S.filter !== el.dataset.v) { S.filter = el.dataset.v; S.state = 'loading'; reload(); } return; }

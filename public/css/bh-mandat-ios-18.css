@@ -1,0 +1,9 @@
+/* bh-mandat-ios-18.css — Création de mandat */
+.bhm-prog { display: flex; gap: 5px; }
+.bhm-prog i { flex: 1; height: 4px; border-radius: 2px; background: rgba(94,107,99,.18); }
+.bhm-prog i.is-on { background: var(--bhp-vert); }
+.bhm-fold { width: 100%; border: 0; background: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 0 2px; }
+.bhm-remu { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.bhm-remu__c { border: 1px solid rgba(255,255,255,.7); cursor: pointer; padding: 18px 12px; font-size: 15px; font-weight: 600; color: var(--bhp-encre); text-align: center; border-radius: 18px; }
+.bhm-remu__c.is-on { background: var(--bhp-vert); color: #fff; border-color: var(--bhp-vert); }
+.bhp-banner a { color: var(--bhp-vert); font-weight: 600; }

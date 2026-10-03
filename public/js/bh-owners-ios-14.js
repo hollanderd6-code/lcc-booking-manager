@@ -272,6 +272,7 @@
           + card(!D.assoc.length ? htmlRow('<span class="bhp-empty">Aucun logement associé</span>') : D.assoc.map(function (p) {
             return '<a class="bhp-row bho-prop" href="/property.html?id=' + encodeURIComponent(p.id) + '">' + ic('house') + '<span>' + esc(U.dname(p)) + '</span>' + CHEV + '</a>';
           }).join('')) + '</div>';
+        if (!c.isAgency) h += '<a class="bhp-btn bhp-btn--mint" style="text-decoration:none" href="/mandat.html?client=' + encodeURIComponent(c.id) + '">' + ic('pencil') + 'Créer un mandat</a>';
         if (!c.isAgency) h += '<button class="bhp-btn bhp-btn--danger" style="font-weight:600" data-act="cd-delete"' + (D.deleting ? ' disabled' : '') + '>' + (D.deleting ? U.SPIN : 'Supprimer ce client') + '</button>';
       }
       root.innerHTML = U.navHTML({ kicker: 'Propriétaire', title: c.name, left: left, right: right }) + '<div class="bhp-stack" data-cd-body>' + h + '</div>';
