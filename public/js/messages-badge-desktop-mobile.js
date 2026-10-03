@@ -78,6 +78,12 @@
 
     const mobileTab = document.querySelector('.tab-btn[data-tab="messages"]');
     if (mobileTab) updateSingleBadge(mobileTab, count, 'mobile');
+
+    // Barre latérale et barre d'onglets des écrans Gestion (gx-*)
+    document.querySelectorAll('[data-gx-unread]').forEach(function (b) {
+      b.textContent = count > 99 ? '99+' : (count || '');
+      b.classList.toggle('on', !!count);
+    });
   }
 
   function updateSingleBadge(element, count, type) {

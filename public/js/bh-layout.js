@@ -667,6 +667,12 @@ function getSidebarHTML() {
 
     // injectTopBar() removed: legacy demo nav replaced by bh-nav-rail (SHELL-FIX-08)
     injectSidebar();
+    // Barre latérale « verre » des écrans Gestion, sur ordinateur (bh-gx-rail.js)
+    if (!document.getElementById('bhGxRailJs')) {
+      var _rail = document.createElement('script');
+      _rail.id = 'bhGxRailJs'; _rail.src = '/js/bh-gx-rail.js?v=1';
+      document.head.appendChild(_rail);
+    }
     injectHeader();
     normalizeBranding();
     injectMobileTitle();
