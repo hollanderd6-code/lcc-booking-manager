@@ -11,6 +11,7 @@
   var SKIP = '#bhasSheet, #bhasScrim, #bhasSr, #bhasSrScrim, .bhas-sheet, .bhas-sr, .bhp-sheet, .bhp-overlay, .sidebar-overlay, .loading-overlay, [data-bhm-skip]';
 
   var CSS = `
+html.bhm-open #fabAddResa,html.bhm-open .bhr-tabs{opacity:0 !important;pointer-events:none !important}
 html.bhm-open .bhm-tabbar{opacity:0 !important;pointer-events:none !important;transform:translateY(20px) !important;transition:opacity .2s ease,transform .2s ease !important}
 .bhm-overlay{background:rgba(20,32,27,.24) !important;-webkit-backdrop-filter:blur(4px) !important;backdrop-filter:blur(4px) !important}
 .bhm-panel{
@@ -93,7 +94,7 @@ html.bhm-open .bhm-tabbar{opacity:0 !important;pointer-events:none !important;tr
     return !!el.firstElementChild;
   }
   function findPanel(ov) {
-    var vw = innerWidth, best = null, bestArea = 0;
+    var vw = innerWidth, vh = innerHeight, best = null, bestArea = 0;
     var walk = function (el, depth) {
       if (depth > 4) return;
       [].forEach.call(el.children, function (c) {
@@ -102,7 +103,9 @@ html.bhm-open .bhm-tabbar{opacity:0 !important;pointer-events:none !important;tr
         var r = c.getBoundingClientRect();
         var bg = rgb(cs.backgroundColor);
         var hasBg = (bg && bg.a > .3) || cs.backgroundImage !== 'none';
-        if (hasBg && r.width < vw * .98 && r.width > 220 && r.height > 80) {
+        // Sur téléphone les fenêtres prennent toute la largeur (feuille du bas) : on les
+        // accepte tant qu'elles ne couvrent pas aussi toute la hauteur.
+        if (hasBg && (r.width < vw * .98 || r.height < vh * .97) && r.width > 220 && r.height > 80) {
           var area = r.width * r.height; if (area > bestArea) { best = c; bestArea = area; }
           return;
         }
@@ -123,6 +126,10 @@ html.bhm-open .bhm-tabbar{opacity:0 !important;pointer-events:none !important;tr
   }
 
   function addC(el, c) { if (el && !el.classList.contains(c)) el.classList.add(c); }
+  // Certaines pages ciblent leurs fenêtres par #id (ex. #editPropertyModal .modal-header) : ces
+  // règles battent nos classes même en !important. Un style inline !important passe devant tout.
+  function force(el, props) { if (!el) return; for (var k in props) if (el.style.getPropertyValue(k) !== props[k] || el.style.getPropertyPriority(k) !== 'important') el.style.setProperty(k, props[k], 'important'); }
+  var INK = '#14201B', VERT = '#0E3B2E';
   /* ── Habillage d'un panneau ── */
   function style(ov, panel) {
     addC(ov, 'bhm-overlay');
@@ -138,6 +145,12 @@ html.bhm-open .bhm-tabbar{opacity:0 !important;pointer-events:none !important;tr
       var cs = getComputedStyle(el), bg = rgb(cs.backgroundColor);
       if (cs.backgroundImage.indexOf('gradient') >= 0 || isStrongColor(bg) || isDark(bg)) addC(el, 'bhm-head');
     });
+    [].forEach.call(panel.querySelectorAll('.bhm-head'), function (h) {
+      force(h, { 'background': 'transparent', 'background-image': 'none', 'color': INK, 'box-shadow': 'none', 'border-bottom': '1px solid rgba(20,32,27,.07)' });
+      [].forEach.call(h.querySelectorAll('h1,h2,h3,h4,span,p,div,small'), function (x) { if (!x.closest('.bhm-close')) force(x, { 'color': INK, 'font-family': "'DM Sans',system-ui,-apple-system,sans-serif" }); });
+      [].forEach.call(h.querySelectorAll('h1,h2,h3'), function (x) { force(x, { 'font-weight': '700', 'letter-spacing': '-0.02em' }); });
+      [].forEach.call(h.querySelectorAll('i,svg'), function (x) { if (!x.closest('.bhm-close')) force(x, { 'color': VERT }); });
+    });
 
     // Titre
     var t = panel.querySelector('h1,h2,h3,.modal-title,[class*="title"]');
@@ -145,20 +158,22 @@ html.bhm-open .bhm-tabbar{opacity:0 !important;pointer-events:none !important;tr
 
     // Boutons
     [].forEach.call(panel.querySelectorAll('button, a.btn, a[class*="btn"], a[class*="button"], [role=button], input[type=submit], input[type=button]'), function (b) {
-      if (b.dataset.bhm) return; b.dataset.bhm = '1';
+      if (b.dataset.bhm) return;
       var txt = (b.textContent || b.value || '').trim();
       var lbl = ((b.getAttribute('aria-label') || '') + ' ' + (b.title || '') + ' ' + b.className + ' ' + (b.id || '')).toLowerCase();
       var icon = b.querySelector('.fa-times, .fa-xmark, .fa-close, .fa-x');
       var cs = getComputedStyle(b), r = b.getBoundingClientRect();
       var isClose = (/close|fermer|dismiss/.test(lbl) && txt.length <= 2) || txt === '×' || txt === '✕' || txt === '✖' || (icon && txt.length <= 1) || (txt === '' && /close|fermer/.test(lbl));
-      if (isClose && r.width <= 60) { addC(b, 'bhm-close'); return; }
+      if (r.width === 0) return; // encore masqué ou en cours d'animation : on repassera
+      b.dataset.bhm = '1';
+      if (isClose && r.width <= 60) { addC(b, 'bhm-close'); force(b, { 'background': 'rgba(255,255,255,.62)', 'background-image': 'none', 'color': INK }); return; }
       if (r.width < 24 || r.height < 20) return;
       // petits boutons-icônes et puces de sélection : on garde le gabarit, on corrige juste la couleur
       var bg = rgb(cs.backgroundColor), fg = rgb(cs.color), bd = rgb(cs.borderTopColor);
       var grad = cs.backgroundImage.indexOf('gradient') >= 0;
       addC(b, 'bhm-btn');
       if (/supprim|delete|annuler la réservation|retirer/i.test(txt) || isRed(bg) || (isRed(fg) && !isOpaque(bg)) || isRed(fg)) addC(b, 'bhm-btn-danger');
-      else if (grad || isDark(bg) || isStrongColor(bg)) addC(b, 'bhm-btn-primary');
+      else if (grad || isDark(bg) || isStrongColor(bg)) { addC(b, 'bhm-btn-primary'); force(b, { 'background': VERT, 'background-image': 'none', 'color': '#fff', 'border-color': VERT }); }
       else if ((isPurple(bd) || isStrongColor(bd)) && parseFloat(cs.borderTopWidth) >= 1.5) addC(b, 'bhm-btn-on');
       else addC(b, 'bhm-btn-secondary');
     });
@@ -202,7 +217,13 @@ html.bhm-open .bhm-tabbar{opacity:0 !important;pointer-events:none !important;tr
     });
     if (document.documentElement.classList.contains('bhm-open') !== open) document.documentElement.classList.toggle('bhm-open', open);
   }
-  function schedule() { if (!scheduled) { scheduled = true; requestAnimationFrame(function () { setTimeout(scan, 30); }); } }
+  // Les fenêtres s'ouvrent souvent en fondu ou en glissant : au premier passage elles sont
+  // encore invisibles ou hors écran. On repasse après l'animation.
+  var late = 0;
+  function schedule() {
+    if (!scheduled) { scheduled = true; requestAnimationFrame(function () { setTimeout(scan, 30); }); }
+    clearTimeout(late); late = setTimeout(function () { scan(); setTimeout(scan, 300); }, 250);
+  }
 
   function boot() {
     var st = document.createElement('style'); st.id = 'bhmStyle'; st.textContent = CSS; document.head.appendChild(st);
